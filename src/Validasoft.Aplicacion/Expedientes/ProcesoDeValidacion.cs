@@ -1,8 +1,10 @@
 using JasperFx.Events;
 using Marten;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Documentos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identidad;
@@ -54,11 +56,31 @@ public static class ProcesoDeValidacion
     }
 
     /// <summary>
+    /// La misma resolución que <see cref="ResolverFlujoAsync"/> sin flujo indicado, sobre flujos ya cargados (consultas
+    /// entre tenants): la versión publicada del flujo del vínculo o, si no, la del por defecto de <c>(empresa, tipo)</c>.
+    /// </summary>
+    public static FlujoVersion? FlujoVigente(Vinculo vinculo, IEnumerable<Flujo> flujos, IEnumerable<FlujoPorDefecto> porDefecto)
+    {
+        var lista = flujos as IReadOnlyCollection<Flujo> ?? [.. flujos];
+        if (vinculo.FlujoId is { } propio && lista.FirstOrDefault(f => f.Id == propio) is { } delVinculo &&
+            delVinculo.EmpresaId == vinculo.EmpresaId && delVinculo.VersionPublicada is { } version)
+            return version;
+
+        var clave = FlujoPorDefecto.Clave(vinculo.EmpresaId, vinculo.TipoVinculoId);
+        return porDefecto.FirstOrDefault(p => p.Id == clave) is { } elegido
+            ? lista.FirstOrDefault(f => f.Id == elegido.FlujoId)?.VersionPublicada
+            : null;
+    }
+
+    /// <summary>
     /// Abre el expediente inicial del vínculo con el flujo resuelto: consume el folio, inicia el stream del expediente,
     /// registra <c>ExpedienteVinculado</c> en <paramref name="vinculoStream"/> y, si todo fue automático, lo cierra aprobado.
+    /// Con requisitos, cada uno nace <c>Cargado</c> si la bóveda ya compartió con el vínculo la versión actual de su tipo:
+    /// <paramref name="documentos"/> los trae la aceptación (que acaba de compartir); en una apertura manual de un vínculo
+    /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1).
     /// </summary>
     public static async Task<Expediente> AbrirAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, FlujoResuelto flujo,
-        IContextoSolicitud contexto, DateTimeOffset ahora, CancellationToken ct)
+        IContextoSolicitud contexto, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null)
     {
         var vinculo = vinculoStream.Aggregate ?? throw new InvalidOperationException("El vínculo no existe.");
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -75,12 +97,18 @@ public static class ProcesoDeValidacion
             areas.TryGetValue(a.AreaId, out var conNombre) ? conNombre.Nombre : "Área", a.AprobadoresRequeridos, a.PuedeRechazarExpediente,
             a.Automatica, a.SlaHoras))])).ToList();
 
+        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, ct);
+        if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
+            documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
+                RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
+        var requisitos = pedidos.Select(p => RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)).ToList();
+
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var datos = new DatosDeApertura(vinculo.EmpresaId, vinculo.Id, TipoExpediente.Inicial, folio, tercero.Id, tercero.Nombre,
             tercero.ClaveIdentificacion, vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty,
             new ActorDeExpediente(contexto.ActorTipo, contexto.ActorId), await QuienesInvitaronAsync(sesion, vinculo.Id, ct));
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
-            flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones), ahora);
+            flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
         var vinculado = vinculo.VincularExpediente(expedienteId, TipoExpediente.Inicial, folio, ahora);
@@ -152,7 +180,8 @@ public static class ProcesoDeValidacion
 
         var empresa = await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct);
         var observaciones = estado.ObservacionesVigentes
-            .Select(v => new ObservacionParaCorreo([.. v.Motivos.Select(m => m.TextoAlTercero)], v.Observacion))
+            .Select(v => new ObservacionParaCorreo([.. v.Motivos.Select(m => m.TextoAlTercero)], v.Observacion,
+                v.RequisitoId is { } requisitoId ? estado.BuscarRequisito(requisitoId)?.Nombre : null))
             .ToList();
         await mensajes.PublishAsync(new CorreoDeObservacionPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
             observaciones));

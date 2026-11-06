@@ -70,6 +70,20 @@ public sealed record UsuarioDto(
 /// <summary>Sesión corta de Validasoft para pantallas embebidas: se envía como <c>Authorization: Bearer {token}</c>.</summary>
 public sealed record SesionUsuarioDto(string Token, DateTimeOffset Expira);
 
+/// <summary>Nombre visible de un usuario del tenant (sin correo ni roles): para mostrar quién emitió un veredicto.</summary>
+public sealed record UsuarioResumenDto(Guid Id, string Nombre);
+
+public sealed record EmpresaResumenDto(Guid Id, string Nombre);
+
+/// <summary>
+/// Quién hace la petición (<c>GET /yo</c>): el actor, el usuario si es una persona (identidad delegada o sesión), sus
+/// roles en las empresas a su alcance, los permisos efectivos en la empresa activa, el sistema integrado y las empresas
+/// que puede usar.
+/// </summary>
+public sealed record YoDto(
+    string ActorTipo, string ActorId, Guid? TenantId, UsuarioResumenDto? Usuario, IReadOnlyList<RolAsignadoDto> Roles,
+    IReadOnlyList<string> Permisos, string? Sistema, IReadOnlyList<EmpresaResumenDto> Empresas, Guid? EmpresaActiva);
+
 // ---------- Áreas ----------
 
 public sealed record CrearAreaDto(string Codigo, string Nombre);

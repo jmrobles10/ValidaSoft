@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Documentos;
 
 namespace Validasoft.Dominio.Flujos;
 
@@ -31,8 +32,21 @@ public sealed record AreaDeEtapa(Guid AreaId, int AprobadoresRequeridos, bool Pu
 /// <summary>Las áreas de una etapa revisan en paralelo; las etapas van en secuencia por <see cref="Orden"/>.</summary>
 public sealed record EtapaDeFlujo(int Orden, IReadOnlyList<AreaDeEtapa> Areas);
 
-/// <summary>Contenido versionado de un flujo (lo que se congela al publicar).</summary>
-public sealed record DefinicionDeFlujo(IReadOnlyList<EtapaDeFlujo> Etapas, PoliticaDevolucion PoliticaDevolucion, bool SeparacionDeFunciones)
+/// <summary>
+/// Documento que pide el flujo (RQ-1): un tipo del tenant, obligatorio u opcional, y las áreas que lo revisan.
+/// <see cref="AreasQueRevisan"/> vacío ⇒ lo revisan todas las áreas del flujo, cada una en su etapa.
+/// <see cref="AprobadoresRequeridos"/> nulo ⇒ los del área. <see cref="CodigoTipo"/> es copia del código del tipo
+/// (inmutable) para leer el flujo sin cruzarlo con el catálogo. Lo que el flujo pide decide qué se comparte (RQ-3).
+/// </summary>
+public sealed record RequisitoDelFlujo(
+    Guid Id, Guid TipoDocumentoTenantId, string CodigoTipo, bool Obligatorio, IReadOnlyList<Guid> AreasQueRevisan, int? AprobadoresRequeridos);
+
+/// <summary>Contenido versionado de un flujo (lo que se congela al publicar). Sin requisitos, cada área decide sobre el expediente (FL-1).</summary>
+public sealed record DefinicionDeFlujo(
+    IReadOnlyList<EtapaDeFlujo> Etapas,
+    PoliticaDevolucion PoliticaDevolucion,
+    bool SeparacionDeFunciones,
+    IReadOnlyList<RequisitoDelFlujo>? Requisitos = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -44,9 +58,11 @@ public sealed record DefinicionDeFlujo(IReadOnlyList<EtapaDeFlujo> Etapas, Polit
 
     /// <summary>
     /// Valida contra las áreas de la empresa (deben existir, estar activas y ser de <paramref name="empresaId"/>) y
-    /// normaliza: etapas ordenadas y numeradas 1..n; un área automática cuenta como un aprobador.
+    /// normaliza: etapas ordenadas y numeradas 1..n; un área automática cuenta como un aprobador. Los requisitos se
+    /// validan contra <paramref name="tiposDelTenant"/> (ver <see cref="ValidarRequisitos"/>).
     /// </summary>
-    public DefinicionDeFlujo Validar(Guid empresaId, IReadOnlyCollection<Area> areasDeLaEmpresa)
+    public DefinicionDeFlujo Validar(Guid empresaId, IReadOnlyCollection<Area> areasDeLaEmpresa,
+        IReadOnlyCollection<TipoDocumentoTenant>? tiposDelTenant = null)
     {
         if (Etapas is null || Etapas.Count == 0)
             throw ReglaDeNegocioException.Validacion("etapas-requeridas", "El flujo necesita al menos una etapa con un área.");
@@ -94,7 +110,55 @@ public sealed record DefinicionDeFlujo(IReadOnlyList<EtapaDeFlujo> Etapas, Polit
             etapas.Add(new EtapaDeFlujo(indice + 1, areas));
         }
 
-        return this with { Etapas = etapas };
+        return this with { Etapas = etapas, Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? []) };
+    }
+
+    /// <summary>
+    /// Cada requisito: un tipo activo del tenant de clase <c>Archivo</c> (422 <c>requisito-invalido</c> /
+    /// <c>clase-no-soportada</c>), sin repetir tipo ni id (<c>requisito-duplicado</c>), revisado por áreas del flujo
+    /// (<c>requisito-area-invalida</c>) y con 1–10 aprobadores si se indican. Con requisitos, toda área del flujo debe
+    /// revisar al menos uno (<c>area-sin-requisitos</c>): su aprobación se deriva de ellos (RQ-4).
+    /// </summary>
+    private IReadOnlyList<RequisitoDelFlujo> ValidarRequisitos(IReadOnlyList<EtapaDeFlujo> etapas, IReadOnlyCollection<TipoDocumentoTenant> tipos)
+    {
+        if (Requisitos is null || Requisitos.Count == 0)
+            return [];
+
+        var areasDelFlujo = etapas.SelectMany(e => e.Areas).Select(a => a.AreaId).ToHashSet();
+        var tiposVistos = new HashSet<Guid>();
+        var idsVistos = new HashSet<Guid>();
+        var resultado = new List<RequisitoDelFlujo>();
+        foreach (var requisito in Requisitos)
+        {
+            var tipo = tipos.FirstOrDefault(t => t.Id == requisito.TipoDocumentoTenantId);
+            if (tipo is not { Activo: true })
+                throw ReglaDeNegocioException.Validacion("requisito-invalido",
+                    $"El tipo de documento {(string.IsNullOrWhiteSpace(requisito.CodigoTipo) ? requisito.TipoDocumentoTenantId.ToString() : requisito.CodigoTipo)} no existe en el tenant o está inactivo.");
+            if (tipo.Clase != ClaseDocumento.Archivo)
+                throw ReglaDeNegocioException.Validacion("clase-no-soportada", $"{tipo.Codigo} es un formulario; aún no se puede pedir en un flujo.");
+            if (!tiposVistos.Add(tipo.Id))
+                throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {tipo.Codigo}.");
+
+            var id = requisito.Id == Guid.Empty ? Guid.CreateVersion7() : requisito.Id;
+            if (!idsVistos.Add(id))
+                throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"Hay dos requisitos con el id {id}.");
+
+            var areas = (requisito.AreasQueRevisan ?? []).Distinct().ToList();
+            if (areas.Any(a => !areasDelFlujo.Contains(a)))
+                throw ReglaDeNegocioException.Validacion("requisito-area-invalida", $"Un área que revisa {tipo.Codigo} no participa en el flujo.");
+            if (requisito.AprobadoresRequeridos is < 1 or > MaximoAprobadores)
+                throw ReglaDeNegocioException.Validacion("aprobadores-invalidos",
+                    $"El requisito {tipo.Codigo} necesita entre 1 y {MaximoAprobadores} aprobadores.");
+
+            resultado.Add(requisito with { Id = id, CodigoTipo = tipo.Codigo, AreasQueRevisan = areas });
+        }
+
+        var sinRequisitos = areasDelFlujo.FirstOrDefault(a => !resultado.Any(r => r.AreasQueRevisan.Count == 0 || r.AreasQueRevisan.Contains(a)));
+        if (sinRequisitos != Guid.Empty)
+            throw ReglaDeNegocioException.Validacion("area-sin-requisitos",
+                $"El área {sinRequisitos} no revisa ningún requisito: con requisitos, cada área aprueba los de su alcance.");
+
+        return resultado;
     }
 }
 
@@ -113,13 +177,16 @@ public sealed class FlujoVersion
 
     public bool SeparacionDeFunciones { get; set; }
 
+    /// <summary>Documentos que pide esta versión (RQ-1); vacío ⇒ cada área decide sobre el expediente completo (FL-1).</summary>
+    public List<RequisitoDelFlujo> Requisitos { get; set; } = [];
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
 
     public DateTimeOffset? RetiradaEn { get; set; }
 
-    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones);
+    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos);
 }
 
 /// <summary>
@@ -158,7 +225,7 @@ public sealed class Flujo
 
     /// <summary>Crea el flujo con su primera versión en borrador.</summary>
     public static Flujo Crear(Guid empresaId, string codigo, string nombre, Guid tipoVinculoId, DefinicionDeFlujo definicion,
-        IReadOnlyCollection<Area> areasDeLaEmpresa, DateTimeOffset ahora)
+        IReadOnlyCollection<Area> areasDeLaEmpresa, DateTimeOffset ahora, IReadOnlyCollection<TipoDocumentoTenant>? tiposDelTenant = null)
     {
         var codigoNormalizado = (codigo ?? string.Empty).Trim().ToUpperInvariant();
         if (!Regex.IsMatch(codigoNormalizado, "^[A-Z][A-Z0-9_]{1,39}$"))
@@ -175,7 +242,7 @@ public sealed class Flujo
             CreadoEn = ahora,
             ActualizadoEn = ahora
         };
-        flujo.Versiones.Add(NuevaVersion(1, definicion.Validar(empresaId, areasDeLaEmpresa), ahora));
+        flujo.Versiones.Add(NuevaVersion(1, definicion.Validar(empresaId, areasDeLaEmpresa, tiposDelTenant), ahora));
         return flujo;
     }
 
@@ -183,9 +250,9 @@ public sealed class Flujo
     /// Edita el borrador; si no hay, crea uno nuevo (versión siguiente a la mayor). Lo publicado no cambia nunca.
     /// </summary>
     public FlujoVersion EditarBorrador(string? nombre, DefinicionDeFlujo definicion, IReadOnlyCollection<Area> areasDeLaEmpresa,
-        DateTimeOffset ahora)
+        DateTimeOffset ahora, IReadOnlyCollection<TipoDocumentoTenant>? tiposDelTenant = null)
     {
-        var validada = definicion.Validar(EmpresaId, areasDeLaEmpresa);
+        var validada = definicion.Validar(EmpresaId, areasDeLaEmpresa, tiposDelTenant);
         if (nombre is not null)
             Nombre = ValidarNombre(nombre);
 
@@ -200,6 +267,7 @@ public sealed class Flujo
             borrador.Etapas = [.. validada.Etapas];
             borrador.PoliticaDevolucion = validada.PoliticaDevolucion;
             borrador.SeparacionDeFunciones = validada.SeparacionDeFunciones;
+            borrador.Requisitos = [.. validada.Requisitos ?? []];
         }
 
         ActualizadoEn = ahora;
@@ -207,14 +275,15 @@ public sealed class Flujo
     }
 
     /// <summary>
-    /// Publica el borrador (vuelve a validar las áreas: pudieron desactivarse) y retira la publicada anterior. Los
-    /// expedientes abiertos conservan la versión que copiaron.
+    /// Publica el borrador (vuelve a validar áreas y tipos de documento: pudieron desactivarse) y retira la publicada
+    /// anterior. Los requisitos quedan congelados con la versión. Los expedientes abiertos conservan la versión que copiaron.
     /// </summary>
-    public FlujoVersion Publicar(IReadOnlyCollection<Area> areasDeLaEmpresa, DateTimeOffset ahora)
+    public FlujoVersion Publicar(IReadOnlyCollection<Area> areasDeLaEmpresa, DateTimeOffset ahora,
+        IReadOnlyCollection<TipoDocumentoTenant>? tiposDelTenant = null)
     {
         var borrador = Borrador
                        ?? throw ReglaDeNegocioException.Conflicto("sin-borrador", "No hay un borrador por publicar; edita el flujo primero.");
-        var validada = borrador.Definicion().Validar(EmpresaId, areasDeLaEmpresa);
+        var validada = borrador.Definicion().Validar(EmpresaId, areasDeLaEmpresa, tiposDelTenant);
 
         if (VersionPublicada is { } anterior)
         {
@@ -223,6 +292,7 @@ public sealed class Flujo
         }
 
         borrador.Etapas = [.. validada.Etapas];
+        borrador.Requisitos = [.. validada.Requisitos ?? []];
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -237,6 +307,7 @@ public sealed class Flujo
         Etapas = [.. definicion.Etapas],
         PoliticaDevolucion = definicion.PoliticaDevolucion,
         SeparacionDeFunciones = definicion.SeparacionDeFunciones,
+        Requisitos = [.. definicion.Requisitos ?? []],
         CreadaEn = ahora
     };
 

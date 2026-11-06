@@ -3,11 +3,13 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Documentos;
@@ -117,17 +119,19 @@ public static class CargaEndpoints
     /// Paso 2. El servidor lee el objeto subido: más grande que el máximo ⇒ 413; tipo real (magic bytes) no permitido ⇒ 415;
     /// SHA-256 distinto al declarado ⇒ 422 <c>hash-no-coincide</c>; el mismo archivo ya registrado ⇒ 200 <c>duplicado</c>.
     /// Un PDF con contenido activo o demasiadas páginas queda <c>Devuelta</c> con su motivo; si no, pasa a <c>Actual</c> y se
-    /// comparte. Sincrónico: responde 200 con el estado final (sin IA no hay análisis en segundo plano).
+    /// comparte. Sincrónico: responde 200 con el estado final (sin IA no hay análisis en segundo plano). Cada vínculo que
+    /// recibió la versión recibe además, por el outbox, la orden de adjuntarla a los requisitos de su expediente abierto
+    /// (<see cref="SincronizarRequisitosDelVinculo"/>, RQ-2).
     /// </summary>
     [WolverinePost("/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/confirmar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ConfirmacionCargaDto> Confirmar(Guid documentoId, int numero, HttpContext http, ISesiones sesiones,
-        IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var ahora = reloj.GetUtcNow();
 
-        await using var sesion = sesiones.Boveda();
+        await using var sesion = sesiones.Boveda(mensajes);
         var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
         var documento = BovedaEndpoints.DelTercero(stream.Aggregate, tercero);
 
@@ -200,7 +204,7 @@ public static class CargaEndpoints
 
         var proyectado = documento.Proyectar(eventos);
         var compartidos = proyectado.VersionActual == numero
-            ? await ComparticionDeDocumentos.CompartirActualAsync(sesion, stream, proyectado, OrigenComparticion.Automatica, ahora, ct)
+            ? await ComparticionDeDocumentos.CompartirActualAsync(sesion, stream, proyectado, OrigenComparticion.Automatica, ahora, ct, mensajes, contexto)
             : [];
 
         carga.Estado = EstadoCarga.Confirmada;

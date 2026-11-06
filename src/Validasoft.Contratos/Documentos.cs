@@ -14,31 +14,24 @@ public sealed record TipoDocumentoCanonicoDto(
     IReadOnlyList<string> CamposClave, IReadOnlyList<string> CamposCriticos, string Sensibilidad, ReglaFrescuraDto? ReglaFrescuraSugerida,
     int RetencionAniosSugerida, bool CargaSoportada);
 
-/// <summary>La empresa exige el tipo a sus vínculos del tipo indicado (código o id del tipo de vínculo).</summary>
-public sealed record ExigenciaDto(Guid EmpresaId, string TipoVinculo);
-
-public sealed record ExigenciaDocumentoDto(Guid EmpresaId, Guid TipoVinculoId, string TipoVinculo);
-
 /// <summary>
 /// Alta de un tipo del tenant. <see cref="TipoCanonico"/> nulo ⇒ tipo propio (siempre <c>PorVinculo</c>). <see cref="Ambito"/>
-/// puede restringir el del canónico, nunca ampliarlo (422 <c>ambito-no-ampliable</c>).
+/// puede restringir el del canónico, nunca ampliarlo (422 <c>ambito-no-ampliable</c>). Qué se pide a cada vínculo lo
+/// deciden los requisitos del flujo (RQ-3): ya no hay <c>exigencias</c> por tipo.
 /// </summary>
 public sealed record CrearTipoDocumentoDto(
     string Codigo, string? Nombre, string? TipoCanonico, string? Ambito = null, ReglaFrescuraDto? ReglaFrescura = null,
-    IReadOnlyList<int>? DiasAviso = null, int? DiasGracia = null, int? DiasRevalidacion = null, string? TextoAyuda = null,
-    IReadOnlyList<ExigenciaDto>? Exigencias = null);
+    IReadOnlyList<int>? DiasAviso = null, int? DiasGracia = null, int? DiasRevalidacion = null, string? TextoAyuda = null);
 
-/// <summary>Código y canónico son inmutables; los campos nulos conservan su valor. <see cref="Exigencias"/> reemplaza la lista.</summary>
+/// <summary>Código y canónico son inmutables; los campos nulos conservan su valor.</summary>
 public sealed record ActualizarTipoDocumentoDto(
     string? Nombre = null, string? Ambito = null, ReglaFrescuraDto? ReglaFrescura = null, IReadOnlyList<int>? DiasAviso = null,
-    int? DiasGracia = null, int? DiasRevalidacion = null, string? TextoAyuda = null, bool? Activo = null,
-    IReadOnlyList<ExigenciaDto>? Exigencias = null);
+    int? DiasGracia = null, int? DiasRevalidacion = null, string? TextoAyuda = null, bool? Activo = null);
 
 /// <summary>Defaults del tenant (B-4). Frescura y plazos se guardan; se aplican con vigencias (H6).</summary>
 public sealed record TipoDocumentoTenantDto(
     Guid Id, string Codigo, string Nombre, string? TipoCanonico, int? VersionCanonico, string Ambito, string Clase, string? TextoAyuda,
-    ReglaFrescuraDto ReglaFrescura, IReadOnlyList<int> DiasAviso, int DiasGracia, int DiasRevalidacion, bool Activo,
-    IReadOnlyList<ExigenciaDocumentoDto> Exigencias, DateTimeOffset CreadoEn);
+    ReglaFrescuraDto ReglaFrescura, IReadOnlyList<int> DiasAviso, int DiasGracia, int DiasRevalidacion, bool Activo, DateTimeOffset CreadoEn);
 
 // ---------- Carga en dos pasos ----------
 

@@ -30,7 +30,7 @@ public sealed partial class BovedaApiTests(ApiFixture fixture)
 
     private sealed record Empresa(string ApiKey, EmpresaDto Datos);
 
-    /// <summary>Un tercero con vínculo CLIENTE en dos empresas de tenants distintos, ambas exigiendo RUT, y su sesión.</summary>
+    /// <summary>Un tercero con vínculo CLIENTE en dos empresas de tenants distintos, cuyos flujos piden RUT, y su sesión.</summary>
     private sealed record Escenario(Empresa A, Empresa B, VinculoDto VinculoA, VinculoDto VinculoB, SesionTerceroDto Sesion, string Correo);
 
     [GeneratedRegex(@"/e/([A-Za-z0-9_-]{43})")]
@@ -333,10 +333,10 @@ public sealed partial class BovedaApiTests(ApiFixture fixture)
         catalogo.Single(t => t.Codigo == "POLIZA").Ambito.ShouldBe("PorVinculo");
         catalogo.Single(t => t.Codigo == "CUENTA_BANCARIA").CargaSoportada.ShouldBeFalse();
 
-        // Semilla del tenant: seis canónicos de archivo, sin exigencias.
+        // Semilla del tenant: seis canónicos de archivo (ya sin exigencias: lo que se pide lo dicen los flujos, RQ-3).
         var tipos = await EmpresaAsync<List<TipoDocumentoTenantDto>>("GET", "/api/v1/tipos-documento", a, null, 200);
         tipos.Select(t => t.Codigo).ShouldBe(["CAMARA_COMERCIO", "CEDULA", "CERTIFICACION_BANCARIA", "ESTADOS_FINANCIEROS", "POLIZA", "RUT"]);
-        tipos.ShouldAllBe(t => t.Exigencias.Count == 0);
+        tipos.ShouldAllBe(t => t.Activo);
         tipos.Single(t => t.Codigo == "POLIZA").DiasAviso.ShouldBe([60, 30, 7]);
 
         // Un tipo propio sin canónico no puede ser Global; un canónico PorVinculo tampoco se amplía.
@@ -348,11 +348,9 @@ public sealed partial class BovedaApiTests(ApiFixture fixture)
 
         var creado = await EmpresaAsync<TipoDocumentoTenantDto>("POST", "/api/v1/tipos-documento", a,
             new CrearTipoDocumentoDto("FORMATO_NORTE", "Formato de vinculación Norte", null,
-                ReglaFrescura: new ReglaFrescuraDto("MaxDiasDesdeExpedicion", 60),
-                Exigencias: [new ExigenciaDto(a.Datos.Id, "PROVEEDOR")]), 201);
+                ReglaFrescura: new ReglaFrescuraDto("MaxDiasDesdeExpedicion", 60)), 201);
         creado.Ambito.ShouldBe("PorVinculo");
         creado.ReglaFrescura.Dias.ShouldBe(60);
-        creado.Exigencias.ShouldHaveSingleItem().TipoVinculo.ShouldBe("PROVEEDOR");
 
         // Restringir un canónico global a PorVinculo sí se permite.
         var rut = tipos.Single(t => t.Codigo == "RUT");
@@ -379,7 +377,7 @@ public sealed partial class BovedaApiTests(ApiFixture fixture)
         var b = await EmpresaNuevaAsync("Sur Global S.A.S.");
         foreach (var empresa in new[] { a, b })
         {
-            await ExigirRutAsync(empresa);
+            await PedirRutEnElFlujoAsync(empresa);
             await EmpresaAsync<TextoLegalDto>("PUT", $"/api/v1/empresas/{empresa.Datos.Id}/textos-legales/autorizacion", empresa,
                 new PublicarTextoLegalDto($"Autorizo a {empresa.Datos.Nombre}"), 200, conEmpresa: false);
             await EmpresaAsync<TextoLegalDto>("PUT", $"/api/v1/empresas/{empresa.Datos.Id}/textos-legales/terminos", empresa,
@@ -410,14 +408,17 @@ public sealed partial class BovedaApiTests(ApiFixture fixture)
         return new Empresa(clave, datos);
     }
 
-    /// <summary>La empresa exige el RUT (tipo de la semilla) a sus vínculos CLIENTE.</summary>
-    private async Task ExigirRutAsync(Empresa empresa)
+    /// <summary>
+    /// La empresa pide el RUT (tipo de la semilla) a sus vínculos CLIENTE con el requisito de su flujo publicado (RQ-3;
+    /// antes se configuraba como exigencia del tipo, BO-3). El flujo por defecto abre el expediente al aceptar.
+    /// </summary>
+    private async Task PedirRutEnElFlujoAsync(Empresa empresa)
     {
-        var tipos = await EmpresaAsync<List<TipoDocumentoTenantDto>>("GET", "/api/v1/tipos-documento", empresa, null, 200);
-        var rut = tipos.Single(t => t.Codigo == "RUT");
-        var actualizado = await EmpresaAsync<TipoDocumentoTenantDto>("PUT", $"/api/v1/tipos-documento/{rut.Id}", empresa,
-            new ActualizarTipoDocumentoDto(Exigencias: [new ExigenciaDto(empresa.Datos.Id, "CLIENTE")]), 200);
-        actualizado.Exigencias.ShouldHaveSingleItem().EmpresaId.ShouldBe(empresa.Datos.Id);
+        await EmpresaAsync<AreaDto>("POST", "/api/v1/areas", empresa, new CrearAreaDto("REVISION", "Revisión"), 201);
+        var flujo = await EmpresaAsync<FlujoDto>("POST", "/api/v1/flujos", empresa,
+            new CrearFlujoDto("CLIENTES", "Habilitación de clientes", "CLIENTE", Requisitos: [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]), 201);
+        var publicado = await EmpresaAsync<FlujoDto>("POST", $"/api/v1/flujos/{flujo.Id}/publicar", empresa, null, 200);
+        publicado.Publicada!.Requisitos.ShouldNotBeNull().ShouldHaveSingleItem().TipoDocumento.ShouldBe("RUT");
     }
 
     private Task<VinculoDto> CrearVinculoAsync(Empresa empresa, string nit, string correo) =>

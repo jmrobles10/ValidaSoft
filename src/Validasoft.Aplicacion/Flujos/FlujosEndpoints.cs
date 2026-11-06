@@ -6,6 +6,7 @@ using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Flujos;
 using Wolverine.Http;
 
@@ -13,7 +14,8 @@ namespace Validasoft.Aplicacion.Flujos;
 
 /// <summary>
 /// Flujos aprobatorios versionados de la empresa activa (<c>X-Empresa</c>): etapas en secuencia, áreas en paralelo,
-/// aprobadores por área, áreas automáticas y política de devolución. Todo cambio deja registro de auditoría (R-1).
+/// aprobadores por área, áreas automáticas, política de devolución y los documentos que pide (requisitos, RQ-1: se
+/// editan en el borrador y se congelan al publicar). Todo cambio deja registro de auditoría (R-1).
 /// </summary>
 public static class FlujosEndpoints
 {
@@ -29,11 +31,15 @@ public static class FlujosEndpoints
             throw ReglaDeNegocioException.Validacion("tipo-vinculo-invalido", $"El tipo de vínculo '{dto.TipoVinculo}' no existe o está inactivo.");
 
         var areas = await empresa.Areas().ToListAsync(ct);
+        var tipos = await TiposAsync(empresa, ct);
         var politica = Politica(dto.PoliticaDevolucion) ?? PoliticaDevolucion.Inmediata;
-        var definicion = dto.Etapas is { Count: > 0 }
+        var definicion = (dto.Etapas is { Count: > 0 }
             ? new DefinicionDeFlujo([.. dto.Etapas.Select(e => e.ADominio())], politica, dto.SeparacionDeFunciones)
-            : DefinicionDeFlujo.TodasEnParalelo(areas, politica, dto.SeparacionDeFunciones);
-        var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora);
+            : DefinicionDeFlujo.TodasEnParalelo(areas, politica, dto.SeparacionDeFunciones)) with
+        {
+            Requisitos = [.. (dto.Requisitos ?? []).Select(r => r.ADominio(tipos))]
+        };
+        var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos);
 
         var codigo = flujo.Codigo;
         if (await empresa.Flujos().AnyAsync(f => f.Codigo == codigo, ct))
@@ -112,12 +118,14 @@ public static class FlujosEndpoints
         var flujo = await empresa.CargarFlujoAsync(id, ct);
         var antes = await DtoAsync(empresa, flujo, ct);
         var ultima = flujo.Ultima;
+        var tipos = await TiposAsync(empresa, ct);
         var definicion = new DefinicionDeFlujo(
             dto.Etapas is null ? ultima.Etapas : [.. dto.Etapas.Select(e => e.ADominio())],
             Politica(dto.PoliticaDevolucion) ?? ultima.PoliticaDevolucion,
-            dto.SeparacionDeFunciones ?? ultima.SeparacionDeFunciones);
+            dto.SeparacionDeFunciones ?? ultima.SeparacionDeFunciones,
+            dto.Requisitos is null ? ultima.Requisitos : [.. dto.Requisitos.Select(r => r.ADominio(tipos))]);
 
-        var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora);
+        var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos);
         return await GuardarAsync(empresa, contexto, flujo, "FlujoVersion", $"{flujo.Id}/v{borrador.Version}", AccionConfiguracion.Modificado, antes, ahora, ct);
     }
 
@@ -130,7 +138,7 @@ public static class FlujosEndpoints
         var ahora = reloj.GetUtcNow();
         var flujo = await empresa.CargarFlujoAsync(id, ct);
         var antes = await DtoAsync(empresa, flujo, ct);
-        var publicada = flujo.Publicar(await empresa.Areas().ToListAsync(ct), ahora);
+        var publicada = flujo.Publicar(await empresa.Areas().ToListAsync(ct), ahora, await TiposAsync(empresa, ct));
 
         var clave = FlujoPorDefecto.Clave(flujo.EmpresaId, flujo.TipoVinculoId);
         if (await empresa.Sesion.LoadAsync<FlujoPorDefecto>(clave, ct) is null)
@@ -171,6 +179,10 @@ public static class FlujosEndpoints
         var porDefecto = await empresa.Sesion.LoadAsync<FlujoPorDefecto>(FlujoPorDefecto.Clave(flujo.EmpresaId, flujo.TipoVinculoId), ct);
         return flujo.ADto(tipo, porDefecto?.FlujoId == flujo.Id);
     }
+
+    /// <summary>Tipos de documento del tenant (los requisitos se validan contra ellos: activos y de clase <c>Archivo</c>).</summary>
+    private static async Task<IReadOnlyList<TipoDocumentoTenant>> TiposAsync(SesionDeEmpresa empresa, CancellationToken ct) =>
+        await empresa.Sesion.Query<TipoDocumentoTenant>().ToListAsync(ct);
 
     private static async Task<IReadOnlyList<FlujoPorDefecto>> PorDefectoAsync(SesionDeEmpresa empresa, CancellationToken ct)
     {

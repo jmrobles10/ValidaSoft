@@ -42,12 +42,27 @@ public sealed record RechazoDelExpediente(Guid AreaId, string RevisorId, IReadOn
     DateTimeOffset Fecha);
 
 /// <summary>
-/// Veredicto guardado en el área. <see cref="Vigente"/> pasa a falso cuando un administrador lo anula o cuando el
-/// tercero reenvía tras una observación de esa área (<see cref="Superado"/>): queda en el historial, pero ya no cuenta.
+/// Veredicto guardado en el área (sobre el expediente) o en un requisito (con <see cref="AreaId"/> y
+/// <see cref="SobreVersion"/>). <see cref="Vigente"/> pasa a falso cuando un administrador lo anula, cuando el tercero
+/// reenvía tras una observación (<see cref="Superado"/>) o cuando llega una versión nueva del requisito
+/// (<see cref="Invalidado"/>): queda en el historial, pero ya no cuenta.
 /// </summary>
 public sealed class VeredictoRegistrado
 {
     public Guid Id { get; set; }
+
+    /// <summary>Solo en veredictos de requisito: el requisito y el área que lo emitió.</summary>
+    public Guid? RequisitoId { get; set; }
+
+    public Guid? AreaId { get; set; }
+
+    /// <summary>Número de la versión del documento sobre la que se decidió (veredictos de requisito).</summary>
+    public int? SobreVersion { get; set; }
+
+    /// <summary>Veredicto de área que el sistema derivó de los requisitos de su alcance (RQ-5).</summary>
+    public bool Derivado { get; set; }
+
+    public bool Invalidado { get; set; }
 
     public Veredicto Veredicto { get; set; }
 
@@ -99,6 +114,9 @@ public sealed class AreaDeExpediente
 
     public List<VeredictoRegistrado> Veredictos { get; set; } = [];
 
+    /// <summary>Con requisitos: cuántos de su alcance esperan todavía su decisión (para la bandeja).</summary>
+    public int RequisitosPorDecidir { get; set; }
+
     /// <summary>Usuarios distintos con aprobación humana vigente.</summary>
     [JsonIgnore]
     public IReadOnlyList<string> AprobadoresVigentes =>
@@ -131,14 +149,15 @@ public sealed class EtapaDeExpediente
 }
 
 /// <summary>
-/// Instancia de una versión de flujo para un vínculo (docs/03 §6) — agregado event-sourced de vida corta. En esta fase
-/// no hay requisitos documentales: cada área se pronuncia sobre el expediente completo. Las áreas de la etapa activa
-/// revisan en paralelo; cada una necesita <c>AprobadoresRequeridos</c> usuarios distintos. Una observación frena todo
-/// (política <c>Inmediata</c>) o al cerrar la etapa (<c>AlCerrarArea</c>); al reenviar, solo las áreas que observaron
-/// vuelven a revisar. Los métodos de decisión devuelven los eventos (incluida la cascada: etapa aprobada, siguiente
-/// etapa, aprobación automática, cierre); los <c>Apply</c> solo evolucionan el estado.
+/// Instancia de una versión de flujo para un vínculo (docs/03 §6) — agregado event-sourced de vida corta. Las áreas de
+/// la etapa activa revisan en paralelo. Sin requisitos (FL-1) cada área se pronuncia sobre el expediente completo y
+/// necesita <c>AprobadoresRequeridos</c> usuarios distintos; con requisitos (RQ-*) cada área aprueba u observa los
+/// documentos de su alcance y su aprobación se deriva de ellos (ver <c>ExpedienteRequisitos.cs</c>). Una observación
+/// frena todo (política <c>Inmediata</c>) o al cerrar la etapa (<c>AlCerrarArea</c>); al reenviar, solo lo observado
+/// vuelve a revisión. Los métodos de decisión devuelven los eventos (incluida la cascada: paso a revisión, etapa
+/// aprobada, siguiente etapa, aprobaciones automáticas, cierre); los <c>Apply</c> solo evolucionan el estado.
 /// </summary>
-public sealed class Expediente
+public sealed partial class Expediente
 {
     private const int LongitudMaximaTexto = 4000;
 
@@ -184,6 +203,12 @@ public sealed class Expediente
 
     public List<EtapaDeExpediente> Etapas { get; set; } = [];
 
+    /// <summary>Documentos que pide el flujo (vacío ⇒ veredictos sobre el expediente completo, FL-1).</summary>
+    public List<RequisitoDeExpediente> Requisitos { get; set; } = [];
+
+    /// <summary>Requisitos observados en la devolución en curso (los que vuelven a revisión al reenviar).</summary>
+    public List<Guid> RequisitosObservados { get; set; } = [];
+
     /// <summary>Copia plana de las áreas del flujo para filtrar en Marten.</summary>
     public List<Guid> AreaIds { get; set; } = [];
 
@@ -209,23 +234,34 @@ public sealed class Expediente
     [JsonIgnore]
     public bool EstaAbierto => Abiertos.Contains(Estado);
 
-    /// <summary>Observaciones que el tercero debe atender (solo mientras el expediente está devuelto).</summary>
+    /// <summary>Con requisitos, cada área decide por documento y su aprobación se deriva (RQ-4).</summary>
+    [JsonIgnore]
+    public bool ConRequisitos => Requisitos.Count > 0;
+
+    /// <summary>
+    /// Observaciones que el tercero debe atender (solo mientras el expediente está devuelto): las de las áreas y las de los
+    /// requisitos (<see cref="VeredictoRegistrado.RequisitoId"/>) aún vigentes; una versión nueva del requisito las invalida.
+    /// </summary>
     [JsonIgnore]
     public IReadOnlyList<VeredictoRegistrado> ObservacionesVigentes =>
-        Estado != EstadoExpediente.Observado || EtapaActiva is not { } etapa
+        Estado != EstadoExpediente.Observado || EtapaActiva is null
             ? []
-            : [.. etapa.Areas.SelectMany(a => a.Veredictos).Where(v => v.Vigente && v.Veredicto == Veredicto.Observado).OrderBy(v => v.Fecha)];
+            : [.. EtapaActiva.Areas.SelectMany(a => a.Veredictos).Concat(Requisitos.SelectMany(r => r.Veredictos))
+                .Where(v => v.Vigente && v.Veredicto == Veredicto.Observado).OrderBy(v => v.Fecha)];
 
     public AreaDeExpediente? BuscarArea(Guid areaId) => Etapas.SelectMany(e => e.Areas).FirstOrDefault(a => a.AreaId == areaId);
 
     // ---------- Decisiones ----------
 
     /// <summary>
-    /// Abre el expediente con la versión de flujo copiada. Sin requisitos todavía, pasa directo a revisión: activa la
-    /// primera etapa (todas sus áreas a la vez) y las áreas automáticas aprueban de inmediato; si todo es automático,
-    /// el expediente queda aprobado en la misma transacción.
+    /// Abre el expediente con la versión de flujo copiada. Sin requisitos pasa directo a revisión (FL-1): activa la
+    /// primera etapa (todas sus áreas a la vez) y las áreas automáticas aprueban de inmediato; si todo es automático, el
+    /// expediente queda aprobado en la misma transacción. Con <paramref name="requisitos"/> emite
+    /// <c>RequisitosCalculados</c> (los que el tercero ya tenía compartidos nacen <c>Cargado</c>) y queda <c>Abierto</c>
+    /// en fase de carga hasta que todos los obligatorios estén cargados o eximidos.
     /// </summary>
-    public static IReadOnlyList<object> Abrir(DatosDeApertura datos, FlujoParaExpediente flujo, DateTimeOffset ahora)
+    public static IReadOnlyList<object> Abrir(DatosDeApertura datos, FlujoParaExpediente flujo, DateTimeOffset ahora,
+        IReadOnlyList<RequisitoCalculado>? requisitos = null)
     {
         if (string.IsNullOrWhiteSpace(datos.Folio))
             throw ReglaDeNegocioException.Validacion("folio-requerido", "El expediente necesita folio.");
@@ -238,8 +274,8 @@ public sealed class Expediente
             datos.TipoVinculoNombre, datos.AbiertoPor, [.. datos.InvitadoPor.Distinct()], ahora));
         simulacion.Emitir(new FlujoSeleccionado(flujo.FlujoId, flujo.FlujoVersionId, flujo.Codigo, flujo.Nombre, flujo.Version, flujo.Origen,
             [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora));
-        simulacion.Emitir(new ExpedienteEnviadoARevision(ahora));
-        Activar(simulacion, simulacion.Estado!.Etapas.OrderBy(e => e.Orden).First(), ahora);
+        if (requisitos is { Count: > 0 })
+            simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
         Evaluar(simulacion, ahora);
         return simulacion.Eventos;
     }
@@ -248,6 +284,7 @@ public sealed class Expediente
     public IReadOnlyList<object> EmitirVeredicto(Guid areaId, Revisor revisor, Veredicto veredicto, IReadOnlyList<MotivoAplicado> motivos,
         string? observacion, DateTimeOffset ahora)
     {
+        AsegurarSinRequisitos();
         AsegurarEnRevision();
         var area = AreaActiva(areaId);
         if (area.Automatica)
@@ -261,12 +298,7 @@ public sealed class Expediente
         if (area.Estado != EstadoAreaExpediente.Pendiente)
             throw ReglaDeNegocioException.Conflicto("area-ya-se-pronuncio", $"El área {area.Codigo} ya está {area.Estado} en esta ronda.");
 
-        var lista = motivos ?? [];
-        if (veredicto == Veredicto.Observado && lista.Count == 0)
-            throw ReglaDeNegocioException.Validacion("motivo-requerido", "Para observar indica al menos un motivo.");
-        if (veredicto == Veredicto.Aprobado && lista.Count > 0)
-            throw ReglaDeNegocioException.Validacion("motivos-solo-al-observar", "Los motivos solo acompañan una observación.");
-
+        var lista = Motivos(veredicto, motivos);
         return Simular(s => s.Emitir(new VeredictoDeAreaEmitido(Guid.CreateVersion7(), areaId, veredicto, OrigenVeredicto.Humano, revisorId,
             [.. lista.DistinctBy(m => m.Codigo)], Texto(observacion, "observacion"), null, null, ahora)), ahora);
     }
@@ -290,14 +322,28 @@ public sealed class Expediente
             Requerido(justificacion, "justificacion-requerida", "El rechazo necesita una justificación."), ahora)];
     }
 
-    /// <summary>Respuesta del tercero (o del integrador) a la observación: solo las áreas que observaron vuelven a revisar.</summary>
+    /// <summary>
+    /// Respuesta del tercero (o del integrador) a la observación: solo lo observado vuelve a revisar. Con requisitos,
+    /// cada requisito observado necesita una versión nueva (que ya invalidó la observación) o, si no, una respuesta
+    /// escrita (409 <c>requisitos-sin-corregir</c>); solo esos requisitos vuelven a revisión (RQ-7).
+    /// </summary>
     public IReadOnlyList<object> Reenviar(OrigenReenvio origen, string? respuesta, DateTimeOffset ahora)
     {
         if (Estado != EstadoExpediente.Observado)
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"Solo se reenvía un expediente observado; este está {Estado}.");
 
+        var texto = Texto(respuesta, "respuesta");
         var reabiertas = EtapaActiva?.Areas.Where(a => a.Estado == EstadoAreaExpediente.Observada).Select(a => a.AreaId).ToList() ?? [];
-        return Simular(s => s.Emitir(new ExpedienteReenviado(origen, Texto(respuesta, "respuesta"), reabiertas, ahora)), ahora);
+        if (!ConRequisitos)
+            return Simular(s => s.Emitir(new ExpedienteReenviado(origen, texto, reabiertas, ahora)), ahora);
+
+        var observados = RequisitosObservados.Select(BuscarRequisito).OfType<RequisitoDeExpediente>().ToList();
+        var sinCorregir = observados.Where(r => !r.Eximido && r.Veredictos.Any(v => v.Vigente && v.Veredicto == Veredicto.Observado)).ToList();
+        if (sinCorregir.Count > 0 && texto is null)
+            throw ReglaDeNegocioException.Conflicto("requisitos-sin-corregir",
+                $"Carga una versión nueva de {string.Join(", ", sinCorregir.Select(r => r.Nombre))} o responde a la observación.");
+
+        return Simular(s => s.Emitir(new ExpedienteReenviado(origen, texto, reabiertas, ahora, [.. observados.Select(r => r.Id)])), ahora);
     }
 
     /// <summary>Un administrador aprueba el área en su nombre (origen <c>Administrador</c>), siempre con justificación.</summary>
@@ -310,6 +356,9 @@ public sealed class Expediente
                 $"El área {area.Codigo} está {area.Estado}; si observó, anula primero la observación.");
 
         var texto = Requerido(justificacion, "justificacion-requerida", "Aprobar en nombre del área necesita una justificación.");
+        if (ConRequisitos)
+            return AprobarRequisitosComoAdministrador(area, administradorId, texto, ahora);
+
         return Simular(s => s.Emitir(new VeredictoDeAreaEmitido(Guid.CreateVersion7(), areaId, Veredicto.Aprobado, OrigenVeredicto.Administrador,
             administradorId, [], null, texto, null, ahora)), ahora);
     }
@@ -326,7 +375,11 @@ public sealed class Expediente
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se anulan veredictos de un expediente {Estado}.");
 
         var area = AreaActiva(areaId);
-        var vigentes = area.Veredictos.Where(v => v.Vigente).ToList();
+        // Los del área sobre el expediente y los de sus requisitos; nunca el veredicto de área derivado (RQ-5).
+        var vigentes = area.Veredictos.Concat(Requisitos.SelectMany(r => r.Veredictos).Where(v => v.AreaId == areaId))
+            .Where(v => v.Vigente && !v.Derivado)
+            .OrderBy(v => v.Fecha)
+            .ToList();
         var veredicto = (veredictoId is null ? vigentes.LastOrDefault() : vigentes.FirstOrDefault(v => v.Id == veredictoId))
                         ?? throw ReglaDeNegocioException.NoEncontrado("veredicto-no-encontrado", "No hay un veredicto vigente con ese id en el área.");
 
@@ -406,6 +459,7 @@ public sealed class Expediente
     public void Apply(ExpedienteEnviadoARevision e)
     {
         Estado = EstadoExpediente.EnRevision;
+        RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
@@ -421,6 +475,7 @@ public sealed class Expediente
             area.SlaVence = area.SlaHoras is { } horas ? e.Fecha.AddHours(horas) : null;
         }
 
+        RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
@@ -436,7 +491,8 @@ public sealed class Expediente
             Motivos = [.. e.Motivos],
             Observacion = e.Observacion,
             Justificacion = e.Justificacion,
-            Fecha = e.Fecha
+            Fecha = e.Fecha,
+            Derivado = e.DerivadoDeRequisitos
         });
         Recalcular(area, e.Fecha);
         ActualizadoEn = e.Fecha;
@@ -445,6 +501,8 @@ public sealed class Expediente
     public void Apply(ExpedienteObservado e)
     {
         Estado = EstadoExpediente.Observado;
+        RequisitosObservados = [.. e.RequisitosObservados ?? []];
+        RecalcularRequisitos(e.Fecha);
         ObservadoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
     }
@@ -463,15 +521,28 @@ public sealed class Expediente
             area.PendienteDesde = e.Fecha;
         }
 
+        foreach (var requisito in (e.RequisitosReabiertos ?? []).Select(BuscarRequisito).OfType<RequisitoDeExpediente>())
+        {
+            foreach (var veredicto in requisito.Veredictos.Where(v => v.Vigente))
+            {
+                veredicto.Vigente = false;
+                veredicto.Superado = true;
+            }
+        }
+
         Estado = EstadoExpediente.EnRevision;
+        RequisitosObservados = [];
         Reenvios++;
         UltimaRespuesta = e.Respuesta;
+        RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
     public void Apply(RevisionReanudada e)
     {
         Estado = EstadoExpediente.EnRevision;
+        RequisitosObservados = [];
+        RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
@@ -509,7 +580,7 @@ public sealed class Expediente
     public void Apply(VeredictoAnuladoPorAdministrador e)
     {
         var area = BuscarArea(e.AreaId)!;
-        var veredicto = area.Veredictos.First(v => v.Id == e.VeredictoId);
+        var veredicto = area.Veredictos.Concat(Requisitos.SelectMany(r => r.Veredictos)).First(v => v.Id == e.VeredictoId);
         veredicto.Vigente = false;
         veredicto.Anulado = true;
         veredicto.AnuladoPor = e.AdministradorId;
@@ -523,6 +594,12 @@ public sealed class Expediente
     /// <summary>El estado del área sale de sus veredictos vigentes: una observación manda; luego aprobación completa.</summary>
     private void Recalcular(AreaDeExpediente area, DateTimeOffset fecha)
     {
+        if (ConRequisitos)
+        {
+            RecalcularRequisitos(fecha);
+            return;
+        }
+
         var previo = area.Estado;
         var vigentes = area.Veredictos.Where(v => v.Vigente).ToList();
         var etapaActiva = Etapas.First(e => e.Areas.Contains(area)).Estado != EstadoEtapa.Esperando;
@@ -535,6 +612,14 @@ public sealed class Expediente
 
         if (area.Estado == EstadoAreaExpediente.Pendiente && previo != EstadoAreaExpediente.Pendiente)
             area.PendienteDesde = fecha;
+    }
+
+    /// <summary>Con requisitos el área no decide sobre el expediente completo: 409 <c>veredicto-por-requisito</c>.</summary>
+    public void AsegurarSinRequisitos()
+    {
+        if (ConRequisitos)
+            throw ReglaDeNegocioException.Conflicto("veredicto-por-requisito",
+                "Este expediente se revisa por documento: emite el veredicto en /requisitos/{requisitoId}/areas/{areaId}/veredicto.");
     }
 
     private void AsegurarEnRevision()
@@ -576,17 +661,31 @@ public sealed class Expediente
         return simulacion.Eventos;
     }
 
-    /// <summary>Cascada tras cada cambio: devolver al tercero, aprobar la etapa, activar la siguiente o aprobar el expediente.</summary>
+    /// <summary>
+    /// Cascada tras cada cambio: pasar a revisión al terminar la carga, aprobaciones automáticas y derivadas de los
+    /// requisitos, devolver al tercero, aprobar la etapa, activar la siguiente o aprobar el expediente.
+    /// </summary>
     private static void Evaluar(Simulacion simulacion, DateTimeOffset ahora)
     {
+        if (simulacion.Estado is { Estado: EstadoExpediente.Abierto } abierto && abierto.ListoParaRevision)
+        {
+            simulacion.Emitir(new ExpedienteEnviadoARevision(ahora));
+            Activar(simulacion, simulacion.Estado!.Etapas.OrderBy(e => e.Orden).First(), ahora);
+        }
+
         while (simulacion.Estado is { Estado: EstadoExpediente.EnRevision, EtapaActiva: { } etapa } expediente)
         {
+            if (expediente.ConRequisitos && AprobarAutomaticasYDerivadas(simulacion, etapa, ahora))
+                continue;
+
             var observadas = etapa.Areas.Where(a => a.Estado == EstadoAreaExpediente.Observada).Select(a => a.AreaId).ToList();
             if (observadas.Count > 0)
             {
-                var todasSePronunciaron = etapa.Areas.All(a => a.Estado is EstadoAreaExpediente.Aprobada or EstadoAreaExpediente.Observada);
+                var todasSePronunciaron = etapa.Areas.All(a =>
+                    (a.Estado is EstadoAreaExpediente.Aprobada or EstadoAreaExpediente.Observada) && a.RequisitosPorDecidir == 0);
                 if (expediente.PoliticaDevolucion == PoliticaDevolucion.Inmediata || todasSePronunciaron)
-                    simulacion.Emitir(new ExpedienteObservado(observadas, ahora));
+                    simulacion.Emitir(new ExpedienteObservado(observadas, ahora,
+                        expediente.ConRequisitos ? [.. expediente.RequisitosConObservacion().Select(r => r.Id)] : null));
                 return;
             }
 
@@ -605,10 +704,13 @@ public sealed class Expediente
         }
     }
 
-    /// <summary>Activa la etapa (todas sus áreas a la vez) y emite la aprobación de sus áreas automáticas.</summary>
+    /// <summary>
+    /// Activa la etapa (todas sus áreas a la vez). Sin requisitos, sus áreas automáticas aprueban aquí mismo; con
+    /// requisitos lo hacen requisito por requisito en la cascada (<see cref="AprobarAutomaticasYDerivadas"/>).
+    /// </summary>
     private static void Activar(Simulacion simulacion, EtapaDeExpediente etapa, DateTimeOffset ahora)
     {
-        var automaticas = etapa.Areas.Where(a => a.Automatica).Select(a => a.AreaId).ToList();
+        List<Guid> automaticas = simulacion.Estado!.ConRequisitos ? [] : [.. etapa.Areas.Where(a => a.Automatica).Select(a => a.AreaId)];
         simulacion.Emitir(new EtapaActivada(etapa.Orden, [.. etapa.Areas.Select(a => a.AreaId)], ahora));
         foreach (var areaId in automaticas)
             simulacion.Emitir(new VeredictoDeAreaEmitido(Guid.CreateVersion7(), areaId, Veredicto.Aprobado, OrigenVeredicto.Sistema, null, [],
@@ -620,6 +722,11 @@ public sealed class Expediente
         switch (evento)
         {
             case FlujoSeleccionado e: Apply(e); break;
+            case RequisitosCalculados e: Apply(e); break;
+            case VersionAdjuntadaARequisito e: Apply(e); break;
+            case VeredictosInvalidadosPorNuevaVersion e: Apply(e); break;
+            case VeredictoDeRequisitoEmitido e: Apply(e); break;
+            case RequisitoEximido e: Apply(e); break;
             case ExpedienteEnviadoARevision e: Apply(e); break;
             case EtapaActivada e: Apply(e); break;
             case VeredictoDeAreaEmitido e: Apply(e); break;
