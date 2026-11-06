@@ -19,6 +19,7 @@ export const esCO = {
     vencida: 'Tu sesión venció',
     vencidaAyuda: 'Pedimos una sesión nueva a tu sistema. Si no se renueva, vuelve a abrir Validasoft desde allí.',
     rechazada: 'La sesión no es válida',
+    cerrada: 'Cerraste la sesión en tu sistema. Vuelve a abrir Validasoft desde allí.',
     soloEmbebida: 'Esta pantalla se abre desde el sistema integrado (SRM, Marco, Portal…).',
     dev: {
       titulo: 'Sesión de desarrollo',

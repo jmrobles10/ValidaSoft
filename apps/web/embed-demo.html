@@ -29,12 +29,15 @@
       }
       header strong { font-size: 16px; }
       header span { color: #b0bec5; font-size: 13px; }
-      .disposicion { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px; align-items: start; }
+      .disposicion { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
       @media (max-width: 900px) { .disposicion { grid-template-columns: 1fr; } }
       aside, .marco { background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; }
-      aside { padding: 16px; display: grid; gap: 12px; position: sticky; top: 16px; }
+      aside { padding: 16px; display: grid; gap: 12px; position: sticky; top: 16px; min-width: 0; }
+      aside > * { min-width: 0; }
+      code { overflow-wrap: anywhere; }
       aside h2 { font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; color: var(--suave); }
       label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
+      select { width: 100%; min-width: 0; text-overflow: ellipsis; }
       select, button { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--borde); background: #fff; color: var(--texto); }
       button { cursor: pointer; }
       button.primario { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
@@ -43,7 +46,7 @@
       .nota { font-size: 12px; color: var(--suave); background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px; line-height: 1.45; }
       .error { font-size: 13px; color: #b71c1c; background: #ffebee; border: 1px solid #ffcdd2; padding: 8px 10px; border-radius: 4px; }
       #bitacora { list-style: none; margin: 0; padding: 0; font: 12px/1.4 'Cascadia Mono', ui-monospace, monospace; max-height: 260px; overflow: auto; border-top: 1px solid var(--borde); padding-top: 8px; }
-      #bitacora li { padding: 2px 0; color: var(--suave); }
+      #bitacora li { padding: 2px 0; color: var(--suave); overflow-wrap: anywhere; }
       #bitacora li.entrante::before { content: '← '; color: var(--acento); }
       #bitacora li.saliente::before { content: '→ '; color: #6a1b9a; }
       .marco { overflow: hidden; min-height: 640px; }

@@ -41,7 +41,7 @@ La semilla crea un tenant nuevo en cada ejecución y escribe las credenciales en
 1. El sistema integrado abre `https://…/index.html#/` en un iframe.
 2. Validasoft envía `{ tipo: 'validasoft:ready', version: 1 }` y `{ tipo: 'validasoft:sesion-requerida', motivo: 'inicial' }`.
 3. El **backend** del sistema canjea API key + aserción `X-Usuario-Delegado` en `POST /api/v1/sesiones-usuario` y el contenedor responde `{ tipo: 'validasoft:sesion', token, empresaId? }`.
-4. Dos minutos antes de vencer (30 min) Validasoft pide `sesion-requerida` con `por-vencer`; si vence o la API responde 401, con `vencida`.
+4. Mientras no tenga sesión, Validasoft repite `sesion-requerida` cada 5 s. Dos minutos antes de vencer (30 min) la pide con `por-vencer`; si vence o la API responde 401, con `vencida`. Tras `validasoft:cerrar-sesion` no pide otra.
 5. Otros mensajes: `validasoft:resize { height }` (salida), `validasoft:tema { mode }` y `validasoft:cerrar-sesion` (entrada).
 
 Solo se aceptan mensajes del propio origen y de `VITE_ORIGENES_CONTENEDOR` (lista separada por comas), y solo se responde al contenedor si su origen está en esa lista. El token vive en memoria; nunca en `localStorage`.

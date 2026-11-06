@@ -49,22 +49,41 @@ function enviar(mensaje: Record<string, unknown>, resumen: string) {
   registrar('saliente', resumen);
 }
 
-async function entregarSesion() {
-  if (!semilla) return;
+let canjeEnCurso: Promise<void> | null = null;
+
+/** Canjea la sesión de la persona elegida y la entrega al iframe. Si ya hay un canje en curso, no inicia otro. */
+function entregarSesion(): Promise<void> {
+  canjeEnCurso ??= canjear().finally(() => {
+    canjeEnCurso = null;
+  });
+  return canjeEnCurso;
+}
+
+async function canjear() {
+  if (!semilla) {
+    mostrarError('Aún no se cargan las credenciales de la semilla.');
+    return;
+  }
   const elegida = semilla.usuarios.find((u) => u.sub === persona.value);
   if (!elegida) return;
+  registrar('saliente', `POST /api/v1/sesiones-usuario (${elegida.nombre})…`);
   try {
     mostrarError(null);
-    const sesion = await abrirSesionDelegada(
-      { apiKey: semilla.apiKey, sistema: semilla.sistema.codigo, clavePrivadaPem: semilla.clavePrivadaPem },
-      elegida,
+    const limite = new Promise<never>((_, rechazar) =>
+      window.setTimeout(() => rechazar(new Error('La API no respondió en 10 s. ¿Está corriendo en el puerto 5080?')), 10_000),
     );
+    const sesion = await Promise.race([
+      abrirSesionDelegada({ apiKey: semilla.apiKey, sistema: semilla.sistema.codigo, clavePrivadaPem: semilla.clavePrivadaPem }, elegida),
+      limite,
+    ]);
     enviar(
       { tipo: 'validasoft:sesion', token: sesion.token, empresaId: empresa.value || null },
       `validasoft:sesion (${elegida.nombre}, vence ${new Date(sesion.expira).toLocaleTimeString('es-CO')})`,
     );
   } catch (error) {
-    mostrarError(error instanceof Error ? error.message : 'No se pudo abrir la sesión.');
+    const mensaje = error instanceof Error ? error.message : 'No se pudo abrir la sesión.';
+    registrar('saliente', `error: ${mensaje}`);
+    mostrarError(mensaje);
   }
 }
 

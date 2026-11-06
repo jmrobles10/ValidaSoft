@@ -27,6 +27,16 @@ export function PantallaSesion({ estado, embebida }: { estado: EstadoSesion; emb
     );
   }
 
+  if (estado === 'cerrada') {
+    return (
+      <Stack sx={{ p: 4, maxWidth: 560, mx: 'auto' }} role="status">
+        <Typography variant="h3" component="h1">
+          {t('sesion.cerrada')}
+        </Typography>
+      </Stack>
+    );
+  }
+
   if (estado === 'vencida' || estado === 'rechazada') {
     return (
       <Stack spacing={1} sx={{ p: 4, maxWidth: 560, mx: 'auto' }} role="alert">

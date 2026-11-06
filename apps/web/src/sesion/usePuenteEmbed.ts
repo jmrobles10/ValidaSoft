@@ -1,5 +1,5 @@
 import { msRestantes } from '@validasoft/api-client';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { usePreferencias } from '../shared/preferencias';
 import {
   estaEmbebida,
@@ -9,11 +9,22 @@ import {
   origenPermitido,
   VERSION_PROTOCOLO,
   type MensajeSaliente,
+  type MotivoSesionRequerida,
 } from './puenteEmbed';
-import { useSesion } from './sesionStore';
+import { useSesion, type EstadoSesion } from './sesionStore';
 
 /** Se pide la renovación este tiempo antes de que venza el token de 30 minutos. */
 export const AVISO_RENOVACION_MS = 2 * 60 * 1000;
+
+/** Cada cuánto se vuelve a pedir la sesión mientras no llega. */
+export const REINTENTO_SESION_MS = 5_000;
+
+/** `cerrada` no pide nada: el contenedor cerró la sesión a propósito. */
+const MOTIVO_POR_ESTADO: Partial<Record<EstadoSesion, MotivoSesionRequerida>> = {
+  'sin-sesion': 'inicial',
+  vencida: 'vencida',
+  rechazada: 'rechazada',
+};
 
 export interface PuenteEmbed {
   embebida: boolean;
@@ -34,7 +45,6 @@ export function usePuenteEmbed(): PuenteEmbed {
   const origenContenedor = useMemo(() => (embebida ? origenDelContenedor(window, permitidos) : null), [embebida, permitidos]);
   const estado = useSesion((s) => s.estado);
   const sesion = useSesion((s) => s.sesion);
-  const primerEstado = useRef(true);
 
   const enviar = useMemo(
     () => (mensaje: MensajeSaliente) => {
@@ -59,7 +69,7 @@ export function usePuenteEmbed(): PuenteEmbed {
           usePreferencias.getState().fijarModo(mensaje.mode, true);
           break;
         case 'validasoft:cerrar-sesion':
-          useSesion.getState().marcar('sin-sesion');
+          useSesion.getState().marcar('cerrada');
           break;
       }
     };
@@ -69,13 +79,14 @@ export function usePuenteEmbed(): PuenteEmbed {
     return () => window.removeEventListener('message', alRecibir);
   }, [embebida, permitidos, enviar]);
 
-  // Pide sesión al arrancar sin ella y cada vez que vence o la API la rechaza.
+  // Pide sesión al arrancar sin ella y cada vez que vence o la API la rechaza. Mientras no llegue, la vuelve a pedir
+  // cada pocos segundos: si el contenedor se demoró o el mensaje se perdió, la pantalla no queda esperando para siempre.
   useEffect(() => {
-    const inicial = primerEstado.current;
-    primerEstado.current = false;
-    if (estado === 'sin-sesion' && inicial) enviar({ tipo: 'validasoft:sesion-requerida', motivo: 'inicial' });
-    if (estado === 'vencida') enviar({ tipo: 'validasoft:sesion-requerida', motivo: 'vencida' });
-    if (estado === 'rechazada') enviar({ tipo: 'validasoft:sesion-requerida', motivo: 'rechazada' });
+    const motivo = MOTIVO_POR_ESTADO[estado];
+    if (!motivo) return undefined;
+    enviar({ tipo: 'validasoft:sesion-requerida', motivo });
+    const reintento = window.setInterval(() => enviar({ tipo: 'validasoft:sesion-requerida', motivo }), REINTENTO_SESION_MS);
+    return () => window.clearInterval(reintento);
   }, [estado, enviar]);
 
   // Renovación anticipada y vencimiento local del token.

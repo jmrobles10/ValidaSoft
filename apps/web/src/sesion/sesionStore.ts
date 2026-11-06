@@ -1,7 +1,8 @@
 import { leerSesion, type SesionValidasoft } from '@validasoft/api-client';
 import { create } from 'zustand';
 
-export type EstadoSesion = 'sin-sesion' | 'activa' | 'vencida' | 'rechazada';
+/** `cerrada`: el contenedor envió `validasoft:cerrar-sesion`; no se pide otra hasta que él la entregue. */
+export type EstadoSesion = 'sin-sesion' | 'activa' | 'vencida' | 'rechazada' | 'cerrada';
 
 interface SesionState {
   /** El token vive solo en memoria (docs/06 §1.2): nunca en localStorage. */
