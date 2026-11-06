@@ -193,6 +193,12 @@ Correcciones de Arquitectura derivadas de la misma auditoría (sin decisión de 
 | T-17 (#41) | WebP | Se acepta WebP además de PDF/JPG/PNG/HEIC (precisa P-16-2). | Arquitectura |
 | T-18 (#27, #52) | R no actualizadas tras P-11-2 | P-13-4: corte y sincronización inversa **por empresa**. P-11-3: logo y colores **por empresa**, dominio por tenant en H8. | Arquitectura |
 
+## 5-sexies. Confirmaciones de Producto (2026-10-29)
+
+| Id | Pregunta | Decisión | Origen |
+|---|---|---|---|
+| C-1 | ¿Debe existir el concepto de invitación en la plataforma? | **Sí, tal cual está**: no es una entidad aparte sino el paso de solicitud + aceptación del vínculo (estado `Invitado`, eventos `InvitacionEnviada`/`InvitacionAceptada`, enlace de acceso, lotes). Se mantiene el nombre "invitación" en estados, eventos, endpoints y UI; se descartó renombrar a "Solicitud/Aceptación". Su razón de ser es el consentimiento por empresa (B-1/ADR-0009), el seguimiento de terceros sin respuesta y la activación del autorregistro invisible. | E |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |
