@@ -121,7 +121,7 @@ public sealed class MiddlewareDeIdempotencia(RequestDelegate siguiente)
     private static readonly string[] RutasQueCrean =
     [
         "/api/v1/plataforma/tenants", "/api/v1/empresas", "/api/v1/api-keys", "/api/v1/sistemas", "/api/v1/usuarios", "/api/v1/tipos-vinculo",
-        "/api/v1/areas", "/api/v1/terceros", "/api/v1/vinculos"
+        "/api/v1/areas", "/api/v1/terceros", "/api/v1/vinculos", "/api/v1/motivos", "/api/v1/flujos"
     ];
 
     public async Task InvokeAsync(HttpContext http, IDocumentStore store, TimeProvider reloj)

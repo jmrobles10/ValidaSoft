@@ -1,14 +1,14 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Marten;
 using JasperFx.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
@@ -128,8 +128,8 @@ public static class VinculosEndpoints
         if (referencia is not null)
             await AsegurarReferenciaLibreAsync(empresa, referencia, ct);
 
-        var creado = Vinculo.Crear(empresa.EmpresaId, tercero.Id, tipo.Id, flujoId: null, atributos, OrigenVinculo.Api, referencia,
-            dto.CorreoInvitacion, ahora);
+        var creado = Vinculo.Crear(empresa.EmpresaId, tercero.Id, tipo.Id, await FlujoExplicitoAsync(empresa, dto.FlujoId, tipo, ct), atributos,
+            OrigenVinculo.Api, referencia, dto.CorreoInvitacion, ahora);
 
         var eventos = new List<object> { creado };
         if (dto.EnviarInvitacion)
@@ -255,13 +255,19 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, stream.Aggregate!.Desbloquear(dto.Justificacion, reloj.GetUtcNow()), ct);
     }
 
+    /// <summary>Si tenía un expediente abierto, se anula en la misma transacción.</summary>
     [WolverinePost("/api/v1/vinculos/{id}/desvincular")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<VinculoDto> Desvincular(Guid id, MotivoDto dto, SesionDeEmpresa empresa, HttpContext http,
         TimeProvider reloj, CancellationToken ct)
     {
+        var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        return await GuardarAsync(empresa, stream, stream.Aggregate!.Desvincular(dto.Motivo, reloj.GetUtcNow()), ct);
+        var abierto = stream.Aggregate!.ExpedienteAbiertoId;
+        var evento = stream.Aggregate.Desvincular(dto.Motivo, ahora);
+        if (abierto is { } expedienteId)
+            await ProcesoDeValidacion.AnularPorTerminacionDelVinculoAsync(empresa.Sesion, expedienteId, evento.Motivo, ahora, ct);
+        return await GuardarAsync(empresa, stream, evento, ct);
     }
 
     [WolverinePost("/api/v1/vinculos/{id}/reintegrar")]
@@ -273,20 +279,20 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, stream.Aggregate!.Reintegrar(dto.Justificacion, reloj.GetUtcNow()), ct);
     }
 
+    /// <summary>Terminal; si tenía un expediente abierto, se anula en la misma transacción.</summary>
     [WolverinePost("/api/v1/vinculos/{id}/anular")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<VinculoDto> Anular(Guid id, MotivoDto dto, SesionDeEmpresa empresa, HttpContext http,
         TimeProvider reloj, CancellationToken ct)
     {
+        var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        return await GuardarAsync(empresa, stream, stream.Aggregate!.Anular(dto.Motivo, reloj.GetUtcNow()), ct);
+        var abierto = stream.Aggregate!.ExpedienteAbiertoId;
+        var evento = stream.Aggregate.Anular(dto.Motivo, ahora);
+        if (abierto is { } expedienteId)
+            await ProcesoDeValidacion.AnularPorTerminacionDelVinculoAsync(empresa.Sesion, expedienteId, evento.Motivo, ahora, ct);
+        return await GuardarAsync(empresa, stream, evento, ct);
     }
-
-    /// <summary>Mismas convenciones JSON que el resto de la API: camelCase y enums como texto.</summary>
-    private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web)
-    {
-        Converters = { new JsonStringEnumConverter() }
-    };
 
     /// <summary>Línea de tiempo del vínculo, directamente del stream de eventos.</summary>
     [WolverineGet("/api/v1/vinculos/{id}/historial")]
@@ -294,15 +300,7 @@ public static class VinculosEndpoints
     public static async Task<IReadOnlyList<EventoHistorialDto>> Historial(Guid id, SesionDeEmpresa empresa, CancellationToken ct)
     {
         await empresa.CargarVinculoAsync(id, ct);
-        var eventos = await empresa.Sesion.Events.FetchStreamAsync(id, token: ct);
-        return [.. eventos.Select(e => new EventoHistorialDto(
-            e.Version,
-            e.EventTypeName,
-            e.Timestamp,
-            Cabecera(e, "actorTipo"),
-            Cabecera(e, "actorId"),
-            Cabecera(e, "sistema"),
-            JsonSerializer.SerializeToElement(e.Data, e.EventType, OpcionesJson)))];
+        return Peticiones.Historial(await empresa.Sesion.Events.FetchStreamAsync(id, token: ct));
     }
 
     /// <summary>
@@ -323,6 +321,17 @@ public static class VinculosEndpoints
                 $"La referencia externa debe ser del sistema de la credencial ({contexto.Sistema}).");
 
         return new ReferenciaExterna(contexto.Sistema, (dto.Id ?? string.Empty).Trim());
+    }
+
+    /// <summary>Flujo explícito del vínculo (opcional): de la empresa y del mismo tipo de vínculo (FL-4).</summary>
+    private static async Task<Guid?> FlujoExplicitoAsync(SesionDeEmpresa empresa, Guid? flujoId, TipoVinculo tipo, CancellationToken ct)
+    {
+        if (flujoId is not { } id)
+            return null;
+        var flujo = await empresa.Sesion.LoadAsync<Flujo>(id, ct);
+        return flujo is not null && flujo.EmpresaId == empresa.EmpresaId && flujo.TipoVinculoId == tipo.Id
+            ? flujo.Id
+            : throw ReglaDeNegocioException.Validacion("flujo-invalido", "El flujo no existe en la empresa o es de otro tipo de vínculo.");
     }
 
     /// <summary>Una referencia identifica un solo vínculo en la empresa (la usa <c>por-referencia</c>).</summary>
@@ -367,18 +376,7 @@ public static class VinculosEndpoints
     }
 
     /// <summary><c>If-Match: "7"</c> o <c>If-Match: 7</c> ⇒ concurrencia optimista sobre la versión del stream.</summary>
-    private static long? VersionEsperada(HttpContext http)
-    {
-        var valor = http.Request.Headers.IfMatch.ToString().Trim('"', ' ', 'W', '/');
-        if (string.IsNullOrEmpty(valor))
-            return null;
-        return long.TryParse(valor, out var version)
-            ? version
-            : throw ReglaDeNegocioException.Validacion("if-match-invalido", "If-Match debe ser la versión numérica del vínculo.");
-    }
-
-    private static string? Cabecera(IEvent evento, string nombre) =>
-        evento.Headers is not null && evento.Headers.TryGetValue(nombre, out var valor) ? valor?.ToString() : null;
+    private static long? VersionEsperada(HttpContext http) => Peticiones.VersionEsperada(http);
 
     private static class Cursor
     {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -108,17 +109,25 @@ public static class InvitacionesPublicasEndpoints
     /// <summary>
     /// Registra <c>ConsentimientosRegistrados</c> y luego <c>InvitacionAceptada</c> en el stream del vínculo (actor =
     /// tercero). Sin documentos todavía, la respuesta no trae <c>compartidos</c> (IN-7). Idempotente por su propia regla:
-    /// repetir ⇒ 409 <c>invitacion-ya-aceptada</c>.
+    /// repetir ⇒ 409 <c>invitacion-ya-aceptada</c>. En la misma transacción abre el expediente inicial con el flujo del
+    /// vínculo o el por defecto (FL-5); si no hay ninguno publicado, la aceptación se registra igual y el vínculo queda
+    /// con apertura pendiente (FL-6): nunca falla por configuración de la empresa.
     /// </summary>
     [WolverinePost("/public/v1/invitaciones/{vinculoId}/aceptar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<InvitacionAceptadaDto> Aceptar(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http, ISesiones sesiones,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var enSesion = tercero.VinculoRequerido(vinculoId);
-        var ahora = reloj.GetUtcNow();
+        // Si pierde una carrera (folio del expediente o el propio vínculo), se repite completa con una sesión nueva.
+        return await Peticiones.ConReintentosAsync(() => AceptarUnaVezAsync(vinculoId, dto, http, sesiones, contexto, tercero, enSesion, reloj, ct));
+    }
 
+    private static async Task<InvitacionAceptadaDto> AceptarUnaVezAsync(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http,
+        ISesiones sesiones, IContextoSolicitud contexto, SesionDeTercero tercero, VinculoEnSesion enSesion, TimeProvider reloj, CancellationToken ct)
+    {
+        var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.ParaTenant(enSesion.TenantId);
         var stream = await sesion.Events.FetchForWriting<Vinculo>(vinculoId, ct);
         var vinculo = stream.Aggregate;
@@ -154,6 +163,9 @@ public static class InvitacionesPublicasEndpoints
             textos.Tercero.AceptarAvisoPlataforma(textos.AvisoRequerido, ahora);
             sesion.Store(textos.Tercero);
         }
+
+        if (await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct) is { } flujo)
+            await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, ahora, ct);
 
         await sesion.SaveChangesAsync(ct);
 

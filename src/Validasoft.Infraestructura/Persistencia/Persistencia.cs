@@ -8,10 +8,13 @@ using Marten.Schema.Indexing.Unique;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
+using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
@@ -94,8 +97,30 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId)
                     .Index(x => x.CreadoEn);
 
-                // Proyección inline: el documento Vinculo es la lectura de tras escritura (VinculoResumen, docs/03 §14).
+                // Motivos propios del tenant (los de la plataforma viven en código) y flujos aprobatorios versionados.
+                opts.Schema.For<Motivo>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_motivo_codigo", TenancyScope.PerTenant, x => x.Codigo);
+                opts.Schema.For<Flujo>().MultiTenanted().UseOptimisticConcurrency(true)
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_flujo_codigo", TenancyScope.PerTenant, x => x.EmpresaId, x => x.Codigo)
+                    .Index(x => x.EmpresaId);
+                opts.Schema.For<FlujoPorDefecto>().MultiTenanted().Index(x => x.EmpresaId);
+
+                // Folios: contador por (empresa, tipo, año) con concurrencia optimista; el folio además es único por tenant.
+                opts.Schema.For<ContadorDeFolio>().MultiTenanted().UseOptimisticConcurrency(true);
+                opts.Schema.For<Expediente>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_expediente_folio", TenancyScope.PerTenant, x => x.Folio)
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.VinculoId)
+                    .Index(x => x.AbiertoEn);
+                opts.Schema.For<FilaBandeja>().MultiTenanted()
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.ExpedienteId)
+                    .Index(x => x.AreaId);
+
+                // Proyecciones inline: Vinculo y Expediente son la lectura tras la escritura (VinculoResumen y
+                // ExpedienteDetalle, docs/03 §14).
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             .IntegrateWithWolverine();

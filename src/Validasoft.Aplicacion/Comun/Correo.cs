@@ -73,7 +73,41 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
             $"<p>El enlace es personal, de un solo uso y vence el {WebUtility.HtmlEncode(vence)}.</p>" +
             "<p>Si no esperabas este correo, ignóralo.</p>");
 
+    /// <summary>
+    /// Observaciones del expediente para el tercero: motivos (texto al tercero) y la observación escrita. Nunca nombra a
+    /// los revisores ni a las áreas internas.
+    /// </summary>
+    public MensajeDeCorreo RedactarObservacion(CorreoDeObservacionPendiente correo)
+    {
+        var asunto = $"{correo.Empresa} tiene observaciones sobre tu validación {correo.Folio}";
+        var lineas = correo.Observaciones.Select(o =>
+            string.Join("; ", o.Motivos) + (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion}")).ToList();
+        var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y necesita que corrijas lo siguiente:\n\n" +
+                    string.Join("\n", lineas.Select(l => "- " + l)) +
+                    $"\n\nIngresa a Validasoft ({UrlPublica}) con el enlace de tu invitación para responder y reenviar.";
+        var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> " +
+                   "y necesita que corrijas lo siguiente:</p><ul>" +
+                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) +
+                   $"</ul><p>Ingresa a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con el enlace de tu invitación para responder.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
     private static string Minuscula(string? texto) => (texto ?? string.Empty).ToLower(Cultura);
+}
+
+/// <summary>Una observación vigente tal como la lee el tercero.</summary>
+public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string? Observacion);
+
+/// <summary>
+/// Correo al tercero cuando su expediente queda <c>Observado</c>; va por el outbox (cola <c>correo</c>) y sale solo si la
+/// transacción del veredicto se confirma. No lleva secretos.
+/// </summary>
+public sealed record CorreoDeObservacionPendiente(string Para, string Empresa, string Folio, IReadOnlyList<ObservacionParaCorreo> Observaciones);
+
+public static class CorreoDeObservacionPendienteHandler
+{
+    public static Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarObservacion(correo), ct);
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>

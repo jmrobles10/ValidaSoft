@@ -126,7 +126,8 @@ public sealed record CrearVinculoDto(
     string CorreoInvitacion,
     ReferenciaExternaDto? ReferenciaExterna,
     bool EnviarInvitacion = true,
-    int VigenciaInvitacionHoras = 72);
+    int VigenciaInvitacionHoras = 72,
+    Guid? FlujoId = null);
 
 public sealed record EnlaceInvitacionDto(string CorreoDestino, DateTimeOffset Expira, int Envios);
 
@@ -149,7 +150,9 @@ public sealed record VinculoDto(
     string Origen,
     DateTimeOffset CreadoEn,
     DateTimeOffset ActualizadoEn,
-    long Version);
+    long Version,
+    Guid? ExpedienteAbiertoId = null,
+    bool AperturaDeExpedientePendiente = false);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -197,7 +200,7 @@ public sealed record VerificarOtpDto(string Codigo);
 /// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
-    DateTimeOffset? InvitacionAceptadaEn);
+    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null);
 
 public sealed record TextoLegalPublicoDto(string Tipo, int TextoVersion, string HashTexto, string Contenido, DateTimeOffset PublicadoEn);
 

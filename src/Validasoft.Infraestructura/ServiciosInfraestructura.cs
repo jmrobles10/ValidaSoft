@@ -99,6 +99,7 @@ public static class ServiciosInfraestructura
         opciones.Discovery.IncludeAssembly(typeof(Permisos).Assembly);
         opciones.Policies.AutoApplyTransactions();
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();

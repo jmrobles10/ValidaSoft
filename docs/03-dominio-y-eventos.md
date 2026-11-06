@@ -131,6 +131,7 @@ enum TipoExpediente       { Inicial, Renovacion, Actualizacion }
 enum Veredicto            { Aprobado, Observado }                                                          // Rechazado solo existe para el expediente (B-7)
 enum OrigenVeredicto      { Humano, Sistema, Administrador }
 enum EstadoEtapa          { Esperando, Activa, Aprobada }
+enum EstadoAreaExpediente { Esperando, Pendiente, Aprobada, Observada }                         // derivado de los veredictos vigentes del área (FL-3)
 enum EstadoVerificacion   { Pendiente, CoincidenciaPorAnalizar, Satisfecha, Fallida, Expirada }
 enum ClaseDocumento       { Archivo, Formulario }
 enum AmbitoDocumento      { Global, PorVinculo }
@@ -371,6 +372,8 @@ Para `Actualizacion` (revalidación) el expediente nace directamente en `EnRevis
 | `RegistrarIncumplimientoSla(AreaId)` / `EscalarSla(AreaId, Nivel)` | `SlaIncumplido` / `SlaEscalado(Nivel: ResponsableArea \| Administrador)` | Scheduled message al activar la etapa; nunca auto-aprueba (P-4-5). |
 | `MarcarRequisitoDesactualizado(RequisitoId, VersionNuevaId)` / `MarcarRequisitoVencido(RequisitoId)` | `RequisitoDesactualizado` / `RequisitoVencido` | Lo emite la saga sobre expedientes `Inicial`/`Renovacion` abiertos cuando cambia la versión actual o vence la aceptada. |
 | `ExportarExpediente` | `ExpedienteExportado(HashZip)` | Adición 5: ZIP con índice firmado. |
+
+**Fase sin requisitos (H1-flujos, FL-1).** Mientras no existan requisitos documentales, el expediente nace y pasa directo a `EnRevision` (`ExpedienteAbierto`, `FlujoSeleccionado` con la versión copiada, `ExpedienteEnviadoARevision`, `EtapaActivada`) y cada área emite `VeredictoDeAreaEmitido(VeredictoId, AreaId, Veredicto, Origen, RevisorId?, Motivos[], Observacion?, Justificacion?, RequisitoId? = null, Fecha)` sobre el expediente completo; las áreas automáticas lo emiten con origen `Sistema` al activarse su etapa. Del lado del vínculo, la apertura se registra como `ExpedienteVinculado(ExpedienteId, Tipo, Folio)` (no `ExpedienteAbierto`, que es el evento del expediente) y el cierre como `ExpedienteCerrado(ExpedienteId, Resultado: Aprobado | Rechazado | Anulado)` + `VinculoActivado(ExpedienteId)` si se aprobó; ambos streams se escriben en la misma transacción (FL-5). Cuando lleguen los requisitos, el veredicto de área se derivará de los de su alcance sin reinterpretar los eventos guardados (`RequisitoId` nulo = sobre el expediente).
 
 **Alcance por tipo.** `Inicial`: toda la matriz. `Renovacion`: requisitos `Vencido`/`PorVencer` + `SiempreEnRenovacion`. `Actualizacion`: solo los tipos cuya versión actual cambió; si cambian más mientras está abierto, `AgregarRequisitoAExpediente` (nunca un segundo expediente; tabla de casos en §5.2).
 
