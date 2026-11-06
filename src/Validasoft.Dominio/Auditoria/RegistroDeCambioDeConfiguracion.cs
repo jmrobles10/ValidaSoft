@@ -37,6 +37,9 @@ public sealed class RegistroDeCambioDeConfiguracion
 
     public string ActorId { get; set; } = string.Empty;
 
+    /// <summary>Sistema integrado desde el que actuó (ADR-0011), si aplica.</summary>
+    public string? Sistema { get; set; }
+
     public string? Justificacion { get; set; }
 
     public string? CorrelationId { get; set; }

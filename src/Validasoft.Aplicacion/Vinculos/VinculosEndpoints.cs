@@ -80,6 +80,12 @@ public static class TercerosEndpoints
 /// </summary>
 public static class VinculosEndpoints
 {
+    /// <summary>
+    /// Crea el vínculo (201). Si la empresa ya tiene ese <c>(tercero, tipo)</c> y lo pide <b>otro</b> sistema integrado, le
+    /// agrega su referencia y responde 200 con el vínculo existente: una sola validación compartida (I-0). La misma
+    /// referencia es idempotente (200); el mismo sistema con otro id es <c>referencia-en-conflicto</c>; sin referencia,
+    /// <c>vinculo-duplicado</c>.
+    /// </summary>
     [WolverinePost("/api/v1/vinculos")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<IResult> Crear(CrearVinculoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
@@ -94,14 +100,30 @@ public static class VinculosEndpoints
             throw ReglaDeNegocioException.Validacion("tipo-vinculo-invalido", $"El tipo de vínculo '{dto.TipoVinculo}' no existe o está inactivo.");
 
         var atributos = ValidadorDeAtributos.Validar(tipo, dto.Atributos);
+        var referencia = ReferenciaDeLaCredencial(dto.ReferenciaExterna, contexto);
         var tercero = await ResolverTerceroAsync(dto, sesion, contexto, ahora, ct);
 
-        var duplicado = await empresa.Vinculos().FirstOrDefaultAsync(v => v.TerceroId == tercero.Id && v.TipoVinculoId == tipo.Id, ct);
-        if (duplicado is not null)
-            throw new ReglaDeNegocioException(TipoFalla.Conflicto, "vinculo-duplicado",
-                $"La empresa ya tiene un vínculo {tipo.Codigo} con este tercero ({duplicado.Id}).");
+        var terceroId = tercero.Id;
+        var tipoId = tipo.Id;
+        var existente = await empresa.Vinculos().FirstOrDefaultAsync(v => v.TerceroId == terceroId && v.TipoVinculoId == tipoId, ct);
+        if (existente is not null)
+        {
+            if (referencia is null)
+                throw new ReglaDeNegocioException(TipoFalla.Conflicto, "vinculo-duplicado",
+                    $"La empresa ya tiene un vínculo {tipo.Codigo} con este tercero ({existente.Id}).");
 
-        var referencia = dto.ReferenciaExterna is null ? null : new ReferenciaExterna(dto.ReferenciaExterna.Sistema, dto.ReferenciaExterna.Id);
+            var agregada = existente.AgregarReferencia(referencia, ahora);
+            if (agregada is null)
+                return Results.Ok(existente.ADto(tipo));
+
+            await AsegurarReferenciaLibreAsync(empresa, referencia, ct);
+            var stream = await empresa.VinculoParaEscribirAsync(existente.Id, null, ct);
+            return Results.Ok(await GuardarAsync(empresa, stream, agregada, ct));
+        }
+
+        if (referencia is not null)
+            await AsegurarReferenciaLibreAsync(empresa, referencia, ct);
+
         var creado = Vinculo.Crear(empresa.EmpresaId, tercero.Id, tipo.Id, flujoId: null, atributos, OrigenVinculo.Api, referencia,
             dto.CorreoInvitacion, ahora);
 
@@ -153,6 +175,20 @@ public static class VinculosEndpoints
         var pagina = await consulta.OrderBy(v => v.CreadoEn).Take(tamano + 1).ToListAsync(ct);
         var siguiente = pagina.Count > tamano ? Cursor.Escribir(pagina[tamano - 1].CreadoEn) : null;
         return new PaginaDto<VinculoDto>([.. pagina.Take(tamano).Select(v => v.ADto(tipos.FirstOrDefault(t => t.Id == v.TipoVinculoId)))], siguiente);
+    }
+
+    /// <summary>Busca el vínculo de la empresa activa por la referencia de un sistema integrado.</summary>
+    [WolverineGet("/api/v1/vinculos/por-referencia")]
+    [Authorize(Policy = Permisos.VinculosLeer)]
+    public static async Task<VinculoDto> PorReferencia(string sistema, string id, SesionDeEmpresa empresa, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(sistema) || string.IsNullOrWhiteSpace(id))
+            throw ReglaDeNegocioException.Validacion("referencia-externa-invalida", "Indica sistema e id de la referencia.");
+
+        var clave = new ReferenciaExterna(sistema.Trim().ToUpperInvariant(), id.Trim()).Clave();
+        var vinculo = await empresa.Vinculos().FirstOrDefaultAsync(v => v.ClavesReferencia.Contains(clave), ct)
+                      ?? throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No hay un vínculo con esa referencia en la empresa.");
+        return vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct));
     }
 
     [WolverineGet("/api/v1/vinculos/{id}")]
@@ -244,7 +280,38 @@ public static class VinculosEndpoints
             e.Timestamp,
             Cabecera(e, "actorTipo"),
             Cabecera(e, "actorId"),
+            Cabecera(e, "sistema"),
             JsonSerializer.SerializeToElement(e.Data, e.EventType)))];
+    }
+
+    /// <summary>
+    /// El sistema de la referencia lo fija la API key (ADR-0011): el cuerpo puede omitirlo, pero si lo trae debe coincidir.
+    /// Una credencial sin sistema integrado no puede registrar referencias.
+    /// </summary>
+    private static ReferenciaExterna? ReferenciaDeLaCredencial(ReferenciaExternaDto? dto, IContextoSolicitud contexto)
+    {
+        if (dto is null)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(contexto.Sistema))
+            throw ReglaDeNegocioException.Validacion("referencia-sin-sistema",
+                "Solo la API key de un sistema integrado puede registrar una referencia externa.");
+
+        if (!string.IsNullOrWhiteSpace(dto.Sistema) && !string.Equals(dto.Sistema.Trim(), contexto.Sistema, StringComparison.OrdinalIgnoreCase))
+            throw ReglaDeNegocioException.Validacion("referencia-sistema-invalido",
+                $"La referencia externa debe ser del sistema de la credencial ({contexto.Sistema}).");
+
+        return new ReferenciaExterna(contexto.Sistema, (dto.Id ?? string.Empty).Trim());
+    }
+
+    /// <summary>Una referencia identifica un solo vínculo en la empresa (la usa <c>por-referencia</c>).</summary>
+    private static async Task AsegurarReferenciaLibreAsync(SesionDeEmpresa empresa, ReferenciaExterna referencia, CancellationToken ct)
+    {
+        var clave = referencia.Clave();
+        var otro = await empresa.Vinculos().FirstOrDefaultAsync(v => v.ClavesReferencia.Contains(clave), ct);
+        if (otro is not null)
+            throw ReglaDeNegocioException.Conflicto("referencia-duplicada",
+                $"La referencia {referencia.Id} de {referencia.Sistema} ya identifica otro vínculo ({otro.Id}).");
     }
 
     private static async Task<Tercero> ResolverTerceroAsync(CrearVinculoDto dto, IDocumentSession sesion, IContextoSolicitud contexto,

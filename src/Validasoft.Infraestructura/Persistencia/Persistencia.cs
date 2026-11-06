@@ -26,8 +26,8 @@ public static class ConfiguracionMarten
 {
     /// <summary>
     /// Un solo <c>DocumentStore</c> con eventos <i>conjoined</i> (T-2, ADR-0004). Esquemas: <c>plataforma</c>
-    /// (tenants y empresas, globales), <c>boveda</c> (terceros, globales), <c>identidad</c> (API keys por tenant,
-    /// idempotencia), <c>validacion</c> (todo lo demás, por tenant) y <c>eventos</c> (event store).
+    /// (tenants y empresas, globales), <c>boveda</c> (terceros, globales), <c>identidad</c> (API keys, sistemas integrados
+    /// y usuarios por tenant; idempotencia), <c>validacion</c> (todo lo demás, por tenant) y <c>eventos</c> (event store).
     /// </summary>
     public static IServiceCollection AgregarPersistencia(this IServiceCollection servicios, IConfiguration configuracion)
     {
@@ -63,11 +63,18 @@ public static class ConfiguracionMarten
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);
                 opts.Schema.For<RegistroIdempotencia>().DatabaseSchemaName("identidad");
+                opts.Schema.For<SistemaIntegrado>().DatabaseSchemaName("identidad").MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_sistema_codigo", TenancyScope.PerTenant, x => x.Codigo);
+                opts.Schema.For<Usuario>().DatabaseSchemaName("identidad").MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_usuario_correo", TenancyScope.PerTenant, x => x.Correo);
+                opts.Schema.For<IndiceIdentidadExterna>().DatabaseSchemaName("identidad").MultiTenanted();
 
                 // validacion (por tenant)
                 opts.Schema.For<TipoVinculo>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_tipo_vinculo_codigo", TenancyScope.PerTenant, x => x.Codigo);
                 opts.Schema.For<RegistroDeCambioDeConfiguracion>().MultiTenanted().Index(x => x.Fecha);
+                opts.Schema.For<Area>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_area_codigo", TenancyScope.PerTenant, x => x.EmpresaId, x => x.Codigo);
                 opts.Schema.For<Vinculo>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_vinculo_natural", TenancyScope.PerTenant,
                         x => x.EmpresaId, x => x.TerceroId, x => x.TipoVinculoId)
@@ -86,7 +93,7 @@ public static class ConfiguracionMarten
     }
 }
 
-/// <summary>Abre sesiones con el tenant de la credencial y escribe actor y correlación en los metadatos de los eventos.</summary>
+/// <summary>Abre sesiones con el tenant de la credencial y escribe actor, sistema y correlación en los metadatos de los eventos.</summary>
 public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto) : ISesiones
 {
     public IDocumentSession DelTenant() => ParaTenant(contexto.TenantRequerido());
@@ -97,6 +104,8 @@ public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto) 
         sesion.CorrelationId = contexto.CorrelationId;
         sesion.SetHeader("actorTipo", contexto.ActorTipo.ToString());
         sesion.SetHeader("actorId", contexto.ActorId);
+        if (contexto.Sistema is not null)
+            sesion.SetHeader("sistema", contexto.Sistema);
         return sesion;
     }
 

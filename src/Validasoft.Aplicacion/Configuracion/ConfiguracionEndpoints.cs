@@ -122,7 +122,11 @@ public static class ApiKeysEndpoints
         var tenant = await sesion.LoadAsync<Tenant>(tenantId, ct)
             ?? throw ReglaDeNegocioException.NoEncontrado("tenant-no-encontrado", "El tenant de la credencial no existe.");
 
+        if (dto.SistemaId is { } sistemaId && await sesion.LoadAsync<SistemaIntegrado>(sistemaId, ct) is not { Activo: true })
+            throw ReglaDeNegocioException.Validacion("sistema-invalido", "El sistema integrado no existe en el tenant o está desactivado.");
+
         var (llave, valor) = llaves.Generar(tenant.Slug, dto.Nombre.Trim(), dto.Scopes, empresas, dto.ExpiraEn, dto.Sandbox, ahora);
+        llave.SistemaId = dto.SistemaId;
         sesion.Store(llave);
         Auditoria.Registrar(sesion, contexto, "ApiKey", llave.Id.ToString(), AccionConfiguracion.Creado, null, llave.ADto(), ahora);
         await sesion.SaveChangesAsync(ct);
@@ -219,5 +223,80 @@ public static class TiposVinculoEndpoints
         Auditoria.Registrar(sesion, contexto, "TipoVinculo", tipo.Id.ToString(), AccionConfiguracion.Modificado, antes, tipo.ADto(), reloj.GetUtcNow());
         await sesion.SaveChangesAsync(ct);
         return tipo.ADto();
+    }
+}
+
+/// <summary>Áreas revisoras de la empresa activa (cabecera <c>X-Empresa</c>) y sus miembros.</summary>
+public static class AreasEndpoints
+{
+    [WolverinePost("/api/v1/areas")]
+    [Authorize(Policy = Permisos.ConfiguracionEscribir)]
+    public static async Task<IResult> Crear(CrearAreaDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        var area = Area.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre);
+
+        var codigo = area.Codigo;
+        if (await empresa.Areas().AnyAsync(a => a.Codigo == codigo, ct))
+            throw ReglaDeNegocioException.Conflicto("area-duplicada", $"La empresa ya tiene el área {codigo}.");
+
+        empresa.Sesion.Store(area);
+        Auditoria.Registrar(empresa.Sesion, contexto, "Area", area.Id.ToString(), AccionConfiguracion.Creado, null, area.ADto(), reloj.GetUtcNow(), area.EmpresaId);
+        await empresa.Sesion.SaveChangesAsync(ct);
+        return Results.Created($"/api/v1/areas/{area.Id}", area.ADto());
+    }
+
+    [WolverineGet("/api/v1/areas")]
+    [Authorize(Policy = Permisos.ConfiguracionLeer)]
+    public static async Task<IReadOnlyList<AreaDto>> Listar(SesionDeEmpresa empresa, CancellationToken ct)
+    {
+        var areas = await empresa.Areas().OrderBy(a => a.Codigo).ToListAsync(ct);
+        return [.. areas.Select(a => a.ADto())];
+    }
+
+    [WolverineGet("/api/v1/areas/{id}")]
+    [Authorize(Policy = Permisos.ConfiguracionLeer)]
+    public static async Task<AreaDto> Obtener(Guid id, SesionDeEmpresa empresa, CancellationToken ct) =>
+        (await empresa.CargarAreaAsync(id, ct)).ADto();
+
+    /// <summary>El código es inmutable; se editan nombre y estado.</summary>
+    [WolverinePut("/api/v1/areas/{id}")]
+    [Authorize(Policy = Permisos.ConfiguracionEscribir)]
+    public static async Task<AreaDto> Actualizar(Guid id, ActualizarAreaDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        var area = await empresa.CargarAreaAsync(id, ct);
+        var antes = area.ADto();
+        area.Actualizar(dto.Nombre, dto.Activa);
+        return await GuardarAsync(empresa, contexto, area, antes, reloj, ct);
+    }
+
+    /// <summary>Reemplaza los miembros: cada uno debe ser un usuario activo con algún rol en esta empresa o en todo el tenant.</summary>
+    [WolverinePut("/api/v1/areas/{id}/miembros")]
+    [Authorize(Policy = Permisos.ConfiguracionEscribir)]
+    public static async Task<AreaDto> DefinirMiembros(Guid id, MiembrosAreaDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        var area = await empresa.CargarAreaAsync(id, ct);
+        var ids = (dto.Usuarios ?? []).Distinct().ToArray();
+        var usuarios = ids.Length == 0 ? [] : await empresa.Sesion.LoadManyAsync<Usuario>(ct, ids);
+
+        var invalidos = ids.Where(i => usuarios.FirstOrDefault(u => u.Id == i) is not { Activo: true } u || !u.TieneRolEn(area.EmpresaId)).ToList();
+        if (invalidos.Count > 0)
+            throw ReglaDeNegocioException.Validacion("miembros-invalidos",
+                $"Estos usuarios no existen, están inactivos o no tienen rol en la empresa: {string.Join(", ", invalidos)}.");
+
+        var antes = area.ADto();
+        area.DefinirMiembros(ids);
+        return await GuardarAsync(empresa, contexto, area, antes, reloj, ct);
+    }
+
+    private static async Task<AreaDto> GuardarAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, Area area, AreaDto antes,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.Sesion.Store(area);
+        Auditoria.Registrar(empresa.Sesion, contexto, "Area", area.Id.ToString(), AccionConfiguracion.Modificado, antes, area.ADto(), reloj.GetUtcNow(), area.EmpresaId);
+        await empresa.Sesion.SaveChangesAsync(ct);
+        return area.ADto();
     }
 }

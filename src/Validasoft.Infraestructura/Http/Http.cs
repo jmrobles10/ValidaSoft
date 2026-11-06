@@ -19,9 +19,10 @@ using Validasoft.Infraestructura.Seguridad;
 namespace Validasoft.Infraestructura.Http;
 
 /// <summary>
-/// Llena el <see cref="ContextoSolicitud"/>: tenant, scopes y empresas desde la credencial; empresa activa desde
-/// <c>X-Empresa</c> (validada contra el tenant y el alcance de la llave; si no, 404 — T-4); correlación desde
-/// <c>X-Correlation-Id</c> (se devuelve en la respuesta).
+/// Llena el <see cref="ContextoSolicitud"/>: tenant, actor, sistema, scopes y empresas desde la credencial (API key o
+/// sesión Bearer); empresa activa desde <c>X-Empresa</c> (validada contra el tenant y el alcance de la credencial; si
+/// no, 404 — T-4); correlación desde <c>X-Correlation-Id</c> (se devuelve en la respuesta). Los scopes de roles por
+/// empresa (<see cref="Reclamos.ScopeEmpresa"/>) solo se suman cuando esa es la empresa activa.
 /// </summary>
 public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
 {
@@ -31,8 +32,7 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
     public async Task InvokeAsync(HttpContext http, IDocumentStore store)
     {
         var contexto = ContextoDesdeHttp.De(http);
-        var correlacion = http.Request.Headers[CabeceraCorrelacion].ToString();
-        contexto.CorrelationId = string.IsNullOrWhiteSpace(correlacion) || correlacion.Length > 100 ? http.TraceIdentifier : correlacion;
+        contexto.CorrelationId = Correlacion(http);
         http.Response.Headers[CabeceraCorrelacion] = contexto.CorrelationId;
 
         var usuario = http.User;
@@ -40,8 +40,8 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
         {
             contexto.TenantId = Guid.TryParse(usuario.FindFirstValue(Reclamos.Tenant), out var tenant) ? tenant : null;
             contexto.ActorTipo = Enum.TryParse<ActorTipo>(usuario.FindFirstValue(Reclamos.ActorTipo), out var actor) ? actor : ActorTipo.Sistema;
-            contexto.ActorId = usuario.FindFirstValue(ClaimTypes.NameIdentifier) ?? "desconocido";
-            contexto.Scopes = usuario.FindAll(Reclamos.Scope).Select(c => c.Value).ToHashSet();
+            contexto.ActorId = usuario.FindFirstValue(ClaimTypes.NameIdentifier) ?? usuario.FindFirstValue(Reclamos.Sujeto) ?? "desconocido";
+            contexto.Sistema = usuario.FindFirstValue(Reclamos.Sistema);
             contexto.Empresas = usuario.FindAll(Reclamos.Empresa).Select(c => c.Value).ToHashSet();
 
             var cabeceraEmpresa = http.Request.Headers[CabeceraEmpresa].ToString();
@@ -58,9 +58,26 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
 
                 contexto.EmpresaId = empresa!.Id;
             }
+
+            var scopes = usuario.FindAll(Reclamos.Scope).Select(c => c.Value).ToHashSet();
+            if (contexto.EmpresaId is { } activa)
+            {
+                var sufijo = "|" + activa;
+                scopes.UnionWith(usuario.FindAll(Reclamos.ScopeEmpresa).Where(c => c.Value.EndsWith(sufijo, StringComparison.Ordinal))
+                    .Select(c => c.Value[..^sufijo.Length]));
+            }
+
+            contexto.Scopes = scopes;
         }
 
         await siguiente(http);
+    }
+
+    /// <summary><c>X-Correlation-Id</c> del cliente (hasta 100 caracteres) o el identificador de la petición.</summary>
+    public static string Correlacion(HttpContext http)
+    {
+        var correlacion = http.Request.Headers[CabeceraCorrelacion].ToString();
+        return string.IsNullOrWhiteSpace(correlacion) || correlacion.Length > 100 ? http.TraceIdentifier : correlacion;
     }
 
     private static async Task<Empresa?> CargarEmpresaAsync(IDocumentStore store, Guid id, CancellationToken ct)
@@ -97,7 +114,10 @@ public sealed class MiddlewareDeIdempotencia(RequestDelegate siguiente)
     public const string Cabecera = "Idempotency-Key";
 
     private static readonly string[] RutasQueCrean =
-        ["/api/v1/plataforma/tenants", "/api/v1/empresas", "/api/v1/api-keys", "/api/v1/tipos-vinculo", "/api/v1/terceros", "/api/v1/vinculos"];
+    [
+        "/api/v1/plataforma/tenants", "/api/v1/empresas", "/api/v1/api-keys", "/api/v1/sistemas", "/api/v1/usuarios", "/api/v1/tipos-vinculo",
+        "/api/v1/areas", "/api/v1/terceros", "/api/v1/vinculos"
+    ];
 
     public async Task InvokeAsync(HttpContext http, IDocumentStore store, TimeProvider reloj)
     {
@@ -202,6 +222,7 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
                 TipoFalla.Validacion => StatusCodes.Status422UnprocessableEntity,
                 TipoFalla.NoEncontrado => StatusCodes.Status404NotFound,
                 TipoFalla.Prohibido => StatusCodes.Status403Forbidden,
+                TipoFalla.NoAutenticado => StatusCodes.Status401Unauthorized,
                 _ => StatusCodes.Status409Conflict
             }, r.Codigo, r.Message),
             ConcurrencyException or EventStreamUnexpectedMaxEventIdException =>

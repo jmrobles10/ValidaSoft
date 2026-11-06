@@ -134,6 +134,41 @@ public class VinculoTests
         Should.Throw<ReglaDeNegocioException>(() => Nuevo().Reintegrar("x", Ahora)).Codigo.ShouldBe("estado-invalido");
 
     [Fact]
+    public void La_referencia_del_evento_de_creacion_es_la_primera_de_la_lista()
+    {
+        var vinculo = Nuevo();
+
+        vinculo.Referencias.ShouldBe([new ReferenciaExterna("SRM", "ADP-00123")]);
+        vinculo.ClavesReferencia.ShouldBe(["SRM|ADP-00123"]);
+    }
+
+    [Fact]
+    public void Otro_sistema_agrega_su_referencia_y_comparte_el_vinculo()
+    {
+        var vinculo = Nuevo();
+
+        var agregada = vinculo.AgregarReferencia(new ReferenciaExterna("MARCO", "PRV-77"), Ahora.AddDays(1));
+        agregada.ShouldNotBeNull();
+        vinculo.Apply(agregada);
+
+        vinculo.Referencias.Select(r => r.Sistema).ShouldBe(["SRM", "MARCO"]);
+        vinculo.ClavesReferencia.ShouldContain("MARCO|PRV-77");
+        vinculo.ActualizadoEn.ShouldBe(Ahora.AddDays(1));
+    }
+
+    [Fact]
+    public void La_misma_referencia_es_idempotente_y_otro_id_del_mismo_sistema_es_conflicto()
+    {
+        var vinculo = Nuevo();
+
+        vinculo.AgregarReferencia(new ReferenciaExterna("SRM", "ADP-00123"), Ahora).ShouldBeNull();
+        Should.Throw<ReglaDeNegocioException>(() => vinculo.AgregarReferencia(new ReferenciaExterna("SRM", "ADP-99999"), Ahora))
+            .Codigo.ShouldBe("referencia-en-conflicto");
+        Should.Throw<ReglaDeNegocioException>(() => vinculo.AgregarReferencia(new ReferenciaExterna("MARCO", " "), Ahora))
+            .Codigo.ShouldBe("referencia-externa-invalida");
+    }
+
+    [Fact]
     public void Los_atributos_se_validan_contra_el_tipo_de_vinculo()
     {
         var proveedor = TipoVinculo.Semilla().Single(t => t.Codigo == "PROVEEDOR");

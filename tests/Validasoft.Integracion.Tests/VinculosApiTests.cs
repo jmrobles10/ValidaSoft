@@ -57,6 +57,7 @@ public sealed class VinculosApiTests(ApiFixture fixture)
         return new Escenario(clave, a, b);
     }
 
+    /// <summary>La llave de administración no pertenece a un sistema integrado: no envía referencia externa (ADR-0011).</summary>
     private static CrearVinculoDto Proveedor(string nit) => new(
         TerceroId: null,
         Tercero: new CrearTerceroDto(new IdentificacionDto("CO", "NIT", nit), "Juridica", "Aceros del Norte S.A.S.", null,
@@ -64,7 +65,7 @@ public sealed class VinculosApiTests(ApiFixture fixture)
         TipoVinculo: "PROVEEDOR",
         Atributos: null,
         CorreoInvitacion: "ana@aceros.co",
-        ReferenciaExterna: new ReferenciaExternaDto("SRM", "ADP-00123"));
+        ReferenciaExterna: null);
 
     [Fact]
     public async Task Crea_un_vinculo_con_identificador_invitacion_e_historial()
@@ -99,6 +100,20 @@ public sealed class VinculosApiTests(ApiFixture fixture)
             s.StatusCodeShouldBe(409);
         });
         (await respuesta.ReadAsTextAsync()).ShouldContain("vinculo-duplicado");
+    }
+
+    [Fact]
+    public async Task Una_llave_sin_sistema_integrado_no_registra_referencias_externas()
+    {
+        var e = await PrepararAsync();
+
+        var respuesta = await Host.Scenario(s =>
+        {
+            s.Post.Json(Proveedor("900555222") with { ReferenciaExterna = new ReferenciaExternaDto("SRM", "ADP-00123") }).ToUrl("/api/v1/vinculos");
+            Cabeceras(s, e.ApiKey, e.EmpresaA.Id, Guid.NewGuid().ToString());
+            s.StatusCodeShouldBe(422);
+        });
+        (await respuesta.ReadAsTextAsync()).ShouldContain("referencia-sin-sistema");
     }
 
     [Fact]

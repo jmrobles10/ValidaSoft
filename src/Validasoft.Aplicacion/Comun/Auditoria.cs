@@ -19,6 +19,7 @@ public static class Auditoria
             Despues = despues,
             ActorTipo = contexto.ActorTipo,
             ActorId = contexto.ActorId,
+            Sistema = contexto.Sistema,
             CorrelationId = contexto.CorrelationId,
             Fecha = fecha
         });

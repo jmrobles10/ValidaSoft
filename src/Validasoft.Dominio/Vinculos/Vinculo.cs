@@ -38,7 +38,11 @@ public sealed class Vinculo
 
     public OrigenVinculo Origen { get; set; }
 
-    public ReferenciaExterna? ReferenciaExterna { get; set; }
+    /// <summary>Una referencia por sistema integrado que comparte esta validación (I-0).</summary>
+    public List<ReferenciaExterna> Referencias { get; set; } = [];
+
+    /// <summary>Copia plana de <see cref="Referencias"/> (<c>SISTEMA|id</c>) para buscar por referencia en Marten.</summary>
+    public List<string> ClavesReferencia { get; set; } = [];
 
     /// <summary>Correo del tercero al que se dirigen las invitaciones de este vínculo.</summary>
     public string CorreoTercero { get; set; } = string.Empty;
@@ -68,11 +72,32 @@ public sealed class Vinculo
             throw ReglaDeNegocioException.Validacion("correo-invitacion-requerido",
                 "El vínculo necesita un correo válido del tercero para enviarle la invitación.");
 
-        if (referencia is not null && (string.IsNullOrWhiteSpace(referencia.Sistema) || string.IsNullOrWhiteSpace(referencia.Id)))
-            throw ReglaDeNegocioException.Validacion("referencia-externa-invalida", "La referencia externa necesita sistema e id.");
+        if (referencia is not null)
+            ValidarReferencia(referencia);
 
         return new VinculoCreado(Guid.CreateVersion7(), empresaId, terceroId, tipoVinculoId, flujoId, atributos,
             origen, referencia, correoInvitacion.Trim().ToLowerInvariant(), ahora);
+    }
+
+    /// <summary>
+    /// Otro sistema pide el mismo vínculo <c>(empresa, tercero, tipo)</c>: en lugar de duplicarlo, se agrega su
+    /// referencia y ambos comparten la validación (I-0). Devuelve <c>null</c> si esa referencia ya estaba
+    /// (idempotente); el mismo sistema con otro id es conflicto.
+    /// </summary>
+    public ReferenciaExternaAgregada? AgregarReferencia(ReferenciaExterna referencia, DateTimeOffset ahora)
+    {
+        ValidarReferencia(referencia);
+
+        var delSistema = Referencias.FirstOrDefault(r => r.Sistema == referencia.Sistema);
+        if (delSistema is not null)
+        {
+            return delSistema.Id == referencia.Id
+                ? null
+                : throw ReglaDeNegocioException.Conflicto("referencia-en-conflicto",
+                    $"El vínculo ya tiene la referencia {delSistema.Id} del sistema {delSistema.Sistema}.");
+        }
+
+        return new ReferenciaExternaAgregada(referencia.Sistema, referencia.Id, ahora);
     }
 
     /// <summary>Solo en <c>Invitado</c> y mientras el tercero no haya aceptado (docs/03 §5.3).</summary>
@@ -186,11 +211,20 @@ public sealed class Vinculo
         Estado = EstadoVinculo.Invitado,
         Atributos = e.Atributos,
         Origen = e.Origen,
-        ReferenciaExterna = e.ReferenciaExterna,
+        Referencias = e.ReferenciaExterna is null ? [] : [e.ReferenciaExterna],
+        ClavesReferencia = e.ReferenciaExterna is null ? [] : [e.ReferenciaExterna.Clave()],
         CorreoTercero = e.CorreoInvitacion,
         CreadoEn = e.Fecha,
         ActualizadoEn = e.Fecha
     };
+
+    public void Apply(ReferenciaExternaAgregada e)
+    {
+        var referencia = new ReferenciaExterna(e.Sistema, e.Id);
+        Referencias.Add(referencia);
+        ClavesReferencia.Add(referencia.Clave());
+        ActualizadoEn = e.Fecha;
+    }
 
     public void Apply(InvitacionEnviada e)
     {
@@ -262,6 +296,12 @@ public sealed class Vinculo
     {
         if (Terminales.Contains(Estado))
             throw ReglaDeNegocioException.Conflicto("estado-terminal", $"No se puede {accion} un vínculo {Estado}.");
+    }
+
+    private static void ValidarReferencia(ReferenciaExterna referencia)
+    {
+        if (string.IsNullOrWhiteSpace(referencia.Sistema) || string.IsNullOrWhiteSpace(referencia.Id))
+            throw ReglaDeNegocioException.Validacion("referencia-externa-invalida", "La referencia externa necesita sistema e id.");
     }
 
     private static void RequerirTexto(string? valor, string codigo, string mensaje)

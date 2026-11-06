@@ -26,7 +26,7 @@
 
 ## 2. Identidad: OpenIddict + ASP.NET Identity
 
-Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`). Keycloak descartado en el MVP (ADR-0003); federable después (§2.5).
+Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`). Keycloak descartado en el MVP (ADR-0003); federable después (§2.5). Las personas que ya iniciaron sesión en un **sistema integrado** (SRM, Marco, Portal, sistemas del cliente) no tienen cuenta propia: actúan por **identidad delegada** (§2.6, ADR-0011, que precisa ADR-0003).
 
 ### 2.1 Flujos
 
@@ -36,6 +36,7 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 | `apps/public` (tercero) | Grant `urn:validasoft:magic-link` | Access JWT 30 min ligado a `terceroId` y vínculos; refresh deslizante máx. 8 h; cookie `HttpOnly; Secure; SameSite=Lax` |
 | SRM/Portal dentro del marco ERP | Grant `urn:validasoft:erp-token` (token exchange) | Access JWT 15 min con `tenant`, `empresas[]`, `sub`, roles |
 | Integraciones servidor-a-servidor | `X-Api-Key` | §4 |
+| Persona de un sistema integrado (SRM, Marco, Portal…) | `X-Api-Key` del sistema + `X-Usuario-Delegado` (JWT ≤ 5 min firmado por el sistema) | §2.6; pantallas embebidas: sesión de Validasoft HS256 de 30 min (`POST /sesiones-usuario`) |
 | CLI de importación | Client Credentials con `importacion:escribir` | 15 min |
 
 ### 2.2 Grant `urn:validasoft:magic-link`
@@ -47,7 +48,7 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 6. **Aceptar la invitación** (`POST /public/v1/invitaciones/{expedienteId}/aceptar`) registra `ConsentimientosRegistrados` —aviso de la plataforma la primera vez (incluye expresamente el procesamiento por IA externa y la transferencia internacional, P-6-5), autorización de datos y T&C de **esa** empresa— con versión del texto, fecha, IP, user-agent y OTP como evidencia (`AceptacionDto`; P-3-5, P-16-4). Solo entonces se comparte con esa empresa la versión actual de cada tipo global que exige (B-1). Hasta que el tercero no haya aceptado el aviso de plataforma, sus versiones se procesan **sin IA** (B-2/B-8).
 
 ### 2.3 Grant `urn:validasoft:erp-token`
-Validación del token del marco contra el endpoint de introspección del ERP del tenant (cache 5 min) o firma compartida rotable; mapeo a usuario Validasoft del tenant con roles por empresa según mapeo configurado; nunca se guarda el token del ERP.
+Validación del token del marco contra el endpoint de introspección del ERP del tenant (cache 5 min) o firma compartida rotable; mapeo a usuario Validasoft del tenant con roles por empresa según mapeo configurado; nunca se guarda el token del ERP. **Precisado por ADR-0011:** Marco es un sistema integrado más y usa la identidad delegada de §2.6; los roles no vienen del ERP.
 
 ### 2.4 Usuarios internos
 - Contraseñas Argon2id; mínimo 12 caracteres; bloqueo progresivo.
@@ -57,6 +58,15 @@ Validación del token del marco contra el endpoint de introspección del ERP del
 
 ### 2.5 Federación futura
 Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cuentas locales desactivables.
+
+### 2.6 Identidad delegada desde sistemas integrados (ADR-0011)
+1. **Sistemas integrados.** El administrador registra cada sistema (`POST /sistemas`: código en mayúsculas único en el tenant, nombre y **clave pública** PEM RSA ≥ 2048 o EC P-256; se rechazan claves privadas). Las API keys del sistema llevan su `sistemaId`. Validasoft no guarda nada que permita suplantar al sistema; rotar la clave (`PUT /sistemas/{id}/clave-publica`) invalida al instante las aserciones con la anterior y desactivar el sistema deja sin efecto sus llaves (como mucho 5 min por la caché de llaves).
+2. **Aserción.** Con su API key, el sistema envía `X-Usuario-Delegado`: JWT RS256/ES256 firmado con su clave privada, `iss` = código del sistema, `aud` = `validasoft`, `exp` no vencido y a lo sumo 5 min en el futuro (tolerancia 30 s), `sub`, `name`, `email`. Firma, emisor, audiencia o vigencia inválidos, llave sin sistema, sistema inactivo o usuario desactivado ⇒ `401` ProblemDetails (`asercion-*`, `llave-sin-sistema`, `sistema-inactivo`, `usuario-inactivo`).
+3. **Usuario.** Se busca por la identidad externa `(sistema, sub)` (única por tenant). Si no existe se **enlaza** al usuario con el mismo correo (alta anticipada por el administrador u otro sistema) o se **crea sin roles** (JIT, ID-2). El sistema es la fuente de nombre y correo; `ultimoAcceso` se actualiza como mucho una vez por minuto. Altas y enlaces quedan en la auditoría de configuración con la API key del sistema como actor.
+4. **Permiso efectivo = intersección.** Scopes = scopes de la llave ∩ scopes de los roles del usuario (§3.1); empresas = empresas de la llave ∩ empresas donde el usuario tiene rol (`*` si tiene un rol de todo el tenant). Los scopes de un rol por empresa solo valen cuando `X-Empresa` es esa empresa; la administración del tenant (`usuarios`, `sistemas`, `api-keys`, `empresas`) solo se obtiene con un rol de todo el tenant. Sin roles, el usuario no ve ninguna empresa (`404`).
+5. **Actor.** La petición queda con actor `Usuario` (`actorId` = id del usuario) y el sistema de origen; los eventos guardan `actorTipo`, `actorId` y `sistema` en sus metadatos, y la auditoría de configuración registra `sistema`.
+6. **Sesiones embebidas (ID-3).** El sistema canjea, servidor a servidor, la aserción por una sesión de Validasoft (`POST /sesiones-usuario` ⇒ `{ token, expira }`): JWT HS256 de **30 min** firmado con `Validasoft:Sesiones:ClaveFirma` (≥ 32 bytes, secreto de configuración) que copia tenant, usuario, sistema, scopes y empresas efectivos. El iframe o Web Component lo envía como `Authorization: Bearer`; `X-Empresa`, idempotencia y autorización funcionan igual que con la API key. Un cambio de roles o la desactivación del usuario se aplican a la siguiente sesión (la vigente expira sola).
+7. **Referencias externas.** El sistema de la referencia de un vínculo lo fija la credencial, no el cuerpo; un vínculo guarda una referencia por sistema y todos comparten la misma validación (I-0, [05 §2.3](05-api-contratos-y-webhooks.md)).
 
 ---
 
@@ -75,6 +85,8 @@ Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cue
 | `Tercero` | Sesión | Lo propio |
 
 Un rol se asigna **por empresa** (`RolAsignado { rol, empresaId, areas[] }`) o **para todo el tenant** (`empresaId = *`). Un usuario puede pertenecer a varios tenants (claim `tenants[]`).
+
+Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los del tenant; `Revisor` = `configuracion:leer`, `terceros:leer`, `vinculos:leer` + `vinculos:escribir`; `OficialCumplimiento` (el `Cumplimiento` de esta tabla) = `Revisor` + `vinculos:bloquear`; `Auditor` = lecturas + `auditoria:leer`. En peticiones delegadas se intersecan con la API key (§2.6).
 
 ### 3.2 Permisos (claims finos; la UI solo oculta botones)
 
@@ -119,6 +131,7 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | Formato | `vsk_{entorno}_{tenantSlug}_{32 bytes base62}`; prefijo visible; valor completo solo al crear/rotar |
 | Almacenamiento | Hash Argon2id + prefijo en claro |
 | Scopes | Lista cerrada de [05 §2](05-api-contratos-y-webhooks.md); `importacion:escribir` no se combina |
+| **Sistema integrado** | `sistemaId` opcional (ADR-0011): fija el sistema de las referencias externas y permite `X-Usuario-Delegado`; la llave del alta del tenant no tiene sistema |
 | **Alcance por empresa** | `empresas[]` o `*`; una llave con `[A1]` no ve nada de `A2` aunque sea del mismo tenant: la API responde **`404 no-encontrado`** (T-4), nunca un 403 que revele existencia |
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
 | Rotación / revocación | Solapamiento 24 h (0–72); revocación inmediata; cache 60 s invalidado por evento |

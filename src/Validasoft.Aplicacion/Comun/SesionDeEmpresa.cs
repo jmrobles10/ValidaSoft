@@ -1,6 +1,7 @@
 using Marten;
 using JasperFx.Events;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Vinculos;
 
 namespace Validasoft.Aplicacion.Comun;
@@ -25,6 +26,16 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
         return vinculo is not null && vinculo.EmpresaId == EmpresaId
             ? vinculo
             : throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo en la empresa.");
+    }
+
+    public IQueryable<Area> Areas() => Sesion.Query<Area>().Where(a => a.EmpresaId == EmpresaId);
+
+    public async Task<Area> CargarAreaAsync(Guid id, CancellationToken ct)
+    {
+        var area = await Sesion.LoadAsync<Area>(id, ct);
+        return area is not null && area.EmpresaId == EmpresaId
+            ? area
+            : throw ReglaDeNegocioException.NoEncontrado("area-no-encontrada", "No existe esa área en la empresa.");
     }
 
     /// <summary>Carga el stream para escribir con concurrencia optimista (<c>If-Match</c> si llega).</summary>

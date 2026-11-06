@@ -199,6 +199,15 @@ Correcciones de Arquitectura derivadas de la misma auditoría (sin decisión de 
 |---|---|---|---|
 | C-1 | ¿Debe existir el concepto de invitación en la plataforma? | **Sí, tal cual está**: no es una entidad aparte sino el paso de solicitud + aceptación del vínculo (estado `Invitado`, eventos `InvitacionEnviada`/`InvitacionAceptada`, enlace de acceso, lotes). Se mantiene el nombre "invitación" en estados, eventos, endpoints y UI; se descartó renombrar a "Solicitud/Aceptación". Su razón de ser es el consentimiento por empresa (B-1/ADR-0009), el seguimiento de terceros sin respuesta y la activación del autorregistro invisible. | E |
 
+## 5-septies. Validasoft como servicio integrable (2026-11-06)
+
+| Id | Pregunta | Decisión | Origen |
+|---|---|---|---|
+| I-0 | Naturaleza del producto | **Validasoft es un servicio de validación que otros sistemas invocan** (Marco, SRM, Portal, sistemas de clientes). La validación de un vínculo es **una sola** por `(empresa, tercero, tipo de vínculo)` y su resultado aplica en **cada sistema que la referencia**: el vínculo guarda una referencia externa **por sistema** y todos reciben los mismos eventos y consultas. | E |
+| ID-1 | ¿Quién autentica a la persona que revisa o aprueba desde un sistema integrado? | **Identidad delegada**: el sistema integrado autentica a su usuario y envía una aserción JWT firmada con su clave privada (Validasoft solo guarda la clave pública del sistema). Validasoft registra al usuario externo para auditoría y asignación de áreas; **no guarda contraseñas** de esos usuarios. Las **cuentas locales** (con 2FA) quedan como opción para clientes que usen Validasoft sin otro sistema (hito posterior). Precisa ADR-0003 (ADR-0011). | E |
+| ID-2 | ¿Quién decide roles y áreas? | **Se asignan en Validasoft**, iguales para todos los sistemas; la aserción solo dice quién es la persona. Un usuario externo nuevo nace sin roles hasta que un administrador lo asigna. | E |
+| ID-3 | ¿Dónde trabajan los revisores? | **Pantallas de Validasoft embebidas** en el sistema integrado (iframe o Web Component) con una sesión emitida a partir de la identidad delegada. La API completa sigue disponible para quien quiera su propia interfaz. | E |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

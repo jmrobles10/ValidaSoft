@@ -17,6 +17,9 @@ public interface IContextoSolicitud
 
     string CorrelationId { get; }
 
+    /// <summary>Código del sistema integrado de la credencial (SRM, MARCO…); nulo en llaves de administración.</summary>
+    string? Sistema { get; }
+
     IReadOnlySet<string> Scopes { get; }
 
     /// <summary>Empresas permitidas por la credencial; contiene <c>*</c> si son todas.</summary>
@@ -27,6 +30,13 @@ public interface IContextoSolicitud
 
     Guid EmpresaRequerida() => EmpresaId
         ?? throw ReglaDeNegocioException.Validacion("empresa-requerida", "Indica la empresa con la cabecera X-Empresa.");
+}
+
+/// <summary>Emite la sesión corta de Validasoft para las pantallas embebidas (ADR-0011, ID-3).</summary>
+public interface IEmisorDeSesiones
+{
+    /// <summary>Solo a partir de una petición con API key + <c>X-Usuario-Delegado</c> ya verificada.</summary>
+    Contratos.SesionUsuarioDto Emitir(System.Security.Claims.ClaimsPrincipal principal, DateTimeOffset ahora);
 }
 
 /// <summary>Abre sesiones de Marten con el tenant correcto y los metadatos de actor y correlación.</summary>

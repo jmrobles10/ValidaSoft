@@ -30,6 +30,8 @@ public sealed class ContextoSolicitud : IContextoSolicitud
 
     public string CorrelationId { get; set; } = Guid.NewGuid().ToString("N");
 
+    public string? Sistema { get; set; }
+
     public IReadOnlySet<string> Scopes { get; set; } = new HashSet<string>();
 
     public IReadOnlySet<string> Empresas { get; set; } = new HashSet<string>();
@@ -66,6 +68,8 @@ public sealed class ContextoDesdeHttp(Microsoft.AspNetCore.Http.IHttpContextAcce
 
     public string CorrelationId => Actual.CorrelationId;
 
+    public string? Sistema => Actual.Sistema;
+
     public IReadOnlySet<string> Scopes => Actual.Scopes;
 
     public IReadOnlySet<string> Empresas => Actual.Empresas;
@@ -77,6 +81,17 @@ public static class Reclamos
     public const string Scope = "scope";
     public const string Empresa = "validasoft:empresa";
     public const string ActorTipo = "validasoft:actor-tipo";
+
+    /// <summary>Scope que solo vale con esa empresa activa: <c>{scope}|{empresaId}</c> (roles por empresa, ADR-0011).</summary>
+    public const string ScopeEmpresa = "validasoft:scope-empresa";
+
+    /// <summary>Código del sistema integrado de la credencial (SRM, MARCO…).</summary>
+    public const string Sistema = "validasoft:sistema";
+
+    public const string SistemaId = "validasoft:sistema-id";
+
+    /// <summary>Identificador del actor en los tokens de sesión (usuario de Validasoft).</summary>
+    public const string Sujeto = "sub";
 }
 
 /// <summary>
@@ -142,7 +157,8 @@ public sealed class GeneradorDeApiKeys(IHostEnvironment entorno) : IGeneradorDeA
 /// <summary>
 /// Autenticación por <c>X-Api-Key</c>. La llave de arranque de Plataforma (<c>Validasoft:Plataforma:ClaveBootstrap</c>)
 /// solo sirve para administrar tenants mientras llega el login OIDC (H1, ADR-0003). Las verificaciones exitosas se
-/// guardan 5 minutos en memoria para no pagar Argon2 en cada petición.
+/// guardan 5 minutos en memoria para no pagar Argon2 en cada petición. Con <c>X-Usuario-Delegado</c>, la llave de un
+/// sistema integrado actúa en nombre de una persona (<see cref="VerificadorDeIdentidadDelegada"/>, ADR-0011).
 /// </summary>
 public sealed class AutenticacionPorApiKey(
     IOptionsMonitor<AuthenticationSchemeOptions> opciones,
@@ -151,12 +167,15 @@ public sealed class AutenticacionPorApiKey(
     IDocumentStore store,
     IMemoryCache cache,
     IConfiguration configuracion,
-    TimeProvider reloj) : AuthenticationHandler<AuthenticationSchemeOptions>(opciones, logger, codificador)
+    TimeProvider reloj,
+    VerificadorDeIdentidadDelegada delegacion) : AuthenticationHandler<AuthenticationSchemeOptions>(opciones, logger, codificador)
 {
     public const string Esquema = "ApiKey";
     public const string Cabecera = "X-Api-Key";
 
-    private sealed record LlaveValidada(string TenantId, string ApiKeyId, IReadOnlyList<string> Scopes, IReadOnlyList<string> Empresas, DateTimeOffset? ExpiraEn);
+    private sealed record LlaveValidada(
+        string TenantId, string ApiKeyId, IReadOnlyList<string> Scopes, IReadOnlyList<string> Empresas, DateTimeOffset? ExpiraEn,
+        Guid? SistemaId, string? Sistema);
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -180,12 +199,29 @@ public sealed class AutenticacionPorApiKey(
             cache.Set(claveCache, validada, validada.ExpiraEn is not null && validada.ExpiraEn < vence ? validada.ExpiraEn.Value : vence);
         }
 
+        var asercion = Request.Headers[VerificadorDeIdentidadDelegada.Cabecera].ToString();
+        if (!string.IsNullOrWhiteSpace(asercion))
+        {
+            if (validada.SistemaId is not { } sistemaId)
+                throw ReglaDeNegocioException.NoAutenticado("llave-sin-sistema",
+                    "Solo la API key de un sistema integrado puede actuar en nombre de un usuario (X-Usuario-Delegado).");
+
+            return Exito(await delegacion.VerificarAsync(asercion.Trim(), Guid.Parse(validada.TenantId), sistemaId, validada.ApiKeyId,
+                validada.Scopes, validada.Empresas, Http.MiddlewareDeContexto.Correlacion(Context), Context.RequestAborted));
+        }
+
         var reclamos = new List<Claim>
         {
             new(Reclamos.Tenant, validada.TenantId),
             new(Reclamos.ActorTipo, ActorTipo.Integracion.ToString()),
             new(ClaimTypes.NameIdentifier, validada.ApiKeyId)
         };
+        if (validada.SistemaId is not null)
+        {
+            reclamos.Add(new(Reclamos.SistemaId, validada.SistemaId.Value.ToString()));
+            reclamos.Add(new(Reclamos.Sistema, validada.Sistema!));
+        }
+
         reclamos.AddRange(validada.Scopes.Select(s => new Claim(Reclamos.Scope, s)));
         reclamos.AddRange(validada.Empresas.Select(e => new Claim(Reclamos.Empresa, e)));
         return Exito(reclamos);
@@ -216,10 +252,21 @@ public sealed class AutenticacionPorApiKey(
         var prefijo = partes[3][..8];
         var candidatas = await sesion.Query<ApiKey>().Where(k => k.Prefijo == prefijo).ToListAsync();
         var llave = candidatas.FirstOrDefault(k => k.VigenteEn(reloj.GetUtcNow()) && GeneradorDeApiKeys.Verificar(valor, k.Hash));
+        if (llave is null)
+            return null;
 
-        return llave is null
-            ? null
-            : new LlaveValidada(tenant.Id.ToString(), llave.Id.ToString(), llave.Scopes, llave.Empresas, llave.ExpiraEn);
+        // La llave de un sistema desactivado deja de autenticar (como mucho 5 minutos después, por la caché).
+        string? codigoSistema = null;
+        if (llave.SistemaId is { } sistemaId)
+        {
+            var sistema = await sesion.LoadAsync<SistemaIntegrado>(sistemaId);
+            if (sistema is null || !sistema.Activo)
+                return null;
+            codigoSistema = sistema.Codigo;
+        }
+
+        return new LlaveValidada(tenant.Id.ToString(), llave.Id.ToString(), llave.Scopes, llave.Empresas, llave.ExpiraEn,
+            llave.SistemaId, codigoSistema);
     }
 
     private AuthenticateResult Exito(IEnumerable<Claim> reclamos)

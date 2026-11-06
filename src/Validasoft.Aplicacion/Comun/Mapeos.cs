@@ -26,7 +26,24 @@ public static class Mapeos
         new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa);
 
     public static ApiKeyDto ADto(this ApiKey k, string? valor = null) =>
-        new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor);
+        new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor, k.SistemaId);
+
+    public static SistemaIntegradoDto ADto(this SistemaIntegrado s) => new(s.Id, s.Codigo, s.Nombre, s.ClavePublicaPem, s.Activo, s.CreadoEn);
+
+    public static RolAsignadoDto ADto(this RolAsignado r) => new(r.Rol.ToString(), r.EmpresaId);
+
+    public static RolAsignado ADominio(this RolAsignadoDto r) =>
+        Enum.TryParse<Rol>(r.Rol, true, out var rol) && Enum.IsDefined(rol)
+            ? new RolAsignado(rol, r.EmpresaId)
+            : throw Dominio.Comun.ReglaDeNegocioException.Validacion("rol-invalido",
+                $"'{r.Rol}' no es un rol ({string.Join(", ", Enum.GetNames<Rol>())}).");
+
+    public static UsuarioDto ADto(this Usuario u) =>
+        new(u.Id, u.Nombre, u.Correo, u.Identificacion?.ADto(), u.Activo,
+            [.. u.Identidades.Select(i => new IdentidadExternaDto(i.SistemaId, i.IdExterno))],
+            [.. u.Roles.Select(ADto)], u.CreadoEn, u.UltimoAcceso);
+
+    public static AreaDto ADto(this Area a) => new(a.Id, a.EmpresaId, a.Codigo, a.Nombre, a.Miembros, a.Activa);
 
     public static AtributoPermitidoDto ADto(this AtributoPermitido a) => new(a.Clave, a.Tipo.ToString(), a.Obligatorio, a.Opciones);
 
@@ -51,6 +68,6 @@ public static class Mapeos
             v.InvitacionAceptadaEn,
             RequisitosCubribles: null,
             v.Bloqueo is null ? null : new BloqueoDto(v.Bloqueo.Motivo, v.Bloqueo.Desde, v.Bloqueo.Hasta),
-            v.ReferenciaExterna is null ? null : new ReferenciaExternaDto(v.ReferenciaExterna.Sistema, v.ReferenciaExterna.Id),
+            [.. v.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))],
             v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version);
 }

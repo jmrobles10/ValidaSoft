@@ -15,5 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Validasoft.Dominio\Validasoft.Dominio.csproj" />
+    <!-- Mapeo rol → scopes e intersección de permisos (reglas puras de Aplicacion.Comun.Permisos). -->
+    <ProjectReference Include="..\..\src\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
   </ItemGroup>
 </Project>

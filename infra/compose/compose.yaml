@@ -30,6 +30,7 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       ConnectionStrings__Validasoft: "Host=postgres;Port=5432;Database=validasoft;Username=validasoft;Password=validasoft"
       Validasoft__Plataforma__ClaveBootstrap: "dev-plataforma-solo-local-cambiar-0001"
+      Validasoft__Sesiones__ClaveFirma: "dev-sesiones-solo-local-cambiar-000000000001"
       Validasoft__Persistencia__CrearEsquemaAlIniciar: "true"
     ports:
       - "5080:8080"

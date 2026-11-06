@@ -1,3 +1,5 @@
+using Validasoft.Dominio.Identidad;
+
 namespace Validasoft.Aplicacion.Comun;
 
 /// <summary>Permisos (scopes) de docs/07 §3.2 usados en esta entrega. Cada uno es una política de autorización.</summary>
@@ -6,6 +8,8 @@ public static class Permisos
     public const string PlataformaTenants = "plataforma:tenants";
     public const string EmpresasAdministrar = "empresas:administrar";
     public const string ApiKeysAdministrar = "api-keys:administrar";
+    public const string SistemasAdministrar = "sistemas:administrar";
+    public const string UsuariosAdministrar = "usuarios:administrar";
     public const string ConfiguracionLeer = "configuracion:leer";
     public const string ConfiguracionEscribir = "configuracion:escribir";
     public const string TercerosLeer = "terceros:leer";
@@ -18,9 +22,92 @@ public static class Permisos
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
-        EmpresasAdministrar, ApiKeysAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
+        EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
+
+    /// <summary>
+    /// Administración del tenant: solo se obtiene con un rol de todo el tenant. Un administrador de una empresa no
+    /// gestiona usuarios, sistemas, llaves ni empresas (evita que se otorgue alcance de tenant a sí mismo).
+    /// </summary>
+    public static readonly IReadOnlySet<string> SoloDeTenant =
+        new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
+
+    private static readonly string[] Lecturas = [ConfiguracionLeer, TercerosLeer, VinculosLeer];
+
+    /// <summary>Mapeo rol → scopes (docs/07 §3.1).</summary>
+    public static IReadOnlyList<string> DeRol(Rol rol) => rol switch
+    {
+        Rol.Administrador => DelTenant,
+        Rol.Revisor => [.. Lecturas, VinculosEscribir],
+        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear],
+        Rol.Auditor => [.. Lecturas, AuditoriaLeer],
+        _ => []
+    };
+
+    /// <summary>
+    /// Permiso efectivo de una petición delegada (ADR-0011): <b>intersección</b> de lo que permite la API key del
+    /// sistema y lo que dan los roles del usuario. Los scopes de roles por empresa solo valen en esa empresa
+    /// (<see cref="PermisosEfectivos.PorEmpresa"/>); las empresas efectivas son las del usuario (<c>*</c> si tiene un
+    /// rol de todo el tenant) recortadas por las de la llave.
+    /// </summary>
+    public static PermisosEfectivos ParaUsuario(IEnumerable<RolAsignado> roles, IEnumerable<string> scopesLlave, IEnumerable<string> empresasLlave)
+    {
+        var llave = scopesLlave.ToHashSet();
+        var empresasDeLlave = empresasLlave.ToHashSet();
+        var lista = roles.ToList();
+
+        var deTenant = lista.Where(r => r.EmpresaId is null).SelectMany(r => DeRol(r.Rol)).Where(llave.Contains).ToHashSet();
+
+        var porEmpresa = new Dictionary<Guid, IReadOnlySet<string>>();
+        foreach (var grupo in lista.Where(r => r.EmpresaId is not null).GroupBy(r => r.EmpresaId!.Value))
+        {
+            if (!PermiteEmpresa(empresasDeLlave, grupo.Key))
+                continue;
+
+            var scopes = grupo.SelectMany(r => DeRol(r.Rol))
+                .Where(s => llave.Contains(s) && !SoloDeTenant.Contains(s) && !deTenant.Contains(s))
+                .ToHashSet();
+            if (scopes.Count > 0)
+                porEmpresa[grupo.Key] = scopes;
+        }
+
+        HashSet<string> empresasUsuario = lista.Any(r => r.EmpresaId is null)
+            ? ["*"]
+            : [.. lista.Select(r => r.EmpresaId!.Value.ToString())];
+        var empresas = Intersectar(empresasDeLlave, empresasUsuario);
+
+        return new PermisosEfectivos(deTenant, porEmpresa, empresas);
+    }
+
+    /// <summary>Intersección de alcances de empresa donde <c>*</c> significa "todas".</summary>
+    public static IReadOnlySet<string> Intersectar(IReadOnlySet<string> a, IReadOnlySet<string> b)
+    {
+        if (a.Contains("*"))
+            return b.ToHashSet();
+        if (b.Contains("*"))
+            return a.ToHashSet();
+        return a.Where(b.Contains).ToHashSet();
+    }
+
+    private static bool PermiteEmpresa(IReadOnlySet<string> empresas, Guid empresaId) =>
+        empresas.Contains("*") || empresas.Contains(empresaId.ToString());
+}
+
+/// <summary>Resultado de <see cref="Permisos.ParaUsuario"/>.</summary>
+/// <param name="DeTenant">Scopes válidos en cualquier empresa efectiva y en las operaciones de tenant.</param>
+/// <param name="PorEmpresa">Scopes adicionales que solo valen con <c>X-Empresa</c> igual a esa empresa.</param>
+/// <param name="Empresas">Empresas efectivas; <c>*</c> = todas las del tenant.</param>
+public sealed record PermisosEfectivos(
+    IReadOnlySet<string> DeTenant,
+    IReadOnlyDictionary<Guid, IReadOnlySet<string>> PorEmpresa,
+    IReadOnlySet<string> Empresas)
+{
+    /// <summary>Scopes que aplican en una petición con la empresa activa indicada (o sin empresa).</summary>
+    public IReadOnlySet<string> EnEmpresa(Guid? empresaId) =>
+        empresaId is { } id && PorEmpresa.TryGetValue(id, out var adicionales)
+            ? DeTenant.Union(adicionales).ToHashSet()
+            : DeTenant;
 }

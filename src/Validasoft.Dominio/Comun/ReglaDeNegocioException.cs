@@ -6,7 +6,8 @@ public enum TipoFalla
     Validacion,
     NoEncontrado,
     Conflicto,
-    Prohibido
+    Prohibido,
+    NoAutenticado
 }
 
 /// <summary>
@@ -25,6 +26,11 @@ public sealed class ReglaDeNegocioException(TipoFalla tipo, string codigo, strin
     public static ReglaDeNegocioException NoEncontrado(string codigo, string mensaje) => new(TipoFalla.NoEncontrado, codigo, mensaje);
 
     public static ReglaDeNegocioException Conflicto(string codigo, string mensaje) => new(TipoFalla.Conflicto, codigo, mensaje);
+
+    public static ReglaDeNegocioException Prohibido(string codigo, string mensaje) => new(TipoFalla.Prohibido, codigo, mensaje);
+
+    /// <summary>La credencial o la identidad delegada no se pudo verificar (401).</summary>
+    public static ReglaDeNegocioException NoAutenticado(string codigo, string mensaje) => new(TipoFalla.NoAutenticado, codigo, mensaje);
 }
 
 /// <summary>Quién origina un cambio (docs/03 §3).</summary>

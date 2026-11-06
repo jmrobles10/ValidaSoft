@@ -1,0 +1,178 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
+using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Identidad;
+using Validasoft.Contratos;
+using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Identidad;
+
+namespace Validasoft.Infraestructura.Seguridad;
+
+/// <summary>
+/// Identidad delegada (ADR-0011): verifica la aserción <c>X-Usuario-Delegado</c> — JWT RS256/ES256 firmado por el
+/// sistema integrado de la API key, <c>iss</c> = su código, <c>aud</c> = <c>validasoft</c>, vence en ≤ 5 minutos — y
+/// arma el principal del <b>usuario</b> con el permiso efectivo (intersección de llave y roles).
+/// </summary>
+public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados usuarios, TimeProvider reloj)
+{
+    public const string Cabecera = "X-Usuario-Delegado";
+    public const string Audiencia = "validasoft";
+
+    private static readonly TimeSpan Tolerancia = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan VigenciaMaxima = TimeSpan.FromMinutes(5);
+    private static readonly JsonWebTokenHandler Manejador = new() { MapInboundClaims = false };
+
+    public async Task<List<Claim>> VerificarAsync(string asercion, Guid tenantId, Guid sistemaId, string apiKeyId,
+        IReadOnlyList<string> scopesLlave, IReadOnlyList<string> empresasLlave, string correlationId, CancellationToken ct)
+    {
+        var sistema = await usuarios.CargarSistemaAsync(tenantId, sistemaId, ct);
+        if (sistema is null || !sistema.Activo)
+            throw ReglaDeNegocioException.NoAutenticado("sistema-inactivo", "El sistema integrado de la API key no existe o está desactivado.");
+
+        var datos = await ValidarAsync(asercion, sistema);
+        var usuario = await usuarios.ResolverAsync(tenantId, sistema, apiKeyId, datos, correlationId, ct);
+        var permisos = Permisos.ParaUsuario(usuario.Roles, scopesLlave, empresasLlave);
+
+        var reclamos = new List<Claim>
+        {
+            new(Reclamos.Tenant, tenantId.ToString()),
+            new(Reclamos.ActorTipo, ActorTipo.Usuario.ToString()),
+            new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+            new(Reclamos.SistemaId, sistema.Id.ToString()),
+            new(Reclamos.Sistema, sistema.Codigo)
+        };
+        reclamos.AddRange(permisos.DeTenant.Select(s => new Claim(Reclamos.Scope, s)));
+        reclamos.AddRange(permisos.PorEmpresa.SelectMany(p => p.Value.Select(s => new Claim(Reclamos.ScopeEmpresa, $"{s}|{p.Key}"))));
+        reclamos.AddRange(permisos.Empresas.Select(e => new Claim(Reclamos.Empresa, e)));
+        return reclamos;
+    }
+
+    private async Task<AsercionDelegada> ValidarAsync(string asercion, SistemaIntegrado sistema)
+    {
+        var parametros = new TokenValidationParameters
+        {
+            ValidIssuer = sistema.Codigo,
+            ValidAudience = Audiencia,
+            IssuerSigningKey = ClaveDeVerificacion(sistema.ClavePublicaPem),
+            ValidAlgorithms = [SecurityAlgorithms.RsaSha256, SecurityAlgorithms.EcdsaSha256],
+            // La vigencia se valida abajo con el reloj de Validasoft, para exigir además el máximo de 5 minutos.
+            ValidateLifetime = false
+        };
+
+        var resultado = await Manejador.ValidateTokenAsync(asercion, parametros);
+        if (!resultado.IsValid || resultado.SecurityToken is not JsonWebToken jwt)
+        {
+            throw resultado.Exception is SecurityTokenInvalidSignatureException
+                ? ReglaDeNegocioException.NoAutenticado("asercion-firma-invalida",
+                    "La firma de X-Usuario-Delegado no corresponde a la clave pública registrada del sistema.")
+                : ReglaDeNegocioException.NoAutenticado("asercion-invalida",
+                    $"X-Usuario-Delegado no es válido: debe ser un JWT RS256/ES256 con iss = {sistema.Codigo} y aud = {Audiencia}.");
+        }
+
+        var ahora = reloj.GetUtcNow();
+        if (jwt.ValidTo == DateTime.MinValue)
+            throw ReglaDeNegocioException.NoAutenticado("asercion-invalida", "La aserción necesita exp.");
+        var expira = new DateTimeOffset(jwt.ValidTo, TimeSpan.Zero);
+        if (expira < ahora - Tolerancia)
+            throw ReglaDeNegocioException.NoAutenticado("asercion-vencida", "La aserción X-Usuario-Delegado ya venció.");
+        if (expira > ahora + VigenciaMaxima + Tolerancia)
+            throw ReglaDeNegocioException.NoAutenticado("asercion-vigencia-excesiva", "La aserción debe vencer en 5 minutos o menos.");
+        if (jwt.ValidFrom != DateTime.MinValue && new DateTimeOffset(jwt.ValidFrom, TimeSpan.Zero) > ahora + Tolerancia)
+            throw ReglaDeNegocioException.NoAutenticado("asercion-invalida", "La aserción aún no es válida (nbf).");
+
+        var sub = jwt.Subject;
+        jwt.TryGetPayloadValue<string>("name", out var nombre);
+        jwt.TryGetPayloadValue<string>("email", out var correo);
+        if (string.IsNullOrWhiteSpace(sub) || string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(correo))
+            throw ReglaDeNegocioException.NoAutenticado("asercion-incompleta", "La aserción debe traer sub, name y email.");
+
+        try
+        {
+            return new AsercionDelegada(sub.Trim(), nombre, Usuario.NormalizarCorreo(correo));
+        }
+        catch (ReglaDeNegocioException)
+        {
+            throw ReglaDeNegocioException.NoAutenticado("asercion-incompleta", "El email de la aserción no es válido.");
+        }
+    }
+
+    /// <summary>La clave ya se validó al registrarla (RSA ≥ 2048 o EC P-256).</summary>
+    private static SecurityKey ClaveDeVerificacion(string pem)
+    {
+        try
+        {
+            var rsa = RSA.Create();
+            rsa.ImportFromPem(pem);
+            return new RsaSecurityKey(rsa);
+        }
+        catch (CryptographicException)
+        {
+            var ec = ECDsa.Create();
+            ec.ImportFromPem(pem);
+            return new ECDsaSecurityKey(ec);
+        }
+    }
+}
+
+/// <summary>
+/// Sesiones cortas de Validasoft para pantallas embebidas (ID-3): JWT HS256 de 30 minutos firmado con
+/// <c>Validasoft:Sesiones:ClaveFirma</c> que copia el permiso efectivo del usuario delegado. Lo valida el esquema
+/// <c>Bearer</c>.
+/// </summary>
+public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSesiones
+{
+    public const string Emisor = "validasoft";
+    public const string Audiencia = "validasoft:sesion";
+    public static readonly TimeSpan Duracion = TimeSpan.FromMinutes(30);
+
+    private static readonly string[] ReclamosCopiados =
+        [Reclamos.Tenant, Reclamos.ActorTipo, Reclamos.Sistema, Reclamos.SistemaId, Reclamos.Scope, Reclamos.ScopeEmpresa, Reclamos.Empresa];
+
+    public SesionUsuarioDto Emitir(ClaimsPrincipal principal, DateTimeOffset ahora)
+    {
+        var delegada = principal.Identity?.AuthenticationType == AutenticacionPorApiKey.Esquema &&
+                       principal.FindFirstValue(Reclamos.ActorTipo) == ActorTipo.Usuario.ToString();
+        if (!delegada)
+            throw ReglaDeNegocioException.Validacion("usuario-delegado-requerido",
+                "La sesión se emite con la API key del sistema integrado y la cabecera X-Usuario-Delegado.");
+
+        var reclamos = principal.Claims.Where(c => ReclamosCopiados.Contains(c.Type)).Select(c => new Claim(c.Type, c.Value)).ToList();
+        reclamos.Add(new Claim(Reclamos.Sujeto, principal.FindFirstValue(ClaimTypes.NameIdentifier)!));
+
+        var expira = ahora + Duracion;
+        var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
+        {
+            Issuer = Emisor,
+            Audience = Audiencia,
+            Subject = new ClaimsIdentity(reclamos),
+            IssuedAt = ahora.UtcDateTime,
+            NotBefore = ahora.UtcDateTime,
+            Expires = expira.UtcDateTime,
+            SigningCredentials = new SigningCredentials(ClaveDeFirma(configuracion), SecurityAlgorithms.HmacSha256)
+        });
+        return new SesionUsuarioDto(token, expira);
+    }
+
+    /// <summary>Parámetros con los que el esquema <c>Bearer</c> valida los tokens emitidos aquí.</summary>
+    public static TokenValidationParameters ParametrosDeValidacion(IConfiguration configuracion) => new()
+    {
+        ValidIssuer = Emisor,
+        ValidAudience = Audiencia,
+        IssuerSigningKey = ClaveDeFirma(configuracion),
+        ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+        ClockSkew = TimeSpan.FromSeconds(30),
+        NameClaimType = Reclamos.Sujeto
+    };
+
+    private static SymmetricSecurityKey ClaveDeFirma(IConfiguration configuracion)
+    {
+        var bytes = Encoding.UTF8.GetBytes(configuracion["Validasoft:Sesiones:ClaveFirma"] ?? string.Empty);
+        return bytes.Length >= 32
+            ? new SymmetricSecurityKey(bytes)
+            : throw new InvalidOperationException("Validasoft:Sesiones:ClaveFirma debe tener al menos 32 bytes.");
+    }
+}

@@ -20,6 +20,12 @@ public sealed class ApiKey
     /// <summary>Empresas internas permitidas; <c>*</c> = todas las del tenant.</summary>
     public List<string> Empresas { get; set; } = [];
 
+    /// <summary>
+    /// Sistema integrado dueño de la llave (ADR-0011): fija el sistema de las referencias externas y la clave pública
+    /// con la que se verifican sus aserciones delegadas. Nulo en llaves de administración.
+    /// </summary>
+    public Guid? SistemaId { get; set; }
+
     public bool Sandbox { get; set; }
 
     public DateTimeOffset CreadaEn { get; set; }

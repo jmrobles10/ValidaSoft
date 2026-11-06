@@ -23,8 +23,15 @@ public enum OrigenVinculo
     Api
 }
 
-/// <summary>Identificador del vínculo en el sistema que lo originó (SRM, Marco, Portal…).</summary>
-public sealed record ReferenciaExterna(string Sistema, string Id);
+/// <summary>
+/// Identificador del vínculo en un sistema integrado (SRM, Marco, Portal…). Un vínculo tiene a lo sumo una por
+/// sistema (I-0); el sistema lo fija la API key, no el cuerpo de la petición.
+/// </summary>
+public sealed record ReferenciaExterna(string Sistema, string Id)
+{
+    /// <summary>Clave plana <c>SISTEMA|id</c> para buscar por referencia.</summary>
+    public string Clave() => $"{Sistema}|{Id}";
+}
 
 // Eventos del stream Vinculo-{id}. Quién y desde dónde (actor, correlación) viaja en los metadatos del
 // evento de Marten, no en el cuerpo (docs/03 §3).
@@ -40,6 +47,9 @@ public sealed record VinculoCreado(
     ReferenciaExterna? ReferenciaExterna,
     string CorreoInvitacion,
     DateTimeOffset Fecha);
+
+/// <summary>Otro sistema integrado pidió el mismo vínculo: comparte la validación y recibe sus eventos (I-0).</summary>
+public sealed record ReferenciaExternaAgregada(string Sistema, string Id, DateTimeOffset Fecha);
 
 public sealed record InvitacionEnviada(string Canal, string CorreoDestino, DateTimeOffset Expira, Guid? LoteId, DateTimeOffset Fecha);
 

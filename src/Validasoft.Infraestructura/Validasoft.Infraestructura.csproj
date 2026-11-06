@@ -6,6 +6,9 @@
     <PackageReference Include="Marten" />
     <PackageReference Include="WolverineFx.Marten" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
