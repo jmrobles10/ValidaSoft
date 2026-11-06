@@ -1,0 +1,23 @@
+{
+  "name": "@validasoft/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generar": "orval --config orval.config.ts",
+    "openapi:actualizar": "node openapi/descargar.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.90.0",
+    "orval": "^7.21.0",
+    "react": "^18.3.1"
+  }
+}

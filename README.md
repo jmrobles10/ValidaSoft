@@ -29,6 +29,10 @@ Sistema de validación documental para cualquier vínculo comercial (proveedor, 
 | ADR | [Decisiones de arquitectura](docs/adr/) | Por qué se decidió cada cosa estructural |
 | — | [Cuestionario](docs/decisiones/cuestionario.md) y [Registro de decisiones](docs/decisiones/registro.md) | Las 97 preguntas del experto y lo que Producto decidió |
 
+## Frontend
+
+Workspace pnpm (`apps/web`, `packages/ui`, `packages/api-client`): ver [apps/web/README.md](apps/web/README.md) para comandos, la demo embebida y lo pendiente.
+
 ## Reglas de oro del producto (resumen)
 
 1. **Un documento global tiene una sola versión vigente por tercero.** Las empresas no eligen versión: validan la actual. Si el tercero sube una versión nueva válida, todas las empresas vinculadas reciben alerta y deben revalidar (15 días y luego el certificado bloquea).
