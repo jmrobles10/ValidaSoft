@@ -1,0 +1,41 @@
+# Entorno local de Validasoft (docs/04 §11).
+#   docker compose -f infra/compose/compose.yaml up -d          -> solo PostgreSQL (la API corre con dotnet run)
+#   docker compose -f infra/compose/compose.yaml --profile app up -d --build   -> PostgreSQL + API en contenedor
+name: validasoft
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: validasoft
+      POSTGRES_USER: validasoft
+      POSTGRES_PASSWORD: validasoft
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U validasoft -d validasoft"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    profiles: ["app"]
+    build:
+      context: ../..
+      dockerfile: src/Validasoft.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Validasoft: "Host=postgres;Port=5432;Database=validasoft;Username=validasoft;Password=validasoft"
+      Validasoft__Plataforma__ClaveBootstrap: "dev-plataforma-solo-local-cambiar-0001"
+      Validasoft__Persistencia__CrearEsquemaAlIniciar: "true"
+    ports:
+      - "5080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-datos:

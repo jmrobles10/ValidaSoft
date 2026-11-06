@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Validasoft.Api/Validasoft.Api.csproj" />
+    <Project Path="src/Validasoft.Aplicacion/Validasoft.Aplicacion.csproj" />
+    <Project Path="src/Validasoft.Contratos/Validasoft.Contratos.csproj" />
+    <Project Path="src/Validasoft.Dominio/Validasoft.Dominio.csproj" />
+    <Project Path="src/Validasoft.Infraestructura/Validasoft.Infraestructura.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Validasoft.Dominio.Tests/Validasoft.Dominio.Tests.csproj" />
+    <Project Path="tests/Validasoft.Integracion.Tests/Validasoft.Integracion.Tests.csproj" />
+  </Folder>
+</Solution>

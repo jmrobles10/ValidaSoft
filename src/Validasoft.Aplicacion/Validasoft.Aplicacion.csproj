@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Dominio\Validasoft.Dominio.csproj" />
+    <ProjectReference Include="..\Validasoft.Contratos\Validasoft.Contratos.csproj" />
+  </ItemGroup>
+</Project>

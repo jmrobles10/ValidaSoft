@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx.Marten" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
+  </ItemGroup>
+</Project>
