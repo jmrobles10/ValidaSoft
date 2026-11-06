@@ -8,6 +8,7 @@ import {
   getListarAperturasPendientesQueryOptions,
   getListarBandejaQueryOptions,
   getListarMotivosQueryOptions,
+  getObtenerExpedienteQueryKey,
   getObtenerExpedienteQueryOptions,
   getObtenerHistorialExpedienteQueryOptions,
   rechazarExpediente,
@@ -90,12 +91,21 @@ export function invalidarExpedientes(cliente: ReturnType<typeof useQueryClient>)
   ]);
 }
 
+/**
+ * La respuesta (el expediente ya decidido) reemplaza al de la caché y el resto se refresca sin esperar: si la
+ * mutación esperara la recarga, quien la llamó vería el expediente nuevo antes de saber que su decisión se guardó.
+ */
 export function useAccionExpediente(empresaId: string, expedienteId: string) {
   const cliente = useQueryClient();
   return useMutation({
     mutationFn: (entrada: EntradaExpediente) => ejecutarEnExpediente(empresaId, expedienteId, entrada),
+    onSuccess: (expediente) => {
+      cliente.setQueryData(conEmpresa(getObtenerExpedienteQueryKey(expedienteId), empresaId), expediente);
+    },
     // También ante 409/403: lo que se mostraba puede no ser lo vigente.
-    onSettled: () => invalidarExpedientes(cliente),
+    onSettled: () => {
+      void invalidarExpedientes(cliente);
+    },
   });
 }
 
@@ -103,6 +113,8 @@ export function useAbrirExpediente(empresaId: string) {
   const cliente = useQueryClient();
   return useMutation({
     mutationFn: ({ vinculoId, flujoId }: { vinculoId: string; flujoId: string | null }) => abrirExpediente(vinculoId, { flujoId }, { empresa: empresaId }),
-    onSettled: () => invalidarExpedientes(cliente),
+    onSettled: () => {
+      void invalidarExpedientes(cliente);
+    },
   });
 }

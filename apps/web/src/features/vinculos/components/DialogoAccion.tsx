@@ -45,7 +45,8 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
   const Icono = ICONO_ACCION[accion];
   const ocupado = mutacion.isPending || recargando;
   const conflicto = esErrorApi(mutacion.error) && mutacion.error.esConflictoDeVersion;
-  const yaNoAplica = !accionPermitidaPorEstado(accion, vinculo);
+  // Solo si el cambio llegó antes de enviar: la recarga que dispara la propia acción no cuenta.
+  const yaNoAplica = !mutacion.isPending && !mutacion.isSuccess && !accionPermitidaPorEstado(accion, vinculo);
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();

@@ -1,4 +1,4 @@
-import { SCOPES, type AreaExpedienteDto, type ExpedienteDto, type MotivoTipificadoDto, type VeredictoEmitidoDto } from '@validasoft/api-client';
+import { SCOPES, type MotivoTipificadoDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
 import {
   accionesDeExpediente,
@@ -14,73 +14,11 @@ import {
   type ContextoRevisor,
 } from './reglas';
 import { identificacionResumida } from '../vinculos/tercero';
+import { area, expediente, veredicto } from './datosPrueba';
 
 const REVISOR = new Set<string>([SCOPES.expedientesLeer, SCOPES.expedientesRevisar]);
 const ADMIN = new Set<string>([SCOPES.expedientesLeer, SCOPES.expedientesRevisar, SCOPES.expedientesAdministrar]);
 const AUDITOR = new Set<string>([SCOPES.expedientesLeer]);
-
-function veredicto(cambios: Partial<VeredictoEmitidoDto> = {}): VeredictoEmitidoDto {
-  return {
-    id: 'v1',
-    veredicto: 'Aprobado',
-    origen: 'Humano',
-    usuario: 'u-1',
-    fecha: '2026-11-06T15:00:00Z',
-    motivos: [],
-    observacion: null,
-    justificacion: null,
-    vigente: true,
-    superado: false,
-    anulado: false,
-    anuladoPor: null,
-    ...cambios,
-  };
-}
-
-function area(cambios: Partial<AreaExpedienteDto> = {}): AreaExpedienteDto {
-  return {
-    areaId: 'a-juridica',
-    codigo: 'JURIDICA',
-    nombre: 'Jurídica',
-    estado: 'Pendiente',
-    aprobadoresRequeridos: 1,
-    aprobaciones: 0,
-    aprobacionesFaltantes: 1,
-    miembrosPendientes: ['u-1'],
-    puedeRechazarExpediente: false,
-    automatica: false,
-    pendienteDesde: '2026-11-06T14:00:00Z',
-    slaVence: null,
-    veredictos: [],
-    ...cambios,
-  };
-}
-
-function expediente(estado: ExpedienteDto['estado'], areas: AreaExpedienteDto[] = [area()]): ExpedienteDto {
-  return {
-    id: 'e1',
-    folio: 'NORTE-E-2026-000001',
-    empresaId: 'emp',
-    vinculoId: 'vin',
-    tercero: { id: 't', nombre: 'Aceros del Norte S.A.S.', identificacion: 'NIT 900123456-0' },
-    tipoVinculo: { id: 'tp', codigo: 'PROVEEDOR', nombre: 'Proveedor' },
-    tipo: 'Inicial',
-    estado,
-    flujo: null,
-    politicaDevolucion: 'Inmediata',
-    separacionDeFunciones: false,
-    etapaActual: 1,
-    etapas: [{ orden: 1, estado: 'Activa', activadaEn: null, aprobadaEn: null, areas }],
-    reenvios: 0,
-    ultimaRespuesta: null,
-    rechazo: null,
-    motivoAnulacion: null,
-    abiertoEn: '2026-11-06T14:00:00Z',
-    cerradoEn: null,
-    actualizadoEn: '2026-11-06T14:00:00Z',
-    version: 3,
-  };
-}
 
 const miembro = (scopes: ReadonlySet<string> = REVISOR, extra: Partial<ContextoRevisor> = {}): ContextoRevisor => ({ scopes, usuarioId: 'u-1', esMiembro: true, ...extra });
 

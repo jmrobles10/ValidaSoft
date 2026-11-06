@@ -5,6 +5,7 @@
  *   { tipo: 'validasoft:ready', version: 1 }
  *   { tipo: 'validasoft:sesion-requerida', motivo: 'inicial' | 'por-vencer' | 'vencida' | 'rechazada' }
  *   { tipo: 'validasoft:resize', height }
+ *   { tipo: 'validasoft:visible', top, height }   región del iframe (px) que debe verse: un diálogo o panel recién abierto
  *
  * Contenedor → Validasoft:
  *   { tipo: 'validasoft:sesion', token, empresaId? }   token = `POST /api/v1/sesiones-usuario` (lo pide el backend del sistema)
@@ -21,7 +22,8 @@ export type MotivoSesionRequerida = 'inicial' | 'por-vencer' | 'vencida' | 'rech
 export type MensajeSaliente =
   | { tipo: 'validasoft:ready'; version: number }
   | { tipo: 'validasoft:sesion-requerida'; motivo: MotivoSesionRequerida }
-  | { tipo: 'validasoft:resize'; height: number };
+  | { tipo: 'validasoft:resize'; height: number }
+  | { tipo: 'validasoft:visible'; top: number; height: number };
 
 export type MensajeEntrante =
   | { tipo: 'validasoft:sesion'; token: string; empresaId: string | null }

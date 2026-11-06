@@ -1,6 +1,7 @@
 import { msRestantes } from '@validasoft/api-client';
 import { useEffect, useMemo } from 'react';
 import { usePreferencias } from '../shared/preferencias';
+import { anclarOverlays } from './overlaysEmbebidos';
 import {
   estaEmbebida,
   interpretarMensaje,
@@ -119,6 +120,12 @@ export function usePuenteEmbed(): PuenteEmbed {
     });
     observador.observe(document.body);
     return () => observador.disconnect();
+  }, [embebida, enviar]);
+
+  // Diálogos y paneles junto a lo que la persona tocó, y aviso al contenedor de la región que debe verse.
+  useEffect(() => {
+    if (!embebida || typeof MutationObserver === 'undefined') return undefined;
+    return anclarOverlays((region) => enviar({ tipo: 'validasoft:visible', ...region }));
   }, [embebida, enviar]);
 
   return { embebida, origenContenedor };

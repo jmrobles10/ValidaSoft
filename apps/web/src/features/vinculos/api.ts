@@ -90,7 +90,10 @@ export function useAccionVinculo(empresaId: string) {
   const cliente = useQueryClient();
   return useMutation({
     mutationFn: (entrada: EntradaAccion) => ejecutarAccion(empresaId, entrada),
-    // Éxito o 412: en ambos casos lo que se mostraba ya no es lo vigente.
-    onSettled: () => invalidarRuta(cliente, '/api/v1/vinculos'),
+    // Éxito o 412: en ambos casos lo que se mostraba ya no es lo vigente. Sin esperar la recarga: el diálogo se
+    // cierra con la respuesta, no con el vínculo recargado (que ya no admitiría la acción recién hecha).
+    onSettled: () => {
+      void invalidarRuta(cliente, '/api/v1/vinculos');
+    },
   });
 }

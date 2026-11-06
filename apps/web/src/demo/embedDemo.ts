@@ -1,7 +1,7 @@
 /**
  * Página de demostración: hace de sistema integrado que aloja Validasoft en un iframe (ID-3). Muestra el contrato
  * postMessage de `sesion/puenteEmbed.ts` desde el lado del contenedor: responde a `sesion-requerida` emitiendo una
- * sesión, ajusta la altura con `resize` y envía el tema.
+ * sesión, ajusta la altura con `resize`, hace scroll hasta la región de `visible` y envía el tema.
  */
 import { abrirSesionDelegada, cargarSemilla, type SemillaDev } from '../dev/firmarAsercion';
 
@@ -9,7 +9,22 @@ interface MensajeDeValidasoft {
   tipo: string;
   motivo?: string;
   height?: number;
+  top?: number;
   version?: number;
+}
+
+/**
+ * `validasoft:visible`: la región `top..top+height` del iframe (un diálogo o panel recién abierto) debe verse. Solo
+ * desplaza si hace falta y lo mínimo; si la región es más alta que la ventana, muestra su borde superior.
+ */
+function mostrarRegion(marcoIframe: HTMLIFrameElement, top: number, alto: number) {
+  const margen = 16;
+  const arriba = marcoIframe.getBoundingClientRect().top + top;
+  const abajo = arriba + alto;
+  let desplazamiento = 0;
+  if (arriba < margen || alto + 2 * margen > window.innerHeight) desplazamiento = arriba - margen;
+  else if (abajo > window.innerHeight - margen) desplazamiento = abajo - window.innerHeight + margen;
+  if (desplazamiento !== 0) window.scrollBy(0, desplazamiento);
 }
 
 function elemento(id: string): HTMLElement {
@@ -120,6 +135,12 @@ window.addEventListener('message', (evento: MessageEvent<MensajeDeValidasoft>) =
       break;
     case 'validasoft:resize':
       if (typeof evento.data.height === 'number') iframe.style.height = `${String(Math.max(640, evento.data.height))}px`;
+      break;
+    case 'validasoft:visible':
+      if (typeof evento.data.top === 'number' && typeof evento.data.height === 'number') {
+        registrar('entrante', `validasoft:visible (top ${String(evento.data.top)}, alto ${String(evento.data.height)})`);
+        mostrarRegion(iframe, evento.data.top, evento.data.height);
+      }
       break;
     default:
       registrar('entrante', tipo);

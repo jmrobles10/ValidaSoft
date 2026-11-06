@@ -14,7 +14,10 @@ export interface DialogoDecisionProps {
   expediente: ExpedienteDto;
   empresaId: string;
   motivos: readonly MotivoTipificadoDto[];
-  /** La decisión ya no aplica al expediente vigente (se recargó y cambió). */
+  /**
+   * La decisión aplica al expediente vigente. Si otra persona lo cambió antes de enviar, deja de aplicar y el diálogo
+   * lo explica; el cambio que produce la propia decisión no cuenta (el diálogo se cierra con la respuesta).
+   */
   aplica: boolean;
   onCerrar: () => void;
 }
@@ -24,7 +27,7 @@ export interface DialogoDecisionProps {
  * anulación y las acciones de administrador. Ante 409/403 explica el caso con el mensaje del código y el detalle se
  * recarga detrás; lo escrito se conserva.
  */
-export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplica, onCerrar }: DialogoDecisionProps) {
+export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplica: aplicaAlExpediente, onCerrar }: DialogoDecisionProps) {
   const { t } = useTranslation();
   const mostrar = useAvisos((s) => s.mostrar);
   const mutacion = useAccionExpediente(empresaId, expediente.id);
@@ -33,6 +36,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const [texto, setTexto] = useState('');
   const [intentado, setIntentado] = useState(false);
 
+  const aplica = aplicaAlExpediente || mutacion.isPending || mutacion.isSuccess;
   const area = 'area' in dialogo ? dialogo.area : null;
   const nombreArea = area?.nombre ?? '';
   const observando = dialogo.tipo === 'veredicto' && veredicto === 'Observado';
@@ -107,8 +111,8 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
     setIntentado(true);
     if (faltanMotivos || faltaTexto || !aplica) return;
     mutacion.mutate(entrada(), {
-      onSuccess: () => {
-        mostrar(textos.exito);
+      onSuccess: (resultado) => {
+        mostrar(resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado' ? t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio }) : textos.exito);
         onCerrar();
       },
     });

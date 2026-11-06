@@ -168,6 +168,7 @@ export const expedientes = {
   },
   textoRequerido: 'Escribe el texto; queda en el historial con tu nombre.',
   yaNoAplica: 'El expediente cambió y esta decisión ya no aplica a su estado actual.',
+  exitoExpedienteAprobado: 'Expediente {{folio}} aprobado: ya no falta ninguna área.',
   historial: {
     titulo: 'Historial',
     vacio: 'Aún no hay eventos.',
