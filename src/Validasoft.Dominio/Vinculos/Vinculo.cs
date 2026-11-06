@@ -1,5 +1,8 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Consentimientos;
+using Validasoft.Dominio.Expedientes;
 
 namespace Validasoft.Dominio.Vinculos;
 
@@ -10,9 +13,9 @@ public sealed record InvitacionVigente(string Correo, DateTimeOffset Expira, int
 /// <summary>
 /// Relación <c>(Empresa, Tercero, TipoDeVinculo)</c> — agregado event-sourced de vida larga (docs/03 §5).
 /// Los métodos de decisión validan las reglas y devuelven el evento; los <c>Apply</c> solo evolucionan el
-/// estado y los usa Marten para reconstruirlo. Esta primera entrega cubre creación, invitación, aceptación,
-/// atributos, bloqueo y ciclo de terminación; las transiciones que dependen de expedientes
-/// (<c>EnValidacion</c>, <c>Activo</c>, vencimientos) llegan con H4/H6.
+/// estado y los usa Marten para reconstruirlo. Cubre creación, invitación, aceptación, atributos, bloqueo, ciclo de
+/// terminación y la relación con su expediente (<c>EnValidacion</c> al abrirlo, <c>Activo</c> al aprobarse); los
+/// vencimientos llegan con H6.
 /// </summary>
 public sealed class Vinculo
 {
@@ -53,10 +56,29 @@ public sealed class Vinculo
 
     public DateTimeOffset? InvitacionAceptadaEn { get; set; }
 
+    /// <summary>Consentimientos registrados al aceptar (versión y hash de cada texto); la evidencia está en el evento.</summary>
+    public List<ConsentimientoRegistrado> Consentimientos { get; set; } = [];
+
     public Bloqueo? Bloqueo { get; set; }
 
     /// <summary>Si alguna vez tuvo un expediente aprobado (habilita renovación al reintegrar).</summary>
     public bool TuvoAprobacion { get; set; }
+
+    /// <summary>Expediente abierto (a lo sumo uno, invariante 1 de docs/03 §5.3).</summary>
+    public Guid? ExpedienteAbiertoId { get; set; }
+
+    /// <summary>Último expediente cerrado y su resultado.</summary>
+    public Guid? UltimoExpedienteId { get; set; }
+
+    public ResultadoExpediente? UltimoResultado { get; set; }
+
+    /// <summary>
+    /// El tercero aceptó pero no se pudo abrir el expediente (no había flujo explícito ni por defecto publicado): un
+    /// administrador debe abrirlo (FL-6). Derivado; no es un estado ni un evento.
+    /// </summary>
+    [JsonIgnore]
+    public bool AperturaDeExpedientePendiente =>
+        InvitacionAceptada && Estado == EstadoVinculo.Invitado && ExpedienteAbiertoId is null && UltimoExpedienteId is null;
 
     public DateTimeOffset CreadoEn { get; set; }
 
@@ -126,6 +148,16 @@ public sealed class Vinculo
     /// </summary>
     public InvitacionAceptada AceptarInvitacion(string correo, DateTimeOffset ahora)
     {
+        AsegurarAceptable(ahora);
+        return new InvitacionAceptada(correo.Trim().ToLowerInvariant(), ahora);
+    }
+
+    /// <summary>
+    /// Reglas comunes para aceptar: no aceptada aún, ni bloqueada ni terminal, con invitación vigente. El llamador la
+    /// usa antes de mirar los textos legales para que <c>invitacion-ya-aceptada</c> tenga prioridad.
+    /// </summary>
+    public void AsegurarAceptable(DateTimeOffset ahora)
+    {
         if (InvitacionAceptada)
             throw ReglaDeNegocioException.Conflicto("invitacion-ya-aceptada", "La invitación ya fue aceptada.");
 
@@ -137,8 +169,53 @@ public sealed class Vinculo
 
         if (Invitacion.Expira <= ahora)
             throw ReglaDeNegocioException.Conflicto("invitacion-expirada", "El enlace de invitación expiró; pide a la empresa que lo reenvíe.");
+    }
 
-        return new InvitacionAceptada(correo.Trim().ToLowerInvariant(), ahora);
+    /// <summary>
+    /// Consentimientos que acompañan la aceptación (B-1, ADR-0009): la autorización y los términos <b>vigentes</b> de
+    /// esta empresa siempre, y el aviso de la plataforma si <paramref name="requeridos"/> lo incluye (el tercero no ha
+    /// aceptado su versión vigente). Cada uno debe venir aceptado y con la versión vigente; la evidencia (IP,
+    /// user-agent, OTP, canal, correo) queda en el evento. Se registra antes de <see cref="AceptarInvitacion"/>.
+    /// </summary>
+    public ConsentimientosRegistrados RegistrarConsentimientos(IReadOnlyList<TextoLegal> requeridos,
+        IReadOnlyList<ConsentimientoOtorgado> otorgados, EvidenciaDeConsentimiento evidencia, DateTimeOffset ahora)
+    {
+        AsegurarAceptable(ahora);
+
+        if (requeridos.Any(t => t.Ambito == AmbitoTextoLegal.Empresa && t.EmpresaId != EmpresaId))
+            throw new InvalidOperationException("Un texto legal requerido es de otra empresa.");
+
+        var faltantes = new[] { TipoTextoLegal.AutorizacionEmpresa, TipoTextoLegal.TerminosEmpresa }
+            .Where(tipo => requeridos.All(t => t.Tipo != tipo)).ToList();
+        if (faltantes.Count > 0)
+            throw ReglaDeNegocioException.Conflicto("textos-legales-faltantes",
+                $"La empresa aún no ha publicado: {string.Join(", ", faltantes)}. No se puede aceptar la invitación todavía.");
+
+        var duplicado = otorgados.GroupBy(o => o.Tipo).FirstOrDefault(g => g.Count() > 1);
+        if (duplicado is not null)
+            throw ReglaDeNegocioException.Validacion("consentimiento-duplicado", $"El consentimiento {duplicado.Key} viene repetido.");
+
+        var registrados = new List<ConsentimientoRegistrado>();
+        foreach (var texto in requeridos)
+        {
+            var otorgado = otorgados.FirstOrDefault(o => o.Tipo == texto.Tipo)
+                ?? throw ReglaDeNegocioException.Validacion("consentimiento-faltante", $"Falta el consentimiento {texto.Tipo}.");
+
+            if (!otorgado.Aceptado)
+                throw ReglaDeNegocioException.Validacion("consentimiento-rechazado",
+                    $"Para aceptar la invitación debes aceptar {texto.Tipo}.");
+
+            if (otorgado.TextoVersion != texto.Version)
+                throw ReglaDeNegocioException.Conflicto("texto-desactualizado",
+                    $"{texto.Tipo} cambió: la versión vigente es la {texto.Version}. Vuelve a leerlo y acéptalo.");
+
+            registrados.Add(new ConsentimientoRegistrado(texto.Tipo, texto.Id, texto.Version, texto.Hash));
+        }
+
+        if (string.IsNullOrWhiteSpace(evidencia.Correo))
+            throw ReglaDeNegocioException.Validacion("correo-requerido", "La evidencia del consentimiento necesita el correo del tercero.");
+
+        return new ConsentimientosRegistrados(registrados, evidencia, ahora);
     }
 
     public AtributosDeVinculoActualizados ActualizarAtributos(Dictionary<string, JsonElement> nuevos, DateTimeOffset ahora)
@@ -199,6 +276,43 @@ public sealed class Vinculo
         return new VinculoAnulado(Estado, motivo.Trim(), ahora);
     }
 
+    /// <summary>
+    /// Registra el expediente que se abre. Un solo expediente abierto; nunca bloqueado ni terminado (invariante 4). En
+    /// esta fase solo hay expedientes <c>Inicial</c>, que se abren desde <c>Invitado</c> (aceptación o apertura manual).
+    /// </summary>
+    public ExpedienteVinculado VincularExpediente(Guid expedienteId, TipoExpediente tipo, string folio, DateTimeOffset ahora)
+    {
+        if (Estado == EstadoVinculo.Bloqueado)
+            throw ReglaDeNegocioException.Conflicto("vinculo-bloqueado", "El vínculo está bloqueado: no se abren expedientes.");
+        AsegurarNoTerminal("abrir un expediente en");
+
+        if (ExpedienteAbiertoId is { } abierto)
+            throw ReglaDeNegocioException.Conflicto("expediente-abierto-existente", $"El vínculo ya tiene el expediente {abierto} abierto.");
+
+        if (tipo != TipoExpediente.Inicial)
+            throw ReglaDeNegocioException.Validacion("tipo-expediente-no-soportado", "Por ahora solo se abren expedientes iniciales.");
+
+        if (Estado != EstadoVinculo.Invitado || TuvoAprobacion)
+            throw ReglaDeNegocioException.Conflicto("estado-invalido",
+                $"Un expediente inicial se abre sobre un vínculo Invitado sin aprobación previa; este está {Estado}.");
+
+        return new ExpedienteVinculado(expedienteId, tipo, folio, ahora);
+    }
+
+    /// <summary>
+    /// Cierra el expediente abierto (lo dispara el proceso de validación en la misma transacción). Aprobado ⇒ además
+    /// <see cref="VinculoActivado"/>.
+    /// </summary>
+    public IReadOnlyList<object> CerrarExpediente(Guid expedienteId, ResultadoExpediente resultado, DateTimeOffset ahora)
+    {
+        if (ExpedienteAbiertoId != expedienteId)
+            throw ReglaDeNegocioException.Conflicto("expediente-no-abierto", "Ese expediente no es el abierto del vínculo.");
+
+        return resultado == ResultadoExpediente.Aprobado
+            ? [new ExpedienteCerrado(expedienteId, resultado, ahora), new VinculoActivado(expedienteId, ahora)]
+            : [new ExpedienteCerrado(expedienteId, resultado, ahora)];
+    }
+
     // ---------- Evolución (Marten) ----------
 
     public static Vinculo Create(VinculoCreado e) => new()
@@ -233,6 +347,12 @@ public sealed class Vinculo
         ActualizadoEn = e.Fecha;
     }
 
+    public void Apply(ConsentimientosRegistrados e)
+    {
+        Consentimientos.AddRange(e.Consentimientos);
+        ActualizadoEn = e.Fecha;
+    }
+
     public void Apply(InvitacionAceptada e)
     {
         InvitacionAceptada = true;
@@ -243,6 +363,31 @@ public sealed class Vinculo
     public void Apply(AtributosDeVinculoActualizados e)
     {
         Atributos = e.Despues;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(ExpedienteVinculado e)
+    {
+        ExpedienteAbiertoId = e.ExpedienteId;
+        if (Estado == EstadoVinculo.Invitado)
+            Estado = EstadoVinculo.EnValidacion;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(ExpedienteCerrado e)
+    {
+        ExpedienteAbiertoId = null;
+        UltimoExpedienteId = e.ExpedienteId;
+        UltimoResultado = e.Resultado;
+        if (e.Resultado != ResultadoExpediente.Aprobado && Estado == EstadoVinculo.EnValidacion)
+            Estado = EstadoVinculo.Invitado;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VinculoActivado e)
+    {
+        Estado = EstadoVinculo.Activo;
+        TuvoAprobacion = true;
         ActualizadoEn = e.Fecha;
     }
 
@@ -264,6 +409,7 @@ public sealed class Vinculo
 
     public void Apply(VinculoDesvinculado e)
     {
+        CerrarExpedientePorTerminacion();
         Estado = EstadoVinculo.Desvinculado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
@@ -284,6 +430,7 @@ public sealed class Vinculo
 
     public void Apply(VinculoAnulado e)
     {
+        CerrarExpedientePorTerminacion();
         Estado = EstadoVinculo.Anulado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
@@ -291,6 +438,16 @@ public sealed class Vinculo
     }
 
     // ---------- Reglas comunes ----------
+
+    /// <summary>Un vínculo terminado anula su expediente abierto (el proceso emite <c>ExpedienteAnulado</c> en su stream).</summary>
+    private void CerrarExpedientePorTerminacion()
+    {
+        if (ExpedienteAbiertoId is not { } abierto)
+            return;
+        UltimoExpedienteId = abierto;
+        UltimoResultado = ResultadoExpediente.Anulado;
+        ExpedienteAbiertoId = null;
+    }
 
     private void AsegurarNoTerminal(string accion)
     {

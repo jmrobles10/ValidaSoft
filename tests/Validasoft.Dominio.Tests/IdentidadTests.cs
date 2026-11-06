@@ -168,15 +168,32 @@ public class AreaTests
 
 public class PermisosTests
 {
-    private static readonly string[] Lecturas = [Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer];
+    private static readonly string[] Lecturas =
+        [Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer, Permisos.FlujosLeer, Permisos.ExpedientesLeer];
 
     [Fact]
     public void Mapea_cada_rol_a_sus_scopes()
     {
         Permisos.DeRol(Rol.Administrador).ShouldBe(Permisos.DelTenant);
-        Permisos.DeRol(Rol.Revisor).ShouldBe([.. Lecturas, Permisos.VinculosEscribir], ignoreOrder: true);
-        Permisos.DeRol(Rol.OficialCumplimiento).ShouldBe([.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear], ignoreOrder: true);
+        Permisos.DeRol(Rol.Revisor).ShouldBe([.. Lecturas, Permisos.VinculosEscribir, Permisos.ExpedientesRevisar], ignoreOrder: true);
+        Permisos.DeRol(Rol.OficialCumplimiento).ShouldBe(
+            [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.ExpedientesRevisar], ignoreOrder: true);
         Permisos.DeRol(Rol.Auditor).ShouldBe([.. Lecturas, Permisos.AuditoriaLeer], ignoreOrder: true);
+    }
+
+    [Fact]
+    public void El_administrador_tiene_todos_los_permisos_de_flujos_y_expedientes_y_el_auditor_solo_lectura()
+    {
+        string[] nuevos =
+        [
+            Permisos.FlujosLeer, Permisos.FlujosEscribir, Permisos.ExpedientesLeer, Permisos.ExpedientesRevisar, Permisos.ExpedientesAdministrar
+        ];
+        nuevos.ShouldAllBe(n => Permisos.DelTenant.Contains(n));
+        nuevos.ShouldAllBe(n => Permisos.DeRol(Rol.Administrador).Contains(n));
+        Permisos.DeRol(Rol.Auditor).ShouldNotContain(Permisos.ExpedientesRevisar);
+        Permisos.DeRol(Rol.Auditor).ShouldNotContain(Permisos.FlujosEscribir);
+        Permisos.DeRol(Rol.Revisor).ShouldNotContain(Permisos.ExpedientesAdministrar);
+        Permisos.DeRol(Rol.OficialCumplimiento).ShouldNotContain(Permisos.FlujosEscribir);
     }
 
     [Fact]

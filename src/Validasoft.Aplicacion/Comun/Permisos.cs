@@ -18,12 +18,22 @@ public static class Permisos
     public const string VinculosEscribir = "vinculos:escribir";
     public const string VinculosBloquear = "vinculos:bloquear";
     public const string AuditoriaLeer = "auditoria:leer";
+    public const string FlujosLeer = "flujos:leer";
+    public const string FlujosEscribir = "flujos:escribir";
+    public const string ExpedientesLeer = "expedientes:leer";
+
+    /// <summary>Emitir veredictos y rechazar (además hay que ser miembro activo del área).</summary>
+    public const string ExpedientesRevisar = "expedientes:revisar";
+
+    /// <summary>Abrir, anular, reenviar como integrador, aprobar en nombre de un área y anular veredictos.</summary>
+    public const string ExpedientesAdministrar = "expedientes:administrar";
 
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
-        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer
+        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer,
+        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -35,14 +45,14 @@ public static class Permisos
     public static readonly IReadOnlySet<string> SoloDeTenant =
         new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
 
-    private static readonly string[] Lecturas = [ConfiguracionLeer, TercerosLeer, VinculosLeer];
+    private static readonly string[] Lecturas = [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer];
 
     /// <summary>Mapeo rol → scopes (docs/07 §3.1).</summary>
     public static IReadOnlyList<string> DeRol(Rol rol) => rol switch
     {
         Rol.Administrador => DelTenant,
-        Rol.Revisor => [.. Lecturas, VinculosEscribir],
-        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear],
+        Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
+        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, ExpedientesRevisar],
         Rol.Auditor => [.. Lecturas, AuditoriaLeer],
         _ => []
     };

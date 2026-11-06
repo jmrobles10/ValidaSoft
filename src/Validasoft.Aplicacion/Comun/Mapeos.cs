@@ -1,4 +1,5 @@
 using Validasoft.Contratos;
+using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Identificaciones;
@@ -54,7 +55,7 @@ public static class Mapeos
                 $"'{a.Tipo}' no es un tipo de atributo ({string.Join(", ", Enum.GetNames<TipoAtributo>())}).");
 
     public static TipoVinculoDto ADto(this TipoVinculo t) =>
-        new(t.Id, t.Codigo, t.Nombre, [.. t.AtributosPermitidos.Select(ADto)], t.ExigeCuentaDesignada, t.Activo);
+        new(t.Id, t.Codigo, t.Nombre, [.. t.AtributosPermitidos.Select(ADto)], t.ExigeCuentaDesignada, t.Activo, t.ExigeOtpEnEnlace);
 
     public static TerceroDto ADto(this Tercero t) =>
         new(t.Id, t.Identificacion.ADto(), t.TipoPersona.ToString(), t.Nombre, t.NombreComercial,
@@ -69,5 +70,17 @@ public static class Mapeos
             RequisitosCubribles: null,
             v.Bloqueo is null ? null : new BloqueoDto(v.Bloqueo.Motivo, v.Bloqueo.Desde, v.Bloqueo.Hasta),
             [.. v.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))],
-            v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version);
+            v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version, v.ExpedienteAbiertoId, v.AperturaDeExpedientePendiente);
+
+    public static TextoLegalDto ADto(this TextoLegal t) =>
+        new(t.Id, t.Ambito.ToString(), t.EmpresaId, t.Tipo.ToString(), t.Version, t.Hash, t.Contenido, t.PublicadoEn, t.PublicadoPor);
+
+    public static TextoLegalPublicoDto APublico(this TextoLegal t) => new(t.Tipo.ToString(), t.Version, t.Hash, t.Contenido, t.PublicadoEn);
+
+    public static EmpresaPublicaDto APublica(this Empresa? e, Guid id) => new(id, e?.Nombre ?? string.Empty, e?.LogoUrl);
+
+    public static VinculoPublicoDto APublico(this Vinculo v, Empresa? empresa, TipoVinculo? tipo) =>
+        new(v.Id, empresa.APublica(v.EmpresaId),
+            new TipoVinculoResumenDto(v.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
+            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId);
 }

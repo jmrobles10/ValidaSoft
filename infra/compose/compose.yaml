@@ -1,5 +1,5 @@
 # Entorno local de Validasoft (docs/04 §11).
-#   docker compose -f infra/compose/compose.yaml up -d          -> solo PostgreSQL (la API corre con dotnet run)
+#   docker compose -f infra/compose/compose.yaml up -d          -> PostgreSQL y Mailpit (la API corre con dotnet run)
 #   docker compose -f infra/compose/compose.yaml --profile app up -d --build   -> PostgreSQL + API en contenedor
 name: validasoft
 
@@ -20,6 +20,13 @@ services:
       timeout: 3s
       retries: 20
 
+  # Correo de desarrollo: SMTP en 1025 y bandeja web en http://localhost:8025 (invitaciones, códigos OTP, autorregistro).
+  mailpit:
+    image: axllent/mailpit:v1.33
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   api:
     profiles: ["app"]
     build:
@@ -32,11 +39,16 @@ services:
       Validasoft__Plataforma__ClaveBootstrap: "dev-plataforma-solo-local-cambiar-0001"
       Validasoft__Sesiones__ClaveFirma: "dev-sesiones-solo-local-cambiar-000000000001"
       Validasoft__Persistencia__CrearEsquemaAlIniciar: "true"
+      Validasoft__Correo__Host: "mailpit"
+      Validasoft__Correo__Puerto: "1025"
+      Validasoft__Correo__Seguridad: "None"
     ports:
       - "5080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
 volumes:
   postgres-datos:

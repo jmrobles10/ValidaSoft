@@ -1,7 +1,6 @@
 using JasperFx;
 using Npgsql;
 using Scalar.AspNetCore;
-using Validasoft.Aplicacion.Comun;
 using Validasoft.Infraestructura;
 using Validasoft.Infraestructura.Http;
 using Wolverine;
@@ -12,11 +11,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AgregarValidasoft(builder.Configuration);
 builder.Services.AddOpenApi("v1");
 builder.Services.AddWolverineHttp();
-builder.Host.UseWolverine(opts => opts.Discovery.IncludeAssembly(typeof(Permisos).Assembly));
+builder.Host.UseWolverine(opts => opts.ConfigurarMensajeria());
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<MiddlewareDeContexto>();
 app.UseAuthorization();

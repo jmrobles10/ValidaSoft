@@ -84,11 +84,14 @@ public sealed record AreaDto(Guid Id, Guid EmpresaId, string Codigo, string Nomb
 
 public sealed record AtributoPermitidoDto(string Clave, string Tipo, bool Obligatorio, IReadOnlyList<string>? Opciones);
 
+/// <summary><see cref="ExigeOtpEnEnlace"/>: el enlace de acceso de sus invitaciones pide además un código enviado al correo.</summary>
 public sealed record CrearTipoVinculoDto(
-    string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto>? AtributosPermitidos, bool ExigeCuentaDesignada);
+    string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto>? AtributosPermitidos, bool ExigeCuentaDesignada,
+    bool ExigeOtpEnEnlace = false);
 
 public sealed record TipoVinculoDto(
-    Guid Id, string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto> AtributosPermitidos, bool ExigeCuentaDesignada, bool Activo);
+    Guid Id, string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto> AtributosPermitidos, bool ExigeCuentaDesignada, bool Activo,
+    bool ExigeOtpEnEnlace = false);
 
 public sealed record TipoVinculoResumenDto(Guid Id, string Codigo, string Nombre);
 
@@ -123,7 +126,8 @@ public sealed record CrearVinculoDto(
     string CorreoInvitacion,
     ReferenciaExternaDto? ReferenciaExterna,
     bool EnviarInvitacion = true,
-    int VigenciaInvitacionHoras = 72);
+    int VigenciaInvitacionHoras = 72,
+    Guid? FlujoId = null);
 
 public sealed record EnlaceInvitacionDto(string CorreoDestino, DateTimeOffset Expira, int Envios);
 
@@ -146,7 +150,9 @@ public sealed record VinculoDto(
     string Origen,
     DateTimeOffset CreadoEn,
     DateTimeOffset ActualizadoEn,
-    long Version);
+    long Version,
+    Guid? ExpedienteAbiertoId = null,
+    bool AperturaDeExpedientePendiente = false);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -159,3 +165,74 @@ public sealed record JustificacionDto(string Justificacion);
 /// <summary><see cref="Sistema"/>: sistema integrado desde el que se actuó (ADR-0011), si aplica.</summary>
 public sealed record EventoHistorialDto(
     long Version, string Tipo, DateTimeOffset Fecha, string? ActorTipo, string? ActorId, string? Sistema, JsonElement Datos);
+
+// ---------- Textos legales (docs/07 §2.2 y §8) ----------
+
+/// <summary>Publica una versión nueva (inmutable) del texto; la anterior deja de ser la vigente.</summary>
+public sealed record PublicarTextoLegalDto(string Contenido);
+
+/// <summary><see cref="Tipo"/>: <c>AvisoPlataforma</c>, <c>AutorizacionEmpresa</c> o <c>TerminosEmpresa</c>; <see cref="Hash"/> = SHA-256 del contenido.</summary>
+public sealed record TextoLegalDto(
+    Guid Id, string Ambito, Guid? EmpresaId, string Tipo, int Version, string Hash, string Contenido, DateTimeOffset PublicadoEn, string PublicadoPor);
+
+/// <summary>Textos vigentes de la empresa y los que le faltan publicar para que sus invitaciones se puedan aceptar.</summary>
+public sealed record TextosLegalesEmpresaDto(Guid EmpresaId, IReadOnlyList<TextoLegalDto> Vigentes, IReadOnlyList<string> Faltantes);
+
+// ---------- Público: el tercero (docs/05 §2.9) ----------
+
+public sealed record EmpresaPublicaDto(Guid Id, string Nombre, string? LogoUrl);
+
+public sealed record VinculoDeSesionDto(Guid Id, EmpresaPublicaDto Empresa, string Estado);
+
+/// <summary>
+/// Sesión del tercero tras canjear el enlace (y el OTP si aplica): JWT de 30 minutos que se envía como
+/// <c>Authorization: Bearer</c> en <c>/public/v1</c>. Por ahora viaja en el cuerpo; con <c>apps/public</c> pasará a cookie.
+/// </summary>
+public sealed record SesionTerceroDto(
+    string AccessToken, DateTimeOffset Expira, Guid TerceroId, bool OtpVerificado, IReadOnlyList<VinculoDeSesionDto> Vinculos,
+    Guid? ExpedienteOrigen = null);
+
+/// <summary>Respuesta 202 del canje cuando el enlace exige OTP: el código llegó al correo y vence en <see cref="Expira"/>.</summary>
+public sealed record OtpRequeridoDto(bool RequiereOtp, DateTimeOffset Expira);
+
+public sealed record VerificarOtpDto(string Codigo);
+
+/// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
+public sealed record VinculoPublicoDto(
+    Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
+    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null);
+
+public sealed record TextoLegalPublicoDto(string Tipo, int TextoVersion, string HashTexto, string Contenido, DateTimeOffset PublicadoEn);
+
+/// <summary>
+/// Lo que el tercero debe aceptar en una invitación: los textos vigentes (el aviso de la plataforma solo si no ha
+/// aceptado su versión vigente). <see cref="TextosFaltantes"/> no vacío ⇒ la empresa aún no publica sus textos y
+/// <see cref="PuedeAceptar"/> es falso.
+/// </summary>
+public sealed record InvitacionPublicaDto(
+    VinculoPublicoDto Vinculo, IReadOnlyList<TextoLegalPublicoDto> TextosPorAceptar, IReadOnlyList<string> TextosFaltantes, bool PuedeAceptar);
+
+public sealed record ConsentimientoDto(string Tipo, int TextoVersion, bool Aceptado);
+
+/// <summary><see cref="OtpCodigo"/>: reservado; hoy el OTP se verifica al canjear el enlace (IN-6).</summary>
+public sealed record AceptarInvitacionDto(IReadOnlyList<ConsentimientoDto> Consentimientos, string? OtpCodigo = null);
+
+public sealed record AceptadoPorDto(Guid TerceroId, string Correo);
+
+/// <summary>
+/// Evidencia de una aceptación (P-3-5, P-16-4). <see cref="DocumentoVersionId"/> (versión <c>PorVinculo</c> que la
+/// registra) llega con el módulo de documentos; mientras tanto la evidencia vive en el evento <c>ConsentimientosRegistrados</c>.
+/// </summary>
+public sealed record AceptacionDto(
+    string Tipo, Guid TextoLegalId, int TextoVersion, string HashTexto, DateTimeOffset Fecha, string Ip, string UserAgent,
+    bool OtpVerificado, string Canal, AceptadoPorDto AceptadoPor, Guid? DocumentoVersionId = null);
+
+/// <summary>Respuesta de aceptar. Sin <c>compartidos</c> ni <c>requisitosCubiertos</c> hasta que existan documentos y expedientes.</summary>
+public sealed record InvitacionAceptadaDto(IReadOnlyList<AceptacionDto> Aceptacion, VinculoPublicoDto Vinculo);
+
+/// <summary>Autorregistro invisible (sin cargas de documentos todavía).</summary>
+public sealed record AutorregistroDto(
+    IdentificacionDto Identificacion, string TipoPersona, string Nombre, string Correo, bool ConsentimientoPlataforma);
+
+/// <summary>Respuesta idéntica exista o no el tercero (no revela nada).</summary>
+public sealed record SolicitudRecibidaDto(string Mensaje);

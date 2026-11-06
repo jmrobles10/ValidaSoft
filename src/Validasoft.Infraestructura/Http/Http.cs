@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.RateLimiting;
 using JasperFx;
 using JasperFx.Events;
 using Marten;
@@ -8,6 +10,9 @@ using Marten.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -116,7 +121,7 @@ public sealed class MiddlewareDeIdempotencia(RequestDelegate siguiente)
     private static readonly string[] RutasQueCrean =
     [
         "/api/v1/plataforma/tenants", "/api/v1/empresas", "/api/v1/api-keys", "/api/v1/sistemas", "/api/v1/usuarios", "/api/v1/tipos-vinculo",
-        "/api/v1/areas", "/api/v1/terceros", "/api/v1/vinculos"
+        "/api/v1/areas", "/api/v1/terceros", "/api/v1/vinculos", "/api/v1/motivos", "/api/v1/flujos"
     ];
 
     public async Task InvokeAsync(HttpContext http, IDocumentStore store, TimeProvider reloj)
@@ -212,8 +217,9 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception excepcion, CancellationToken ct)
     {
+        var ruta = RutaSegura(http.Request.Path);
         if (excepcion is not ReglaDeNegocioException)
-            logger.LogError(excepcion, "Error no controlado en {Ruta} (traceId {TraceId})", http.Request.Path, http.TraceIdentifier);
+            logger.LogError(excepcion, "Error no controlado en {Ruta} (traceId {TraceId})", ruta, http.TraceIdentifier);
 
         var (estado, codigo, detalle) = excepcion switch
         {
@@ -223,6 +229,8 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
                 TipoFalla.NoEncontrado => StatusCodes.Status404NotFound,
                 TipoFalla.Prohibido => StatusCodes.Status403Forbidden,
                 TipoFalla.NoAutenticado => StatusCodes.Status401Unauthorized,
+                TipoFalla.Expirado => StatusCodes.Status410Gone,
+                TipoFalla.DemasiadosIntentos => StatusCodes.Status429TooManyRequests,
                 _ => StatusCodes.Status409Conflict
             }, r.Codigo, r.Message),
             ConcurrencyException or EventStreamUnexpectedMaxEventIdException =>
@@ -241,13 +249,64 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
             Type = $"https://docs.validasoft.co/errores/{codigo}",
             Title = codigo,
             Detail = detalle,
-            Instance = http.Request.Path
+            Instance = ruta
         };
         problema.Extensions["codigo"] = codigo;
         problema.Extensions["traceId"] = http.TraceIdentifier;
+        if (excepcion is ReglaDeNegocioException { Datos: { } datos })
+        {
+            foreach (var (clave, valor) in datos)
+                problema.Extensions[clave] = valor;
+        }
         if (estado == StatusCodes.Status500InternalServerError && entorno.IsDevelopment())
             problema.Extensions["excepcion"] = excepcion.ToString();
 
         return await problemas.TryWriteAsync(new ProblemDetailsContext { HttpContext = http, ProblemDetails = problema, Exception = excepcion });
+    }
+
+    /// <summary>Ruta sin secretos: el token de <c>/public/v1/enlaces/{token}/…</c> nunca llega a logs ni a respuestas de error.</summary>
+    public static string RutaSegura(PathString ruta) =>
+        Regex.Replace(ruta.Value ?? string.Empty, "(?<=/enlaces/)[^/]+", "***", RegexOptions.IgnoreCase);
+}
+
+/// <summary>
+/// Límite de peticiones por IP en <c>/public/v1</c> (ventana fija; <c>Validasoft:LimitePublico:{Peticiones, VentanaSegundos}</c>,
+/// por defecto 60 por minuto). <c>/api/v1</c> aún no tiene límite (llegará por credencial). Excedido ⇒ 429 ProblemDetails
+/// <c>demasiadas-peticiones</c> con <c>Retry-After</c>.
+/// </summary>
+public static class LimiteDePeticionesPublicas
+{
+    public static IServiceCollection AgregarLimiteDePeticionesPublicas(this IServiceCollection servicios, IConfiguration configuracion)
+    {
+        var peticiones = Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:Peticiones", 60));
+        var ventana = TimeSpan.FromSeconds(Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:VentanaSegundos", 60)));
+
+        return servicios.AddRateLimiter(opciones =>
+        {
+            opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+                http.Request.Path.StartsWithSegments(ServiciosInfraestructura.RutaPublica, StringComparison.OrdinalIgnoreCase)
+                    ? RateLimitPartition.GetFixedWindowLimiter("ip:" + (http.Connection.RemoteIpAddress?.ToString() ?? "desconocida"),
+                        _ => new FixedWindowRateLimiterOptions { PermitLimit = peticiones, Window = ventana, QueueLimit = 0 })
+                    : RateLimitPartition.GetNoLimiter("sin-limite"));
+
+            opciones.OnRejected = async (contexto, ct) =>
+            {
+                var http = contexto.HttpContext;
+                http.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                http.Response.Headers.RetryAfter = ((int)ventana.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                var problema = new ProblemDetails
+                {
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Type = "https://docs.validasoft.co/errores/demasiadas-peticiones",
+                    Title = "demasiadas-peticiones",
+                    Detail = "Hiciste demasiadas peticiones; espera un momento e inténtalo de nuevo.",
+                    Instance = ManejadorDeErrores.RutaSegura(http.Request.Path)
+                };
+                problema.Extensions["codigo"] = "demasiadas-peticiones";
+                problema.Extensions["traceId"] = http.TraceIdentifier;
+                await http.RequestServices.GetRequiredService<IProblemDetailsService>()
+                    .WriteAsync(new ProblemDetailsContext { HttpContext = http, ProblemDetails = problema });
+            };
+        });
     }
 }

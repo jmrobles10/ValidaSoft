@@ -2,7 +2,10 @@ using Marten;
 using JasperFx.Events;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 
 namespace Validasoft.Aplicacion.Comun;
 
@@ -13,8 +16,20 @@ namespace Validasoft.Aplicacion.Comun;
 public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto) : IAsyncDisposable
 {
     private IDocumentSession? _sesion;
+    private IMessageBus? _mensajes;
 
-    public IDocumentSession Sesion => _sesion ??= sesiones.DelTenant();
+    public IDocumentSession Sesion => _sesion ??= _mensajes is null ? sesiones.DelTenant() : sesiones.DelTenant(_mensajes);
+
+    /// <summary>
+    /// Enlista la sesión en el outbox de <paramref name="mensajes"/> (debe llamarse antes del primer uso de
+    /// <see cref="Sesion"/>): los mensajes publicados se despachan solo si la transacción se confirma.
+    /// </summary>
+    public void UsarMensajeria(IMessageBus mensajes)
+    {
+        if (_sesion is not null)
+            throw new InvalidOperationException("La sesión de la empresa ya se abrió sin mensajería.");
+        _mensajes = mensajes;
+    }
 
     public Guid EmpresaId => contexto.EmpresaRequerida();
 
@@ -47,6 +62,42 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
 
         if (stream.Aggregate is null || stream.Aggregate.EmpresaId != EmpresaId)
             throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo en la empresa.");
+
+        return stream;
+    }
+
+    public IQueryable<Flujo> Flujos() => Sesion.Query<Flujo>().Where(f => f.EmpresaId == EmpresaId);
+
+    public async Task<Flujo> CargarFlujoAsync(Guid id, CancellationToken ct)
+    {
+        var flujo = await Sesion.LoadAsync<Flujo>(id, ct);
+        return flujo is not null && flujo.EmpresaId == EmpresaId
+            ? flujo
+            : throw ReglaDeNegocioException.NoEncontrado("flujo-no-encontrado", "No existe ese flujo en la empresa.");
+    }
+
+    public IQueryable<Expediente> Expedientes() => Sesion.Query<Expediente>().Where(e => e.EmpresaId == EmpresaId);
+
+    public async Task<Expediente> CargarExpedienteAsync(Guid id, CancellationToken ct)
+    {
+        var expediente = await Sesion.LoadAsync<Expediente>(id, ct);
+        return expediente is not null && expediente.EmpresaId == EmpresaId
+            ? expediente
+            : throw ReglaDeNegocioException.NoEncontrado("expediente-no-encontrado", "No existe ese expediente en la empresa.");
+    }
+
+    /// <summary>Stream del expediente para escribir con concurrencia optimista (<c>If-Match</c> si llega).</summary>
+    public async Task<IEventStream<Expediente>> ExpedienteParaEscribirAsync(Guid id, long? versionEsperada, CancellationToken ct)
+    {
+        // Sin If-Match, las decisiones sobre un mismo expediente se serializan con un bloqueo de fila del stream (FL-12):
+        // las áreas revisan en paralelo y dos veredictos simultáneos no deben responder 412 a quien no pidió esa versión.
+        // Con If-Match se conserva la concurrencia optimista que el cliente pidió.
+        var stream = versionEsperada is null
+            ? await Sesion.Events.FetchForExclusiveWriting<Expediente>(id, ct)
+            : await Sesion.Events.FetchForWriting<Expediente>(id, versionEsperada.Value, ct);
+
+        if (stream.Aggregate is null || stream.Aggregate.EmpresaId != EmpresaId)
+            throw ReglaDeNegocioException.NoEncontrado("expediente-no-encontrado", "No existe ese expediente en la empresa.");
 
         return stream;
     }
