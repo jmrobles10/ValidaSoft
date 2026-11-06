@@ -9,7 +9,7 @@ import { useSesion } from './sesionStore';
  * Solo en `vite dev` y fuera de un iframe: abre una sesión como lo haría el sistema integrado, para trabajar en la
  * UI sin un contenedor. Los campos se prellenan con `pnpm semilla:dev`.
  */
-export function FormularioSesionDev() {
+export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) {
   const { t } = useTranslation();
   const establecer = useSesion((s) => s.establecer);
   const [semilla, setSemilla] = useState<SemillaDev | null>(null);
@@ -64,7 +64,7 @@ export function FormularioSesionDev() {
   };
 
   return (
-    <Card sx={{ maxWidth: 640, mx: 'auto', my: 4 }}>
+    <Card sx={{ maxWidth: 640, mx: 'auto', my: 4, borderRadius: (th) => `${String(th.radio.md)}px` }}>
       <CardContent component="form" onSubmit={(e) => void enviar(e)}>
         <Stack spacing={2}>
           <Typography variant="h2" component="h1">
@@ -73,6 +73,7 @@ export function FormularioSesionDev() {
           <Typography variant="body2" color="text.secondary">
             {t('sesion.dev.ayuda')}
           </Typography>
+          {vencida && <Alert severity="warning">{t('sesion.vencida')}</Alert>}
           <Alert severity={semilla ? 'success' : 'info'}>{semilla ? t('sesion.dev.semilla') : t('sesion.dev.sinSemilla')}</Alert>
           {error !== null && <Alert severity="error">{mensajeDeError(error, t)}</Alert>}
           {semilla && (

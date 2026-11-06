@@ -1,44 +1,33 @@
-import { Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Skeleton, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useTercero } from '../api';
+import { identificacionDe } from '../tercero';
 
 /**
- * Nombre e identificación del tercero. `VinculoDto` solo trae `terceroId`, así que cada fila lo consulta (con caché
- * de 5 minutos); pendiente pedir al backend un resumen del tercero en el listado.
+ * Nombre del tercero con su NIT en la misma línea (fila de 36 px). `VinculoDto` solo trae `terceroId`, así que cada
+ * fila lo consulta (con caché de 5 minutos); pendiente pedir al backend un resumen del tercero en el listado.
  */
-export function NombreTercero({
-  terceroId,
-  conIdentificacion = true,
-  variante = 'body2',
-}: {
-  terceroId: string;
-  conIdentificacion?: boolean;
-  variante?: 'body2' | 'h2';
-}) {
+export function NombreTercero({ terceroId }: { terceroId: string }) {
   const { t } = useTranslation();
   const { data, isPending, isError } = useTercero(terceroId);
 
-  if (isPending) return <Skeleton variant="text" width={180} />;
+  if (isPending) return <Skeleton variant="rounded" height={12} width={200} />;
   if (isError) {
     return (
-      <Typography component="span" variant={variante} color="text.secondary">
+      <Typography component="span" color="text.secondary">
         {t('vinculos.terceroDesconocido')}
       </Typography>
     );
   }
 
-  const { numero, digitoVerificacion, tipo } = data.identificacion;
   return (
-    <Stack component="span" spacing={0} sx={{ minWidth: 0 }}>
-      <Typography component="span" variant={variante} noWrap sx={{ display: 'block' }}>
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 1, minWidth: 0, maxWidth: '100%' }}>
+      <Typography component="span" noWrap sx={{ fontWeight: 500 }}>
         {data.nombre}
       </Typography>
-      {conIdentificacion && (
-        <Typography variant="mono" color="text.secondary" sx={{ fontSize: 12, display: 'block' }}>
-          {tipo} {numero}
-          {digitoVerificacion ? `-${digitoVerificacion}` : ''}
-        </Typography>
-      )}
-    </Stack>
+      <Typography component="span" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+        {identificacionDe(data)}
+      </Typography>
+    </Box>
   );
 }

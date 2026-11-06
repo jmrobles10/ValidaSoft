@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
  * Paginación por cursor opaco (`PaginaDto.siguienteCursor`). La API solo sabe ir hacia adelante, así que para volver
  * se guarda la pila de cursores ya visitados. `null` = primera página.
  */
-export interface PaginacionCursor {
+export interface EstadoPaginacionCursor {
   /** Cursor de la página actual (se envía como `cursor`). */
   cursor: string | null;
   /** Número de página, desde 1. */
@@ -16,7 +16,7 @@ export interface PaginacionCursor {
   reiniciar: () => void;
 }
 
-export function usePaginacionCursor(): PaginacionCursor {
+export function usePaginacionCursor(): EstadoPaginacionCursor {
   const [pila, setPila] = useState<(string | null)[]>([null]);
 
   const irASiguiente = useCallback((siguiente: string) => {

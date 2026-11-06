@@ -10,6 +10,7 @@ export function aOpcion(empresa: EmpresaDto): EmpresaOpcion {
     nombre: empresa.nombre,
     identificacion: digitoVerificacion ? `${numero}-${digitoVerificacion}` : numero,
     logoUrl: empresa.logoUrl,
+    prefijo: empresa.prefijoFolio,
   };
 }
 

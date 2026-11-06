@@ -6,7 +6,7 @@ Workspace pnpm en la raíz del repo con una app y dos paquetes (docs/06 §1.1):
 |---|---|
 | `apps/web` | Pantallas de Validasoft **embebidas** en el sistema integrado (ID-3, ADR-0011): vínculos, áreas, usuarios y roles, sistemas integrados. |
 | `packages/api-client` | Cliente generado con **orval** desde el snapshot `openapi/v1.json` + fetcher, errores tipados, lectura del token de sesión y reglas de acciones del vínculo. |
-| `packages/ui` | Tema de marca (`createValidasoftTheme`) y componentes base: `ChipEstado`, `SelectorEmpresa`, `LineaDeTiempo`, `TablaConCursor` + `usePaginacionCursor`. |
+| `packages/ui` | Design system (dirección **Registro**): `tokens.ts`, `createValidasoftTheme(modo, { app, colorEmpresa })`, mapa canónico de estados (`estados.ts`), paleta segura por empresa (`marcaEmpresa.ts`) y componentes: `ChipEstado`, `SelectorEmpresa`, `LineaDeTiempo`, `TablaConCursor`, `PaginacionCursor`, `BarraFiltros`/`FiltroMenu`/`CampoBusqueda`, `EstadoVacio`, `PaginaEstado`, `ErrorEnLinea`, `RejillaDatos`/`Dato`, `AvatarActor`, `ReferenciaExterna`, `Isotipo`. |
 
 Stack: React 18, TypeScript estricto (sin `any`), Vite 6, MUI v6 (solo `@mui/material`), TanStack Query v5, Zustand v5, React Router 7 (hash), i18next (es-CO), Vitest + Testing Library.
 
@@ -46,13 +46,23 @@ La semilla crea un tenant nuevo en cada ejecución y escribe las credenciales en
 
 Solo se aceptan mensajes del propio origen y de `VITE_ORIGENES_CONTENEDOR` (lista separada por comas), y solo se responde al contenedor si su origen está en esa lista. El token vive en memoria; nunca en `localStorage`.
 
+## Design system
+
+La fuente es el artifact *Design System* de Validasoft (README, tokens y `codigo/`). `packages/ui/src/tokens.ts`, `tema.ts`, `estados.ts` y `marcaEmpresa.ts` son copia de su carpeta `codigo/`: si cambian allá, se copian de nuevo y no se editan a mano (salvo correcciones que también se reporten al artifact).
+
+- Tema **claro por defecto** (el anfitrión puede imponer el oscuro con `validasoft:tema`); `app: 'web'` = densidad compacta.
+- Estados solo con `ChipEstado` (contorno, ícono en el tono del estado); los rellenos de color quedan para alertas y avisos.
+- Cabecera embebida de una fila (48 px): isotipo, empresa, pestañas *Vínculos* y *Configuración* y "Sesión desde SRM". Configuración tiene barra lateral separada en grupo (usuarios, sistemas) y empresa activa (áreas).
+- Texto solo para lectores de pantalla: usa `visualmenteOculto` (en `sx` de MUI `width: 1` es 100 %; el `ChipEstado` de referencia del artifact trae ese error).
+
 ## Decisiones de implementación
 
 - **Empresa en la URL** (`/e/:empresaId/…`) y en la clave de cada consulta (`conEmpresa`), además de `X-Empresa`: dos empresas nunca comparten caché (ADR-0008). Al cambiar de persona se vacía la caché.
 - **Fetcher** (`packages/api-client/src/fetcher.ts`): `Authorization: Bearer`, `X-Empresa`, `X-Correlation-Id`; `Idempotency-Key` automática en los POST que crean (o la de la llamada, una por formulario abierto); `If-Match: "n"` con `VinculoDto.version` en las acciones; ProblemDetails → `ErrorApi` con `codigo`, `traceId`, `errores` por campo y atajos (`esConflictoDeVersion`, `esNoAutenticado`…); fallas de red → `ErrorDeRed`.
 - **Permisos**: la UI lee los scopes del token (sin verificar la firma) solo para ocultar lo que no aplica; las acciones del vínculo replican las guardas del agregado (`accionesDisponibles`). La API decide siempre.
 - **Contrato**: `openapi/transformar.ts` corrige el snapshot antes de generar (ver "Lo que falta") y **falla** si la API trae un endpoint que el cliente no conoce o deja de traer uno.
-- `TablaConCursor` usa la tabla de MUI (no DataGrid Pro: la licencia aún no está en este repo).
+- `TablaConCursor` usa la tabla de MUI (no DataGrid Pro: la licencia aún no está en este repo). Los overrides de DataGrid del design system (`codigo/temaDataGrid.ts`) se agregan cuando llegue la licencia.
+- Acciones del vínculo: las seguras como botones; las destructivas en "Más acciones" con su consecuencia. Ante un 412 el diálogo explica el conflicto y "Recargar" trae la versión vigente sin perder lo escrito; anular pide escribir ANULAR.
 
 ## Lo que falta
 
@@ -65,4 +75,4 @@ Solo se aceptan mensajes del propio origen y de `VITE_ORIGENES_CONTENEDOR` (list
 5. `POST /vinculos/{id}/invitaciones` respondió `envios: 3` cuando el vínculo pasaba de 1 a 2 envíos (posible conteo doble).
 6. No hay CORS ni cabeceras CSP/`frame-ancestors` para servir el embed desde otro origen; tampoco un endpoint "quién soy" (nombre de la persona de la sesión).
 
-**Frontend pendiente**: Storybook de `packages/ui` (decisión abierta 06-2); pruebas de accesibilidad con axe/Playwright; `en` cargado; zona horaria del tenant (hoy fija `America/Bogota`); Web Component envolvente (decisión abierta 06-1); SSE para invalidar consultas; crear vínculos y editar atributos desde la UI; pantallas de API keys, empresas y auditoría; `apps/public` y los paquetes `forms`, `i18n`, `domain`, `config` y `sdk-ts` de docs/06.
+**Frontend pendiente**: pantallas de prioridad 2 del design system (inicio, expedientes, flujos, terceros, certificados, auditoría completa) y `apps/public` con la marca por empresa (`createValidasoftTheme(modo, { app: 'public', colorEmpresa })` ya la deriva); Storybook de `packages/ui` (decisión abierta 06-2); pruebas de accesibilidad con axe/Playwright; `en` cargado; zona horaria del tenant (hoy fija `America/Bogota`); Web Component envolvente (decisión abierta 06-1); SSE para invalidar consultas; crear vínculos y editar atributos desde la UI; pantallas de API keys, empresas y auditoría; `apps/public` y los paquetes `forms`, `i18n`, `domain`, `config` y `sdk-ts` de docs/06.

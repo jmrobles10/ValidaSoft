@@ -1,22 +1,9 @@
-import {
-  Box,
-  Button,
-  IconButton,
-  Paper,
-  Skeleton,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { Box, Skeleton, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import type { ReactNode } from 'react';
-import type { PaginacionCursor } from './usePaginacionCursor';
+import { visualmenteOculto } from './accesibilidad';
+import { PaginacionCursor } from './PaginacionCursor';
+import { ErrorEnLinea, EstadoVacio } from './patrones';
+import type { EstadoPaginacionCursor as EstadoPaginacion } from './usePaginacionCursor';
 
 export interface ColumnaTabla<Fila> {
   id: string;
@@ -24,6 +11,8 @@ export interface ColumnaTabla<Fila> {
   celda: (fila: Fila) => ReactNode;
   ancho?: number | string;
   alinear?: 'left' | 'right' | 'center';
+  /** El encabezado solo para lectores de pantalla (columna de acciones). */
+  encabezadoOculto?: boolean;
 }
 
 export interface TablaConCursorProps<Fila> {
@@ -34,18 +23,30 @@ export interface TablaConCursorProps<Fila> {
   /** Mensaje de error recuperable; con `onReintentar` muestra el botón. */
   error?: string | null;
   onReintentar?: () => void;
-  paginacion: PaginacionCursor;
+  paginacion: EstadoPaginacion;
   /** `siguienteCursor` de la última respuesta; `null` = no hay más. */
   siguienteCursor: string | null | undefined;
   onFila?: (fila: Fila) => void;
-  /** Texto accesible de la fila para lectores de pantalla ("Abrir vínculo de Aceros del Norte"). */
+  /** Texto accesible de la fila ("Abrir vínculo de Aceros del Norte"). */
   etiquetaFila?: (fila: Fila) => string;
+  /** Vacío: un texto se muestra con `EstadoVacio`; un nodo se pinta tal cual. */
   vacio?: ReactNode;
   etiqueta: string;
   filasEsqueleto?: number;
+  /** Alto de fila: 36 px (compacta) o 48 px cuando la celda lleva dos líneas. */
+  filasAltas?: boolean;
 }
 
-/** Tabla de bandeja con paginación por cursor, esqueleto de carga, vacío con ícono y error con reintento (docs/06 §2.3). */
+/** Marco de tabla densa (borde sutil, radio 12, sin bordes verticales). Úsalo también en tablas sin paginación. */
+export function MarcoTabla({ children }: { children: ReactNode }) {
+  return (
+    <Box sx={{ position: 'relative', overflow: 'hidden', border: 1, borderColor: 'divider', borderRadius: (t) => `${String(t.radio.md)}px`, bgcolor: 'background.paper' }}>
+      {children}
+    </Box>
+  );
+}
+
+/** Tabla de bandeja con paginación por cursor, esqueleto con la forma de las filas, vacío y error con reintento. */
 export function TablaConCursor<Fila>({
   columnas,
   filas,
@@ -59,112 +60,109 @@ export function TablaConCursor<Fila>({
   etiquetaFila,
   vacio = 'No hay resultados.',
   etiqueta,
-  filasEsqueleto = 5,
+  filasEsqueleto = 6,
+  filasAltas = false,
 }: TablaConCursorProps<Fila>) {
   const sinFilas = !cargando && !error && (filas?.length ?? 0) === 0;
+  const alto = filasAltas ? 48 : undefined;
 
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: 'hidden' }}>
-      <TableContainer>
-        <Table size="small" aria-label={etiqueta} aria-busy={cargando}>
-          <TableHead>
-            <TableRow>
-              {columnas.map((c) => (
-                <TableCell key={c.id} align={c.alinear} sx={{ width: c.ancho }}>
-                  {c.encabezado}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {cargando &&
-              Array.from({ length: filasEsqueleto }, (_, i) => (
-                <TableRow key={`esqueleto-${String(i)}`}>
-                  {columnas.map((c) => (
-                    <TableCell key={c.id}>
-                      <Skeleton variant="text" />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            {!cargando &&
-              !error &&
-              filas?.map((fila) => (
-                <TableRow
-                  key={claveFila(fila)}
-                  hover={Boolean(onFila)}
-                  tabIndex={onFila ? 0 : undefined}
-                  aria-label={etiquetaFila?.(fila)}
-                  onClick={onFila ? () => onFila(fila) : undefined}
-                  onKeyDown={
-                    onFila
-                      ? (evento) => {
-                          if (evento.key === 'Enter' || evento.key === ' ') {
-                            evento.preventDefault();
-                            onFila(fila);
-                          }
-                        }
-                      : undefined
-                  }
-                  sx={{ cursor: onFila ? 'pointer' : 'default' }}
-                >
-                  {columnas.map((c) => (
-                    <TableCell key={c.id} align={c.alinear}>
-                      {c.celda(fila)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
+    <>
       {error && (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ p: 2 }} role="alert">
-          <Typography variant="body2" color="error">
-            {error}
-          </Typography>
-          {onReintentar && (
-            <Button size="small" onClick={onReintentar}>
-              Reintentar
-            </Button>
-          )}
-        </Stack>
+        <Box sx={{ mb: 1.5 }} role="alert">
+          <ErrorEnLinea mensaje={error} onReintentar={onReintentar} />
+        </Box>
       )}
-
-      {sinFilas && (
-        <Stack alignItems="center" spacing={1} sx={{ py: 5, color: 'text.secondary' }}>
-          <Inbox size={28} strokeWidth={1.5} aria-hidden />
-          <Typography variant="body2">{vacio}</Typography>
-        </Stack>
+      <MarcoTabla>
+        <TableContainer>
+          <Table size="small" aria-label={etiqueta} aria-busy={cargando}>
+            <TableHead>
+              <TableRow>
+                {columnas.map((c) => (
+                  <TableCell key={c.id} align={c.alinear} sx={{ width: c.ancho, whiteSpace: 'nowrap' }}>
+                    {c.encabezadoOculto ? <Box component="span" sx={visualmenteOculto}>{c.encabezado}</Box> : c.encabezado}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {cargando &&
+                Array.from({ length: filasEsqueleto }, (_, i) => (
+                  <TableRow key={`esqueleto-${String(i)}`} sx={{ '&:hover': { bgcolor: 'transparent' } }}>
+                    {columnas.map((c, j) => (
+                      <TableCell key={c.id} sx={{ height: alto }}>
+                        <Skeleton variant="rounded" height={12} width={c.encabezadoOculto ? 20 : 40 + ((i * 7 + j * 13) % 5) * 14} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              {!cargando &&
+                !error &&
+                filas?.map((fila) => (
+                  <TableRow
+                    key={claveFila(fila)}
+                    tabIndex={onFila ? 0 : undefined}
+                    aria-label={etiquetaFila?.(fila)}
+                    onClick={onFila ? () => onFila(fila) : undefined}
+                    onKeyDown={
+                      onFila
+                        ? (evento) => {
+                            if (evento.target === evento.currentTarget && (evento.key === 'Enter' || evento.key === ' ')) {
+                              evento.preventDefault();
+                              onFila(fila);
+                            }
+                          }
+                        : undefined
+                    }
+                    sx={{ cursor: onFila ? 'pointer' : 'default', '&:focus-visible': { outlineOffset: -2 } }}
+                  >
+                    {columnas.map((c) => (
+                      <TableCell key={c.id} align={c.alinear} sx={{ height: alto }}>
+                        {c.celda(fila)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              {sinFilas && (
+                <TableRow sx={{ '&:hover': { bgcolor: 'transparent' } }}>
+                  <TableCell colSpan={columnas.length} sx={{ borderBottom: 0, height: 'auto' }}>
+                    {typeof vacio === 'string' ? <EstadoVacio compacto titulo={vacio} /> : vacio}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </MarcoTabla>
+      {(paginacion.hayAnterior || Boolean(siguienteCursor)) && (
+        <PaginacionCursor
+          pagina={paginacion.pagina}
+          hayAnterior={paginacion.hayAnterior}
+          haySiguiente={Boolean(siguienteCursor)}
+          cargando={cargando}
+          onAnterior={paginacion.irAAnterior}
+          onSiguiente={() => {
+            if (siguienteCursor) paginacion.irASiguiente(siguienteCursor);
+          }}
+        />
       )}
+    </>
+  );
+}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, px: 2, py: 1, borderTop: 1, borderColor: 'divider' }}>
-        <Typography variant="caption" color="text.secondary">
-          Página {paginacion.pagina}
-        </Typography>
-        <Tooltip title="Página anterior">
-          <span>
-            <IconButton size="small" aria-label="Página anterior" disabled={!paginacion.hayAnterior || cargando} onClick={paginacion.irAAnterior}>
-              <ChevronLeft size={18} />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title="Página siguiente">
-          <span>
-            <IconButton
-              size="small"
-              aria-label="Página siguiente"
-              disabled={!siguienteCursor || cargando}
-              onClick={() => {
-                if (siguienteCursor) paginacion.irASiguiente(siguienteCursor);
-              }}
-            >
-              <ChevronRight size={18} />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
-    </Paper>
+/** Filas de esqueleto con la forma de la tabla (para tablas sin paginación). */
+export function FilasEsqueleto({ columnas, filas = 4, alto }: { columnas: number; filas?: number; alto?: number }) {
+  return (
+    <>
+      {Array.from({ length: filas }, (_, i) => (
+        <TableRow key={`esqueleto-${String(i)}`} sx={{ '&:hover': { bgcolor: 'transparent' } }}>
+          {Array.from({ length: columnas }, (_, j) => (
+            <TableCell key={j} sx={{ height: alto }}>
+              <Skeleton variant="rounded" height={12} width={j === columnas - 1 ? 20 : 40 + ((i * 7 + j * 13) % 5) * 14} />
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate } from 'react-router';
 import { EmpresaDeLaRuta, RedireccionInicial } from '../features/empresas/RutasEmpresa';
 import { AppShell } from './AppShell';
+import { LayoutConfiguracion } from './LayoutConfiguracion';
 
 /**
  * Hash router: dentro del iframe la navegación no toca la URL del sistema que aloja la pantalla y las rutas no
@@ -27,16 +28,21 @@ export function crearRouter() {
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
             },
             {
-              path: 'areas',
-              lazy: () => import('../features/configuracion/areas/PaginaAreas').then((m) => ({ Component: m.PaginaAreas })),
-            },
-            {
-              path: 'usuarios',
-              lazy: () => import('../features/configuracion/usuarios/PaginaUsuarios').then((m) => ({ Component: m.PaginaUsuarios })),
-            },
-            {
-              path: 'sistemas',
-              lazy: () => import('../features/configuracion/sistemas/PaginaSistemas').then((m) => ({ Component: m.PaginaSistemas })),
+              element: <LayoutConfiguracion />,
+              children: [
+                {
+                  path: 'areas',
+                  lazy: () => import('../features/configuracion/areas/PaginaAreas').then((m) => ({ Component: m.PaginaAreas })),
+                },
+                {
+                  path: 'usuarios',
+                  lazy: () => import('../features/configuracion/usuarios/PaginaUsuarios').then((m) => ({ Component: m.PaginaUsuarios })),
+                },
+                {
+                  path: 'sistemas',
+                  lazy: () => import('../features/configuracion/sistemas/PaginaSistemas').then((m) => ({ Component: m.PaginaSistemas })),
+                },
+              ],
             },
           ],
         },

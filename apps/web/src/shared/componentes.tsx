@@ -1,87 +1,123 @@
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Stack, Typography } from '@mui/material';
-import { ShieldOff } from 'lucide-react';
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Stack, Typography } from '@mui/material';
+import { ErrorEnLinea, PaginaEstado } from '@validasoft/ui';
+import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router';
 
-/** Página 403 propia (docs/06 §2.3). */
+/** Página 403 propia: dice de quién es la sección y a quién pedir acceso (nunca "Forbidden"). */
 export function SinPermiso({ seccion }: { seccion: string }) {
   const { t } = useTranslation();
-  return (
-    <Stack alignItems="center" spacing={1.5} sx={{ py: 8, textAlign: 'center', color: 'text.secondary' }}>
-      <ShieldOff size={32} strokeWidth={1.5} aria-hidden />
-      <Typography variant="h3" color="text.primary" component="h1">
-        {t('sinPermiso.titulo')}
-      </Typography>
-      <Typography variant="body2">{t('sinPermiso.ayuda', { seccion })}</Typography>
-    </Stack>
-  );
+  return <PaginaEstado icono={Lock} titulo={t('sinPermiso.titulo', { seccion })} texto={t('sinPermiso.ayuda')} rol="alert" />;
 }
 
 /** Error recuperable inline con reintento. */
 export function ErrorRecuperable({ mensaje, onReintentar }: { mensaje: string; onReintentar?: () => void }) {
   const { t } = useTranslation();
+  return <ErrorEnLinea mensaje={mensaje} onReintentar={onReintentar} textoReintentar={t('comun.reintentar')} />;
+}
+
+/** Enlace "‹ Vínculos" sobre el título de un detalle. */
+export function EnlaceVolver({ a, children }: { a: string; children: ReactNode }) {
   return (
-    <Alert
-      severity="error"
-      action={
-        onReintentar ? (
-          <Button color="inherit" size="small" onClick={onReintentar}>
-            {t('comun.reintentar')}
-          </Button>
-        ) : undefined
-      }
+    <Link
+      component={RouterLink}
+      to={a}
+      relative="path"
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: '2px', mb: 0.75, ml: -0.5, fontSize: 13 }}
     >
-      {mensaje}
-    </Alert>
+      <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
+      {children}
+    </Link>
   );
 }
 
-export function EncabezadoPagina({ titulo, subtitulo, acciones }: { titulo: string; subtitulo?: ReactNode; acciones?: ReactNode }) {
+/** Título de página (24/32) con subtítulo y acciones alineadas abajo a la derecha. */
+export function EncabezadoPagina({ titulo, subtitulo, acciones }: { titulo: ReactNode; subtitulo?: ReactNode; acciones?: ReactNode }) {
   return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 3 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h2" component="h1">
           {titulo}
         </Typography>
         {subtitulo && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
             {subtitulo}
           </Typography>
         )}
       </Box>
-      {acciones && <Stack direction="row" spacing={1}>{acciones}</Stack>}
+      {acciones && (
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+          {acciones}
+        </Stack>
+      )}
     </Stack>
   );
 }
 
-/** Confirmación propia (window.confirm no funciona en iframes con sandbox). */
+/** Tarjeta de sección: borde sutil, radio 12, sin sombra. */
+export function Tarjeta({ titulo, acciones, children, etiqueta }: { titulo?: ReactNode; acciones?: ReactNode; children: ReactNode; etiqueta?: string }) {
+  return (
+    <Box component="section" aria-label={etiqueta} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: (t) => `${String(t.radio.md)}px`, bgcolor: 'background.paper', minWidth: 0 }}>
+      {(titulo ?? acciones) && (
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+          {titulo && (
+            <Typography variant="h4" component="h2">
+              {titulo}
+            </Typography>
+          )}
+          {acciones}
+        </Stack>
+      )}
+      {children}
+    </Box>
+  );
+}
+
+/** Spinner solo dentro del botón que ejecuta la acción. */
+export function IconoCarga() {
+  return <CircularProgress size={14} color="inherit" aria-hidden />;
+}
+
+/** Confirmación propia (window.confirm no funciona en iframes con sandbox). Dice qué pasa, no "¿Está seguro?". */
 export function DialogoConfirmacion({
   titulo,
+  subtitulo,
   mensaje,
   confirmar,
+  icono,
   ocupado = false,
   onConfirmar,
   onCerrar,
 }: {
   titulo: string;
-  mensaje: string;
+  subtitulo?: ReactNode;
+  mensaje: ReactNode;
   confirmar: string;
+  icono?: ReactNode;
   ocupado?: boolean;
   onConfirmar: () => void;
   onCerrar: () => void;
 }) {
   const { t } = useTranslation();
   return (
-    <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth="xs" fullWidth aria-labelledby="titulo-confirmacion">
-      <DialogTitle id="titulo-confirmacion">{titulo}</DialogTitle>
+    <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 440, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-confirmacion">
+      <DialogTitle id="titulo-confirmacion">
+        {titulo}
+        {subtitulo && (
+          <Typography variant="body2" color="text.secondary" component="span" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+            {subtitulo}
+          </Typography>
+        )}
+      </DialogTitle>
       <DialogContent>
-        <DialogContentText>{mensaje}</DialogContentText>
+        <Typography>{mensaje}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCerrar} disabled={ocupado}>
+        <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
           {t('comun.cancelar')}
         </Button>
-        <Button variant="contained" color="error" onClick={onConfirmar} disabled={ocupado}>
+        <Button variant="contained" color="error" onClick={onConfirmar} disabled={ocupado} startIcon={ocupado ? <IconoCarga /> : icono}>
           {confirmar}
         </Button>
       </DialogActions>

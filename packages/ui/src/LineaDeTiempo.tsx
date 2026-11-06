@@ -1,10 +1,13 @@
-import { alpha, Box, Stack, Typography, useTheme } from '@mui/material';
-import { Bot, ServerCog, User, type LucideIcon } from 'lucide-react';
+import { Box, Stack, Typography } from '@mui/material';
+import { ArrowRight, Plug } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { claveDia, formatearDiaLargo, formatearHora, ZONA_HORARIA_POR_DEFECTO } from './formato';
-import type { TonoEstado } from './tema';
+import { ChipEstado } from './ChipEstado';
+import { AvatarActor, type TipoAvatar } from './datos';
+import type { Estado } from './estados';
+import { claveDia, formatearFecha, formatearHora, ZONA_HORARIA_POR_DEFECTO } from './formato';
+import { EstadoVacio } from './patrones';
 
-export type TipoActor = 'humano' | 'tercero' | 'sistema' | 'integracion';
+export type TipoActor = TipoAvatar;
 
 export interface EventoTimeline {
   id: string;
@@ -12,13 +15,14 @@ export interface EventoTimeline {
   titulo: string;
   fecha: string | Date;
   actor: { nombre: string; tipo: TipoActor };
-  /** Sistema integrado desde el que se actuó (ADR-0011), p. ej. SRM. */
+  /** Sistema integrado desde el que se actuó (ADR-0011): se muestra "desde SRM". */
   sistema?: string | null;
-  /** Motivo, justificación o comentario. */
+  /** Dato del evento ("A contacto@concretos.co, vence el 09/11/2026"). */
   detalle?: ReactNode;
-  antes?: string | null;
-  despues?: string | null;
-  tono?: TonoEstado;
+  /** Motivo o justificación escritos por una persona: van citados. */
+  motivo?: string | null;
+  antes?: Estado | null;
+  despues?: Estado | null;
 }
 
 export interface GrupoDia {
@@ -40,92 +44,93 @@ export function agruparPorDia(eventos: readonly EventoTimeline[], zonaHoraria = 
     if (ultimo?.clave === clave) {
       ultimo.eventos.push(evento);
     } else {
-      grupos.push({ clave, etiqueta: formatearDiaLargo(evento.fecha, zonaHoraria), eventos: [evento] });
+      grupos.push({ clave, etiqueta: formatearFecha(evento.fecha, zonaHoraria), eventos: [evento] });
     }
   }
   return grupos;
 }
 
-const ICONO_ACTOR: Record<TipoActor, LucideIcon> = {
-  humano: User,
-  tercero: User,
-  sistema: Bot,
-  integracion: ServerCog,
-};
-
 export interface LineaDeTiempoProps {
   eventos: readonly EventoTimeline[];
   zonaHoraria?: string;
-  vacio?: ReactNode;
+  vacio?: string;
 }
 
-/** Historial agrupado por día: quién (persona, tercero, `Sistema (IA)` o integración), desde qué sistema y antes/después. */
+/** Historial agrupado por día: quién (persona, tercero, `Sistema (IA)` o integración), desde qué sistema, antes → después y motivo. */
 export function LineaDeTiempo({ eventos, zonaHoraria = ZONA_HORARIA_POR_DEFECTO, vacio = 'Sin eventos todavía.' }: LineaDeTiempoProps) {
-  const tema = useTheme();
   const grupos = agruparPorDia(eventos, zonaHoraria);
 
-  if (grupos.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        {vacio}
-      </Typography>
-    );
-  }
+  if (grupos.length === 0) return <EstadoVacio compacto titulo={vacio} />;
 
   return (
-    <Stack spacing={3} component="section" aria-label="Historial">
+    <Stack spacing={2.5}>
       {grupos.map((grupo) => (
-        <Box key={grupo.clave}>
-          <Typography variant="caption" color="text.secondary" component="h4" sx={{ mb: 1 }}>
+        <Box component="section" key={grupo.clave} aria-label={grupo.etiqueta}>
+          <Typography
+            component="h3"
+            sx={{ mb: 1, color: 'text.secondary', fontSize: 12, lineHeight: '16px', fontWeight: 600, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' }}
+          >
             {grupo.etiqueta}
           </Typography>
-          <Box component="ol" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-            {grupo.eventos.map((evento, indice) => {
-              const color = tema.palette.estado[evento.tono ?? 'enCurso'];
-              const Icono = ICONO_ACTOR[evento.actor.tipo];
-              const esUltimo = indice === grupo.eventos.length - 1;
-              return (
-                <Box component="li" key={evento.id} sx={{ display: 'flex', gap: 1.5 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 0.5 }}>
-                    <Box
-                      sx={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        backgroundColor: color,
-                        boxShadow: `0 0 0 4px ${alpha(color, 0.16)}`,
-                      }}
-                    />
-                    {!esUltimo && <Box sx={{ flex: 1, width: '1px', backgroundColor: 'divider', my: 0.5 }} />}
-                  </Box>
-                  <Box sx={{ pb: esUltimo ? 0 : 2, minWidth: 0, flex: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="baseline" justifyContent="space-between">
-                      <Typography variant="body1">{evento.titulo}</Typography>
-                      <Typography variant="mono" color="text.secondary" sx={{ flexShrink: 0 }}>
-                        {formatearHora(evento.fecha, zonaHoraria)}
-                      </Typography>
-                    </Stack>
-                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: 'text.secondary', mt: 0.25 }}>
-                      <Icono size={13} strokeWidth={1.75} aria-hidden />
-                      <Typography variant="caption">
-                        {evento.actor.nombre}
-                        {evento.sistema ? ` · desde ${evento.sistema}` : ''}
-                      </Typography>
-                    </Stack>
-                    {(evento.antes ?? evento.despues) && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {evento.antes ?? '—'} → {evento.despues ?? '—'}
-                      </Typography>
-                    )}
-                    {evento.detalle && (
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {evento.detalle}
-                      </Typography>
-                    )}
-                  </Box>
+          <Box
+            component="ol"
+            sx={{
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              m: 0,
+              p: 0,
+              listStyle: 'none',
+              '&::before': { content: '""', position: 'absolute', left: 13, top: 8, bottom: 8, width: '1px', bgcolor: 'divider' },
+            }}
+          >
+            {grupo.eventos.map((evento) => (
+              <Box component="li" key={evento.id} sx={{ position: 'relative', display: 'flex', gap: 1.5 }}>
+                <Box sx={{ position: 'relative', zIndex: 1, borderRadius: '50%', boxShadow: (t) => `0 0 0 3px ${t.palette.background.paper}`, alignSelf: 'flex-start' }}>
+                  <AvatarActor tipo={evento.actor.tipo} nombre={evento.actor.nombre} />
                 </Box>
-              );
-            })}
+                <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 600 }}>{evento.titulo}</Typography>
+                  <Typography variant="body2" color="text.secondary" component="p">
+                    {evento.actor.nombre}
+                    {evento.sistema && (
+                      <>
+                        {' · '}
+                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', verticalAlign: 'middle' }}>
+                          <Plug size={12} strokeWidth={1.75} aria-hidden />
+                          desde {evento.sistema}
+                        </Box>
+                      </>
+                    )}
+                    {' · '}
+                    <Typography component="span" variant="monoTabla">
+                      {formatearHora(evento.fecha, zonaHoraria)}
+                    </Typography>
+                  </Typography>
+                  {(evento.antes ?? evento.despues) && (
+                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', color: 'text.secondary' }}>
+                      {evento.antes && <ChipEstado estado={evento.antes} />}
+                      {evento.antes && evento.despues && <ArrowRight size={14} strokeWidth={1.75} aria-label="pasó a" />}
+                      {evento.despues && <ChipEstado estado={evento.despues} />}
+                    </Box>
+                  )}
+                  {evento.detalle && (
+                    <Typography variant="body2" color="text.secondary">
+                      {evento.detalle}
+                    </Typography>
+                  )}
+                  {evento.motivo && (
+                    <Box
+                      component="blockquote"
+                      sx={{ m: 0, px: 1.25, py: 0.75, borderRadius: (t) => `${String(t.radio.sm)}px`, bgcolor: 'superficie.nivel2', fontSize: 13, lineHeight: '18px' }}
+                    >
+                      {evento.motivo}
+                    </Box>
+                  )}
+                </Stack>
+              </Box>
+            ))}
           </Box>
         </Box>
       ))}

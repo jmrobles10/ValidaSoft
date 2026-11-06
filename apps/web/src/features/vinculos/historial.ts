@@ -1,6 +1,5 @@
 import type { EstadoVinculo, EventoHistorialDto } from '@validasoft/api-client';
-import { APARIENCIA_ESTADO, type EventoTimeline, type TipoActor, type TonoEstado } from '@validasoft/ui';
-import { formatearFecha } from '@validasoft/ui';
+import { formatearFecha, type EventoTimeline, type TipoActor } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { esCO } from '../../i18n/es-CO';
 
@@ -8,15 +7,6 @@ import { esCO } from '../../i18n/es-CO';
 const ORDEN_ESTADOS: readonly EstadoVinculo[] = ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'];
 
 type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor'>;
-
-const TONO: Partial<Record<TipoConocido, TonoEstado>> = {
-  vinculo_bloqueado: 'error',
-  vinculo_desbloqueado: 'exito',
-  vinculo_desvinculado: 'advertencia',
-  vinculo_reintegrado: 'exito',
-  vinculo_anulado: 'neutro',
-  invitacion_aceptada: 'exito',
-};
 
 /**
  * Los datos del evento llegan como los serializa Marten (PascalCase y enums numéricos), distinto del resto de la
@@ -36,10 +26,6 @@ export function estadoDe(valor: unknown): EstadoVinculo | null {
 
 function texto(valor: unknown): string | null {
   return typeof valor === 'string' && valor.trim() ? valor : null;
-}
-
-function etiquetaEstado(estado: EstadoVinculo | null): string | null {
-  return estado ? APARIENCIA_ESTADO[estado].etiqueta : null;
 }
 
 /** Tipo de Marten (`vinculo_bloqueado`, o `VinculoBloqueado` según la versión) → clave de texto. */
@@ -67,7 +53,7 @@ function actorDe(evento: EventoHistorialDto, contexto: ContextoHistorial, t: TFu
     case 'Usuario':
       return {
         nombre: id === contexto.usuarioActual ? t('historial.actor.tu') : (contexto.nombres?.get(id) ?? t('historial.actor.Usuario')),
-        tipo: 'humano',
+        tipo: 'persona',
       };
     case 'Integracion':
       return { nombre: t('historial.actor.Integracion'), tipo: 'integracion' };
@@ -92,7 +78,6 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
     fecha: evento.fecha,
     actor: actorDe(evento, contexto, t),
     sistema: evento.sistema,
-    tono: esTipoConocido(tipo) ? (TONO[tipo] ?? 'enCurso') : 'enCurso',
   };
 
   const motivo = texto(campo(datos, 'motivo'));
@@ -120,20 +105,21 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       const hasta = texto(campo(datos, 'hasta'));
       return {
         ...base,
-        antes: etiquetaEstado(estadoDe(campo(datos, 'estadoPrevio'))),
-        despues: etiquetaEstado('Bloqueado'),
-        detalle: [motivo, hasta ? t('historial.hasta', { fecha: formatearFecha(hasta) }) : null].filter(Boolean).join(' · '),
+        antes: estadoDe(campo(datos, 'estadoPrevio')),
+        despues: 'Bloqueado',
+        motivo,
+        detalle: hasta ? t('historial.hasta', { fecha: formatearFecha(hasta) }) : null,
       };
     }
     case 'vinculo_desbloqueado':
-      return { ...base, antes: etiquetaEstado('Bloqueado'), despues: etiquetaEstado(estadoDe(campo(datos, 'estadoRestituido'))), detalle: justificacion };
+      return { ...base, antes: 'Bloqueado', despues: estadoDe(campo(datos, 'estadoRestituido')), motivo: justificacion };
     case 'vinculo_desvinculado':
-      return { ...base, antes: etiquetaEstado(estadoDe(campo(datos, 'estadoPrevio'))), despues: etiquetaEstado('Desvinculado'), detalle: motivo };
+      return { ...base, antes: estadoDe(campo(datos, 'estadoPrevio')), despues: 'Desvinculado', motivo };
     case 'vinculo_reintegrado':
-      return { ...base, antes: etiquetaEstado('Desvinculado'), despues: etiquetaEstado(estadoDe(campo(datos, 'estadoResultante'))), detalle: justificacion };
+      return { ...base, antes: 'Desvinculado', despues: estadoDe(campo(datos, 'estadoResultante')), motivo: justificacion };
     case 'vinculo_anulado':
-      return { ...base, antes: etiquetaEstado(estadoDe(campo(datos, 'estadoPrevio'))), despues: etiquetaEstado('Anulado'), detalle: motivo };
+      return { ...base, antes: estadoDe(campo(datos, 'estadoPrevio')), despues: 'Anulado', motivo };
     default:
-      return { ...base, detalle: motivo ?? justificacion };
+      return { ...base, motivo: motivo ?? justificacion };
   }
 }

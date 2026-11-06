@@ -21,7 +21,7 @@ configurarCliente({
 
 export function App() {
   const modo = usePreferencias((s) => s.modo);
-  const tema = useMemo(() => createValidasoftTheme(modo), [modo]);
+  const tema = useMemo(() => createValidasoftTheme(modo, { app: 'web' }), [modo]);
   const [clienteConsultas] = useState(crearClienteConsultas);
   const [router] = useState(crearRouter);
   const { embebida } = usePuenteEmbed();

@@ -6,6 +6,7 @@ import { mensajeDeError } from '../shared/errores';
 import { aFilas, ALCANCE_TENANT, aRoles } from './configuracion/usuarios/roles';
 import { elegirEmpresaInicial } from './empresas/useEmpresas';
 import { campo, estadoDe, eventoATimeline, tipoNormalizado } from './vinculos/historial';
+import { interpretarReferencia } from './vinculos/referencia';
 
 const t = i18n.t.bind(i18n);
 
@@ -50,7 +51,7 @@ describe('historial del vínculo', () => {
     expect(tipoNormalizado('vinculo_bloqueado')).toBe('vinculo_bloqueado');
   });
 
-  it('arma títulos, actor, antes/después y detalle', () => {
+  it('arma títulos, actor, antes/después, motivo y detalle', () => {
     const [creado, bloqueado, desbloqueado] = historial.map((e) =>
       eventoATimeline(e, { usuarioActual: 'usuario-ana', nombres: new Map([['otro', 'Rubén']]) }, t),
     );
@@ -60,12 +61,12 @@ describe('historial del vínculo', () => {
       titulo: 'Vínculo bloqueado',
       antes: 'Invitado',
       despues: 'Bloqueado',
-      detalle: 'Documentos vencidos. · Hasta el 31/12/2026',
-      actor: { nombre: 'Tú', tipo: 'humano' },
+      motivo: 'Documentos vencidos.',
+      detalle: 'Hasta el 31/12/2026',
+      actor: { nombre: 'Tú', tipo: 'persona' },
       sistema: 'DEMO',
-      tono: 'error',
     });
-    expect(desbloqueado).toMatchObject({ antes: 'Bloqueado', despues: 'Invitado', detalle: 'Allegó los documentos al día.', tono: 'exito' });
+    expect(desbloqueado).toMatchObject({ antes: 'Bloqueado', despues: 'Invitado', motivo: 'Allegó los documentos al día.' });
   });
 
   it('usa el nombre conocido del usuario y tolera tipos nuevos', () => {
@@ -124,5 +125,15 @@ describe('reintentos de consultas', () => {
     expect(debeReintentar(0, new ErrorApi(404, 'no-encontrado', '', null, null))).toBe(false);
     expect(debeReintentar(0, new ErrorApi(503, 'error-interno', '', null, null))).toBe(true);
     expect(debeReintentar(2, new ErrorDeRed('x', null))).toBe(false);
+  });
+});
+
+describe('búsqueda por referencia externa', () => {
+  it('acepta el sistema delante o usa el de la sesión', () => {
+    expect(interpretarReferencia('SRM · PRV-002', null)).toEqual({ sistema: 'SRM', id: 'PRV-002' });
+    expect(interpretarReferencia('marco: 12-A ', 'SRM')).toEqual({ sistema: 'MARCO', id: '12-A' });
+    expect(interpretarReferencia(' PRV-002 ', 'SRM')).toEqual({ sistema: 'SRM', id: 'PRV-002' });
+    expect(interpretarReferencia('PRV-002', null)).toBeNull();
+    expect(interpretarReferencia('   ', 'SRM')).toBeNull();
   });
 });

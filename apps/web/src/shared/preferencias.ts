@@ -33,7 +33,7 @@ const almacenamientoSeguro = createJSONStorage(() => {
 export const usePreferencias = create<PreferenciasState>()(
   persist(
     (set) => ({
-      modo: 'dark',
+      modo: 'light',
       ultimaEmpresa: {},
       temaDelContenedor: false,
       fijarModo: (modo, delContenedor = false) => set((s) => ({ modo, temaDelContenedor: s.temaDelContenedor || delContenedor })),

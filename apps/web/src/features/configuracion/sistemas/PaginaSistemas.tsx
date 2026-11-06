@@ -1,47 +1,29 @@
-import {
-  Alert,
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  IconButton,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  crearSistema,
-  desactivarSistema,
-  getListarSistemasQueryOptions,
-  rotarClavePublicaSistema,
-  SCOPES,
-  type SistemaIntegradoDto,
-} from '@validasoft/api-client';
-import { formatearFecha } from '@validasoft/ui';
-import { Ban, KeyRound, Plus } from 'lucide-react';
+import { crearSistema, desactivarSistema, getListarSistemasQueryOptions, rotarClavePublicaSistema, SCOPES, type SistemaIntegradoDto } from '@validasoft/api-client';
+import { AvatarActor, Dato, EstadoVacio, FilasEsqueleto, formatearFecha, MarcoTabla, RejillaDatos } from '@validasoft/ui';
+import { Ban, CircleCheck, Plug, Plus, RefreshCw } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAvisos } from '../../../shared/useAvisos';
-import { DialogoConfirmacion, EncabezadoPagina, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
+import { DialogoConfirmacion, EncabezadoPagina, ErrorRecuperable, IconoCarga, SinPermiso, Tarjeta } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
+import { useAvisos } from '../../../shared/useAvisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { resumenClave } from './clave';
 
 type Edicion = { tipo: 'crear'; clave: string } | { tipo: 'rotar'; sistema: SistemaIntegradoDto };
+
+function EstadoSistema({ activo }: { activo: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 13, '& svg': { color: activo ? 'estado.exito.texto' : 'text.secondary' } }}>
+      {activo ? <CircleCheck size={14} strokeWidth={1.75} aria-hidden /> : <Ban size={14} strokeWidth={1.75} aria-hidden />}
+      {activo ? t('comun.activo') : t('sistemas.desactivado')}
+    </Box>
+  );
+}
 
 /** Sistemas integrados del tenant y sus claves públicas (ADR-0011). */
 export function PaginaSistemas() {
@@ -51,12 +33,13 @@ export function PaginaSistemas() {
   const consulta = useQuery({ ...getListarSistemasQueryOptions({ request: { empresa: null } }), enabled: puede });
   const cliente = useQueryClient();
   const mostrar = useAvisos((s) => s.mostrar);
+  const [elegidoId, setElegidoId] = useState<string | null>(null);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
   const [porDesactivar, setPorDesactivar] = useState<SistemaIntegradoDto | null>(null);
 
   const desactivar = useMutation({
     mutationFn: (s: SistemaIntegradoDto) => desactivarSistema(s.id, { empresa: null }),
-    onSuccess: () => mostrar(t('sistemas.desactivado')),
+    onSuccess: () => mostrar(t('sistemas.desactivadoAviso')),
     onError: (error) => mostrar(mensajeDeError(error, t), 'error'),
     onSettled: () => {
       setPorDesactivar(null);
@@ -66,79 +49,158 @@ export function PaginaSistemas() {
 
   if (!puede) return <SinPermiso seccion={t('nav.sistemas')} />;
 
+  const sistemas = consulta.data ?? [];
+  const elegido = sistemas.find((s) => s.id === elegidoId) ?? sistemas[0] ?? null;
+
   return (
     <>
       <EncabezadoPagina
         titulo={t('sistemas.titulo')}
         subtitulo={t('sistemas.ayuda')}
         acciones={
-          <Button variant="contained" startIcon={<Plus size={16} />} onClick={() => setEdicion({ tipo: 'crear', clave: crypto.randomUUID() })}>
+          <Button variant="contained" startIcon={<Plus size={16} aria-hidden />} onClick={() => setEdicion({ tipo: 'crear', clave: crypto.randomUUID() })}>
             {t('sistemas.nuevo')}
           </Button>
         }
       />
-      {consulta.isError && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 3 }}>
-        <Table size="small" aria-label={t('sistemas.titulo')} aria-busy={consulta.isPending}>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('sistemas.codigo')}</TableCell>
-              <TableCell>{t('sistemas.nombre')}</TableCell>
-              <TableCell>{t('sistemas.huella')}</TableCell>
-              <TableCell>{t('vinculos.detalle.creado')}</TableCell>
-              <TableCell align="right" />
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {consulta.data?.length === 0 && (
+      {consulta.isError && (
+        <Box sx={{ mb: 1.5 }}>
+          <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />
+        </Box>
+      )}
+      <MarcoTabla>
+        <TableContainer>
+          <Table size="small" aria-label={t('sistemas.titulo')} aria-busy={consulta.isPending}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5}>{t('sistemas.vacio')}</TableCell>
+                <TableCell>{t('sistemas.sistema')}</TableCell>
+                <TableCell sx={{ width: 130 }}>{t('sistemas.estado')}</TableCell>
+                <TableCell sx={{ width: 220 }}>{t('sistemas.huella')}</TableCell>
+                <TableCell sx={{ width: 120 }}>{t('sistemas.registrado')}</TableCell>
               </TableRow>
-            )}
-            {consulta.data?.map((s) => (
-              <TableRow key={s.id} sx={{ opacity: s.activo ? 1 : 0.55 }}>
-                <TableCell>
-                  <Chip size="small" color="primary" variant="outlined" label={s.codigo} />
-                </TableCell>
-                <TableCell>
-                  {s.nombre} {!s.activo && <Chip size="small" label={t('comun.inactivo')} sx={{ ml: 1 }} />}
-                </TableCell>
-                <TableCell>
-                  <Typography variant="mono" color="text.secondary">
-                    {resumenClave(s.clavePublicaPem)}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="mono">{formatearFecha(s.creadoEn)}</Typography>
-                </TableCell>
-                <TableCell align="right">
-                  {s.activo && (
-                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                      <Tooltip title={t('sistemas.rotar')}>
-                        <IconButton aria-label={`${t('sistemas.rotar')}: ${s.codigo}`} onClick={() => setEdicion({ tipo: 'rotar', sistema: s })}>
-                          <KeyRound size={16} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('comun.desactivar')}>
-                        <IconButton aria-label={`${t('comun.desactivar')}: ${s.codigo}`} onClick={() => setPorDesactivar(s)}>
-                          <Ban size={16} />
-                        </IconButton>
-                      </Tooltip>
+            </TableHead>
+            <TableBody>
+              {consulta.isPending && <FilasEsqueleto columnas={4} filas={3} />}
+              {consulta.data && sistemas.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ borderBottom: 0 }}>
+                    <EstadoVacio compacto icono={Plug} titulo={t('sistemas.vacio')} texto={t('sistemas.vacioAyuda')} />
+                  </TableCell>
+                </TableRow>
+              )}
+              {sistemas.map((s) => (
+                <TableRow
+                  key={s.id}
+                  selected={s.id === elegido?.id}
+                  tabIndex={0}
+                  aria-label={t('sistemas.ver', { nombre: s.nombre })}
+                  onClick={() => setElegidoId(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setElegidoId(s.id);
+                    }
+                  }}
+                  sx={{ cursor: 'pointer', '&:focus-visible': { outlineOffset: -2 } }}
+                >
+                  <TableCell>
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      <AvatarActor tipo="integracion" />
+                      <span style={{ fontWeight: 500 }}>{s.nombre}</span>
+                      <Typography component="span" variant="monoTabla" color="text.secondary">
+                        {s.codigo}
+                      </Typography>
                     </Stack>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </TableCell>
+                  <TableCell>
+                    <EstadoSistema activo={s.activo} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="monoTabla">{resumenClave(s.clavePublicaPem)}</Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="monoTabla">{formatearFecha(s.creadoEn)}</Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </MarcoTabla>
 
-      {edicion && <DialogoSistema edicion={edicion} onCerrar={() => setEdicion(null)} />}
+      {elegido && (
+        <Box sx={{ mt: 2 }}>
+          <Tarjeta etiqueta={elegido.nombre} titulo={elegido.nombre}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 2 }}>
+              {t('sistemas.detalleAyuda', { codigo: elegido.codigo })}
+            </Typography>
+            <Stack spacing={2}>
+              <Box>
+                <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 0.5 }}>{t('sistemas.clavePublica')}</Typography>
+                <Box
+                  component="pre"
+                  sx={{
+                    m: 0,
+                    px: 1.5,
+                    py: 1.25,
+                    borderRadius: (th) => `${String(th.radio.sm)}px`,
+                    bgcolor: 'superficie.nivel2',
+                    fontFamily: (th) => th.typography.mono.fontFamily,
+                    fontSize: 12,
+                    lineHeight: '18px',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    maxHeight: 180,
+                    overflow: 'auto',
+                  }}
+                >
+                  {elegido.clavePublicaPem.trim()}
+                </Box>
+              </Box>
+              <RejillaDatos>
+                <Dato etiqueta={t('sistemas.emisor')}>
+                  <Typography component="span" variant="mono">
+                    {elegido.codigo}
+                  </Typography>
+                </Dato>
+                <Dato etiqueta={t('sistemas.registrado')}>
+                  <Typography component="span" variant="mono">
+                    {formatearFecha(elegido.creadoEn)}
+                  </Typography>
+                </Dato>
+                <Dato etiqueta={t('sistemas.estado')}>
+                  <EstadoSistema activo={elegido.activo} />
+                </Dato>
+              </RejillaDatos>
+              {elegido.activo && (
+                <Stack direction="row" spacing={1}>
+                  <Button variant="outlined" startIcon={<RefreshCw size={16} aria-hidden />} onClick={() => setEdicion({ tipo: 'rotar', sistema: elegido })}>
+                    {t('sistemas.rotar')}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<Ban size={16} aria-hidden />}
+                    onClick={() => setPorDesactivar(elegido)}
+                    sx={{ color: 'estado.error.texto', borderColor: 'estado.error.borde' }}
+                  >
+                    {t('sistemas.desactivar')}
+                  </Button>
+                </Stack>
+              )}
+            </Stack>
+          </Tarjeta>
+        </Box>
+      )}
+
+      {edicion && <DialogoSistema edicion={edicion} onCerrar={() => setEdicion(null)} onListo={setElegidoId} />}
       {porDesactivar && (
         <DialogoConfirmacion
-          titulo={t('comun.desactivar')}
+          titulo={t('sistemas.desactivarTitulo', { nombre: porDesactivar.nombre })}
+          subtitulo={porDesactivar.codigo}
           mensaje={t('sistemas.confirmarDesactivar', { codigo: porDesactivar.codigo })}
-          confirmar={t('comun.desactivar')}
+          confirmar={t('sistemas.desactivar')}
+          icono={<Ban size={16} aria-hidden />}
           ocupado={desactivar.isPending}
           onConfirmar={() => desactivar.mutate(porDesactivar)}
           onCerrar={() => setPorDesactivar(null)}
@@ -148,7 +210,7 @@ export function PaginaSistemas() {
   );
 }
 
-function DialogoSistema({ edicion, onCerrar }: { edicion: Edicion; onCerrar: () => void }) {
+function DialogoSistema({ edicion, onCerrar, onListo }: { edicion: Edicion; onCerrar: () => void; onListo: (id: string) => void }) {
   const { t } = useTranslation();
   const cliente = useQueryClient();
   const mostrar = useAvisos((s) => s.mostrar);
@@ -157,12 +219,17 @@ function DialogoSistema({ edicion, onCerrar }: { edicion: Edicion; onCerrar: () 
   const [pem, setPem] = useState('');
 
   const guardar = useMutation({
-    mutationFn: () =>
-      edicion.tipo === 'rotar'
-        ? rotarClavePublicaSistema(edicion.sistema.id, { clavePublicaPem: pem }, { empresa: null })
-        : crearSistema({ codigo, nombre, clavePublicaPem: pem }, { empresa: null, idempotencyKey: edicion.clave }),
-    onSuccess: () => {
+    mutationFn: async () => {
+      if (edicion.tipo === 'rotar') {
+        await rotarClavePublicaSistema(edicion.sistema.id, { clavePublicaPem: pem }, { empresa: null });
+        return edicion.sistema.id;
+      }
+      const creado = await crearSistema({ codigo, nombre, clavePublicaPem: pem }, { empresa: null, idempotencyKey: edicion.clave });
+      return creado.id;
+    },
+    onSuccess: (id) => {
       mostrar(edicion.tipo === 'rotar' ? t('sistemas.rotado') : t('sistemas.creado'));
+      onListo(id);
       onCerrar();
     },
     onSettled: () => invalidarRuta(cliente, '/api/v1/sistemas'),
@@ -174,20 +241,27 @@ function DialogoSistema({ edicion, onCerrar }: { edicion: Edicion; onCerrar: () 
   };
 
   return (
-    <Dialog open onClose={guardar.isPending ? undefined : onCerrar} fullWidth maxWidth="sm" aria-labelledby="titulo-sistema">
+    <Dialog open onClose={guardar.isPending ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-sistema">
       <form onSubmit={enviar}>
         <DialogTitle id="titulo-sistema">
           {edicion.tipo === 'rotar' ? t('sistemas.rotarTitulo', { codigo: edicion.sistema.codigo }) : t('sistemas.nuevo')}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            {edicion.tipo === 'rotar' && <DialogContentText>{t('sistemas.rotarAyuda')}</DialogContentText>}
+          <Stack spacing={2}>
+            {edicion.tipo === 'rotar' && <Alert severity="warning">{t('sistemas.rotarAyuda')}</Alert>}
             {guardar.isError && <Alert severity="error">{mensajeDeError(guardar.error, t)}</Alert>}
             {edicion.tipo === 'crear' && (
-              <>
-                <TextField required label={t('sistemas.codigo')} value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} />
-                <TextField required label={t('sistemas.nombre')} value={nombre} onChange={(e) => setNombre(e.target.value)} />
-              </>
+              <Stack direction="row" spacing={1.5}>
+                <TextField
+                  required
+                  label={t('sistemas.codigo')}
+                  helperText={t('sistemas.codigoAyuda')}
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                  sx={{ width: 160, '& input': { fontFamily: (th) => th.typography.mono.fontFamily } }}
+                />
+                <TextField required label={t('sistemas.nombre')} value={nombre} onChange={(e) => setNombre(e.target.value)} sx={{ flex: 1 }} />
+              </Stack>
             )}
             <TextField
               required
@@ -197,16 +271,16 @@ function DialogoSistema({ edicion, onCerrar }: { edicion: Edicion; onCerrar: () 
               helperText={t('sistemas.clavePublicaAyuda')}
               value={pem}
               onChange={(e) => setPem(e.target.value)}
-              slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontSize: 12 } } }}
+              sx={{ '& textarea': { fontFamily: (th) => th.typography.mono.fontFamily, fontSize: 12 } }}
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={onCerrar} disabled={guardar.isPending}>
+          <Button variant="text" onClick={onCerrar} disabled={guardar.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}
           </Button>
-          <Button type="submit" variant="contained" disabled={guardar.isPending}>
-            {edicion.tipo === 'rotar' ? t('sistemas.rotar') : t('comun.crear')}
+          <Button type="submit" variant="contained" disabled={guardar.isPending} startIcon={guardar.isPending ? <IconoCarga /> : undefined}>
+            {edicion.tipo === 'rotar' ? t('sistemas.rotar') : t('sistemas.registrar')}
           </Button>
         </DialogActions>
       </form>
