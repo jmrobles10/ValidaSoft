@@ -3,8 +3,10 @@
 //   pnpm semilla:dev            (API en http://localhost:5080 con ASPNETCORE_ENVIRONMENT=Development)
 //
 // Crea un tenant nuevo con dos empresas, un sistema integrado "DEMO" con su par de claves RSA, una API key de ese
-// sistema (con los scopes de flujos y expedientes), usuarios con distintos roles, áreas (Jurídica, Compras y
-// Cumplimiento), tipos de vínculo y vínculos en varios estados. Los flujos se crean desde la UI. Escribe las
+// sistema (con los scopes de flujos, expedientes y documentos), usuarios con distintos roles, áreas (Jurídica, Compras
+// y Cumplimiento), tipos de vínculo (PROVEEDOR exige OTP en el enlace), el flujo «Habilitación de proveedores» publicado
+// en Norte, los textos legales de Norte, RUT y Cámara de comercio exigidos a los proveedores de Norte y vínculos en
+// varios estados. Las invitaciones llegan a Mailpit (http://localhost:8025) con el enlace del tercero. Escribe las
 // credenciales en apps/web/.semilla.local.json (ignorado por git), que Vite sirve solo en `vite dev` para prellenar
 // el formulario de sesión y embed-demo.html. Cada ejecución crea un tenant distinto: no reutiliza ni borra nada.
 import { createSign, generateKeyPairSync, randomUUID } from 'node:crypto';
@@ -106,6 +108,8 @@ const scopes = [
   'expedientes:leer',
   'expedientes:revisar',
   'expedientes:administrar',
+  'documentos:leer',
+  'documentos:descargar',
 ];
 const llaveSistema = await llamar('POST', '/api/v1/api-keys', {
   llave: admin,
@@ -135,18 +139,19 @@ for (const u of usuarios) {
   u.id = usuario.id;
 }
 
-for (const [codigo, nombre] of [
-  ['PROVEEDOR', 'Proveedor'],
-  ['CLIENTE', 'Cliente'],
+for (const [codigo, nombre, exigeOtpEnEnlace] of [
+  ['PROVEEDOR', 'Proveedor', true],
+  ['CLIENTE', 'Cliente', false],
 ]) {
   await llamar('POST', '/api/v1/tipos-vinculo', {
     llave: admin,
-    cuerpo: { codigo, nombre, atributosPermitidos: [], exigeCuentaDesignada: false },
+    cuerpo: { codigo, nombre, atributosPermitidos: [], exigeCuentaDesignada: false, exigeOtpEnEnlace },
   }).catch((error) => {
     if (!String(error.message).includes('tipo-vinculo-duplicado')) throw error;
   });
 }
 
+const areas = {};
 for (const [codigo, nombre, miembros] of [
   ['juridica', 'Jurídica', [usuarios[0].id, usuarios[1].id]],
   ['compras', 'Compras', [usuarios[1].id]],
@@ -154,6 +159,60 @@ for (const [codigo, nombre, miembros] of [
 ]) {
   const area = await llamar('POST', '/api/v1/areas', { llave: admin, empresa: norte.id, cuerpo: { codigo, nombre } });
   await llamar('PUT', `/api/v1/areas/${area.id}/miembros`, { llave: admin, empresa: norte.id, cuerpo: { usuarios: miembros } });
+  areas[codigo] = area;
+}
+
+// Flujo por defecto de los proveedores de Norte: Compras y Cumplimiento revisan en paralelo; Cumplimiento puede rechazar.
+// Así, cuando el tercero acepta la invitación, se abre su expediente.
+const flujo = await llamar('POST', '/api/v1/flujos', {
+  llave: admin,
+  empresa: norte.id,
+  cuerpo: {
+    codigo: 'HABILITACION',
+    nombre: 'Habilitación de proveedores',
+    tipoVinculo: 'PROVEEDOR',
+    etapas: [
+      {
+        orden: 1,
+        areas: [
+          { areaId: areas.compras.id, aprobadoresRequeridos: 1, puedeRechazarExpediente: false, automatica: false, slaHoras: null },
+          { areaId: areas.cumplimiento.id, aprobadoresRequeridos: 1, puedeRechazarExpediente: true, automatica: false, slaHoras: null },
+        ],
+      },
+    ],
+    politicaDevolucion: 'Inmediata',
+    separacionDeFunciones: false,
+  },
+});
+await llamar('POST', `/api/v1/flujos/${flujo.id}/publicar`, { llave: admin, empresa: norte.id });
+
+// Textos legales de Norte (el aviso de la plataforma lo siembra la API al arrancar). Sin ellos, el tercero no puede aceptar.
+for (const [tipo, contenido] of [
+  [
+    'autorizacion',
+    'Autorizo a Constructora Norte S.A.S. a tratar mis datos personales y los documentos que comparta para evaluar y ' +
+      'administrar la relación comercial, conforme a la Ley 1581 de 2012 y a su política de tratamiento de datos. ' +
+      'Puedo conocer, actualizar, rectificar y suprimir mis datos escribiendo a datos@constructoranorte.co. (Texto de demostración.)',
+  ],
+  [
+    'terminos',
+    'Términos y condiciones para proveedores de Constructora Norte S.A.S.: la información que entrego es veraz y la ' +
+      'mantendré actualizada; acepto que Constructora Norte verifique mis documentos y consulte listas restrictivas. ' +
+      '(Texto de demostración.)',
+  ],
+]) {
+  await llamar('PUT', `/api/v1/empresas/${norte.id}/textos-legales/${tipo}`, { llave: admin, cuerpo: { contenido } });
+}
+
+// Documentos que Norte exige a sus proveedores (BO-3; cambia cuando el flujo declare sus requisitos).
+const tiposDocumento = await llamar('GET', '/api/v1/tipos-documento', { llave: admin });
+for (const codigo of ['RUT', 'CAMARA_COMERCIO']) {
+  const tipo = tiposDocumento.find((t) => t.codigo === codigo);
+  if (!tipo) throw new Error(`El tenant no trae el tipo de documento ${codigo}.`);
+  await llamar('PUT', `/api/v1/tipos-documento/${tipo.id}`, {
+    llave: admin,
+    cuerpo: { exigencias: [{ empresaId: norte.id, tipoVinculo: 'PROVEEDOR' }] },
+  });
 }
 
 const terceros = [
@@ -231,3 +290,4 @@ await writeFile(new URL('../.semilla.local.json', import.meta.url), JSON.stringi
 
 console.log(`Listo: ${vinculos.length + 1} vínculos, ${usuarios.length} usuarios, sistema ${SISTEMA}.`);
 console.log('Credenciales en apps/web/.semilla.local.json (solo desarrollo; no se versiona).');
+console.log('Invitaciones (enlace del tercero y código OTP) en Mailpit: http://localhost:8025, o en apps/public: /dev/correos.');

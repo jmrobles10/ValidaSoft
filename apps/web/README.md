@@ -1,10 +1,11 @@
-# Frontend de Validasoft (H1: pantallas embebidas, bandeja, expedientes y flujos)
+# Frontend de Validasoft (H1–H2: pantallas embebidas, bandeja, expedientes, flujos, documentos y app del tercero)
 
-Workspace pnpm en la raíz del repo con una app y dos paquetes (docs/06 §1.1):
+Workspace pnpm en la raíz del repo con dos apps y dos paquetes (docs/06 §1.1):
 
 | Ruta | Qué es |
 |---|---|
 | `apps/web` | Pantallas de Validasoft **embebidas** en el sistema integrado (ID-3, ADR-0011): bandeja de revisión, expedientes, vínculos y configuración (usuarios y roles, sistemas integrados, motivos, áreas y flujos aprobatorios). |
+| `apps/public` | Pantallas del **tercero**, móvil primero: enlace con OTP, mis empresas, invitación con textos legales, mi bóveda con subida en dos pasos y mi revisión. Ver [apps/public/README.md](../public/README.md). |
 | `packages/api-client` | Cliente generado con **orval** desde el snapshot `openapi/v1.json` + fetcher, errores tipados, lectura del token de sesión y reglas de acciones del vínculo. |
 | `packages/ui` | Design system (dirección **Registro**): `tokens.ts`, `createValidasoftTheme(modo, { app, colorEmpresa })`, mapa canónico de estados (`estados.ts`), paleta segura por empresa (`marcaEmpresa.ts`) y componentes: `ChipEstado`, `SelectorEmpresa`, `LineaDeTiempo`, `TablaConCursor`, `PaginacionCursor`, `BarraFiltros`/`FiltroMenu`/`CampoBusqueda`, `EstadoVacio`, `PaginaEstado`, `ErrorEnLinea`, `RejillaDatos`/`Dato`, `AvatarActor`, `ReferenciaExterna`, `Isotipo`. |
 
@@ -15,9 +16,9 @@ Stack: React 18, TypeScript estricto (sin `any`), Vite 6, MUI v6 (solo `@mui/mat
 ```bash
 pnpm install
 pnpm lint          # ESLint strict-type-checked, --max-warnings 0
-pnpm typecheck     # tsc en los tres proyectos
+pnpm typecheck     # tsc en los cuatro proyectos
 pnpm test          # Vitest en todos los proyectos
-pnpm build         # build de apps/web (dist/ sin la demo ni el formulario de desarrollo)
+pnpm build         # build de apps/web y apps/public (dist/ sin la demo, el formulario de desarrollo ni /dev/correos)
 pnpm generar:api   # regenera packages/api-client/src/generado desde el snapshot
 pnpm --filter @validasoft/api-client openapi:actualizar   # baja un snapshot nuevo de la API levantada
 ```
@@ -25,9 +26,9 @@ pnpm --filter @validasoft/api-client openapi:actualizar   # baja un snapshot nue
 ## Probar contra la API local
 
 ```bash
-docker compose -f infra/compose/compose.yaml up -d                       # PostgreSQL
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Validasoft.Api   # API en :5080
-pnpm semilla:dev                                                          # tenant, empresas, sistema DEMO, usuarios, vínculos
+docker compose -f infra/compose/compose.yaml up -d                       # PostgreSQL, Mailpit (:8025) y MinIO (:9000)
+ASPNETCORE_ENVIRONMENT=Development Validasoft__Correo__UrlPublica=http://localhost:5181 dotnet run --project src/Validasoft.Api   # API en :5080; los enlaces del correo apuntan a apps/public
+pnpm semilla:dev                                                          # tenant, empresas, sistema DEMO, usuarios, vínculos, flujo, textos legales y documentos exigidos
 pnpm dev                                                                  # Vite en :5173 (si está ocupado: pnpm --filter @validasoft/web exec vite --port 5180)
 ```
 
@@ -93,4 +94,8 @@ La fuente es el artifact *Design System* de Validasoft (README, tokens y `codigo
 6. `TerceroResumenDto.identificacion` (expediente y bandeja) llega como la clave interna `CO|NIT|900123456`, sin dígito de verificación; la UI muestra "NIT 900123456" (`identificacionResumida`). Pedir la identificación legible con su DV, como en `TerceroDto`.
 7. Los POST que crean flujo, motivo y expediente siguen publicándose como `IResult` y los enums de expedientes y flujos como `string`; `transformar.ts` los corrige.
 
-**Frontend pendiente**: aperturas pendientes probadas solo con datos vacíos (falta un tercero que acepte sin flujo publicado); lista de expedientes cerrados del vínculo (`GET /expedientes?vinculoId=`); el design system no trae estado para un área `Esperando` ni para versiones de flujo (`Borrador`/`Publicada`): `ChipEstadoArea` y `VersionesFlujo` los pintan aparte y conviene llevarlos al artifact; pantallas de prioridad 2 del design system (inicio, terceros, certificados, auditoría completa) y `apps/public` con la marca por empresa (`createValidasoftTheme(modo, { app: 'public', colorEmpresa })` ya la deriva); Storybook de `packages/ui` (decisión abierta 06-2); pruebas de accesibilidad con axe/Playwright; `en` cargado; zona horaria del tenant (hoy fija `America/Bogota`); Web Component envolvente (decisión abierta 06-1); SSE para invalidar consultas; crear vínculos y editar atributos desde la UI; pantallas de API keys, empresas y auditoría; `apps/public` y los paquetes `forms`, `i18n`, `domain`, `config` y `sdk-ts` de docs/06.
+**Documentos del vínculo** (`features/documentos`, en el detalle del vínculo, `documentos:leer`): lo que el tercero compartió con este vínculo (`GET /vinculos/{id}/documentos`), con tipo, versión, fecha y SHA-256 corto. «Ver o descargar» (`documentos:descargar`) pide la URL prefirmada (`POST …/descarga`, auditada) y abre PDF e imágenes en un visor dentro de la app: como la URL trae `Content-Disposition: attachment`, el visor lee el archivo y lo muestra desde un `blob:`. Antes de que el tercero acepte la lista está vacía (B-1).
+
+**Pedidos al backend de documentos**: (a) una variante `inline` de la descarga (p. ej. `?disposicion=inline`) para que el visor no tenga que leer el archivo en memoria; (b) CORS del bucket para el origen de `apps/web` en producción (el visor lee la URL prefirmada con `fetch`); en desarrollo MinIO lo permite. Los pedidos de la app del tercero están en [apps/public/README.md](../public/README.md).
+
+**Frontend pendiente**: aperturas pendientes probadas solo con datos vacíos (falta un tercero que acepte sin flujo publicado); lista de expedientes cerrados del vínculo (`GET /expedientes?vinculoId=`); el design system no trae estado para un área `Esperando` ni para versiones de flujo (`Borrador`/`Publicada`): `ChipEstadoArea` y `VersionesFlujo` los pintan aparte y conviene llevarlos al artifact; pantallas de prioridad 2 del design system (inicio, terceros, certificados, auditoría completa); marca por empresa en `apps/public` (`createValidasoftTheme(modo, { app: 'public', colorEmpresa })` ya la deriva, falta el color en la API); visor con comparación de versiones; Storybook de `packages/ui` (decisión abierta 06-2); pruebas de accesibilidad con axe/Playwright; `en` cargado; zona horaria del tenant (hoy fija `America/Bogota`); Web Component envolvente (decisión abierta 06-1); SSE para invalidar consultas; crear vínculos y editar atributos desde la UI; pantallas de API keys, empresas y auditoría; los paquetes `forms`, `i18n`, `domain`, `config` y `sdk-ts` de docs/06.

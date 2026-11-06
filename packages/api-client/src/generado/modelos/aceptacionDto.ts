@@ -4,11 +4,12 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { TipoTextoLegal } from './tipoTextoLegal';
 import type { AceptadoPorDto } from './aceptadoPorDto';
 import type { AceptacionDtoDocumentoVersionId } from './aceptacionDtoDocumentoVersionId';
 
 export interface AceptacionDto {
-  tipo: string;
+  tipo: TipoTextoLegal;
   textoLegalId: string;
   textoVersion: number;
   hashTexto: string;

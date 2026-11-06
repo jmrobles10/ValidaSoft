@@ -5,9 +5,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
+import type { EstadoVinculo } from './estadoVinculo';
 
 export interface VinculoDeSesionDto {
   id: string;
   empresa: EmpresaPublicaDto;
-  estado: string;
+  estado: EstadoVinculo;
 }

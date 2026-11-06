@@ -21,6 +21,8 @@ export const SCOPES = {
   expedientesLeer: 'expedientes:leer',
   expedientesRevisar: 'expedientes:revisar',
   expedientesAdministrar: 'expedientes:administrar',
+  documentosLeer: 'documentos:leer',
+  documentosDescargar: 'documentos:descargar',
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];

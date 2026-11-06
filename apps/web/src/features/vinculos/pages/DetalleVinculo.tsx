@@ -10,6 +10,7 @@ import { EnlaceVolver, ErrorRecuperable, EsqueletoHistorial, SinPermiso, Tarjeta
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
 import { useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
@@ -82,6 +83,7 @@ export function DetalleVinculo() {
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
+          <DocumentosVinculo vinculo={vinculo} />
           <ReferenciasVinculo vinculo={vinculo} />
         </Stack>
         <HistorialVinculo empresaId={empresa.id} vinculoId={vinculo.id} />

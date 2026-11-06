@@ -6,6 +6,7 @@
  */
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
+import type { EstadoExpediente } from './estadoExpediente';
 import type { ObservacionPublicaDto } from './observacionPublicaDto';
 
 export interface ExpedientePublicoDto {
@@ -13,7 +14,7 @@ export interface ExpedientePublicoDto {
   folio: string;
   empresa: EmpresaPublicaDto;
   tipoVinculo: TipoVinculoResumenDto;
-  estado: string;
+  estado: EstadoExpediente;
   observaciones: ObservacionPublicaDto[];
   puedeReenviar: boolean;
   reenvios: number;

@@ -2446,6 +2446,570 @@
         }
       }
     },
+    "/public/v1/boveda": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+        ],
+        "summary": "GET_public_v1_boveda",
+        "description": "GET_public_v1_boveda",
+        "operationId": "GET_public_v1_boveda",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BovedaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/documentos/{documentoId}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+        ],
+        "summary": "GET_public_v1_boveda_documentos_documentoId",
+        "description": "GET_public_v1_boveda_documentos_documentoId",
+        "operationId": "GET_public_v1_boveda_documentos_documentoId",
+        "parameters": [
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_descarga",
+        "description": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_descarga",
+        "operationId": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_descarga",
+        "parameters": [
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retirar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_retirar",
+        "description": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_retirar",
+        "operationId": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_retirar",
+        "parameters": [
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetirarVersionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetiroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/documentos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.DocumentosDeVinculoEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_documentos",
+        "description": "GET_api_v1_vinculos_id_documentos",
+        "operationId": "GET_api_v1_vinculos_id_documentos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentoVistaEmpresaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/documentos/{documentoId}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.DocumentosDeVinculoEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_documentos_documentoId",
+        "description": "GET_api_v1_vinculos_id_documentos_documentoId",
+        "operationId": "GET_api_v1_vinculos_id_documentos_documentoId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentoVistaEmpresaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/documentos/{documentoId}/versiones/{numero}/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.DocumentosDeVinculoEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_documentos_documentoId_versiones_numero_descarga",
+        "description": "POST_api_v1_vinculos_id_documentos_documentoId_versiones_numero_descarga",
+        "operationId": "POST_api_v1_vinculos_id_documentos_documentoId_versiones_numero_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/documentos": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.CargaEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_documentos",
+        "description": "POST_public_v1_boveda_documentos",
+        "operationId": "POST_public_v1_boveda_documentos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarCargaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/confirmar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.CargaEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_confirmar",
+        "description": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_confirmar",
+        "operationId": "POST_public_v1_boveda_documentos_documentoId_versiones_numero_confirmar",
+        "parameters": [
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmacionCargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/catalogos/tipos-documento": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.CatalogoDocumentalEndpoints"
+        ],
+        "summary": "GET_api_v1_catalogos_tipos_documento",
+        "description": "GET_api_v1_catalogos_tipos_documento",
+        "operationId": "GET_api_v1_catalogos_tipos_documento",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TipoDocumentoCanonicoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tipos-documento": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.TiposDocumentoEndpoints"
+        ],
+        "summary": "POST_api_v1_tipos_documento",
+        "description": "POST_api_v1_tipos_documento",
+        "operationId": "POST_api_v1_tipos_documento",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearTipoDocumentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.TiposDocumentoEndpoints"
+        ],
+        "summary": "GET_api_v1_tipos_documento",
+        "description": "GET_api_v1_tipos_documento",
+        "operationId": "GET_api_v1_tipos_documento",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TipoDocumentoTenantDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tipos-documento/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.TiposDocumentoEndpoints"
+        ],
+        "summary": "GET_api_v1_tipos_documento_id",
+        "description": "GET_api_v1_tipos_documento_id",
+        "operationId": "GET_api_v1_tipos_documento_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoDocumentoTenantDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.TiposDocumentoEndpoints"
+        ],
+        "summary": "PUT_api_v1_tipos_documento_id",
+        "description": "PUT_api_v1_tipos_documento_id",
+        "operationId": "PUT_api_v1_tipos_documento_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarTipoDocumentoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TipoDocumentoTenantDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/textos-legales/aviso": {
       "put": {
         "tags": [
@@ -3460,6 +4024,86 @@
           }
         }
       },
+      "ActualizarTipoDocumentoDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ambito": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reglaFrescura": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReglaFrescuraDto"
+              }
+            ]
+          },
+          "diasAviso": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "diasGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasRevalidacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "textoAyuda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "activo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "exigencias": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExigenciaDto"
+            }
+          }
+        }
+      },
       "AnularVeredictoDto": {
         "required": [
           "justificacion"
@@ -3821,6 +4465,124 @@
           }
         }
       },
+      "BovedaDto": {
+        "required": [
+          "terceroId",
+          "documentos"
+        ],
+        "type": "object",
+        "properties": {
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentoBovedaDto"
+            }
+          }
+        }
+      },
+      "ComparticionPublicaDto": {
+        "required": [
+          "vinculoId",
+          "empresa",
+          "compartido",
+          "version",
+          "versionActualCompartida",
+          "compartidaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "$ref": "#/components/schemas/EmpresaPublicaDto"
+          },
+          "compartido": {
+            "type": "boolean"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "versionActualCompartida": {
+            "type": "boolean"
+          },
+          "compartidaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "CompartidoDto": {
+        "required": [
+          "documentoId",
+          "tipo",
+          "version",
+          "vinculoId",
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ConfirmacionCargaDto": {
+        "required": [
+          "duplicado",
+          "version",
+          "compartidos"
+        ],
+        "type": "object",
+        "properties": {
+          "duplicado": {
+            "type": "boolean"
+          },
+          "version": {
+            "$ref": "#/components/schemas/VersionDocumentoDto"
+          },
+          "compartidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompartidoDto"
+            }
+          }
+        }
+      },
       "ConsentimientoDto": {
         "required": [
           "tipo",
@@ -4115,6 +4877,94 @@
           }
         }
       },
+      "CrearTipoDocumentoDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "tipoCanonico"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoCanonico": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ambito": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reglaFrescura": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReglaFrescuraDto"
+              }
+            ]
+          },
+          "diasAviso": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "diasGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasRevalidacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "textoAyuda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "exigencias": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExigenciaDto"
+            }
+          }
+        }
+      },
       "CrearTipoVinculoDto": {
         "required": [
           "codigo",
@@ -4263,6 +5113,187 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "DescargaDto": {
+        "required": [
+          "url",
+          "expira",
+          "nombre",
+          "mime"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expira": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          }
+        }
+      },
+      "DocumentoBovedaDto": {
+        "required": [
+          "id",
+          "tipo",
+          "ambito",
+          "clase",
+          "vinculoId",
+          "versionActual",
+          "versiones",
+          "porEmpresa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDocumentoResumenDto"
+          },
+          "ambito": {
+            "type": "string"
+          },
+          "clase": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "versionActual": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VersionDocumentoDto"
+              }
+            ]
+          },
+          "versiones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porEmpresa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparticionPublicaDto"
+            }
+          }
+        }
+      },
+      "DocumentoDto": {
+        "required": [
+          "id",
+          "terceroId",
+          "tipo",
+          "clase",
+          "ambito",
+          "vinculoId",
+          "versionActual",
+          "versiones",
+          "porEmpresa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDocumentoResumenDto"
+          },
+          "clase": {
+            "type": "string"
+          },
+          "ambito": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "versionActual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "versiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionDocumentoDto"
+            }
+          },
+          "porEmpresa": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComparticionPublicaDto"
+            }
+          }
+        }
+      },
+      "DocumentoVistaEmpresaDto": {
+        "required": [
+          "documentoId",
+          "tipo",
+          "ambito",
+          "versionActual",
+          "versionesCompartidas"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoDocumentoResumenDto"
+          },
+          "ambito": {
+            "type": "string"
+          },
+          "versionActual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "versionesCompartidas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VersionDocumentoDto"
+            }
           }
         }
       },
@@ -4506,6 +5537,43 @@
           },
           "datos": {
             "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
+      "ExigenciaDocumentoDto": {
+        "required": [
+          "empresaId",
+          "tipoVinculoId",
+          "tipoVinculo"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoVinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoVinculo": {
+            "type": "string"
+          }
+        }
+      },
+      "ExigenciaDto": {
+        "required": [
+          "empresaId",
+          "tipoVinculo"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoVinculo": {
+            "type": "string"
           }
         }
       },
@@ -4979,6 +6047,61 @@
           }
         }
       },
+      "HechosDto": {
+        "required": [
+          "conIa",
+          "hashVerificado",
+          "antivirus",
+          "mimeReal",
+          "paginas",
+          "comparacion",
+          "camposCambiados",
+          "camposCriticosCambiados",
+          "pendienteRevisionHumana"
+        ],
+        "type": "object",
+        "properties": {
+          "conIa": {
+            "type": "boolean"
+          },
+          "hashVerificado": {
+            "type": "boolean"
+          },
+          "antivirus": {
+            "type": "string"
+          },
+          "mimeReal": {
+            "type": "string"
+          },
+          "paginas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "comparacion": {
+            "type": "string"
+          },
+          "camposCambiados": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "camposCriticosCambiados": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pendienteRevisionHumana": {
+            "type": "boolean"
+          }
+        }
+      },
       "IdentidadExternaDto": {
         "required": [
           "sistemaId",
@@ -5020,10 +6143,61 @@
           }
         }
       },
+      "IniciarCargaDto": {
+        "required": [
+          "nombreArchivo",
+          "tamanoBytes",
+          "tipoMime"
+        ],
+        "type": "object",
+        "properties": {
+          "nombreArchivo": {
+            "type": "string"
+          },
+          "tamanoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tipoMime": {
+            "type": "string"
+          },
+          "tipoCanonico": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "InvitacionAceptadaDto": {
         "required": [
           "aceptacion",
-          "vinculo"
+          "vinculo",
+          "compartidos"
         ],
         "type": "object",
         "properties": {
@@ -5035,6 +6209,12 @@
           },
           "vinculo": {
             "$ref": "#/components/schemas/VinculoPublicoDto"
+          },
+          "compartidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompartidoDto"
+            }
           }
         }
       },
@@ -5389,6 +6569,65 @@
           }
         }
       },
+      "ReglaFrescuraDto": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "regla": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RetirarVersionDto": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          }
+        }
+      },
+      "RetiroDto": {
+        "required": [
+          "documento",
+          "binarioEliminado",
+          "compartidos"
+        ],
+        "type": "object",
+        "properties": {
+          "documento": {
+            "$ref": "#/components/schemas/DocumentoDto"
+          },
+          "binarioEliminado": {
+            "type": "boolean"
+          },
+          "compartidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompartidoDto"
+            }
+          }
+        }
+      },
       "RolAsignadoDto": {
         "required": [
           "rol",
@@ -5732,6 +6971,236 @@
           }
         }
       },
+      "TipoDocumentoCanonicoDto": {
+        "required": [
+          "codigo",
+          "version",
+          "nombre",
+          "ambito",
+          "clase",
+          "aplicaA",
+          "tieneVencimientoIntrinseco",
+          "tieneFechaExpedicion",
+          "esPeriodico",
+          "periodicidad",
+          "permiteRatificacion",
+          "dePersonaRelacionada",
+          "camposClave",
+          "camposCriticos",
+          "sensibilidad",
+          "reglaFrescuraSugerida",
+          "retencionAniosSugerida",
+          "cargaSoportada"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "ambito": {
+            "type": "string"
+          },
+          "clase": {
+            "type": "string"
+          },
+          "aplicaA": {
+            "type": "string"
+          },
+          "tieneVencimientoIntrinseco": {
+            "type": "boolean"
+          },
+          "tieneFechaExpedicion": {
+            "type": "boolean"
+          },
+          "esPeriodico": {
+            "type": "boolean"
+          },
+          "periodicidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "permiteRatificacion": {
+            "type": "boolean"
+          },
+          "dePersonaRelacionada": {
+            "type": "boolean"
+          },
+          "camposClave": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "camposCriticos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sensibilidad": {
+            "type": "string"
+          },
+          "reglaFrescuraSugerida": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReglaFrescuraDto"
+              }
+            ]
+          },
+          "retencionAniosSugerida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cargaSoportada": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TipoDocumentoResumenDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "tipoDocumentoTenantId"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "TipoDocumentoTenantDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "tipoCanonico",
+          "versionCanonico",
+          "ambito",
+          "clase",
+          "textoAyuda",
+          "reglaFrescura",
+          "diasAviso",
+          "diasGracia",
+          "diasRevalidacion",
+          "activo",
+          "exigencias",
+          "creadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipoCanonico": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionCanonico": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ambito": {
+            "type": "string"
+          },
+          "clase": {
+            "type": "string"
+          },
+          "textoAyuda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reglaFrescura": {
+            "$ref": "#/components/schemas/ReglaFrescuraDto"
+          },
+          "diasAviso": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "diasGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasRevalidacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "exigencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExigenciaDocumentoDto"
+            }
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "TipoIdentificacionDto": {
         "required": [
           "pais",
@@ -5993,6 +7462,100 @@
           }
         }
       },
+      "VersionDocumentoDto": {
+        "required": [
+          "documentoId",
+          "n",
+          "estado",
+          "cargadaEn",
+          "cargadaPor",
+          "clase",
+          "nombreOriginal",
+          "mime",
+          "tamanoBytes",
+          "paginas",
+          "sha256",
+          "motivoDevolucion",
+          "detalleDevolucion",
+          "hechos"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "n": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "cargadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cargadaPor": {
+            "type": "string"
+          },
+          "clase": {
+            "type": "string"
+          },
+          "nombreOriginal": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "tamanoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "paginas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "motivoDevolucion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detalleDevolucion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hechos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HechosDto"
+              }
+            ]
+          }
+        }
+      },
       "VinculoDeSesionDto": {
         "required": [
           "id",
@@ -6227,6 +7790,21 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ExpedientesPublicosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.DocumentosDeVinculoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.CargaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.CatalogoDocumentalEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.TiposDocumentoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Consentimientos.TextosLegalesEndpoints"

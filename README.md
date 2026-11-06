@@ -31,7 +31,7 @@ Sistema de validación documental para cualquier vínculo comercial (proveedor, 
 
 ## Frontend
 
-Workspace pnpm (`apps/web`, `packages/ui`, `packages/api-client`): ver [apps/web/README.md](apps/web/README.md) para comandos, la demo embebida y lo pendiente.
+Workspace pnpm (`apps/web`, `apps/public`, `packages/ui`, `packages/api-client`): ver [apps/web/README.md](apps/web/README.md) para comandos, la demo embebida y lo pendiente, y [apps/public/README.md](apps/public/README.md) para la app del tercero.
 
 ## Reglas de oro del producto (resumen)
 

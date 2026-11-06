@@ -6,8 +6,10 @@
  */
 import type { AceptacionDto } from './aceptacionDto';
 import type { VinculoPublicoDto } from './vinculoPublicoDto';
+import type { CompartidoDto } from './compartidoDto';
 
 export interface InvitacionAceptadaDto {
   aceptacion: AceptacionDto[];
   vinculo: VinculoPublicoDto;
+  compartidos: CompartidoDto[];
 }

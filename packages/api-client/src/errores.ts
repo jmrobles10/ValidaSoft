@@ -66,6 +66,8 @@ export class ErrorApi extends Error {
     readonly traceId: string | null,
     readonly correlationId: string | null,
     readonly errores: Readonly<Record<string, readonly string[]>> = {},
+    /** Extensiones propias del caso (p. ej. `intentosRestantes` en `otp-invalido`, IN-12). */
+    readonly extensiones: Readonly<Record<string, unknown>> = {},
   ) {
     super(`${codigo} (${estado}): ${detalle}`);
   }
@@ -158,5 +160,20 @@ export function errorDesdeProblema(estado: number, cuerpo: unknown, correlationI
   const codigo = texto(problema.codigo) ?? codigoPorEstado(estado);
   const detalle =
     texto(problema.detail) ?? texto(problema.title) ?? (typeof cuerpo === 'string' && cuerpo ? cuerpo : `HTTP ${estado}`);
-  return new ErrorApi(estado, codigo, detalle, texto(problema.traceId) ?? null, correlationId, erroresPorCampo(problema.errors));
+  return new ErrorApi(
+    estado,
+    codigo,
+    detalle,
+    texto(problema.traceId) ?? null,
+    correlationId,
+    erroresPorCampo(problema.errors),
+    extensionesDe(problema),
+  );
+}
+
+const CAMPOS_ESTANDAR = new Set(['type', 'title', 'status', 'detail', 'instance', 'codigo', 'traceId', 'errors', 'errores']);
+
+/** Lo que el ProblemDetails trae además de los campos estándar. */
+function extensionesDe(problema: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(problema).filter(([clave]) => !CAMPOS_ESTANDAR.has(clave)));
 }

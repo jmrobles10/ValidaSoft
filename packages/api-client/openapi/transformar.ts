@@ -3,7 +3,8 @@
  *
  * El snapshot se guarda tal como lo sirve la API; estas correcciones compensan lo que el backend aún no declara
  * (ver "lo que falta" en apps/web/README.md):
- *  - operationId en español y estable (la API publica `POST_api_v1_vinculos`).
+ *  - operationId en español y estable (la API publica `POST_api_v1_vinculos`); las rutas `/public/v1` del tercero van
+ *    todas a la etiqueta `publico`.
  *  - Respuesta real de los endpoints que devuelven `IResult` (Results.Created) y que la API documenta como `IResult`.
  *  - `TenantCreadoDto`, que no aparece en los esquemas.
  *  - Estados y roles como enum textual (la API los serializa como texto pero los publica como `string`).
@@ -123,7 +124,33 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/expedientes/{id}/anular': 'anularExpediente',
   'GET /api/v1/bandeja': 'listarBandeja',
   'GET /api/v1/bandeja/aperturas-pendientes': 'listarAperturasPendientes',
+  'GET /api/v1/catalogos/tipos-documento': 'listarTiposDocumentoCanonicos',
+  'POST /api/v1/tipos-documento': 'crearTipoDocumento',
+  'GET /api/v1/tipos-documento': 'listarTiposDocumento',
+  'GET /api/v1/tipos-documento/{id}': 'obtenerTipoDocumento',
+  'PUT /api/v1/tipos-documento/{id}': 'actualizarTipoDocumento',
+  'GET /api/v1/vinculos/{id}/documentos': 'listarDocumentosVinculo',
+  'GET /api/v1/vinculos/{id}/documentos/{documentoId}': 'obtenerDocumentoVinculo',
+  'POST /api/v1/vinculos/{id}/documentos/{documentoId}/versiones/{numero}/descarga': 'descargarDocumentoVinculo',
+  // Rutas del tercero (`apps/public`): sesión del tercero en Bearer, sin empresa activa.
+  'POST /public/v1/enlaces/{token}/canjear': 'canjearEnlace',
+  'POST /public/v1/enlaces/{token}/otp': 'verificarOtpEnlace',
+  'GET /public/v1/vinculos': 'listarVinculosPublicos',
+  'GET /public/v1/invitaciones/{vinculoId}': 'obtenerInvitacionPublica',
+  'POST /public/v1/invitaciones/{vinculoId}/aceptar': 'aceptarInvitacion',
+  'POST /public/v1/autorregistro': 'autorregistrarTercero',
+  'GET /public/v1/expedientes/{id}': 'obtenerExpedientePublico',
+  'POST /public/v1/expedientes/{id}/reenviar': 'reenviarExpedientePublico',
+  'GET /public/v1/boveda': 'obtenerBoveda',
+  'GET /public/v1/boveda/documentos/{documentoId}': 'obtenerDocumentoBoveda',
+  'POST /public/v1/boveda/documentos': 'iniciarCargaDocumento',
+  'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/confirmar': 'confirmarCargaDocumento',
+  'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/descarga': 'descargarDocumentoBoveda',
+  'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retirar': 'retirarVersionDocumento',
 };
+
+/** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
+const PREFIJOS = ['/api/v1/', '/public/v1/'];
 
 /** Respuesta real (código → esquema) de los endpoints publicados como `IResult`; `null` = sin cuerpo. */
 const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
@@ -142,6 +169,12 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearMotivo: { '201': 'MotivoTipificadoDto' },
   crearFlujo: { '201': 'FlujoDto' },
   abrirExpediente: { '201': 'ExpedienteDto' },
+  crearTipoDocumento: { '201': 'TipoDocumentoTenantDto' },
+  // 200 con la sesión; 202 cuando el tipo de vínculo exige OTP (el código llegó al correo).
+  canjearEnlace: { '200': 'SesionTerceroDto', '202': 'OtpRequeridoDto' },
+  autorregistrarTercero: { '202': 'SolicitudRecibidaDto' },
+  // 201 con la URL prefirmada; 200 `duplicado` sin `carga` (el archivo ya es una versión del documento).
+  iniciarCargaDocumento: { '200': 'CargaPrefirmadaDto', '201': 'CargaPrefirmadaDto' },
 };
 
 /** Enums textuales del dominio (docs/03 §3.1, docs/07 §3.1). */
@@ -160,6 +193,10 @@ const ENUMS: Record<string, string[]> = {
   EstadoFlujoVersion: ['Borrador', 'Publicada', 'Retirada'],
   CategoriaMotivo: ['Documento', 'Formulario', 'Contacto', 'Otro'],
   AplicaMotivo: ['Observacion', 'Rechazo', 'Ambos'],
+  EstadoVersion: ['Recibida', 'EnAnalisis', 'Actual', 'Superada', 'Devuelta', 'Retirada'],
+  AmbitoDocumento: ['Global', 'PorVinculo'],
+  ClaseDocumento: ['Archivo', 'Formulario'],
+  TipoTextoLegal: ['AvisoPlataforma', 'AutorizacionEmpresa', 'TerminosEmpresa'],
 };
 
 /** `Esquema.propiedad` → enum. */
@@ -186,6 +223,19 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'CrearMotivoDto.aplicaA': 'AplicaMotivo',
   'ActualizarMotivoDto.categoria': 'CategoriaMotivo',
   'ActualizarMotivoDto.aplicaA': 'AplicaMotivo',
+  'VersionDocumentoDto.estado': 'EstadoVersion',
+  'VersionDocumentoDto.clase': 'ClaseDocumento',
+  'DocumentoBovedaDto.ambito': 'AmbitoDocumento',
+  'DocumentoBovedaDto.clase': 'ClaseDocumento',
+  'DocumentoDto.ambito': 'AmbitoDocumento',
+  'DocumentoDto.clase': 'ClaseDocumento',
+  'DocumentoVistaEmpresaDto.ambito': 'AmbitoDocumento',
+  'ExpedientePublicoDto.estado': 'EstadoExpediente',
+  'VinculoPublicoDto.estado': 'EstadoVinculo',
+  'VinculoDeSesionDto.estado': 'EstadoVinculo',
+  'TextoLegalPublicoDto.tipo': 'TipoTextoLegal',
+  'ConsentimientoDto.tipo': 'TipoTextoLegal',
+  'AceptacionDto.tipo': 'TipoTextoLegal',
 };
 
 const METODOS = ['get', 'post', 'put', 'patch', 'delete'];
@@ -212,6 +262,34 @@ export function transformarOpenApi(entrada: unknown): DocumentoOpenApi {
     },
   };
 
+  // Respuestas `IResult` cuyo tipo no llega a los esquemas.
+  esquemas.OtpRequeridoDto = {
+    type: 'object',
+    required: ['requiereOtp', 'expira'],
+    properties: { requiereOtp: { type: 'boolean' }, expira: { type: 'string', format: 'date-time' } },
+  };
+  esquemas.SolicitudRecibidaDto = { type: 'object', required: ['mensaje'], properties: { mensaje: { type: 'string' } } };
+  esquemas.InstruccionCargaDto = {
+    type: 'object',
+    required: ['metodo', 'url', 'cabeceras', 'expira'],
+    properties: {
+      metodo: { type: 'string' },
+      url: { type: 'string' },
+      cabeceras: { type: 'object', additionalProperties: { type: 'string' } },
+      expira: { type: 'string', format: 'date-time' },
+    },
+  };
+  esquemas.CargaPrefirmadaDto = {
+    type: 'object',
+    required: ['documentoId', 'version', 'duplicado', 'carga'],
+    properties: {
+      documentoId: { type: 'string', format: 'uuid' },
+      version: { type: 'integer', format: 'int32' },
+      duplicado: { type: 'boolean' },
+      carga: { oneOf: [{ type: 'null' }, { $ref: '#/components/schemas/InstruccionCargaDto' }] },
+    },
+  };
+
   for (const [nombre, esquema] of Object.entries(esquemas)) {
     normalizarEnteros(esquema);
     for (const [propiedad, valor] of Object.entries(esquema.properties ?? {})) {
@@ -226,7 +304,7 @@ export function transformarOpenApi(entrada: unknown): DocumentoOpenApi {
 
   const rutas: DocumentoOpenApi['paths'] = {};
   for (const [ruta, operaciones] of Object.entries(documento.paths)) {
-    if (!ruta.startsWith('/api/v1/')) continue; // health checks: no son parte del contrato del cliente
+    if (!PREFIJOS.some((prefijo) => ruta.startsWith(prefijo))) continue;
 
     for (const metodo of METODOS) {
       const operacion = operaciones[metodo];
@@ -241,7 +319,8 @@ export function transformarOpenApi(entrada: unknown): DocumentoOpenApi {
       }
 
       operacion.operationId = nombre;
-      operacion.tags = [etiqueta(operacion.tags?.[0])];
+      // Todo lo del tercero en un módulo propio (`publico`), que es lo único que importa `apps/public`.
+      operacion.tags = [ruta.startsWith('/public/') ? 'publico' : etiqueta(operacion.tags?.[0])];
       delete operacion.summary;
       delete operacion.description;
 

@@ -6,6 +6,7 @@
  */
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
+import type { EstadoVinculo } from './estadoVinculo';
 import type { VinculoPublicoDtoInvitacionAceptadaEn } from './vinculoPublicoDtoInvitacionAceptadaEn';
 import type { VinculoPublicoDtoExpedienteId } from './vinculoPublicoDtoExpedienteId';
 
@@ -13,7 +14,7 @@ export interface VinculoPublicoDto {
   id: string;
   empresa: EmpresaPublicaDto;
   tipoVinculo: TipoVinculoResumenDto;
-  estado: string;
+  estado: EstadoVinculo;
   invitacionAceptada: boolean;
   invitacionAceptadaEn: VinculoPublicoDtoInvitacionAceptadaEn;
   expedienteId?: VinculoPublicoDtoExpedienteId;
