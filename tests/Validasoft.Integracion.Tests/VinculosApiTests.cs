@@ -7,22 +7,29 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Validasoft.Aplicacion.Comun;
+using Testcontainers.Minio;
 using Testcontainers.PostgreSql;
 using Validasoft.Contratos;
 
 namespace Validasoft.Integracion.Tests;
 
 /// <summary>
-/// Levanta PostgreSQL 17 en Docker (Testcontainers) y la API completa en memoria (Alba). Los correos no salen: los
-/// captura <see cref="CorreosCapturados"/>. El límite de peticiones públicas es bajo (20 por minuto y por IP).
+/// Levanta PostgreSQL 17 y MinIO en Docker (Testcontainers) y la API completa en memoria (Alba). Los correos no salen: los
+/// captura <see cref="CorreosCapturados"/>. El límite de peticiones públicas es bajo (20 por minuto y por IP) y el tamaño
+/// máximo de archivo también (<see cref="TamanoMaximo"/>) para probar el 413 sin subir 20 MB.
 /// </summary>
 public sealed class ApiFixture : IAsyncLifetime
 {
     public const string ClavePlataforma = "dev-plataforma-solo-local-cambiar-0001";
     public const string UrlPublica = "https://publico.validasoft.test";
     public const int LimitePublico = 20;
+    public const long TamanoMaximo = 256 * 1024;
+
+    /// <summary>Fork comunitario de MinIO (misma línea de comandos; minio/minio ya no se publica en Docker Hub).</summary>
+    public const string ImagenMinio = "pgsty/minio:RELEASE.2026-08-04T00-00-00Z";
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17").Build();
+    private readonly MinioContainer _minio = new MinioBuilder(ImagenMinio).Build();
 
     public IAlbaHost Host { get; private set; } = null!;
 
@@ -30,11 +37,17 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await Task.WhenAll(_postgres.StartAsync(), _minio.StartAsync());
         Host = await AlbaHost.For<Program>(b =>
         {
             b.UseEnvironment("Development");
             b.UseSetting("ConnectionStrings:Validasoft", _postgres.GetConnectionString());
+            b.UseSetting("Validasoft:Almacen:Endpoint", _minio.GetConnectionString());
+            b.UseSetting("Validasoft:Almacen:EndpointPublico", "");
+            b.UseSetting("Validasoft:Almacen:AccessKey", _minio.GetAccessKey());
+            b.UseSetting("Validasoft:Almacen:SecretKey", _minio.GetSecretKey());
+            b.UseSetting("Validasoft:Almacen:CrearBucketsAlIniciar", "true");
+            b.UseSetting("Validasoft:Boveda:TamanoMaximoBytes", TamanoMaximo.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:Correo:UrlPublica", UrlPublica);
             b.UseSetting("Validasoft:LimitePublico:Peticiones", LimitePublico.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:LimitePublico:VentanaSegundos", "60");
@@ -50,6 +63,7 @@ public sealed class ApiFixture : IAsyncLifetime
     {
         await Host.DisposeAsync();
         await _postgres.DisposeAsync();
+        await _minio.DisposeAsync();
     }
 }
 

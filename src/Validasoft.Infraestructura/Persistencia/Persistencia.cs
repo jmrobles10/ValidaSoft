@@ -13,6 +13,7 @@ using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identidad;
@@ -67,6 +68,14 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Tercero>().DatabaseSchemaName("boveda")
                     .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion);
 
+                // Documentos de la bóveda: streams Documento-{id} en el tenant técnico "boveda" (ambos ámbitos; el PorVinculo
+                // guarda su tenant como dato). Clave natural única: (tercero, canónico) o (vínculo, tipo del tenant).
+                opts.Schema.For<Documento>().DatabaseSchemaName("boveda").MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_documento_clave", TenancyScope.PerTenant, x => x.ClaveNatural)
+                    .Index(x => x.TerceroId);
+                opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
+                    .Index(x => x.DocumentoId);
+
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);
                 opts.Schema.For<RegistroIdempotencia>().DatabaseSchemaName("identidad");
@@ -105,6 +114,11 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId);
                 opts.Schema.For<FlujoPorDefecto>().MultiTenanted().Index(x => x.EmpresaId);
 
+                // Tipos de documento del tenant (defaults del grupo y exigencias por empresa y tipo de vínculo, BO-3).
+                opts.Schema.For<TipoDocumentoTenant>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_tipo_documento_codigo", TenancyScope.PerTenant, x => x.Codigo)
+                    .Index(x => x.TipoCanonico);
+
                 // Folios: contador por (empresa, tipo, año) con concurrencia optimista; el folio además es único por tenant.
                 opts.Schema.For<ContadorDeFolio>().MultiTenanted().UseOptimisticConcurrency(true);
                 opts.Schema.For<Expediente>().MultiTenanted()
@@ -121,6 +135,7 @@ public static class ConfiguracionMarten
                 // ExpedienteDetalle, docs/03 §14).
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             .IntegrateWithWolverine();
@@ -153,6 +168,13 @@ public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto, 
         ConMetadatos(mensajes is null ? store.LightweightSession() : outbox.OpenSession(Contexto(mensajes)));
 
     public IQuerySession ConsultaGlobal() => store.QuerySession();
+
+    public IDocumentSession Boveda(IMessageBus? mensajes = null) =>
+        ConMetadatos(mensajes is null
+            ? store.LightweightSession(TenantsTecnicos.Boveda)
+            : outbox.OpenSession(Contexto(mensajes), TenantsTecnicos.Boveda));
+
+    public IQuerySession ConsultaBoveda() => store.QuerySession(TenantsTecnicos.Boveda);
 
     private IDocumentSession ConMetadatos(IDocumentSession sesion)
     {

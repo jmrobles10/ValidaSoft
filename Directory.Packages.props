@@ -16,6 +16,8 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.6" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="MailKit" Version="4.18.2" />
+    <!-- Almacenamiento de binarios compatible con S3 (MinIO en desarrollo y on-premise; S3 en la nube). -->
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.104.10" />
     <!-- Pruebas -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -24,5 +26,6 @@
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="Alba" Version="8.5.3" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageVersion Include="Testcontainers.Minio" Version="4.15.0" />
   </ItemGroup>
 </Project>

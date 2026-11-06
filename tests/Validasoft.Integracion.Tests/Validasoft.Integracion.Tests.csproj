@@ -10,6 +10,7 @@
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Alba" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Minio" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

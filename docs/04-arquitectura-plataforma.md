@@ -227,7 +227,7 @@ Reconstrucción: `dotnet Validasoft.Api -- proyecciones rebuild <nombre>` (coman
 | Regla | Detalle |
 |---|---|
 | Buckets | `boveda` para documentos globales (clave de plataforma); `tenant-{id}` para `PorVinculo` de todas las empresas del tenant (SSE-KMS con la clave del tenant); **no** hay bucket por empresa: el aislamiento entre empresas del grupo es lógico (`empresa_id` en la clave y en la autorización) |
-| Clave | `terceros/{terceroId}/{sha256}.{ext}` y `empresas/{empresaId}/vinculos/{vinculoId}/{sha256}.{ext}`; nombre original en `x-amz-meta-nombre-original` (nunca en la clave: el Portal usaba el nombre del tercero como carpeta) |
+| Clave | `terceros/{terceroId}/{sha256}` y `empresas/{empresaId}/vinculos/{vinculoId}/{sha256}` (sin extensión, como en [02 §10.2](02-modelo-documental-compartido.md); el tipo real va en `Content-Type`, BO-2); nombre original en `x-amz-meta-nombre-original` (nunca en la clave: el Portal usaba el nombre del tercero como carpeta). Zonas auxiliares: `cargas/{cargaId}` (subida temporal) y `cuarentena/{documentoId}/v{n}` (versiones devueltas) |
 | Subida | Dos pasos: `POST …/documentos` declara nombre, tamaño, mime y sha256 → URL prefirmada PUT (5 min) con `x-amz-checksum-sha256` → `POST /documentos/{docId}/versiones/{n}/confirmar` verifica existencia y hash, emite `VersionCargada` |
 | Descarga | Solo URL prefirmada GET (5–15 min) emitida tras comprobar `comparticion_version` o propiedad; cada emisión registra `DocumentoAccedido` |
 | Dedupe | Único `(documento_id, sha256)`: subir el mismo archivo devuelve la versión existente y propone "ratificar" si el tipo lo permite |
@@ -429,6 +429,8 @@ services:
     image: validasoft/app:${VERSION:-dev}
     environment: { VALIDASOFT_ROL: worker }
 ```
+
+**Implementado en `infra/compose/compose.yaml` (2026-11-06):** `postgres:17`, `mailpit` (SMTP 1025, bandeja 8025) y `minio` con la imagen `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` (fork comunitario con la misma línea de comandos; `minio/minio` ya no se publica en Docker Hub), API S3 en `9000` y consola en `http://localhost:9001` (`validasoft` / `validasoft-minio-solo-local`, solo local). La API crea el bucket `boveda` al arrancar si `Validasoft:Almacen:CrearBucketsAlIniciar` está activo (desarrollo) y los `tenant-{id}` con la primera carga `PorVinculo`. El servicio `api` (perfil `app`) usa `Validasoft__Almacen__Endpoint=http://minio:9000` para leer y `Validasoft__Almacen__EndpointPublico=http://localhost:9000` para firmar las URLs que abre el navegador. Las pruebas de integración levantan la misma imagen con `Testcontainers.Minio`. Aún no hay `worker`, `otel-lgtm` ni `clamav`.
 
 Comandos: `make up | down | migrar | seed | test | e2e | logs` y `build.ps1` equivalentes. `-- seed demo` crea el tenant `demo` con **dos empresas internas** (`Constructora Norte`, `Constructora Sur`), flujo "Habilitación de proveedores" (Compras, Legal, Financiera, Cumplimiento; SST opcional), semilla de tipos canónicos (P-2-3), catálogo de identificación multipaís, usuarios por rol y tres terceros con documentos fixture (uno compartido por las dos empresas para demostrar aislamiento de decisiones y revalidación).
 

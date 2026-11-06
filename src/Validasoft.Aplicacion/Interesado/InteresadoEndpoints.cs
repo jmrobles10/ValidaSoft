@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
+using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
@@ -108,7 +109,8 @@ public static class InvitacionesPublicasEndpoints
 
     /// <summary>
     /// Registra <c>ConsentimientosRegistrados</c> y luego <c>InvitacionAceptada</c> en el stream del vínculo (actor =
-    /// tercero). Sin documentos todavía, la respuesta no trae <c>compartidos</c> (IN-7). Idempotente por su propia regla:
+    /// tercero) y comparte con la empresa la versión actual de cada documento global que exige para ese tipo de vínculo
+    /// (más los <c>PorVinculo</c> ya cargados para él); la respuesta trae esos <c>compartidos</c>. Idempotente por su propia regla:
     /// repetir ⇒ 409 <c>invitacion-ya-aceptada</c>. En la misma transacción abre el expediente inicial con el flujo del
     /// vínculo o el por defecto (FL-5); si no hay ninguno publicado, la aceptación se registra igual y el vínculo queda
     /// con apertura pendiente (FL-6): nunca falla por configuración de la empresa.
@@ -164,6 +166,9 @@ public static class InvitacionesPublicasEndpoints
             sesion.Store(textos.Tercero);
         }
 
+        // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que exige: misma transacción.
+        var compartidos = await ComparticionDeDocumentos.AlAceptarInvitacionAsync(sesion, vinculo, enSesion.TenantId, ahora, ct);
+
         if (await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct) is { } flujo)
             await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, ahora, ct);
 
@@ -175,7 +180,8 @@ public static class InvitacionesPublicasEndpoints
         return new InvitacionAceptadaDto(
             [.. consentimientos.Consentimientos.Select(c => new AceptacionDto(c.Tipo.ToString(), c.TextoLegalId, c.Version, c.Hash,
                 consentimientos.Fecha, evidencia.Ip, evidencia.UserAgent, evidencia.OtpVerificado, evidencia.Canal.ToString(), aceptadoPor))],
-            actualizado.APublico(empresa, tipo));
+            actualizado.APublico(empresa, tipo),
+            compartidos);
     }
 
     private static List<ConsentimientoOtorgado> Otorgados(AceptarInvitacionDto dto) =>

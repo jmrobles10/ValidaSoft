@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
+using Validasoft.Infraestructura.Almacenamiento;
 using Validasoft.Infraestructura.Correo;
 using Validasoft.Infraestructura.Http;
 using Validasoft.Infraestructura.Persistencia;
@@ -46,6 +47,11 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
         servicios.AddHostedService<SembradoDeTextosLegales>();
+        // Bóveda de documentos: almacenamiento S3/MinIO y límites de carga (docs/04 §6).
+        servicios.AddSingleton<ReglasDeCarga>();
+        servicios.AddSingleton<FabricaClienteS3>();
+        servicios.AddSingleton<IAlmacenDeArchivos, AlmacenS3>();
+        servicios.AddHostedService<InicializadorDeAlmacen>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)
