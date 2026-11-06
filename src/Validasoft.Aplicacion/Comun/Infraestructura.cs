@@ -64,6 +64,22 @@ public interface ISesiones
 
     /// <summary>Lectura de documentos globales (<c>plataforma</c>, <c>boveda</c>).</summary>
     IQuerySession ConsultaGlobal();
+
+    /// <summary>
+    /// Escritura en el tenant técnico <c>boveda</c> (streams <c>Documento-*</c>, T-2); con <paramref name="mensajes"/>,
+    /// enlistada en el outbox.
+    /// </summary>
+    IDocumentSession Boveda(IMessageBus? mensajes = null);
+
+    /// <summary>Lectura del tenant técnico <c>boveda</c> (documentos de la bóveda).</summary>
+    IQuerySession ConsultaBoveda();
+}
+
+/// <summary>Tenants técnicos del único <c>DocumentStore</c> (T-2): los streams fuera de <c>validacion</c> no usan un tenant real.</summary>
+public static class TenantsTecnicos
+{
+    /// <summary>Bóveda global de los terceros: <c>Documento-{id}</c> de ambos ámbitos (el <c>PorVinculo</c> guarda su tenant como dato).</summary>
+    public const string Boveda = "boveda";
 }
 
 /// <summary>Cifra secretos de corta vida (token del enlace, código OTP) que viajan en el outbox hasta el correo (IN-3).</summary>

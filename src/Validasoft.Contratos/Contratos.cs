@@ -227,8 +227,12 @@ public sealed record AceptacionDto(
     string Tipo, Guid TextoLegalId, int TextoVersion, string HashTexto, DateTimeOffset Fecha, string Ip, string UserAgent,
     bool OtpVerificado, string Canal, AceptadoPorDto AceptadoPor, Guid? DocumentoVersionId = null);
 
-/// <summary>Respuesta de aceptar. Sin <c>compartidos</c> ni <c>requisitosCubiertos</c> hasta que existan documentos y expedientes.</summary>
-public sealed record InvitacionAceptadaDto(IReadOnlyList<AceptacionDto> Aceptacion, VinculoPublicoDto Vinculo);
+/// <summary>
+/// Respuesta de aceptar: la evidencia, el vínculo y los documentos que se compartieron con la empresa en ese momento (la
+/// versión actual de cada tipo global que exige y los <c>PorVinculo</c> ya cargados para el vínculo). Sin
+/// <c>requisitosCubiertos</c> hasta que el expediente tenga requisitos.
+/// </summary>
+public sealed record InvitacionAceptadaDto(IReadOnlyList<AceptacionDto> Aceptacion, VinculoPublicoDto Vinculo, IReadOnlyList<CompartidoDto> Compartidos);
 
 /// <summary>Autorregistro invisible (sin cargas de documentos todavía).</summary>
 public sealed record AutorregistroDto(

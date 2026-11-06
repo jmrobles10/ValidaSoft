@@ -169,7 +169,10 @@ public class AreaTests
 public class PermisosTests
 {
     private static readonly string[] Lecturas =
-        [Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer, Permisos.FlujosLeer, Permisos.ExpedientesLeer];
+    [
+        Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer, Permisos.FlujosLeer, Permisos.ExpedientesLeer,
+        Permisos.DocumentosLeer, Permisos.DocumentosDescargar
+    ];
 
     [Fact]
     public void Mapea_cada_rol_a_sus_scopes()

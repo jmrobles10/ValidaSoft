@@ -2,7 +2,9 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Documentos;
 using Validasoft.Contratos;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -41,6 +43,14 @@ public static class TenantsEndpoints
         {
             sesion.Store(tipo);
             Auditoria.Registrar(sesion, contexto, "TipoVinculo", tipo.Id.ToString(), AccionConfiguracion.Creado, null, tipo.ADto(), ahora);
+        }
+
+        // Tipos de documento más comunes enlazados a su canónico; ninguna empresa los exige hasta que se configure (BO-3).
+        foreach (var tipo in TipoDocumentoTenant.Semilla(tenant.Id, ahora))
+        {
+            sesion.Store(tipo);
+            Auditoria.Registrar(sesion, contexto, TiposDocumentoEndpoints.Entidad, tipo.Id.ToString(), AccionConfiguracion.Creado, null,
+                tipo.ADto(new Dictionary<Guid, TipoVinculo>()), ahora);
         }
 
         var (llave, valor) = llaves.Generar(tenant.Slug, "Administración inicial", Permisos.DelTenant, ["*"], null, false, ahora);

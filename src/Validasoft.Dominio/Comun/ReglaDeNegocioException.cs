@@ -13,7 +13,13 @@ public enum TipoFalla
     Expirado,
 
     /// <summary>Se agotaron los intentos permitidos (429).</summary>
-    DemasiadosIntentos
+    DemasiadosIntentos,
+
+    /// <summary>El archivo supera el tamaño máximo permitido (413).</summary>
+    DemasiadoGrande,
+
+    /// <summary>El tipo real del archivo no está en la lista blanca (415).</summary>
+    TipoNoSoportado
 }
 
 /// <summary>
@@ -44,6 +50,10 @@ public sealed class ReglaDeNegocioException(TipoFalla tipo, string codigo, strin
     public static ReglaDeNegocioException Expirado(string codigo, string mensaje) => new(TipoFalla.Expirado, codigo, mensaje);
 
     public static ReglaDeNegocioException DemasiadosIntentos(string codigo, string mensaje) => new(TipoFalla.DemasiadosIntentos, codigo, mensaje);
+
+    public static ReglaDeNegocioException DemasiadoGrande(string mensaje) => new(TipoFalla.DemasiadoGrande, "archivo-demasiado-grande", mensaje);
+
+    public static ReglaDeNegocioException TipoNoSoportado(string mensaje) => new(TipoFalla.TipoNoSoportado, "tipo-archivo-no-soportado", mensaje);
 }
 
 /// <summary>Quién origina un cambio (docs/03 §3).</summary>
