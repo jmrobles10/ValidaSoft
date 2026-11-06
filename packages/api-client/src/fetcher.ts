@@ -39,6 +39,8 @@ export const RUTAS_QUE_CREAN: readonly string[] = [
   '/api/v1/areas',
   '/api/v1/terceros',
   '/api/v1/vinculos',
+  '/api/v1/motivos',
+  '/api/v1/flujos',
 ];
 
 export function construirUrl(baseUrl: string, ruta: string, params?: object): string {

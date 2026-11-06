@@ -11,4 +11,5 @@ export interface CrearTipoVinculoDto {
   nombre: string;
   atributosPermitidos: CrearTipoVinculoDtoAtributosPermitidos;
   exigeCuentaDesignada: boolean;
+  exigeOtpEnEnlace?: boolean;
 }

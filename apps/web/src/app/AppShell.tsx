@@ -11,7 +11,7 @@ import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
 interface Pestana {
-  clave: 'vinculos' | 'configuracion';
+  clave: 'bandeja' | 'vinculos' | 'configuracion';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
@@ -33,13 +33,16 @@ export function AppShell() {
 
   const configuracion = SECCIONES_CONFIGURACION.filter((s) => permisos.puede(s.scope));
   const pestanas: Pestana[] = [];
+  if (permisos.puede(SCOPES.expedientesLeer)) pestanas.push({ clave: 'bandeja', ruta: 'bandeja', prefijos: ['bandeja', 'expedientes'] });
   if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos'] });
   const primera = configuracion[0];
   if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });
 
   const relativa = pathname.slice(`/e/${empresa.id}/`.length);
   const activa = pestanas.find((p) => p.prefijos.some((r) => relativa === r || relativa.startsWith(`${r}/`)));
-  const seccionActual = relativa.split('/')[0] ?? 'vinculos';
+  // Al cambiar de empresa se conserva la sección, no el recurso (el expediente o flujo es de la otra empresa).
+  const primerSegmento = relativa.split('/')[0] ?? '';
+  const seccionActual = primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento || 'vinculos';
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>

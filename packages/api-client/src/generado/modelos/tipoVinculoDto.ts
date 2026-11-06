@@ -13,4 +13,5 @@ export interface TipoVinculoDto {
   atributosPermitidos: AtributoPermitidoDto[];
   exigeCuentaDesignada: boolean;
   activo: boolean;
+  exigeOtpEnEnlace?: boolean;
 }

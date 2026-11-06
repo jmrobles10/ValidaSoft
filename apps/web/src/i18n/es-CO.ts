@@ -1,4 +1,6 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
+import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
+
 export const esCO = {
   app: {
     nombre: 'Validasoft',
@@ -7,7 +9,10 @@ export const esCO = {
     venceEn: 'La sesión vence en {{minutos}} min',
   },
   nav: {
+    bandeja: 'Bandeja',
     vinculos: 'Vínculos',
+    flujos: 'Flujos aprobatorios',
+    motivos: 'Motivos',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
     sistemas: 'Sistemas integrados',
@@ -200,6 +205,10 @@ export const esCO = {
       recargar: 'Recargar',
     },
   },
+  bandeja,
+  expedientes,
+  motivos,
+  flujos,
   historial: {
     vinculo_creado: 'Vínculo creado',
     referencia_externa_agregada: 'Referencia externa agregada',
@@ -211,6 +220,9 @@ export const esCO = {
     vinculo_desvinculado: 'Tercero desvinculado',
     vinculo_reintegrado: 'Vínculo reintegrado',
     vinculo_anulado: 'Vínculo anulado',
+    expediente_vinculado: 'Expediente abierto',
+    vinculo_activado: 'Vínculo activado',
+    expediente_cerrado: 'Expediente cerrado',
     referencia: 'Referencia {{sistema}} {{id}}',
     invitacion: 'A {{correo}}, vence el {{expira}}',
     hasta: 'Hasta el {{fecha}}',
@@ -345,6 +357,7 @@ export const esCO = {
     'error-interno': 'Ocurrió un error inesperado. Si se repite, repórtalo con el código {{traceId}}.',
     generico: '{{detalle}}',
     codigoSoporte: 'Código para soporte: {{traceId}}',
+    ...erroresRevision,
   },
 } as const;
 

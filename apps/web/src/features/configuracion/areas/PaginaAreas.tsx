@@ -21,19 +21,20 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { actualizarArea, crearArea, definirMiembrosArea, getListarAreasQueryOptions, SCOPES, type AreaDto, type UsuarioDto } from '@validasoft/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { actualizarArea, crearArea, definirMiembrosArea, SCOPES, type AreaDto, type UsuarioDto } from '@validasoft/api-client';
 import { AvatarActor, EstadoVacio, MarcoTabla } from '@validasoft/ui';
 import { ChevronRight, Pencil, Plus, Users, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EncabezadoPagina, ErrorRecuperable, IconoCarga, SinPermiso, Tarjeta } from '../../../shared/componentes';
-import { conEmpresa, invalidarRuta } from '../../../shared/consultas';
+import { invalidarRuta } from '../../../shared/consultas';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { useUsuarios } from '../usuarios/api';
+import { useAreas } from './api';
 
 type Edicion = { tipo: 'crear'; clave: string } | { tipo: 'editar'; area: AreaDto };
 
@@ -44,8 +45,7 @@ export function PaginaAreas() {
   const permisos = usePermisos(empresa.id);
   const puedeLeer = permisos.puede(SCOPES.configuracionLeer);
   const puedeEscribir = permisos.puede(SCOPES.configuracionEscribir);
-  const opciones = getListarAreasQueryOptions({ request: { empresa: empresa.id } });
-  const consulta = useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresa.id), enabled: puedeLeer });
+  const consulta = useAreas(empresa.id, puedeLeer);
   // Los nombres de los miembros solo se ven si la persona puede listar usuarios.
   const usuarios = useUsuarios(permisos.puede(SCOPES.usuariosAdministrar));
   const [elegidaId, setElegidaId] = useState<string | null>(null);

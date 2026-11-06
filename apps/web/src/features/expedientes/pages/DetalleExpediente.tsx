@@ -1,0 +1,195 @@
+import { Alert, AlertTitle, Box, Button, Menu, MenuItem, ListItemIcon, ListItemText, Skeleton, Stack, Typography } from '@mui/material';
+import { esErrorApi, SCOPES, type AreaExpedienteDto } from '@validasoft/api-client';
+import { ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
+import { Ban, ChevronDown, Link2, Lock, SearchX, Send } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link as RouterLink, useParams } from 'react-router';
+import { useSesion } from '../../../sesion/sesionStore';
+import { EnlaceVolver, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
+import { mensajeDeError } from '../../../shared/errores';
+import { usePermisos } from '../../../shared/usePermisos';
+import { useAreas } from '../../configuracion/areas/api';
+import { useNombresUsuarios } from '../../configuracion/usuarios/api';
+import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { useVinculo } from '../../vinculos/api';
+import { identificacionResumida } from '../../vinculos/tercero';
+import { useExpediente, useMotivos } from '../api';
+import { DialogoDecision } from '../components/DialogoDecision';
+import { EtapasExpediente } from '../components/EtapasExpediente';
+import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
+import { accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
+
+export function DetalleExpediente() {
+  const { t } = useTranslation();
+  const { expedienteId = '' } = useParams();
+  const { empresa } = useEmpresaActiva();
+  const permisos = usePermisos(empresa.id);
+  const usuarioId = useSesion((s) => s.sesion?.usuarioId ?? null);
+  const consulta = useExpediente(empresa.id, expedienteId);
+  const vinculo = useVinculo(empresa.id, consulta.data?.vinculoId ?? '');
+  const areas = useAreas(empresa.id, permisos.puede(SCOPES.configuracionLeer));
+  const motivos = useMotivos(empresa.id, permisos.puede(SCOPES.configuracionLeer));
+  const nombres = useNombresUsuarios(empresa.id);
+  const [dialogo, setDialogo] = useState<DialogoExpediente | null>(null);
+  const [ancla, setAncla] = useState<HTMLElement | null>(null);
+
+  const vinculoBloqueado = vinculo.data?.estado === 'Bloqueado';
+  const contexto = useCallback(
+    (area: AreaExpedienteDto | null): ContextoRevisor => {
+      const delArea = area ? areas.data?.find((a) => a.id === area.areaId) : undefined;
+      return {
+        scopes: permisos.scopes,
+        usuarioId,
+        esMiembro: delArea && usuarioId ? delArea.activa && delArea.miembros.includes(usuarioId) : null,
+        vinculoBloqueado,
+      };
+    },
+    [areas.data, permisos.scopes, usuarioId, vinculoBloqueado],
+  );
+  const nombresMotivos = useMemo(() => new Map((motivos.data ?? []).map((m) => [m.codigo, m.nombre])), [motivos.data]);
+
+  if (!permisos.puede(SCOPES.expedientesLeer)) return <SinPermiso seccion={t('nav.bandeja')} />;
+
+  const volver = <EnlaceVolver a={`/e/${empresa.id}/bandeja`}>{t('nav.bandeja')}</EnlaceVolver>;
+
+  if (consulta.isPending) {
+    return (
+      <Box aria-busy>
+        {volver}
+        <Skeleton variant="rounded" width={320} height={28} sx={{ mb: 1 }} />
+        <Skeleton variant="rounded" width={240} height={14} sx={{ mb: 3 }} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2 }}>
+          <Skeleton variant="rounded" height={280} />
+          <Skeleton variant="rounded" height={320} />
+        </Box>
+      </Box>
+    );
+  }
+  if (consulta.isError) {
+    if (esErrorApi(consulta.error) && consulta.error.esNoEncontrado) {
+      return <PaginaEstado icono={SearchX} titulo={t('expedientes.noEncontrado')} texto={t('expedientes.noEncontradoAyuda')} acciones={volver} />;
+    }
+    return (
+      <>
+        {volver}
+        <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />
+      </>
+    );
+  }
+
+  const expediente = consulta.data;
+  const acciones = accionesDeExpediente(expediente, permisos.scopes, vinculoBloqueado);
+  const nombreDeArea = (id: string) => expediente.etapas.flatMap((e) => e.areas).find((a) => a.areaId === id)?.nombre ?? '—';
+  const observadas = areasQueVuelvenARevisar(expediente);
+  const frenadas = areasFrenadas(expediente);
+
+  return (
+    <>
+      {volver}
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h2" component="h1" noWrap>
+            {expediente.tercero.nombre}
+          </Typography>
+          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 13 }}>
+            <Typography component="span" variant="mono">
+              {expediente.folio}
+            </Typography>
+            <span aria-hidden>·</span>
+            <span>{identificacionResumida(expediente.tercero.identificacion)}</span>
+            <span aria-hidden>·</span>
+            <span>{expediente.tipoVinculo.nombre}</span>
+            <span aria-hidden>·</span>
+            <ChipEstado estado={expediente.estado} fecha={expediente.cerradoEn ?? expediente.actualizadoEn} />
+          </Stack>
+        </Box>
+        <Stack direction="row" spacing={1} role="group" aria-label={t('vinculos.detalle.acciones')} sx={{ flex: 'none' }}>
+          <Button component={RouterLink} to={`/e/${empresa.id}/vinculos/${expediente.vinculoId}`} variant="outlined" startIcon={<Link2 size={16} aria-hidden />}>
+            {t('expedientes.verVinculo')}
+          </Button>
+          {acciones.includes('reenviar') && (
+            <Button variant="contained" startIcon={<Send size={16} aria-hidden />} onClick={() => setDialogo({ tipo: 'reenviar' })}>
+              {t('expedientes.acciones.reenviar')}
+            </Button>
+          )}
+          {acciones.includes('anular') && (
+            <>
+              <Button variant="outlined" endIcon={<ChevronDown size={16} aria-hidden />} aria-haspopup="menu" onClick={(e) => setAncla(e.currentTarget)}>
+                {t('expedientes.acciones.mas')}
+              </Button>
+              <Menu anchorEl={ancla} open={Boolean(ancla)} onClose={() => setAncla(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+                <MenuItem
+                  onClick={() => {
+                    setAncla(null);
+                    setDialogo({ tipo: 'anular' });
+                  }}
+                  sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
+                >
+                  <ListItemIcon>
+                    <Ban size={16} strokeWidth={1.75} aria-hidden />
+                  </ListItemIcon>
+                  <ListItemText primary={t('expedientes.acciones.anular')} />
+                </MenuItem>
+              </Menu>
+            </>
+          )}
+        </Stack>
+      </Stack>
+
+      {vinculoBloqueado && expediente.estado !== 'Aprobado' && (
+        <Alert severity="error" icon={<Lock size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.bloqueadoTitulo')}</AlertTitle>
+          {t('expedientes.avisos.bloqueado')}
+        </Alert>
+      )}
+      {expediente.estado === 'Observado' && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.observadoTitulo')}</AlertTitle>
+          {t('expedientes.avisos.observado', { count: observadas.length, areas: observadas.map((a) => a.nombre).join(', ') })}
+          {frenadas.length > 0 && ` ${t('expedientes.avisos.frenadas', { areas: frenadas.map((a) => a.nombre).join(', ') })}`}
+        </Alert>
+      )}
+      {expediente.estado === 'Aprobado' && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.aprobadoTitulo')}</AlertTitle>
+          {t('expedientes.avisos.aprobado', { fecha: formatearFecha(expediente.cerradoEn ?? expediente.actualizadoEn) })}
+        </Alert>
+      )}
+      {expediente.estado === 'Rechazado' && expediente.rechazo && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.rechazadoTitulo')}</AlertTitle>
+          {t('expedientes.avisos.rechazado', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })}{' '}
+          “{expediente.rechazo.justificacion}”
+        </Alert>
+      )}
+      {expediente.estado === 'Anulado' && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.anuladoTitulo')}</AlertTitle>
+          {t('expedientes.avisos.anulado', { fecha: formatearFecha(expediente.cerradoEn ?? expediente.actualizadoEn) })}
+          {expediente.motivoAnulacion ? ` “${expediente.motivoAnulacion}”` : ''}
+        </Alert>
+      )}
+
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
+        <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <EtapasExpediente expediente={expediente} contexto={contexto} nombres={nombres} motivos={nombresMotivos} onAccion={setDialogo} />
+          <UltimaRespuesta expediente={expediente} />
+          <DatosExpediente expediente={expediente} />
+        </Stack>
+        <HistorialExpediente empresaId={empresa.id} expediente={expediente} nombres={nombres} />
+      </Box>
+
+      {dialogo && (
+        <DialogoDecision
+          dialogo={dialogo}
+          expediente={expediente}
+          empresaId={empresa.id}
+          motivos={motivos.data ?? []}
+          aplica={dialogoAplica(dialogo, expediente, contexto)}
+          onCerrar={() => setDialogo(null)}
+        />
+      )}
+    </>
+  );
+}

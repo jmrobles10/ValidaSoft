@@ -6,10 +6,11 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSesion } from '../../../sesion/sesionStore';
-import { EnlaceVolver, ErrorRecuperable, SinPermiso, Tarjeta } from '../../../shared/componentes';
+import { EnlaceVolver, ErrorRecuperable, EsqueletoHistorial, SinPermiso, Tarjeta } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
 import { useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
@@ -80,6 +81,7 @@ export function DetalleVinculo() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} />
+          <TarjetaExpedienteVinculo vinculo={vinculo} />
           <ReferenciasVinculo vinculo={vinculo} />
         </Stack>
         <HistorialVinculo empresaId={empresa.id} vinculoId={vinculo.id} />
@@ -272,17 +274,7 @@ function HistorialVinculo({ empresaId, vinculoId }: { empresaId: string; vinculo
   return (
     <Tarjeta titulo={t('vinculos.detalle.historial')}>
       {consulta.isPending && (
-        <Stack spacing={2} aria-busy>
-          {[0, 1, 2].map((i) => (
-            <Stack key={i} direction="row" spacing={1.5}>
-              <Skeleton variant="circular" width={28} height={28} />
-              <Box sx={{ flex: 1 }}>
-                <Skeleton variant="rounded" height={14} width="60%" sx={{ mb: 1 }} />
-                <Skeleton variant="rounded" height={12} width="40%" />
-              </Box>
-            </Stack>
-          ))}
-        </Stack>
+        <EsqueletoHistorial />
       )}
       {consulta.isError && <ErrorRecuperable mensaje={t('vinculos.detalle.errorHistorial')} onReintentar={() => void refetch()} />}
       {consulta.data && <LineaDeTiempo eventos={eventos} vacio={t('vinculos.detalle.sinHistorial')} />}

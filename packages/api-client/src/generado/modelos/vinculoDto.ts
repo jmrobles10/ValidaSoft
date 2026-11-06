@@ -14,6 +14,7 @@ import type { VinculoDtoRequisitosCubribles } from './vinculoDtoRequisitosCubrib
 import type { VinculoDtoBloqueo } from './vinculoDtoBloqueo';
 import type { ReferenciaExternaDto } from './referenciaExternaDto';
 import type { OrigenVinculo } from './origenVinculo';
+import type { VinculoDtoExpedienteAbiertoId } from './vinculoDtoExpedienteAbiertoId';
 
 export interface VinculoDto {
   id: string;
@@ -33,4 +34,6 @@ export interface VinculoDto {
   creadoEn: string;
   actualizadoEn: string;
   version: number;
+  expedienteAbiertoId?: VinculoDtoExpedienteAbiertoId;
+  aperturaDeExpedientePendiente?: boolean;
 }

@@ -21,7 +21,7 @@ export function RedireccionInicial() {
 
   const destino = elegirEmpresaInicial(consulta.data, sugerida, ultima);
   if (!destino) return <Alert severity="info">{t('empresas.sinEmpresas')}</Alert>;
-  return <Navigate to={`/e/${destino}/vinculos`} replace />;
+  return <Navigate to={`/e/${destino}`} replace />;
 }
 
 /** Rama `/e/:empresaId`: valida la empresa de la URL y la fija como `X-Empresa` del cliente. */

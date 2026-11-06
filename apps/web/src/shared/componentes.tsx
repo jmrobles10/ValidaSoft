@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Skeleton, Stack, Typography } from '@mui/material';
 import { ErrorEnLinea, PaginaEstado } from '@validasoft/ui';
 import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -74,6 +74,23 @@ export function Tarjeta({ titulo, acciones, children, etiqueta }: { titulo?: Rea
   );
 }
 
+/** Esqueleto de una línea de tiempo mientras carga el historial. */
+export function EsqueletoHistorial() {
+  return (
+    <Stack spacing={2} aria-busy>
+      {[0, 1, 2].map((i) => (
+        <Stack key={i} direction="row" spacing={1.5}>
+          <Skeleton variant="circular" width={28} height={28} />
+          <Box sx={{ flex: 1 }}>
+            <Skeleton variant="rounded" height={14} width="60%" sx={{ mb: 1 }} />
+            <Skeleton variant="rounded" height={12} width="40%" />
+          </Box>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 /** Spinner solo dentro del botón que ejecuta la acción. */
 export function IconoCarga() {
   return <CircularProgress size={14} color="inherit" aria-hidden />;
@@ -86,6 +103,7 @@ export function DialogoConfirmacion({
   mensaje,
   confirmar,
   icono,
+  tono = 'error',
   ocupado = false,
   onConfirmar,
   onCerrar,
@@ -95,6 +113,8 @@ export function DialogoConfirmacion({
   mensaje: ReactNode;
   confirmar: string;
   icono?: ReactNode;
+  /** `error` para lo destructivo (por defecto); `primary` para confirmar algo que no destruye (publicar). */
+  tono?: 'error' | 'primary';
   ocupado?: boolean;
   onConfirmar: () => void;
   onCerrar: () => void;
@@ -117,7 +137,7 @@ export function DialogoConfirmacion({
         <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
           {t('comun.cancelar')}
         </Button>
-        <Button variant="contained" color="error" onClick={onConfirmar} disabled={ocupado} startIcon={ocupado ? <IconoCarga /> : icono}>
+        <Button variant="contained" color={tono} onClick={onConfirmar} disabled={ocupado} startIcon={ocupado ? <IconoCarga /> : icono}>
           {confirmar}
         </Button>
       </DialogActions>

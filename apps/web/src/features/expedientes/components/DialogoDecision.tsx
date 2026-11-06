@@ -1,0 +1,210 @@
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
+import type { ExpedienteDto, MotivoTipificadoDto, Veredicto } from '@validasoft/api-client';
+import { useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { IconoCarga } from '../../../shared/componentes';
+import { mensajeDeError } from '../../../shared/errores';
+import { useAvisos } from '../../../shared/useAvisos';
+import { useAccionExpediente, type EntradaExpediente } from '../api';
+import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoExpediente } from '../reglas';
+import { SelectorMotivos } from './SelectorMotivos';
+
+export interface DialogoDecisionProps {
+  dialogo: DialogoExpediente;
+  expediente: ExpedienteDto;
+  empresaId: string;
+  motivos: readonly MotivoTipificadoDto[];
+  /** La decisión ya no aplica al expediente vigente (se recargó y cambió). */
+  aplica: boolean;
+  onCerrar: () => void;
+}
+
+/**
+ * Toda decisión sobre el expediente: veredicto (Aprobado u Observado con motivos), rechazo, reenvío como integrador,
+ * anulación y las acciones de administrador. Ante 409/403 explica el caso con el mensaje del código y el detalle se
+ * recarga detrás; lo escrito se conserva.
+ */
+export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplica, onCerrar }: DialogoDecisionProps) {
+  const { t } = useTranslation();
+  const mostrar = useAvisos((s) => s.mostrar);
+  const mutacion = useAccionExpediente(empresaId, expediente.id);
+  const [veredicto, setVeredicto] = useState<Veredicto>('Aprobado');
+  const [elegidos, setElegidos] = useState<string[]>([]);
+  const [texto, setTexto] = useState('');
+  const [intentado, setIntentado] = useState(false);
+
+  const area = 'area' in dialogo ? dialogo.area : null;
+  const nombreArea = area?.nombre ?? '';
+  const observando = dialogo.tipo === 'veredicto' && veredicto === 'Observado';
+  const conMotivos = observando || dialogo.tipo === 'rechazar';
+  const textoOpcional = dialogo.tipo === 'reenviar' || dialogo.tipo === 'veredicto';
+  const faltanMotivos = conMotivos && elegidos.length === 0;
+  const faltaTexto = !textoOpcional && !texto.trim();
+  const disponibles = motivosPara(motivos, dialogo.tipo === 'rechazar' ? 'Rechazo' : 'Observacion');
+  const ocupado = mutacion.isPending;
+
+  const textos = (() => {
+    switch (dialogo.tipo) {
+      case 'veredicto':
+        return {
+          titulo: t('expedientes.veredicto.titulo', { area: nombreArea }),
+          ayuda: null,
+          campo: t('expedientes.veredicto.observacion'),
+          confirmar: observando ? t('expedientes.veredicto.confirmarObservar') : t('expedientes.veredicto.confirmarAprobar'),
+          exito: observando ? t('expedientes.veredicto.exitoObservar') : t('expedientes.veredicto.exitoAprobar', { area: nombreArea }),
+        };
+      case 'rechazar':
+        return { titulo: t('expedientes.rechazo.titulo'), ayuda: t('expedientes.rechazo.ayuda'), campo: t('expedientes.rechazo.justificacion'), confirmar: t('expedientes.rechazo.confirmar'), exito: t('expedientes.rechazo.exito') };
+      case 'aprobarComoAdministrador':
+        return {
+          titulo: t('expedientes.aprobacionAdmin.titulo', { area: nombreArea }),
+          ayuda: t('expedientes.aprobacionAdmin.ayuda'),
+          campo: t('expedientes.aprobacionAdmin.justificacion'),
+          confirmar: t('expedientes.aprobacionAdmin.confirmar'),
+          exito: t('expedientes.aprobacionAdmin.exito', { area: nombreArea }),
+        };
+      case 'anularVeredicto': {
+        const ultimo = area ? veredictosVigentes(area).at(-1) : undefined;
+        return {
+          titulo: t('expedientes.anulacionVeredicto.titulo', { area: nombreArea }),
+          ayuda: t('expedientes.anulacionVeredicto.ayuda', { veredicto: ultimo ? t(`expedientes.veredictos.${ultimo.veredicto}`).toLowerCase() : '—' }),
+          campo: t('expedientes.anulacionVeredicto.justificacion'),
+          confirmar: t('expedientes.anulacionVeredicto.confirmar'),
+          exito: t('expedientes.anulacionVeredicto.exito'),
+        };
+      }
+      case 'reenviar':
+        return {
+          titulo: t('expedientes.reenvio.titulo'),
+          ayuda: t('expedientes.reenvio.ayuda', { areas: areasQueVuelvenARevisar(expediente).map((a) => a.nombre).join(', ') || '—' }),
+          campo: t('expedientes.reenvio.respuesta'),
+          confirmar: t('expedientes.reenvio.confirmar'),
+          exito: t('expedientes.reenvio.exito'),
+        };
+      case 'anular':
+        return { titulo: t('expedientes.anulacion.titulo'), ayuda: t('expedientes.anulacion.ayuda'), campo: t('expedientes.anulacion.motivo'), confirmar: t('expedientes.anulacion.confirmar'), exito: t('expedientes.anulacion.exito') };
+    }
+  })();
+
+  const entrada = (): EntradaExpediente => {
+    switch (dialogo.tipo) {
+      case 'veredicto':
+        return { tipo: 'veredicto', areaId: dialogo.area.areaId, veredicto, motivos: elegidos, observacion: observando ? texto : '' };
+      case 'rechazar':
+        return { tipo: 'rechazar', areaId: dialogo.area.areaId, motivos: elegidos, justificacion: texto };
+      case 'aprobarComoAdministrador':
+      case 'anularVeredicto':
+        return { tipo: dialogo.tipo, areaId: dialogo.area.areaId, justificacion: texto };
+      case 'reenviar':
+        return { tipo: 'reenviar', respuesta: texto };
+      case 'anular':
+        return { tipo: 'anular', motivo: texto };
+    }
+  };
+
+  const enviar = (evento: FormEvent) => {
+    evento.preventDefault();
+    setIntentado(true);
+    if (faltanMotivos || faltaTexto || !aplica) return;
+    mutacion.mutate(entrada(), {
+      onSuccess: () => {
+        mostrar(textos.exito);
+        onCerrar();
+      },
+    });
+  };
+
+  const destructiva = dialogo.tipo === 'rechazar' || dialogo.tipo === 'anular' || dialogo.tipo === 'anularVeredicto';
+  const mostrarCampo = dialogo.tipo !== 'veredicto' || observando;
+
+  return (
+    <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-decision">
+      <form onSubmit={enviar} noValidate>
+        <DialogTitle id="titulo-decision">
+          {textos.titulo}
+          <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+            {expediente.folio} · {expediente.tercero.nombre}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            {!aplica && <Alert severity="warning">{t('expedientes.yaNoAplica')}</Alert>}
+            {textos.ayuda && (destructiva ? <Alert severity="warning">{textos.ayuda}</Alert> : <Typography>{textos.ayuda}</Typography>)}
+            {mutacion.isError && <Alert severity="error">{mensajeDeError(mutacion.error, t)}</Alert>}
+
+            {dialogo.tipo === 'veredicto' && (
+              <RadioGroup aria-label={t('expedientes.veredicto.decision')} value={veredicto} onChange={(e) => setVeredicto(e.target.value as Veredicto)}>
+                {(['Aprobado', 'Observado'] as const).map((opcion) => (
+                  <FormControlLabel
+                    key={opcion}
+                    value={opcion}
+                    disabled={!aplica}
+                    control={<Radio size="small" />}
+                    sx={{ alignItems: 'flex-start', mx: 0, py: 0.5 }}
+                    label={
+                      <Box sx={{ pt: '5px' }}>
+                        <Typography component="span" sx={{ display: 'block', fontWeight: 600, fontSize: 14 }}>
+                          {opcion === 'Aprobado' ? t('expedientes.veredicto.aprobar') : t('expedientes.veredicto.observar')}
+                        </Typography>
+                        <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 13 }}>
+                          {opcion === 'Aprobado'
+                            ? t('expedientes.veredicto.aprobarAyuda')
+                            : expediente.politicaDevolucion === 'AlCerrarArea'
+                              ? t('expedientes.veredicto.observarAyudaAlCerrar')
+                              : t('expedientes.veredicto.observarAyudaInmediata')}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                ))}
+              </RadioGroup>
+            )}
+
+            {conMotivos &&
+              (disponibles.length === 0 ? (
+                <Alert severity="warning">{t('expedientes.veredicto.sinMotivos')}</Alert>
+              ) : (
+                <SelectorMotivos
+                  etiqueta={t('expedientes.veredicto.motivos')}
+                  ayuda={t('expedientes.veredicto.motivosAyuda')}
+                  motivos={disponibles}
+                  elegidos={elegidos}
+                  onCambiar={setElegidos}
+                  error={intentado && faltanMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
+                  deshabilitado={!aplica}
+                />
+              ))}
+
+            {mostrarCampo && (
+              <TextField
+                required={!textoOpcional}
+                label={textos.campo}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value.slice(0, MAXIMO_TEXTO_EXPEDIENTE))}
+                multiline
+                minRows={3}
+                disabled={!aplica}
+                error={intentado && faltaTexto}
+                helperText={intentado && faltaTexto ? t('expedientes.textoRequerido') : undefined}
+              />
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
+            {aplica ? t('comun.cancelar') : t('comun.cerrar')}
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            color={destructiva ? 'error' : 'primary'}
+            disabled={ocupado || !aplica}
+            startIcon={ocupado ? <IconoCarga /> : undefined}
+          >
+            {textos.confirmar}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}

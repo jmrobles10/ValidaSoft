@@ -24,7 +24,7 @@ export function estadoDe(valor: unknown): EstadoVinculo | null {
   return null;
 }
 
-function texto(valor: unknown): string | null {
+export function texto(valor: unknown): string | null {
   return typeof valor === 'string' && valor.trim() ? valor : null;
 }
 
@@ -47,7 +47,7 @@ export interface ContextoHistorial {
   nombres?: ReadonlyMap<string, string>;
 }
 
-function actorDe(evento: EventoHistorialDto, contexto: ContextoHistorial, t: TFunction): { nombre: string; tipo: TipoActor } {
+export function actorDe(evento: EventoHistorialDto, contexto: ContextoHistorial, t: TFunction): { nombre: string; tipo: TipoActor } {
   const id = evento.actorId ?? '';
   switch (evento.actorTipo) {
     case 'Usuario':
@@ -119,6 +119,14 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       return { ...base, antes: 'Desvinculado', despues: estadoDe(campo(datos, 'estadoResultante')), motivo: justificacion };
     case 'vinculo_anulado':
       return { ...base, antes: estadoDe(campo(datos, 'estadoPrevio')), despues: 'Anulado', motivo };
+    case 'expediente_vinculado':
+      return { ...base, antes: 'Invitado', despues: 'EnValidacion', detalle: texto(campo(datos, 'folio')) };
+    case 'vinculo_activado':
+      return { ...base, antes: 'EnValidacion', despues: 'Activo' };
+    case 'expediente_cerrado': {
+      const resultado = texto(campo(datos, 'resultado'));
+      return resultado === 'Aprobado' || resultado === 'Rechazado' || resultado === 'Anulado' ? { ...base, despues: resultado } : base;
+    }
     default:
       return { ...base, motivo: motivo ?? justificacion };
   }

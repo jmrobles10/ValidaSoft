@@ -16,6 +16,11 @@ export const SCOPES = {
   vinculosEscribir: 'vinculos:escribir',
   vinculosBloquear: 'vinculos:bloquear',
   auditoriaLeer: 'auditoria:leer',
+  flujosLeer: 'flujos:leer',
+  flujosEscribir: 'flujos:escribir',
+  expedientesLeer: 'expedientes:leer',
+  expedientesRevisar: 'expedientes:revisar',
+  expedientesAdministrar: 'expedientes:administrar',
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];

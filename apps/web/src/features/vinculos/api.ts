@@ -27,7 +27,7 @@ export function useVinculos(empresaId: string, params: ListarVinculosParams) {
 
 export function useVinculo(empresaId: string, id: string) {
   const opciones = getObtenerVinculoQueryOptions(id, { request: { empresa: empresaId } });
-  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId) });
+  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId), enabled: Boolean(id) });
 }
 
 export function useHistorialVinculo(empresaId: string, id: string) {

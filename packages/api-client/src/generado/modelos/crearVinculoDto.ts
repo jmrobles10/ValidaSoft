@@ -8,6 +8,7 @@ import type { CrearVinculoDtoTerceroId } from './crearVinculoDtoTerceroId';
 import type { CrearVinculoDtoTercero } from './crearVinculoDtoTercero';
 import type { CrearVinculoDtoAtributos } from './crearVinculoDtoAtributos';
 import type { CrearVinculoDtoReferenciaExterna } from './crearVinculoDtoReferenciaExterna';
+import type { CrearVinculoDtoFlujoId } from './crearVinculoDtoFlujoId';
 
 export interface CrearVinculoDto {
   terceroId: CrearVinculoDtoTerceroId;
@@ -18,4 +19,5 @@ export interface CrearVinculoDto {
   referenciaExterna: CrearVinculoDtoReferenciaExterna;
   enviarInvitacion?: boolean;
   vigenciaInvitacionHoras?: number;
+  flujoId?: CrearVinculoDtoFlujoId;
 }

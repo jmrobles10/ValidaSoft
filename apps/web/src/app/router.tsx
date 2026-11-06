@@ -1,6 +1,7 @@
 import { createHashRouter, Navigate } from 'react-router';
 import { EmpresaDeLaRuta, RedireccionInicial } from '../features/empresas/RutasEmpresa';
 import { AppShell } from './AppShell';
+import { InicioEmpresa } from './InicioEmpresa';
 import { LayoutConfiguracion } from './LayoutConfiguracion';
 
 /**
@@ -18,7 +19,15 @@ export function crearRouter() {
         {
           element: <AppShell />,
           children: [
-            { index: true, element: <Navigate to="vinculos" replace /> },
+            { index: true, element: <InicioEmpresa /> },
+            {
+              path: 'bandeja',
+              lazy: () => import('../features/expedientes/pages/Bandeja').then((m) => ({ Component: m.Bandeja })),
+            },
+            {
+              path: 'expedientes/:expedienteId',
+              lazy: () => import('../features/expedientes/pages/DetalleExpediente').then((m) => ({ Component: m.DetalleExpediente })),
+            },
             {
               path: 'vinculos',
               lazy: () => import('../features/vinculos/pages/ListaVinculos').then((m) => ({ Component: m.ListaVinculos })),
@@ -37,6 +46,18 @@ export function crearRouter() {
                 {
                   path: 'usuarios',
                   lazy: () => import('../features/configuracion/usuarios/PaginaUsuarios').then((m) => ({ Component: m.PaginaUsuarios })),
+                },
+                {
+                  path: 'motivos',
+                  lazy: () => import('../features/configuracion/motivos/PaginaMotivos').then((m) => ({ Component: m.PaginaMotivos })),
+                },
+                {
+                  path: 'flujos',
+                  lazy: () => import('../features/flujos/pages/PaginaFlujos').then((m) => ({ Component: m.PaginaFlujos })),
+                },
+                {
+                  path: 'flujos/:flujoId',
+                  lazy: () => import('../features/flujos/pages/EditorFlujo').then((m) => ({ Component: m.EditorFlujo })),
                 },
                 {
                   path: 'sistemas',

@@ -3,7 +3,8 @@
 //   pnpm semilla:dev            (API en http://localhost:5080 con ASPNETCORE_ENVIRONMENT=Development)
 //
 // Crea un tenant nuevo con dos empresas, un sistema integrado "DEMO" con su par de claves RSA, una API key de ese
-// sistema, usuarios con distintos roles, áreas, tipos de vínculo y vínculos en varios estados. Escribe las
+// sistema (con los scopes de flujos y expedientes), usuarios con distintos roles, áreas (Jurídica, Compras y
+// Cumplimiento), tipos de vínculo y vínculos en varios estados. Los flujos se crean desde la UI. Escribe las
 // credenciales en apps/web/.semilla.local.json (ignorado por git), que Vite sirve solo en `vite dev` para prellenar
 // el formulario de sesión y embed-demo.html. Cada ejecución crea un tenant distinto: no reutiliza ni borra nada.
 import { createSign, generateKeyPairSync, randomUUID } from 'node:crypto';
@@ -100,6 +101,11 @@ const scopes = [
   'vinculos:escribir',
   'vinculos:bloquear',
   'auditoria:leer',
+  'flujos:leer',
+  'flujos:escribir',
+  'expedientes:leer',
+  'expedientes:revisar',
+  'expedientes:administrar',
 ];
 const llaveSistema = await llamar('POST', '/api/v1/api-keys', {
   llave: admin,
@@ -144,6 +150,7 @@ for (const [codigo, nombre] of [
 for (const [codigo, nombre, miembros] of [
   ['juridica', 'Jurídica', [usuarios[0].id, usuarios[1].id]],
   ['compras', 'Compras', [usuarios[1].id]],
+  ['cumplimiento', 'Cumplimiento', [usuarios[2].id]],
 ]) {
   const area = await llamar('POST', '/api/v1/areas', { llave: admin, empresa: norte.id, cuerpo: { codigo, nombre } });
   await llamar('PUT', `/api/v1/areas/${area.id}/miembros`, { llave: admin, empresa: norte.id, cuerpo: { usuarios: miembros } });
