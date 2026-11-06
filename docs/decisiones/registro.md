@@ -208,6 +208,25 @@ Correcciones de Arquitectura derivadas de la misma auditoría (sin decisión de 
 | ID-2 | ¿Quién decide roles y áreas? | **Se asignan en Validasoft**, iguales para todos los sistemas; la aserción solo dice quién es la persona. Un usuario externo nuevo nace sin roles hasta que un administrador lo asigna. | E |
 | ID-3 | ¿Dónde trabajan los revisores? | **Pantallas de Validasoft embebidas** en el sistema integrado (iframe o Web Component) con una sesión emitida a partir de la identidad delegada. La API completa sigue disponible para quien quiera su propia interfaz. | E |
 
+## 5-octies. Implementación de la validación por el interesado (2026-11-06)
+
+Decisiones de implementación tomadas al construir enlace de acceso, sesión del tercero, textos legales, aceptación y autorregistro (docs/05 §2.9.1, docs/07 §2.2). Origen **A** = Arquitectura (pueden objetarse aquí).
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| IN-1 | Ruta de aceptación sin expedientes | `GET /public/v1/invitaciones/{vinculoId}` y `POST /public/v1/invitaciones/{vinculoId}/aceptar` mientras no existan expedientes; con H4 se agrega la variante por `expedienteId`. | A |
+| IN-2 | Correo después del commit | Outbox de Marten + Wolverine: las sesiones que publican correo se abren con `OutboxedSessionFactory` (`ISesiones` con `IMessageBus`) y el mensaje `CorreoDeAccesoPendiente` va a la cola local durable `correo`; se despacha tras `SaveChangesAsync`. No se usa la cascada del endpoint porque las sesiones las abre `ISesiones` (tenant y metadatos de actor). Se activa `AutoApplyTransactions` para manejadores futuros. Fallo SMTP: reintentos 1 s/5 s/30 s y luego cola de errores. | A |
+| IN-3 | Secretos en tránsito | El token y el OTP viajan en el sobre del outbox **cifrados** (AES-256-GCM, clave derivada con HKDF de `Validasoft:Sesiones:ClaveFirma`); el segmento `/enlaces/{token}` se enmascara en logs y en `instance` de los errores. | A |
+| IN-4 | Reenvío e intentos | Reenviar la invitación borra los enlaces no usados del vínculo (404). Los 5 intentos de OTP son por enlace: volver a canjear envía otro código pero no reinicia la cuenta. OTP vencido ⇒ `410 otp-vencido`. | A |
+| IN-5 | Concurrencia del enlace | `EnlaceDeAcceso` usa concurrencia optimista: dos verificaciones simultáneas no pierden un intento fallido (la segunda responde 412). | A |
+| IN-6 | OTP y aceptación | El OTP se verifica al canjear. Si el tipo del vínculo exige OTP y la sesión no lo verificó (p. ej. entró por el enlace de otro vínculo o del autorregistro) ⇒ `403 otp-requerido`. `otpCodigo` de `AceptarInvitacionDto` queda reservado. | A |
+| IN-7 | Respuesta de aceptar | `{ aceptacion: AceptacionDto[], vinculo }` sin `compartidos` ni `requisitosCubiertos` (no hay documentos). `AceptacionDto` añade `tipo` y `textoLegalId`; `documentoVersionId` nulo hasta el módulo de documentos. `textoVersion` es el número de versión del texto. | A |
+| IN-8 | Alcance de la sesión | Vínculos del tercero cuyo `correoTercero` coincide con el correo del enlace, en todos los tenants (consulta `AnyTenant` de Marten), fijados al emitir el token; el tenant sale de la `Empresa`. Esquema `Tercero` elegido por ruta (`/public/v1`). Token en el cuerpo hasta `apps/public`. | A |
+| IN-9 | Textos legales | Documento global `TextoLegal` (esquema `plataforma`) con `Serie` = `{tipo}|{empresa o plataforma}` y versión única por serie; hash SHA-256 del contenido recortado. La auditoría del aviso de plataforma queda en el tenant por defecto de Marten (no hay tenant). Al arrancar se siembra un aviso v1 **provisional** (menciona IA externa y transferencia internacional, P-6-5) que Legal debe reemplazar. | A |
+| IN-10 | Límite de peticiones | Limitador global de ASP.NET Core, ventana fija por IP, solo para `/public/v1/*` (`Validasoft:LimitePublico`, 60/min); 429 `demasiadas-peticiones`. Pendiente: confiar en `X-Forwarded-For` del proxy de despliegue. | A |
+| IN-11 | Autorregistro | Valida todos los datos antes de buscar (un dato inválido responde igual exista o no el tercero); `consentimientoPlataforma=false` ⇒ 422. El enlace de autorregistro no tiene vínculo ni OTP y vence en 72 h. | A |
+| IN-12 | Nuevas fallas | `TipoFalla.Expirado` ⇒ 410 y `TipoFalla.DemasiadosIntentos` ⇒ 429; `ReglaDeNegocioException.Datos` viaja como extensiones del ProblemDetails (p. ej. `intentosRestantes`). | A |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

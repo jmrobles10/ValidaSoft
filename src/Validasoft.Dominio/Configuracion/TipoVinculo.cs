@@ -33,9 +33,13 @@ public sealed class TipoVinculo
     /// <summary>Si el cierre aprobado exige cuenta bancaria designada (proveedor por defecto, esc. 1).</summary>
     public bool ExigeCuentaDesignada { get; set; }
 
+    /// <summary>Si el enlace de acceso de sus invitaciones exige además un código OTP enviado al correo (docs/07 §2.2).</summary>
+    public bool ExigeOtpEnEnlace { get; set; }
+
     public bool Activo { get; set; } = true;
 
-    public static TipoVinculo Crear(string codigo, string nombre, IEnumerable<AtributoPermitido>? atributos, bool exigeCuentaDesignada)
+    public static TipoVinculo Crear(string codigo, string nombre, IEnumerable<AtributoPermitido>? atributos, bool exigeCuentaDesignada,
+        bool exigeOtpEnEnlace = false)
     {
         var codigoNormalizado = (codigo ?? string.Empty).Trim().ToUpperInvariant();
         if (!Regex.IsMatch(codigoNormalizado, "^[A-Z][A-Z0-9_]{1,39}$"))
@@ -62,11 +66,12 @@ public sealed class TipoVinculo
             Codigo = codigoNormalizado,
             Nombre = nombre.Trim(),
             AtributosPermitidos = lista,
-            ExigeCuentaDesignada = exigeCuentaDesignada
+            ExigeCuentaDesignada = exigeCuentaDesignada,
+            ExigeOtpEnEnlace = exigeOtpEnEnlace
         };
     }
 
-    /// <summary>Tipos que se siembran al crear un tenant; la empresa puede agregar más.</summary>
+    /// <summary>Tipos que se siembran al crear un tenant; la empresa puede agregar más. Solo PROVEEDOR exige OTP en el enlace.</summary>
     public static IReadOnlyList<TipoVinculo> Semilla() =>
     [
         Crear("PROVEEDOR", "Proveedor",
@@ -74,7 +79,7 @@ public sealed class TipoVinculo
             new("montoEstimado", TipoAtributo.Numero, false, null),
             new("nivelRiesgo", TipoAtributo.Opcion, false, ["Bajo", "Medio", "Alto"]),
             new("categorias", TipoAtributo.ListaOpciones, false, ["Materiales", "Servicios", "Equipos", "Mano de obra"])
-        ], exigeCuentaDesignada: true),
+        ], exigeCuentaDesignada: true, exigeOtpEnEnlace: true),
         Crear("CLIENTE", "Cliente", [new("nivelRiesgo", TipoAtributo.Opcion, false, ["Bajo", "Medio", "Alto"])], false),
         Crear("EMPLEADO", "Empleado", [new("cargo", TipoAtributo.Texto, false, null)], false),
         Crear("USUARIO", "Usuario", [], false)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Validasoft.Dominio.Consentimientos;
 
 namespace Validasoft.Dominio.Vinculos;
 
@@ -54,6 +55,28 @@ public sealed record ReferenciaExternaAgregada(string Sistema, string Id, DateTi
 public sealed record InvitacionEnviada(string Canal, string CorreoDestino, DateTimeOffset Expira, Guid? LoteId, DateTimeOffset Fecha);
 
 public sealed record InvitacionAceptada(string Correo, DateTimeOffset Fecha);
+
+/// <summary>Desde dónde aceptó el tercero: la página pública o una pantalla embebida en un sistema integrado.</summary>
+public enum CanalAceptacion
+{
+    Web,
+    Embed
+}
+
+/// <summary>Lo que el tercero marcó en la pantalla de aceptación (entrada de <see cref="Vinculo.RegistrarConsentimientos"/>).</summary>
+public sealed record ConsentimientoOtorgado(TipoTextoLegal Tipo, int TextoVersion, bool Aceptado);
+
+/// <summary>Texto aceptado: versión e id exactos más su hash SHA-256 (P-3-5, P-16-4).</summary>
+public sealed record ConsentimientoRegistrado(TipoTextoLegal Tipo, Guid TextoLegalId, int Version, string Hash);
+
+/// <summary>Evidencia de la aceptación. El actor (tercero) también viaja en los metadatos del evento.</summary>
+public sealed record EvidenciaDeConsentimiento(Guid TerceroId, string Correo, string Ip, string UserAgent, bool OtpVerificado, CanalAceptacion Canal);
+
+/// <summary>El tercero aceptó los textos legales de esta empresa (y el aviso de la plataforma si le faltaba); precede a <see cref="InvitacionAceptada"/>.</summary>
+public sealed record ConsentimientosRegistrados(
+    IReadOnlyList<ConsentimientoRegistrado> Consentimientos,
+    EvidenciaDeConsentimiento Evidencia,
+    DateTimeOffset Fecha);
 
 public sealed record AtributosDeVinculoActualizados(
     Dictionary<string, JsonElement> Antes,

@@ -1,14 +1,17 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Marten;
 using JasperFx.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Vinculos;
@@ -89,9 +92,10 @@ public static class VinculosEndpoints
     [WolverinePost("/api/v1/vinculos")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<IResult> Crear(CrearVinculoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
+        empresa.UsarMensajeria(mensajes);
         var sesion = empresa.Sesion;
 
         var codigoTipo = (dto.TipoVinculo ?? string.Empty).Trim().ToUpperInvariant();
@@ -131,7 +135,9 @@ public static class VinculosEndpoints
         if (dto.EnviarInvitacion)
         {
             var vinculo = Vinculo.Create(creado);
-            eventos.Add(vinculo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora));
+            var invitacion = vinculo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora);
+            eventos.Add(invitacion);
+            await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, contexto.TenantRequerido(), vinculo, tipo, invitacion, ct);
         }
 
         sesion.Events.StartStream<Vinculo>(creado.VinculoId, eventos);
@@ -210,16 +216,25 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, stream.Aggregate.ActualizarAtributos(atributos, reloj.GetUtcNow()), ct);
     }
 
-    /// <summary>Envía o reenvía la invitación. El enlace de acceso del tercero (magic link) llega con H4.</summary>
+    /// <summary>
+    /// Envía o reenvía la invitación: genera un enlace de acceso nuevo (el anterior no usado deja de servir) y el correo
+    /// sale por el outbox después de confirmar la transacción.
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/invitaciones")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
-    public static async Task<IResult> Invitar(Guid id, InvitacionDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Invitar(Guid id, InvitacionDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto, HttpContext http,
+        IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
+        empresa.UsarMensajeria(mensajes);
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
         var evento = stream.Aggregate!.EnviarInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras), null, reloj.GetUtcNow());
-        await GuardarAsync(empresa, stream, evento, ct);
-        return Results.Created($"/api/v1/vinculos/{id}", new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, stream.Aggregate.Invitacion?.Envios + 1 ?? 1));
+        var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(stream.Aggregate.TipoVinculoId, ct)
+                   ?? throw ReglaDeNegocioException.NoEncontrado("tipo-vinculo-no-encontrado", "El tipo del vínculo ya no existe.");
+        await EnlacesDeAcceso.InvitarAsync(empresa.Sesion, mensajes, protector, contexto.TenantRequerido(), stream.Aggregate, tipo, evento, ct);
+        // El conteo sale del vínculo recargado tras guardar (el agregado del stream ya aplicó el evento al anexarlo).
+        var guardado = await GuardarAsync(empresa, stream, evento, ct);
+        return Results.Created($"/api/v1/vinculos/{id}",
+            guardado.Invitacion ?? new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, 1));
     }
 
     [WolverinePost("/api/v1/vinculos/{id}/bloquear")]
@@ -267,6 +282,12 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, stream.Aggregate!.Anular(dto.Motivo, reloj.GetUtcNow()), ct);
     }
 
+    /// <summary>Mismas convenciones JSON que el resto de la API: camelCase y enums como texto.</summary>
+    private static readonly JsonSerializerOptions OpcionesJson = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     /// <summary>Línea de tiempo del vínculo, directamente del stream de eventos.</summary>
     [WolverineGet("/api/v1/vinculos/{id}/historial")]
     [Authorize(Policy = Permisos.VinculosLeer)]
@@ -281,7 +302,7 @@ public static class VinculosEndpoints
             Cabecera(e, "actorTipo"),
             Cabecera(e, "actorId"),
             Cabecera(e, "sistema"),
-            JsonSerializer.SerializeToElement(e.Data, e.EventType)))];
+            JsonSerializer.SerializeToElement(e.Data, e.EventType, OpcionesJson)))];
     }
 
     /// <summary>

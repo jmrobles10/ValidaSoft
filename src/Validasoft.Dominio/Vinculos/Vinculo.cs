@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Consentimientos;
 
 namespace Validasoft.Dominio.Vinculos;
 
@@ -52,6 +53,9 @@ public sealed class Vinculo
     public bool InvitacionAceptada { get; set; }
 
     public DateTimeOffset? InvitacionAceptadaEn { get; set; }
+
+    /// <summary>Consentimientos registrados al aceptar (versión y hash de cada texto); la evidencia está en el evento.</summary>
+    public List<ConsentimientoRegistrado> Consentimientos { get; set; } = [];
 
     public Bloqueo? Bloqueo { get; set; }
 
@@ -126,6 +130,16 @@ public sealed class Vinculo
     /// </summary>
     public InvitacionAceptada AceptarInvitacion(string correo, DateTimeOffset ahora)
     {
+        AsegurarAceptable(ahora);
+        return new InvitacionAceptada(correo.Trim().ToLowerInvariant(), ahora);
+    }
+
+    /// <summary>
+    /// Reglas comunes para aceptar: no aceptada aún, ni bloqueada ni terminal, con invitación vigente. El llamador la
+    /// usa antes de mirar los textos legales para que <c>invitacion-ya-aceptada</c> tenga prioridad.
+    /// </summary>
+    public void AsegurarAceptable(DateTimeOffset ahora)
+    {
         if (InvitacionAceptada)
             throw ReglaDeNegocioException.Conflicto("invitacion-ya-aceptada", "La invitación ya fue aceptada.");
 
@@ -137,8 +151,53 @@ public sealed class Vinculo
 
         if (Invitacion.Expira <= ahora)
             throw ReglaDeNegocioException.Conflicto("invitacion-expirada", "El enlace de invitación expiró; pide a la empresa que lo reenvíe.");
+    }
 
-        return new InvitacionAceptada(correo.Trim().ToLowerInvariant(), ahora);
+    /// <summary>
+    /// Consentimientos que acompañan la aceptación (B-1, ADR-0009): la autorización y los términos <b>vigentes</b> de
+    /// esta empresa siempre, y el aviso de la plataforma si <paramref name="requeridos"/> lo incluye (el tercero no ha
+    /// aceptado su versión vigente). Cada uno debe venir aceptado y con la versión vigente; la evidencia (IP,
+    /// user-agent, OTP, canal, correo) queda en el evento. Se registra antes de <see cref="AceptarInvitacion"/>.
+    /// </summary>
+    public ConsentimientosRegistrados RegistrarConsentimientos(IReadOnlyList<TextoLegal> requeridos,
+        IReadOnlyList<ConsentimientoOtorgado> otorgados, EvidenciaDeConsentimiento evidencia, DateTimeOffset ahora)
+    {
+        AsegurarAceptable(ahora);
+
+        if (requeridos.Any(t => t.Ambito == AmbitoTextoLegal.Empresa && t.EmpresaId != EmpresaId))
+            throw new InvalidOperationException("Un texto legal requerido es de otra empresa.");
+
+        var faltantes = new[] { TipoTextoLegal.AutorizacionEmpresa, TipoTextoLegal.TerminosEmpresa }
+            .Where(tipo => requeridos.All(t => t.Tipo != tipo)).ToList();
+        if (faltantes.Count > 0)
+            throw ReglaDeNegocioException.Conflicto("textos-legales-faltantes",
+                $"La empresa aún no ha publicado: {string.Join(", ", faltantes)}. No se puede aceptar la invitación todavía.");
+
+        var duplicado = otorgados.GroupBy(o => o.Tipo).FirstOrDefault(g => g.Count() > 1);
+        if (duplicado is not null)
+            throw ReglaDeNegocioException.Validacion("consentimiento-duplicado", $"El consentimiento {duplicado.Key} viene repetido.");
+
+        var registrados = new List<ConsentimientoRegistrado>();
+        foreach (var texto in requeridos)
+        {
+            var otorgado = otorgados.FirstOrDefault(o => o.Tipo == texto.Tipo)
+                ?? throw ReglaDeNegocioException.Validacion("consentimiento-faltante", $"Falta el consentimiento {texto.Tipo}.");
+
+            if (!otorgado.Aceptado)
+                throw ReglaDeNegocioException.Validacion("consentimiento-rechazado",
+                    $"Para aceptar la invitación debes aceptar {texto.Tipo}.");
+
+            if (otorgado.TextoVersion != texto.Version)
+                throw ReglaDeNegocioException.Conflicto("texto-desactualizado",
+                    $"{texto.Tipo} cambió: la versión vigente es la {texto.Version}. Vuelve a leerlo y acéptalo.");
+
+            registrados.Add(new ConsentimientoRegistrado(texto.Tipo, texto.Id, texto.Version, texto.Hash));
+        }
+
+        if (string.IsNullOrWhiteSpace(evidencia.Correo))
+            throw ReglaDeNegocioException.Validacion("correo-requerido", "La evidencia del consentimiento necesita el correo del tercero.");
+
+        return new ConsentimientosRegistrados(registrados, evidencia, ahora);
     }
 
     public AtributosDeVinculoActualizados ActualizarAtributos(Dictionary<string, JsonElement> nuevos, DateTimeOffset ahora)
@@ -230,6 +289,12 @@ public sealed class Vinculo
     {
         Invitacion = new InvitacionVigente(e.CorreoDestino, e.Expira, (Invitacion?.Envios ?? 0) + 1);
         CorreoTercero = e.CorreoDestino;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(ConsentimientosRegistrados e)
+    {
+        Consentimientos.AddRange(e.Consentimientos);
         ActualizadoEn = e.Fecha;
     }
 

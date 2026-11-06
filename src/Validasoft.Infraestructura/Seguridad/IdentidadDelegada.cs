@@ -168,7 +168,7 @@ public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSe
         NameClaimType = Reclamos.Sujeto
     };
 
-    private static SymmetricSecurityKey ClaveDeFirma(IConfiguration configuracion)
+    internal static SymmetricSecurityKey ClaveDeFirma(IConfiguration configuracion)
     {
         var bytes = Encoding.UTF8.GetBytes(configuracion["Validasoft:Sesiones:ClaveFirma"] ?? string.Empty);
         return bytes.Length >= 32

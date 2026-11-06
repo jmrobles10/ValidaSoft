@@ -1,19 +1,32 @@
+using System.Collections.Concurrent;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Alba;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Validasoft.Aplicacion.Comun;
 using Testcontainers.PostgreSql;
 using Validasoft.Contratos;
 
 namespace Validasoft.Integracion.Tests;
 
-/// <summary>Levanta PostgreSQL 17 en Docker (Testcontainers) y la API completa en memoria (Alba).</summary>
+/// <summary>
+/// Levanta PostgreSQL 17 en Docker (Testcontainers) y la API completa en memoria (Alba). Los correos no salen: los
+/// captura <see cref="CorreosCapturados"/>. El límite de peticiones públicas es bajo (20 por minuto y por IP).
+/// </summary>
 public sealed class ApiFixture : IAsyncLifetime
 {
     public const string ClavePlataforma = "dev-plataforma-solo-local-cambiar-0001";
+    public const string UrlPublica = "https://publico.validasoft.test";
+    public const int LimitePublico = 20;
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17").Build();
 
     public IAlbaHost Host { get; private set; } = null!;
+
+    public CorreosCapturados Correos { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -22,6 +35,14 @@ public sealed class ApiFixture : IAsyncLifetime
         {
             b.UseEnvironment("Development");
             b.UseSetting("ConnectionStrings:Validasoft", _postgres.GetConnectionString());
+            b.UseSetting("Validasoft:Correo:UrlPublica", UrlPublica);
+            b.UseSetting("Validasoft:LimitePublico:Peticiones", LimitePublico.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("Validasoft:LimitePublico:VentanaSegundos", "60");
+            b.ConfigureTestServices(s =>
+            {
+                s.RemoveAll<IEnviadorDeCorreo>();
+                s.AddSingleton<IEnviadorDeCorreo>(Correos);
+            });
         });
     }
 
@@ -29,6 +50,36 @@ public sealed class ApiFixture : IAsyncLifetime
     {
         await Host.DisposeAsync();
         await _postgres.DisposeAsync();
+    }
+}
+
+/// <summary>Enviador falso: guarda los correos para leer el enlace o el código; el envío real ocurre tras el commit (outbox).</summary>
+public sealed class CorreosCapturados : IEnviadorDeCorreo
+{
+    private readonly ConcurrentQueue<MensajeDeCorreo> _mensajes = new();
+
+    public Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct)
+    {
+        _mensajes.Enqueue(mensaje);
+        return Task.CompletedTask;
+    }
+
+    public IReadOnlyList<MensajeDeCorreo> Para(string correo) =>
+        [.. _mensajes.Where(m => string.Equals(m.Para, correo, StringComparison.OrdinalIgnoreCase))];
+
+    /// <summary>Espera hasta que haya <paramref name="cuantos"/> correos a <paramref name="para"/> que cumplan la condición; devuelve el último.</summary>
+    public async Task<MensajeDeCorreo> EsperarAsync(string para, Func<MensajeDeCorreo, bool>? condicion = null, int cuantos = 1)
+    {
+        var limite = DateTime.UtcNow.AddSeconds(20);
+        while (true)
+        {
+            var encontrados = Para(para).Where(condicion ?? (_ => true)).ToList();
+            if (encontrados.Count >= cuantos)
+                return encontrados[cuantos - 1];
+            if (DateTime.UtcNow > limite)
+                throw new TimeoutException($"No llegaron {cuantos} correos a {para} (hay {encontrados.Count}).");
+            await Task.Delay(50);
+        }
     }
 }
 
@@ -161,6 +212,13 @@ public sealed class VinculosApiTests(ApiFixture fixture)
         var bloqueado = await PostAsync<VinculoDto>($"/api/v1/vinculos/{vinculo.Id}/bloquear", e.ApiKey, e.EmpresaA.Id,
             new BloquearVinculoDto("Sanción contractual", null), esperado: 200);
         bloqueado.Estado.ShouldBe("Bloqueado");
+
+        // El historial usa las convenciones JSON de la API: camelCase y enums como texto.
+        var historial = await GetAsync<List<EventoHistorialDto>>($"/api/v1/vinculos/{vinculo.Id}/historial", e.ApiKey, e.EmpresaA.Id);
+        var datos = historial.Single(h => h.Tipo == "vinculo_bloqueado").Datos;
+        datos.GetProperty("estadoPrevio").ValueKind.ShouldBe(JsonValueKind.String);
+        datos.GetProperty("estadoPrevio").GetString().ShouldBe("Invitado");
+        datos.GetProperty("motivo").GetString().ShouldBe("Sanción contractual");
 
         var desbloqueado = await PostAsync<VinculoDto>($"/api/v1/vinculos/{vinculo.Id}/desbloquear", e.ApiKey, e.EmpresaA.Id,
             new JustificacionDto("Sanción levantada"), esperado: 200);

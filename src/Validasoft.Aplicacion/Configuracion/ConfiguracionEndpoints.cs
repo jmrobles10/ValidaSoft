@@ -72,7 +72,7 @@ public static class EmpresasEndpoints
         return empresa.ADto();
     }
 
-    private static async Task<Empresa> CargarAsync(Guid id, ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct)
+    internal static async Task<Empresa> CargarAsync(Guid id, ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct)
     {
         var tenantId = contexto.TenantRequerido();
         await using var consulta = sesiones.ConsultaGlobal();
@@ -169,7 +169,8 @@ public static class TiposVinculoEndpoints
     public static async Task<IResult> Crear(CrearTipoVinculoDto dto, ISesiones sesiones, IContextoSolicitud contexto,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tipo = TipoVinculo.Crear(dto.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada);
+        var tipo = TipoVinculo.Crear(dto.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada,
+            dto.ExigeOtpEnEnlace);
 
         await using var sesion = sesiones.DelTenant();
         if (await sesion.Query<TipoVinculo>().AnyAsync(t => t.Codigo == tipo.Codigo, ct))
@@ -199,7 +200,7 @@ public static class TiposVinculoEndpoints
                 ?? throw ReglaDeNegocioException.NoEncontrado("tipo-vinculo-no-encontrado", "No existe ese tipo de vínculo.")).ADto();
     }
 
-    /// <summary>El código es inmutable; se editan nombre, atributos, cuenta designada y estado.</summary>
+    /// <summary>El código es inmutable; se editan nombre, atributos, cuenta designada, OTP en el enlace y estado.</summary>
     [WolverinePut("/api/v1/tipos-vinculo/{id}")]
     [Authorize(Policy = Permisos.ConfiguracionEscribir)]
     public static async Task<TipoVinculoDto> Actualizar(Guid id, CrearTipoVinculoDto dto, bool? activo, ISesiones sesiones,
@@ -213,10 +214,12 @@ public static class TiposVinculoEndpoints
             throw ReglaDeNegocioException.Validacion("codigo-inmutable", "El código de un tipo de vínculo no se puede cambiar.");
 
         var antes = tipo.ADto();
-        var validado = TipoVinculo.Crear(tipo.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada);
+        var validado = TipoVinculo.Crear(tipo.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada,
+            dto.ExigeOtpEnEnlace);
         tipo.Nombre = validado.Nombre;
         tipo.AtributosPermitidos = validado.AtributosPermitidos;
         tipo.ExigeCuentaDesignada = validado.ExigeCuentaDesignada;
+        tipo.ExigeOtpEnEnlace = validado.ExigeOtpEnEnlace;
         tipo.Activo = activo ?? tipo.Activo;
 
         sesion.Store(tipo);

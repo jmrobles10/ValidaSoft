@@ -1,4 +1,5 @@
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Identificaciones;
 
 namespace Validasoft.Dominio.Terceros;
@@ -42,6 +43,34 @@ public sealed class Tercero
     public Guid? CreadoPorTenant { get; set; }
 
     public DateTimeOffset CreadoEn { get; set; }
+
+    /// <summary>Versión del aviso de la plataforma que aceptó (P-6-5); sin ella sus versiones se procesan sin IA (B-2/B-8).</summary>
+    public int? AvisoPlataformaVersion { get; set; }
+
+    public string? AvisoPlataformaHash { get; set; }
+
+    public DateTimeOffset? AvisoPlataformaAceptadoEn { get; set; }
+
+    /// <summary>¿Debe aceptar el aviso vigente? Sí, si nunca lo aceptó o aceptó una versión anterior.</summary>
+    public bool RequiereAvisoPlataforma(TextoLegal? vigente) =>
+        vigente is not null && AvisoPlataformaVersion != vigente.Version;
+
+    public void AceptarAvisoPlataforma(TextoLegal aviso, DateTimeOffset ahora)
+    {
+        if (aviso.Tipo != TipoTextoLegal.AvisoPlataforma)
+            throw new InvalidOperationException("Solo se registra aquí el aviso de la plataforma.");
+
+        AvisoPlataformaVersion = aviso.Version;
+        AvisoPlataformaHash = aviso.Hash;
+        AvisoPlataformaAceptadoEn = ahora;
+    }
+
+    /// <summary>¿El correo es de alguno de sus contactos? (comparación sin mayúsculas ni espacios).</summary>
+    public bool TieneContacto(string correo)
+    {
+        var normalizado = (correo ?? string.Empty).Trim().ToLowerInvariant();
+        return normalizado.Length > 0 && Contactos.Any(c => string.Equals(c.Correo.Trim(), normalizado, StringComparison.OrdinalIgnoreCase));
+    }
 
     public static Tercero Crear(Identificacion identificacion, TipoPersona tipoPersona, string nombre,
         string? nombreComercial, IEnumerable<Contacto>? contactos, DateTimeOffset ahora)

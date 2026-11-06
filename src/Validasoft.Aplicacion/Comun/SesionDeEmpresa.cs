@@ -3,6 +3,7 @@ using JasperFx.Events;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 
 namespace Validasoft.Aplicacion.Comun;
 
@@ -13,8 +14,20 @@ namespace Validasoft.Aplicacion.Comun;
 public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto) : IAsyncDisposable
 {
     private IDocumentSession? _sesion;
+    private IMessageBus? _mensajes;
 
-    public IDocumentSession Sesion => _sesion ??= sesiones.DelTenant();
+    public IDocumentSession Sesion => _sesion ??= _mensajes is null ? sesiones.DelTenant() : sesiones.DelTenant(_mensajes);
+
+    /// <summary>
+    /// Enlista la sesión en el outbox de <paramref name="mensajes"/> (debe llamarse antes del primer uso de
+    /// <see cref="Sesion"/>): los mensajes publicados se despachan solo si la transacción se confirma.
+    /// </summary>
+    public void UsarMensajeria(IMessageBus mensajes)
+    {
+        if (_sesion is not null)
+            throw new InvalidOperationException("La sesión de la empresa ya se abrió sin mensajería.");
+        _mensajes = mensajes;
+    }
 
     public Guid EmpresaId => contexto.EmpresaRequerida();
 

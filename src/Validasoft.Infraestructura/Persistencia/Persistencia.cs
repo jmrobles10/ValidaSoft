@@ -11,6 +11,7 @@ using Validasoft.Aplicacion.Comun;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
@@ -18,7 +19,10 @@ using Validasoft.Dominio.Vinculos;
 using Validasoft.Infraestructura.Http;
 using Weasel.Core;
 using Weasel.Postgresql.Tables;
+using Wolverine;
 using Wolverine.Marten;
+using Wolverine.Marten.Publishing;
+using Wolverine.Runtime;
 
 namespace Validasoft.Infraestructura.Persistencia;
 
@@ -68,6 +72,15 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Usuario>().DatabaseSchemaName("identidad").MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_usuario_correo", TenancyScope.PerTenant, x => x.Correo);
                 opts.Schema.For<IndiceIdentidadExterna>().DatabaseSchemaName("identidad").MultiTenanted();
+                // Enlaces de acceso del tercero: globales (el tercero no pertenece a un tenant). Concurrencia optimista para
+                // que dos intentos de OTP simultáneos no pierdan la cuenta de fallos.
+                opts.Schema.For<EnlaceDeAcceso>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .Index(x => x.VinculoId)
+                    .Index(x => x.Expira);
+
+                // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
+                opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_texto_legal_version", x => x.Serie, x => x.Version);
 
                 // validacion (por tenant)
                 opts.Schema.For<TipoVinculo>().MultiTenanted()
@@ -93,14 +106,31 @@ public static class ConfiguracionMarten
     }
 }
 
-/// <summary>Abre sesiones con el tenant de la credencial y escribe actor, sistema y correlación en los metadatos de los eventos.</summary>
-public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto) : ISesiones
+/// <summary>
+/// Abre sesiones con el tenant de la credencial y escribe actor, sistema y correlación en los metadatos de los eventos.
+/// Con un <see cref="IMessageBus"/> la sesión sale de <see cref="OutboxedSessionFactory"/>: los mensajes publicados en ese
+/// bus se guardan en la misma transacción (outbox de Marten) y se despachan después del commit.
+/// </summary>
+public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto, OutboxedSessionFactory outbox) : ISesiones
 {
     public IDocumentSession DelTenant() => ParaTenant(contexto.TenantRequerido());
 
-    public IDocumentSession ParaTenant(Guid tenantId)
+    public IDocumentSession DelTenant(IMessageBus mensajes) => ParaTenant(contexto.TenantRequerido(), mensajes);
+
+    public IDocumentSession ParaTenant(Guid tenantId) => ParaTenant(tenantId, null);
+
+    public IDocumentSession ParaTenant(Guid tenantId, IMessageBus? mensajes) =>
+        ConMetadatos(mensajes is null
+            ? store.LightweightSession(tenantId.ToString("N"))
+            : outbox.OpenSession(Contexto(mensajes), tenantId.ToString("N")));
+
+    public IDocumentSession Global(IMessageBus? mensajes = null) =>
+        ConMetadatos(mensajes is null ? store.LightweightSession() : outbox.OpenSession(Contexto(mensajes)));
+
+    public IQuerySession ConsultaGlobal() => store.QuerySession();
+
+    private IDocumentSession ConMetadatos(IDocumentSession sesion)
     {
-        var sesion = store.LightweightSession(tenantId.ToString("N"));
         sesion.CorrelationId = contexto.CorrelationId;
         sesion.SetHeader("actorTipo", contexto.ActorTipo.ToString());
         sesion.SetHeader("actorId", contexto.ActorId);
@@ -109,5 +139,8 @@ public sealed class Sesiones(IDocumentStore store, IContextoSolicitud contexto) 
         return sesion;
     }
 
-    public IQuerySession ConsultaGlobal() => store.QuerySession();
+    /// <summary>En los endpoints de Wolverine el <see cref="IMessageBus"/> de la petición es su <see cref="MessageContext"/>.</summary>
+    private static MessageContext Contexto(IMessageBus mensajes) =>
+        mensajes as MessageContext
+        ?? throw new InvalidOperationException("El outbox necesita el MessageContext de Wolverine de la petición.");
 }
