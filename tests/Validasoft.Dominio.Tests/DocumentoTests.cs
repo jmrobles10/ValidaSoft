@@ -199,13 +199,13 @@ public class DocumentoTests
     [Fact]
     public void Un_documento_por_vinculo_no_sale_de_su_vinculo()
     {
-        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "POLIZA_A", null, "POLIZA", null, null, null, null, null, null, null, Ahora);
+        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "POLIZA_A", null, "POLIZA", null, null, null, null, null, null, Ahora);
         var propio = Guid.NewGuid();
         var poliza = Documento.Create(Documento.CrearPorVinculo(Tercero, tipo, tipo.TenantId, Guid.NewGuid(), propio, Ahora));
         poliza.ClaveNatural.ShouldBe(Documento.ClavePorVinculo(propio, tipo.Id));
         Cargar(poliza, "p1");
 
-        // Otro vínculo (aunque su empresa "exija" el canónico) no recibe nada; el propio sí, tras aceptar.
+        // Otro vínculo (aunque su flujo pida el canónico) no recibe nada; el propio sí, tras aceptar.
         poliza.Compartir(Vinculo(exige: true), OrigenComparticion.Automatica, Ahora).ShouldBeNull();
         poliza.Compartir(Vinculo(propio, aceptada: false), OrigenComparticion.Automatica, Ahora).ShouldBeNull();
         poliza.Compartir(Vinculo(propio, exige: false), OrigenComparticion.Automatica, Ahora).ShouldNotBeNull().VinculoId.ShouldBe(propio);
@@ -253,7 +253,7 @@ public class TipoDocumentoTenantTests
     [Fact]
     public void Hereda_nombre_frescura_y_ambito_del_canonico()
     {
-        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "rut", null, "RUT", null, null, null, null, null, null, null, Ahora);
+        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "rut", null, "RUT", null, null, null, null, null, null, Ahora);
 
         tipo.Codigo.ShouldBe("RUT");
         tipo.Nombre.ShouldBe("Registro Único Tributario");
@@ -266,43 +266,42 @@ public class TipoDocumentoTenantTests
     public void El_ambito_se_puede_restringir_pero_nunca_ampliar()
     {
         var restringido = TipoDocumentoTenant.Crear(Guid.NewGuid(), "RUT_PROPIO", null, "RUT", AmbitoDocumento.PorVinculo, null, null, null, null,
-            null, null, Ahora);
+            null, Ahora);
         restringido.Ambito.ShouldBe(AmbitoDocumento.PorVinculo);
 
         Should.Throw<ReglaDeNegocioException>(() =>
-                TipoDocumentoTenant.Crear(Guid.NewGuid(), "POLIZA", null, "POLIZA", AmbitoDocumento.Global, null, null, null, null, null, null, Ahora))
+                TipoDocumentoTenant.Crear(Guid.NewGuid(), "POLIZA", null, "POLIZA", AmbitoDocumento.Global, null, null, null, null, null, Ahora))
             .Codigo.ShouldBe("ambito-no-ampliable");
 
         // Un tipo propio sin canónico es siempre PorVinculo.
-        var propio = TipoDocumentoTenant.Crear(Guid.NewGuid(), "FORMATO_A", "Formato A", null, null, null, null, null, null, null, null, Ahora);
+        var propio = TipoDocumentoTenant.Crear(Guid.NewGuid(), "FORMATO_A", "Formato A", null, null, null, null, null, null, null, Ahora);
         propio.Ambito.ShouldBe(AmbitoDocumento.PorVinculo);
-        Should.Throw<ReglaDeNegocioException>(() => propio.Actualizar(null, AmbitoDocumento.Global, null, null, null, null, null, null, null))
+        Should.Throw<ReglaDeNegocioException>(() => propio.Actualizar(null, AmbitoDocumento.Global, null, null, null, null, null, null))
             .Codigo.ShouldBe("ambito-no-ampliable");
     }
 
+    // Antes (BO-3) aquí se probaban las exigencias por empresa y tipo de vínculo; desde RQ-3 lo que se pide lo deciden
+    // los requisitos del flujo (FlujoTests y RequisitosExpedienteTests). Se conserva la regla que sigue en el tipo:
+    // los valores nulos no cambian nada y desactivar es explícito.
     [Fact]
-    public void Exige_solo_a_la_empresa_y_tipo_de_vinculo_configurados_mientras_este_activo()
+    public void Actualizar_conserva_lo_que_llega_nulo_y_puede_desactivar()
     {
-        var empresa = Guid.NewGuid();
-        var proveedor = Guid.NewGuid();
-        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "RUT", null, "RUT", null, null, null, null, null, null,
-            [new ExigenciaDeDocumento(empresa, proveedor)], Ahora);
+        var tipo = TipoDocumentoTenant.Crear(Guid.NewGuid(), "RUT", null, "RUT", null, null, null, null, null, "Ayuda", Ahora);
 
-        tipo.Exige(empresa, proveedor).ShouldBeTrue();
-        tipo.Exige(empresa, Guid.NewGuid()).ShouldBeFalse();
-        tipo.Exige(Guid.NewGuid(), proveedor).ShouldBeFalse();
+        tipo.Actualizar(null, null, null, null, null, null, null, activo: false);
 
-        tipo.Actualizar(null, null, null, null, null, null, null, null, activo: false);
-        tipo.Exige(empresa, proveedor).ShouldBeFalse();
+        tipo.Activo.ShouldBeFalse();
+        tipo.Nombre.ShouldBe("Registro Único Tributario");
+        tipo.TextoAyuda.ShouldBe("Ayuda");
     }
 
     [Fact]
-    public void La_semilla_trae_los_seis_canonicos_de_archivo_sin_exigencias()
+    public void La_semilla_trae_los_seis_canonicos_de_archivo()
     {
         var semilla = TipoDocumentoTenant.Semilla(Guid.NewGuid(), Ahora);
 
         semilla.Select(t => t.Codigo).ShouldBe(["RUT", "CAMARA_COMERCIO", "CEDULA", "ESTADOS_FINANCIEROS", "CERTIFICACION_BANCARIA", "POLIZA"]);
-        semilla.ShouldAllBe(t => t.Exigencias.Count == 0 && t.Clase == ClaseDocumento.Archivo);
+        semilla.ShouldAllBe(t => t.Activo && t.Clase == ClaseDocumento.Archivo);
         semilla.Single(t => t.Codigo == "POLIZA").Ambito.ShouldBe(AmbitoDocumento.PorVinculo);
     }
 

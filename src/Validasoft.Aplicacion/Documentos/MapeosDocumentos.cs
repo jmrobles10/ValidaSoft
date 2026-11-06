@@ -32,12 +32,9 @@ public static class MapeosDocumentos
             t.TieneFechaExpedicion, t.EsPeriodico, t.Periodicidad, t.PermiteRatificacion, t.DePersonaRelacionada, t.CamposClave,
             t.CamposCriticos, t.Sensibilidad.ToString(), t.ReglaFrescuraSugerida?.ADto(), t.RetencionAniosSugerida, t.CargaSoportada);
 
-    public static TipoDocumentoTenantDto ADto(this TipoDocumentoTenant t, IReadOnlyDictionary<Guid, TipoVinculo> tiposVinculo) =>
+    public static TipoDocumentoTenantDto ADto(this TipoDocumentoTenant t) =>
         new(t.Id, t.Codigo, t.Nombre, t.TipoCanonico, t.VersionCanonico, t.Ambito.ToString(), t.Clase.ToString(), t.TextoAyuda,
-            t.ReglaFrescura.ADto(), t.DiasAviso, t.DiasGracia, t.DiasRevalidacion, t.Activo,
-            [.. t.Exigencias.Select(e => new ExigenciaDocumentoDto(e.EmpresaId, e.TipoVinculoId,
-                tiposVinculo.TryGetValue(e.TipoVinculoId, out var tv) ? tv.Codigo : string.Empty))],
-            t.CreadoEn);
+            t.ReglaFrescura.ADto(), t.DiasAviso, t.DiasGracia, t.DiasRevalidacion, t.Activo, t.CreadoEn);
 
     public static TipoDocumentoResumenDto Resumen(this Documento d) => new(d.TipoCanonico ?? string.Empty, d.NombreTipo, d.TipoDocumentoTenantId);
 

@@ -9,6 +9,7 @@ using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -109,11 +110,12 @@ public static class InvitacionesPublicasEndpoints
 
     /// <summary>
     /// Registra <c>ConsentimientosRegistrados</c> y luego <c>InvitacionAceptada</c> en el stream del vínculo (actor =
-    /// tercero) y comparte con la empresa la versión actual de cada documento global que exige para ese tipo de vínculo
-    /// (más los <c>PorVinculo</c> ya cargados para él); la respuesta trae esos <c>compartidos</c>. Idempotente por su propia regla:
-    /// repetir ⇒ 409 <c>invitacion-ya-aceptada</c>. En la misma transacción abre el expediente inicial con el flujo del
-    /// vínculo o el por defecto (FL-5); si no hay ninguno publicado, la aceptación se registra igual y el vínculo queda
-    /// con apertura pendiente (FL-6): nunca falla por configuración de la empresa.
+    /// tercero) y comparte con la empresa la versión actual de cada documento global que piden los requisitos del flujo
+    /// resuelto para el vínculo (RQ-3; más los <c>PorVinculo</c> ya cargados para él); la respuesta trae esos
+    /// <c>compartidos</c>. Idempotente por su propia regla: repetir ⇒ 409 <c>invitacion-ya-aceptada</c>. En la misma
+    /// transacción abre el expediente inicial con ese flujo (FL-5), con los requisitos cubiertos ya <c>Cargado</c>; si no
+    /// hay flujo publicado no se comparte ningún global, la aceptación se registra igual y el vínculo queda con apertura
+    /// pendiente (FL-6): nunca falla por configuración de la empresa.
     /// </summary>
     [WolverinePost("/public/v1/invitaciones/{vinculoId}/aceptar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
@@ -166,11 +168,14 @@ public static class InvitacionesPublicasEndpoints
             sesion.Store(textos.Tercero);
         }
 
-        // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que exige: misma transacción.
-        var compartidos = await ComparticionDeDocumentos.AlAceptarInvitacionAsync(sesion, vinculo, enSesion.TenantId, ahora, ct);
+        // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que pide su flujo: misma transacción.
+        var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
+        var pedidos = flujo is null ? [] : await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, ct);
+        var documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, enSesion.TenantId,
+            RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.AlAceptarInvitacion, ahora, ct);
 
-        if (await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct) is { } flujo)
-            await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, ahora, ct);
+        if (flujo is not null)
+            await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, ahora, ct, documentos);
 
         await sesion.SaveChangesAsync(ct);
 
@@ -181,7 +186,7 @@ public static class InvitacionesPublicasEndpoints
             [.. consentimientos.Consentimientos.Select(c => new AceptacionDto(c.Tipo.ToString(), c.TextoLegalId, c.Version, c.Hash,
                 consentimientos.Fecha, evidencia.Ip, evidencia.UserAgent, evidencia.OtpVerificado, evidencia.Canal.ToString(), aceptadoPor))],
             actualizado.APublico(empresa, tipo),
-            compartidos);
+            documentos.Compartidos);
     }
 
     private static List<ConsentimientoOtorgado> Otorgados(AceptarInvitacionDto dto) =>

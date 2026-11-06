@@ -81,7 +81,8 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     {
         var asunto = $"{correo.Empresa} tiene observaciones sobre tu validación {correo.Folio}";
         var lineas = correo.Observaciones.Select(o =>
-            string.Join("; ", o.Motivos) + (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion}")).ToList();
+            (o.Requisito is null ? string.Empty : $"{o.Requisito}: ") + string.Join("; ", o.Motivos) +
+            (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion}")).ToList();
         var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y necesita que corrijas lo siguiente:\n\n" +
                     string.Join("\n", lineas.Select(l => "- " + l)) +
                     $"\n\nIngresa a Validasoft ({UrlPublica}) con el enlace de tu invitación para responder y reenviar.";
@@ -95,8 +96,8 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     private static string Minuscula(string? texto) => (texto ?? string.Empty).ToLower(Cultura);
 }
 
-/// <summary>Una observación vigente tal como la lee el tercero.</summary>
-public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string? Observacion);
+/// <summary>Una observación vigente tal como la lee el tercero; <see cref="Requisito"/>: el documento observado (nombre del tipo), si lo hay.</summary>
+public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string? Observacion, string? Requisito = null);
 
 /// <summary>
 /// Correo al tercero cuando su expediente queda <c>Observado</c>; va por el outbox (cola <c>correo</c>) y sale solo si la

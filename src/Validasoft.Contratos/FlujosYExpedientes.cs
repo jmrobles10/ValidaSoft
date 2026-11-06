@@ -26,20 +26,35 @@ public sealed record AreaDeEtapaDto(
 public sealed record EtapaDto(int Orden, IReadOnlyList<AreaDeEtapaDto> Areas);
 
 /// <summary>
+/// Documento que pide el flujo (RQ-1). Al escribir, el tipo va por <see cref="TipoDocumentoTenantId"/> o por su código
+/// (<see cref="TipoDocumento"/>); <see cref="Id"/> opcional (se conserva entre versiones si se reenvía).
+/// <see cref="AreasQueRevisan"/> vacío o nulo ⇒ todas las áreas del flujo; <see cref="AprobadoresRequeridos"/> nulo ⇒ los
+/// del área. Al leer vienen los tres identificadores.
+/// </summary>
+public sealed record RequisitoDelFlujoDto(
+    Guid? Id = null, Guid? TipoDocumentoTenantId = null, string? TipoDocumento = null, bool Obligatorio = true,
+    IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null);
+
+/// <summary>
 /// Sin <see cref="Etapas"/>: una sola etapa con todas las áreas activas de la empresa en paralelo (P-4-4).
-/// <see cref="PoliticaDevolucion"/>: <c>Inmediata</c> (por defecto) o <c>AlCerrarArea</c>.
+/// <see cref="PoliticaDevolucion"/>: <c>Inmediata</c> (por defecto) o <c>AlCerrarArea</c>. Sin <see cref="Requisitos"/>
+/// cada área decide sobre el expediente completo (FL-1).
 /// </summary>
 public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
-    bool SeparacionDeFunciones = false);
+    bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
 
-/// <summary>Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última versión.</summary>
+/// <summary>
+/// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
+/// versión; <c>requisitos: []</c> los quita.
+/// </summary>
 public sealed record EditarFlujoDto(
-    string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null);
+    string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
+    IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
-    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn);
+    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
 
 /// <summary>Flujo con su versión publicada y su borrador (si existen) y si es el flujo por defecto de su tipo de vínculo.</summary>
 public sealed record FlujoDto(
@@ -60,20 +75,44 @@ public sealed record TerceroResumenDto(Guid Id, string Nombre, string Identifica
 
 /// <summary>
 /// Veredicto de un área. <see cref="Usuario"/>: id del revisor (o del administrador); nulo si lo emitió el sistema.
-/// <see cref="Superado"/>: dejó de contar porque el tercero reenvió tras la observación de esa área.
+/// <see cref="Superado"/>: dejó de contar porque el tercero reenvió tras la observación (o se eximió el requisito).
+/// En un requisito: <see cref="SobreVersion"/> (número de la versión decidida) e <see cref="Invalidado"/> (llegó una
+/// versión nueva). <see cref="Derivado"/>: aprobación del área que el sistema dedujo de sus requisitos.
 /// </summary>
 public sealed record VeredictoEmitidoDto(
     Guid Id, string Veredicto, string Origen, string? Usuario, DateTimeOffset Fecha, IReadOnlyList<string> Motivos, string? Observacion,
-    string? Justificacion, bool Vigente, bool Superado, bool Anulado, string? AnuladoPor);
+    string? Justificacion, bool Vigente, bool Superado, bool Anulado, string? AnuladoPor, int? SobreVersion = null, bool Invalidado = false,
+    bool Derivado = false);
 
 /// <summary>
 /// Área del expediente con sus aprobaciones (<see cref="Aprobaciones"/> de <see cref="AprobadoresRequeridos"/>) y los
-/// miembros que aún no se pronuncian (<see cref="MiembrosPendientes"/>, vacío si el área ya se pronunció).
+/// miembros que aún no se pronuncian (<see cref="MiembrosPendientes"/>, vacío si el área ya se pronunció). Con requisitos,
+/// <see cref="RequisitosPorDecidir"/> cuenta los de su alcance que aún esperan su decisión.
 /// </summary>
 public sealed record AreaExpedienteDto(
     Guid AreaId, string Codigo, string Nombre, string Estado, int AprobadoresRequeridos, int Aprobaciones, int AprobacionesFaltantes,
     IReadOnlyList<Guid> MiembrosPendientes, bool PuedeRechazarExpediente, bool Automatica, DateTimeOffset? PendienteDesde,
-    DateTimeOffset? SlaVence, IReadOnlyList<VeredictoEmitidoDto> Veredictos);
+    DateTimeOffset? SlaVence, IReadOnlyList<VeredictoEmitidoDto> Veredictos, int RequisitosPorDecidir = 0);
+
+/// <summary>Tipo de documento de un requisito: id y código del tipo del tenant, canónico (para cargarlo) y ámbito.</summary>
+public sealed record TipoDocumentoRequisitoDto(Guid Id, string Codigo, string Nombre, string? TipoCanonico, string Ambito);
+
+/// <summary>Versión de la bóveda que cubre el requisito (compartida con el vínculo).</summary>
+public sealed record VersionRequisitoDto(Guid DocumentoId, int N, string Sha256, DateTimeOffset CargadaEn);
+
+/// <summary>Decisión de un área sobre el requisito: <see cref="Estado"/> <c>Esperando|Pendiente|Aprobado|Observado|Eximido</c>.</summary>
+public sealed record AreaDeRequisitoDto(
+    Guid AreaId, string Codigo, string Estado, int AprobadoresRequeridos, int Aprobaciones, IReadOnlyList<VeredictoEmitidoDto> Veredictos);
+
+public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffset Fecha);
+
+/// <summary>
+/// Requisito del expediente (<c>RequisitoDto</c> de docs/05 §4, reducido). <see cref="Estado"/>:
+/// <c>Pendiente|Cargado|EnRevision|Observado|Aprobado|Eximido</c>.
+/// </summary>
+public sealed record RequisitoExpedienteDto(
+    Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual, int Reenvios,
+    ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas);
 
 public sealed record EtapaExpedienteDto(int Orden, string Estado, DateTimeOffset? ActivadaEn, DateTimeOffset? AprobadaEn,
     IReadOnlyList<AreaExpedienteDto> Areas);
@@ -101,10 +140,14 @@ public sealed record ExpedienteDto(
     DateTimeOffset AbiertoEn,
     DateTimeOffset? CerradoEn,
     DateTimeOffset ActualizadoEn,
-    long Version);
+    long Version,
+    IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null);
 
-/// <summary><see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c> (con al menos un motivo). El área va en la ruta.</summary>
-public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null);
+/// <summary>
+/// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c> (con al menos un motivo). El área (y el requisito) van en
+/// la ruta. <see cref="SobreVersion"/>: obligatorio en el veredicto de un requisito (número de la versión que se revisó).
+/// </summary>
+public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null, int? SobreVersion = null);
 
 /// <summary>Rechazo terminal: solo un área con <c>puedeRechazarExpediente</c>; motivos y justificación obligatorios.</summary>
 public sealed record RechazarExpedienteDto(Guid AreaId, IReadOnlyList<string> Motivos, string Justificacion);
@@ -114,19 +157,35 @@ public sealed record ReenviarExpedienteDto(string? Respuesta = null);
 /// <summary>Sin <see cref="VeredictoId"/> se anula el veredicto vigente más reciente del área.</summary>
 public sealed record AnularVeredictoDto(string Justificacion, Guid? VeredictoId = null);
 
-/// <summary>Fila de la bandeja <c>BandejaRevision</c>: un expediente × un área.</summary>
+/// <summary>
+/// Fila de la bandeja <c>BandejaRevision</c>: un expediente × un área. <see cref="RequisitosPendientes"/>: requisitos del
+/// alcance del área que aún esperan su decisión (0 sin requisitos).
+/// </summary>
 public sealed record FilaBandejaDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, Guid AreaId,
     string AreaCodigo, string AreaNombre, int Etapa, string EstadoArea, string EstadoExpediente, int Aprobaciones, int AprobadoresRequeridos,
-    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn);
+    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0);
 
 // ---------- Público: el tercero ----------
 
 public sealed record MotivoPublicoDto(string Codigo, string Texto);
 
-public sealed record ObservacionPublicaDto(IReadOnlyList<MotivoPublicoDto> Motivos, string? Observacion, DateTimeOffset Fecha);
+/// <summary><see cref="Requisito"/>: código del documento observado (nulo si la observación es sobre el expediente).</summary>
+public sealed record ObservacionPublicaDto(IReadOnlyList<MotivoPublicoDto> Motivos, string? Observacion, DateTimeOffset Fecha, string? Requisito = null);
 
-/// <summary>Lo que el tercero ve de su expediente: estado y observaciones vigentes, sin áreas ni revisores.</summary>
+/// <summary>
+/// Requisito visto por el tercero, sin áreas ni revisores: si falta (<c>Pendiente</c>), si está observado y con qué
+/// motivo (<see cref="Observaciones"/> vigentes), y la versión que lo cubre.
+/// </summary>
+public sealed record RequisitoPublicoDto(
+    Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual,
+    IReadOnlyList<ObservacionPublicaDto> Observaciones);
+
+/// <summary>
+/// Lo que el tercero ve de su expediente: estado, observaciones vigentes y los documentos que le piden
+/// (<see cref="Requisitos"/>, <see cref="RequisitosFaltantes"/> obligatorios sin cargar), sin áreas ni revisores.
+/// </summary>
 public sealed record ExpedientePublicoDto(
     Guid Id, string Folio, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado,
-    IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeReenviar, int Reenvios, DateTimeOffset ActualizadoEn);
+    IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeReenviar, int Reenvios, DateTimeOffset ActualizadoEn,
+    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0);

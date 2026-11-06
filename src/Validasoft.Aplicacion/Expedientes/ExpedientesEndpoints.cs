@@ -16,9 +16,10 @@ using Wolverine.Http;
 namespace Validasoft.Aplicacion.Expedientes;
 
 /// <summary>
-/// Expedientes de la empresa activa (<c>X-Empresa</c>): apertura manual, consulta, veredictos de área, rechazo,
-/// reenvío, anulación y acciones del administrador. Cada expediente es un stream <c>Expediente-{id}</c>; la lectura sale
-/// de su proyección inline. Las escrituras aceptan <c>If-Match</c> con la versión y devuelven <c>ETag</c>.
+/// Expedientes de la empresa activa (<c>X-Empresa</c>): apertura manual, consulta, veredictos de área (flujos sin
+/// requisitos) o de requisito, exención, rechazo, reenvío, anulación y acciones del administrador. Cada expediente es un
+/// stream <c>Expediente-{id}</c>; la lectura sale de su proyección inline. Las escrituras aceptan <c>If-Match</c> con la
+/// versión y devuelven <c>ETag</c>.
 /// </summary>
 public static class ExpedientesEndpoints
 {
@@ -96,8 +97,9 @@ public static class ExpedientesEndpoints
     }
 
     /// <summary>
-    /// Veredicto de un miembro del área sobre el expediente completo. <c>Observado</c> exige motivos; con política
-    /// <c>Inmediata</c> devuelve el expediente al tercero (correo por el outbox) y bloquea los demás veredictos (409).
+    /// Veredicto de un miembro del área sobre el expediente completo (flujos sin requisitos, FL-1; con requisitos ⇒ 409
+    /// <c>veredicto-por-requisito</c>). <c>Observado</c> exige motivos; con política <c>Inmediata</c> devuelve el
+    /// expediente al tercero (correo por el outbox) y bloquea los demás veredictos (409).
     /// </summary>
     [WolverinePost("/api/v1/expedientes/{id}/areas/{areaId}/veredicto")]
     [Authorize(Policy = Permisos.ExpedientesRevisar)]
@@ -105,14 +107,50 @@ public static class ExpedientesEndpoints
         HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        if (!Enum.TryParse<Veredicto>(dto.Veredicto, true, out var veredicto) || !Enum.IsDefined(veredicto))
-            throw ReglaDeNegocioException.Validacion("veredicto-invalido", "El veredicto es Aprobado u Observado (el rechazo es del expediente).");
-
+        var veredicto = LeerVeredicto(dto);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+        stream.Aggregate!.AsegurarSinRequisitos();
         await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
         var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
         var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
         var eventos = stream.Aggregate!.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, reloj.GetUtcNow());
+        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+    }
+
+    /// <summary>
+    /// Veredicto de un miembro del área sobre un requisito de su alcance (RQ-4): <c>sobreVersion</c> obligatorio y igual a
+    /// la versión vigente del requisito (si no, 409 <c>version-superada</c>). El área queda aprobada cuando aprobó (o se
+    /// eximieron) todos los requisitos de su alcance; una observación devuelve el expediente según la política del flujo.
+    /// </summary>
+    [WolverinePost("/api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto")]
+    [Authorize(Policy = Permisos.ExpedientesRevisar)]
+    public static async Task<ExpedienteDto> VeredictoDeRequisito(Guid id, Guid requisitoId, Guid areaId, VeredictoDto dto, SesionDeEmpresa empresa,
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        var veredicto = LeerVeredicto(dto);
+        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+        var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
+        var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
+        var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
+            reloj.GetUtcNow());
+        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+    }
+
+    /// <summary>
+    /// Exime un requisito con justificación (RQ-6, <c>expedientes:administrar</c>): sus veredictos dejan de contar y, si era
+    /// lo último que faltaba, el expediente pasa a revisión o sus áreas quedan aprobadas.
+    /// </summary>
+    [WolverinePost("/api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir")]
+    [Authorize(Policy = Permisos.ExpedientesAdministrar)]
+    public static async Task<ExpedienteDto> Eximir(Guid id, Guid requisitoId, JustificacionDto dto, SesionDeEmpresa empresa,
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+        var eventos = stream.Aggregate!.EximirRequisito(requisitoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
         return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
     }
 
@@ -131,7 +169,10 @@ public static class ExpedientesEndpoints
         return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
     }
 
-    /// <summary>El integrador responde a la observación en nombre del tercero; solo las áreas que observaron vuelven a revisar.</summary>
+    /// <summary>
+    /// El integrador responde a la observación en nombre del tercero; solo lo observado vuelve a revisar. Antes adjunta las
+    /// versiones que la bóveda ya compartió y aún no llegaron por el outbox (<see cref="ReenvioConVersionesAsync"/>).
+    /// </summary>
     [WolverinePost("/api/v1/expedientes/{id}/reenviar")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> Reenviar(Guid id, ReenviarExpedienteDto dto, SesionDeEmpresa empresa, HttpContext http,
@@ -140,8 +181,20 @@ public static class ExpedientesEndpoints
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var eventos = stream.Aggregate!.Reenviar(OrigenReenvio.Integrador, dto.Respuesta, reloj.GetUtcNow());
+        var eventos = await ReenvioConVersionesAsync(empresa.Sesion, stream.Aggregate!, OrigenReenvio.Integrador, dto.Respuesta, reloj.GetUtcNow(), ct);
         return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+    }
+
+    /// <summary>
+    /// Sincroniza el expediente con la bóveda y luego reenvía sobre el estado resultante: así el reenvío no depende de que el
+    /// mensaje <see cref="SincronizarRequisitosDelVinculo"/> ya se haya procesado (el que llegue después no hará nada).
+    /// </summary>
+    internal static async Task<IReadOnlyList<object>> ReenvioConVersionesAsync(Marten.IDocumentSession sesion, Expediente expediente,
+        OrigenReenvio origen, string? respuesta, DateTimeOffset ahora, CancellationToken ct)
+    {
+        var sincronizados = await RequisitosDeExpediente.SincronizarAsync(sesion, expediente, ahora, ct);
+        var actual = sincronizados.Count == 0 ? expediente : Expediente.Reproducir(expediente, sincronizados);
+        return [.. sincronizados, .. actual.Reenviar(origen, respuesta, ahora)];
     }
 
     /// <summary>Anula el expediente abierto (el vínculo vuelve a <c>Invitado</c> si estaba en validación).</summary>
@@ -180,6 +233,11 @@ public static class ExpedientesEndpoints
         var eventos = stream.Aggregate!.AnularVeredicto(areaId, dto.VeredictoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
         return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
     }
+
+    private static Veredicto LeerVeredicto(VeredictoDto dto) =>
+        Enum.TryParse<Veredicto>(dto.Veredicto, true, out var veredicto) && Enum.IsDefined(veredicto)
+            ? veredicto
+            : throw ReglaDeNegocioException.Validacion("veredicto-invalido", "El veredicto es Aprobado u Observado (el rechazo es del expediente).");
 
     /// <summary>Un vínculo bloqueado no recibe decisiones sobre su expediente (B-5).</summary>
     private static async Task AsegurarVinculoNoBloqueadoAsync(SesionDeEmpresa empresa, Expediente expediente, CancellationToken ct)
@@ -271,7 +329,10 @@ public static class BandejaEndpoints
     }
 }
 
-/// <summary>El tercero ve sus expedientes (solo los de los vínculos de su sesión) y responde a las observaciones.</summary>
+/// <summary>
+/// El tercero ve sus expedientes (solo los de los vínculos de su sesión): qué documentos le piden, cuáles faltan, cuáles
+/// están observados y con qué motivo (sin áreas ni revisores), y responde a las observaciones.
+/// </summary>
 public static class ExpedientesPublicosEndpoints
 {
     [WolverineGet("/public/v1/expedientes/{id}")]
@@ -287,7 +348,10 @@ public static class ExpedientesPublicosEndpoints
         return expediente.APublico(await consulta.LoadAsync<Empresa>(expediente.EmpresaId, ct));
     }
 
-    /// <summary>Responde a la observación (<c>{ respuesta }</c>): las áreas que observaron vuelven a revisar.</summary>
+    /// <summary>
+    /// Responde a la observación (<c>{ respuesta }</c>): lo observado vuelve a revisión. Con requisitos, cada documento
+    /// observado necesita una versión nueva o, si no, la respuesta (409 <c>requisitos-sin-corregir</c>).
+    /// </summary>
     [WolverinePost("/public/v1/expedientes/{id}/reenviar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ExpedientePublicoDto> Reenviar(Guid id, ReenviarExpedienteDto dto, HttpContext http, ISesiones sesiones,
@@ -314,8 +378,8 @@ public static class ExpedientesPublicosEndpoints
             throw ReglaDeNegocioException.Conflicto("vinculo-bloqueado", "La empresa suspendió temporalmente esta validación.");
 
         var ahora = reloj.GetUtcNow();
-        var estado = await ProcesoDeValidacion.AnexarAsync(sesion, stream, expediente.Reenviar(OrigenReenvio.Tercero, dto.Respuesta, ahora), null,
-            ahora, ct);
+        var eventos = await ExpedientesEndpoints.ReenvioConVersionesAsync(sesion, expediente, OrigenReenvio.Tercero, dto.Respuesta, ahora, ct);
+        var estado = await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, ahora, ct);
         await sesion.SaveChangesAsync(ct);
         return estado.APublico(await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct));
     }

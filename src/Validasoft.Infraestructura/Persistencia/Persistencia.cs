@@ -114,7 +114,7 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId);
                 opts.Schema.For<FlujoPorDefecto>().MultiTenanted().Index(x => x.EmpresaId);
 
-                // Tipos de documento del tenant (defaults del grupo y exigencias por empresa y tipo de vínculo, BO-3).
+                // Tipos de documento del tenant (defaults del grupo); qué se pide a cada vínculo lo dicen los requisitos del flujo (RQ-3).
                 opts.Schema.For<TipoDocumentoTenant>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_tipo_documento_codigo", TenancyScope.PerTenant, x => x.Codigo)
                     .Index(x => x.TipoCanonico);

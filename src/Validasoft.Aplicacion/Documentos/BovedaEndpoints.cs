@@ -7,6 +7,7 @@ using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Plataforma;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Documentos;
@@ -63,16 +64,17 @@ public static class BovedaEndpoints
 
     /// <summary>
     /// El tercero retira una versión (no se borra si alguna empresa la recibió o la descargó, docs/02 §10.3). Si era la
-    /// actual vuelve la anterior y se comparte con quien corresponda. Devuelta o retirada ⇒ 409 <c>estado-invalido</c>.
+    /// actual vuelve la anterior, se comparte con quien corresponda y los expedientes abiertos que la tenían la reciben de
+    /// vuelta (RQ-2). Devuelta o retirada ⇒ 409 <c>estado-invalido</c>.
     /// </summary>
     [WolverinePost("/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retirar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<RetiroDto> Retirar(Guid documentoId, int numero, RetirarVersionDto dto, HttpContext http, ISesiones sesiones,
-        IAlmacenDeArchivos almacen, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, IAlmacenDeArchivos almacen, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var ahora = reloj.GetUtcNow();
-        await using var sesion = sesiones.Boveda();
+        await using var sesion = sesiones.Boveda(mensajes);
         var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
         var documento = DelTercero(stream.Aggregate, tercero);
         var version = documento.VersionRequerida(numero);
@@ -82,8 +84,12 @@ public static class BovedaEndpoints
             stream.AppendOne(evento);
         var proyectado = documento.Proyectar(eventos);
         var compartidos = proyectado.VersionActual is not null && proyectado.VersionActual != documento.VersionActual
-            ? await ComparticionDeDocumentos.CompartirActualAsync(sesion, stream, proyectado, OrigenComparticion.Automatica, ahora, ct)
+            ? await ComparticionDeDocumentos.CompartirActualAsync(sesion, stream, proyectado, OrigenComparticion.Automatica, ahora, ct, mensajes, contexto)
             : [];
+        // Quienes ya tenían la versión restituida también deben volver a ella en sus requisitos.
+        if (proyectado.VersionActual is { } restituida && restituida != documento.VersionActual)
+            await ComparticionDeDocumentos.PedirSincronizacionAsync(mensajes,
+                proyectado.Comparticiones.Where(c => c.Numero == restituida).Select(c => (c.TenantId, c.VinculoId)), contexto);
 
         // El objeto es content-addressed: solo se elimina si nadie lo vio y ninguna otra versión del tercero apunta a él.
         var nadieLoVio = !documento.Comparticiones.Any(c => c.Numero == numero) && !version.AccedidaPorEmpresa;

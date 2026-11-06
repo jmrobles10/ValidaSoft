@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Infraestructura.Almacenamiento;
@@ -30,6 +31,9 @@ public static class ServiciosInfraestructura
 
     /// <summary>Cola local durable de los correos del outbox (IN-2).</summary>
     public const string ColaCorreo = "correo";
+
+    /// <summary>Cola local durable que adjunta a los expedientes las versiones que comparte la bóveda (RQ-2).</summary>
+    public const string ColaRequisitos = "requisitos";
 
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
@@ -96,9 +100,9 @@ public static class ServiciosInfraestructura
     }
 
     /// <summary>
-    /// Mensajería de Wolverine: transacciones automáticas de Marten en los manejadores que usen sesión, y los correos por
-    /// una cola local durable (sus sobres se guardan con el outbox en la misma transacción que el cambio que los origina).
-    /// Un fallo de SMTP se reintenta con espera y luego va a la cola de errores.
+    /// Mensajería de Wolverine: transacciones automáticas de Marten en los manejadores que usen sesión, y los correos y la
+    /// sincronización de requisitos por colas locales durables (sus sobres se guardan con el outbox en la misma transacción
+    /// que el cambio que los origina). Un fallo se reintenta con espera y luego va a la cola de errores.
     /// </summary>
     public static WolverineOptions ConfigurarMensajeria(this WolverineOptions opciones)
     {
@@ -106,6 +110,7 @@ public static class ServiciosInfraestructura
         opciones.Policies.AutoApplyTransactions();
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();

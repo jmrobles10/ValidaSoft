@@ -48,7 +48,8 @@ public sealed record Comparticion(int Numero, Guid TenantId, Guid EmpresaId, Gui
 
 /// <summary>
 /// Vínculo candidato a recibir la versión actual, con lo que la aplicación resolvió fuera del agregado: si el tercero
-/// aceptó la invitación, el estado del vínculo y si su empresa exige el tipo para ese tipo de vínculo.
+/// aceptó la invitación, el estado del vínculo y si su flujo vigente o su expediente abierto pide el tipo
+/// (<see cref="ExigeElTipo"/>; RQ-3, antes las exigencias por tipo de BO-3).
 /// </summary>
 public sealed record VinculoCandidato(
     Guid VinculoId, Guid TenantId, Guid EmpresaId, Guid TerceroId, bool InvitacionAceptada, EstadoVinculo Estado, bool ExigeElTipo)
@@ -239,7 +240,7 @@ public sealed class Documento
 
     /// <summary>
     /// Comparte la versión actual con un vínculo si corresponde; nulo si no: sin versión actual, invitación no aceptada
-    /// (B-1), compartición congelada, la empresa no exige el tipo (globales) o es otro vínculo (<c>PorVinculo</c>), o ya
+    /// (B-1), compartición congelada, el flujo del vínculo no pide el tipo (globales) o es otro vínculo (<c>PorVinculo</c>), o ya
     /// estaba compartida (idempotente por <c>(vínculo, versión)</c>, invariante 8 de docs/02 §13).
     /// </summary>
     public VersionCompartida? Compartir(VinculoCandidato vinculo, OrigenComparticion origen, DateTimeOffset ahora)

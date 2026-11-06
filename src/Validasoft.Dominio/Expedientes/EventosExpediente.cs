@@ -1,4 +1,5 @@
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Flujos;
 
 namespace Validasoft.Dominio.Expedientes;
@@ -56,6 +57,24 @@ public enum EstadoAreaExpediente
 
     /// <summary>Tiene una observación vigente.</summary>
     Observada
+}
+
+/// <summary>
+/// Estado de un requisito del expediente (docs/03 §3.1), derivado de su versión, sus veredictos vigentes y su exención.
+/// Esta fase usa <c>Pendiente</c> (sin versión), <c>Cargado</c> (con versión, aún sin revisión o corregido esperando el
+/// reenvío), <c>EnRevision</c>, <c>Observado</c>, <c>Aprobado</c> (todas sus áreas) y <c>Eximido</c>.
+/// </summary>
+public enum EstadoRequisito
+{
+    Pendiente,
+    Cargado,
+    EnRevision,
+    Observado,
+    Aprobado,
+    Eximido,
+    NoAplica,
+    Vencido,
+    Desactualizado
 }
 
 /// <summary>Cómo se eligió el flujo (docs/03 §12.1). <c>Regla</c> llega con las reglas de selección.</summary>
@@ -120,16 +139,70 @@ public sealed record FlujoSeleccionado(
     bool SeparacionDeFunciones,
     DateTimeOffset Fecha);
 
-/// <summary>Sin requisitos documentales (fase actual), el expediente pasa directo a revisión al abrirse.</summary>
+/// <summary>
+/// Fin de la fase de carga: sin requisitos al abrirse (FL-1); con requisitos, cuando todos los obligatorios están
+/// <c>Cargado</c> o <c>Eximido</c> (docs/03 §6.3).
+/// </summary>
 public sealed record ExpedienteEnviadoARevision(DateTimeOffset Fecha);
+
+/// <summary>Versión de la bóveda que cubre un requisito (siempre compartida con el vínculo del expediente).</summary>
+public sealed record VersionDeRequisito(Guid DocumentoId, int Numero, string Sha256, DateTimeOffset CargadaEn);
+
+/// <summary>
+/// Foto de un requisito al abrir el expediente: el tipo del tenant (con su canónico y ámbito, para casar documentos de la
+/// bóveda), si es obligatorio, las áreas que lo revisan (ya resueltas: vacío en el flujo ⇒ todas) y la versión que lo
+/// cubre si el tercero ya la tenía compartida con el vínculo.
+/// </summary>
+public sealed record RequisitoCalculado(
+    Guid RequisitoId,
+    Guid TipoDocumentoTenantId,
+    string Codigo,
+    string Nombre,
+    string? TipoCanonico,
+    AmbitoDocumento Ambito,
+    bool Obligatorio,
+    IReadOnlyList<Guid> AreasQueRevisan,
+    int? AprobadoresRequeridos,
+    VersionDeRequisito? Version);
+
+/// <summary>Los requisitos de la versión del flujo, congelados en el expediente (docs/03 §6.3). Un flujo sin requisitos no lo emite.</summary>
+public sealed record RequisitosCalculados(IReadOnlyList<RequisitoCalculado> Requisitos, DateTimeOffset Fecha);
+
+/// <summary>Una versión actual compartida con el vínculo pasa a cubrir el requisito (la anterior queda en su historial).</summary>
+public sealed record VersionAdjuntadaARequisito(Guid RequisitoId, VersionDeRequisito Version, int? NumeroAnterior, DateTimeOffset Fecha);
+
+/// <summary>Los veredictos vigentes del requisito eran sobre la versión anterior: dejan de contar (solo ese requisito).</summary>
+public sealed record VeredictosInvalidadosPorNuevaVersion(Guid RequisitoId, int VersionAnterior, IReadOnlyList<Guid> AreasAfectadas,
+    DateTimeOffset Fecha);
+
+/// <summary>
+/// Veredicto de un área sobre un requisito y una versión concreta (<see cref="SobreVersion"/>). Origen <c>Humano</c>
+/// (miembro del área), <c>Sistema</c> (área automática) o <c>Administrador</c> (aprobación en nombre del área).
+/// </summary>
+public sealed record VeredictoDeRequisitoEmitido(
+    Guid VeredictoId,
+    Guid RequisitoId,
+    Guid AreaId,
+    Veredicto Veredicto,
+    OrigenVeredicto Origen,
+    string? RevisorId,
+    int SobreVersion,
+    IReadOnlyList<MotivoAplicado> Motivos,
+    string? Observacion,
+    string? Justificacion,
+    DateTimeOffset Fecha);
+
+/// <summary>Un administrador exime el requisito con justificación (visible en el certificado, P-5-4); sus veredictos dejan de contar.</summary>
+public sealed record RequisitoEximido(Guid RequisitoId, string Por, string Justificacion, DateTimeOffset Fecha);
 
 /// <summary>Todas las áreas de la etapa reciben el expediente al mismo tiempo.</summary>
 public sealed record EtapaActivada(int Orden, IReadOnlyList<Guid> Areas, DateTimeOffset Fecha);
 
 /// <summary>
-/// Veredicto de un área. <see cref="RequisitoId"/> nulo = sobre el expediente completo (fase sin documentos, FL-3);
-/// cuando existan requisitos, el veredicto de área se derivará de los de sus requisitos sin reinterpretar estos eventos.
-/// <see cref="RevisorId"/>: usuario (humano), administrador que aprobó en nombre del área, o nulo (sistema).
+/// Veredicto de un área sobre el expediente completo (<see cref="RequisitoId"/> siempre nulo; flujos sin requisitos,
+/// FL-3). <see cref="RevisorId"/>: usuario (humano), administrador que aprobó en nombre del área, o nulo (sistema). Con
+/// requisitos, el sistema lo emite cuando el área aprobó todo su alcance (<see cref="DerivadoDeRequisitos"/>, RQ-5): su
+/// origen dice quién aprobó los requisitos (<c>Administrador</c> si intervino, si no <c>Humano</c>, si no <c>Sistema</c>).
 /// </summary>
 public sealed record VeredictoDeAreaEmitido(
     Guid VeredictoId,
@@ -141,19 +214,25 @@ public sealed record VeredictoDeAreaEmitido(
     string? Observacion,
     string? Justificacion,
     Guid? RequisitoId,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha,
+    bool DerivadoDeRequisitos = false);
 
-/// <summary>El expediente vuelve al tercero; mientras tanto ninguna área emite veredictos.</summary>
-public sealed record ExpedienteObservado(IReadOnlyList<Guid> AreasQueObservaron, DateTimeOffset Fecha);
-
-/// <summary>Respuesta a la observación: las áreas que observaron vuelven a quedar pendientes; las demás conservan lo suyo.</summary>
-public sealed record ExpedienteReenviado(OrigenReenvio Origen, string? Respuesta, IReadOnlyList<Guid> AreasReabiertas, DateTimeOffset Fecha);
+/// <summary>El expediente vuelve al tercero; mientras tanto ninguna área emite veredictos. Con requisitos, cuáles se observaron.</summary>
+public sealed record ExpedienteObservado(IReadOnlyList<Guid> AreasQueObservaron, DateTimeOffset Fecha, IReadOnlyList<Guid>? RequisitosObservados = null);
 
 /// <summary>
-/// Un administrador anuló la última observación vigente: el expediente deja de estar devuelto al tercero y la revisión
-/// sigue sin esperar un reenvío (FL-13). El área cuya observación se anuló vuelve a quedar pendiente.
+/// Respuesta a la observación: las áreas que observaron vuelven a quedar pendientes; las demás conservan lo suyo. Con
+/// requisitos, solo los observados vuelven a revisión (<see cref="RequisitosReabiertos"/>).
 /// </summary>
-public sealed record RevisionReanudada(Guid VeredictoAnuladoId, DateTimeOffset Fecha);
+public sealed record ExpedienteReenviado(OrigenReenvio Origen, string? Respuesta, IReadOnlyList<Guid> AreasReabiertas, DateTimeOffset Fecha,
+    IReadOnlyList<Guid>? RequisitosReabiertos = null);
+
+/// <summary>
+/// Un administrador anuló la última observación vigente (o eximió el último requisito observado,
+/// <see cref="RequisitoEximidoId"/>): el expediente deja de estar devuelto al tercero y la revisión sigue sin esperar un
+/// reenvío (FL-13). El área cuya observación se anuló vuelve a quedar pendiente.
+/// </summary>
+public sealed record RevisionReanudada(Guid VeredictoAnuladoId, DateTimeOffset Fecha, Guid? RequisitoEximidoId = null);
 
 public sealed record EtapaAprobada(int Orden, DateTimeOffset Fecha);
 

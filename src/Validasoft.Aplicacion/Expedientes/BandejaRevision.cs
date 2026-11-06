@@ -47,6 +47,9 @@ public sealed class FilaBandeja
 
     public int AprobadoresRequeridos { get; set; }
 
+    /// <summary>Con requisitos: los del alcance del área que aún esperan su decisión.</summary>
+    public int RequisitosPendientes { get; set; }
+
     /// <summary>Desde cuándo espera el área (activación de su etapa o reenvío del tercero).</summary>
     public DateTimeOffset? Desde { get; set; }
 
@@ -80,6 +83,7 @@ public static class ProyeccionBandejaRevision
             EstadoExpediente = e.Estado,
             Aprobaciones = area.Aprobaciones,
             AprobadoresRequeridos = area.AprobadoresRequeridos,
+            RequisitosPendientes = area.RequisitosPorDecidir,
             Desde = area.PendienteDesde,
             ActualizadoEn = e.ActualizadoEn
         }));
