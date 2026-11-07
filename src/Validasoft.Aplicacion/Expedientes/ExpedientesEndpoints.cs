@@ -16,8 +16,9 @@ using Wolverine.Http;
 namespace Validasoft.Aplicacion.Expedientes;
 
 /// <summary>
-/// Expedientes de la empresa activa (<c>X-Empresa</c>): apertura manual, consulta, veredictos de área (flujos sin
-/// requisitos) o de requisito, exención, rechazo, reenvío, anulación y acciones del administrador. Cada expediente es un
+/// Expedientes de la empresa activa (<c>X-Empresa</c>): apertura manual, consulta, decisión del área (sobre el expediente
+/// completo sin requisitos, o sobre sus documentos con requisitos, DA-1) o veredicto de un requisito, exención, rechazo,
+/// reenvío, anulación y acciones del administrador. Cada expediente es un
 /// stream <c>Expediente-{id}</c>; la lectura sale de su proyección inline. Las escrituras aceptan <c>If-Match</c> con la
 /// versión y devuelven <c>ETag</c>.
 /// </summary>
@@ -75,7 +76,7 @@ public static class ExpedientesEndpoints
 
         var pagina = await consulta.OrderBy(e => e.AbiertoEn).ThenBy(e => e.Id).Skip(desde).Take(tamano + 1).ToListAsync(ct);
         var siguiente = pagina.Count > tamano ? Peticiones.EscribirDesplazamiento(desde + tamano) : null;
-        return new PaginaDto<ExpedienteDto>([.. pagina.Take(tamano).Select(e => e.ADto(new Dictionary<Guid, List<Guid>>()))], siguiente);
+        return new PaginaDto<ExpedienteDto>([.. pagina.Take(tamano).Select(e => e.ADto(new Dictionary<Guid, List<Guid>>(), empresa.UsuarioConsultante))], siguiente);
     }
 
     /// <summary>Estado, etapas y áreas con sus veredictos, aprobaciones y miembros que faltan por pronunciarse.</summary>
@@ -97,9 +98,12 @@ public static class ExpedientesEndpoints
     }
 
     /// <summary>
-    /// Veredicto de un miembro del área sobre el expediente completo (flujos sin requisitos, FL-1; con requisitos ⇒ 409
-    /// <c>veredicto-por-requisito</c>). <c>Observado</c> exige motivos; con política <c>Inmediata</c> devuelve el
-    /// expediente al tercero (correo por el outbox) y bloquea los demás veredictos (409).
+    /// Decisión de un miembro del área. Sin requisitos (FL-1) es el veredicto sobre el expediente completo
+    /// (<c>Observado</c> exige motivos). Con requisitos (DA-1) es la decisión del área sobre sus documentos:
+    /// <c>Aprobado</c> («Aprobar área») aprueba de una vez lo que a esta persona le queda por decidir, con
+    /// <c>versiones</c> (todo o nada); <c>Observado</c> observa los documentos de <c>requisitos[]</c> en un solo paso. Una
+    /// observación con política <c>Inmediata</c> devuelve el expediente al tercero (un solo correo por el outbox) y bloquea
+    /// los demás veredictos (409).
     /// </summary>
     [WolverinePost("/api/v1/expedientes/{id}/areas/{areaId}/veredicto")]
     [Authorize(Policy = Permisos.ExpedientesRevisar)]
@@ -109,11 +113,30 @@ public static class ExpedientesEndpoints
         empresa.UsarMensajeria(mensajes);
         var veredicto = LeerVeredicto(dto);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        stream.Aggregate!.AsegurarSinRequisitos();
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+        var expediente = stream.Aggregate!;
+        await AsegurarVinculoNoBloqueadoAsync(empresa, expediente, ct);
         var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
-        var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
-        var eventos = stream.Aggregate!.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, reloj.GetUtcNow());
+        var ahora = reloj.GetUtcNow();
+
+        IReadOnlyList<object> eventos;
+        if (!expediente.ConRequisitos)
+        {
+            var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
+            eventos = expediente.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, ahora);
+        }
+        else if (veredicto == Dominio.Expedientes.Veredicto.Aprobado)
+        {
+            eventos = expediente.AprobarArea(areaId, revisor, dto.Versiones, ahora);
+        }
+        else
+        {
+            var observaciones = new List<ObservacionDeRequisito>();
+            foreach (var requisito in dto.Requisitos ?? [])
+                observaciones.Add(new ObservacionDeRequisito(requisito.RequisitoId, requisito.SobreVersion,
+                    await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, requisito.Motivos, AplicaMotivo.Observacion, ct), requisito.Observacion));
+            eventos = expediente.ObservarArea(areaId, revisor, observaciones, ahora);
+        }
+
         return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
@@ -262,7 +285,7 @@ public static class ExpedientesEndpoints
     {
         var expediente = await empresa.CargarExpedienteAsync(id, ct);
         var areas = expediente.AreaIds.Count == 0 ? [] : await empresa.Sesion.LoadManyAsync<Area>(ct, expediente.AreaIds.ToArray());
-        return expediente.ADto(areas.ToDictionary(a => a.Id, a => a.Miembros));
+        return expediente.ADto(areas.ToDictionary(a => a.Id, a => a.Miembros), empresa.UsuarioConsultante);
     }
 }
 

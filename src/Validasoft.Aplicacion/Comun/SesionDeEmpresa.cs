@@ -33,6 +33,10 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
 
     public Guid EmpresaId => contexto.EmpresaRequerida();
 
+    /// <summary>Id del usuario que consulta si es una persona (identidad delegada o su sesión); nulo para integraciones.</summary>
+    public string? UsuarioConsultante =>
+        contexto.ActorTipo == ActorTipo.Usuario && Guid.TryParse(contexto.ActorId, out var usuarioId) ? usuarioId.ToString() : null;
+
     public IQueryable<Vinculo> Vinculos() => Sesion.Query<Vinculo>().Where(v => v.EmpresaId == EmpresaId);
 
     public async Task<Vinculo> CargarVinculoAsync(Guid id, CancellationToken ct)

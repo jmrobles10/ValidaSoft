@@ -103,10 +103,10 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await ApiAsync<PaginaDto<FilaBandejaDto>>("GET", "/api/v1/bandeja", Delegado(e.Norte, e.Laura), null, 200)).Datos
             .ShouldHaveSingleItem().RequisitosPendientes.ShouldBe(1);
 
-        // Con requisitos no hay veredicto sobre el expediente completo; Compras no revisa la Cámara.
+        // Con requisitos, «Aprobar área» pide la versión de cada documento que decide (DA-1); Compras no revisa la Cámara.
         var porArea = await ApiAsync("POST", $"/api/v1/expedientes/{expedienteId}/areas/{e.Compras.Id}/veredicto", Delegado(e.Norte, e.Laura),
-            new VeredictoDto("Aprobado"), 409);
-        (await CodigoAsync(porArea)).ShouldBe("veredicto-por-requisito");
+            new VeredictoDto("Aprobado"), 422);
+        (await CodigoAsync(porArea)).ShouldBe("versiones-requeridas");
         var fueraDeAlcance = await VeredictoAsync(e, expedienteId, requisitoCamara.Id, e.Compras, e.Laura, new VeredictoDto("Aprobado", SobreVersion: 1), 409);
         (await CodigoAsync(fueraDeAlcance)).ShouldBe("requisito-no-en-alcance");
 
@@ -179,6 +179,113 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
             "veredicto_de_area_emitido", "veredicto_de_requisito_emitido", "veredicto_de_area_emitido", "etapa_aprobada", "expediente_aprobado"
         ]);
         historial[3].ActorTipo.ShouldBe("Tercero"); // la Cámara la adjuntó la carga del tercero (por el outbox)
+    }
+
+    // ---------- decisión por área (DA-1…DA-4) ----------
+
+    [Fact]
+    public async Task Decision_por_area_observacion_multiple_un_solo_correo_y_aprobar_area_hasta_activar_el_vinculo()
+    {
+        var e = await PrepararAsync();
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara"));
+        await AceptarAsync(sesion, vinculo.Id);
+        var expedienteId = (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId!.Value;
+        var url = $"/api/v1/expedientes/{expedienteId}";
+
+        // Cada persona ve lo que «Aprobar área» le aprobaría, con la versión vigente.
+        var visto = await ApiAsync<ExpedienteDto>("GET", url, Delegado(e.Norte, e.Carlos), null, 200);
+        visto.Estado.ShouldBe("EnRevision");
+        var rut = Requisito(visto, "RUT");
+        var camara = Requisito(visto, "CAMARA_COMERCIO");
+        Area(visto, "CUMPLIMIENTO").DocumentosPorDecidir!.ShouldBe([new DocumentoPorDecidirDto(rut.Id, 1), new DocumentoPorDecidirDto(camara.Id, 1)]);
+        Area(visto, "COMPRAS").DocumentosPorDecidir!.ShouldBe([new DocumentoPorDecidirDto(rut.Id, 1)]);
+
+        // Cumplimiento observa RUT y Cámara en una sola llamada ⇒ una sola devolución y un solo correo con ambas observaciones.
+        var sinDocumentos = await AreaAsync(e, expedienteId, e.Cumplimiento, e.Carlos, new VeredictoDto("Observado", ["ilegible"]), 422);
+        (await CodigoAsync(sinDocumentos)).ShouldBe("requisitos-requeridos");
+        var observado = await AreaAsync<ExpedienteDto>(e, expedienteId, e.Cumplimiento, e.Carlos, new VeredictoDto("Observado", Requisitos:
+        [
+            new ObservacionDeRequisitoDto(rut.Id, 1, ["ilegible"], "El RUT no está actualizado."),
+            new ObservacionDeRequisitoDto(camara.Id, 1, ["ilegible"], "La cámara está cortada.")
+        ]));
+        observado.Estado.ShouldBe("Observado");
+        observado.Requisitos!.ShouldAllBe(r => r.Estado == "Observado");
+        Area(observado, "CUMPLIMIENTO").Estado.ShouldBe("Observada");
+        Area(observado, "COMPRAS").DocumentosPorDecidir!.ShouldBeEmpty(); // devuelto: nadie decide
+
+        var aviso = await fixture.Correos.EsperarAsync(correo, m => m.Asunto.Contains("observaciones"));
+        aviso.Texto.ShouldContain(rut.TipoDocumento.Nombre);
+        aviso.Texto.ShouldContain(camara.TipoDocumento.Nombre);
+        aviso.Texto.ShouldContain("El RUT no está actualizado.");
+        aviso.Texto.ShouldContain("La cámara está cortada.");
+        aviso.Texto.ShouldNotContain("CUMPLIMIENTO");
+
+        // El tercero sube versiones nuevas de ambos y reenvía.
+        await SubirAsync(sesion, "RUT", Pdf("RUT actualizado"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara completa"));
+        await EsperarAsync(e.Norte, expedienteId, x => x.Requisitos!.All(r => r.VersionActual!.N == 2));
+        (await TerceroAsync<ExpedientePublicoDto>("POST", $"/public/v1/expedientes/{expedienteId}/reenviar", sesion.AccessToken,
+            new ReenviarExpedienteDto(), 200)).Estado.ShouldBe("EnRevision");
+        fixture.Correos.Para(correo).Count(m => m.Asunto.Contains("observaciones")).ShouldBe(1);
+
+        // Compras «Aprobar área» con lo que leyó.
+        var leidoPorLaura = await ApiAsync<ExpedienteDto>("GET", url, Delegado(e.Norte, e.Laura), null, 200);
+        var deCompras = Area(leidoPorLaura, "COMPRAS").DocumentosPorDecidir!;
+        deCompras.ShouldBe([new DocumentoPorDecidirDto(rut.Id, 2)]);
+        var comprasAprobo = await AreaAsync<ExpedienteDto>(e, expedienteId, e.Compras, e.Laura,
+            new VeredictoDto("Aprobado", Versiones: deCompras.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+        Area(comprasAprobo, "COMPRAS").Estado.ShouldBe("Aprobada");
+        Area(comprasAprobo, "COMPRAS").Veredictos.ShouldContain(v => v.Derivado && v.Vigente && v.Origen == "Humano");
+        var ya = await AreaAsync(e, expedienteId, e.Compras, e.Laura,
+            new VeredictoDto("Aprobado", Versiones: deCompras.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)), 409);
+        (await CodigoAsync(ya)).ShouldBe("area-ya-se-pronuncio");
+
+        // Cumplimiento lee y, antes de decidir, llega la Cámara v3 ⇒ 409 version-superada y no se aprueba nada.
+        var leidoPorCarlos = Area(await ApiAsync<ExpedienteDto>("GET", url, Delegado(e.Norte, e.Carlos), null, 200), "CUMPLIMIENTO")
+            .DocumentosPorDecidir!;
+        leidoPorCarlos.ShouldBe([new DocumentoPorDecidirDto(rut.Id, 2), new DocumentoPorDecidirDto(camara.Id, 2)]);
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara v3"));
+        await EsperarAsync(e.Norte, expedienteId, x => Requisito(x, "CAMARA_COMERCIO").VersionActual!.N == 3);
+
+        var faltan = await AreaAsync(e, expedienteId, e.Cumplimiento, e.Carlos,
+            new VeredictoDto("Aprobado", Versiones: new Dictionary<Guid, int> { [rut.Id] = 2 }), 422);
+        var problemaFaltan = await faltan.ReadAsJsonAsync<JsonElement>();
+        problemaFaltan.GetProperty("codigo").GetString().ShouldBe("versiones-requeridas");
+        problemaFaltan.GetProperty("requisitos").EnumerateArray().Select(r => r.GetProperty("requisitoId").GetGuid()).ShouldBe([camara.Id]);
+
+        var superada = await AreaAsync(e, expedienteId, e.Cumplimiento, e.Carlos,
+            new VeredictoDto("Aprobado", Versiones: leidoPorCarlos.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)), 409);
+        var problema = await superada.ReadAsJsonAsync<JsonElement>();
+        problema.GetProperty("codigo").GetString().ShouldBe("version-superada");
+        var afectado = problema.GetProperty("requisitos").EnumerateArray().ShouldHaveSingleItem();
+        afectado.GetProperty("requisitoId").GetGuid().ShouldBe(camara.Id);
+        afectado.GetProperty("versionVigente").GetInt32().ShouldBe(3);
+        var sinCambios = await ApiAsync<ExpedienteDto>("GET", url, Delegado(e.Norte, e.Carlos), null, 200);
+        Requisito(sinCambios, "RUT").Areas.Single(a => a.Codigo == "CUMPLIMIENTO").Veredictos.ShouldAllBe(v => !v.Vigente);
+
+        // Vuelve a leer y aprueba: lo aprobado coincide con documentosPorDecidir ⇒ expediente aprobado y vínculo activo.
+        var releido = Area(sinCambios, "CUMPLIMIENTO").DocumentosPorDecidir!;
+        releido.ShouldBe([new DocumentoPorDecidirDto(rut.Id, 2), new DocumentoPorDecidirDto(camara.Id, 3)]);
+        var aprobado = await AreaAsync<ExpedienteDto>(e, expedienteId, e.Cumplimiento, e.Carlos,
+            new VeredictoDto("Aprobado", Versiones: releido.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+        aprobado.Estado.ShouldBe("Aprobado");
+        aprobado.Requisitos!.ShouldAllBe(r => r.Estado == "Aprobado");
+        var deCarlos = aprobado.Requisitos!
+            .SelectMany(r => r.Areas.Where(a => a.Codigo == "CUMPLIMIENTO").SelectMany(a => a.Veredictos.Where(v => v.Vigente))
+                .Select(v => (r.Id, v.SobreVersion, v.Usuario)))
+            .ToList();
+        var carlos = e.Carlos.Usuario.Id.ToString();
+        deCarlos.ShouldBe([(rut.Id, (int?)2, (string?)carlos), (camara.Id, (int?)3, (string?)carlos)]);
+        (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Activo");
+
+        var historial = await ApiAsync<List<EventoHistorialDto>>("GET", $"{url}/historial", Admin(e.Norte), null, 200);
+        historial.Count(h => h.Tipo == "expediente_observado").ShouldBe(1);
+        // Dos observaciones, el RUT de Compras y el RUT y la Cámara de Cumplimiento.
+        historial.Count(h => h.Tipo == "veredicto_de_requisito_emitido").ShouldBe(5);
     }
 
     // ---------- exención ----------
@@ -481,6 +588,12 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         int esperado) =>
         ApiAsync("POST", $"/api/v1/expedientes/{expedienteId}/requisitos/{requisitoId}/areas/{area.Id}/veredicto", Delegado(e.Norte, persona), dto,
             esperado);
+
+    private Task<T> AreaAsync<T>(Escenario e, Guid expedienteId, AreaDto area, Persona persona, VeredictoDto dto) =>
+        ApiAsync<T>("POST", $"/api/v1/expedientes/{expedienteId}/areas/{area.Id}/veredicto", Delegado(e.Norte, persona), dto, 200);
+
+    private Task<IScenarioResult> AreaAsync(Escenario e, Guid expedienteId, AreaDto area, Persona persona, VeredictoDto dto, int esperado) =>
+        ApiAsync("POST", $"/api/v1/expedientes/{expedienteId}/areas/{area.Id}/veredicto", Delegado(e.Norte, persona), dto, esperado);
 
     private static RequisitoExpedienteDto Requisito(ExpedienteDto expediente, string codigo) =>
         expediente.Requisitos!.Single(r => r.TipoDocumento.Codigo == codigo);

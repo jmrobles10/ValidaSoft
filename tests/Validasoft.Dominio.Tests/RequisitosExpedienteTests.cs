@@ -12,7 +12,7 @@ namespace Validasoft.Dominio.Tests;
 /// concretos de su alcance y su aprobación se deriva de ellos. Escenario base: Compras y Cumplimiento en paralelo; RUT
 /// (ambas) y Cámara de comercio (solo Cumplimiento).
 /// </summary>
-public class RequisitosExpedienteTests
+public partial class RequisitosExpedienteTests
 {
     private static readonly DateTimeOffset Ahora = new(2026, 11, 6, 9, 0, 0, TimeSpan.FromHours(-5));
 
@@ -38,10 +38,10 @@ public class RequisitosExpedienteTests
             [_cumplimiento], null, version);
 
     private FlujoParaExpediente Flujo(PoliticaDevolucion politica = PoliticaDevolucion.Inmediata, bool comprasAutomatica = false,
-        bool enSecuencia = false)
+        bool enSecuencia = false, int aprobadoresCumplimiento = 1)
     {
         var compras = new AreaDelFlujo(_compras, "COMPRAS", "Compras", 1, false, comprasAutomatica, null);
-        var cumplimiento = new AreaDelFlujo(_cumplimiento, "CUMPLIMIENTO", "Cumplimiento", 1, true, false, null);
+        var cumplimiento = new AreaDelFlujo(_cumplimiento, "CUMPLIMIENTO", "Cumplimiento", aprobadoresCumplimiento, true, false, null);
         IReadOnlyList<EtapaDelFlujo> etapas = enSecuencia
             ? [new EtapaDelFlujo(1, [compras]), new EtapaDelFlujo(2, [cumplimiento])]
             : [new EtapaDelFlujo(1, [compras, cumplimiento])];
@@ -140,8 +140,9 @@ public class RequisitosExpedienteTests
         Codigo(() => e.EmitirVeredictoDeRequisito(_rut, _compras, _ana, Veredicto.Aprobado, null, [], null, Ahora)).ShouldBe("sobre-version-requerida");
         Codigo(() => e.EmitirVeredictoDeRequisito(_rut, _compras, _ana, Veredicto.Aprobado, 2, [], null, Ahora)).ShouldBe("version-superada");
         Codigo(() => e.EmitirVeredictoDeRequisito(_rut, _compras, _ana, Veredicto.Observado, 1, [], null, Ahora)).ShouldBe("motivo-requerido");
-        // Con requisitos, el área no decide sobre el expediente completo.
-        Codigo(() => e.EmitirVeredicto(_compras, _ana, Veredicto.Aprobado, [], null, Ahora)).ShouldBe("veredicto-por-requisito");
+        // Con requisitos, la decisión del área pide las versiones de sus documentos o los documentos que observa (DA-1).
+        Codigo(() => e.EmitirVeredicto(_compras, _ana, Veredicto.Aprobado, [], null, Ahora)).ShouldBe("versiones-requeridas");
+        Codigo(() => e.EmitirVeredicto(_compras, _ana, Veredicto.Observado, [Ilegible], null, Ahora)).ShouldBe("requisitos-requeridos");
 
         e = Aprobar(e, _rut, _compras, _ana);
         Codigo(() => e.EmitirVeredictoDeRequisito(_rut, _compras, _beto, Veredicto.Aprobado, 1, [], null, Ahora)).ShouldBe("requisito-ya-decidido");
