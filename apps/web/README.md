@@ -28,7 +28,7 @@ pnpm --filter @validasoft/api-client openapi:actualizar   # baja un snapshot nue
 ```bash
 docker compose -f infra/compose/compose.yaml up -d                       # PostgreSQL, Mailpit (:8025) y MinIO (:9000)
 ASPNETCORE_ENVIRONMENT=Development Validasoft__Correo__UrlPublica=http://localhost:5181 dotnet run --project src/Validasoft.Api   # API en :5080; los enlaces del correo apuntan a apps/public
-pnpm semilla:dev                                                          # tenant, empresas, sistema DEMO, usuarios, vínculos, flujo, textos legales y documentos exigidos
+pnpm semilla:dev                                                          # tenant, empresas, sistema DEMO, usuarios, vínculos, flujo con requisitos y textos legales
 pnpm dev                                                                  # Vite en :5173 (si está ocupado: pnpm --filter @validasoft/web exec vite --port 5180)
 ```
 
@@ -61,14 +61,15 @@ La fuente es el artifact *Design System* de Validasoft (README, tokens y `codigo
 
 ## Bandeja, expedientes y flujos (fase «Flujos aprobatorios», docs/05 §2.4.1)
 
-- **Bandeja** (`/e/:empresa/bandeja`, `expedientes:leer`): una fila por expediente × área con folio, tercero, tipo, área, estado del área, aprobaciones x/N y desde cuándo; filtros de área y estado en la URL; cursor. Es la primera pantalla de quien lee expedientes. El administrador ve el botón de **aperturas pendientes** (FL-6) y abre cada expediente desde ahí.
+- **Bandeja** (`/e/:empresa/bandeja`, `expedientes:leer`): una fila por expediente × área con folio, tercero, tipo, área, estado del área, aprobaciones x/N y desde cuándo y, en flujos con requisitos, cuántos documentos le quedan por decidir al área; filtros de área y estado en la URL; cursor. Es la primera pantalla de quien lee expedientes. El administrador ve el botón de **aperturas pendientes** (FL-6) y abre cada expediente desde ahí.
+- **Documentos que pide el flujo** (fase «Requisitos», docs/05 §2.4.2): en el expediente, cada requisito con su estado, versión vigente (fecha y SHA-256), «Ver» en el visor y, por cada área que lo revisa, su estado, aprobaciones x/N y veredictos sobre la versión (los invalidados por una versión nueva, tachados con «era sobre la vN»). «Aprobar u observar» envía `sobreVersion`; si llega otra versión mientras el diálogo está abierto, avisa «Llegó la versión N» y no deja confirmar (409 `version-superada` se explica igual). El administrador exime con justificación. Mientras falten obligatorios, «Esperando documentos del tercero» con la lista. Con requisitos, la tarjeta del área ya no ofrece el veredicto por área (409 `veredicto-por-requisito`) y muestra sus documentos por decidir. Reglas en `features/expedientes/requisitos.ts`.
 - **Expediente** (`/e/:empresa/expedientes/:id`): etapas en secuencia y, en cada una, las áreas en paralelo con su estado, aprobaciones, quién falta, veredictos (superados y anulados atenuados) y acciones; última respuesta del tercero; datos (flujo y versión, política de devolución, separación de funciones); historial.
   - Veredicto: Aprobar u Observar con motivos tipificados (`GET /motivos`, filtrados por `aplicaA`) y observación para el tercero. Rechazo (terminal) solo en áreas con permiso, también con el expediente devuelto (FL-14).
   - Administrador (`expedientes:administrar`): reenviar en nombre del tercero, anular el expediente, aprobar en nombre de un área y anular un veredicto, siempre con justificación.
   - `features/expedientes/reglas.ts` replica las guardas del agregado para ocultar o explicar ("Devuelto al tercero: espera su respuesta", "Ya emitiste tu veredicto…"). Las decisiones van **sin `If-Match`** (las áreas deciden en paralelo y el servidor serializa, FL-12); ante 409/403 el diálogo muestra el mensaje del código, el expediente se recarga detrás y, si la decisión ya no aplica, el botón se deshabilita.
 - **Vínculo**: tarjeta *Expediente* con el expediente en curso, el aviso de apertura pendiente y, para el administrador, **Abrir expediente** (flujo por defecto o uno publicado).
 - **Configuración › Motivos** (grupo): los 8 de la plataforma (fijos) y los propios, con código, categoría, uso y texto al tercero.
-- **Configuración › Flujos aprobatorios** (empresa, `flujos:*`): lista con versión publicada y borrador; flujo por defecto por tipo de vínculo; editor con etapas (subir, bajar, quitar), áreas en paralelo con aprobadores (1–10), puede rechazar, automática y SLA, política de devolución y separación de funciones; guardar borrador, publicar con confirmación y ver versiones anteriores en solo lectura. `features/flujos/editor.ts` valida como `DefinicionDeFlujo.Validar` (más aprobadores que miembros es aviso, no error).
+- **Configuración › Flujos aprobatorios** (empresa, `flujos:*`): lista con versión publicada y borrador; flujo por defecto por tipo de vínculo; editor con etapas (subir, bajar, quitar), áreas en paralelo con aprobadores (1–10), puede rechazar, automática y SLA, política de devolución y separación de funciones; sección «Documentos que pide» (tipo, obligatorio, qué áreas lo revisan —ninguna = todas— y aprobadores); guardar borrador, publicar con confirmación y ver versiones anteriores en solo lectura. Con documentos, toda área debe revisar al menos uno (`area-sin-requisitos`), igual que la API. `features/flujos/editor.ts` valida como `DefinicionDeFlujo.Validar` (más aprobadores que miembros es aviso, no error).
 - Pestañas y secciones se muestran según los scopes del token: `flujos:leer|escribir`, `expedientes:leer|revisar|administrar`.
 
 ## Decisiones de implementación
@@ -86,15 +87,15 @@ La fuente es el artifact *Design System* de Validasoft (README, tokens y `codigo
 
 1. Los POST que devuelven `Results.Created` se publican como `IResult` en OpenAPI y todas las respuestas aparecen como 200/404; tampoco hay `operationId` útiles. Declarar `Produces<T>(201)`, errores ProblemDetails y nombres de operación.
 2. `estado`, `origen` y `rol` se publican como `string` y los enteros como `integer | string`.
-3. **Nombres de personas para quien no administra usuarios.** El historial (vínculo y expediente: `EventoHistorialDto.actorId`), `VeredictoEmitidoDto.usuario` y `anuladoPor`, `AreaExpedienteDto.miembrosPendientes` y `RechazoDto.usuario` traen solo ids, y todo `GET /api/v1/usuarios*` exige `usuarios:administrar`. Un revisor u oficial ve «Persona del área» y «Usuario» en lugar del nombre; solo la administradora los ve (`useNombresUsuarios`). Pedido, en orden de preferencia:
-   - Incluir `{ id, nombre }` donde hoy va el id (el nombre al momento del hecho, como `actorNombre` en el historial).
-   - O un `GET /api/v1/usuarios/resumen?ids=…` → `[{ id, nombre }]` legible con `expedientes:leer` o `vinculos:leer`, limitado a personas del tenant. La UI solo tendría que cambiar `useNombresUsuarios`.
+3. ~~Nombres de personas~~: resuelto con `GET /usuarios/resumen?ids=` (RQ-9); `useNombresUsuarios(empresaId, ids)` pide solo los ids que aparecen en pantalla. «Persona del área» queda como respaldo sin `expedientes:leer` ni `vinculos:leer`.
 4. `VinculoDto` no trae nombre ni identificación del tercero: el listado consulta `GET /terceros/{id}` por fila (con caché).
 5. No hay CORS ni cabeceras CSP/`frame-ancestors` para servir el embed desde otro origen; tampoco un endpoint "quién soy" (nombre de la persona de la sesión).
 6. `TerceroResumenDto.identificacion` (expediente y bandeja) llega como la clave interna `CO|NIT|900123456`, sin dígito de verificación; la UI muestra "NIT 900123456" (`identificacionResumida`). Pedir la identificación legible con su DV, como en `TerceroDto`.
 7. Los POST que crean flujo, motivo y expediente siguen publicándose como `IResult` y los enums de expedientes y flujos como `string`; `transformar.ts` los corrige.
 
 **Documentos del vínculo** (`features/documentos`, en el detalle del vínculo, `documentos:leer`): lo que el tercero compartió con este vínculo (`GET /vinculos/{id}/documentos`), con tipo, versión, fecha y SHA-256 corto. «Ver o descargar» (`documentos:descargar`) pide la URL prefirmada (`POST …/descarga`, auditada) y abre PDF e imágenes en un visor dentro de la app: como la URL trae `Content-Disposition: attachment`, el visor lee el archivo y lo muestra desde un `blob:`. Antes de que el tercero acepte la lista está vacía (B-1).
+
+**Quién soy**: la cabecera embebida muestra «Persona · desde SRM» con `GET /yo` (`sesion/useYo.ts`).
 
 **Pedidos al backend de documentos**: (a) una variante `inline` de la descarga (p. ej. `?disposicion=inline`) para que el visor no tenga que leer el archivo en memoria; (b) CORS del bucket para el origen de `apps/web` en producción (el visor lee la URL prefirmada con `fetch`); en desarrollo MinIO lo permite. Los pedidos de la app del tercero están en [apps/public/README.md](../public/README.md).
 

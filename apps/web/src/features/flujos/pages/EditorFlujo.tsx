@@ -12,10 +12,10 @@ import { useAvisos } from '../../../shared/useAvisos';
 import { useAreas } from '../../configuracion/areas/api';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { useTiposVinculo } from '../../vinculos/api';
-import { useCrearFlujo, useDefinirPorDefecto, useEditarFlujo, useFlujo, usePublicarFlujo, useVersionesFlujo } from '../api';
+import { useCrearFlujo, useTiposDocumento, useDefinirPorDefecto, useEditarFlujo, useFlujo, usePublicarFlujo, useVersionesFlujo } from '../api';
 import { FormularioFlujo } from '../components/FormularioFlujo';
 import { VersionesFlujo } from '../components/VersionesFlujo';
-import { borradorDesdeVersion, borradorVacio, erroresBloqueantes, etapasADto, firmaBorrador, normalizarCodigo, validarFlujo, type BorradorFlujo } from '../editor';
+import { borradorDesdeVersion, borradorVacio, erroresBloqueantes, etapasADto, firmaBorrador, normalizarCodigo, requisitosADto, validarFlujo, type BorradorFlujo } from '../editor';
 
 /**
  * Crear (`flujos/nuevo`) o editar un flujo. Con borrador, se edita el borrador; con solo versión publicada, "Editar"
@@ -34,6 +34,7 @@ export function EditorFlujo() {
   const versiones = useVersionesFlujo(empresa.id, nuevo ? '' : flujoId);
   const areas = useAreas(empresa.id, permisos.puede(SCOPES.configuracionLeer));
   const tipos = useTiposVinculo(empresa.id, nuevo && permisos.puede(SCOPES.configuracionLeer));
+  const tiposDocumento = useTiposDocumento(permisos.puede(SCOPES.configuracionLeer));
   const crear = useCrearFlujo(empresa.id);
   const editar = useEditarFlujo(empresa.id, flujoId);
   const publicar = usePublicarFlujo(empresa.id, flujoId);
@@ -79,7 +80,7 @@ export function EditorFlujo() {
   const mostrado: BorradorFlujo | null =
     versionVista && datos ? borradorDesdeVersion(base(datos), versionVista) : (borrador ?? (datos?.publicada ? borradorDesdeVersion(base(datos), datos.publicada) : null));
   const editando = !versionVista && borrador !== null && puedeEscribir;
-  const errores = borrador ? validarFlujo(borrador, listaAreas, nuevo) : [];
+  const errores = borrador ? validarFlujo(borrador, listaAreas, nuevo, tiposDocumento.data ?? []) : [];
   const bloqueantes = erroresBloqueantes(errores);
   const visibles = editando ? (intentado ? errores : errores.filter((e) => e.aviso)) : [];
   const sinGuardar = Boolean(borrador && (nuevo || !datos?.borrador || firmaBorrador(borrador) !== firmaBorrador(borradorDesdeVersion(base(datos), datos.borrador))));
@@ -89,7 +90,13 @@ export function EditorFlujo() {
   const guardar = () => {
     setIntentado(true);
     if (!borrador || bloqueantes.length > 0) return;
-    const comun = { nombre: borrador.nombre.trim(), etapas: etapasADto(borrador.etapas), politicaDevolucion: borrador.politicaDevolucion, separacionDeFunciones: borrador.separacionDeFunciones };
+    const comun = {
+      nombre: borrador.nombre.trim(),
+      etapas: etapasADto(borrador.etapas),
+      politicaDevolucion: borrador.politicaDevolucion,
+      separacionDeFunciones: borrador.separacionDeFunciones,
+      requisitos: requisitosADto(borrador.requisitos),
+    };
     if (nuevo) {
       crear.mutate(
         { ...comun, codigo: normalizarCodigo(borrador.codigo), tipoVinculo: borrador.tipoVinculo },
@@ -187,6 +194,7 @@ export function EditorFlujo() {
             onCambiar={(b) => setBorrador(b)}
             areas={listaAreas}
             tipos={nuevo ? (tipos.data ?? []) : null}
+            tiposDocumento={tiposDocumento.data ?? []}
             errores={visibles}
             soloLectura={!editando}
           />

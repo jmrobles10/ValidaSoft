@@ -7,9 +7,11 @@
 import type { Veredicto } from './veredicto';
 import type { VeredictoDtoMotivos } from './veredictoDtoMotivos';
 import type { VeredictoDtoObservacion } from './veredictoDtoObservacion';
+import type { VeredictoDtoSobreVersion } from './veredictoDtoSobreVersion';
 
 export interface VeredictoDto {
   veredicto: Veredicto;
   motivos?: VeredictoDtoMotivos;
   observacion?: VeredictoDtoObservacion;
+  sobreVersion?: VeredictoDtoSobreVersion;
 }

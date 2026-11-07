@@ -6,9 +6,11 @@
  */
 import type { MotivoPublicoDto } from './motivoPublicoDto';
 import type { ObservacionPublicaDtoObservacion } from './observacionPublicaDtoObservacion';
+import type { ObservacionPublicaDtoRequisito } from './observacionPublicaDtoRequisito';
 
 export interface ObservacionPublicaDto {
   motivos: MotivoPublicoDto[];
   observacion: ObservacionPublicaDtoObservacion;
   fecha: string;
+  requisito?: ObservacionPublicaDtoRequisito;
 }

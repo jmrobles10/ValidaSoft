@@ -1447,6 +1447,68 @@
         }
       }
     },
+    "/api/v1/yo": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"
+        ],
+        "summary": "GET_api_v1_yo",
+        "description": "GET_api_v1_yo",
+        "operationId": "GET_api_v1_yo",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/YoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios/resumen": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"
+        ],
+        "summary": "GET_api_v1_usuarios_resumen",
+        "description": "GET_api_v1_usuarios_resumen",
+        "operationId": "GET_api_v1_usuarios_resumen",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioResumenDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/flujos": {
       "post": {
         "tags": [
@@ -2005,6 +2067,125 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VeredictoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_requisitos_requisitoId_areas_areaId_veredicto",
+        "description": "POST_api_v1_expedientes_id_requisitos_requisitoId_areas_areaId_veredicto",
+        "operationId": "POST_api_v1_expedientes_id_requisitos_requisitoId_areas_areaId_veredicto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requisitoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "areaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VeredictoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_requisitos_requisitoId_eximir",
+        "description": "POST_api_v1_expedientes_id_requisitos_requisitoId_eximir",
+        "operationId": "POST_api_v1_expedientes_id_requisitos_requisitoId_eximir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requisitoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JustificacionDto"
               }
             }
           },
@@ -4092,15 +4273,6 @@
               "null",
               "boolean"
             ]
-          },
-          "exigencias": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/ExigenciaDto"
-            }
           }
         }
       },
@@ -4222,6 +4394,51 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "AreaDeRequisitoDto": {
+        "required": [
+          "areaId",
+          "codigo",
+          "estado",
+          "aprobadoresRequeridos",
+          "aprobaciones",
+          "veredictos"
+        ],
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "aprobadoresRequeridos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aprobaciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "veredictos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VeredictoEmitidoDto"
+            }
           }
         }
       },
@@ -4349,6 +4566,15 @@
             "items": {
               "$ref": "#/components/schemas/VeredictoEmitidoDto"
             }
+          },
+          "requisitosPorDecidir": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -4763,6 +4989,15 @@
           "separacionDeFunciones": {
             "type": "boolean",
             "default": false
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RequisitoDelFlujoDto"
+            }
           }
         }
       },
@@ -4953,15 +5188,6 @@
               "null",
               "string"
             ]
-          },
-          "exigencias": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/ExigenciaDto"
-            }
           }
         }
       },
@@ -5326,6 +5552,15 @@
               "null",
               "boolean"
             ]
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RequisitoDelFlujoDto"
+            }
           }
         }
       },
@@ -5396,6 +5631,22 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "EmpresaResumenDto": {
+        "required": [
+          "id",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
           }
         }
       },
@@ -5540,40 +5791,23 @@
           }
         }
       },
-      "ExigenciaDocumentoDto": {
+      "ExencionDto": {
         "required": [
-          "empresaId",
-          "tipoVinculoId",
-          "tipoVinculo"
+          "por",
+          "justificacion",
+          "fecha"
         ],
         "type": "object",
         "properties": {
-          "empresaId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tipoVinculoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "tipoVinculo": {
+          "por": {
             "type": "string"
-          }
-        }
-      },
-      "ExigenciaDto": {
-        "required": [
-          "empresaId",
-          "tipoVinculo"
-        ],
-        "type": "object",
-        "properties": {
-          "empresaId": {
-            "type": "string",
-            "format": "uuid"
           },
-          "tipoVinculo": {
+          "justificacion": {
             "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -5713,6 +5947,15 @@
               "string"
             ],
             "format": "int64"
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RequisitoExpedienteDto"
+            }
           }
         }
       },
@@ -5766,6 +6009,24 @@
           "actualizadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RequisitoPublicoDto"
+            }
+          },
+          "requisitosFaltantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -5856,6 +6117,15 @@
           "actualizadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "requisitosPendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -6044,6 +6314,15 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RequisitoDelFlujoDto"
+            }
           }
         }
       },
@@ -6389,6 +6668,12 @@
           "fecha": {
             "type": "string",
             "format": "date-time"
+          },
+          "requisito": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6592,6 +6877,158 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RequisitoDelFlujoDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tipoDocumento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "obligatorio": {
+            "type": "boolean",
+            "default": true
+          },
+          "areasQueRevisan": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "aprobadoresRequeridos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RequisitoExpedienteDto": {
+        "required": [
+          "id",
+          "tipoDocumento",
+          "obligatorio",
+          "estado",
+          "versionActual",
+          "reenvios",
+          "exencion",
+          "areas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoDocumento": {
+            "$ref": "#/components/schemas/TipoDocumentoRequisitoDto"
+          },
+          "obligatorio": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "versionActual": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VersionRequisitoDto"
+              }
+            ]
+          },
+          "reenvios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "exencion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExencionDto"
+              }
+            ]
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreaDeRequisitoDto"
+            }
+          }
+        }
+      },
+      "RequisitoPublicoDto": {
+        "required": [
+          "id",
+          "tipoDocumento",
+          "obligatorio",
+          "estado",
+          "versionActual",
+          "observaciones"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoDocumento": {
+            "$ref": "#/components/schemas/TipoDocumentoRequisitoDto"
+          },
+          "obligatorio": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "versionActual": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VersionRequisitoDto"
+              }
+            ]
+          },
+          "observaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObservacionPublicaDto"
+            }
           }
         }
       },
@@ -7076,6 +7513,37 @@
           }
         }
       },
+      "TipoDocumentoRequisitoDto": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "tipoCanonico",
+          "ambito"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "tipoCanonico": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ambito": {
+            "type": "string"
+          }
+        }
+      },
       "TipoDocumentoResumenDto": {
         "required": [
           "codigo",
@@ -7114,7 +7582,6 @@
           "diasGracia",
           "diasRevalidacion",
           "activo",
-          "exigencias",
           "creadoEn"
         ],
         "type": "object",
@@ -7188,12 +7655,6 @@
           },
           "activo": {
             "type": "boolean"
-          },
-          "exigencias": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExigenciaDocumentoDto"
-            }
           },
           "creadoEn": {
             "type": "string",
@@ -7353,6 +7814,22 @@
           }
         }
       },
+      "UsuarioResumenDto": {
+        "required": [
+          "id",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
       "VeredictoDto": {
         "required": [
           "veredicto"
@@ -7376,6 +7853,15 @@
               "null",
               "string"
             ]
+          },
+          "sobreVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -7448,6 +7934,23 @@
               "null",
               "string"
             ]
+          },
+          "sobreVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalidado": {
+            "type": "boolean",
+            "default": false
+          },
+          "derivado": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -7553,6 +8056,36 @@
                 "$ref": "#/components/schemas/HechosDto"
               }
             ]
+          }
+        }
+      },
+      "VersionRequisitoDto": {
+        "required": [
+          "documentoId",
+          "n",
+          "sha256",
+          "cargadaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "n": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "cargadaEn": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -7745,6 +8278,76 @@
             "format": "uuid"
           }
         }
+      },
+      "YoDto": {
+        "required": [
+          "actorTipo",
+          "actorId",
+          "tenantId",
+          "usuario",
+          "roles",
+          "permisos",
+          "sistema",
+          "empresas",
+          "empresaActiva"
+        ],
+        "type": "object",
+        "properties": {
+          "actorTipo": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "usuario": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UsuarioResumenDto"
+              }
+            ]
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RolAsignadoDto"
+            }
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sistema": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaResumenDto"
+            }
+          },
+          "empresaActiva": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
       }
     }
   },
@@ -7778,6 +8381,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.SesionesUsuarioEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Flujos.FlujosEndpoints"

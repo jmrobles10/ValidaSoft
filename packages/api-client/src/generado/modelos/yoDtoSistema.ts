@@ -4,6 +4,5 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { ExigenciaDto } from './exigenciaDto';
 
-export type CrearTipoDocumentoDtoExigencias = null | ExigenciaDto[];
+export type YoDtoSistema = null | string;

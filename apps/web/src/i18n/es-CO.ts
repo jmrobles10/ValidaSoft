@@ -7,6 +7,7 @@ export const esCO = {
     nombre: 'Validasoft',
     tema: { claro: 'Usar tema claro', oscuro: 'Usar tema oscuro' },
     sesionDe: 'Sesión desde {{sistema}}',
+    sesionDePersona: '{{persona}} · desde {{sistema}}',
     venceEn: 'La sesión vence en {{minutos}} min',
   },
   nav: {

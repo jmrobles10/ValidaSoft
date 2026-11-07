@@ -8,7 +8,6 @@ import type { TipoDocumentoTenantDtoTipoCanonico } from './tipoDocumentoTenantDt
 import type { TipoDocumentoTenantDtoVersionCanonico } from './tipoDocumentoTenantDtoVersionCanonico';
 import type { TipoDocumentoTenantDtoTextoAyuda } from './tipoDocumentoTenantDtoTextoAyuda';
 import type { ReglaFrescuraDto } from './reglaFrescuraDto';
-import type { ExigenciaDocumentoDto } from './exigenciaDocumentoDto';
 
 export interface TipoDocumentoTenantDto {
   id: string;
@@ -24,6 +23,5 @@ export interface TipoDocumentoTenantDto {
   diasGracia: number;
   diasRevalidacion: number;
   activo: boolean;
-  exigencias: ExigenciaDocumentoDto[];
   creadoEn: string;
 }

@@ -5,21 +5,25 @@ import { SearchX, Upload } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
-import { useExpedientePublico, useReenviarExpediente } from '../shared/api';
+import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
 import { mensajeDeError } from '../shared/errores';
+import { observacionesGenerales } from './requisitos';
+import { Observacion, RequisitosDelExpediente } from './RequisitosDelExpediente';
 
 const MAXIMO_RESPUESTA = 4000;
 
 /**
- * Mi revisión con una empresa (`ExpedientePublicoDto`): estado, observaciones con los textos de sus motivos (nunca
- * revisores ni áreas internas, FL-10) y, si está devuelto, la respuesta con «Enviar respuesta» (reenviar).
+ * Mi revisión con una empresa (`ExpedientePublicoDto`): estado, los documentos que pide con lo que falta y lo
+ * observado (con sus motivos, nunca revisores ni áreas internas, FL-10), subir directo desde cada documento y, si está
+ * devuelto, «Enviar respuesta» (reenviar) con o sin versión nueva (RQ-7).
  */
 export function PaginaExpediente() {
   const { t } = useTranslation();
   const { id = '' } = useParams();
   const consulta = useExpedientePublico(id);
+  const vinculos = useVinculosPublicos();
   const reenvio = useReenviarExpediente(id);
   const mostrar = useAvisos((s) => s.mostrar);
   const [respuesta, setRespuesta] = useState('');
@@ -34,7 +38,11 @@ export function PaginaExpediente() {
 
   const expediente = consulta.data;
   const empresa = expediente.empresa.nombre;
-  const observaciones = [...expediente.observaciones].sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const conRequisitos = (expediente.requisitos?.length ?? 0) > 0;
+  const faltantes = expediente.requisitosFaltantes ?? 0;
+  // Con documentos, cada observación va en su tarjeta; aquí quedan las del expediente completo.
+  const observaciones = (conRequisitos ? observacionesGenerales(expediente) : [...expediente.observaciones]).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const vinculoId = vinculos.data?.find((v) => v.expedienteId === expediente.id)?.id ?? null;
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
@@ -67,13 +75,19 @@ export function PaginaExpediente() {
             {t('expediente.actualizado', { fecha: formatearFecha(expediente.actualizadoEn) })}
           </Typography>
         </Stack>
-        <Typography sx={{ fontSize: 15, lineHeight: '22px' }}>{t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}</Typography>
+        <Typography sx={{ fontSize: 15, lineHeight: '22px' }}>
+          {expediente.estado === 'Abierto' && faltantes > 0
+            ? t('expediente.faltan', { count: faltantes, empresa })
+            : t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}
+        </Typography>
         {expediente.reenvios > 0 && (
           <Typography color="text.secondary" sx={{ fontSize: 14, mt: 1 }}>
             {t('expediente.reenvios', { count: expediente.reenvios })}
           </Typography>
         )}
       </Card>
+
+      {conRequisitos && <RequisitosDelExpediente expediente={expediente} vinculoId={vinculoId} />}
 
       {observaciones.length > 0 && (
         <Box component="section" aria-labelledby="titulo-observaciones" sx={{ mb: 2 }}>
@@ -82,22 +96,8 @@ export function PaginaExpediente() {
           </Typography>
           <Stack spacing={1.5}>
             {observaciones.map((o) => (
-              <Card key={o.fecha} sx={{ p: 2 }}>
-                <Typography color="text.secondary" sx={{ fontSize: 13, mb: 1 }}>
-                  {t('expediente.observacionDel', { fecha: formatearFecha(o.fecha) })}
-                </Typography>
-                <Stack component="ul" spacing={1} sx={{ p: 0, m: 0, listStyle: 'none' }}>
-                  {o.motivos.map((m) => (
-                    <Typography component="li" key={m.codigo} sx={{ fontSize: 15, lineHeight: '22px' }}>
-                      {m.texto}
-                    </Typography>
-                  ))}
-                </Stack>
-                {o.observacion && (
-                  <Typography sx={{ mt: 1.5, p: 1.5, borderRadius: 1, bgcolor: 'superficie.nivel2', fontSize: 15, lineHeight: '22px', whiteSpace: 'pre-wrap' }}>
-                    “{o.observacion}”
-                  </Typography>
-                )}
+              <Card key={o.fecha} sx={{ p: 2, pt: 0.5 }}>
+                <Observacion observacion={o} />
               </Card>
             ))}
           </Stack>
@@ -110,7 +110,7 @@ export function PaginaExpediente() {
             {reenvio.isError && <Alert severity="error">{mensajeDeError(reenvio.error, t)}</Alert>}
             <TextField
               label={t('expediente.respuesta')}
-              helperText={t('expediente.respuestaAyuda')}
+              helperText={conRequisitos ? t('expediente.respuestaAyudaRequisitos') : t('expediente.respuestaAyuda')}
               value={respuesta}
               onChange={(e) => setRespuesta(e.target.value.slice(0, MAXIMO_RESPUESTA))}
               multiline
@@ -121,9 +121,11 @@ export function PaginaExpediente() {
               <Button type="submit" variant="contained" size="large" disabled={reenvio.isPending}>
                 {t('expediente.reenviar')}
               </Button>
-              <Button component={RouterLink} to="/boveda" variant="outlined" size="large" startIcon={<Upload size={18} aria-hidden />}>
-                {t('expediente.subirEnBoveda')}
-              </Button>
+              {!conRequisitos && (
+                <Button component={RouterLink} to="/boveda" variant="outlined" size="large" startIcon={<Upload size={18} aria-hidden />}>
+                  {t('expediente.subirEnBoveda')}
+                </Button>
+              )}
             </Stack>
           </Stack>
         </Card>

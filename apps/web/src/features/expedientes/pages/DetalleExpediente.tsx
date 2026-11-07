@@ -17,7 +17,9 @@ import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
 import { DialogoDecision } from '../components/DialogoDecision';
 import { EtapasExpediente } from '../components/EtapasExpediente';
+import { PanelRequisitos } from '../components/PanelRequisitos';
 import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
+import { usuariosDelExpediente } from '../requisitos';
 import { accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
 
 export function DetalleExpediente() {
@@ -30,7 +32,7 @@ export function DetalleExpediente() {
   const vinculo = useVinculo(empresa.id, consulta.data?.vinculoId ?? '');
   const areas = useAreas(empresa.id, permisos.puede(SCOPES.configuracionLeer));
   const motivos = useMotivos(empresa.id, permisos.puede(SCOPES.configuracionLeer));
-  const nombres = useNombresUsuarios(empresa.id);
+  const nombres = useNombresUsuarios(empresa.id, useMemo(() => (consulta.data ? usuariosDelExpediente(consulta.data) : []), [consulta.data]));
   const [dialogo, setDialogo] = useState<DialogoExpediente | null>(null);
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
 
@@ -173,11 +175,12 @@ export function DetalleExpediente() {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <PanelRequisitos expediente={expediente} contexto={contexto} nombres={nombres} onAccion={setDialogo} />
           <EtapasExpediente expediente={expediente} contexto={contexto} nombres={nombres} motivos={nombresMotivos} onAccion={setDialogo} />
           <UltimaRespuesta expediente={expediente} />
           <DatosExpediente expediente={expediente} />
         </Stack>
-        <HistorialExpediente empresaId={empresa.id} expediente={expediente} nombres={nombres} />
+        <HistorialExpediente empresaId={empresa.id} expediente={expediente} />
       </Box>
 
       {dialogo && (

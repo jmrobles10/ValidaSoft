@@ -14,6 +14,7 @@ import {
   type ContextoRevisor,
   type DialogoExpediente,
 } from '../reglas';
+import { tieneRequisitos } from '../requisitos';
 
 export interface EtapasExpedienteProps {
   expediente: ExpedienteDto;
@@ -70,7 +71,11 @@ function TarjetaArea({
   const nombre = (id: string) => (id === contexto.usuarioId ? t('expedientes.veredictos.tu') : (nombres.get(id) ?? null));
   const pendientes = area.miembrosPendientes.map((id) => nombre(id) ?? t('expedientes.etapas.personaDelArea'));
   // Solo se explica el bloqueo a quien revisa y cuando dice algo útil (no "tu rol no emite veredictos").
-  const explicar = bloqueo && bloqueo !== 'sin-permiso' && bloqueo !== 'expediente-cerrado' && bloqueo !== 'area-cerrada' && contexto.scopes.has(SCOPES.expedientesRevisar);
+  // Con requisitos, el área decide documento por documento (RQ-4): su veredicto se deriva y no se emite aquí.
+  const porDocumento = tieneRequisitos(expediente);
+  const emitir = bloqueo === null && !porDocumento;
+  const explicar =
+    !porDocumento && bloqueo && bloqueo !== 'sin-permiso' && bloqueo !== 'expediente-cerrado' && bloqueo !== 'area-cerrada' && contexto.scopes.has(SCOPES.expedientesRevisar);
 
   return (
     <Box sx={{ border: 1, borderColor: area.estado === 'Observada' ? 'estado.advertencia.borde' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5, minWidth: 0 }}>
@@ -115,7 +120,12 @@ function TarjetaArea({
 
       <Stack direction="row" spacing={1.5} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 1.25 }}>
         <Aprobaciones aprobaciones={area.aprobaciones} requeridas={area.aprobadoresRequeridos} />
-        {area.aprobacionesFaltantes > 0 && area.estado !== 'Esperando' && (
+        {porDocumento && (area.requisitosPorDecidir ?? 0) > 0 && area.estado !== 'Esperando' && (
+          <Typography component="span" color="text.secondary" sx={{ fontSize: 12 }}>
+            {t('expedientes.requisitos.porDecidir', { count: area.requisitosPorDecidir ?? 0 })}
+          </Typography>
+        )}
+        {!porDocumento && area.aprobacionesFaltantes > 0 && area.estado !== 'Esperando' && (
           <Typography component="span" color="text.secondary" sx={{ fontSize: 12 }}>
             {t('expedientes.etapas.faltan', { count: area.aprobacionesFaltantes })}
           </Typography>
@@ -129,9 +139,9 @@ function TarjetaArea({
 
       <Veredictos veredictos={area.veredictos} nombre={nombre} motivos={motivos} />
 
-      {(bloqueo === null || rechaza || explicar) && (
+      {(emitir || rechaza || explicar) && (
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 1.5 }}>
-          {bloqueo === null && (
+          {emitir && (
             <Button variant="contained" size="small" startIcon={<Gavel size={14} aria-hidden />} onClick={() => onAccion({ tipo: 'veredicto', area })}>
               {t('expedientes.acciones.emitir')}
             </Button>

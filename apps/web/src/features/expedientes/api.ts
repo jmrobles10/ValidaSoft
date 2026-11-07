@@ -5,6 +5,8 @@ import {
   anularVeredicto,
   aprobarComoAdministrador,
   emitirVeredicto,
+  emitirVeredictoRequisito,
+  eximirRequisito,
   getListarAperturasPendientesQueryOptions,
   getListarBandejaQueryOptions,
   getListarMotivosQueryOptions,
@@ -48,6 +50,8 @@ export function useMotivos(empresaId: string, habilitado = true) {
 /** Una decisión sobre el expediente; cada variante lleva lo que exige su endpoint. */
 export type EntradaExpediente =
   | { tipo: 'veredicto'; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string }
+  | { tipo: 'veredictoRequisito'; requisitoId: string; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string; sobreVersion: number }
+  | { tipo: 'eximir'; requisitoId: string; justificacion: string }
   | { tipo: 'rechazar'; areaId: string; motivos: string[]; justificacion: string }
   | { tipo: 'aprobarComoAdministrador'; areaId: string; justificacion: string }
   | { tipo: 'anularVeredicto'; areaId: string; justificacion: string; veredictoId?: string }
@@ -69,6 +73,22 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
         { veredicto: entrada.veredicto, motivos: entrada.veredicto === 'Observado' ? entrada.motivos : [], observacion: texto(entrada.observacion) },
         opciones,
       );
+    case 'veredictoRequisito':
+      // `sobreVersion` es obligatorio: si llegó otra versión mientras se revisaba, la API responde 409 `version-superada`.
+      return emitirVeredictoRequisito(
+        expedienteId,
+        entrada.requisitoId,
+        entrada.areaId,
+        {
+          veredicto: entrada.veredicto,
+          motivos: entrada.veredicto === 'Observado' ? entrada.motivos : [],
+          observacion: texto(entrada.observacion),
+          sobreVersion: entrada.sobreVersion,
+        },
+        opciones,
+      );
+    case 'eximir':
+      return eximirRequisito(expedienteId, entrada.requisitoId, { justificacion: entrada.justificacion.trim() }, opciones);
     case 'rechazar':
       return rechazarExpediente(expedienteId, { areaId: entrada.areaId, motivos: entrada.motivos, justificacion: entrada.justificacion.trim() }, opciones);
     case 'aprobarComoAdministrador':

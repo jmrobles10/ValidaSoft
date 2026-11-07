@@ -1,9 +1,10 @@
 import { Box, FormControlLabel, MenuItem, Radio, RadioGroup, Stack, Switch, TextField, Typography } from '@mui/material';
-import type { AreaDto, PoliticaDevolucion, TipoVinculoDto } from '@validasoft/api-client';
+import type { AreaDto, PoliticaDevolucion, TipoDocumentoTenantDto, TipoVinculoDto } from '@validasoft/api-client';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
-import type { BorradorFlujo, ErrorFlujo } from '../editor';
+import { limpiarAreasDeRequisitos, type BorradorFlujo, type ErrorFlujo } from '../editor';
 import { EditorEtapas } from './EditorEtapas';
+import { EditorRequisitos } from './EditorRequisitos';
 
 export interface FormularioFlujoProps {
   borrador: BorradorFlujo;
@@ -11,14 +12,16 @@ export interface FormularioFlujoProps {
   areas: readonly AreaDto[];
   /** Tipos de vínculo para elegir al crear; `null` = flujo existente (código y tipo fijos). */
   tipos: readonly TipoVinculoDto[] | null;
+  /** Tipos de documento del tenant, para los requisitos. */
+  tiposDocumento: readonly TipoDocumentoTenantDto[];
   errores: readonly ErrorFlujo[];
   soloLectura: boolean;
 }
 
 const POLITICAS: readonly PoliticaDevolucion[] = ['Inmediata', 'AlCerrarArea'];
 
-/** Datos generales del flujo, política de devolución, separación de funciones y etapas. */
-export function FormularioFlujo({ borrador, onCambiar, areas, tipos, errores, soloLectura }: FormularioFlujoProps) {
+/** Datos generales del flujo, política de devolución, separación de funciones, etapas y documentos que pide. */
+export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocumento, errores, soloLectura }: FormularioFlujoProps) {
   const { t } = useTranslation();
   const error = (campo: string) => {
     const e = errores.find((x) => x.campo === campo);
@@ -116,7 +119,25 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, errores, so
       </Tarjeta>
 
       <Tarjeta titulo={t('flujos.editor.etapas')}>
-        <EditorEtapas etapas={borrador.etapas} areas={areas} onCambiar={(etapas) => onCambiar({ ...borrador, etapas })} errores={errores} soloLectura={soloLectura} />
+        <EditorEtapas
+          etapas={borrador.etapas}
+          areas={areas}
+          onCambiar={(etapas) => onCambiar(limpiarAreasDeRequisitos({ ...borrador, etapas }))}
+          errores={errores}
+          soloLectura={soloLectura}
+        />
+      </Tarjeta>
+
+      <Tarjeta titulo={t('flujos.editor.documentos')}>
+        <EditorRequisitos
+          requisitos={borrador.requisitos}
+          etapas={borrador.etapas}
+          areas={areas}
+          tiposDocumento={tiposDocumento}
+          onCambiar={(requisitos) => onCambiar({ ...borrador, requisitos })}
+          errores={errores}
+          soloLectura={soloLectura}
+        />
       </Tarjeta>
     </Stack>
   );

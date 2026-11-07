@@ -26,4 +26,5 @@ export interface FilaBandejaDto {
   aprobadoresRequeridos: number;
   desde: FilaBandejaDtoDesde;
   actualizadoEn: string;
+  requisitosPendientes?: number;
 }

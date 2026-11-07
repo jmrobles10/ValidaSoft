@@ -9,6 +9,7 @@ import type { EtapaDto } from './etapaDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { FlujoVersionDtoPublicadaEn } from './flujoVersionDtoPublicadaEn';
 import type { FlujoVersionDtoRetiradaEn } from './flujoVersionDtoRetiradaEn';
+import type { FlujoVersionDtoRequisitos } from './flujoVersionDtoRequisitos';
 
 export interface FlujoVersionDto {
   id: string;
@@ -20,4 +21,5 @@ export interface FlujoVersionDto {
   creadaEn: string;
   publicadaEn: FlujoVersionDtoPublicadaEn;
   retiradaEn: FlujoVersionDtoRetiradaEn;
+  requisitos?: FlujoVersionDtoRequisitos;
 }

@@ -12,7 +12,6 @@ import type { ActualizarTipoDocumentoDtoDiasGracia } from './actualizarTipoDocum
 import type { ActualizarTipoDocumentoDtoDiasRevalidacion } from './actualizarTipoDocumentoDtoDiasRevalidacion';
 import type { ActualizarTipoDocumentoDtoTextoAyuda } from './actualizarTipoDocumentoDtoTextoAyuda';
 import type { ActualizarTipoDocumentoDtoActivo } from './actualizarTipoDocumentoDtoActivo';
-import type { ActualizarTipoDocumentoDtoExigencias } from './actualizarTipoDocumentoDtoExigencias';
 
 export interface ActualizarTipoDocumentoDto {
   nombre?: ActualizarTipoDocumentoDtoNombre;
@@ -23,5 +22,4 @@ export interface ActualizarTipoDocumentoDto {
   diasRevalidacion?: ActualizarTipoDocumentoDtoDiasRevalidacion;
   textoAyuda?: ActualizarTipoDocumentoDtoTextoAyuda;
   activo?: ActualizarTipoDocumentoDtoActivo;
-  exigencias?: ActualizarTipoDocumentoDtoExigencias;
 }

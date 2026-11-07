@@ -16,6 +16,7 @@ import type { ExpedienteDtoUltimaRespuesta } from './expedienteDtoUltimaRespuest
 import type { ExpedienteDtoRechazo } from './expedienteDtoRechazo';
 import type { ExpedienteDtoMotivoAnulacion } from './expedienteDtoMotivoAnulacion';
 import type { ExpedienteDtoCerradoEn } from './expedienteDtoCerradoEn';
+import type { ExpedienteDtoRequisitos } from './expedienteDtoRequisitos';
 
 export interface ExpedienteDto {
   id: string;
@@ -39,4 +40,5 @@ export interface ExpedienteDto {
   cerradoEn: ExpedienteDtoCerradoEn;
   actualizadoEn: string;
   version: number;
+  requisitos?: ExpedienteDtoRequisitos;
 }

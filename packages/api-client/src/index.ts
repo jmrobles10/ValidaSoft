@@ -17,6 +17,7 @@ export * from './generado/endpoints/expedientes/expedientes';
 export * from './generado/endpoints/flujos/flujos';
 export * from './generado/endpoints/motivos/motivos';
 export * from './generado/endpoints/publico/publico';
+export * from './generado/endpoints/quien-soy/quien-soy';
 export * from './generado/endpoints/sesiones-usuario/sesiones-usuario';
 export * from './generado/endpoints/sistemas/sistemas';
 export * from './generado/endpoints/tenants/tenants';

@@ -17,12 +17,15 @@ export function EstadoDeSubida({
   onCancelar,
   onReintentar,
   onOtroArchivo,
+  volver = null,
 }: {
   estado: Exclude<EstadoSubida, { fase: 'inicio' }>;
   tipo: string;
   onCancelar: () => void;
   onReintentar?: () => void;
   onOtroArchivo: () => void;
+  /** Ruta a la que regresar (la revisión de la que vino); si la hay, es la acción principal. */
+  volver?: string | null;
 }) {
   const { t } = useTranslation();
   const sesion = useSesionTercero((s) => s.sesion);
@@ -123,7 +126,12 @@ export function EstadoDeSubida({
       <AlertTitle>{t('subir.lista', { n: String(r.version.n), tipo })}</AlertTitle>
       {empresas.length > 0 ? t('subir.listaCompartida', { empresas: empresas.join(', ') }) : t('subir.listaSinCompartir')}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
-        <Button component={RouterLink} to="/boveda" variant="contained">
+        {volver && (
+          <Button component={RouterLink} to={volver} variant="contained">
+            {t('subir.volverRevision')}
+          </Button>
+        )}
+        <Button component={RouterLink} to="/boveda" variant={volver ? 'outlined' : 'contained'}>
           {t('subir.irBoveda')}
         </Button>
         <Button variant="outlined" onClick={onOtroArchivo}>

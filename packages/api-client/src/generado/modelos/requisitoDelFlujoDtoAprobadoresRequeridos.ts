@@ -5,7 +5,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ExigenciaDto {
-  empresaId: string;
-  tipoVinculo: string;
-}
+export type RequisitoDelFlujoDtoAprobadoresRequeridos = null | number;

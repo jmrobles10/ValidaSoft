@@ -23,4 +23,5 @@ export interface AreaExpedienteDto {
   pendienteDesde: AreaExpedienteDtoPendienteDesde;
   slaVence: AreaExpedienteDtoSlaVence;
   veredictos: VeredictoEmitidoDto[];
+  requisitosPorDecidir?: number;
 }

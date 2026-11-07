@@ -5,8 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ExigenciaDocumentoDto {
-  empresaId: string;
-  tipoVinculoId: string;
-  tipoVinculo: string;
+export interface EmpresaResumenDto {
+  id: string;
+  nombre: string;
 }

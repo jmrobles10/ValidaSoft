@@ -1,5 +1,5 @@
 import { Alert, Box, Button, CircularProgress, Dialog, IconButton, Stack, Typography } from '@mui/material';
-import type { DescargaDto, VersionDocumentoDto } from '@validasoft/api-client';
+import type { DescargaDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
 import { Download, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -7,10 +7,13 @@ import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../../shared/errores';
 import { tipoDeVisor, usePedirDescarga } from './api';
 
+/** Lo que el visor necesita de una versión: sirve desde la lista de documentos del vínculo y desde un requisito. */
 export interface DocumentoEnVisor {
   documentoId: string;
+  /** Nombre del tipo de documento («Registro Único Tributario»). */
   tipo: string;
-  version: VersionDocumentoDto;
+  n: number;
+  cargadaEn: string;
 }
 
 type Contenido = { estado: 'cargando' } | { estado: 'listo'; url: string } | { estado: 'error'; error: unknown };
@@ -26,7 +29,6 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
   const pedir = usePedirDescarga(empresaId, vinculoId);
   const [descarga, setDescarga] = useState<DescargaDto | null>(null);
   const [contenido, setContenido] = useState<Contenido>({ estado: 'cargando' });
-  const visor = tipoDeVisor(documento.version.mime);
   const { mutateAsync } = pedir;
 
   useEffect(() => {
@@ -36,10 +38,10 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
     // Función y no la propiedad directa: TypeScript no estrecha su valor entre los `await`.
     const abortado = () => control.signal.aborted;
     const cargar = async () => {
-      const d = await mutateAsync({ documentoId: documento.documentoId, numero: documento.version.n });
+      const d = await mutateAsync({ documentoId: documento.documentoId, numero: documento.n });
       if (abortado()) return;
       setDescarga(d);
-      if (visor === 'otro') return;
+      if (tipoDeVisor(d.mime) === 'otro') return;
       const respuesta = await fetch(d.url, { signal: control.signal });
       if (!respuesta.ok) throw new Error(`HTTP ${String(respuesta.status)}`);
       const blob = new Blob([await respuesta.arrayBuffer()], { type: d.mime });
@@ -54,9 +56,11 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
       control.abort();
       if (objeto) URL.revokeObjectURL(objeto);
     };
-  }, [mutateAsync, documento.documentoId, documento.version.n, visor]);
+  }, [mutateAsync, documento.documentoId, documento.n]);
 
-  const titulo = `${documento.tipo} · ${t('documentos.version', { n: String(documento.version.n), fecha: formatearFecha(documento.version.cargadaEn) })}`;
+  // El tipo de archivo se sabe al pedir la descarga (`DescargaDto.mime`); mientras tanto se muestra la carga.
+  const visor = descarga ? tipoDeVisor(descarga.mime) : 'pdf';
+  const titulo = `${documento.tipo} · ${t('documentos.version', { n: String(documento.n), fecha: formatearFecha(documento.cargadaEn) })}`;
 
   return (
     <Dialog
@@ -72,7 +76,7 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
             {titulo}
           </Typography>
           <Typography color="text.secondary" sx={{ fontSize: 12 }} noWrap>
-            {documento.version.nombreOriginal}
+            {descarga?.nombre ?? ' '}
           </Typography>
         </Box>
         <Button component="a" href={descarga?.url} download={descarga?.nombre} disabled={!descarga} variant="outlined" startIcon={<Download size={16} aria-hidden />}>

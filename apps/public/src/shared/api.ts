@@ -1,4 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { debeRefrescar } from '../expediente/requisitos';
 import {
   aceptarInvitacion,
   descargarDocumentoBoveda,
@@ -75,7 +76,9 @@ export function useDescargarVersion() {
   });
 }
 
-export const useExpedientePublico = (id: string) => useQuery(getObtenerExpedientePublicoQueryOptions(id));
+/** Se refresca solo mientras falten documentos o esté devuelto: la versión subida llega por una cola (RQ-2). */
+export const useExpedientePublico = (id: string) =>
+  useQuery({ ...getObtenerExpedientePublicoQueryOptions(id), refetchInterval: (consulta) => debeRefrescar(consulta.state.data) });
 
 export function useReenviarExpediente(id: string) {
   const refrescar = useRefrescarTodo();

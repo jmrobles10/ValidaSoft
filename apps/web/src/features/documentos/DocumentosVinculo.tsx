@@ -63,7 +63,7 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
                     variant="outlined"
                     size="small"
                     startIcon={<Eye size={16} aria-hidden />}
-                    onClick={() => setAbierto({ documentoId: documento.documentoId, tipo: documento.tipo.nombre, version })}
+                    onClick={() => setAbierto({ documentoId: documento.documentoId, tipo: documento.tipo.nombre, n: version.n, cargadaEn: version.cargadaEn })}
                     aria-label={t('documentos.verAccesible', { tipo: documento.tipo.nombre, n: String(version.n) })}
                   >
                     {t('documentos.ver')}

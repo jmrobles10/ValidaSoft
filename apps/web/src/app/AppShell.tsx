@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
 import { useSesion } from '../sesion/sesionStore';
+import { useYo } from '../sesion/useYo';
 import { usePreferencias } from '../shared/preferencias';
 import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
@@ -27,6 +28,9 @@ export function AppShell() {
   const { empresa, empresas } = contexto;
   const permisos = usePermisos(empresa.id);
   const sistema = useSesion((s) => s.sesion?.sistema);
+  // Quién soy (`GET /yo`, RQ-9): el nombre de la persona junto al sistema desde el que entró.
+  const yo = useYo();
+  const persona = yo.data?.usuario?.nombre ?? null;
   const { modo, temaDelContenedor, fijarModo } = usePreferencias();
   const navegar = useNavigate();
   const { pathname } = useLocation();
@@ -115,7 +119,7 @@ export function AppShell() {
             sx={{ display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
           >
             <Link2 size={14} strokeWidth={1.75} aria-hidden />
-            {t('app.sesionDe', { sistema })}
+            {persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}
           </Typography>
         )}
         {!temaDelContenedor && (

@@ -1,4 +1,4 @@
-import type { AreaExpedienteDto, ExpedienteDto, VeredictoEmitidoDto } from '@validasoft/api-client';
+import type { AreaDeRequisitoDto, AreaExpedienteDto, ExpedienteDto, RequisitoExpedienteDto, VeredictoEmitidoDto } from '@validasoft/api-client';
 
 /** Datos de prueba de expedientes (solo para las pruebas). */
 export function veredicto(cambios: Partial<VeredictoEmitidoDto> = {}): VeredictoEmitidoDto {
@@ -61,5 +61,23 @@ export function expediente(estado: ExpedienteDto['estado'], areas: AreaExpedient
     cerradoEn: null,
     actualizadoEn: '2026-11-06T14:00:00Z',
     version: 3,
+  };
+}
+
+export function areaDeRequisito(cambios: Partial<AreaDeRequisitoDto> = {}): AreaDeRequisitoDto {
+  return { areaId: 'a-juridica', codigo: 'JURIDICA', estado: 'Pendiente', aprobadoresRequeridos: 1, aprobaciones: 0, veredictos: [], ...cambios };
+}
+
+export function requisito(cambios: Partial<RequisitoExpedienteDto> = {}): RequisitoExpedienteDto {
+  return {
+    id: 'r-rut',
+    tipoDocumento: { id: 'td-rut', codigo: 'RUT', nombre: 'Registro Único Tributario', tipoCanonico: 'RUT', ambito: 'Global' },
+    obligatorio: true,
+    estado: 'EnRevision',
+    versionActual: { documentoId: 'doc-rut', n: 1, sha256: 'abc', cargadaEn: '2026-11-06T14:00:00Z' },
+    reenvios: 0,
+    exencion: null,
+    areas: [areaDeRequisito()],
+    ...cambios,
   };
 }

@@ -8,10 +8,12 @@ import type { EditarFlujoDtoNombre } from './editarFlujoDtoNombre';
 import type { EditarFlujoDtoEtapas } from './editarFlujoDtoEtapas';
 import type { EditarFlujoDtoPoliticaDevolucion } from './editarFlujoDtoPoliticaDevolucion';
 import type { EditarFlujoDtoSeparacionDeFunciones } from './editarFlujoDtoSeparacionDeFunciones';
+import type { EditarFlujoDtoRequisitos } from './editarFlujoDtoRequisitos';
 
 export interface EditarFlujoDto {
   nombre?: EditarFlujoDtoNombre;
   etapas?: EditarFlujoDtoEtapas;
   politicaDevolucion?: EditarFlujoDtoPoliticaDevolucion;
   separacionDeFunciones?: EditarFlujoDtoSeparacionDeFunciones;
+  requisitos?: EditarFlujoDtoRequisitos;
 }

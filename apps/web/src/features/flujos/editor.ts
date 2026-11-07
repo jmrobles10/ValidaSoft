@@ -1,4 +1,4 @@
-import type { AreaDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion } from '@validasoft/api-client';
+import type { AreaDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion, RequisitoDelFlujoDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
 
 /**
  * Modelo del editor de flujos y su validación. Replica `DefinicionDeFlujo.Validar` y `Flujo.Crear` del dominio
@@ -23,6 +23,19 @@ export interface EtapaEnEditor {
   areas: AreaEnEditor[];
 }
 
+/** Documento que pide el flujo (RQ-1). */
+export interface RequisitoEnEditor {
+  /** Clave estable para React; el `id` de la API se conserva para que los expedientes reconozcan el requisito. */
+  clave: string;
+  id: string | null;
+  tipoDocumentoTenantId: string;
+  obligatorio: boolean;
+  /** Áreas que lo revisan; vacío = todas las áreas del flujo. */
+  areasQueRevisan: string[];
+  /** `null` = los aprobadores de cada área. */
+  aprobadoresRequeridos: number | null;
+}
+
 export interface BorradorFlujo {
   codigo: string;
   nombre: string;
@@ -31,6 +44,7 @@ export interface BorradorFlujo {
   politicaDevolucion: PoliticaDevolucion;
   separacionDeFunciones: boolean;
   etapas: EtapaEnEditor[];
+  requisitos: RequisitoEnEditor[];
 }
 
 export type CodigoErrorFlujo =
@@ -45,11 +59,17 @@ export type CodigoErrorFlujo =
   | 'aprobadores-invalidos'
   | 'aprobadores-sin-miembros'
   | 'area-automatica-no-rechaza'
-  | 'sla-invalido';
+  | 'sla-invalido'
+  | 'requisito-sin-tipo'
+  | 'requisito-duplicado'
+  | 'requisito-invalido'
+  | 'requisito-area-invalida'
+  | 'requisito-aprobadores-invalidos'
+  | 'area-sin-requisitos';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
-  /** `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>` o `area.<i>.<j>`. */
+  /** `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>` o `requisito.<k>`. */
   campo: string;
   /** Es aviso: no impide guardar (la API lo acepta) pero el flujo no avanzaría. */
   aviso?: boolean;
@@ -65,8 +85,20 @@ export function areaNueva(areaId = ''): AreaEnEditor {
   return { areaId, aprobadoresRequeridos: 1, puedeRechazarExpediente: false, automatica: false, slaHoras: null };
 }
 
+export function requisitoNuevo(tipoDocumentoTenantId = ''): RequisitoEnEditor {
+  return { clave: nuevaClave(), id: null, tipoDocumentoTenantId, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: null };
+}
+
 export function borradorVacio(): BorradorFlujo {
-  return { codigo: '', nombre: '', tipoVinculo: '', politicaDevolucion: 'Inmediata', separacionDeFunciones: false, etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }] };
+  return {
+    codigo: '',
+    nombre: '',
+    tipoVinculo: '',
+    politicaDevolucion: 'Inmediata',
+    separacionDeFunciones: false,
+    etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }],
+    requisitos: [],
+  };
 }
 
 /** Lleva una versión (publicada o borrador) al editor. */
@@ -87,6 +119,14 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
           slaHoras: a.slaHoras ?? null,
         })),
       })),
+    requisitos: (version.requisitos ?? []).map((r) => ({
+      clave: nuevaClave(),
+      id: r.id ?? null,
+      tipoDocumentoTenantId: r.tipoDocumentoTenantId ?? '',
+      obligatorio: r.obligatorio ?? true,
+      areasQueRevisan: [...(r.areasQueRevisan ?? [])],
+      aprobadoresRequeridos: r.aprobadoresRequeridos ?? null,
+    })),
   };
 }
 
@@ -99,7 +139,12 @@ export function normalizarCodigo(codigo: string): string {
  * Errores del borrador. `nuevo` valida además código y tipo de vínculo (inmutables después). Las áreas inactivas o de
  * otra empresa son error (`area-invalida`); más aprobadores que miembros es aviso (el área nunca se completaría).
  */
-export function validarFlujo(borrador: BorradorFlujo, areas: readonly AreaDto[], nuevo: boolean): ErrorFlujo[] {
+export function validarFlujo(
+  borrador: BorradorFlujo,
+  areas: readonly AreaDto[],
+  nuevo: boolean,
+  tiposDocumento: readonly TipoDocumentoTenantDto[] = [],
+): ErrorFlujo[] {
   const errores: ErrorFlujo[] = [];
   if (nuevo) {
     if (!PATRON_CODIGO.test(normalizarCodigo(borrador.codigo))) errores.push({ codigo: 'codigo-invalido', campo: 'codigo' });
@@ -135,7 +180,60 @@ export function validarFlujo(borrador: BorradorFlujo, areas: readonly AreaDto[],
       }
     });
   });
+  errores.push(...validarRequisitos(borrador, tiposDocumento));
   return errores;
+}
+
+/**
+ * Requisitos (RQ-1): tipo elegido, activo, de archivo y sin repetir; áreas del flujo; 1–10 aprobadores; y, si hay
+ * requisitos, toda área del flujo revisa al menos uno (`area-sin-requisitos`: su aprobación se deriva de ellos).
+ */
+export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requisitos'>, tiposDocumento: readonly TipoDocumentoTenantDto[]): ErrorFlujo[] {
+  const errores: ErrorFlujo[] = [];
+  const areasDelFlujo = new Set(borrador.etapas.flatMap((e) => e.areas.map((a) => a.areaId)).filter(Boolean));
+  const tipos = new Set<string>();
+  borrador.requisitos.forEach((r, k) => {
+    const campo = `requisito.${String(k)}`;
+    if (!r.tipoDocumentoTenantId) {
+      errores.push({ codigo: 'requisito-sin-tipo', campo });
+    } else {
+      if (tipos.has(r.tipoDocumentoTenantId)) errores.push({ codigo: 'requisito-duplicado', campo });
+      tipos.add(r.tipoDocumentoTenantId);
+      const tipo = tiposDocumento.find((t) => t.id === r.tipoDocumentoTenantId);
+      if (tiposDocumento.length > 0 && (!tipo?.activo || tipo.clase !== 'Archivo')) errores.push({ codigo: 'requisito-invalido', campo });
+    }
+    if (r.areasQueRevisan.some((a) => !areasDelFlujo.has(a))) errores.push({ codigo: 'requisito-area-invalida', campo });
+    if (r.aprobadoresRequeridos !== null && (!Number.isInteger(r.aprobadoresRequeridos) || r.aprobadoresRequeridos < 1 || r.aprobadoresRequeridos > MAXIMO_APROBADORES)) {
+      errores.push({ codigo: 'requisito-aprobadores-invalidos', campo });
+    }
+  });
+  if (borrador.requisitos.length > 0) {
+    const cubiertas = new Set(borrador.requisitos.flatMap((r) => (r.areasQueRevisan.length === 0 ? [...areasDelFlujo] : r.areasQueRevisan)));
+    borrador.etapas.forEach((etapa, i) =>
+      etapa.areas.forEach((area, j) => {
+        if (area.areaId && !cubiertas.has(area.areaId)) errores.push({ codigo: 'area-sin-requisitos', campo: `area.${String(i)}.${String(j)}` });
+      }),
+    );
+  }
+  return errores;
+}
+
+/** Requisitos para la API (`null` en aprobadores = los del área). */
+export function requisitosADto(requisitos: readonly RequisitoEnEditor[]): RequisitoDelFlujoDto[] {
+  return requisitos.map((r) => ({
+    id: r.id,
+    tipoDocumentoTenantId: r.tipoDocumentoTenantId,
+    tipoDocumento: null,
+    obligatorio: r.obligatorio,
+    areasQueRevisan: r.areasQueRevisan,
+    aprobadoresRequeridos: r.aprobadoresRequeridos,
+  }));
+}
+
+/** Quita de los requisitos las áreas que ya no están en el flujo (al quitar un área de una etapa). */
+export function limpiarAreasDeRequisitos(borrador: BorradorFlujo): BorradorFlujo {
+  const areasDelFlujo = new Set(borrador.etapas.flatMap((e) => e.areas.map((a) => a.areaId)));
+  return { ...borrador, requisitos: borrador.requisitos.map((r) => ({ ...r, areasQueRevisan: r.areasQueRevisan.filter((a) => areasDelFlujo.has(a)) })) };
 }
 
 /** Solo los errores que impiden guardar. */
@@ -180,5 +278,6 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     politica: borrador.politicaDevolucion,
     separacion: borrador.separacionDeFunciones,
     etapas: etapasADto(borrador.etapas),
+    requisitos: requisitosADto(borrador.requisitos),
   });
 }

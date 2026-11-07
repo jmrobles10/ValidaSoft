@@ -7,6 +7,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
 import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoExpediente } from '../reglas';
+import { versionVigente } from '../requisitos';
 import { SelectorMotivos } from './SelectorMotivos';
 
 export interface DialogoDecisionProps {
@@ -38,10 +39,16 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
 
   const aplica = aplicaAlExpediente || mutacion.isPending || mutacion.isSuccess;
   const area = 'area' in dialogo ? dialogo.area : null;
-  const nombreArea = area?.nombre ?? '';
-  const observando = dialogo.tipo === 'veredicto' && veredicto === 'Observado';
+  const nombreArea = dialogo.tipo === 'veredictoRequisito' ? dialogo.nombreArea : (area?.nombre ?? '');
+  const esVeredicto = dialogo.tipo === 'veredicto' || dialogo.tipo === 'veredictoRequisito';
+  const observando = esVeredicto && veredicto === 'Observado';
   const conMotivos = observando || dialogo.tipo === 'rechazar';
-  const textoOpcional = dialogo.tipo === 'reenviar' || dialogo.tipo === 'veredicto';
+  const textoOpcional = dialogo.tipo === 'reenviar' || esVeredicto;
+  const requisito = 'requisito' in dialogo ? dialogo.requisito : null;
+  const documento = requisito?.tipoDocumento.nombre ?? '';
+  const versionRevisada = requisito?.versionActual?.n ?? null;
+  // Si llegó otra versión del documento, el aviso dice cuál (en vez del genérico «el expediente cambió»).
+  const versionNueva = dialogo.tipo === 'veredictoRequisito' && !aplica ? versionVigente(expediente, dialogo.requisito.id) : null;
   const faltanMotivos = conMotivos && elegidos.length === 0;
   const faltaTexto = !textoOpcional && !texto.trim();
   const disponibles = motivosPara(motivos, dialogo.tipo === 'rechazar' ? 'Rechazo' : 'Observacion');
@@ -56,6 +63,24 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
           campo: t('expedientes.veredicto.observacion'),
           confirmar: observando ? t('expedientes.veredicto.confirmarObservar') : t('expedientes.veredicto.confirmarAprobar'),
           exito: observando ? t('expedientes.veredicto.exitoObservar') : t('expedientes.veredicto.exitoAprobar', { area: nombreArea }),
+        };
+      case 'veredictoRequisito':
+        return {
+          titulo: t('expedientes.requisitos.veredicto.titulo', { documento, area: nombreArea }),
+          ayuda: t('expedientes.requisitos.veredicto.ayuda', { n: String(versionRevisada ?? '—') }),
+          campo: t('expedientes.veredicto.observacion'),
+          confirmar: observando ? t('expedientes.veredicto.confirmarObservar') : t('expedientes.veredicto.confirmarAprobar'),
+          exito: observando
+            ? t('expedientes.requisitos.veredicto.exitoObservar', { documento })
+            : t('expedientes.requisitos.veredicto.exitoAprobar', { documento, area: nombreArea }),
+        };
+      case 'eximir':
+        return {
+          titulo: t('expedientes.requisitos.eximir.titulo', { documento }),
+          ayuda: t('expedientes.requisitos.eximir.ayuda'),
+          campo: t('expedientes.requisitos.eximir.justificacion'),
+          confirmar: t('expedientes.requisitos.eximir.confirmar'),
+          exito: t('expedientes.requisitos.eximir.exito', { documento }),
         };
       case 'rechazar':
         return { titulo: t('expedientes.rechazo.titulo'), ayuda: t('expedientes.rechazo.ayuda'), campo: t('expedientes.rechazo.justificacion'), confirmar: t('expedientes.rechazo.confirmar'), exito: t('expedientes.rechazo.exito') };
@@ -94,6 +119,18 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
     switch (dialogo.tipo) {
       case 'veredicto':
         return { tipo: 'veredicto', areaId: dialogo.area.areaId, veredicto, motivos: elegidos, observacion: observando ? texto : '' };
+      case 'veredictoRequisito':
+        return {
+          tipo: 'veredictoRequisito',
+          requisitoId: dialogo.requisito.id,
+          areaId: dialogo.areaRequisito.areaId,
+          veredicto,
+          motivos: elegidos,
+          observacion: observando ? texto : '',
+          sobreVersion: versionRevisada ?? 0,
+        };
+      case 'eximir':
+        return { tipo: 'eximir', requisitoId: dialogo.requisito.id, justificacion: texto };
       case 'rechazar':
         return { tipo: 'rechazar', areaId: dialogo.area.areaId, motivos: elegidos, justificacion: texto };
       case 'aprobarComoAdministrador':
@@ -119,7 +156,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   };
 
   const destructiva = dialogo.tipo === 'rechazar' || dialogo.tipo === 'anular' || dialogo.tipo === 'anularVeredicto';
-  const mostrarCampo = dialogo.tipo !== 'veredicto' || observando;
+  const mostrarCampo = !esVeredicto || observando;
 
   return (
     <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-decision">
@@ -132,11 +169,17 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
-            {!aplica && <Alert severity="warning">{t('expedientes.yaNoAplica')}</Alert>}
+            {!aplica && (
+              <Alert severity="warning">
+                {versionNueva !== null && versionNueva !== versionRevisada
+                  ? t('expedientes.requisitos.versionCambio', { documento, n: String(versionNueva) })
+                  : t('expedientes.yaNoAplica')}
+              </Alert>
+            )}
             {textos.ayuda && (destructiva ? <Alert severity="warning">{textos.ayuda}</Alert> : <Typography>{textos.ayuda}</Typography>)}
             {mutacion.isError && <Alert severity="error">{mensajeDeError(mutacion.error, t)}</Alert>}
 
-            {dialogo.tipo === 'veredicto' && (
+            {esVeredicto && (
               <RadioGroup aria-label={t('expedientes.veredicto.decision')} value={veredicto} onChange={(e) => setVeredicto(e.target.value as Veredicto)}>
                 {(['Aprobado', 'Observado'] as const).map((opcion) => (
                   <FormControlLabel

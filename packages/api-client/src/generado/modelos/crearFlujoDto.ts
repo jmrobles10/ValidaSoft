@@ -6,6 +6,7 @@
  */
 import type { CrearFlujoDtoEtapas } from './crearFlujoDtoEtapas';
 import type { CrearFlujoDtoPoliticaDevolucion } from './crearFlujoDtoPoliticaDevolucion';
+import type { CrearFlujoDtoRequisitos } from './crearFlujoDtoRequisitos';
 
 export interface CrearFlujoDto {
   codigo: string;
@@ -14,4 +15,5 @@ export interface CrearFlujoDto {
   etapas?: CrearFlujoDtoEtapas;
   politicaDevolucion?: CrearFlujoDtoPoliticaDevolucion;
   separacionDeFunciones?: boolean;
+  requisitos?: CrearFlujoDtoRequisitos;
 }

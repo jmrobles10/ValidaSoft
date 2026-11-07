@@ -124,6 +124,10 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/expedientes/{id}/anular': 'anularExpediente',
   'GET /api/v1/bandeja': 'listarBandeja',
   'GET /api/v1/bandeja/aperturas-pendientes': 'listarAperturasPendientes',
+  'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto': 'emitirVeredictoRequisito',
+  'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir': 'eximirRequisito',
+  'GET /api/v1/usuarios/resumen': 'resumirUsuarios',
+  'GET /api/v1/yo': 'obtenerYo',
   'GET /api/v1/catalogos/tipos-documento': 'listarTiposDocumentoCanonicos',
   'POST /api/v1/tipos-documento': 'crearTipoDocumento',
   'GET /api/v1/tipos-documento': 'listarTiposDocumento',
@@ -197,6 +201,8 @@ const ENUMS: Record<string, string[]> = {
   AmbitoDocumento: ['Global', 'PorVinculo'],
   ClaseDocumento: ['Archivo', 'Formulario'],
   TipoTextoLegal: ['AvisoPlataforma', 'AutorizacionEmpresa', 'TerminosEmpresa'],
+  EstadoRequisito: ['Pendiente', 'Cargado', 'EnRevision', 'Observado', 'Aprobado', 'Eximido'],
+  EstadoAreaRequisito: ['Esperando', 'Pendiente', 'Aprobado', 'Observado', 'Eximido'],
 };
 
 /** `Esquema.propiedad` → enum. */
@@ -236,6 +242,10 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'TextoLegalPublicoDto.tipo': 'TipoTextoLegal',
   'ConsentimientoDto.tipo': 'TipoTextoLegal',
   'AceptacionDto.tipo': 'TipoTextoLegal',
+  'RequisitoExpedienteDto.estado': 'EstadoRequisito',
+  'RequisitoPublicoDto.estado': 'EstadoRequisito',
+  'AreaDeRequisitoDto.estado': 'EstadoAreaRequisito',
+  'TipoDocumentoRequisitoDto.ambito': 'AmbitoDocumento',
 };
 
 const METODOS = ['get', 'post', 'put', 'patch', 'delete'];

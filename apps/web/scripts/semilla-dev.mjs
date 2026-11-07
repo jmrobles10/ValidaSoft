@@ -5,8 +5,8 @@
 // Crea un tenant nuevo con dos empresas, un sistema integrado "DEMO" con su par de claves RSA, una API key de ese
 // sistema (con los scopes de flujos, expedientes y documentos), usuarios con distintos roles, áreas (Jurídica, Compras
 // y Cumplimiento), tipos de vínculo (PROVEEDOR exige OTP en el enlace), el flujo «Habilitación de proveedores» publicado
-// en Norte, los textos legales de Norte, RUT y Cámara de comercio exigidos a los proveedores de Norte y vínculos en
-// varios estados. Las invitaciones llegan a Mailpit (http://localhost:8025) con el enlace del tercero. Escribe las
+// en Norte con sus requisitos (RUT lo revisan Compras y Cumplimiento; Cámara de comercio, solo Cumplimiento), los textos
+// legales de Norte y vínculos en varios estados. Las invitaciones llegan a Mailpit (http://localhost:8025) con el enlace del tercero. Escribe las
 // credenciales en apps/web/.semilla.local.json (ignorado por git), que Vite sirve solo en `vite dev` para prellenar
 // el formulario de sesión y embed-demo.html. Cada ejecución crea un tenant distinto: no reutiliza ni borra nada.
 import { createSign, generateKeyPairSync, randomUUID } from 'node:crypto';
@@ -163,7 +163,8 @@ for (const [codigo, nombre, miembros] of [
 }
 
 // Flujo por defecto de los proveedores de Norte: Compras y Cumplimiento revisan en paralelo; Cumplimiento puede rechazar.
-// Así, cuando el tercero acepta la invitación, se abre su expediente.
+// Sus requisitos deciden qué documentos recibe Norte (RQ-3): RUT (Compras y Cumplimiento) y Cámara de comercio (solo
+// Cumplimiento). Cuando el tercero acepta la invitación se abre su expediente: `Abierto` mientras falte algún documento.
 const flujo = await llamar('POST', '/api/v1/flujos', {
   llave: admin,
   empresa: norte.id,
@@ -182,6 +183,10 @@ const flujo = await llamar('POST', '/api/v1/flujos', {
     ],
     politicaDevolucion: 'Inmediata',
     separacionDeFunciones: false,
+    requisitos: [
+      { tipoDocumento: 'RUT', obligatorio: true, areasQueRevisan: [areas.compras.id, areas.cumplimiento.id], aprobadoresRequeridos: null },
+      { tipoDocumento: 'CAMARA_COMERCIO', obligatorio: true, areasQueRevisan: [areas.cumplimiento.id], aprobadoresRequeridos: null },
+    ],
   },
 });
 await llamar('POST', `/api/v1/flujos/${flujo.id}/publicar`, { llave: admin, empresa: norte.id });
@@ -202,17 +207,6 @@ for (const [tipo, contenido] of [
   ],
 ]) {
   await llamar('PUT', `/api/v1/empresas/${norte.id}/textos-legales/${tipo}`, { llave: admin, cuerpo: { contenido } });
-}
-
-// Documentos que Norte exige a sus proveedores (BO-3; cambia cuando el flujo declare sus requisitos).
-const tiposDocumento = await llamar('GET', '/api/v1/tipos-documento', { llave: admin });
-for (const codigo of ['RUT', 'CAMARA_COMERCIO']) {
-  const tipo = tiposDocumento.find((t) => t.codigo === codigo);
-  if (!tipo) throw new Error(`El tenant no trae el tipo de documento ${codigo}.`);
-  await llamar('PUT', `/api/v1/tipos-documento/${tipo.id}`, {
-    llave: admin,
-    cuerpo: { exigencias: [{ empresaId: norte.id, tipoVinculo: 'PROVEEDOR' }] },
-  });
 }
 
 const terceros = [

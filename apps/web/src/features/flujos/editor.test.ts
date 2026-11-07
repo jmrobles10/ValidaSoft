@@ -1,4 +1,4 @@
-import type { AreaDto, FlujoVersionDto } from '@validasoft/api-client';
+import type { AreaDto, FlujoVersionDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
 import {
   areaNueva,
@@ -8,9 +8,13 @@ import {
   erroresBloqueantes,
   etapasADto,
   firmaBorrador,
+  limpiarAreasDeRequisitos,
   moverEtapa,
+  requisitoNuevo,
+  requisitosADto,
   validarFlujo,
   type BorradorFlujo,
+  type RequisitoEnEditor,
 } from './editor';
 
 const areaDto = (id: string, miembros = 2, activa = true): AreaDto => ({ id, empresaId: 'emp', codigo: id.toUpperCase(), nombre: id, miembros: Array.from({ length: miembros }, (_, i) => `u${String(i)}`), activa });
@@ -109,5 +113,79 @@ describe('etapasADto y edición', () => {
     expect(firmaBorrador(cargado)).toBe(firmaBorrador(borradorDesdeVersion({ codigo: 'PROV', nombre: 'Proveedores', tipoVinculo: 'PROVEEDOR' }, version)));
     expect(firmaBorrador({ ...cargado, separacionDeFunciones: false })).not.toBe(firmaBorrador(cargado));
     expect(cargado.politicaDevolucion).toBe('AlCerrarArea');
+  });
+});
+
+describe('requisitos del flujo (RQ-1)', () => {
+  const tipo = (id: string, cambios: Partial<TipoDocumentoTenantDto> = {}): TipoDocumentoTenantDto => ({
+    id,
+    codigo: id.toUpperCase(),
+    nombre: id,
+    tipoCanonico: id.toUpperCase(),
+    versionCanonico: 1,
+    ambito: 'Global',
+    clase: 'Archivo',
+    textoAyuda: null,
+    reglaFrescura: { tipo: 'NoAplica', dias: null },
+    diasAviso: [],
+    diasGracia: 0,
+    diasRevalidacion: 0,
+    activo: true,
+    creadoEn: '2026-11-06T12:00:00Z',
+    ...cambios,
+  });
+  const TIPOS = [tipo('rut'), tipo('camara'), tipo('sagrilaft', { clase: 'Formulario' })];
+  const req = (tipoDocumentoTenantId: string, areasQueRevisan: string[] = [], cambios: Partial<RequisitoEnEditor> = {}): RequisitoEnEditor => ({
+    ...requisitoNuevo(tipoDocumentoTenantId),
+    areasQueRevisan,
+    ...cambios,
+  });
+  const errores = (b: BorradorFlujo) => validarFlujo(b, AREAS, false, TIPOS).map((e) => `${e.codigo}@${e.campo}`);
+
+  it('sin requisitos el flujo decide por área (FL-1); con ellos, toda área debe revisar al menos uno', () => {
+    expect(errores(borrador())).toEqual([]);
+    expect(errores(borrador({ requisitos: [req('rut', ['compras'])] }))).toEqual(['area-sin-requisitos@area.0.0']);
+    expect(errores(borrador({ requisitos: [req('rut', ['compras']), req('camara', ['juridica'])] }))).toEqual([]);
+    // Sin áreas elegidas lo revisan todas las del flujo.
+    expect(errores(borrador({ requisitos: [req('rut')] }))).toEqual([]);
+  });
+
+  it('señala tipo sin elegir, repetido, inválido (formulario), área fuera del flujo y aprobadores fuera de rango', () => {
+    const b = borrador({
+      requisitos: [req(''), req('rut'), req('rut'), req('sagrilaft'), req('camara', ['archivo']), req('camara', [], { aprobadoresRequeridos: 11 })],
+    });
+    expect(errores(b)).toEqual([
+      'requisito-sin-tipo@requisito.0',
+      'requisito-duplicado@requisito.2',
+      'requisito-invalido@requisito.3',
+      'requisito-area-invalida@requisito.4',
+      'requisito-duplicado@requisito.5',
+      'requisito-aprobadores-invalidos@requisito.5',
+    ]);
+  });
+
+  it('al quitar un área del flujo, sale también de los requisitos', () => {
+    const b = borrador({ requisitos: [req('rut', ['juridica', 'compras'])] });
+    const sinCompras = limpiarAreasDeRequisitos({ ...b, etapas: [{ clave: 'e1', areas: [areaNueva('juridica')] }] });
+    expect(sinCompras.requisitos[0]?.areasQueRevisan).toEqual(['juridica']);
+  });
+
+  it('una versión con requisitos va y vuelve del editor sin cambios (conserva el id del requisito)', () => {
+    const version: FlujoVersionDto = {
+      id: 'v1',
+      version: 1,
+      estado: 'Publicada',
+      politicaDevolucion: 'Inmediata',
+      separacionDeFunciones: false,
+      creadaEn: '2026-11-06T12:00:00Z',
+      publicadaEn: null,
+      retiradaEn: null,
+      etapas: [{ orden: 1, areas: [{ areaId: 'juridica', aprobadoresRequeridos: 1, puedeRechazarExpediente: false, automatica: false, slaHoras: null }] }],
+      requisitos: [{ id: 'r1', tipoDocumentoTenantId: 'rut', tipoDocumento: 'RUT', obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: 2 }],
+    };
+    const b = borradorDesdeVersion({ codigo: 'P', nombre: 'P', tipoVinculo: 'PROVEEDOR' }, version);
+    expect(requisitosADto(b.requisitos)).toEqual([
+      { id: 'r1', tipoDocumentoTenantId: 'rut', tipoDocumento: null, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: 2 },
+    ]);
   });
 });

@@ -12,7 +12,7 @@ import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
-import { useNombresUsuarios } from '../../configuracion/usuarios/api';
+import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
 import { DialogoAccion } from '../components/DialogoAccion';
@@ -264,8 +264,8 @@ function ReferenciasVinculo({ vinculo }: { vinculo: VinculoDto }) {
 function HistorialVinculo({ empresaId, vinculoId }: { empresaId: string; vinculoId: string }) {
   const { t } = useTranslation();
   const usuarioActual = useSesion((s) => s.sesion?.usuarioId ?? null);
-  const nombres = useNombresUsuarios(empresaId);
   const consulta = useHistorialVinculo(empresaId, vinculoId);
+  const nombres = useNombresUsuarios(empresaId, useMemo(() => actoresDeHistorial(consulta.data), [consulta.data]));
   const { refetch } = consulta;
   const eventos = useMemo(
     // Del más reciente al más antiguo por versión: varios eventos de una misma transacción comparten la hora.

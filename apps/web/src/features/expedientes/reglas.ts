@@ -1,13 +1,16 @@
 import {
   SCOPES,
+  type AreaDeRequisitoDto,
   type AreaExpedienteDto,
   type EstadoAreaExpediente,
   type EstadoExpediente,
   type ExpedienteDto,
   type MotivoTipificadoDto,
+  type RequisitoExpedienteDto,
   type VeredictoEmitidoDto,
 } from '@validasoft/api-client';
 import type { Estado } from '@validasoft/ui';
+import { bloqueoRequisito, puedeEximir, versionVigente } from './requisitos';
 
 /**
  * Reglas de la UI del expediente: replican las guardas del agregado `Expediente` (FL-3, FL-9, FL-11, FL-13, FL-14)
@@ -114,9 +117,11 @@ export function puedeAbrirExpediente(
   return scopes.has(SCOPES.expedientesAdministrar) && !vinculo.expedienteAbiertoId && vinculo.estado === 'Invitado';
 }
 
-/** Diálogo abierto en el detalle: cada decisión sobre un área o sobre el expediente completo. */
+/** Diálogo abierto en el detalle: cada decisión sobre un área, un documento (requisito) o el expediente completo. */
 export type DialogoExpediente =
   | { tipo: 'veredicto' | 'rechazar' | 'aprobarComoAdministrador' | 'anularVeredicto'; area: AreaExpedienteDto }
+  | { tipo: 'veredictoRequisito'; requisito: RequisitoExpedienteDto; areaRequisito: AreaDeRequisitoDto; nombreArea: string }
+  | { tipo: 'eximir'; requisito: RequisitoExpedienteDto }
   | { tipo: 'reenviar' | 'anular' };
 
 /** ¿La decisión del diálogo sigue aplicando al expediente vigente? (tras recargar puede haber cambiado). */
@@ -125,6 +130,16 @@ export function dialogoAplica(
   expediente: ExpedienteDto,
   contexto: (area: AreaExpedienteDto | null) => ContextoRevisor,
 ): boolean {
+  if (dialogo.tipo === 'veredictoRequisito' || dialogo.tipo === 'eximir') {
+    const requisito = expediente.requisitos?.find((r) => r.id === dialogo.requisito.id);
+    if (!requisito) return false;
+    if (dialogo.tipo === 'eximir') return puedeEximir(expediente, requisito, contexto(null).scopes);
+    // Si llegó otra versión, la decisión era sobre la anterior: deja de aplicar (RQ-4, `version-superada`).
+    if (versionVigente(expediente, requisito.id) !== dialogo.requisito.versionActual?.n) return false;
+    const areaRequisito = requisito.areas.find((a) => a.areaId === dialogo.areaRequisito.areaId);
+    const area = expediente.etapas.flatMap((e) => e.areas).find((a) => a.areaId === dialogo.areaRequisito.areaId) ?? null;
+    return areaRequisito ? bloqueoRequisito(expediente, requisito, areaRequisito, contexto(area)) === null : false;
+  }
   if (!('area' in dialogo)) {
     const ctx = contexto(null);
     return accionesDeExpediente(expediente, ctx.scopes, ctx.vinculoBloqueado).includes(dialogo.tipo);

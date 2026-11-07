@@ -137,6 +137,7 @@ export const esCO = {
   subir: {
     titulo: 'Subir documento',
     tituloNueva: 'Nueva versión de {{tipo}}',
+    tituloDocumento: 'Subir {{tipo}}',
     tipo: 'Tipo de documento',
     tipoAyuda: 'Elige qué vas a subir. Si una empresa te lo exige, se lo compartimos.',
     zona: 'Sube tu {{tipo}}',
@@ -159,6 +160,7 @@ export const esCO = {
     devueltaTitulo: 'Devolvimos este archivo',
     otroArchivo: 'Elegir otro archivo',
     irBoveda: 'Ver mi bóveda',
+    volverRevision: 'Volver a mi revisión',
     problemas: {
       vacio: 'El archivo está vacío. Elige otro.',
       'demasiado-grande': 'Este archivo pesa {{tamano}}. El máximo es {{mb}} MB: comprímelo o divídelo e inténtalo de nuevo.',
@@ -194,6 +196,18 @@ export const esCO = {
     reenvios_other: 'Has respondido {{count}} veces.',
     actualizado: 'Actualizado el {{fecha}}',
     subirEnBoveda: 'Ir a mi bóveda',
+    respuestaAyudaRequisitos:
+      'Si corregiste un documento, súbelo desde su tarjeta antes de enviar. Si no hace falta una versión nueva, explica aquí por qué.',
+    faltan_one: 'Te falta {{count}} documento. Súbelo para que {{empresa}} empiece a revisar.',
+    faltan_other: 'Te faltan {{count}} documentos. Súbelos para que {{empresa}} empiece a revisar.',
+    documentos: {
+      titulo: 'Lo que te pide {{empresa}}',
+      grupos: { 'te-toca': 'Te toca', 'en-revision': 'Lo revisa {{empresa}}', listo: 'Listo' },
+      version: 'Versión {{n}} · cargada el {{fecha}}',
+      faltaObligatorio: 'Aún no lo subes.',
+      faltaOpcional: 'Opcional: súbelo si lo tienes.',
+      acciones: { subir: 'Subir documento', corregir: 'Subir versión corregida', reemplazar: 'Subir otra versión' },
+    },
   },
   dev: {
     titulo: 'Correos de desarrollo (Mailpit)',
@@ -214,6 +228,8 @@ export const esCO = {
     'version-ya-confirmada': 'Esta versión ya quedó registrada.',
     'carga-desactualizada': 'Empezaste otra subida de este documento. Usa la más reciente.',
     'hash-no-coincide': 'El archivo cambió durante la subida. Súbelo de nuevo.',
+    'requisitos-sin-corregir':
+      'Cada documento observado necesita una versión nueva o una explicación. Sube la versión corregida o escribe tu respuesta antes de enviar.',
   },
 } as const;
 

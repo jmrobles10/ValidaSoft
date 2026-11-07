@@ -427,6 +427,127 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const emitirVeredictoRequisito = (
+    id: string,
+    requisitoId: string,
+    areaId: string,
+    veredictoDto: BodyType<VeredictoDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<ExpedienteDto>(
+      {url: `/api/v1/expedientes/${id}/requisitos/${requisitoId}/areas/${areaId}/veredicto`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: veredictoDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getEmitirVeredictoRequisitoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof emitirVeredictoRequisito>>, TError,{id: string;requisitoId: string;areaId: string;data: BodyType<VeredictoDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof emitirVeredictoRequisito>>, TError,{id: string;requisitoId: string;areaId: string;data: BodyType<VeredictoDto>}, TContext> => {
+
+const mutationKey = ['emitirVeredictoRequisito'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof emitirVeredictoRequisito>>, {id: string;requisitoId: string;areaId: string;data: BodyType<VeredictoDto>}> = (props) => {
+          const {id,requisitoId,areaId,data} = props ?? {};
+
+          return  emitirVeredictoRequisito(id,requisitoId,areaId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EmitirVeredictoRequisitoMutationResult = NonNullable<Awaited<ReturnType<typeof emitirVeredictoRequisito>>>
+    export type EmitirVeredictoRequisitoMutationBody = BodyType<VeredictoDto>
+    export type EmitirVeredictoRequisitoMutationError = ErrorType<void>
+
+    export const useEmitirVeredictoRequisito = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof emitirVeredictoRequisito>>, TError,{id: string;requisitoId: string;areaId: string;data: BodyType<VeredictoDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof emitirVeredictoRequisito>>,
+        TError,
+        {id: string;requisitoId: string;areaId: string;data: BodyType<VeredictoDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getEmitirVeredictoRequisitoMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const eximirRequisito = (
+    id: string,
+    requisitoId: string,
+    justificacionDto: BodyType<JustificacionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<ExpedienteDto>(
+      {url: `/api/v1/expedientes/${id}/requisitos/${requisitoId}/eximir`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: justificacionDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getEximirRequisitoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eximirRequisito>>, TError,{id: string;requisitoId: string;data: BodyType<JustificacionDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof eximirRequisito>>, TError,{id: string;requisitoId: string;data: BodyType<JustificacionDto>}, TContext> => {
+
+const mutationKey = ['eximirRequisito'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof eximirRequisito>>, {id: string;requisitoId: string;data: BodyType<JustificacionDto>}> = (props) => {
+          const {id,requisitoId,data} = props ?? {};
+
+          return  eximirRequisito(id,requisitoId,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EximirRequisitoMutationResult = NonNullable<Awaited<ReturnType<typeof eximirRequisito>>>
+    export type EximirRequisitoMutationBody = BodyType<JustificacionDto>
+    export type EximirRequisitoMutationError = ErrorType<void>
+
+    export const useEximirRequisito = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof eximirRequisito>>, TError,{id: string;requisitoId: string;data: BodyType<JustificacionDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof eximirRequisito>>,
+        TError,
+        {id: string;requisitoId: string;data: BodyType<JustificacionDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getEximirRequisitoMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const rechazarExpediente = (
     id: string,
     rechazarExpedienteDto: BodyType<RechazarExpedienteDto>,

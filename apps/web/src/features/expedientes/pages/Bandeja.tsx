@@ -78,6 +78,22 @@ export function Bandeja() {
         celda: (f) => <Aprobaciones aprobaciones={f.aprobaciones} requeridas={f.aprobadoresRequeridos} />,
       },
       {
+        // Documentos que el área aún debe decidir (flujos con requisitos, RQ-4); «—» en un flujo sin requisitos.
+        id: 'documentos',
+        encabezado: t('bandeja.columnas.documentos'),
+        ancho: 110,
+        celda: (f) =>
+          (f.requisitosPendientes ?? 0) > 0 ? (
+            <Typography variant="monoTabla" aria-label={t('bandeja.documentosAccesible', { count: f.requisitosPendientes ?? 0 })}>
+              {t('bandeja.documentos', { count: f.requisitosPendientes ?? 0 })}
+            </Typography>
+          ) : (
+            <Typography variant="monoTabla" color="text.secondary">
+              —
+            </Typography>
+          ),
+      },
+      {
         id: 'desde',
         encabezado: t('bandeja.columnas.desde'),
         ancho: 100,

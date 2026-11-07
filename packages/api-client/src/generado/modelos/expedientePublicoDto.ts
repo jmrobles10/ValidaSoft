@@ -8,6 +8,7 @@ import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
 import type { EstadoExpediente } from './estadoExpediente';
 import type { ObservacionPublicaDto } from './observacionPublicaDto';
+import type { ExpedientePublicoDtoRequisitos } from './expedientePublicoDtoRequisitos';
 
 export interface ExpedientePublicoDto {
   id: string;
@@ -19,4 +20,6 @@ export interface ExpedientePublicoDto {
   puedeReenviar: boolean;
   reenvios: number;
   actualizadoEn: string;
+  requisitos?: ExpedientePublicoDtoRequisitos;
+  requisitosFaltantes?: number;
 }

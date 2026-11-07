@@ -10,6 +10,7 @@ import type { VeredictoEmitidoDtoUsuario } from './veredictoEmitidoDtoUsuario';
 import type { VeredictoEmitidoDtoObservacion } from './veredictoEmitidoDtoObservacion';
 import type { VeredictoEmitidoDtoJustificacion } from './veredictoEmitidoDtoJustificacion';
 import type { VeredictoEmitidoDtoAnuladoPor } from './veredictoEmitidoDtoAnuladoPor';
+import type { VeredictoEmitidoDtoSobreVersion } from './veredictoEmitidoDtoSobreVersion';
 
 export interface VeredictoEmitidoDto {
   id: string;
@@ -24,4 +25,7 @@ export interface VeredictoEmitidoDto {
   superado: boolean;
   anulado: boolean;
   anuladoPor: VeredictoEmitidoDtoAnuladoPor;
+  sobreVersion?: VeredictoEmitidoDtoSobreVersion;
+  invalidado?: boolean;
+  derivado?: boolean;
 }

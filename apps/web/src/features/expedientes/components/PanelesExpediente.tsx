@@ -7,7 +7,8 @@ import { useSesion } from '../../../sesion/sesionStore';
 import { ErrorRecuperable, EsqueletoHistorial, Tarjeta } from '../../../shared/componentes';
 import { identificacionResumida } from '../../vinculos/tercero';
 import { useHistorialExpediente } from '../api';
-import { eventoExpedienteATimeline, nombresDeAreas } from '../historial';
+import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
+import { eventoExpedienteATimeline, nombresDeAreas, nombresDeRequisitos } from '../historial';
 
 const Mono = ({ children }: { children: string }) => (
   <Typography component="span" variant="mono">
@@ -70,15 +71,17 @@ export function UltimaRespuesta({ expediente }: { expediente: ExpedienteDto }) {
   );
 }
 
-export function HistorialExpediente({ empresaId, expediente, nombres }: { empresaId: string; expediente: ExpedienteDto; nombres: ReadonlyMap<string, string> }) {
+export function HistorialExpediente({ empresaId, expediente }: { empresaId: string; expediente: ExpedienteDto }) {
   const { t } = useTranslation();
   const usuarioActual = useSesion((s) => s.sesion?.usuarioId ?? null);
   const consulta = useHistorialExpediente(empresaId, expediente.id);
+  const nombres = useNombresUsuarios(empresaId, useMemo(() => actoresDeHistorial(consulta.data), [consulta.data]));
   const { refetch } = consulta;
   const areas = useMemo(() => nombresDeAreas(expediente), [expediente]);
+  const requisitos = useMemo(() => nombresDeRequisitos(expediente), [expediente]);
   const eventos = useMemo(
-    () => [...(consulta.data ?? [])].reverse().map((e) => eventoExpedienteATimeline(e, { usuarioActual, nombres, areas }, t)),
-    [consulta.data, usuarioActual, nombres, areas, t],
+    () => [...(consulta.data ?? [])].reverse().map((e) => eventoExpedienteATimeline(e, { usuarioActual, nombres, areas, requisitos }, t)),
+    [consulta.data, usuarioActual, nombres, areas, requisitos, t],
   );
 
   return (

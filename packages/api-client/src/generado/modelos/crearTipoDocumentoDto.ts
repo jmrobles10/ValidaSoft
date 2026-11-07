@@ -12,7 +12,6 @@ import type { CrearTipoDocumentoDtoDiasAviso } from './crearTipoDocumentoDtoDias
 import type { CrearTipoDocumentoDtoDiasGracia } from './crearTipoDocumentoDtoDiasGracia';
 import type { CrearTipoDocumentoDtoDiasRevalidacion } from './crearTipoDocumentoDtoDiasRevalidacion';
 import type { CrearTipoDocumentoDtoTextoAyuda } from './crearTipoDocumentoDtoTextoAyuda';
-import type { CrearTipoDocumentoDtoExigencias } from './crearTipoDocumentoDtoExigencias';
 
 export interface CrearTipoDocumentoDto {
   codigo: string;
@@ -24,5 +23,4 @@ export interface CrearTipoDocumentoDto {
   diasGracia?: CrearTipoDocumentoDtoDiasGracia;
   diasRevalidacion?: CrearTipoDocumentoDtoDiasRevalidacion;
   textoAyuda?: CrearTipoDocumentoDtoTextoAyuda;
-  exigencias?: CrearTipoDocumentoDtoExigencias;
 }

@@ -10,8 +10,14 @@ import {
   publicarFlujo,
   type CrearFlujoDto,
   type EditarFlujoDto,
+  getListarTiposDocumentoQueryOptions,
 } from '@validasoft/api-client';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
+
+/** Tipos de documento del tenant para los requisitos del flujo (`configuracion:leer`). Cambian poco. */
+export function useTiposDocumento(habilitado = true) {
+  return useQuery({ ...getListarTiposDocumentoQueryOptions({ request: { empresa: null } }), enabled: habilitado, staleTime: 5 * 60_000 });
+}
 
 export function useFlujos(empresaId: string, tipoVinculo?: string, habilitado = true) {
   const opciones = getListarFlujosQueryOptions(tipoVinculo ? { tipoVinculo } : undefined, { request: { empresa: empresaId } });
