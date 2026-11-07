@@ -76,6 +76,10 @@ public sealed class RequisitoDeExpediente
 
     public bool DecididoPor(AreaDeExpediente area) => AprobadoPor(area) || ObservadoPor(area.AreaId);
 
+    /// <summary>¿Esta persona ya emitió, en esta ronda, un veredicto humano vigente sobre el requisito en el área?</summary>
+    public bool DecidioPersona(Guid areaId, string revisorId) =>
+        Veredictos.Any(v => v.Vigente && v.AreaId == areaId && v.Origen == OrigenVeredicto.Humano && v.RevisorId == revisorId);
+
     /// <summary>Personas distintas con aprobación humana vigente del área (x de <see cref="AprobadoresPara"/>).</summary>
     public int AprobacionesDe(AreaDeExpediente area) =>
         AprobadoPor(area) && !Eximido
@@ -106,44 +110,17 @@ public sealed partial class Expediente
     /// actual del requisito (409 <c>version-superada</c>); cada persona decide una vez por requisito y área
     /// (<c>aprobador-repetido</c>) y el requisito queda decidido por el área al observarlo o al juntar
     /// <c>AprobadoresRequeridos</c> personas distintas (<c>requisito-ya-decidido</c>). La aprobación del área y el
-    /// resto de la cascada se derivan (RQ-4, RQ-5).
+    /// resto de la cascada se derivan (RQ-4, RQ-5). Las mismas reglas valen documento a documento en la decisión por
+    /// área (<see cref="AprobarArea"/>, <see cref="ObservarArea"/>).
     /// </summary>
     public IReadOnlyList<object> EmitirVeredictoDeRequisito(Guid requisitoId, Guid areaId, Revisor revisor, Veredicto veredicto, int? sobreVersion,
         IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora)
     {
-        if (!ConRequisitos)
-            throw ReglaDeNegocioException.Conflicto("sin-requisitos",
-                "Este expediente no pide documentos: el área decide sobre el expediente completo (/areas/{areaId}/veredicto).");
-        AsegurarEnRevision();
-        var requisito = BuscarRequisito(requisitoId)
-                        ?? throw ReglaDeNegocioException.NoEncontrado("requisito-no-encontrado", "Ese requisito no está en el expediente.");
-        var area = AreaActiva(areaId);
-        if (!requisito.LoRevisa(areaId))
-            throw ReglaDeNegocioException.Conflicto("requisito-no-en-alcance", $"El área {area.Codigo} no revisa {requisito.Nombre}.");
-        if (area.Automatica)
-            throw ReglaDeNegocioException.Conflicto("area-automatica", $"El área {area.Codigo} aprueba automáticamente.");
-        AsegurarRevisorHabilitado(revisor);
-
-        if (requisito.Eximido)
-            throw ReglaDeNegocioException.Conflicto("requisito-eximido", $"{requisito.Nombre} está eximido.");
-        if (requisito.VersionActual is not { } version)
-            throw ReglaDeNegocioException.Conflicto("requisito-sin-version", $"El tercero aún no ha cargado {requisito.Nombre}.");
-        if (sobreVersion is not { } numero)
-            throw ReglaDeNegocioException.Validacion("sobre-version-requerida", "Indica sobre qué versión del documento decides (sobreVersion).");
-        if (numero != version.Numero)
-            throw ReglaDeNegocioException.Conflicto("version-superada",
-                $"La versión vigente de {requisito.Nombre} es la {version.Numero}; vuelve a abrir el expediente antes de decidir.");
-
+        var area = AreaParaDecidirPorRequisitos(areaId, revisor);
         var revisorId = revisor.UsuarioId.ToString();
-        if (requisito.Veredictos.Any(v => v.Vigente && v.AreaId == areaId && v.Origen == OrigenVeredicto.Humano && v.RevisorId == revisorId))
-            throw ReglaDeNegocioException.Conflicto("aprobador-repetido",
-                $"Ya emitiste tu veredicto sobre {requisito.Nombre} en el área {area.Codigo}; otra persona del área debe completar las aprobaciones.");
-        if (requisito.DecididoPor(area))
-            throw ReglaDeNegocioException.Conflicto("requisito-ya-decidido", $"El área {area.Codigo} ya decidió {requisito.Nombre} en esta ronda.");
-
-        var lista = Motivos(veredicto, motivos);
-        return Simular(s => s.Emitir(new VeredictoDeRequisitoEmitido(Guid.CreateVersion7(), requisitoId, areaId, veredicto, OrigenVeredicto.Humano,
-            revisorId, numero, [.. lista.DistinctBy(m => m.Codigo)], Texto(observacion, "observacion"), null, ahora)), ahora);
+        var requisito = RequisitoDecidible(requisitoId, area, revisorId, sobreVersion, superadas: null);
+        var evento = VeredictoHumano(requisito, area, veredicto, revisorId, Motivos(veredicto, motivos), Texto(observacion, "observacion"), ahora);
+        return Simular(s => s.Emitir(evento), ahora);
     }
 
     /// <summary>

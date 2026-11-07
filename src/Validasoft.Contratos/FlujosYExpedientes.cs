@@ -84,15 +84,21 @@ public sealed record VeredictoEmitidoDto(
     string? Justificacion, bool Vigente, bool Superado, bool Anulado, string? AnuladoPor, int? SobreVersion = null, bool Invalidado = false,
     bool Derivado = false);
 
+/// <summary>Documento que «Aprobar área» decidiría y la versión vigente que debe acompañarlo en <c>versiones</c>.</summary>
+public sealed record DocumentoPorDecidirDto(Guid RequisitoId, int VersionVigente);
+
 /// <summary>
 /// Área del expediente con sus aprobaciones (<see cref="Aprobaciones"/> de <see cref="AprobadoresRequeridos"/>) y los
 /// miembros que aún no se pronuncian (<see cref="MiembrosPendientes"/>, vacío si el área ya se pronunció). Con requisitos,
-/// <see cref="RequisitosPorDecidir"/> cuenta los de su alcance que aún esperan su decisión.
+/// <see cref="RequisitosPorDecidir"/> cuenta los de su alcance que aún esperan su decisión y
+/// <see cref="DocumentosPorDecidir"/> lista lo que «Aprobar área» aprobaría a quien consulta (si es una persona; si no,
+/// lo que el área aún no decidió), con la versión vigente de cada uno; vacío fuera de revisión o sin requisitos.
 /// </summary>
 public sealed record AreaExpedienteDto(
     Guid AreaId, string Codigo, string Nombre, string Estado, int AprobadoresRequeridos, int Aprobaciones, int AprobacionesFaltantes,
     IReadOnlyList<Guid> MiembrosPendientes, bool PuedeRechazarExpediente, bool Automatica, DateTimeOffset? PendienteDesde,
-    DateTimeOffset? SlaVence, IReadOnlyList<VeredictoEmitidoDto> Veredictos, int RequisitosPorDecidir = 0);
+    DateTimeOffset? SlaVence, IReadOnlyList<VeredictoEmitidoDto> Veredictos, int RequisitosPorDecidir = 0,
+    IReadOnlyList<DocumentoPorDecidirDto>? DocumentosPorDecidir = null);
 
 /// <summary>Tipo de documento de un requisito: id y código del tipo del tenant, canónico (para cargarlo) y ámbito.</summary>
 public sealed record TipoDocumentoRequisitoDto(Guid Id, string Codigo, string Nombre, string? TipoCanonico, string Ambito);
@@ -144,10 +150,20 @@ public sealed record ExpedienteDto(
     IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null);
 
 /// <summary>
-/// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c> (con al menos un motivo). El área (y el requisito) van en
-/// la ruta. <see cref="SobreVersion"/>: obligatorio en el veredicto de un requisito (número de la versión que se revisó).
+/// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c>. El área (y el requisito) van en la ruta.
+/// <list type="bullet">
+/// <item>Flujo sin requisitos (FL-1): <see cref="Motivos"/> (al observar, al menos uno) y <see cref="Observacion"/>.</item>
+/// <item>Veredicto de un requisito: además <see cref="SobreVersion"/> (número de la versión que se revisó).</item>
+/// <item>Decisión de área con requisitos (DA-1): <c>Aprobado</c> lleva <see cref="Versiones"/> (requisitoId → versión que
+/// vio el revisor de cada documento que decide); <c>Observado</c> lleva <see cref="Requisitos"/> (los documentos
+/// marcados). <see cref="Motivos"/> y <see cref="Observacion"/> de primer nivel no se usan.</item>
+/// </list>
 /// </summary>
-public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null, int? SobreVersion = null);
+public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null, int? SobreVersion = null,
+    IReadOnlyDictionary<Guid, int>? Versiones = null, IReadOnlyList<ObservacionDeRequisitoDto>? Requisitos = null);
+
+/// <summary>Documento marcado al observar el área: la versión que se revisó, al menos un motivo y la observación.</summary>
+public sealed record ObservacionDeRequisitoDto(Guid RequisitoId, int? SobreVersion, IReadOnlyList<string>? Motivos, string? Observacion = null);
 
 /// <summary>Rechazo terminal: solo un área con <c>puedeRechazarExpediente</c>; motivos y justificación obligatorios.</summary>
 public sealed record RechazarExpedienteDto(Guid AreaId, IReadOnlyList<string> Motivos, string Justificacion);

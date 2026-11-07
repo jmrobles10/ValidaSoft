@@ -152,7 +152,8 @@ public sealed class EtapaDeExpediente
 /// Instancia de una versión de flujo para un vínculo (docs/03 §6) — agregado event-sourced de vida corta. Las áreas de
 /// la etapa activa revisan en paralelo. Sin requisitos (FL-1) cada área se pronuncia sobre el expediente completo y
 /// necesita <c>AprobadoresRequeridos</c> usuarios distintos; con requisitos (RQ-*) cada área aprueba u observa los
-/// documentos de su alcance y su aprobación se deriva de ellos (ver <c>ExpedienteRequisitos.cs</c>). Una observación
+/// documentos de su alcance —uno a uno o todos en una decisión de área (DA-*)— y su aprobación se deriva de ellos (ver
+/// <c>ExpedienteRequisitos.cs</c> y <c>ExpedienteDecisionDeArea.cs</c>). Una observación
 /// frena todo (política <c>Inmediata</c>) o al cerrar la etapa (<c>AlCerrarArea</c>); al reenviar, solo lo observado
 /// vuelve a revisión. Los métodos de decisión devuelven los eventos (incluida la cascada: paso a revisión, etapa
 /// aprobada, siguiente etapa, aprobaciones automáticas, cierre); los <c>Apply</c> solo evolucionan el estado.
@@ -234,7 +235,7 @@ public sealed partial class Expediente
     [JsonIgnore]
     public bool EstaAbierto => Abiertos.Contains(Estado);
 
-    /// <summary>Con requisitos, cada área decide por documento y su aprobación se deriva (RQ-4).</summary>
+    /// <summary>Con requisitos, cada área decide por documento (uno a uno o en una decisión de área, DA-1) y su aprobación se deriva (RQ-4).</summary>
     [JsonIgnore]
     public bool ConRequisitos => Requisitos.Count > 0;
 
@@ -280,11 +281,17 @@ public sealed partial class Expediente
         return simulacion.Eventos;
     }
 
-    /// <summary>Veredicto humano de un miembro del área (la pertenencia la verifica la aplicación).</summary>
+    /// <summary>
+    /// Veredicto humano de un miembro del área sobre el expediente completo (FL-1; la pertenencia la verifica la
+    /// aplicación). Con requisitos la decisión del área se toma por sus documentos (<see cref="AprobarArea"/> u
+    /// <see cref="ObservarArea"/>): sin versiones ni documentos marcados responde 422 <c>versiones-requeridas</c> o
+    /// <c>requisitos-requeridos</c>.
+    /// </summary>
     public IReadOnlyList<object> EmitirVeredicto(Guid areaId, Revisor revisor, Veredicto veredicto, IReadOnlyList<MotivoAplicado> motivos,
         string? observacion, DateTimeOffset ahora)
     {
-        AsegurarSinRequisitos();
+        if (ConRequisitos)
+            return veredicto == Veredicto.Aprobado ? AprobarArea(areaId, revisor, null, ahora) : ObservarArea(areaId, revisor, null, ahora);
         AsegurarEnRevision();
         var area = AreaActiva(areaId);
         if (area.Automatica)
@@ -612,14 +619,6 @@ public sealed partial class Expediente
 
         if (area.Estado == EstadoAreaExpediente.Pendiente && previo != EstadoAreaExpediente.Pendiente)
             area.PendienteDesde = fecha;
-    }
-
-    /// <summary>Con requisitos el área no decide sobre el expediente completo: 409 <c>veredicto-por-requisito</c>.</summary>
-    public void AsegurarSinRequisitos()
-    {
-        if (ConRequisitos)
-            throw ReglaDeNegocioException.Conflicto("veredicto-por-requisito",
-                "Este expediente se revisa por documento: emite el veredicto en /requisitos/{requisitoId}/areas/{areaId}/veredicto.");
     }
 
     private void AsegurarEnRevision()

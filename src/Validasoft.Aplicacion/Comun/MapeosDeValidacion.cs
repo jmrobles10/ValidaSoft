@@ -49,8 +49,12 @@ public static class MapeosDeValidacion
         new(v.Id, v.Veredicto.ToString(), v.Origen.ToString(), v.RevisorId, v.Fecha, [.. v.Motivos.Select(m => m.Codigo)], v.Observacion,
             v.Justificacion, v.Vigente, v.Superado, v.Anulado, v.AnuladoPor, v.SobreVersion, v.Invalidado, v.Derivado);
 
-    /// <summary><paramref name="miembros"/>: miembros actuales de cada área (para listar quién falta por pronunciarse).</summary>
-    public static ExpedienteDto ADto(this Expediente e, IReadOnlyDictionary<Guid, List<Guid>> miembros) =>
+    /// <summary>
+    /// <paramref name="miembros"/>: miembros actuales de cada área (para listar quién falta por pronunciarse).
+    /// <paramref name="consultante"/>: usuario que consulta (si es una persona), para calcular lo que «Aprobar área» le
+    /// aprobaría (<see cref="AreaExpedienteDto.DocumentosPorDecidir"/>).
+    /// </summary>
+    public static ExpedienteDto ADto(this Expediente e, IReadOnlyDictionary<Guid, List<Guid>> miembros, string? consultante = null) =>
         new(e.Id, e.Folio, e.EmpresaId, e.VinculoId,
             new TerceroResumenDto(e.TerceroId, e.TerceroNombre, e.TerceroIdentificacion),
             new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre),
@@ -59,7 +63,7 @@ public static class MapeosDeValidacion
                 e.Flujo.Origen.ToString()),
             e.PoliticaDevolucion.ToString(), e.SeparacionDeFunciones, e.EtapaActiva?.Orden,
             [.. e.Etapas.Select(et => new EtapaExpedienteDto(et.Orden, et.Estado.ToString(), et.ActivadaEn, et.AprobadaEn,
-                [.. et.Areas.Select(a => a.ADto(miembros.TryGetValue(a.AreaId, out var m) ? m : []))]))],
+                [.. et.Areas.Select(a => a.ADto(miembros.TryGetValue(a.AreaId, out var m) ? m : [], PorDecidir(e, et, a, consultante)))]))],
             e.Reenvios, e.UltimaRespuesta,
             e.Rechazo is null ? null : new RechazoDto(e.Rechazo.AreaId, e.Rechazo.RevisorId, [.. e.Rechazo.Motivos.Select(m => m.Codigo)],
                 e.Rechazo.Justificacion, e.Rechazo.Fecha),
@@ -88,7 +92,13 @@ public static class MapeosDeValidacion
 
     private static VersionRequisitoDto ADto(this VersionDeRequisito v) => new(v.DocumentoId, v.Numero, v.Sha256, v.CargadaEn);
 
-    private static AreaExpedienteDto ADto(this AreaDeExpediente a, IReadOnlyList<Guid> miembros)
+    /// <summary>Solo en revisión, en la etapa activa y en áreas no automáticas: lo que «Aprobar área» aprobaría (DA-3).</summary>
+    private static IReadOnlyList<DocumentoPorDecidirDto> PorDecidir(Expediente e, EtapaDeExpediente etapa, AreaDeExpediente area, string? consultante) =>
+        e.Estado != EstadoExpediente.EnRevision || etapa.Estado != EstadoEtapa.Activa || area.Automatica
+            ? []
+            : [.. e.DocumentosPorDecidir(area.AreaId, consultante).Select(d => new DocumentoPorDecidirDto(d.RequisitoId, d.VersionVigente))];
+
+    private static AreaExpedienteDto ADto(this AreaDeExpediente a, IReadOnlyList<Guid> miembros, IReadOnlyList<DocumentoPorDecidirDto> porDecidir)
     {
         var yaSePronunciaron = a.RevisoresVigentes;
         IReadOnlyList<Guid> pendientes = a.Estado == EstadoAreaExpediente.Pendiente
@@ -96,7 +106,7 @@ public static class MapeosDeValidacion
             : [];
         return new AreaExpedienteDto(a.AreaId, a.Codigo, a.Nombre, a.Estado.ToString(), a.AprobadoresRequeridos, a.Aprobaciones,
             Math.Max(0, a.AprobadoresRequeridos - a.Aprobaciones), pendientes, a.PuedeRechazarExpediente, a.Automatica, a.PendienteDesde,
-            a.SlaVence, [.. a.Veredictos.Select(ADto)], a.RequisitosPorDecidir);
+            a.SlaVence, [.. a.Veredictos.Select(ADto)], a.RequisitosPorDecidir, porDecidir);
     }
 
     public static FilaBandejaDto ADto(this FilaBandeja f) =>
