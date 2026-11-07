@@ -22,7 +22,10 @@ public enum PlantillaCorreo
     CodigoOtp,
 
     /// <summary>Enlace de acceso tras el autorregistro (<c>autorregistro</c>, docs/05 §8).</summary>
-    AccesoAutorregistro
+    AccesoAutorregistro,
+
+    /// <summary>Enlace para volver a entrar pedido con el correo (<c>POST /public/v1/acceso</c>, RE-1).</summary>
+    AccesoPorCorreo
 }
 
 /// <summary>
@@ -53,6 +56,10 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                 "Tu enlace de acceso a Validasoft",
                 "Recibimos tu registro en Validasoft. Con este enlace entras a tu bóveda y ves las empresas que te han invitado.",
                 $"{UrlPublica}/e/{secreto}", vence),
+            PlantillaCorreo.AccesoPorCorreo => ConEnlace(correo.Para,
+                "Tu enlace para entrar a Validasoft",
+                "Pediste entrar a Validasoft. Con este enlace ves las empresas con las que tienes un vínculo y respondes lo que te pidan.",
+                $"{UrlPublica}/e/{secreto}", vence),
             PlantillaCorreo.CodigoOtp => new MensajeDeCorreo(correo.Para,
                 "Tu código de acceso a Validasoft",
                 $"Tu código de acceso es {secreto}. Vence el {vence} y solo sirve para el enlace que acabas de abrir.\n\n" +
@@ -75,23 +82,39 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
 
     /// <summary>
     /// Observaciones del expediente para el tercero: motivos (texto al tercero) y la observación escrita. Nunca nombra a
-    /// los revisores ni a las áreas internas.
+    /// los revisores ni a las áreas internas. Con <paramref name="token"/> lleva un enlace de acceso de un solo uso (RE-4);
+    /// sin él (mensajes encolados antes de RE-4) remite a pedir uno con el correo.
     /// </summary>
-    public MensajeDeCorreo RedactarObservacion(CorreoDeObservacionPendiente correo)
+    public MensajeDeCorreo RedactarObservacion(CorreoDeObservacionPendiente correo, string? token = null)
     {
         var asunto = $"{correo.Empresa} tiene observaciones sobre tu validación {correo.Folio}";
         var lineas = correo.Observaciones.Select(o =>
             (o.Requisito is null ? string.Empty : $"{o.Requisito}: ") + string.Join("; ", o.Motivos) +
             (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion}")).ToList();
         var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y necesita que corrijas lo siguiente:\n\n" +
-                    string.Join("\n", lineas.Select(l => "- " + l)) +
-                    $"\n\nIngresa a Validasoft ({UrlPublica}) con el enlace de tu invitación para responder y reenviar.";
+                    string.Join("\n", lineas.Select(l => "- " + l)) + "\n\n" + ComoEntrar(token, correo.EnlaceExpira);
         var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> " +
                    "y necesita que corrijas lo siguiente:</p><ul>" +
-                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) +
-                   $"</ul><p>Ingresa a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con el enlace de tu invitación para responder.</p>";
+                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) + "</ul>" +
+                   ComoEntrarHtml(token, correo.EnlaceExpira);
         return new MensajeDeCorreo(correo.Para, asunto, texto, html);
     }
+
+    private string ComoEntrar(string? token, DateTimeOffset? expira) =>
+        token is null
+            ? $"Entra a Validasoft ({UrlPublica}) y pide un enlace con tu correo para responder y reenviar."
+            : $"Para responder y reenviar, abre este enlace (es personal, de un solo uso y vence el {Fecha(expira)}):\n{UrlPublica}/e/{token}\n\n" +
+              $"Si ya venció, entra a {UrlPublica} y pide uno nuevo con tu correo.";
+
+    private string ComoEntrarHtml(string? token, DateTimeOffset? expira) =>
+        token is null
+            ? $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> y pide un enlace con tu correo para responder.</p>"
+            : $"<p><a href=\"{WebUtility.HtmlEncode($"{UrlPublica}/e/{token}")}\">Responder en Validasoft</a></p>" +
+              $"<p>El enlace es personal, de un solo uso y vence el {WebUtility.HtmlEncode(Fecha(expira))}. Si ya venció, entra a " +
+              $"<a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> y pide uno nuevo con tu correo.</p>";
+
+    private static string Fecha(DateTimeOffset? fecha) =>
+        fecha?.UtcDateTime.ToString("d 'de' MMMM 'de' yyyy, HH:mm 'UTC'", Cultura) ?? "pronto";
 
     private static string Minuscula(string? texto) => (texto ?? string.Empty).ToLower(Cultura);
 }
@@ -101,14 +124,19 @@ public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string
 
 /// <summary>
 /// Correo al tercero cuando su expediente queda <c>Observado</c>; va por el outbox (cola <c>correo</c>) y sale solo si la
-/// transacción del veredicto se confirma. No lleva secretos.
+/// transacción del veredicto se confirma. <see cref="EnlaceProtegido"/> es el token del enlace de acceso creado en esa
+/// misma transacción, <b>cifrado</b> como en <see cref="CorreoDeAccesoPendiente"/> (IN-3, RE-4).
 /// </summary>
-public sealed record CorreoDeObservacionPendiente(string Para, string Empresa, string Folio, IReadOnlyList<ObservacionParaCorreo> Observaciones);
+public sealed record CorreoDeObservacionPendiente(
+    string Para, string Empresa, string Folio, IReadOnlyList<ObservacionParaCorreo> Observaciones, string? EnlaceProtegido = null,
+    DateTimeOffset? EnlaceExpira = null);
 
 public static class CorreoDeObservacionPendienteHandler
 {
-    public static Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarObservacion(correo), ct);
+    public static Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
+        RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarObservacion(correo,
+            correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido)), ct);
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>

@@ -42,7 +42,8 @@ public static class EnlacesDeAcceso
     public static async Task AutorregistroAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Guid terceroId,
         string correo, DateTimeOffset ahora)
     {
-        var (enlace, token) = EnlaceDeAcceso.Emitir(null, null, terceroId, correo, ahora + VigenciaAutorregistro, false, ahora);
+        var (enlace, token) = EnlaceDeAcceso.Emitir(null, null, terceroId, correo, ahora + VigenciaAutorregistro, false, ahora,
+            MotivoEnlace.Autorregistro);
         sesion.Store(enlace);
         await mensajes.PublishAsync(new CorreoDeAccesoPendiente(PlantillaCorreo.AccesoAutorregistro, enlace.CorreoDestino,
             protector.Proteger(token), enlace.Expira, null, null));
@@ -62,11 +63,17 @@ public static class EnlacesDeAcceso
     /// Sesión del tercero: incluye los vínculos de ese tercero cuyo correo de invitación coincide con el del enlace, en
     /// todos los tenants (consulta entre tenants de Marten). Canjear solo abre sesión: no comparte nada (B-1).
     /// </summary>
-    public static async Task<SesionTerceroDto> AbrirSesionAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
-        bool otpVerificado, DateTimeOffset ahora, CancellationToken ct)
+    public static Task<SesionTerceroDto> AbrirSesionAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
+        bool otpVerificado, DateTimeOffset ahora, CancellationToken ct) =>
+        EmitirAccesoAsync(consulta, emisor, enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora, ct);
+
+    /// <summary>
+    /// Access token del tercero con la lista de vínculos <b>calculada ahora</b> (al canjear y en cada renovación, RE-3):
+    /// un vínculo creado después del canje entra en la siguiente renovación.
+    /// </summary>
+    public static async Task<SesionTerceroDto> EmitirAccesoAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, Guid terceroId,
+        string correo, bool otpVerificado, DateTimeOffset ahora, CancellationToken ct)
     {
-        var terceroId = enlace.TerceroId;
-        var correo = enlace.CorreoDestino;
         var vinculos = await consulta.Query<Vinculo>()
             .Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.CorreoTercero == correo)
             .OrderBy(v => v.CreadoEn)

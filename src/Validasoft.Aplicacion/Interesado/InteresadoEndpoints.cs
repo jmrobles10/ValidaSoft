@@ -20,15 +20,19 @@ namespace Validasoft.Aplicacion.Interesado;
 
 /// <summary>
 /// Canje del enlace de acceso y del OTP (públicos, sin credencial, con límite de peticiones por IP). El token viaja en la
-/// ruta: nunca se registra en logs (el manejador de errores enmascara ese segmento).
+/// ruta: nunca se registra en logs (el manejador de errores enmascara ese segmento). Abrir la sesión además abre una
+/// sesión de refresco y pone la cookie <c>vs_tercero</c> (RE-3).
 /// </summary>
 public static class EnlacesPublicosEndpoints
 {
-    /// <summary>Sin OTP ⇒ 200 con la sesión. Con OTP ⇒ 202 y el código al mismo correo. Usado/vencido ⇒ 410; inexistente ⇒ 404.</summary>
+    /// <summary>
+    /// Sin OTP ⇒ 200 con la sesión y la cookie de refresco. Con OTP ⇒ 202 y el código al mismo correo. Usado/vencido ⇒
+    /// 410; inexistente ⇒ 404.
+    /// </summary>
     [WolverinePost("/public/v1/enlaces/{token}/canjear")]
     [AllowAnonymous]
-    public static async Task<IResult> Canjear(string token, ISesiones sesiones, IMessageBus mensajes, IProtectorDeSecretos protector,
-        IEmisorDeSesionesTercero emisor, TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Canjear(string token, HttpContext http, ISesiones sesiones, IMessageBus mensajes,
+        IProtectorDeSecretos protector, IEmisorDeSesionesTercero emisor, CookieDeSesionTercero cookie, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global(mensajes);
@@ -39,7 +43,9 @@ public static class EnlacesPublicosEndpoints
         if (resultado.SesionAbierta)
         {
             var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesion, emisor, enlace, otpVerificado: false, ahora, ct);
+            var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: false, ahora);
             await sesion.SaveChangesAsync(ct);
+            cookie.Poner(http.Response, refresco.Token, refresco.Expira);
             return Results.Ok(abierta);
         }
 
@@ -49,11 +55,14 @@ public static class EnlacesPublicosEndpoints
         return Results.Json(new OtpRequeridoDto(true, resultado.OtpExpira.Value), statusCode: StatusCodes.Status202Accepted);
     }
 
-    /// <summary>Código correcto ⇒ sesión con <c>otpVerificado</c>. Incorrecto ⇒ 422 <c>otp-invalido</c> (con <c>intentosRestantes</c>); agotado ⇒ 429.</summary>
+    /// <summary>
+    /// Código correcto ⇒ sesión con <c>otpVerificado</c> y la cookie de refresco. Incorrecto ⇒ 422 <c>otp-invalido</c> (con
+    /// <c>intentosRestantes</c>); agotado ⇒ 429.
+    /// </summary>
     [WolverinePost("/public/v1/enlaces/{token}/otp")]
     [AllowAnonymous]
-    public static async Task<SesionTerceroDto> VerificarOtp(string token, VerificarOtpDto dto, ISesiones sesiones, IEmisorDeSesionesTercero emisor,
-        TimeProvider reloj, CancellationToken ct)
+    public static async Task<SesionTerceroDto> VerificarOtp(string token, VerificarOtpDto dto, HttpContext http, ISesiones sesiones,
+        IEmisorDeSesionesTercero emisor, CookieDeSesionTercero cookie, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
@@ -73,7 +82,9 @@ public static class EnlacesPublicosEndpoints
         }
 
         var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesion, emisor, enlace, otpVerificado: true, ahora, ct);
+        var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: true, ahora);
         await sesion.SaveChangesAsync(ct);
+        cookie.Poner(http.Response, refresco.Token, refresco.Expira);
         return abierta;
     }
 }

@@ -352,6 +352,39 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
         abiertos.Select(x => x.Folio).ShouldBe(Enumerable.Range(1, 6).Select(n => $"NORTE-E-{anio}-{n:D6}"), ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task El_correo_de_observacion_trae_un_enlace_que_abre_la_sesion_del_tercero()
+    {
+        var e = await PrepararAsync();
+        await CrearFlujoAsync(e, "CLIENTE", [new EtapaDto(1, [new AreaDeEtapaDto(e.Cumplimiento.Id)])]);
+        await PublicarTextosAsync(e);
+        var correoTercero = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e, "CLIENTE", correoTercero);
+        await AceptarInvitacionAsync(vinculo, correoTercero);
+        var expedienteId = (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e), null, 200)).ExpedienteAbiertoId!.Value;
+
+        await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{expedienteId}/areas/{e.Cumplimiento.Id}/veredicto",
+            Delegado(e, e.Carlos), new VeredictoDto("Observado", ["incompleto"], "Falta el RUT actualizado."), 200);
+
+        // El correo trae un enlace nuevo de un solo uso (antes solo decía «ingresa con el enlace de tu invitación»).
+        var correo = await Correos.EsperarAsync(correoTercero, m => m.Asunto.Contains("observaciones"));
+        correo.Texto.ShouldNotContain("enlace de tu invitación");
+        correo.Html.ShouldContain($"{ApiFixture.UrlPublica}/e/");
+        var token = RegexToken().Match(correo.Texto).Groups[1].Value;
+        token.Length.ShouldBe(43);
+
+        var canje = await PublicoAsync("POST", $"/public/v1/enlaces/{token}/canjear", null, 200);
+        var sesion = (await canje.ReadAsJsonAsync<SesionTerceroDto>())!;
+        sesion.Vinculos.ShouldHaveSingleItem().Id.ShouldBe(vinculo.Id);
+        canje.Context.Response.Headers.SetCookie.ToString().ShouldContain("vs_tercero=");
+        var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{expedienteId}", sesion.AccessToken, null, 200);
+        vista.Estado.ShouldBe("Observado");
+        vista.PuedeReenviar.ShouldBeTrue();
+
+        // De un solo uso.
+        (await CodigoAsync(await PublicoAsync("POST", $"/public/v1/enlaces/{token}/canjear", null, 410))).ShouldBe("enlace-usado");
+    }
+
     // ---------- preparación ----------
 
     private async Task<Escenario> PrepararAsync()

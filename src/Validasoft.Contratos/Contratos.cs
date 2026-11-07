@@ -199,8 +199,9 @@ public sealed record EmpresaPublicaDto(Guid Id, string Nombre, string? LogoUrl);
 public sealed record VinculoDeSesionDto(Guid Id, EmpresaPublicaDto Empresa, string Estado);
 
 /// <summary>
-/// Sesión del tercero tras canjear el enlace (y el OTP si aplica): JWT de 30 minutos que se envía como
-/// <c>Authorization: Bearer</c> en <c>/public/v1</c>. Por ahora viaja en el cuerpo; con <c>apps/public</c> pasará a cookie.
+/// Sesión del tercero tras canjear el enlace (y el OTP si aplica) o renovarla: JWT de 30 minutos que viaja en el cuerpo y
+/// se envía como <c>Authorization: Bearer</c> en <c>/public/v1</c>. El token de refresco va aparte, en la cookie
+/// <c>HttpOnly</c> <c>vs_tercero</c> (<c>POST /public/v1/sesion/renovar</c>).
 /// </summary>
 public sealed record SesionTerceroDto(
     string AccessToken, DateTimeOffset Expira, Guid TerceroId, bool OtpVerificado, IReadOnlyList<VinculoDeSesionDto> Vinculos,
@@ -254,3 +255,6 @@ public sealed record AutorregistroDto(
 
 /// <summary>Respuesta idéntica exista o no el tercero (no revela nada).</summary>
 public sealed record SolicitudRecibidaDto(string Mensaje);
+
+/// <summary>Pedir un enlace para volver a entrar (<c>POST /public/v1/acceso</c>); la respuesta es la misma exista o no el correo.</summary>
+public sealed record SolicitarAccesoDto(string? Correo);
