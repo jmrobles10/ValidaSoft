@@ -242,7 +242,7 @@ export const expedientes = {
     exitoAprobar: '{{area}} aprobó sus documentos.',
     exitoObservar_one: 'Observaste {{count}} documento; el tercero recibe los motivos en un solo correo.',
     exitoObservar_other: 'Observaste {{count}} documentos; el tercero recibe los motivos en un solo correo.',
-    versionSuperada: 'El tercero subió una versión nueva de: {{documentos}}. Recargamos el expediente: revisa la versión nueva antes de decidir.',
+    versionSuperada: 'Cambió lo que hay por decidir en: {{documentos}} (el tercero subió una versión nueva). Recargamos el expediente: revísalo antes de decidir.',
     algunDocumento: 'un documento del área',
     revisarDeNuevo: 'Revisar de nuevo',
     bloqueos: {
@@ -498,5 +498,7 @@ export const erroresRevision = {
   'requisito-invalido': 'El tipo de documento no existe o está inactivo.',
   'requisito-area-invalida': 'Un documento lo revisa un área que no está en el flujo.',
   'sobre-version-requerida': 'Falta la versión revisada. Recarga y vuelve a decidir.',
+  'area-observada': 'Esta área tiene una observación vigente: no se puede aprobar hasta que el tercero responda o se anule la observación.',
+  'versiones-requeridas': 'Cambió lo que hay por decidir. Recarga y vuelve a revisar.',
   'clase-no-soportada': 'Ese tipo de documento es un formulario: aún no se puede pedir en un flujo.',
 } as const;

@@ -171,7 +171,7 @@ export function dialogoAplica(
       return bloqueoDecisionArea(expediente, area, ctx) === null;
     case 'aprobarArea': {
       // Todo o nada: si cambió alguna versión o lo que queda por decidir, la aprobación vista ya no es la vigente.
-      const vigentes = documentosPorDecidir(expediente, area, ctx.usuarioId);
+      const vigentes = documentosPorDecidir(area);
       const iguales =
         vigentes.length === dialogo.documentos.length &&
         vigentes.every((d) => dialogo.documentos.some((x) => x.requisitoId === d.requisitoId && x.versionVigente === d.versionVigente));

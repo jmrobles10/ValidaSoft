@@ -4660,6 +4660,15 @@
             ],
             "format": "int32",
             "default": 0
+          },
+          "documentosPorDecidir": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DocumentoPorDecidirDto"
+            }
           }
         }
       },
@@ -5568,6 +5577,27 @@
             "items": {
               "$ref": "#/components/schemas/ComparticionPublicaDto"
             }
+          }
+        }
+      },
+      "DocumentoPorDecidirDto": {
+        "required": [
+          "requisitoId",
+          "versionVigente"
+        ],
+        "type": "object",
+        "properties": {
+          "requisitoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionVigente": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -6727,6 +6757,44 @@
           },
           "activo": {
             "type": "boolean"
+          }
+        }
+      },
+      "ObservacionDeRequisitoDto": {
+        "required": [
+          "requisitoId",
+          "sobreVersion",
+          "motivos"
+        ],
+        "type": "object",
+        "properties": {
+          "requisitoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sobreVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "motivos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "observacion": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -7961,6 +8029,29 @@
               "string"
             ],
             "format": "int32"
+          },
+          "versiones": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "requisitos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ObservacionDeRequisitoDto"
+            }
           }
         }
       },

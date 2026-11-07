@@ -1,6 +1,15 @@
-import { esErrorApi, type AreaDeRequisitoDto, type AreaExpedienteDto, type ExpedienteDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
+import {
+  esErrorApi,
+  type AreaDeRequisitoDto,
+  type AreaExpedienteDto,
+  type DocumentoPorDecidirDto,
+  type ExpedienteDto,
+  type ObservacionDeRequisitoDto,
+  type RequisitoExpedienteDto,
+  type VeredictoDto,
+} from '@validasoft/api-client';
 import { bloqueoVeredicto, type BloqueoVeredicto, type ContextoRevisor } from './reglas';
-import { requisitosDe, veredictosVigentesDeRequisito } from './requisitos';
+import { requisitosDe } from './requisitos';
 
 /**
  * Decisión por área «como en el SRM» (opción mixta, `feature/H2-decision-area`): en pantalla cada área toma una sola
@@ -12,25 +21,11 @@ import { requisitosDe, veredictosVigentesDeRequisito } from './requisitos';
  *   un motivo (422 `requisitos-requeridos`); una sola devolución y un solo correo al tercero.
  */
 
-/** `ExpedienteDto.etapas[].areas[].documentosPorDecidir[]` (nuevo en el contrato). */
-export interface DocumentoPorDecidir {
-  requisitoId: string;
-  versionVigente: number;
-}
-
-export interface ObservacionDeDocumento {
-  requisitoId: string;
-  sobreVersion: number;
-  motivos: string[];
-  observacion?: string | null;
-}
-
-/** Cuerpo de la decisión del área (amplía `VeredictoDto`). */
-export interface DecisionDeArea {
-  veredicto: 'Aprobado' | 'Observado';
-  versiones?: Record<string, number>;
-  requisitos?: ObservacionDeDocumento[];
-}
+/** Lo que «Aprobar área» aprobaría a quien consulta: `ExpedienteDto.etapas[].areas[].documentosPorDecidir[]`. */
+export type DocumentoPorDecidir = DocumentoPorDecidirDto;
+export type ObservacionDeDocumento = ObservacionDeRequisitoDto;
+/** Cuerpo de la decisión del área (`VeredictoDto` con `versiones` o `requisitos`). */
+export type DecisionDeArea = Pick<VeredictoDto, 'veredicto' | 'versiones' | 'requisitos'>;
 
 /** Un documento que revisa el área, con lo que el área lleva decidido sobre él. */
 export interface DocumentoDelArea {
@@ -46,18 +41,11 @@ export function documentosDelArea(expediente: Pick<ExpedienteDto, 'requisitos'>,
 }
 
 /**
- * Lo que la persona aún debe decidir en el área. Usa `documentosPorDecidir` de la API; si no viene (API anterior), lo
- * deriva: documentos del área pendientes, con versión, sin un voto suyo sobre la versión vigente.
+ * Lo que la persona aún debe decidir en el área, según la API: vacío si el expediente no está `EnRevision`, si la etapa
+ * del área no está activa o si el área es automática.
  */
-export function documentosPorDecidir(expediente: ExpedienteDto, area: AreaExpedienteDto, usuarioId: string | null): DocumentoPorDecidir[] {
-  const delServidor = (area as AreaExpedienteDto & { documentosPorDecidir?: DocumentoPorDecidir[] | null }).documentosPorDecidir;
-  if (delServidor) return delServidor;
-  return documentosDelArea(expediente, area.areaId).flatMap(({ requisito, areaRequisito }) => {
-    const version = requisito.versionActual?.n;
-    if (version === undefined || areaRequisito.estado !== 'Pendiente' || requisito.estado === 'Eximido') return [];
-    const yaVoto = usuarioId && veredictosVigentesDeRequisito(areaRequisito).some((v) => v.usuario === usuarioId && v.sobreVersion === version);
-    return yaVoto ? [] : [{ requisitoId: requisito.id, versionVigente: version }];
-  });
+export function documentosPorDecidir(area: Pick<AreaExpedienteDto, 'documentosPorDecidir'>): DocumentoPorDecidir[] {
+  return area.documentosPorDecidir ?? [];
 }
 
 /** `versiones` de «Aprobar área»: exactamente los documentos por decidir, con su versión vigente. */
@@ -71,7 +59,7 @@ export type BloqueoDecisionArea = Exclude<BloqueoVeredicto, 'ya-voto'> | 'nada-p
 export function bloqueoDecisionArea(expediente: ExpedienteDto, area: AreaExpedienteDto, contexto: ContextoRevisor): BloqueoDecisionArea | null {
   const bloqueo = bloqueoVeredicto(expediente, area, { ...contexto, usuarioId: null });
   if (bloqueo && bloqueo !== 'ya-voto') return bloqueo;
-  return documentosPorDecidir(expediente, area, contexto.usuarioId).length === 0 ? 'nada-por-decidir' : null;
+  return documentosPorDecidir(area).length === 0 ? 'nada-por-decidir' : null;
 }
 
 /** Lo marcado en «Observar»: por documento, sus motivos y su nota. */
@@ -99,6 +87,7 @@ export type FalloDecision =
   | { tipo: 'version-superada'; requisitos: string[] }
   | { tipo: 'expediente-observado' }
   | { tipo: 'area-ya-se-pronuncio' }
+  | { tipo: 'area-observada' }
   | { tipo: 'otro' };
 
 function idsDe(valor: unknown): string[] {
@@ -113,8 +102,10 @@ function idsDe(valor: unknown): string[] {
 export function falloDeDecision(error: unknown): FalloDecision {
   if (!esErrorApi(error)) return { tipo: 'otro' };
   switch (error.codigo) {
-    case 'version-superada': {
-      // `datos.requisitos` llega como extensión del ProblemDetails (IN-12); se aceptan ids o `{ requisitoId }`.
+    case 'version-superada':
+    case 'versiones-requeridas': {
+      // `requisitos: [{ requisitoId, versionVigente }]` en el primer nivel del ProblemDetails (también en
+      // `versiones-requeridas`: llegó un documento por decidir que no estaba). Se aceptan ids o `{ requisitoId }`.
       const datos = error.extensiones.datos;
       const requisitos = idsDe(error.extensiones.requisitos);
       return { tipo: 'version-superada', requisitos: requisitos.length > 0 ? requisitos : idsDe(datos && typeof datos === 'object' && 'requisitos' in datos ? datos.requisitos : null) };
@@ -123,6 +114,8 @@ export function falloDeDecision(error: unknown): FalloDecision {
       return { tipo: 'expediente-observado' };
     case 'area-ya-se-pronuncio':
       return { tipo: 'area-ya-se-pronuncio' };
+    case 'area-observada':
+      return { tipo: 'area-observada' };
     default:
       return { tipo: 'otro' };
   }

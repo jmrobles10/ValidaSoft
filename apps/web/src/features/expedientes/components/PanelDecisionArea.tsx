@@ -46,7 +46,7 @@ export function PanelDecisionArea({
         {areas.map((area) => {
           const ctx = contexto(area);
           const bloqueo = bloqueoDecisionArea(expediente, area, ctx);
-          const porDecidir = documentosPorDecidir(expediente, area, ctx.usuarioId);
+          const porDecidir = documentosPorDecidir(area);
           const explicar = seExplica(bloqueo) && ctx.scopes.has(SCOPES.expedientesRevisar) ? bloqueo : null;
           return (
             <Box key={area.areaId} component="section" aria-label={area.nombre} sx={{ border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}>

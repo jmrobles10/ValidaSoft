@@ -66,7 +66,12 @@ export function enlaceDeSubida(requisito: RequisitoPublicoDto, vinculoId: string
   return `/boveda/subir?${parametros.toString()}`;
 }
 
-/** Mientras falten documentos o esté devuelto, la versión subida llega al expediente por una cola: se refresca solo. */
+/**
+ * Se refresca solo: cada 4 s mientras falten documentos o esté devuelto (la versión subida llega al expediente por una
+ * cola) y cada 30 s mientras la empresa revisa, para que una observación aparezca sin recargar.
+ */
 export function debeRefrescar(expediente: Pick<ExpedientePublicoDto, 'estado'> | undefined): number | false {
-  return expediente && (expediente.estado === 'Abierto' || expediente.estado === 'Observado') ? 4000 : false;
+  if (!expediente) return false;
+  if (expediente.estado === 'Abierto' || expediente.estado === 'Observado') return 4000;
+  return expediente.estado === 'EnRevision' ? 30_000 : false;
 }

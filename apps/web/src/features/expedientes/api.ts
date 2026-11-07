@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   abrirExpediente,
-  clienteValidasoft,
   anularExpediente,
   anularVeredicto,
   aprobarComoAdministrador,
@@ -91,12 +90,9 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
         opciones,
       );
     case 'veredictoArea':
-      // Decisión del área completa (`feature/H2-decision-area`): «Aprobar área» con `versiones` u «Observar» con
-      // `requisitos[]`. Mientras el contrato no esté en el cliente generado, va por el mutator con el cuerpo ampliado.
-      return clienteValidasoft<ExpedienteDto>(
-        { url: `/api/v1/expedientes/${expedienteId}/areas/${entrada.areaId}/veredicto`, method: 'POST', data: entrada.decision },
-        opciones,
-      );
+      // Decisión del área completa: «Aprobar área» con `versiones` u «Observar» con `requisitos[]` (con requisitos,
+      // la API ignora `motivos` y `observacion` de primer nivel).
+      return emitirVeredicto(expedienteId, entrada.areaId, entrada.decision, opciones);
     case 'eximir':
       return eximirRequisito(expedienteId, entrada.requisitoId, { justificacion: entrada.justificacion.trim() }, opciones);
     case 'rechazar':

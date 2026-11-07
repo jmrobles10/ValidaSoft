@@ -8,6 +8,7 @@ import type { EstadoAreaExpediente } from './estadoAreaExpediente';
 import type { AreaExpedienteDtoPendienteDesde } from './areaExpedienteDtoPendienteDesde';
 import type { AreaExpedienteDtoSlaVence } from './areaExpedienteDtoSlaVence';
 import type { VeredictoEmitidoDto } from './veredictoEmitidoDto';
+import type { AreaExpedienteDtoDocumentosPorDecidir } from './areaExpedienteDtoDocumentosPorDecidir';
 
 export interface AreaExpedienteDto {
   areaId: string;
@@ -24,4 +25,5 @@ export interface AreaExpedienteDto {
   slaVence: AreaExpedienteDtoSlaVence;
   veredictos: VeredictoEmitidoDto[];
   requisitosPorDecidir?: number;
+  documentosPorDecidir?: AreaExpedienteDtoDocumentosPorDecidir;
 }

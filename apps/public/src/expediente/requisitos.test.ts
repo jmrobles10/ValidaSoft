@@ -64,10 +64,11 @@ describe('documentos que pide la empresa', () => {
     expect(enlaceDeSubida(propio, null, '/expediente/e1')).toBeNull();
   });
 
-  it('se refresca solo mientras falten documentos o esté devuelto (la versión llega por una cola)', () => {
+  it('se refresca rápido mientras falten documentos o esté devuelto, y despacio mientras la empresa revisa', () => {
     expect(debeRefrescar(expediente('Abierto', []))).toBe(4000);
     expect(debeRefrescar(expediente('Observado', []))).toBe(4000);
-    expect(debeRefrescar(expediente('EnRevision', []))).toBe(false);
+    expect(debeRefrescar(expediente('EnRevision', []))).toBe(30_000);
+    expect(debeRefrescar(expediente('Aprobado', []))).toBe(false);
     expect(debeRefrescar(undefined)).toBe(false);
   });
 });
