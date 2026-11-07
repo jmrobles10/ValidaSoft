@@ -17,10 +17,12 @@ import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
 import { DialogoDecision } from '../components/DialogoDecision';
 import { EtapasExpediente } from '../components/EtapasExpediente';
+import { DialogoDecisionArea } from '../components/DialogoDecisionArea';
+import { PanelDecisionArea } from '../components/PanelDecisionArea';
 import { PanelRequisitos } from '../components/PanelRequisitos';
 import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
 import { usuariosDelExpediente } from '../requisitos';
-import { accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
+import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
 
 export function DetalleExpediente() {
   const { t } = useTranslation();
@@ -175,6 +177,7 @@ export function DetalleExpediente() {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
+          <PanelDecisionArea expediente={expediente} contexto={contexto} onAccion={setDialogo} />
           <PanelRequisitos expediente={expediente} contexto={contexto} nombres={nombres} onAccion={setDialogo} />
           <EtapasExpediente expediente={expediente} contexto={contexto} nombres={nombres} motivos={nombresMotivos} onAccion={setDialogo} />
           <UltimaRespuesta expediente={expediente} />
@@ -183,7 +186,17 @@ export function DetalleExpediente() {
         <HistorialExpediente empresaId={empresa.id} expediente={expediente} />
       </Box>
 
-      {dialogo && (
+      {dialogo && esDialogoDeArea(dialogo) && (
+        <DialogoDecisionArea
+          dialogo={dialogo}
+          expediente={expediente}
+          empresaId={empresa.id}
+          motivos={motivos.data ?? []}
+          aplica={dialogoAplica(dialogo, expediente, contexto)}
+          onCerrar={() => setDialogo(null)}
+        />
+      )}
+      {dialogo && !esDialogoDeArea(dialogo) && (
         <DialogoDecision
           dialogo={dialogo}
           expediente={expediente}

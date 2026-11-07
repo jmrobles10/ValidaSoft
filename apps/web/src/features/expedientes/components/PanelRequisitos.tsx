@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Stack } from '@mui/material';
+import { Alert, AlertTitle, Button, Stack } from '@mui/material';
 import { SCOPES, type AreaExpedienteDto, type ExpedienteDto } from '@validasoft/api-client';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,8 @@ export function PanelRequisitos({
 }) {
   const { t } = useTranslation();
   const [abierto, setAbierto] = useState<DocumentoEnVisor | null>(null);
+  // La decisión principal es por área (PanelDecisionArea); documento por documento queda como acción secundaria.
+  const [porDocumento, setPorDocumento] = useState(false);
   const areas = useMemo(() => new Map(expediente.etapas.flatMap((e) => e.areas.map((a) => [a.areaId, a] as const))), [expediente.etapas]);
   const requisitos = requisitosDe(expediente);
   const faltantes = requisitosFaltantes(expediente);
@@ -32,7 +34,16 @@ export function PanelRequisitos({
   if (requisitos.length === 0) return null;
 
   return (
-    <Tarjeta titulo={t('expedientes.requisitos.titulo')}>
+    <Tarjeta
+      titulo={t('expedientes.requisitos.titulo')}
+      acciones={
+        contexto(null).scopes.has(SCOPES.expedientesRevisar) && expediente.estado === 'EnRevision' ? (
+          <Button size="small" variant="text" onClick={() => setPorDocumento((v) => !v)} aria-pressed={porDocumento}>
+            {porDocumento ? t('expedientes.requisitos.ocultarPorDocumento') : t('expedientes.requisitos.decidirPorDocumento')}
+          </Button>
+        ) : undefined
+      }
+    >
       {enFaseDeCarga(expediente) && faltantes.length > 0 && (
         <Alert severity="info" sx={{ mb: 1.5 }}>
           <AlertTitle>{t('expedientes.requisitos.faseCargaTitulo')}</AlertTitle>
@@ -51,6 +62,7 @@ export function PanelRequisitos({
             puedeVer={puedeVer}
             onVer={setAbierto}
             onAccion={onAccion}
+            decidirPorDocumento={porDocumento}
           />
         ))}
       </Stack>

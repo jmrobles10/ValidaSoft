@@ -25,13 +25,15 @@ export interface TarjetaRequisitoProps {
   puedeVer: boolean;
   onVer: (documento: DocumentoEnVisor) => void;
   onAccion: (dialogo: DialogoExpediente) => void;
+  /** Muestra «Aprobar u observar» por documento (acción secundaria; la principal es la decisión del área). */
+  decidirPorDocumento?: boolean;
 }
 
 /**
  * Un documento que pide el flujo: estado, versión vigente (con «Ver» en el visor) y, por cada área que lo revisa, su
  * estado, sus veredictos sobre la versión y «Aprobar u observar» cuando le toca a quien mira (RQ-4).
  */
-export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion }: TarjetaRequisitoProps) {
+export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false }: TarjetaRequisitoProps) {
   const { t } = useTranslation();
   const version = requisito.versionActual;
   const documento = requisito.tipoDocumento.nombre;
@@ -109,6 +111,7 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
             contexto={contexto}
             nombres={nombres}
             onAccion={onAccion}
+            decidirPorDocumento={decidirPorDocumento}
           />
         ))}
       </Stack>
@@ -124,12 +127,16 @@ function AreaDelRequisito({
   contexto,
   nombres,
   onAccion,
-}: Pick<TarjetaRequisitoProps, 'expediente' | 'requisito' | 'contexto' | 'nombres' | 'onAccion'> & { areaRequisito: AreaDeRequisitoDto; area: AreaExpedienteDto | null }) {
+  decidirPorDocumento,
+}: Pick<TarjetaRequisitoProps, 'expediente' | 'requisito' | 'contexto' | 'nombres' | 'onAccion' | 'decidirPorDocumento'> & {
+  areaRequisito: AreaDeRequisitoDto;
+  area: AreaExpedienteDto | null;
+}) {
   const { t } = useTranslation();
   const ctx = contexto(area);
   const nombreArea = area?.nombre ?? areaRequisito.codigo;
   const bloqueo = bloqueoRequisito(expediente, requisito, areaRequisito, ctx);
-  const explicar = seExplica(bloqueo) && ctx.scopes.has(SCOPES.expedientesRevisar) ? bloqueo : null;
+  const explicar = decidirPorDocumento && seExplica(bloqueo) && ctx.scopes.has(SCOPES.expedientesRevisar) ? bloqueo : null;
   const nombre = (id: string | null | undefined) =>
     id && id === ctx.usuarioId ? t('expedientes.veredictos.tu') : ((id && nombres.get(id)) ?? t('expedientes.requisitos.persona'));
 
@@ -145,7 +152,7 @@ function AreaDelRequisito({
         <Typography component="span" variant="monoTabla" color="text.secondary">
           {t('bandeja.aprobaciones', { aprobaciones: String(areaRequisito.aprobaciones), requeridas: String(areaRequisito.aprobadoresRequeridos) })}
         </Typography>
-        {bloqueo === null && (
+        {bloqueo === null && decidirPorDocumento && (
           <Button
             size="small"
             variant="contained"

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   abrirExpediente,
+  clienteValidasoft,
   anularExpediente,
   anularVeredicto,
   aprobarComoAdministrador,
@@ -20,6 +21,7 @@ import {
   type Veredicto,
 } from '@validasoft/api-client';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
+import type { DecisionDeArea } from './decisionArea';
 
 export function useBandeja(empresaId: string, params: ListarBandejaParams) {
   const opciones = getListarBandejaQueryOptions(params, { request: { empresa: empresaId } });
@@ -52,6 +54,7 @@ export type EntradaExpediente =
   | { tipo: 'veredicto'; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string }
   | { tipo: 'veredictoRequisito'; requisitoId: string; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string; sobreVersion: number }
   | { tipo: 'eximir'; requisitoId: string; justificacion: string }
+  | { tipo: 'veredictoArea'; areaId: string; decision: DecisionDeArea }
   | { tipo: 'rechazar'; areaId: string; motivos: string[]; justificacion: string }
   | { tipo: 'aprobarComoAdministrador'; areaId: string; justificacion: string }
   | { tipo: 'anularVeredicto'; areaId: string; justificacion: string; veredictoId?: string }
@@ -85,6 +88,13 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
           observacion: texto(entrada.observacion),
           sobreVersion: entrada.sobreVersion,
         },
+        opciones,
+      );
+    case 'veredictoArea':
+      // Decisión del área completa (`feature/H2-decision-area`): «Aprobar área» con `versiones` u «Observar» con
+      // `requisitos[]`. Mientras el contrato no esté en el cliente generado, va por el mutator con el cuerpo ampliado.
+      return clienteValidasoft<ExpedienteDto>(
+        { url: `/api/v1/expedientes/${expedienteId}/areas/${entrada.areaId}/veredicto`, method: 'POST', data: entrada.decision },
         opciones,
       );
     case 'eximir':

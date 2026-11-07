@@ -10,6 +10,7 @@ import {
   type VeredictoEmitidoDto,
 } from '@validasoft/api-client';
 import type { Estado } from '@validasoft/ui';
+import { bloqueoDecisionArea, documentosPorDecidir, type DocumentoPorDecidir } from './decisionArea';
 import { bloqueoRequisito, puedeEximir, versionVigente } from './requisitos';
 
 /**
@@ -122,7 +123,17 @@ export type DialogoExpediente =
   | { tipo: 'veredicto' | 'rechazar' | 'aprobarComoAdministrador' | 'anularVeredicto'; area: AreaExpedienteDto }
   | { tipo: 'veredictoRequisito'; requisito: RequisitoExpedienteDto; areaRequisito: AreaDeRequisitoDto; nombreArea: string }
   | { tipo: 'eximir'; requisito: RequisitoExpedienteDto }
+  // Decisión del área completa: «Aprobar área» con los documentos que vio, u «Observar» marcando documentos.
+  | { tipo: 'aprobarArea'; area: AreaExpedienteDto; documentos: readonly DocumentoPorDecidir[] }
+  | { tipo: 'observarArea'; area: AreaExpedienteDto }
   | { tipo: 'reenviar' | 'anular' };
+
+/** Diálogos de decisión de área completa (tienen su propio componente, `DialogoDecisionArea`). */
+export type DialogoDeArea = Extract<DialogoExpediente, { tipo: 'aprobarArea' | 'observarArea' }>;
+
+export function esDialogoDeArea(dialogo: DialogoExpediente): dialogo is DialogoDeArea {
+  return dialogo.tipo === 'aprobarArea' || dialogo.tipo === 'observarArea';
+}
 
 /** ¿La decisión del diálogo sigue aplicando al expediente vigente? (tras recargar puede haber cambiado). */
 export function dialogoAplica(
@@ -156,6 +167,16 @@ export function dialogoAplica(
       return puedeAprobarComoAdministrador(expediente, area, ctx);
     case 'anularVeredicto':
       return puedeAnularVeredicto(expediente, area, ctx.scopes);
+    case 'observarArea':
+      return bloqueoDecisionArea(expediente, area, ctx) === null;
+    case 'aprobarArea': {
+      // Todo o nada: si cambió alguna versión o lo que queda por decidir, la aprobación vista ya no es la vigente.
+      const vigentes = documentosPorDecidir(expediente, area, ctx.usuarioId);
+      const iguales =
+        vigentes.length === dialogo.documentos.length &&
+        vigentes.every((d) => dialogo.documentos.some((x) => x.requisitoId === d.requisitoId && x.versionVigente === d.versionVigente));
+      return iguales && bloqueoDecisionArea(expediente, area, ctx) === null;
+    }
   }
 }
 

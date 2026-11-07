@@ -6,12 +6,12 @@ import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
-import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoExpediente } from '../reglas';
+import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { versionVigente } from '../requisitos';
 import { SelectorMotivos } from './SelectorMotivos';
 
 export interface DialogoDecisionProps {
-  dialogo: DialogoExpediente;
+  dialogo: Exclude<DialogoExpediente, DialogoDeArea>;
   expediente: ExpedienteDto;
   empresaId: string;
   motivos: readonly MotivoTipificadoDto[];

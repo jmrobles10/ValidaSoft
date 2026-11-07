@@ -10,7 +10,7 @@ import { conEmpresa } from '../../../shared/consultas';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useExpediente } from '../api';
 import { area, expediente, veredicto } from '../datosPrueba';
-import { dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
+import { dialogoAplica, type ContextoRevisor, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { DialogoDecision } from './DialogoDecision';
 
 const EMPRESA = 'emp';
@@ -20,7 +20,7 @@ const CONTEXTO: ContextoRevisor = { scopes: new Set([SCOPES.expedientesLeer, SCO
 const json = (estado: number, cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
 
 /** Igual que el detalle: el diálogo lee el expediente de la caché y `aplica` se recalcula con cada versión. */
-function Detalle({ dialogo, cerrarDesmonta, onCerrar }: { dialogo: DialogoExpediente; cerrarDesmonta: boolean; onCerrar: () => void }) {
+function Detalle({ dialogo, cerrarDesmonta, onCerrar }: { dialogo: Exclude<DialogoExpediente, DialogoDeArea>; cerrarDesmonta: boolean; onCerrar: () => void }) {
   const consulta = useExpediente(EMPRESA, 'e1');
   const [abierto, setAbierto] = useState(true);
   if (!consulta.data || !abierto) return null;
@@ -43,7 +43,7 @@ function Detalle({ dialogo, cerrarDesmonta, onCerrar }: { dialogo: DialogoExpedi
  * `respuesta` contesta la decisión (POST); la recarga del expediente (GET) contesta `recarga`, o nunca si es `null`
  * (una red lenta: el diálogo no debe esperarla).
  */
-function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true }: { inicial: ExpedienteDto; dialogo: DialogoExpediente; respuesta: () => Response; recarga: ExpedienteDto | null; cerrarDesmonta?: boolean }) {
+function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true }: { inicial: ExpedienteDto; dialogo: Exclude<DialogoExpediente, DialogoDeArea>; respuesta: () => Response; recarga: ExpedienteDto | null; cerrarDesmonta?: boolean }) {
   configurarCliente({
     fetch: vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
       if ((init?.method ?? 'GET') === 'GET') return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
