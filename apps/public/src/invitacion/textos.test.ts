@@ -39,6 +39,25 @@ describe('qué textos hay que aceptar', () => {
     expect(estadoInvitacion(invitacion())).toBe('por-aceptar');
   });
 
+  it('un vínculo bloqueado es una validación suspendida, no «faltan textos» (aunque no pueda aceptar)', () => {
+    const bloqueado = invitacion({ puedeAceptar: false, textosFaltantes: [] });
+    bloqueado.vinculo = { ...bloqueado.vinculo, estado: 'Bloqueado' };
+    expect(estadoInvitacion(bloqueado)).toBe('suspendida');
+    expect(puedeAceptar(bloqueado, new Set(bloqueado.textosPorAceptar.map(claveTexto)))).toBe(false);
+  });
+
+  it('desvinculado o anulado: la invitación ya no está vigente, también si ya había aceptado', () => {
+    for (const estado of ['Desvinculado', 'Anulado'] as const) {
+      const base = invitacion({ puedeAceptar: false }, true);
+      expect(estadoInvitacion({ ...base, vinculo: { ...base.vinculo, estado } })).toBe('terminada');
+    }
+  });
+
+  it('«aún no publica sus textos» solo cuando faltan textos; si la API no deja aceptar por otra razón, aviso genérico', () => {
+    expect(estadoInvitacion(invitacion({ puedeAceptar: false, textosFaltantes: ['AutorizacionEmpresa'] }))).toBe('faltan-textos');
+    expect(estadoInvitacion(invitacion({ puedeAceptar: false, textosFaltantes: [] }))).toBe('no-disponible');
+  });
+
   it('exige marcar cada texto vigente; sin el aviso (ya aceptado antes) bastan los de la empresa', () => {
     const todos = new Set(invitacion().textosPorAceptar.map(claveTexto));
     expect(puedeAceptar(invitacion(), new Set(['AvisoPlataforma:1', 'AutorizacionEmpresa:1']))).toBe(false);

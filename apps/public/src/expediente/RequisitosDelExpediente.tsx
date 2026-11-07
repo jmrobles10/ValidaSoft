@@ -9,7 +9,7 @@ import { accionDeRequisito, enlaceDeSubida, observacionesDeRequisito, requisitos
 const GRUPOS: readonly GrupoRequisito[] = ['te-toca', 'en-revision', 'listo'];
 
 /** Los documentos que pide la empresa, agrupados en «Te toca», «Lo revisa la empresa» y «Listo». */
-export function RequisitosDelExpediente({ expediente, vinculoId }: { expediente: ExpedientePublicoDto; vinculoId: string | null }) {
+export function RequisitosDelExpediente({ expediente, vinculoId, soloLectura = false }: { expediente: ExpedientePublicoDto; vinculoId: string | null; soloLectura?: boolean }) {
   const { t } = useTranslation();
   const grupos = requisitosPorGrupo(expediente);
   const volver = `/expediente/${expediente.id}`;
@@ -28,7 +28,7 @@ export function RequisitosDelExpediente({ expediente, vinculoId }: { expediente:
             </Typography>
             <Stack component="ul" spacing={1.25} sx={{ p: 0, m: 0, listStyle: 'none' }}>
               {grupos[grupo].map((r) => (
-                <TarjetaRequisitoPublico key={r.id} requisito={r} expediente={expediente} enlace={enlaceDeSubida(r, vinculoId, volver)} />
+                <TarjetaRequisitoPublico key={r.id} requisito={r} expediente={expediente} enlace={soloLectura ? null : enlaceDeSubida(r, vinculoId, volver)} />
               ))}
             </Stack>
           </Box>

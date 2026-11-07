@@ -98,6 +98,8 @@ export const esCO = {
     compartidos_other: 'le compartimos {{count}} documentos de tu bóveda.',
     aceptadaTitulo: 'Ya aceptaste esta invitación',
     aceptadaTexto: 'La aceptaste el {{fecha}}. {{empresa}} recibe las versiones de tus documentos que exige.',
+    noDisponibleTitulo: 'Por ahora no puedes aceptar esta invitación',
+    noDisponibleTexto: 'Inténtalo más tarde. Si sigue igual, escribe a {{empresa}}.',
     faltanTitulo: '{{empresa}} aún no publica sus textos',
     faltanTexto: 'No puedes aceptar hasta que la empresa publique su autorización de datos y sus términos. Te avisaremos; también puedes escribirle.',
     irBoveda: 'Ir a mi bóveda',
@@ -107,6 +109,18 @@ export const esCO = {
       'textos-legales-faltantes': 'La empresa retiró o cambió sus textos. Recargamos la invitación.',
       'otp-requerido': 'Esta empresa pide verificar tu correo con un código. Abre de nuevo el enlace de su invitación y escribe el código que te llegue.',
       'ya-aceptada': 'Ya habías aceptado esta invitación.',
+    },
+  },
+  vinculoSituacion: {
+    suspendida: {
+      titulo: '{{empresa}} suspendió temporalmente esta validación',
+      texto: 'Por ahora no puedes aceptar, enviar documentos ni responder a esta empresa. Te avisaremos por correo cuando la reanude; si tienes dudas, escríbele.',
+      corto: 'Suspendió temporalmente la validación. Te avisaremos cuando la reanude.',
+    },
+    terminada: {
+      titulo: 'Esta invitación ya no está vigente',
+      texto: '{{empresa}} cerró esta relación. Tus documentos siguen en tu bóveda; si crees que es un error, escríbele.',
+      corto: 'Cerró esta relación; la invitación ya no está vigente.',
     },
   },
   boveda: {

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
 import { esErrorApi } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { SearchX, Upload } from 'lucide-react';
@@ -9,6 +9,7 @@ import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
 import { mensajeDeError } from '../shared/errores';
+import { situacionDelVinculo } from '../vinculos/situacion';
 import { observacionesGenerales } from './requisitos';
 import { Observacion, RequisitosDelExpediente } from './RequisitosDelExpediente';
 
@@ -42,7 +43,10 @@ export function PaginaExpediente() {
   const faltantes = expediente.requisitosFaltantes ?? 0;
   // Con documentos, cada observación va en su tarjeta; aquí quedan las del expediente completo.
   const observaciones = (conRequisitos ? observacionesGenerales(expediente) : [...expediente.observaciones]).sort((a, b) => b.fecha.localeCompare(a.fecha));
-  const vinculoId = vinculos.data?.find((v) => v.expedienteId === expediente.id)?.id ?? null;
+  const vinculo = vinculos.data?.find((v) => v.expedienteId === expediente.id);
+  const vinculoId = vinculo?.id ?? null;
+  // Con el vínculo suspendido o terminado no se sube ni se reenvía para esta empresa (la API respondería 409).
+  const situacion = situacionDelVinculo(vinculo?.estado);
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
@@ -87,7 +91,14 @@ export function PaginaExpediente() {
         )}
       </Card>
 
-      {conRequisitos && <RequisitosDelExpediente expediente={expediente} vinculoId={vinculoId} />}
+      {situacion !== 'vigente' && (
+        <Alert severity={situacion === 'suspendida' ? 'warning' : 'info'} sx={{ mb: 2 }}>
+          <AlertTitle>{t(`vinculoSituacion.${situacion}.titulo`, { empresa })}</AlertTitle>
+          {t(`vinculoSituacion.${situacion}.texto`, { empresa })}
+        </Alert>
+      )}
+
+      {conRequisitos && <RequisitosDelExpediente expediente={expediente} vinculoId={vinculoId} soloLectura={situacion !== 'vigente'} />}
 
       {observaciones.length > 0 && (
         <Box component="section" aria-labelledby="titulo-observaciones" sx={{ mb: 2 }}>
@@ -104,7 +115,7 @@ export function PaginaExpediente() {
         </Box>
       )}
 
-      {expediente.puedeReenviar && (
+      {expediente.puedeReenviar && situacion === 'vigente' && (
         <Card component="form" onSubmit={enviar} noValidate sx={{ p: 2 }}>
           <Stack spacing={1.5}>
             {reenvio.isError && <Alert severity="error">{mensajeDeError(reenvio.error, t)}</Alert>}

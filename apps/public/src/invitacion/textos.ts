@@ -1,3 +1,4 @@
+import { situacionDelVinculo } from '../vinculos/situacion';
 import { esErrorApi, type ConsentimientoDto, type InvitacionPublicaDto, type TextoLegalPublicoDto, type TipoTextoLegal } from '@validasoft/api-client';
 
 /** Orden de lectura: primero el aviso de la plataforma (solo si falta), luego la autorización y los términos de la empresa. */
@@ -12,12 +13,19 @@ export function textosOrdenados(invitacion: InvitacionPublicaDto): TextoLegalPub
   return [...invitacion.textosPorAceptar].sort((a, b) => ORDEN[a.tipo] - ORDEN[b.tipo]);
 }
 
-/** Qué ve la persona: ya aceptó, la empresa aún no publica sus textos, o tiene textos por aceptar. */
-export type EstadoInvitacion = 'aceptada' | 'faltan-textos' | 'por-aceptar';
+/**
+ * Qué ve la persona, en este orden: la empresa suspendió la validación (vínculo bloqueado) o la terminó (desvinculado,
+ * anulado); ya aceptó; la empresa aún no publica sus textos (solo si `textosFaltantes` trae alguno); la API no deja
+ * aceptar por otro motivo; o tiene textos por aceptar.
+ */
+export type EstadoInvitacion = 'suspendida' | 'terminada' | 'aceptada' | 'faltan-textos' | 'no-disponible' | 'por-aceptar';
 
 export function estadoInvitacion(invitacion: InvitacionPublicaDto): EstadoInvitacion {
+  const situacion = situacionDelVinculo(invitacion.vinculo.estado);
+  if (situacion !== 'vigente') return situacion;
   if (invitacion.vinculo.invitacionAceptada) return 'aceptada';
-  if (!invitacion.puedeAceptar || invitacion.textosFaltantes.length > 0) return 'faltan-textos';
+  if (invitacion.textosFaltantes.length > 0) return 'faltan-textos';
+  if (!invitacion.puedeAceptar) return 'no-disponible';
   return 'por-aceptar';
 }
 

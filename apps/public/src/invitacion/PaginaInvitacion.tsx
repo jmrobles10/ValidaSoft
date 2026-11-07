@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Card, Checkbox, FormControlLabel, Stack, Typography } from '@mui/material';
 import { esErrorApi } from '@validasoft/api-client';
 import { formatearFecha, PaginaEstado } from '@validasoft/ui';
-import { CircleCheck, FileClock, SearchX } from 'lucide-react';
+import { CircleCheck, CirclePause, CircleSlash, FileClock, SearchX } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Link as RouterLink, useParams } from 'react-router';
@@ -37,6 +37,21 @@ export function PaginaInvitacion() {
   const estado = estadoInvitacion(invitacion);
   const expedienteId = invitacion.vinculo.expedienteId;
 
+  if (estado === 'suspendida' || estado === 'terminada') {
+    return (
+      <PaginaEstado
+        icono={estado === 'suspendida' ? CirclePause : CircleSlash}
+        titulo={t(`vinculoSituacion.${estado}.titulo`, { empresa })}
+        texto={t(`vinculoSituacion.${estado}.texto`, { empresa })}
+        acciones={
+          <Button component={RouterLink} to="/boveda" variant="outlined">
+            {t('invitacion.irBoveda')}
+          </Button>
+        }
+      />
+    );
+  }
+
   // Ya aceptó y tiene revisión abierta (p. ej. entró con el enlace del correo de observación): directo a ella.
   if (estado === 'aceptada' && expedienteId) return <Navigate to={`/expediente/${expedienteId}`} replace />;
 
@@ -64,6 +79,9 @@ export function PaginaInvitacion() {
 
   if (estado === 'faltan-textos') {
     return <PaginaEstado icono={FileClock} titulo={t('invitacion.faltanTitulo', { empresa })} texto={t('invitacion.faltanTexto')} />;
+  }
+  if (estado === 'no-disponible') {
+    return <PaginaEstado icono={FileClock} titulo={t('invitacion.noDisponibleTitulo')} texto={t('invitacion.noDisponibleTexto', { empresa })} />;
   }
 
   const fallo = aceptacion.isError ? falloDeAceptacion(aceptacion.error) : null;
