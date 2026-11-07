@@ -88,7 +88,8 @@ public static class Peticiones
         }
     }
 
-    private static bool EsCarrera(Exception e) =>
+    /// <summary>La escritura perdió una carrera (concurrencia optimista, stream o clave única).</summary>
+    public static bool EsCarrera(Exception e) =>
         e is ConcurrencyException or EventStreamUnexpectedMaxEventIdException or DocumentAlreadyExistsException ||
         e is MartenCommandException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } };
 

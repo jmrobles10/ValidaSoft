@@ -51,6 +51,7 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Correo:UrlPublica", UrlPublica);
             b.UseSetting("Validasoft:LimitePublico:Peticiones", LimitePublico.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:LimitePublico:VentanaSegundos", "60");
+            b.UseSetting("Validasoft:SesionTercero:CookieSegura", "true"); // como producción: se verifica el atributo Secure
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();

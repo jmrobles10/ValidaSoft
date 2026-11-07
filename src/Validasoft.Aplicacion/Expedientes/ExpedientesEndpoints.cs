@@ -104,7 +104,7 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/expedientes/{id}/areas/{areaId}/veredicto")]
     [Authorize(Policy = Permisos.ExpedientesRevisar)]
     public static async Task<ExpedienteDto> Veredicto(Guid id, Guid areaId, VeredictoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var veredicto = LeerVeredicto(dto);
@@ -114,7 +114,7 @@ public static class ExpedientesEndpoints
         var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
         var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
         var eventos = stream.Aggregate!.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto")]
     [Authorize(Policy = Permisos.ExpedientesRevisar)]
     public static async Task<ExpedienteDto> VeredictoDeRequisito(Guid id, Guid requisitoId, Guid areaId, VeredictoDto dto, SesionDeEmpresa empresa,
-        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var veredicto = LeerVeredicto(dto);
@@ -135,7 +135,7 @@ public static class ExpedientesEndpoints
         var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
         var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
             reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>
@@ -145,20 +145,20 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> Eximir(Guid id, Guid requisitoId, JustificacionDto dto, SesionDeEmpresa empresa,
-        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
         var eventos = stream.Aggregate!.EximirRequisito(requisitoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>Rechazo terminal por un área con <c>puedeRechazarExpediente</c> (motivos y justificación).</summary>
     [WolverinePost("/api/v1/expedientes/{id}/rechazar")]
     [Authorize(Policy = Permisos.ExpedientesRevisar)]
     public static async Task<ExpedienteDto> Rechazar(Guid id, RechazarExpedienteDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
@@ -166,7 +166,7 @@ public static class ExpedientesEndpoints
         var revisor = await Revisores.DelAreaAsync(empresa, contexto, dto.AreaId, ct);
         var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Rechazo, ct);
         var eventos = stream.Aggregate!.Rechazar(dto.AreaId, revisor, motivos, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>
@@ -176,13 +176,13 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/expedientes/{id}/reenviar")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> Reenviar(Guid id, ReenviarExpedienteDto dto, SesionDeEmpresa empresa, HttpContext http,
-        IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
         var eventos = await ReenvioConVersionesAsync(empresa.Sesion, stream.Aggregate!, OrigenReenvio.Integrador, dto.Respuesta, reloj.GetUtcNow(), ct);
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>
@@ -201,37 +201,37 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/expedientes/{id}/anular")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> Anular(Guid id, MotivoDto dto, SesionDeEmpresa empresa, HttpContext http, IMessageBus mensajes,
-        TimeProvider reloj, CancellationToken ct)
+        IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         var eventos = new object[] { stream.Aggregate!.Anular(dto.Motivo, reloj.GetUtcNow()) };
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>Aprobación en nombre del área (origen <c>Administrador</c>), con justificación.</summary>
     [WolverinePost("/api/v1/expedientes/{id}/areas/{areaId}/aprobar-como-administrador")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> AprobarComoAdministrador(Guid id, Guid areaId, JustificacionDto dto, SesionDeEmpresa empresa,
-        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
         var eventos = stream.Aggregate!.AprobarComoAdministrador(areaId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     /// <summary>Anula un veredicto vigente del área (el indicado o el más reciente), con justificación. No revierte un rechazo.</summary>
     [WolverinePost("/api/v1/expedientes/{id}/areas/{areaId}/anular-veredicto")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<ExpedienteDto> AnularVeredicto(Guid id, Guid areaId, AnularVeredictoDto dto, SesionDeEmpresa empresa,
-        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
         var eventos = stream.Aggregate!.AnularVeredicto(areaId, dto.VeredictoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, http, reloj, ct);
+        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
     }
 
     private static Veredicto LeerVeredicto(VeredictoDto dto) =>
@@ -248,9 +248,10 @@ public static class ExpedientesEndpoints
     }
 
     private static async Task<ExpedienteDto> GuardarAsync(SesionDeEmpresa empresa, JasperFx.Events.IEventStream<Expediente> stream,
-        IReadOnlyList<object> eventos, IMessageBus mensajes, HttpContext http, TimeProvider reloj, CancellationToken ct)
+        IReadOnlyList<object> eventos, IMessageBus mensajes, IProtectorDeSecretos protector, HttpContext http, TimeProvider reloj,
+        CancellationToken ct)
     {
-        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, mensajes, reloj.GetUtcNow(), ct);
+        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, new CorreoAlTercero(mensajes, protector), reloj.GetUtcNow(), ct);
         await empresa.Sesion.SaveChangesAsync(ct);
         var detalle = await DetalleAsync(empresa, stream.Id, ct);
         Peticiones.EscribirETag(http, detalle.Version);

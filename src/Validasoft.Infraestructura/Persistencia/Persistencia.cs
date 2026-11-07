@@ -89,6 +89,13 @@ public static class ConfiguracionMarten
                 opts.Schema.For<EnlaceDeAcceso>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
                     .Index(x => x.VinculoId)
                     .Index(x => x.Expira);
+                // Sesiones de refresco del tercero (RE-3): globales; la rotación usa concurrencia optimista para que dos
+                // renovaciones simultáneas con el mismo token no dejen dos tokens válidos.
+                opts.Schema.For<SesionDeRefresco>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .Index(x => x.TerceroId)
+                    .Index(x => x.ExpiraEn);
+                // Límite de enlaces pedidos con el correo (RE-2): un documento por correo (hash), con concurrencia optimista.
+                opts.Schema.For<LimiteDeAccesoPorCorreo>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")

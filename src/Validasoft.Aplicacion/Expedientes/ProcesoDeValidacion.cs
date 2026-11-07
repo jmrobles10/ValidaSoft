@@ -15,6 +15,12 @@ using Wolverine;
 
 namespace Validasoft.Aplicacion.Expedientes;
 
+/// <summary>
+/// Lo que necesita el proceso para escribirle al tercero: el bus del outbox de la petición y el protector con el que viaja
+/// el token del enlace de acceso del correo de observación (IN-3, RE-4).
+/// </summary>
+public sealed record CorreoAlTercero(IMessageBus Mensajes, IProtectorDeSecretos Protector);
+
 /// <summary>Versión de flujo elegida para un expediente y cómo se eligió.</summary>
 public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFlujo Origen);
 
@@ -124,14 +130,14 @@ public static class ProcesoDeValidacion
 
     /// <summary>
     /// Anexa los eventos de una decisión al expediente y propaga sus efectos en la misma sesión: bandeja, cierre del
-    /// vínculo y, con <paramref name="mensajes"/>, el correo de observación.
+    /// vínculo y, con <paramref name="correo"/>, el correo de observación con su enlace de acceso.
     /// </summary>
     public static async Task<Expediente> AnexarAsync(IDocumentSession sesion, IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
-        IMessageBus? mensajes, DateTimeOffset ahora, CancellationToken ct)
+        CorreoAlTercero? correo, DateTimeOffset ahora, CancellationToken ct)
     {
         var estado = Expediente.Reproducir(stream.Aggregate, eventos);
         stream.AppendMany(eventos);
-        await DespuesDeEscribirAsync(sesion, estado, eventos, null, mensajes, ahora, ct);
+        await DespuesDeEscribirAsync(sesion, estado, eventos, null, correo, ahora, ct);
         return estado;
     }
 
@@ -150,7 +156,7 @@ public static class ProcesoDeValidacion
     }
 
     private static async Task DespuesDeEscribirAsync(IDocumentSession sesion, Expediente estado, IReadOnlyList<object> eventos,
-        IEventStream<Vinculo>? vinculoStream, IMessageBus? mensajes, DateTimeOffset ahora, CancellationToken ct)
+        IEventStream<Vinculo>? vinculoStream, CorreoAlTercero? correo, DateTimeOffset ahora, CancellationToken ct)
     {
         foreach (var fila in ProyeccionBandejaRevision.Filas(estado))
             sesion.Store(fila);
@@ -167,24 +173,33 @@ public static class ProcesoDeValidacion
                 vinculoStream.AppendMany(vinculo.CerrarExpediente(estado.Id, cierre, ahora));
         }
 
-        if (mensajes is not null && eventos.OfType<ExpedienteObservado>().Any())
-            await PublicarObservacionAsync(sesion, estado, mensajes, ct);
+        if (correo is not null && eventos.OfType<ExpedienteObservado>().Any())
+            await PublicarObservacionAsync(sesion, estado, correo, ahora, ct);
     }
 
-    /// <summary>Correo al tercero con motivos y observaciones vigentes, sin revisores ni áreas (outbox).</summary>
-    private static async Task PublicarObservacionAsync(IDocumentSession sesion, Expediente estado, IMessageBus mensajes, CancellationToken ct)
+    /// <summary>
+    /// Correo al tercero con motivos y observaciones vigentes, sin revisores ni áreas (outbox), y un enlace de acceso de un
+    /// solo uso creado en esta misma transacción (RE-4): sin él el tercero no tenía cómo volver a entrar.
+    /// </summary>
+    private static async Task PublicarObservacionAsync(IDocumentSession sesion, Expediente estado, CorreoAlTercero correo, DateTimeOffset ahora,
+        CancellationToken ct)
     {
         var vinculo = await sesion.LoadAsync<Vinculo>(estado.VinculoId, ct);
         if (vinculo is null || string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
             return;
 
         var empresa = await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct);
+        var tipo = await sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
         var observaciones = estado.ObservacionesVigentes
             .Select(v => new ObservacionParaCorreo([.. v.Motivos.Select(m => m.TextoAlTercero)], v.Observacion,
                 v.RequisitoId is { } requisitoId ? estado.BuscarRequisito(requisitoId)?.Nombre : null))
             .ToList();
-        await mensajes.PublishAsync(new CorreoDeObservacionPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
-            observaciones));
+
+        var (enlace, token) = EnlaceDeAcceso.Emitir(empresa?.TenantId, vinculo.Id, vinculo.TerceroId, vinculo.CorreoTercero,
+            ahora + EnlaceDeAcceso.VigenciaObservacion, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
+        sesion.Store(enlace);
+        await correo.Mensajes.PublishAsync(new CorreoDeObservacionPendiente(enlace.CorreoDestino, empresa?.Nombre ?? "La empresa", estado.Folio,
+            observaciones, correo.Protector.Proteger(token), enlace.Expira));
     }
 
     /// <summary>

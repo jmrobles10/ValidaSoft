@@ -4,6 +4,19 @@ using Validasoft.Dominio.Comun;
 
 namespace Validasoft.Dominio.Identidad;
 
+/// <summary>Por qué se emitió el enlace (trazabilidad; no cambia su comportamiento).</summary>
+public enum MotivoEnlace
+{
+    Invitacion,
+    Autorregistro,
+
+    /// <summary>El tercero lo pidió con su correo en <c>POST /public/v1/acceso</c> (RE-1).</summary>
+    AccesoPorCorreo,
+
+    /// <summary>Viaja en el correo de observación del expediente (RE-4).</summary>
+    Observacion
+}
+
 /// <summary>Resultado de canjear un enlace: abre la sesión de una vez o pide el código OTP que se envía al correo.</summary>
 public sealed record ResultadoCanje(bool SesionAbierta, string? CodigoOtp, DateTimeOffset? OtpExpira);
 
@@ -17,6 +30,12 @@ public sealed class EnlaceDeAcceso
 {
     public const int IntentosOtp = 5;
     public static readonly TimeSpan VigenciaOtp = TimeSpan.FromMinutes(10);
+
+    /// <summary>Enlace pedido con el correo para volver a entrar (RE-1): corto, porque el tercero lo pidió en ese momento.</summary>
+    public static readonly TimeSpan VigenciaAccesoPorCorreo = TimeSpan.FromHours(1);
+
+    /// <summary>Enlace del correo de observación (RE-4): el tercero puede tardar en corregir.</summary>
+    public static readonly TimeSpan VigenciaObservacion = TimeSpan.FromHours(72);
 
     /// <summary>SHA-256 hexadecimal (minúsculas) del token.</summary>
     public string Id { get; set; } = string.Empty;
@@ -34,6 +53,8 @@ public sealed class EnlaceDeAcceso
 
     public bool RequiereOtp { get; set; }
 
+    public MotivoEnlace Motivo { get; set; }
+
     public bool Usado { get; set; }
 
     public DateTimeOffset? UsadoEn { get; set; }
@@ -49,7 +70,7 @@ public sealed class EnlaceDeAcceso
 
     /// <summary>Crea el enlace y devuelve el token opaco (256 bits, base64url) que viaja solo en el correo.</summary>
     public static (EnlaceDeAcceso Enlace, string Token) Emitir(Guid? tenantId, Guid? vinculoId, Guid terceroId, string correoDestino,
-        DateTimeOffset expira, bool requiereOtp, DateTimeOffset ahora)
+        DateTimeOffset expira, bool requiereOtp, DateTimeOffset ahora, MotivoEnlace motivo = MotivoEnlace.Invitacion)
     {
         if (string.IsNullOrWhiteSpace(correoDestino) || !correoDestino.Contains('@'))
             throw ReglaDeNegocioException.Validacion("correo-invalido", "El enlace de acceso necesita un correo válido.");
@@ -67,6 +88,7 @@ public sealed class EnlaceDeAcceso
             CorreoDestino = correoDestino.Trim().ToLowerInvariant(),
             Expira = expira,
             RequiereOtp = requiereOtp,
+            Motivo = motivo,
             CreadoEn = ahora
         };
         return (enlace, token);
@@ -131,18 +153,18 @@ public sealed class EnlaceDeAcceso
     {
         if (Usado)
             throw ReglaDeNegocioException.Expirado("enlace-usado",
-                "Este enlace ya se usó. Pide uno nuevo a la empresa que te invitó.");
+                "Este enlace ya se usó. Pide uno nuevo con tu correo para volver a entrar.");
 
         if (Expira <= ahora)
             throw ReglaDeNegocioException.Expirado("enlace-vencido",
-                "Este enlace venció. Pide uno nuevo a la empresa que te invitó.");
+                "Este enlace venció. Pide uno nuevo con tu correo para volver a entrar.");
     }
 
     private void AsegurarNoBloqueado()
     {
         if (OtpIntentos >= IntentosOtp)
             throw ReglaDeNegocioException.DemasiadosIntentos("otp-bloqueado",
-                "Se agotaron los intentos del código. Pide un enlace nuevo a la empresa que te invitó.");
+                "Se agotaron los intentos del código. Pide un enlace nuevo con tu correo.");
     }
 
     private void MarcarUsado(DateTimeOffset ahora)
