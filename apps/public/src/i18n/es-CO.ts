@@ -19,14 +19,25 @@ export const esCO = {
     empresas: 'Mis empresas',
     salir: 'Salir',
   },
-  sesion: {
-    sinSesionTitulo: 'Abre el enlace de tu correo',
-    sinSesion:
-      'Para ver tus documentos entra con el enlace que te envió la empresa. Es personal y de un solo uso; si ya lo usaste, pídele a la empresa que te envíe uno nuevo.',
-    vencidaTitulo: 'Tu sesión terminó',
-    vencida: 'Por seguridad, la sesión dura 30 minutos. Pide un enlace nuevo a la empresa o ábrelo de nuevo desde tu correo si aún no lo usaste.',
-    salioTitulo: 'Saliste',
-    salio: 'Cerramos tu sesión en este dispositivo.',
+  acceso: {
+    titulo: 'Entrar con mi correo',
+    texto:
+      'Escribe el correo al que te llegó la invitación de la empresa. Te enviamos un enlace para entrar; si la empresa lo pide, también un código.',
+    correo: 'Correo de la invitación',
+    correoAyuda: 'El enlace llega a ese mismo correo.',
+    correoInvalido: 'Escribe un correo válido, por ejemplo nombre@empresa.com.',
+    enviar: 'Enviarme el enlace',
+    enviadoTitulo: 'Revisa tu correo',
+    enviado:
+      'Si tu correo está registrado, te enviamos un enlace para entrar. Llega al correo de tu invitación; revisa también la carpeta de spam. El enlace sirve una sola vez.',
+    otroCorreo: 'Usar otro correo',
+    limitado: 'Pediste varios enlaces seguidos. Espera unos minutos y vuelve a intentarlo.',
+    restaurando: 'Entrando…',
+    paginaNoEncontrada: 'Revisa la dirección. Si buscas tus documentos, entra con tu correo.',
+    motivos: {
+      vencida: { titulo: 'Tu sesión terminó', texto: 'Por seguridad la sesión dura unas horas. Entra de nuevo con tu correo.' },
+      salio: { titulo: 'Saliste', texto: 'Cerramos tu sesión en este dispositivo. Para volver, entra con tu correo.' },
+    },
   },
   enlace: {
     abriendo: 'Abriendo tu invitación…',

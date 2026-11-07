@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
-import { PaginaNoEncontrada, RequiereSesion } from '../sesion/PaginasSesion';
+import { PaginaEntrar, PaginaNoEncontrada, RequiereSesion } from '../sesion/PaginasSesion';
 import { Shell } from './Shell';
 
 /**
@@ -11,6 +11,7 @@ const rutas: RouteObject[] = [
     element: <Shell />,
     children: [
       { index: true, element: <Navigate to="/empresas" replace /> },
+      { path: 'entrar', element: <PaginaEntrar /> },
       { path: 'e/:token', lazy: () => import('../enlace/PaginaEnlace').then((m) => ({ Component: m.PaginaEnlace })) },
       {
         element: <RequiereSesion />,

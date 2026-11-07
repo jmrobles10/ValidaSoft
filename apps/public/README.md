@@ -21,7 +21,13 @@ pnpm --filter @validasoft/public build      # dist/ (sin /dev/correos)
 | `/expediente/:id` | Mi revisión: estado («te faltan N documentos» en la fase de carga), los documentos que pide la empresa agrupados en «Te toca», «Lo revisa la empresa» y «Listo», cada observado con sus motivos y su observación, y desde cada tarjeta «Subir documento», «Subir versión corregida» u «Subir otra versión» (va a `/boveda/subir` con el tipo fijo y vuelve aquí). «Enviar respuesta» reenvía con o sin respuesta escrita (`requisitos-sin-corregir` se explica). Se refresca solo mientras esté abierto o devuelto: la versión subida llega al expediente por una cola. |
 | `/dev/correos` | Solo `vite dev`: lee Mailpit por el proxy `/__mailpit` y muestra «Abrir enlace» y el código OTP de cada correo. |
 
-La sesión del tercero (JWT de 30 min) vive **solo en memoria** y viaja como `Authorization: Bearer`; un 401 o el vencimiento muestran «Tu sesión terminó». Al recargar se pierde: la cookie llegará después.
+**Sesión** (`src/sesion/`, contrato de `feature/H2-reingreso`): el access (JWT de 30 min) vive en memoria y viaja como `Authorization: Bearer`; la cookie `vs_tercero` (HttpOnly, SameSite=Lax, `Path=/public/v1/sesion`, hasta 8 h desde el canje) lo renueva con `POST /public/v1/sesion/renovar` (cabecera `X-Validasoft-Cliente: public`):
+- al arrancar se intenta renovar: con cookie vigente la persona sigue dentro tras recargar; sin ella (401) ve «Entrar con mi correo»;
+- dos minutos antes de vencer se renueva solo (una sola petición aunque la pidan varias llamadas: la cookie rota);
+- si una llamada responde 401, se renueva una vez y se repite (`sesion/renovacion.ts`); si tampoco, «Tu sesión terminó»;
+- «Salir» llama a `POST /public/v1/sesion/cerrar` (borra la cookie).
+
+**Entrar con mi correo** (`/entrar`, y en lugar de «abre el enlace de tu correo»): `POST /public/v1/acceso { correo }` responde siempre igual y la pantalla también; el enlace llega al correo de la invitación. Los enlaces usados, vencidos o bloqueados ofrecen esta entrada. En desarrollo, el proxy de Vite deja pasar `Set-Cookie` sin `Domain`, así la cookie queda en :5181 (mismo origen que la app).
 
 ## Probar el recorrido
 
@@ -39,7 +45,7 @@ pnpm --filter @validasoft/public dev
 
 ## Pedidos al backend
 
-0. **Volver a entrar a un vínculo aceptado.** Cuando el tercero ya usó su enlace (y la sesión vive en memoria), no tiene forma de volver: `POST /vinculos/{id}/invitaciones` solo admite vínculos `Invitado` (409 `estado-invalido`) y el autorregistro solo escribe a los contactos del tercero global (los de su primera creación, a veces de otro tenant), no al `correoTercero` del vínculo. En la verificación se resolvió invitando otro vínculo al mismo correo. Pedir un `POST /public/v1/acceso { correo }` que envíe un enlace de acceso para los vínculos con ese `correoTercero` (respuesta siempre igual), o permitir reenviar el enlace de acceso de un vínculo `EnValidacion`/`Activo`. Es lo que necesita el tercero para responder una observación.
+0. ~~Volver a entrar a un vínculo aceptado~~: lo resuelve `feature/H2-reingreso` (acceso por correo, enlace en el correo de observación y sesión renovable con cookie).
 1. **Catálogo para el tercero.** Para subir por su cuenta (sin requisito), la lista de tipos está fija en `src/boveda/catalogo.ts` (canónicos globales de archivo) porque `GET /api/v1/catalogos/tipos-documento` no acepta su sesión. Desde la revisión ya sube lo que pide cada requisito. `ExpedientePublicoDto` tampoco trae `vinculoId` (hace falta para un tipo propio de la empresa); hoy se toma de `GET /public/v1/vinculos`.
 2. **Contexto del enlace antes de canjear** (`EnlaceContexto` de docs/06 §5): empresa, tipo de vínculo, `requiereOtp` y correo enmascarado. Sin eso la landing no puede decir «Constructora Norte te pide…» antes del código, ni a qué correo llegó. El 202 del canje (`OtpRequeridoDto`) tampoco trae el correo enmascarado.
 3. **Marca y soporte de la empresa**: `EmpresaPublicaDto` no trae color (para `derivarPaletaEmpresa`) ni correo de soporte, que el design system muestra en el pie y en Mis empresas.
@@ -49,4 +55,4 @@ pnpm --filter @validasoft/public dev
 
 ## Pendiente
 
-Cookie de sesión (hoy en memoria); conversión HEIC y unir varias fotos en un PDF (el Dropzone del design system usa `pdf-lib` y `heic2any` en un chunk aparte); SSE de la bóveda; ratificar una versión duplicada; personas relacionadas, cuentas bancarias, certificado y verificador; marca de la empresa en el tema; embed `/embed/expediente/:token`; PWA y cola sin conexión.
+Conversión HEIC y unir varias fotos en un PDF (el Dropzone del design system usa `pdf-lib` y `heic2any` en un chunk aparte); SSE de la bóveda; ratificar una versión duplicada; personas relacionadas, cuentas bancarias, certificado y verificador; marca de la empresa en el tema; embed `/embed/expediente/:token`; PWA y cola sin conexión.

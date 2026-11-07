@@ -1,22 +1,36 @@
-import { Button } from '@mui/material';
+import { Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { PaginaEstado } from '@validasoft/ui';
-import { Clock, LogOut, MailOpen, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, Link as RouterLink } from 'react-router';
-import { useSesionTercero, type EstadoSesionTercero } from './sesionTercero';
+import { Navigate, Outlet, Link as RouterLink } from 'react-router';
+import { PaginaAcceso } from './PaginaAcceso';
+import { useSesionTercero } from './sesionTercero';
 
-/** Rutas que necesitan la sesión del tercero: sin ella, se explica cómo entrar (no hay usuario ni contraseña). */
+/** Mientras se intenta recuperar la sesión con la cookie (al arrancar), un instante de espera. */
+function Restaurando() {
+  const { t } = useTranslation();
+  return (
+    <Stack alignItems="center" spacing={2} sx={{ py: 10 }} role="status">
+      <CircularProgress size={28} aria-hidden />
+      <Typography color="text.secondary">{t('acceso.restaurando')}</Typography>
+    </Stack>
+  );
+}
+
+/** Rutas que necesitan la sesión del tercero: sin ella, «Entrar con mi correo» (no hay usuario ni contraseña). */
 export function RequiereSesion() {
   const estado = useSesionTercero((s) => s.estado);
   if (estado === 'activa') return <Outlet />;
-  return <PaginaSinSesion estado={estado} />;
+  if (estado === 'restaurando') return <Restaurando />;
+  return <PaginaAcceso motivo={estado} />;
 }
 
-export function PaginaSinSesion({ estado }: { estado: Exclude<EstadoSesionTercero, 'activa'> }) {
-  const { t } = useTranslation();
-  if (estado === 'vencida') return <PaginaEstado icono={Clock} titulo={t('sesion.vencidaTitulo')} texto={t('sesion.vencida')} rol="alert" />;
-  if (estado === 'salio') return <PaginaEstado icono={LogOut} titulo={t('sesion.salioTitulo')} texto={t('sesion.salio')} rol="status" />;
-  return <PaginaEstado icono={MailOpen} titulo={t('sesion.sinSesionTitulo')} texto={t('sesion.sinSesion')} />;
+/** `/entrar`: la entrada con correo; con sesión, directo a Mis empresas. */
+export function PaginaEntrar() {
+  const estado = useSesionTercero((s) => s.estado);
+  if (estado === 'activa') return <Navigate to="/empresas" replace />;
+  if (estado === 'restaurando') return <Restaurando />;
+  return <PaginaAcceso motivo={estado} />;
 }
 
 export function PaginaNoEncontrada() {
@@ -26,13 +40,11 @@ export function PaginaNoEncontrada() {
     <PaginaEstado
       icono={SearchX}
       titulo={t('enlace.fallos.no-encontrado.titulo')}
-      texto={t('sesion.sinSesion')}
+      texto={t('acceso.paginaNoEncontrada')}
       acciones={
-        activa ? (
-          <Button component={RouterLink} to="/empresas" variant="contained">
-            {t('nav.empresas')}
-          </Button>
-        ) : undefined
+        <Button component={RouterLink} to={activa ? '/empresas' : '/entrar'} variant="contained">
+          {activa ? t('nav.empresas') : t('acceso.titulo')}
+        </Button>
       }
     />
   );

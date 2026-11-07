@@ -18,7 +18,7 @@ export function Shell() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const activa = useSesionTercero((s) => s.estado === 'activa');
-  const cerrar = useSesionTercero((s) => s.cerrar);
+  const salir = useSesionTercero((s) => s.salir);
   const actual = SECCIONES.find((s) => pathname.startsWith(s.ruta))?.ruta ?? (pathname.startsWith('/expediente') ? '/empresas' : false);
 
   return (
@@ -49,7 +49,7 @@ export function Shell() {
             </Stack>
           )}
           {activa && (
-            <Button variant="text" onClick={cerrar} startIcon={<LogOut size={18} aria-hidden />} sx={{ color: 'text.secondary' }}>
+            <Button variant="text" onClick={() => void salir()} startIcon={<LogOut size={18} aria-hidden />} sx={{ color: 'text.secondary' }}>
               {t('nav.salir')}
             </Button>
           )}

@@ -5,7 +5,7 @@ import { formatearHora, PaginaEstado } from '@validasoft/ui';
 import { CircleAlert, Clock, Link2Off, WifiOff } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { canjearUnaVez, destinoTrasSesion, falloDeEnlace, intentosRestantesDe, type FalloEnlace, type ResultadoCanje } from './canje';
 import { CodigoOtp } from './CodigoOtp';
@@ -77,7 +77,12 @@ export function PaginaEnlace() {
         texto={t(`enlace.fallos.${fallo}.texto`)}
         rol="alert"
         acciones={
-          REINTENTABLES.includes(fallo) ? (
+          !REINTENTABLES.includes(fallo) && fallo !== 'otro' ? (
+            // Enlace usado, vencido o bloqueado: se pide otro con el correo (POST /public/v1/acceso).
+            <Button component={RouterLink} to="/entrar" variant="contained">
+              {t('acceso.titulo')}
+            </Button>
+          ) : REINTENTABLES.includes(fallo) ? (
             <Button
               variant="contained"
               onClick={() => {
