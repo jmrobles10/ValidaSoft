@@ -143,6 +143,9 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/invitaciones/{vinculoId}': 'obtenerInvitacionPublica',
   'POST /public/v1/invitaciones/{vinculoId}/aceptar': 'aceptarInvitacion',
   'POST /public/v1/autorregistro': 'autorregistrarTercero',
+  'POST /public/v1/acceso': 'solicitarAcceso',
+  'POST /public/v1/sesion/renovar': 'renovarSesionTercero',
+  'POST /public/v1/sesion/cerrar': 'cerrarSesionTercero',
   'GET /public/v1/expedientes/{id}': 'obtenerExpedientePublico',
   'POST /public/v1/expedientes/{id}/reenviar': 'reenviarExpedientePublico',
   'GET /public/v1/boveda': 'obtenerBoveda',
@@ -177,6 +180,9 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   // 200 con la sesión; 202 cuando el tipo de vínculo exige OTP (el código llegó al correo).
   canjearEnlace: { '200': 'SesionTerceroDto', '202': 'OtpRequeridoDto' },
   autorregistrarTercero: { '202': 'SolicitudRecibidaDto' },
+  // Siempre 202 con el mismo cuerpo, exista o no el correo.
+  solicitarAcceso: { '202': 'SolicitudRecibidaDto' },
+  cerrarSesionTercero: { '204': null },
   // 201 con la URL prefirmada; 200 `duplicado` sin `carga` (el archivo ya es una versión del documento).
   iniciarCargaDocumento: { '200': 'CargaPrefirmadaDto', '201': 'CargaPrefirmadaDto' },
 };

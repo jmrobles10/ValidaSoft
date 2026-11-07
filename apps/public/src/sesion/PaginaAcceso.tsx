@@ -47,6 +47,8 @@ export function PaginaAcceso({ motivo = 'sin-sesion' }: { motivo?: Exclude<Estad
   }
 
   const limitado = esErrorApi(solicitud.error) && solicitud.error.estado === 429;
+  // 422 `correo-invalido`: la API solo valida la forma; se marca el campo como lo haría la validación local.
+  const correoRechazado = esErrorApi(solicitud.error) && solicitud.error.codigo === 'correo-invalido';
   return (
     <Box component="form" onSubmit={enviar} noValidate sx={{ maxWidth: 440, mx: 'auto', pt: { xs: 1, sm: 4 } }}>
       {motivo !== 'sin-sesion' && (
@@ -62,16 +64,19 @@ export function PaginaAcceso({ motivo = 'sin-sesion' }: { motivo?: Exclude<Estad
         {t('acceso.texto')}
       </Typography>
       <Stack spacing={2}>
-        {solicitud.isError && <Alert severity="error">{limitado ? t('acceso.limitado') : mensajeDeError(solicitud.error, t)}</Alert>}
+        {solicitud.isError && !correoRechazado && <Alert severity="error">{limitado ? t('acceso.limitado') : mensajeDeError(solicitud.error, t)}</Alert>}
         <TextField
           type="email"
           label={t('acceso.correo')}
           value={correo}
-          onChange={(e) => setCorreo(e.target.value)}
+          onChange={(e) => {
+            setCorreo(e.target.value);
+            if (solicitud.isError) solicitud.reset();
+          }}
           autoComplete="email"
           inputMode="email"
-          error={intentado && invalido}
-          helperText={intentado && invalido ? t('acceso.correoInvalido') : t('acceso.correoAyuda')}
+          error={(intentado && invalido) || correoRechazado}
+          helperText={(intentado && invalido) || correoRechazado ? t('acceso.correoInvalido') : t('acceso.correoAyuda')}
           disabled={solicitud.isPending}
           fullWidth
         />

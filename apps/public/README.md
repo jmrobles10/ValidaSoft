@@ -25,9 +25,10 @@ pnpm --filter @validasoft/public build      # dist/ (sin /dev/correos)
 - al arrancar se intenta renovar: con cookie vigente la persona sigue dentro tras recargar; sin ella (401) ve «Entrar con mi correo»;
 - dos minutos antes de vencer se renueva solo (una sola petición aunque la pidan varias llamadas: la cookie rota);
 - si una llamada responde 401, se renueva una vez y se repite (`sesion/renovacion.ts`); si tampoco, «Tu sesión terminó»;
-- «Salir» llama a `POST /public/v1/sesion/cerrar` (borra la cookie).
+- «Salir» llama a `POST /public/v1/sesion/cerrar` (borra la cookie);
+- la cookie rota en cada renovación y no hay periodo de gracia (presentar una ya rotada revoca la sesión): las renovaciones se serializan entre pestañas con Web Locks (`conCandado`) y un 409 `renovacion-concurrente` se reintenta una vez (`renovarUnaVez`).
 
-**Entrar con mi correo** (`/entrar`, y en lugar de «abre el enlace de tu correo»): `POST /public/v1/acceso { correo }` responde siempre igual y la pantalla también; el enlace llega al correo de la invitación. Los enlaces usados, vencidos o bloqueados ofrecen esta entrada. En desarrollo, el proxy de Vite deja pasar `Set-Cookie` sin `Domain`, así la cookie queda en :5181 (mismo origen que la app).
+**Entrar con mi correo** (`/entrar`, y en lugar de «abre el enlace de tu correo»): `POST /public/v1/acceso { correo }` responde siempre igual (solo 422 `correo-invalido` si está mal formado) y la pantalla también; el enlace llega al correo de la invitación y vence en 1 h (el del correo de observación, en 72 h). Los enlaces usados, vencidos o bloqueados ofrecen esta entrada. En desarrollo, el proxy de Vite deja pasar `Set-Cookie` sin `Domain`, así la cookie queda en :5181 (mismo origen que la app).
 
 ## Probar el recorrido
 
@@ -52,6 +53,8 @@ pnpm --filter @validasoft/public dev
 4. **Estado por empresa en la bóveda**: `ComparticionPublicaDto` dice qué versión tiene cada empresa pero no si la aprobó u observó (llega con los requisitos).
 5. **CORS del almacenamiento en producción**: el `PUT` prefirmado sale del origen de `apps/public` directo a S3/MinIO. En desarrollo MinIO acepta cualquier origen; en producción el bucket necesita CORS para ese origen (`PUT`, cabecera `Content-Type`).
 6. Canje, inicio de carga y autorregistro siguen publicándose como `IResult` en OpenAPI; `transformar.ts` declara sus respuestas reales (`SesionTerceroDto | OtpRequeridoDto`, `CargaPrefirmadaDto`, `SolicitudRecibidaDto`).
+
+Pedido al backend: la sesión que abre el enlace del correo de observación llega con `expedienteOrigen: null`; con el id del expediente, el tercero entraría directo a su revisión (hoy pasa por la invitación aceptada, que lo redirige).
 
 ## Pendiente
 

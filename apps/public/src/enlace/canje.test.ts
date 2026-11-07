@@ -58,6 +58,10 @@ describe('canje del enlace', () => {
     expect(normalizarCodigo(' 481 72-9 99')).toBe('481729');
   });
 
+  it('un enlace de expediente (correo de observación) lleva directo a esa revisión', () => {
+    expect(destinoTrasSesion({ ...sesion([vinculo('v1')]), expedienteOrigen: 'e9' })).toBe('/expediente/e9');
+  });
+
   it('con un solo vínculo va directo a su invitación; con varios, a Mis empresas', () => {
     expect(destinoTrasSesion(sesion([vinculo('v1')]))).toBe('/empresas/v1');
     expect(destinoTrasSesion(sesion([vinculo('v1'), vinculo('v2')]))).toBe('/empresas');

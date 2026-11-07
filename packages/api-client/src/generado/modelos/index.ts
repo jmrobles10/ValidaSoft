@@ -244,6 +244,8 @@ export * from './sesionTerceroDto';
 export * from './sesionTerceroDtoExpedienteOrigen';
 export * from './sesionUsuarioDto';
 export * from './sistemaIntegradoDto';
+export * from './solicitarAccesoDto';
+export * from './solicitarAccesoDtoCorreo';
 export * from './solicitudRecibidaDto';
 export * from './tenantCreadoDto';
 export * from './tenantDto';

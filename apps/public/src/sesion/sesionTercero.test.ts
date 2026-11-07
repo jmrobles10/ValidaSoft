@@ -1,6 +1,7 @@
 import { ErrorApi, ErrorDeRed, type SesionTerceroDto } from '@validasoft/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { envolverConRenovacion } from './renovacion';
+import { conCandado, renovarUnaVez } from './sesionApi';
 import { correoValido } from './correo';
 import { ANTICIPO_RENOVACION_MS, crearSesionTercero, REINTENTO_RENOVACION_MS, type ApiSesion } from './sesionTercero';
 
@@ -120,5 +121,43 @@ describe('salir y entrar con el correo', () => {
     expect(correoValido(' contacto@aceros.co ')).toBe(true);
     expect(correoValido('contacto@aceros')).toBe(false);
     expect(correoValido('con tacto@aceros.co')).toBe(false);
+  });
+});
+
+describe('renovaciones entre pestañas', () => {
+  it('reintenta una sola vez ante 409 renovacion-concurrente (otra pestaña ganó con la misma cookie)', async () => {
+    vi.useRealTimers();
+    const concurrente = new ErrorApi(409, 'renovacion-concurrente', '', null, null);
+    const renovar = vi.fn<() => Promise<SesionTerceroDto>>().mockRejectedValueOnce(concurrente).mockResolvedValueOnce(sesion('a2'));
+    await expect(renovarUnaVez(renovar, () => Promise.resolve())).resolves.toMatchObject({ accessToken: 'a2' });
+    expect(renovar).toHaveBeenCalledTimes(2);
+    // Un segundo 409, o cualquier otro error, ya no se reintenta.
+    const siempre = vi.fn<() => Promise<SesionTerceroDto>>().mockRejectedValue(concurrente);
+    await expect(renovarUnaVez(siempre, () => Promise.resolve())).rejects.toBe(concurrente);
+    expect(siempre).toHaveBeenCalledTimes(2);
+    const revocada = vi.fn<() => Promise<SesionTerceroDto>>().mockRejectedValue(new ErrorApi(401, 'sesion-revocada', '', null, null));
+    await expect(renovarUnaVez(revocada, () => Promise.resolve())).rejects.toMatchObject({ codigo: 'sesion-revocada' });
+    expect(revocada).toHaveBeenCalledTimes(1);
+  });
+
+  it('serializa con Web Locks: una renovación espera a que termine la de la otra pestaña', async () => {
+    vi.useRealTimers();
+    const orden: string[] = [];
+    let cola = Promise.resolve();
+    const candados = {
+      request: (_nombre: string, tarea: () => Promise<unknown>) => {
+        const resultado = cola.then(tarea);
+        cola = resultado.then(() => undefined, () => undefined);
+        return resultado;
+      },
+    } as unknown as LockManager;
+    const tarea = (nombre: string) => async () => {
+      orden.push(`inicia ${nombre}`);
+      await new Promise((r) => setTimeout(r, 5));
+      orden.push(`termina ${nombre}`);
+      return nombre;
+    };
+    await Promise.all([conCandado(tarea('A'), candados), conCandado(tarea('B'), candados)]);
+    expect(orden).toEqual(['inicia A', 'termina A', 'inicia B', 'termina B']);
   });
 });

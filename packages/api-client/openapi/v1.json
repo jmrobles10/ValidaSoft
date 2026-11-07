@@ -1055,6 +1055,91 @@
         }
       }
     },
+    "/public/v1/sesion/renovar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.SesionPublicaEndpoints"
+        ],
+        "summary": "POST_public_v1_sesion_renovar",
+        "description": "POST_public_v1_sesion_renovar",
+        "operationId": "POST_public_v1_sesion_renovar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/sesion/cerrar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.SesionPublicaEndpoints"
+        ],
+        "summary": "POST_public_v1_sesion_cerrar",
+        "description": "POST_public_v1_sesion_cerrar",
+        "operationId": "POST_public_v1_sesion_cerrar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/acceso": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.AccesoPorCorreoEndpoints"
+        ],
+        "summary": "POST_public_v1_acceso",
+        "description": "POST_public_v1_acceso",
+        "operationId": "POST_public_v1_acceso",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SolicitarAccesoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/sistemas": {
       "post": {
         "tags": [
@@ -7183,6 +7268,20 @@
           }
         }
       },
+      "SolicitarAccesoDto": {
+        "required": [
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TenantDto": {
         "required": [
           "id",
@@ -8372,6 +8471,12 @@
     },
     {
       "name": "Validasoft.Aplicacion.Interesado.AutorregistroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Interesado.SesionPublicaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Interesado.AccesoPorCorreoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.SistemasEndpoints"

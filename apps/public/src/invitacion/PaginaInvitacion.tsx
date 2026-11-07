@@ -4,7 +4,7 @@ import { formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { CircleCheck, FileClock, SearchX } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useParams } from 'react-router';
+import { Navigate, Link as RouterLink, useParams } from 'react-router';
 import { useAceptarInvitacion, useInvitacion } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -36,6 +36,9 @@ export function PaginaInvitacion() {
   const empresa = invitacion.vinculo.empresa.nombre;
   const estado = estadoInvitacion(invitacion);
   const expedienteId = invitacion.vinculo.expedienteId;
+
+  // Ya aceptó y tiene revisión abierta (p. ej. entró con el enlace del correo de observación): directo a ella.
+  if (estado === 'aceptada' && expedienteId) return <Navigate to={`/expediente/${expedienteId}`} replace />;
 
   if (estado === 'aceptada') {
     return (
