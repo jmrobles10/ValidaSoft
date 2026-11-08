@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema integrado (demo) · Validasoft embebido</title>
+    <style>
+      :root {
+        --fondo: #eef1f5;
+        --panel: #ffffff;
+        --borde: #d5dbe5;
+        --texto: #1d2533;
+        --suave: #5d6878;
+        --acento: #00695c;
+        --acento-texto: #ffffff;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        color: var(--texto);
+        background: var(--fondo);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      header {
+        background: #263238;
+        color: #fff;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      header strong { font-size: 16px; }
+      header span { color: #b0bec5; font-size: 13px; }
+      .disposicion { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
+      @media (max-width: 900px) { .disposicion { grid-template-columns: 1fr; } }
+      aside, .marco { background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; }
+      aside { padding: 16px; display: grid; gap: 12px; position: sticky; top: 16px; min-width: 0; }
+      aside > * { min-width: 0; }
+      code { overflow-wrap: anywhere; }
+      aside h2 { font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; color: var(--suave); }
+      label { display: grid; gap: 4px; font-size: 13px; color: var(--suave); }
+      select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+      select, button { font: inherit; font-size: 14px; padding: 7px 10px; border-radius: 4px; border: 1px solid var(--borde); background: #fff; color: var(--texto); }
+      button { cursor: pointer; }
+      button.primario { background: var(--acento); color: var(--acento-texto); border-color: var(--acento); }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .botones { display: flex; flex-wrap: wrap; gap: 8px; }
+      .nota { font-size: 12px; color: var(--suave); background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px; line-height: 1.45; }
+      .error { font-size: 13px; color: #b71c1c; background: #ffebee; border: 1px solid #ffcdd2; padding: 8px 10px; border-radius: 4px; }
+      #bitacora { list-style: none; margin: 0; padding: 0; font: 12px/1.4 'Cascadia Mono', ui-monospace, monospace; max-height: 260px; overflow: auto; border-top: 1px solid var(--borde); padding-top: 8px; }
+      #bitacora li { padding: 2px 0; color: var(--suave); overflow-wrap: anywhere; }
+      #bitacora li.entrante::before { content: '← '; color: var(--acento); }
+      #bitacora li.saliente::before { content: '→ '; color: #6a1b9a; }
+      .marco { overflow: hidden; min-height: 640px; }
+      .marco .vacio { padding: 48px; text-align: center; color: var(--suave); }
+      iframe { display: block; width: 100%; height: 640px; border: 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>Compras y Proveedores</strong>
+      <span>Sistema integrado de demostración: aloja las pantallas de Validasoft en un iframe</span>
+    </header>
+    <div class="disposicion">
+      <aside aria-label="Controles del sistema integrado">
+        <h2>Sesión delegada</h2>
+        <p class="nota">
+          En producción, el <b>backend</b> de este sistema firma la aserción <code>X-Usuario-Delegado</code> con su clave privada y pide
+          la sesión en <code>POST /api/v1/sesiones-usuario</code>. Aquí lo hace el navegador con las credenciales de
+          <code>pnpm semilla:dev</code>, solo para la demo.
+        </p>
+        <div id="sin-semilla" class="error" hidden>
+          No hay credenciales de demo. Levanta la API y ejecuta <code>pnpm semilla:dev</code>; luego recarga.
+        </div>
+        <label>Persona que inició sesión en este sistema <select id="persona"></select></label>
+        <label>Empresa sugerida <select id="empresa"></select></label>
+        <label>
+          Tema
+          <select id="tema">
+            <option value="light">Claro</option>
+            <option value="dark">Oscuro</option>
+          </select>
+        </label>
+        <div class="botones">
+          <button id="abrir" class="primario" type="button">Abrir Validasoft</button>
+          <button id="renovar" type="button" disabled>Renovar sesión</button>
+          <button id="cerrar" type="button" disabled>Cerrar sesión</button>
+        </div>
+        <div id="error" class="error" hidden></div>
+        <h2>Mensajes postMessage</h2>
+        <ul id="bitacora" aria-live="polite"></ul>
+      </aside>
+      <section class="marco" aria-label="Validasoft embebido">
+        <div id="vacio" class="vacio">Elige una persona y abre Validasoft.</div>
+      </section>
+    </div>
+    <script type="module" src="/src/demo/embedDemo.ts"></script>
+  </body>
+</html>

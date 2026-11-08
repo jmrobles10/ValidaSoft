@@ -1,0 +1,19 @@
+import { SCOPES, type Scope } from '@validasoft/api-client';
+import { ListChecks, Plug, Route, Users, Workflow, type LucideIcon } from 'lucide-react';
+
+export interface SeccionConfiguracion {
+  ruta: 'usuarios' | 'areas' | 'sistemas' | 'motivos' | 'flujos';
+  scope: Scope;
+  icono: LucideIcon;
+  /** Áreas y flujos son de la empresa activa; usuarios, sistemas y motivos son del grupo. */
+  alcance: 'grupo' | 'empresa';
+}
+
+/** Secciones de Configuración en el orden de su barra lateral. */
+export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
+  { ruta: 'usuarios', scope: SCOPES.usuariosAdministrar, icono: Users, alcance: 'grupo' },
+  { ruta: 'sistemas', scope: SCOPES.sistemasAdministrar, icono: Plug, alcance: 'grupo' },
+  { ruta: 'motivos', scope: SCOPES.configuracionLeer, icono: ListChecks, alcance: 'grupo' },
+  { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },
+  { ruta: 'flujos', scope: SCOPES.flujosLeer, icono: Route, alcance: 'empresa' },
+];
