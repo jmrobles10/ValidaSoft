@@ -45,6 +45,17 @@ public sealed class CargaDeDocumento
 
     public DateTimeOffset Expira { get; set; }
 
+    /// <summary>Límites del tipo al iniciar (TD-1): se vuelven a aplicar al confirmar con el tipo real, el tamaño y las páginas. Nulo ⇒ globales.</summary>
+    public ReglasDeArchivo? Reglas { get; set; }
+
+    /// <summary>Datos declarados ya validados (tipos <c>ArchivoYFormulario</c>, TD-4); viajan a la versión al confirmar.</summary>
+    public List<DatoDeclarado>? Datos { get; set; }
+
+    public string? HashDatos { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DatosVerificados? DatosVerificados => Datos is null || HashDatos is null ? null : new DatosVerificados(Datos, HashDatos);
+
     /// <summary>Nombre que se guarda: sin rutas ni caracteres de control (el original va solo en metadatos, nunca en la clave).</summary>
     public static string NormalizarNombre(string? nombre)
     {

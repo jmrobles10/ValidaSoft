@@ -76,6 +76,10 @@ public static class ConfiguracionMarten
                     .Index(x => x.TerceroId);
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
                     .Index(x => x.DocumentoId);
+                // Avisos de vencimiento programados (TD-6): uno por tercero y fecha, en el tenant técnico "boveda" para
+                // guardarse en la misma transacción que el evento de vigencia y el mensaje programado (outbox).
+                opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted()
+                    .Index(x => x.TerceroId);
 
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);

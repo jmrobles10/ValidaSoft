@@ -54,7 +54,8 @@ public static class MapeosDeValidacion
     /// <paramref name="consultante"/>: usuario que consulta (si es una persona), para calcular lo que «Aprobar área» le
     /// aprobaría (<see cref="AreaExpedienteDto.DocumentosPorDecidir"/>).
     /// </summary>
-    public static ExpedienteDto ADto(this Expediente e, IReadOnlyDictionary<Guid, List<Guid>> miembros, string? consultante = null) =>
+    public static ExpedienteDto ADto(this Expediente e, IReadOnlyDictionary<Guid, List<Guid>> miembros, string? consultante = null,
+        DocumentacionDelExpediente? documentacion = null) =>
         new(e.Id, e.Folio, e.EmpresaId, e.VinculoId,
             new TerceroResumenDto(e.TerceroId, e.TerceroNombre, e.TerceroIdentificacion),
             new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre),
@@ -68,11 +69,11 @@ public static class MapeosDeValidacion
             e.Rechazo is null ? null : new RechazoDto(e.Rechazo.AreaId, e.Rechazo.RevisorId, [.. e.Rechazo.Motivos.Select(m => m.Codigo)],
                 e.Rechazo.Justificacion, e.Rechazo.Fecha),
             e.MotivoAnulacion, e.AbiertoEn, e.CerradoEn, e.ActualizadoEn, e.Version,
-            [.. e.Requisitos.Select(r => r.ADto(e))]);
+            [.. e.Requisitos.Select(r => r.ADto(e, documentacion))]);
 
     /// <summary>Requisito con la decisión de cada área que lo revisa (estado, aprobaciones y veredictos de esa área).</summary>
-    private static RequisitoExpedienteDto ADto(this RequisitoDeExpediente r, Expediente e) =>
-        new(r.Id, r.Tipo(), r.Obligatorio, r.Estado.ToString(), r.VersionActual?.ADto(), r.Reenvios,
+    private static RequisitoExpedienteDto ADto(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>
+        new(r.Id, r.Tipo(documentacion), r.Obligatorio, r.Estado.ToString(), r.Version(e, documentacion), r.Reenvios,
             r.Eximido ? new ExencionDto(r.EximidoPor ?? string.Empty, r.JustificacionExencion ?? string.Empty, r.EximidoEn ?? e.ActualizadoEn) : null,
             [
                 .. r.AreasQueRevisan.Select(id => (Id: id, Area: e.BuscarArea(id))).Where(x => x.Area is not null).Select(x =>
@@ -87,10 +88,14 @@ public static class MapeosDeValidacion
         : e.Etapas.First(et => et.Areas.Contains(area)).Estado == EstadoEtapa.Esperando || e.Estado == EstadoExpediente.Abierto ? "Esperando"
         : "Pendiente";
 
-    private static TipoDocumentoRequisitoDto Tipo(this RequisitoDeExpediente r) =>
-        new(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString());
+    private static TipoDocumentoRequisitoDto Tipo(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>
+        documentacion?.Tipo(r) ?? new(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString());
 
-    private static VersionRequisitoDto ADto(this VersionDeRequisito v) => new(v.DocumentoId, v.Numero, v.Sha256, v.CargadaEn);
+    /// <summary>Versión que cubre el requisito; con la documentación, además sus datos declarados y su vigencia para el vínculo (TD-4, TD-6).</summary>
+    private static VersionRequisitoDto? Version(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>
+        r.VersionActual is not { } v
+            ? null
+            : documentacion?.Version(v, r, e.VinculoId) ?? new VersionRequisitoDto(v.DocumentoId, v.Numero, v.Sha256, v.CargadaEn);
 
     /// <summary>Solo en revisión, en la etapa activa y en áreas no automáticas: lo que «Aprobar área» aprobaría (DA-3).</summary>
     private static IReadOnlyList<DocumentoPorDecidirDto> PorDecidir(Expediente e, EtapaDeExpediente etapa, AreaDeExpediente area, string? consultante) =>
@@ -119,16 +124,16 @@ public static class MapeosDeValidacion
     /// Vista del tercero: estado, observaciones vigentes con el texto del motivo (y el documento observado) y los
     /// requisitos que le piden con su estado y sus observaciones; nunca áreas, revisores ni veredictos internos.
     /// </summary>
-    public static ExpedientePublicoDto APublico(this Expediente e, Empresa? empresa) =>
+    public static ExpedientePublicoDto APublico(this Expediente e, Empresa? empresa, DocumentacionDelExpediente? documentacion = null) =>
         new(e.Id, e.Folio, empresa.APublica(e.EmpresaId), new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre),
             e.Estado.ToString(),
             [.. e.ObservacionesVigentes.Select(v => v.APublica(v.RequisitoId is { } id ? e.BuscarRequisito(id)?.Codigo : null))],
             e.Estado == EstadoExpediente.Observado, e.Reenvios, e.ActualizadoEn,
             [
                 // Una observación solo llega al tercero cuando el expediente se le devuelve (con AlCerrarArea puede esperar).
-                .. e.Requisitos.Select(r => new RequisitoPublicoDto(r.Id, r.Tipo(), r.Obligatorio,
+                .. e.Requisitos.Select(r => new RequisitoPublicoDto(r.Id, r.Tipo(documentacion), r.Obligatorio,
                     (r.Estado == EstadoRequisito.Observado && e.Estado != EstadoExpediente.Observado ? EstadoRequisito.EnRevision : r.Estado).ToString(),
-                    r.VersionActual?.ADto(),
+                    r.Version(e, documentacion),
                     e.Estado == EstadoExpediente.Observado
                         ? [.. r.Veredictos.Where(v => v.Vigente && v.Veredicto == Veredicto.Observado).OrderBy(v => v.Fecha).Select(v => v.APublica(r.Codigo))]
                         : []))

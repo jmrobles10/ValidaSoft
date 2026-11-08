@@ -100,11 +100,23 @@ public sealed record AreaExpedienteDto(
     DateTimeOffset? SlaVence, IReadOnlyList<VeredictoEmitidoDto> Veredictos, int RequisitosPorDecidir = 0,
     IReadOnlyList<DocumentoPorDecidirDto>? DocumentosPorDecidir = null);
 
-/// <summary>Tipo de documento de un requisito: id y código del tipo del tenant, canónico (para cargarlo) y ámbito.</summary>
-public sealed record TipoDocumentoRequisitoDto(Guid Id, string Codigo, string Nombre, string? TipoCanonico, string Ambito);
+/// <summary>
+/// Tipo de documento de un requisito: id y código del tipo del tenant, canónico (para cargarlo) y ámbito. Con TD-1…TD-5,
+/// además lo que el tercero necesita para entregarlo: <see cref="Modo"/> (<c>Archivo|Formulario|ArchivoYFormulario</c>),
+/// <see cref="Campos"/>, límites de archivo (<see cref="Archivo"/>), si hay plantilla para descargar y el texto de ayuda.
+/// Nulos si el tipo ya no existe.
+/// </summary>
+public sealed record TipoDocumentoRequisitoDto(
+    Guid Id, string Codigo, string Nombre, string? TipoCanonico, string Ambito, string? Modo = null, IReadOnlyList<CampoFormularioDto>? Campos = null,
+    ReglasArchivoDto? Archivo = null, bool TienePlantilla = false, string? TextoAyuda = null);
 
-/// <summary>Versión de la bóveda que cubre el requisito (compartida con el vínculo).</summary>
-public sealed record VersionRequisitoDto(Guid DocumentoId, int N, string Sha256, DateTimeOffset CargadaEn);
+/// <summary>
+/// Versión de la bóveda que cubre el requisito (compartida con el vínculo), con lo que declaró el tercero
+/// (<see cref="DatosDeclarados"/>), su vigencia para esta empresa (TD-6) y su estado en la bóveda (<see cref="Estado"/>).
+/// </summary>
+public sealed record VersionRequisitoDto(
+    Guid DocumentoId, int N, string Sha256, DateTimeOffset CargadaEn, IReadOnlyList<DatoDeclaradoDto>? DatosDeclarados = null,
+    VigenciaDto? Vigencia = null, string? Estado = null, string? Clase = null);
 
 /// <summary>Decisión de un área sobre el requisito: <see cref="Estado"/> <c>Esperando|Pendiente|Aprobado|Observado|Eximido</c>.</summary>
 public sealed record AreaDeRequisitoDto(
