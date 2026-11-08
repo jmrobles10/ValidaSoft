@@ -6,9 +6,10 @@ import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
+import { ResumenVersion } from '../../documentos/ResumenVersion';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
 import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoDeArea, type DialogoExpediente } from '../reglas';
-import { versionVigente } from '../requisitos';
+import { documentoEnVisor, versionVigente } from '../requisitos';
 import { SelectorMotivos } from './SelectorMotivos';
 
 export interface DialogoDecisionProps {
@@ -50,6 +51,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const requisito = 'requisito' in dialogo ? dialogo.requisito : null;
   const documento = requisito?.tipoDocumento.nombre ?? '';
   const versionRevisada = requisito?.versionActual?.n ?? null;
+  const version = requisito ? documentoEnVisor(requisito) : null;
   // Si llegó otra versión del documento, el aviso dice cuál (en vez del genérico «el expediente cambió»).
   const versionNueva = dialogo.tipo === 'veredictoRequisito' && !aplica ? versionVigente(expediente, dialogo.requisito.id) : null;
   const faltanMotivos = conMotivos && elegidos.length === 0;
@@ -187,6 +189,8 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
               </Alert>
             )}
             {textos.ayuda && (destructiva ? <Alert severity="warning">{textos.ayuda}</Alert> : <Typography>{textos.ayuda}</Typography>)}
+            {/* Lo que se decide de la versión además del archivo (y lo único, si es un formulario): vigencia y datos. */}
+            {dialogo.tipo === 'veredictoRequisito' && version && <ResumenVersion datos={version.datosDeclarados ?? []} vigencia={version.vigencia} conTitulo />}
             {mutacion.isError && <Alert severity="error">{mensajeDeError(mutacion.error, t)}</Alert>}
 
             {esVeredicto && (

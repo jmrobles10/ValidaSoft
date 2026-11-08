@@ -1,15 +1,17 @@
 import { Box, Button, Stack, Typography } from '@mui/material';
 import { SCOPES, type AreaExpedienteDto, type ExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado } from '@validasoft/ui';
-import { Check, Eye, TriangleAlert } from 'lucide-react';
+import { Check, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
+import { ChipVigencia } from '../../documentos/VigenciaDocumento';
 import { VisorDocumento, type DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import { ChipEstadoArea } from '../componentes';
 import { bloqueoDecisionArea, documentosDelArea, documentosPorDecidir, type BloqueoDecisionArea } from '../decisionArea';
 import type { ContextoRevisor, DialogoExpediente } from '../reglas';
-import { tieneRequisitos } from '../requisitos';
+import { documentoEnVisor, tieneRequisitos } from '../requisitos';
+import { BotonVerVersion } from './BotonVerVersion';
 
 /** Bloqueos que se explican a quien revisa; los demás (sin permiso, cerrado) no dicen nada útil. */
 const EXPLICADOS = ['expediente-observado', 'vinculo-bloqueado', 'area-esperando', 'no-es-miembro', 'nada-por-decidir'] as const;
@@ -19,7 +21,8 @@ function seExplica(bloqueo: BloqueoDecisionArea | null): bloqueo is (typeof EXPL
 }
 
 /**
- * La decisión de cada área de la etapa en curso, como en el SRM: sus documentos con versión y «Ver», y una sola
+ * La decisión de cada área de la etapa en curso, como en el SRM: sus documentos con versión, vigencia y «Ver» (o «Ver
+ * datos» si la versión es solo un formulario), y una sola
  * decisión: «Aprobar área (n documentos)» u «Observar». El detalle por documento queda en «Documentos que pide el
  * flujo» («Decidir por documento»). Solo en flujos con requisitos.
  */
@@ -59,6 +62,7 @@ export function PanelDecisionArea({
               <Stack component="ul" spacing={0.75} sx={{ p: 0, m: 0, listStyle: 'none' }}>
                 {documentosDelArea(expediente, area.areaId).map(({ requisito, areaRequisito }) => {
                   const version = requisito.versionActual;
+                  const documento = documentoEnVisor(requisito);
                   return (
                     <Stack component="li" key={requisito.id} direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
                       <Typography sx={{ fontSize: 13, flex: '1 1 auto', minWidth: 0 }} noWrap>
@@ -69,18 +73,9 @@ export function PanelDecisionArea({
                           </Typography>
                         )}
                       </Typography>
+                      {version?.vigencia && <ChipVigencia vigencia={version.vigencia} />}
                       {areaRequisito.estado !== 'Esperando' && <ChipEstado estado={areaRequisito.estado} />}
-                      {version && puedeVer && (
-                        <Button
-                          size="small"
-                          variant="text"
-                          startIcon={<Eye size={14} aria-hidden />}
-                          onClick={() => setAbierto({ documentoId: version.documentoId, tipo: requisito.tipoDocumento.nombre, n: version.n, cargadaEn: version.cargadaEn })}
-                          aria-label={t('expedientes.requisitos.verAccesible', { documento: requisito.tipoDocumento.nombre, n: String(version.n) })}
-                        >
-                          {t('expedientes.requisitos.ver')}
-                        </Button>
-                      )}
+                      {documento && <BotonVerVersion documento={documento} puedeVerArchivo={puedeVer} variante="text" onVer={setAbierto} />}
                     </Stack>
                   );
                 })}

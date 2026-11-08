@@ -1,13 +1,15 @@
 import { Button, Divider, Skeleton, Stack, Typography } from '@mui/material';
 import { SCOPES, type VinculoDto } from '@validasoft/api-client';
 import { ChipEstado, EstadoVacio, formatearFecha } from '@validasoft/ui';
-import { Eye, FileText, FolderOpen } from 'lucide-react';
+import { ClipboardList, Eye, FileText, FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorRecuperable, Tarjeta } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
 import { usePermisos } from '../../shared/usePermisos';
 import { hashCorto, useDocumentosVinculo, versionVisible } from './api';
+import { datosDe, esVersionSinArchivo } from './formatoDatos';
+import { ChipVigencia } from './VigenciaDocumento';
 import { VisorDocumento, type DocumentoEnVisor } from './VisorDocumento';
 
 /**
@@ -40,6 +42,8 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
         <Stack component="ul" divider={<Divider component="li" aria-hidden />} sx={{ p: 0, m: 0, listStyle: 'none' }}>
           {consulta.data.map((documento) => {
             const version = versionVisible(documento);
+            // Una versión de solo formulario no se descarga (409 `version-sin-archivo`): se ven sus datos.
+            const sinArchivo = version ? esVersionSinArchivo(version) : false;
             return (
               <Stack component="li" key={documento.documentoId} direction="row" spacing={1.5} alignItems="center" sx={{ py: 1 }}>
                 <FileText size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', opacity: 0.7 }} />
@@ -57,16 +61,31 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
                     </Typography>
                   )}
                 </Stack>
+                {version?.vigencia && <ChipVigencia vigencia={version.vigencia} />}
                 {version && version.n !== documento.versionActual && <ChipEstado estado="Superada" />}
-                {version && puedeDescargar && (
+                {version && (sinArchivo || puedeDescargar) && (
                   <Button
                     variant="outlined"
                     size="small"
-                    startIcon={<Eye size={16} aria-hidden />}
-                    onClick={() => setAbierto({ documentoId: documento.documentoId, tipo: documento.tipo.nombre, n: version.n, cargadaEn: version.cargadaEn })}
-                    aria-label={t('documentos.verAccesible', { tipo: documento.tipo.nombre, n: String(version.n) })}
+                    startIcon={sinArchivo ? <ClipboardList size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+                    onClick={() =>
+                      setAbierto({
+                        documentoId: documento.documentoId,
+                        tipo: documento.tipo.nombre,
+                        n: version.n,
+                        cargadaEn: version.cargadaEn,
+                        datosDeclarados: datosDe(version),
+                        vigencia: version.vigencia ?? null,
+                        sinArchivo,
+                      })
+                    }
+                    aria-label={
+                      sinArchivo
+                        ? t('expedientes.datosDeclarados.verDatosAccesible', { documento: documento.tipo.nombre, n: String(version.n) })
+                        : t('documentos.verAccesible', { tipo: documento.tipo.nombre, n: String(version.n) })
+                    }
                   >
-                    {t('documentos.ver')}
+                    {sinArchivo ? t('expedientes.datosDeclarados.verDatos') : t('documentos.ver')}
                   </Button>
                 )}
               </Stack>

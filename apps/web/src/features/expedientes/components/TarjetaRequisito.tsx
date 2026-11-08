@@ -1,12 +1,14 @@
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type ExpedienteDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha } from '@validasoft/ui';
-import { Clock, Eye, FileText } from 'lucide-react';
+import { Clock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hashCorto } from '../../documentos/api';
+import { ResumenVersion } from '../../documentos/ResumenVersion';
 import type { DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import type { ContextoRevisor, DialogoExpediente } from '../reglas';
-import { bloqueoRequisito, puedeEximir, veredictosInvalidados, veredictosVigentesDeRequisito, type BloqueoRequisito } from '../requisitos';
+import { bloqueoRequisito, documentoEnVisor, puedeEximir, veredictosInvalidados, veredictosVigentesDeRequisito, type BloqueoRequisito } from '../requisitos';
+import { BotonVerVersion } from './BotonVerVersion';
 
 /** Bloqueos que se explican a quien revisa (los demás no dicen nada útil: sin permiso, cerrado). */
 const BLOQUEOS_EXPLICADOS = ['expediente-en-carga', 'expediente-observado', 'vinculo-bloqueado', 'sin-version', 'area-esperando', 'no-es-miembro', 'ya-voto'] as const;
@@ -30,12 +32,14 @@ export interface TarjetaRequisitoProps {
 }
 
 /**
- * Un documento que pide el flujo: estado, versión vigente (con «Ver» en el visor) y, por cada área que lo revisa, su
+ * Un documento que pide el flujo: estado, versión vigente (con «Ver» en el visor si trae archivo), su vigencia, los
+ * datos que declaró el tercero y, por cada área que lo revisa, su
  * estado, sus veredictos sobre la versión y «Aprobar u observar» cuando le toca a quien mira (RQ-4).
  */
 export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false }: TarjetaRequisitoProps) {
   const { t } = useTranslation();
   const version = requisito.versionActual;
+  const visor = documentoEnVisor(requisito);
   const documento = requisito.tipoDocumento.nombre;
   const eximir = puedeEximir(expediente, requisito, contexto(null).scopes);
 
@@ -53,6 +57,7 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
               <>
                 {' · '}
                 {t('expedientes.requisitos.version', { n: String(version.n), fecha: formatearFecha(version.cargadaEn) })}
+                {visor?.sinArchivo && ` · ${t('expedientes.datosDeclarados.formulario')}`}
                 {' · '}
                 <Typography component="span" variant="mono" title={version.sha256} sx={{ fontSize: 12 }}>
                   {t('expedientes.requisitos.hash', { hash: hashCorto(version.sha256) })}
@@ -62,17 +67,8 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
           </Typography>
         </Box>
         <ChipEstado estado={requisito.estado} />
-        {version && puedeVer && (
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<Eye size={16} aria-hidden />}
-            onClick={() => onVer({ documentoId: version.documentoId, tipo: documento, n: version.n, cargadaEn: version.cargadaEn })}
-            aria-label={t('expedientes.requisitos.verAccesible', { documento, n: String(version.n) })}
-          >
-            {t('expedientes.requisitos.ver')}
-          </Button>
-        )}
+        {/* Una versión de solo formulario no tiene archivo que ver: sus datos van abajo, en la misma tarjeta. */}
+        {visor && !visor.sinArchivo && <BotonVerVersion documento={visor} puedeVerArchivo={puedeVer} onVer={onVer} />}
         {eximir && (
           <Button size="small" variant="text" onClick={() => onAccion({ tipo: 'eximir', requisito })} sx={{ color: 'text.secondary' }}>
             {t('expedientes.requisitos.eximirAccion')}
@@ -80,6 +76,11 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
         )}
       </Stack>
 
+      {visor && (
+        <Box sx={{ mt: 1 }}>
+          <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} />
+        </Box>
+      )}
       {!version && requisito.estado === 'Pendiente' && (
         <Typography color="text.secondary" sx={{ fontSize: 13, mt: 1 }}>
           {t('expedientes.requisitos.sinVersion')}

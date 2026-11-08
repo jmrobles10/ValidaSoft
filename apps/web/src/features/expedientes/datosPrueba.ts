@@ -1,4 +1,12 @@
-import type { AreaDeRequisitoDto, AreaExpedienteDto, ExpedienteDto, RequisitoExpedienteDto, VeredictoEmitidoDto } from '@validasoft/api-client';
+import type {
+  AreaDeRequisitoDto,
+  AreaExpedienteDto,
+  DatoDeclaradoDto,
+  ExpedienteDto,
+  RequisitoExpedienteDto,
+  VeredictoEmitidoDto,
+  VigenciaDto,
+} from '@validasoft/api-client';
 
 /** Datos de prueba de expedientes (solo para las pruebas). */
 export function veredicto(cambios: Partial<VeredictoEmitidoDto> = {}): VeredictoEmitidoDto {
@@ -80,4 +88,36 @@ export function requisito(cambios: Partial<RequisitoExpedienteDto> = {}): Requis
     areas: [areaDeRequisito()],
     ...cambios,
   };
+}
+
+/** Vigencia de una versión (TD-6): por defecto vigente hasta el 30/11/2026, calculada desde la expedición declarada. */
+export function vigencia(cambios: Partial<VigenciaDto> = {}): VigenciaDto {
+  return {
+    vigenteHasta: '2026-11-30',
+    base: 'FechaExpedicion',
+    estado: 'Vigente',
+    diasAviso: [15],
+    diasGracia: 0,
+    finDeGracia: null,
+    vencidaEn: null,
+    ...cambios,
+  };
+}
+
+/** Datos que declaró el tercero, uno de cada tipo (valores normalizados como los entrega la API). */
+export const DATOS_DECLARADOS: DatoDeclaradoDto[] = [
+  { clave: 'fecha_expedicion', etiqueta: 'Fecha de expedición', tipo: 'Fecha', valor: '2026-11-01' },
+  { clave: 'activos', etiqueta: 'Activos totales', tipo: 'Numero', valor: '1234567.5' },
+  { clave: 'gran_contribuyente', etiqueta: '¿Es gran contribuyente?', tipo: 'SiNo', valor: 'true' },
+  { clave: 'regimen', etiqueta: 'Régimen', tipo: 'Lista', valor: 'Común' },
+];
+
+/** Requisito cubierto por una versión de solo formulario (sin archivo: su descarga responde 409 `version-sin-archivo`). */
+export function requisitoFormulario(cambios: Partial<RequisitoExpedienteDto> = {}): RequisitoExpedienteDto {
+  return requisito({
+    id: 'r-sarlaft',
+    tipoDocumento: { id: 'td-sarlaft', codigo: 'SARLAFT', nombre: 'Formulario SARLAFT', tipoCanonico: null, ambito: 'PorVinculo', modo: 'Formulario', campos: [], archivo: null, tienePlantilla: false },
+    versionActual: { documentoId: 'doc-sarlaft', n: 2, sha256: 'def', cargadaEn: '2026-11-07T14:00:00Z', datosDeclarados: DATOS_DECLARADOS, vigencia: vigencia(), estado: 'Actual', clase: 'Formulario' },
+    ...cambios,
+  });
 }

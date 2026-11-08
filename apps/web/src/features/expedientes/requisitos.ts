@@ -5,6 +5,8 @@ import {
   type RequisitoExpedienteDto,
   type VeredictoEmitidoDto,
 } from '@validasoft/api-client';
+import { datosDe, esVersionSinArchivo } from '../documentos/formatoDatos';
+import type { DocumentoEnVisor } from '../documentos/VisorDocumento';
 import type { ContextoRevisor } from './reglas';
 
 /**
@@ -119,4 +121,22 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
   }
   agregar(expediente.rechazo?.usuario);
   return [...ids].sort();
+}
+
+/**
+ * Lo que el visor necesita de la versión vigente del requisito (`null` sin versión): sus datos declarados, su vigencia
+ * para este vínculo y si trae archivo (una versión de solo formulario no se descarga: 409 `version-sin-archivo`).
+ */
+export function documentoEnVisor(requisito: RequisitoExpedienteDto): DocumentoEnVisor | null {
+  const version = requisito.versionActual;
+  if (!version) return null;
+  return {
+    documentoId: version.documentoId,
+    tipo: requisito.tipoDocumento.nombre,
+    n: version.n,
+    cargadaEn: version.cargadaEn,
+    datosDeclarados: datosDe(version),
+    vigencia: version.vigencia ?? null,
+    sinArchivo: esVersionSinArchivo(version, requisito.tipoDocumento.modo),
+  };
 }
