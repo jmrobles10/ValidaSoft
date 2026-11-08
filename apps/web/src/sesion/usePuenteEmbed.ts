@@ -113,7 +113,9 @@ export function usePuenteEmbed(): PuenteEmbed {
     if (!embebida || typeof ResizeObserver === 'undefined') return undefined;
     let ultima = 0;
     const observador = new ResizeObserver(() => {
-      const altura = Math.ceil(document.documentElement.scrollHeight);
+      // Con altura fija se avisa esa: `scrollHeight` nunca baja del alto actual del iframe y no lo dejaría encoger
+      // al llegar a una página de edición desde una más alta.
+      const altura = useAlturaFija.getState().altura ?? Math.ceil(document.documentElement.scrollHeight);
       if (altura !== ultima) {
         ultima = altura;
         enviar({ tipo: 'validasoft:resize', height: altura });
