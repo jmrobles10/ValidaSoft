@@ -43,6 +43,48 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
 
     public string UrlPublica => (configuracion["Validasoft:Correo:UrlPublica"] ?? "http://localhost:5173").TrimEnd('/');
 
+    /// <summary>
+    /// URL de <c>apps/web</c> (rutas con <c>#</c>) para los enlaces de los correos a revisores y administradores
+    /// (<c>Validasoft:Correo:UrlApp</c>; por defecto <c>{UrlPublica}/app/</c>, SE-3).
+    /// </summary>
+    public string UrlApp => configuracion["Validasoft:Correo:UrlApp"] is { Length: > 0 } app ? app.TrimEnd('/') + "/" : UrlPublica + "/app/";
+
+    /// <summary>Correo consolidado a una persona del tenant (NW-9): líneas de texto y, si hay, el enlace a la pantalla.</summary>
+    public MensajeDeCorreo RedactarNotificacion(Notificaciones.CorreoDeNotificacionPendiente correo)
+    {
+        var enlace = correo.Ruta is null ? null : $"{UrlApp}#{correo.Ruta}";
+        var saludo = $"Hola, {correo.Nombre}.";
+        var texto = saludo + "\n\n" + string.Join("\n", correo.Lineas) +
+                    (enlace is null ? string.Empty : $"\n\nÁbrelo en Validasoft:\n{enlace}") +
+                    "\n\nPuedes apagar estos correos en tus preferencias de notificación.";
+        var html = $"<p>{WebUtility.HtmlEncode(saludo)}</p>" + string.Concat(correo.Lineas.Select(l => $"<p>{WebUtility.HtmlEncode(l)}</p>")) +
+                   (enlace is null ? string.Empty : $"<p><a href=\"{WebUtility.HtmlEncode(enlace)}\">Abrir en Validasoft</a></p>") +
+                   "<p>Puedes apagar estos correos en tus preferencias de notificación.</p>";
+        return new MensajeDeCorreo(correo.Para, correo.Asunto, texto, html);
+    }
+
+    /// <summary>
+    /// Constancia al tercero de lo que aceptó (plantilla <c>consentimiento-empresa</c>, NW-10): cada texto con su versión y
+    /// huella SHA-256 y la fecha. No incluye la IP ni otros datos de la evidencia.
+    /// </summary>
+    public MensajeDeCorreo RedactarConstancia(Notificaciones.CorreoDeConstanciaPendiente correo)
+    {
+        var fecha = correo.AceptadaEn.UtcDateTime.ToString("d 'de' MMMM 'de' yyyy, HH:mm 'UTC'", Cultura);
+        var lineas = correo.Textos.Select(t => $"{t.Titulo}, versión {t.Version} (huella {Corta(t.Hash)})").ToList();
+        var asunto = $"Constancia de tu aceptación con {correo.Empresa}";
+        var texto = $"El {fecha} aceptaste la invitación de {correo.Empresa} en Validasoft y estos textos:\n\n" +
+                    string.Join("\n", lineas.Select(l => "- " + l)) +
+                    "\n\nGuarda este correo como constancia. Puedes consultar los textos completos al entrar a Validasoft " +
+                    $"({UrlPublica}) con tu correo.";
+        var html = $"<p>El {WebUtility.HtmlEncode(fecha)} aceptaste la invitación de <b>{WebUtility.HtmlEncode(correo.Empresa)}</b> en Validasoft y estos textos:</p><ul>" +
+                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) + "</ul>" +
+                   "<p>Guarda este correo como constancia. Puedes consultar los textos completos al entrar a " +
+                   $"<a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con tu correo.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    private static string Corta(string hash) => hash.Length > 16 ? hash[..16] : hash;
+
     public MensajeDeCorreo Redactar(CorreoDeAccesoPendiente correo, string secreto)
     {
         var vence = correo.Expira.UtcDateTime.ToString("d 'de' MMMM 'de' yyyy, HH:mm 'UTC'", Cultura);

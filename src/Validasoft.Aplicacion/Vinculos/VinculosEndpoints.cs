@@ -2,6 +2,7 @@ using Marten;
 using JasperFx.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
@@ -237,29 +238,37 @@ public static class VinculosEndpoints
             guardado.Invitacion ?? new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, 1));
     }
 
+    /// <summary>Bloquear suspende el certificado en la misma transacción (B-5); no lo revoca.</summary>
     [WolverinePost("/api/v1/vinculos/{id}/bloquear")]
     [Authorize(Policy = Permisos.VinculosBloquear)]
     public static async Task<VinculoDto> Bloquear(Guid id, BloquearVinculoDto dto, SesionDeEmpresa empresa, HttpContext http,
         TimeProvider reloj, CancellationToken ct)
     {
+        var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        return await GuardarAsync(empresa, stream, stream.Aggregate!.Bloquear(dto.Motivo, dto.Hasta, reloj.GetUtcNow()), ct);
+        var evento = stream.Aggregate!.Bloquear(dto.Motivo, dto.Hasta, ahora);
+        await CicloDeCertificados.AlBloquearAsync(empresa.Sesion, id, evento.Motivo, ahora, ct);
+        return await GuardarAsync(empresa, stream, evento, ct);
     }
 
+    /// <summary>Desbloquear restablece el certificado suspendido (o lo deja vencido si su vigencia pasó durante el bloqueo).</summary>
     [WolverinePost("/api/v1/vinculos/{id}/desbloquear")]
     [Authorize(Policy = Permisos.VinculosBloquear)]
     public static async Task<VinculoDto> Desbloquear(Guid id, JustificacionDto dto, SesionDeEmpresa empresa, HttpContext http,
         TimeProvider reloj, CancellationToken ct)
     {
+        var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        return await GuardarAsync(empresa, stream, stream.Aggregate!.Desbloquear(dto.Justificacion, reloj.GetUtcNow()), ct);
+        var evento = stream.Aggregate!.Desbloquear(dto.Justificacion, ahora);
+        await CicloDeCertificados.AlDesbloquearAsync(empresa.Sesion, id, evento.Justificacion, ahora, ct);
+        return await GuardarAsync(empresa, stream, evento, ct);
     }
 
-    /// <summary>Si tenía un expediente abierto, se anula en la misma transacción.</summary>
+    /// <summary>Si tenía un expediente abierto, se anula en la misma transacción; su certificado se revoca (por el sistema).</summary>
     [WolverinePost("/api/v1/vinculos/{id}/desvincular")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<VinculoDto> Desvincular(Guid id, MotivoDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
@@ -267,6 +276,7 @@ public static class VinculosEndpoints
         var evento = stream.Aggregate.Desvincular(dto.Motivo, ahora);
         if (abierto is { } expedienteId)
             await ProcesoDeValidacion.AnularPorTerminacionDelVinculoAsync(empresa.Sesion, expedienteId, evento.Motivo, ahora, ct);
+        await CicloDeCertificados.AlTerminarAsync(empresa.Sesion, id, "Vínculo desvinculado", evento.Motivo, contexto.ActorId, ahora, ct);
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 
@@ -279,11 +289,11 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, stream.Aggregate!.Reintegrar(dto.Justificacion, reloj.GetUtcNow()), ct);
     }
 
-    /// <summary>Terminal; si tenía un expediente abierto, se anula en la misma transacción.</summary>
+    /// <summary>Terminal; si tenía un expediente abierto, se anula en la misma transacción; su certificado se revoca (por el sistema).</summary>
     [WolverinePost("/api/v1/vinculos/{id}/anular")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<VinculoDto> Anular(Guid id, MotivoDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
@@ -291,6 +301,7 @@ public static class VinculosEndpoints
         var evento = stream.Aggregate.Anular(dto.Motivo, ahora);
         if (abierto is { } expedienteId)
             await ProcesoDeValidacion.AnularPorTerminacionDelVinculoAsync(empresa.Sesion, expedienteId, evento.Motivo, ahora, ct);
+        await CicloDeCertificados.AlTerminarAsync(empresa.Sesion, id, "Vínculo anulado", evento.Motivo, contexto.ActorId, ahora, ct);
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 

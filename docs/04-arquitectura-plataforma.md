@@ -208,6 +208,7 @@ Reconstrucción: `dotnet Validasoft.Api -- proyecciones rebuild <nombre>` (coman
 | Scheduled messages | SLA de etapa (`VencerSlaRevision`), expiración de magic link, recordatorio de carga pendiente, `PlazoRevalidacionVencido` (tras `diasRevalidacion`, 15 por defecto ⇒ certificado `ConPendientes` bloqueante, A-2) |
 | Job diario | `ProcesarVencimientosDelDia` lee `VencimientoProgramado` y `FrescuraDocumentoTercero` y emite comandos idempotentes (`MarcarPorVencer`, `MarcarVencido`, `EnviarAvisoConsolidado`) |
 | Errores | `RetryWithCooldown(1s, 5s, 30s)` para transitorios; `MoveToErrorQueue` tras N; panel de dead letters en Configuración con reintento manual |
+| **Implementado (NW, 2026-11-08)** | Colas **locales** durables (aún no el transporte PostgreSQL): `correo`, `requisitos`, `vigencias` y **`webhooks`** (secuencial: un intento a la vez, en orden; los reintentos con backoff van como mensajes programados y no la bloquean). **Daemon asíncrono de Marten** en modo *hot/cold* (un líder por bloqueo consultivo) con la suscripción `eventos-publicos` (`BatchSubscription` de Wolverine): lee el event store en orden y, en la misma transacción que su avance, registra los eventos públicos, crea las entregas de webhook, encola sus envíos, guarda la campana y encola los correos a personas (docs/05 §6.5, NW-3). Es el primer uso del daemon; el resto de proyecciones siguen inline. |
 
 ### Sagas (persistidas en Marten)
 | Saga | Dispara | Pasos | Compensación |
@@ -384,6 +385,7 @@ Cada decisión automática emite `VeredictoAutomaticoEmitido(expediente, requisi
 | Preferencias | Por usuario: evento × canal; resumen diario opcional |
 | Soporte | Todo correo y pantalla del tercero muestra el contacto de soporte de la **empresa** (primer nivel, P-15-4); la plataforma solo aparece para incidentes técnicos |
 | Prohibido | Enviar contraseñas; enlaces sin expiración; HTML sin escape del comentario de la empresa (bug conocido del Portal) |
+| **Implementado (NW, 2026-11-08)** | Disparo por la suscripción `eventos-publicos` (§5); campana como documento `Notificacion` por usuario y tenant (+ SSE `/notificaciones/stream`); correos consolidados por persona y hecho por la cola `correo`; preferencias de correo por tipo (`PreferenciasNotificacion`); plantillas en código (`RedactorDeCorreos`), sin Fluid ni edición por tenant todavía; dedupe por id determinista `(evento, usuario, tipo)`. Ver docs/05 §6.5. |
 
 ---
 

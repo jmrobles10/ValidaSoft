@@ -18,6 +18,9 @@
     <PackageVersion Include="MailKit" Version="4.18.2" />
     <!-- Almacenamiento de binarios compatible con S3 (MinIO en desarrollo y on-premise; S3 en la nube). -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.10" />
+    <!-- Certificados (CE-4, CE-6): sello Ed25519 (.NET 10 no lo trae; ya llegaba transitivo por MailKit/MimeKit, MIT) y QR (MIT). -->
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
+    <PackageVersion Include="QRCoder" Version="1.6.0" />
     <!-- Pruebas -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />

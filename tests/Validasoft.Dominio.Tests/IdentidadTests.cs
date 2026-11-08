@@ -212,7 +212,7 @@ public class PermisosTests
     private static readonly string[] Lecturas =
     [
         Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer, Permisos.FlujosLeer, Permisos.ExpedientesLeer,
-        Permisos.DocumentosLeer, Permisos.DocumentosDescargar
+        Permisos.DocumentosLeer, Permisos.DocumentosDescargar, Permisos.CertificadosLeer
     ];
 
     [Fact]

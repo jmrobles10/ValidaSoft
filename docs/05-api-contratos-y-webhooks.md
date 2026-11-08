@@ -208,6 +208,43 @@ Cada área aprueba u observa **documentos concretos** y su aprobación se deriva
 | `GET /public/v1/verificar/{folio}` | **Público** (`CertificadoPublicoDto`) | — | 200/404 | — |
 | `GET /consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900123456&tipoVinculo=proveedor` | `ConsultaCertificacionDto` desde `EstadoCertificacionTercero` para la empresa de `X-Empresa`; número **normalizado sin DV**; si no hay vínculo responde `200` con `estadoVinculo: "SinVinculo"`; `bloqueado` + `motivoBloqueo` (`Bloqueo` \| `PlazoRevalidacion` \| `Vencido`); `ETag`, `max-age=300`; `fuenteRespaldo`/`antiguedadSegundos` los rellena el integrador cuando sirve desde su tabla local | `consultas:leer` | 200/304 | — |
 
+#### 2.6.1 Estado de implementación — fase «Certificado verificable» (H5, 2026-11-08)
+
+Implementado el certificado del vínculo con su verificación pública (decisiones CE-1…CE-10 del [registro](decisiones/registro.md); dominio en [03 §7](03-dominio-y-eventos.md)). Todas las rutas de empresa piden `X-Empresa`; un folio de otra empresa o de otro tenant responde 404 `certificado-no-encontrado` (T-4).
+
+| Ruta | Permiso | Contrato |
+|---|---|---|
+| `GET /api/v1/vinculos/{id}/certificado` | `certificados:leer` | `CertificadoDelVinculoDto { vinculoId, actual: CertificadoDto?, emisiones: EmisionDelCertificadoDto[] }`. `actual` es la emisión más reciente en el estado que tenga (nula si el vínculo nunca se aprobó); `emisiones` de la más reciente a la primera: `{ folio, emision, estado, emitidoEn, vigenteHasta?, huella, expedienteFolio, pdfDisponible }`. 404 `vinculo-no-encontrado`. |
+| `GET /api/v1/certificados/{folio}` | `certificados:leer` | `CertificadoDto` de esa emisión (`…-{n}`) o de la actual (folio raíz `{Prefijo}-C-{Año}-{Secuencia}`). 404 `certificado-no-encontrado` (también con un folio mal formado). |
+| `POST /api/v1/certificados/{folio}/descarga` | `certificados:leer` | Sin cuerpo. `DescargaDto { url, expira, nombre: "{folio}.pdf", mime: "application/pdf" }` (URL prefirmada de 5 min, `attachment`). Cada entrega queda en el stream del certificado (`CertificadoDescargado`: emisión, actor, IP, user-agent). Si el PDF aún no existe se genera en la petición. `Idempotency-Key` opcional. |
+| `POST /api/v1/certificados/{folio}/revocar` | `expedientes:administrar` | `RevocarCertificadoDto { justificacion }` → 200 `CertificadoDto` (`estado: Revocado`, `revocacion { motivo, origen: Administrador, fecha }`). 422 `justificacion-requerida`; 409 `certificado-revocado` (ya lo estaba), `emision-no-actual` (folio de una emisión reemplazada). Irreversible. |
+| `GET /public/v1/verificar/{folio}?huella=` | **anónimo** (límite por IP de `/public/v1`) | `CertificadoPublicoDto` de la emisión (o de la actual con el folio raíz). `huella` (opcional): los 12 primeros hexadecimales del hash, con o sin separadores (`5a7e·0c1d·9f22`); con ella también se encuentra una emisión anterior por el folio raíz. El folio solo es único dentro de un tenant: si hay más de uno, 409 `folio-ambiguo` y hay que enviar la huella (CE-8). 404 `certificado-no-encontrado` (folio inexistente, mal formado u otra huella); 422 `huella-invalida`. `Cache-Control: no-store`. |
+| `POST /public/v1/verificar/{folio}/descarga?huella=` | **anónimo** (límite por IP) | `DescargaDto` del PDF **solo de una emisión `Vigente`** (otro estado ⇒ 409 `certificado-no-vigente`); auditada como descarga pública (`CertificadoDescargado { publico: true, actorTipo: "Publico", ip, userAgent }`). |
+| `GET /.well-known/validasoft-certificados.json` | **anónimo** | `ClavesDeCertificadosDto { emisor, algoritmo: "Ed25519", mensajeFirmado, esquemas: ["validasoft.certificado.v1"], claves: [{ kid, algoritmo, clavePublica (base64, 32 bytes), jwk: { kty: "OKP", crv: "Ed25519", x (base64url), kid, alg: "EdDSA", use: "sig" }, vigente }] }` con la clave vigente y las anteriores (rotación, CE-4). `Cache-Control: public, max-age=3600`. |
+
+**`CertificadoDto`** (empresa): `id`, `folio` (con emisión), `folioRaiz`, `emision`, `esLaActual`, `estado` (`Vigente | Suspendido | Vencido | Revocado | Reemplazado`; `ConPendientes` llega con H6), `bloqueante` (suspendido, revocado o vencido: no debe aceptarse), `empresa { id, nombre, logoUrl? }`, `vinculoId`, `expedienteId`, `expedienteFolio`, `tercero { nombre, identificacionEnmascarada, pais, tipoPersona }`, `tipoVinculo { codigo, nombre }`, `flujo { codigo, nombre, version }`, `emitidoEn`, `vigenteHasta?` (`YYYY-MM-DD`), `huella` (`xxxx·xxxx·xxxx`), `hashContenido` (64 hex), `urlVerificacion`, `requisitos[] { codigo, nombre, version?, sha256?, vigenteHasta?, eximido, justificacion? }`, `areas[] { area, codigo, origen: Humano | Sistema | Administrador, fecha }`, `pendientes: []`, `suspension? { motivo, desde }`, `revocacion? { motivo, origen: Administrador | Sistema, fecha }`, `pdf? { sha256, tamano, generadoEn }` (nulo mientras se genera), `descargas`, `firma { algoritmo: "Ed25519", kid, clavePublicaUrl, valor (base64) }`, `contenidoCanonico` (objeto: lo que se hasheó), `version`.
+
+**`CertificadoPublicoDto`**: `folio`, `emision`, `estado`, `bloqueante`, `titular { nombre, identificacionEnmascarada }`, `emisor { empresa, logoUrl? }`, `flujo { codigo, nombre, version }`, `emitidoEn`, `vigenteHasta?`, `huella`, `hashContenido`, `contenidoCanonico` (objeto `CertificadoContenidoDto`), `urlVerificacion`, `pendientes: []`, `firma { algoritmo, kid, clavePublicaUrl, valor }`, `estadoDesde`, `reemplazadoPor?` (folio de la emisión actual si esta fue reemplazada), `pdfDescargable` (`true` solo si `Vigente`). Sin revisores, contactos, documentos ni el motivo del bloqueo.
+
+**`CertificadoContenidoDto`** (lo que se hashea; esquema `validasoft.certificado.v1`): `esquema`, `folio` (con emisión), `emision`, `empresa { id, nombre, identificacion { pais, tipo, numero, digitoVerificacion? } }`, `tercero { nombre, identificacionEnmascarada, pais, tipoPersona }`, `tipoVinculo { codigo, nombre }`, `flujo { codigo, nombre, version }`, `requisitos[] { codigo, nombre, versionN?, sha256?, vigenteHasta?, eximido, justificacion? }` ordenados por `codigo` (eximido ⇒ sin versión ni hash, con justificación), `verificaciones: []`, `areas[] { area, codigo, origen, fecha }`, `emitidoEn` (UTC al segundo, `…Z`), `vigenteHasta?` (`YYYY-MM-DD`: la menor vigencia de los documentos aceptados que tienen una). Los nulos se omiten.
+
+**Cómo verifica un cliente** (la página pública `{UrlPublica}/verificar/{folio}?huella=…`, a la que lleva el QR del PDF): (1) `GET /public/v1/verificar/{folio}?huella=…`; (2) canonicalizar `contenidoCanonico` con RFC 8785 (JCS) y calcular su SHA-256 ⇒ debe ser `hashContenido` (y empezar por la huella impresa); (3) tomar de `/.well-known/validasoft-certificados.json` la clave con `kid = firma.kid` e importar su `jwk` (WebCrypto `Ed25519`); (4) verificar `firma.valor` (base64) sobre los **32 bytes** del SHA-256 (no sobre el texto hexadecimal). Con contenido de solo texto y enteros, `JSON.stringify` con las claves ordenadas recursivamente da el mismo resultado que JCS.
+
+**Cuándo se emite y qué lo cambia** (eventos del stream `Certificado-{id}`, uno por vínculo; los webhooks `certificado.*` de §7 los publicará la fase de notificaciones):
+
+| Hecho | Evento del certificado |
+|---|---|
+| El expediente se aprueba y el vínculo queda `Activo` (cualquier camino: veredicto, decisión de área, aprobación del administrador, exención, área automática, aceptación con todo automático, sincronización de requisitos) | `CertificadoEmitido` (emisión `-1`, misma transacción). Un expediente aprobado nuevo de un vínculo que ya tenía certificado ⇒ `CertificadoReemplazado` + `CertificadoEmitido(-{n+1})` (aún no ocurre: solo hay expedientes iniciales). |
+| `POST /vinculos/{id}/bloquear` | `CertificadoSuspendido` (si estaba vigente) |
+| `POST /vinculos/{id}/desbloquear` | `CertificadoRestablecido` (o `CertificadoVencido` si su vigencia pasó durante el bloqueo) |
+| `POST /vinculos/{id}/anular` · `/desvincular` | `CertificadoRevocado { origen: Sistema, motivo: "Vínculo anulado: …" \| "Vínculo desvinculado: …" }` |
+| `POST /certificados/{folio}/revocar` | `CertificadoRevocado { origen: Administrador }` |
+| Pasa `vigenteHasta` (procesador de certificados) | `CertificadoVencido` |
+| PDF generado (después del commit) | `PdfDeCertificadoGenerado { emision, bucket, clave, sha256, tamano }` |
+| Descarga del PDF (empresa o pública) | `CertificadoDescargado` |
+
+**Diferencias con §2.6 y §4** (pendiente o cambiado): no existen todavía `GET /certificados` (lista), `GET /certificados/{folio}/emisiones` (el historial va en `GET /vinculos/{id}/certificado`) ni `GET /certificados/{folio}/pdf` (es `POST …/descarga`, porque escribe la auditoría, como BO-7); revocar pide `expedientes:administrar` (no se creó `certificados:revocar`); `VinculoDto.certificado`, `VinculoPublicoDto.certificado`, `GET /public/v1/certificados/{folio}` (vista del tercero) y `GET /consultas/certificacion` (`ConsultaCertificacionDto`) siguen pendientes; `ConPendientes`, `pendientes` y `verificaciones` van vacíos hasta H6/H7; `contenidoCanonico` agrega `nombre` en requisitos, `codigo` en áreas y `nombre` en flujo y tipo de vínculo, y no separa `hashDatos` (en una versión solo de formulario `sha256` ya es la huella de sus datos, TD-4); `urlVerificacion` lleva la emisión y `?huella=` (CE-8); el PDF no es PDF/A-2b (CE-6).
+
 ### 2.7 Vencimientos, notificaciones y auditoría
 
 | Método y ruta | Descripción | Permiso | Respuestas | Emite |
@@ -234,6 +271,8 @@ Cada área aprueba u observa **documentos concretos** y su aprobación se deriva
 | `POST /webhooks/{id}/rotar-secreto` · `POST /webhooks/{id}/probar` | Rotación 24 h; `prueba.ping` | `webhooks:administrar` | 200 | `prueba.ping` |
 | `GET /webhooks/{id}/entregas` · `GET …/entregas/{eid}` · `POST …/entregas/{eid}/reenviar` | `EntregaWebhookDto` | `webhooks:administrar` | 200 | — |
 | `GET /eventos?desde={cursor}&tipos=&empresaId=` | **Modo pull** (`PaginaDto<EventoPublicoDto>`), orden por secuencia del outbox del tenant | `eventos:leer` | 200 | — |
+
+> **Implementado (NW, 2026-11-08)**: contrato exacto y diferencias con esta tabla y con §2.7 (campana en `/notificaciones`, no `/novedades`) en **§6.5**.
 
 ### 2.9 Público (tercero) e importación
 
@@ -478,8 +517,8 @@ Tipos base: `uuid`, `string`, `int`, `decimal`, `bool`, `date` (`YYYY-MM-DD`), `
 | `CorreccionDatoDto` | `campo*`, `valor*`, `justificacion` |
 | `DescargaDto` | `url*`, `expira*`, `nombre*`, `mime*` |
 | `DocumentoVistaEmpresaDto` | `documentoId*`, `tipo*`, `versionActual*: VersionDocumentoDto`, `versionesCompartidas*: int[]`, `aceptacionEnMisVinculos*: {vinculoId, version, estado, vigenteHasta}[]` |
-| `CertificadoDto` | `folio*` (formato `{PrefijoEmpresa}-C-{Año}-{Secuencia}-{n}`, T-9), `emision*`, `estado*: EstadoCertificado` (incluye `Suspendido`, B-5), `empresa*: {id, nombre}`, `vinculoId*`, `expedienteFolio*`, `tercero*: {nombre, identificacionEnmascarada}`, `flujo*`, `emitidoEn*`, `vigenteHasta`, `huella*`, `urlVerificacion*`, `requisitos*: {codigo, version, vigenteHasta, eximido}[]`, `areas*: {area, origen: enum(Humano\|Sistema\|Administrador), fecha}[]`, `pendientes: {causa, tipo, bloqueante}[]`, `suspension: {motivo, desde}` |
-| `CertificadoPublicoDto` | `folio*`, `estado*: EstadoCertificado`, `bloqueante*: bool` (A-2/B-5), `titular*: {nombre, identificacionEnmascarada}`, `emisor*: {empresa, logoUrl}`, `flujo*`, `emitidoEn*`, `vigenteHasta`, `huella*`, `contenidoCanonico*: CertificadoContenidoDto` (lo que se hashea; sin contactos ni nombres de revisores), `urlVerificacion*`, `pendientes: string[]`, `firma*: {algoritmo: "Ed25519", clavePublicaUrl, valor}` |
+| `CertificadoDto` | **Implementado con otra forma: ver §2.6.1.** `folio*` (formato `{PrefijoEmpresa}-C-{Año}-{Secuencia}-{n}`, T-9), `emision*`, `estado*: EstadoCertificado` (incluye `Suspendido`, B-5), `empresa*: {id, nombre}`, `vinculoId*`, `expedienteFolio*`, `tercero*: {nombre, identificacionEnmascarada}`, `flujo*`, `emitidoEn*`, `vigenteHasta`, `huella*`, `urlVerificacion*`, `requisitos*: {codigo, version, vigenteHasta, eximido}[]`, `areas*: {area, origen: enum(Humano\|Sistema\|Administrador), fecha}[]`, `pendientes: {causa, tipo, bloqueante}[]`, `suspension: {motivo, desde}` |
+| `CertificadoPublicoDto` | **Implementado con otra forma: ver §2.6.1.** `folio*`, `estado*: EstadoCertificado`, `bloqueante*: bool` (A-2/B-5), `titular*: {nombre, identificacionEnmascarada}`, `emisor*: {empresa, logoUrl}`, `flujo*`, `emitidoEn*`, `vigenteHasta`, `huella*`, `contenidoCanonico*: CertificadoContenidoDto` (lo que se hashea; sin contactos ni nombres de revisores), `urlVerificacion*`, `pendientes: string[]`, `firma*: {algoritmo: "Ed25519", clavePublicaUrl, valor}` |
 | `RevocarDto` | `motivo*` |
 | `ConsultaCertificacionDto` | `certificado*: bool`, `folio`, `estado: EstadoCertificado`, `estadoVinculo*: EstadoVinculo \| "SinVinculo"`, `vinculoId`, `terceroId`, `vigenteHasta`, `revalidacionPendiente*: {tipo, plazo, bloqueante}[]`, `documentosVencidos*: string[]`, `bloqueado*: bool`, `motivoBloqueo: enum(Bloqueo\|PlazoRevalidacion\|Vencido)?` (B-5/A-2), `cuentaDesignada: {numeroEnmascarado, banco}`, `urlVerificacion`, `legacy: {estadoTercero: int}`, `fuenteRespaldo*: bool`, `antiguedadSegundos: int?` (solo con `fuenteRespaldo = true`) |
 | `VencimientoDto` | `vinculoId*`, `empresaId*`, `folio`, `tercero*`, `tipo*`, `version*`, `vigenteHasta*`, `dias*`, `estado*: enum(Vencido\|PorVencer\|Vigente)`, `critico*`, `permiteRatificar*`, `ultimaNotificacion` |
@@ -551,7 +590,7 @@ Tipos base: `uuid`, `string`, `int`, `decimal`, `bool`, `date` (`YYYY-MM-DD`), `
 | `CambiarFlujoDto` | `flujoVersionId*`, `justificacion*` |
 | `AplicarVersionDto` | `filtro: {estados: EstadoExpediente[], flujoVersionAnterior, empresaId, desde}`, `justificacion*` |
 | `ImpactoAplicacionDto` | `expedientesAfectados*: int`, `detalle*: {expedienteId, folio, requisitosAgregados: string[], requisitosQuitados: string[], veredictosConservados: int}[]`, `simulacion*: bool` |
-| `CertificadoContenidoDto` | Contenido **canónico** que se hashea (ver [03 §7.1](03-dominio-y-eventos.md)): `esquema*: "validasoft.certificado.v1"`, `folio*`, `emision*`, `empresa*: {id, nombre, identificacion}`, `tercero*: {nombre, identificacionEnmascarada, pais, tipoPersona}`, `tipoVinculo*`, `flujo*: {codigo, version}`, `requisitos*: {codigo, versionN, sha256 \| hashDatos, vigenteHasta, eximido, justificacion}[]` (ordenados por `codigo`), `verificaciones*: {tipo, proveedor, resultado, fecha}[]`, `areas*: {area, origen, fecha}[]`, `emitidoEn*`, `vigenteHasta`; **excluye** contactos, direcciones, URLs de descarga y nombres de revisores |
+| `CertificadoContenidoDto` | **Implementado (§2.6.1).** Contenido **canónico** que se hashea (ver [03 §7.1](03-dominio-y-eventos.md)): `esquema*: "validasoft.certificado.v1"`, `folio*`, `emision*`, `empresa*: {id, nombre, identificacion}`, `tercero*: {nombre, identificacionEnmascarada, pais, tipoPersona}`, `tipoVinculo*`, `flujo*: {codigo, version}`, `requisitos*: {codigo, versionN, sha256 \| hashDatos, vigenteHasta, eximido, justificacion}[]` (ordenados por `codigo`), `verificaciones*: {tipo, proveedor, resultado, fecha}[]`, `areas*: {area, origen, fecha}[]`, `emitidoEn*`, `vigenteHasta`; **excluye** contactos, direcciones, URLs de descarga y nombres de revisores |
 
 ---
 
@@ -728,9 +767,104 @@ Cabeceras: `Validasoft-Event`, `Validasoft-Delivery` (id de **intento**; cambia 
 
 Los `hechos` son globales (la bóveda solo emite `camposCambiados` y `camposCriticosCambiados` según el canónico, T-7); `requiereRevalidacion` vive en `efectoEnEmpresa` porque lo decide la saga de **cada** tenant (críticos canónicos **o** `camposCuyoCambioExigeHumano` propios). Cada empresa recibe **su** copia; nunca ve efectos en otras empresas (ni del mismo tenant).
 
+### 6.5 Estado de implementación — fase «Notificaciones y webhooks» (NW, 2026-11-08)
+
+Decisiones NW-1…NW-12 del [registro](decisiones/registro.md). Lo que sigue es el **contrato vigente**; donde difiere de §6.1–§6.4, §7 u §8, manda esta sección (las diferencias se listan al final).
+
+**Origen de los eventos públicos (NW-3).** Una suscripción de Marten (`eventos-publicos`, daemon asíncrono en modo *hot/cold*) lee el event store en orden y, por cada evento de dominio del catálogo, registra un `EventoPublico` (documento global con su tenant), crea una entrega por cada suscripción de webhook que lo acepta y planea las notificaciones a personas. Todo eso, los mensajes de envío y el avance de la suscripción se confirman **en una transacción** (outbox de Wolverine): no se pierden ni se duplican. El **cursor** es la secuencia global del evento de dominio de origen: monotónico por tenant, con huecos, y siempre un prefijo (el modo pull no se salta ninguno). El `id` del evento público es el del evento de dominio (estable; sirve para deduplicar).
+
+**Sobre** (`EventoPublicoDto`, el mismo JSON en el webhook, en `GET /eventos` y en el SSE):
+
+```json
+{ "id": "0196…", "tipo": "expediente.observado", "version": 1, "ocurridoEn": "2026-11-08T15:03:11.123456+00:00",
+  "tenantId": "0196…", "empresaId": "0196…", "cursor": "4211",
+  "datos": { "expedienteId": "0196…", "folio": "NORTE-E-2026-000001", "vinculoId": "0196…",
+             "referencias": [ { "sistema": "SRM", "id": "ADP-00123" } ], "tipoExpediente": "Inicial", "estado": "Observado",
+             "causa": null, "requisitos": [ { "requisitoId": "0196…", "codigo": "RUT" } ], "motivos": null, "justificacion": null,
+             "terceroId": null, "tipoVinculo": null } }
+```
+
+**Catálogo v1 implementado** (`GET /api/v1/eventos/tipos` → `TipoEventoPublicoDto[] { tipo, descripcion }`). Todos los `datos` llevan `vinculoId` y `referencias[] { sistema, id }` (una por sistema integrado que comparte el vínculo) para que cada sistema ubique su registro; nunca llevan revisores, áreas, correos, IP, nombres de personas ni URLs de binarios.
+
+| Tipo | Evento de dominio | `datos` |
+|---|---|---|
+| `vinculo.creado` | `VinculoCreado` | `DatosVinculoCreadoDto { vinculoId, referencias, terceroId, identificacion { pais, tipo, numero, digitoVerificacion }, tipoVinculo (código), flujoId, origen, estado: "Invitado" }` |
+| `vinculo.invitacion_enviada` | `InvitacionEnviada` | `DatosInvitacionEnviadaDto { vinculoId, referencias, canal, expira }` (sin el correo) |
+| `vinculo.invitacion_aceptada` | `InvitacionAceptada` | `DatosInvitacionAceptadaDto { vinculoId, referencias, aceptadaEn, consentimientos[] { tipo, version } }` (sin la evidencia) |
+| `vinculo.activado` · `vinculo.bloqueado` · `vinculo.desbloqueado` · `vinculo.desvinculado` · `vinculo.anulado` | `VinculoActivado`, `VinculoBloqueado`, `VinculoDesbloqueado`, `VinculoDesvinculado`, `VinculoAnulado` | `DatosEstadoVinculoDto { vinculoId, referencias, estado, estadoAnterior?, motivo? (o justificación del desbloqueo), hasta?, expedienteId? (activado) }` |
+| `vinculo.referencia_agregada` | `ReferenciaExternaAgregada` | `DatosReferenciaAgregadaDto { vinculoId, referencias, referencia { sistema, id } }` |
+| `expediente.abierto` · `expediente.en_revision` · `expediente.observado` · `expediente.reenviado` · `expediente.aprobado` · `expediente.rechazado` | `ExpedienteAbierto`; `ExpedienteEnviadoARevision` (`causa: CargaCompleta`) o `RevisionReanudada` (`causa: RevisionReanudada`); `ExpedienteObservado`; `ExpedienteReenviado` (`causa: Tercero\|Integrador`); `ExpedienteAprobado`; `ExpedienteRechazado` | `DatosExpedienteDto { expedienteId, folio, vinculoId, referencias, tipoExpediente, estado (tras el evento), causa?, requisitos? [{ requisitoId, codigo }] (observados o reabiertos), motivos? [{ codigo, texto }] (rechazo, texto tal como se comunicó al tercero), justificacion? (rechazo), terceroId? y tipoVinculo? (abierto) }` |
+| `documento.compartido` · `documento.por_vencer` · `documento.vencido` | `VersionCompartida`; `VencimientoAvisado` (nuevo evento del stream del documento, uno por documento y vínculo en el aviso consolidado del día, TD-7); `VersionVencida` | `DatosDocumentoDto { documentoId, terceroId, tipo (canónico o código del tipo del tenant), version, vinculoId, referencias, causa? (compartido: InvitacionAceptada\|VersionNueva\|Importada), vigenteHasta?, diasRestantes? (por vencer), diasGracia? (vencido) }` |
+| `certificado.emitido` · `certificado.reemplazado` · `certificado.suspendido` · `certificado.restablecido` · `certificado.revocado` · `certificado.vencido` | `CertificadoEmitido`; `CertificadoReemplazado` (emisión anterior); `CertificadoSuspendido`/`Restablecido` (bloqueo y desbloqueo, B-5); `CertificadoRevocado`; `CertificadoVencido` (NW-13) | `DatosCertificadoDto { certificadoId, vinculoId, referencias, terceroId, certificado { folio, emision, estado (tras el evento), hash (SHA-256 hex), vigenteHasta?, urlVerificacion }, estadoAnterior?, motivo? (suspendido, restablecido, revocado, reemplazado), expedienteId? y expedienteFolio? (emitido), folioReemplazo? (reemplazado) }`. Versión reducida de §6.3: `versionesAceptadas`, `cuentaDesignada`, `cambios` y `verificaciones` llegan con H6–H7 |
+
+Agregar tipos es registrar otro `IMapeadorDeEventos` en DI (NW-2); su catálogo se suma solo a la validación de suscripciones y a `GET /eventos/tipos`.
+
+**Modo pull y SSE** (`eventos:leer`; el tenant sale de la credencial; con `X-Empresa` solo esa empresa; si no, las empresas de la credencial o todas si tiene `*`):
+
+| Ruta | Contrato |
+|---|---|
+| `GET /api/v1/eventos?desde={cursor}&tipos=a,b&limite=50` | `PaginaEventosDto { datos: EventoPublicoDto[], cursor, hayMas }` en orden de cursor (máx. 200). `cursor` = el último devuelto (o el mismo `desde` si no hubo nada): se pasa tal cual en la siguiente consulta. Sin `desde` empieza por el primero. 422 `cursor-invalido`. |
+| `GET /api/v1/eventos/stream?desde=&tipos=` | SSE (§3.4): `id` = cursor (reanuda con `Last-Event-ID`), `event` = tipo, `data` = `EventoPublicoDto`. Consulta cada 2 s; comentario de vida cada 15 s. |
+| `GET /api/v1/eventos/tipos` | Catálogo (cualquier credencial). |
+
+**Webhooks** (`webhooks:administrar`; una llave de un sistema integrado solo ve y gestiona las suscripciones de su sistema —las demás responden 404—; una llave sin sistema ve todas e indica `sistemaId` al crear):
+
+| Ruta | Contrato |
+|---|---|
+| `POST /api/v1/webhooks` | `CrearWebhookDto { url, tipos[] ("*" = todos), empresas[]? (ids o "*"; nulo = todas las del alcance), sistemaId? (solo con llave sin sistema), descripcion? }` → **201** `WebhookDto` con `secreto` (`whsec_…`, 256 bits; **se muestra una sola vez**). 422 `url-invalida`, `url-no-permitida` (no https, IP privada/local/reservada o `localhost`; `http` solo hacia `localhost`/`127.0.0.1`/`[::1]` con `Validasoft:Webhooks:PermitirHttpLocal`, desarrollo), `tipos-requeridos`, `tipos-invalidos`, `empresas-invalidas`, `empresas-fuera-de-alcance` (alcance = empresas pedidas ∩ las de la credencial; `*` con una credencial limitada se reduce a sus empresas), `sistema-requerido`, `sistema-invalido`. Esta ruta y `rotar-secreto` **no guardan respuesta de idempotencia** (dejaría el secreto en claro 24 h): un POST repetido crea otra suscripción. |
+| `GET /api/v1/webhooks` · `GET /api/v1/webhooks/{id}` | `WebhookDto { id, sistemaId, sistema, url, descripcion, tipos[], empresas[], version, activa, fallosSeguidos, deshabilitadaEn?, causaDeshabilitacion? (fallos-consecutivos\|manual), creadaEn, ultimaEntregaEn?, secretoAnteriorVence?, secreto: null }`. 404 `webhook-no-encontrado`. |
+| `PUT /api/v1/webhooks/{id}` | `EditarWebhookDto { url?, tipos?, empresas?, descripcion? }` (nulo = sin cambio), mismas validaciones. |
+| `POST /api/v1/webhooks/{id}/rotar-secreto` | 200 `WebhookDto` con el `secreto` nuevo; el anterior sigue firmando hasta `secretoAnteriorVence` (`Validasoft:Webhooks:HorasSolapamientoRotacion`, 24 h). |
+| `POST /api/v1/webhooks/{id}/activar` · `POST …/desactivar` | 200 `WebhookDto`. Activar reinicia `fallosSeguidos`; 409 `webhook-inactivo` al desactivar una inactiva. |
+| `GET /api/v1/webhooks/{id}/entregas?estado=&limite=50&cursor=` | `PaginaDto<EntregaWebhookDto>`, más recientes primero. `EntregaWebhookDto { id, webhookId, eventoId, tipoEvento, cursor, empresaId, estado (Pendiente\|Entregada\|Reintentando\|Fallida\|Cancelada), intentos, creadaEn, entregadaEn?, proximoIntentoEn?, historial[] IntentoEntregaDto { numero, intentoId, fecha, codigoHttp?, duracionMs, resultado (Exitoso\|Fallido), error? (HTTP nnn, timeout, error-de-conexion, destino-no-permitido), manual } }`. |
+| `GET /api/v1/webhooks/{id}/entregas/{entregaId}` | `EntregaWebhookDto`. 404 `entrega-no-encontrada`. |
+| `POST /api/v1/webhooks/{id}/entregas/{entregaId}/reenviar` | **202** `EntregaWebhookDto` (`estado: Pendiente`): un intento manual más, ahora, aunque la entrega esté entregada, fallida o cancelada y aunque la suscripción esté desactivada; si falla no programa reintentos. |
+
+Todas las altas y cambios quedan en la auditoría de configuración (entidad `Webhook`; el secreto nunca se audita, solo `secretoAnteriorVence`). El secreto se guarda cifrado (AES-256-GCM con la clave derivada de `Validasoft:Sesiones:ClaveFirma`, como IN-3): **rotar esa clave invalida los secretos de webhook** (hay que rotarlos); la clave por tenant de docs/07 §5 sigue pendiente.
+
+**Entrega** (NW-5): `POST` a la URL con `Content-Type: application/json`, `User-Agent: Validasoft-Webhooks/1.0`, el sobre como cuerpo y las cabeceras:
+
+| Cabecera | Valor |
+|---|---|
+| `Validasoft-Event-Id` | `id` del evento: **la clave de deduplicación** (un reintento o un reenvío manual repiten el mismo). |
+| `Validasoft-Event-Type` | `tipo`. |
+| `Validasoft-Delivery` | id del **intento** (cambia en cada reintento). |
+| `Validasoft-Timestamp` | segundos Unix del envío. |
+| `Validasoft-Signature` | `t={timestamp},v1={hex(HMAC-SHA256(secreto, "{timestamp}.{cuerpo}"))}`; durante una rotación, un `v1=` por cada secreto vigente (`t=…,v1=…,v1=…`). El receptor recalcula con su secreto, compara en tiempo constante contra cualquier `v1` y rechaza timestamps a más de 5 min. `FirmaDeWebhook.Verificar` (dominio) es la referencia. |
+
+Éxito = `2xx` antes del timeout (`Validasoft:Webhooks:TimeoutSegundos`, **5 s**; responde rápido y procesa después). Sin redirecciones ni cookies. Si falla: reintentos con backoff **1 min, 5 min, 30 min, 2 h y 6 h** (`Validasoft:Webhooks:Reintentos`; 6 intentos) como mensajes programados en la misma transacción; luego `Fallida` y queda el reenvío manual. Cada intento fallido suma a `fallosSeguidos` de la suscripción (se reinicia con un éxito); al llegar a **20** (`Validasoft:Webhooks:FallosParaDeshabilitar`) se **deshabilita** (`causa: fallos-consecutivos`), se audita y los administradores del tenant reciben la notificación `webhook.deshabilitado` (campana y correo); sus reintentos pendientes quedan `Cancelada` y los eventos nuevos no generan entregas mientras siga inactiva. **Orden**: la cola `webhooks` es secuencial, así un receptor sano recibe los eventos en el orden del cursor; un reintento llega después de eventos más nuevos, así que el receptor ordena por `cursor` y deduplica por `Validasoft-Event-Id`. **SSRF**: la URL se valida al crear y la IP se vuelve a comprobar **al conectar** (todas las direcciones del DNS deben ser públicas y se conecta a esas mismas: sin DNS rebinding); quedan fuera loopback, RFC 1918, enlace local (incluye `169.254.169.254`), CGNAT, ULA, multicast, documentación y reservadas, también dentro de IPv6 (mapeadas, NAT64, 6to4). `PermitirHttpLocal` admite loopback y `PermitirDestinosPrivados` las redes privadas (solo desarrollo u on-premise).
+
+**Notificaciones a personas** (NW-8…NW-11; las genera la misma suscripción):
+
+| Tipo | Hecho | Quién | Correo |
+|---|---|---|---|
+| `expediente.nuevo_en_area` «Nuevo expediente en tu área» | `EtapaActivada` (al pasar a revisión o al activarse una etapa siguiente) | miembros activos con rol en la empresa de las áreas de la etapa | sí (consolidado) |
+| `expediente.tercero_respondio` «El tercero respondió» | `ExpedienteReenviado` | miembros de las áreas que vuelven a revisar | sí (consolidado) |
+| `expediente.aprobado` · `expediente.rechazado` | `ExpedienteAprobado` · `ExpedienteRechazado` | miembros de todas las áreas del flujo | no |
+| `documento.por_vencer` «Documento por vencer» | `VencimientoAvisado` | miembros de las áreas del expediente abierto (o el último) del vínculo | no |
+| `webhook.deshabilitado` | deshabilitación por fallos | usuarios activos con rol `Administrador` | sí |
+
+**Consolidación**: una notificación y, si va por correo, **un correo por persona y hecho** aunque esté en varias áreas (el correo nombra sus áreas y enlaza a `{Validasoft:Correo:UrlApp}#/e/{empresa}/expedientes/{id}`; por defecto `UrlApp` = `{UrlPublica}/app/`). Hechos con más de 24 h (`Validasoft:Notificaciones:HorasAntiguedadMaxima`) no notifican a personas (al encender la suscripción sobre una base con historia no salen correos viejos). **Constancia al tercero** (plantilla `consentimiento-empresa`): al registrarse `ConsentimientosRegistrados` sale al correo con el que aceptó «Constancia de tu aceptación con {empresa}» con cada texto (título, versión y huella SHA-256) y la fecha; sin IP ni otros datos de la evidencia.
+
+| Ruta (cualquier credencial de **persona**: identidad delegada o su sesión; una integración sin persona ⇒ 422 `usuario-delegado-requerido`) | Contrato |
+|---|---|
+| `GET /api/v1/notificaciones?soloNoLeidas=&limite=30&cursor=` | `BandejaNotificacionesDto { datos: NotificacionDto[], siguienteCursor?, noLeidas }`, más recientes primero (máx. 100). `NotificacionDto { id, tipo, titulo, mensaje, empresaId?, expedienteId?, vinculoId?, folio?, enlace? (ruta de apps/web sin host, p. ej. /e/{empresa}/expedientes/{id}), creadaEn, leidaEn? }`. Con `X-Empresa`, solo las de esa empresa y las del tenant (`empresaId: null`). |
+| `POST /api/v1/notificaciones/{id}/leida` | 200 `NotificacionDto`; 404 `notificacion-no-encontrada` (también si es de otra persona). |
+| `POST /api/v1/notificaciones/leidas` | 200 `NotificacionesMarcadasDto { marcadas }` (las no leídas visibles con el mismo filtro). |
+| `GET /api/v1/notificaciones/stream` | SSE: `event: notificacion` (`data` = `NotificacionDto`, `id` = su orden) por cada nueva desde que se conectó (o desde `Last-Event-ID`) y `event: no_leidas` (`data` = el total) cuando cambia. Consulta cada 2 s. |
+| `GET /api/v1/usuarios/me/preferencias-notificacion` · `PUT` | `PreferenciasNotificacionDto { correo: { [tipo]: bool }, tiposConCorreo[] }`; el `PUT` (`ActualizarPreferenciasNotificacionDto { correo }`) cambia solo los tipos que envía; un tipo que no va por correo ⇒ 422 `tipo-notificacion-invalido`. Por defecto todos `true`. La campana no se apaga. |
+
+**Permisos**: `eventos:leer` y `webhooks:administrar` se suman a los scopes del tenant y al rol `Administrador` (no al Auditor todavía). Las llaves ya emitidas no los tienen (como BO-9): se crea una llave nueva con ellos.
+
+**Diferencias con §6.1–§8** (y por qué): (1) `Validasoft-Event-Type` en lugar de `Validasoft-Event` y el timestamp también dentro de la firma (`t=`, como el resto de la industria); no se envía `X-Correlation-Id`. (2) El sobre lleva `tenantId` (no el slug `tenant`), `cursor` (no `secuencia`) y las referencias dentro de `datos`; no lleva `agregado`, `actor` ni `legacy` todavía. (3) Nombres del catálogo pedidos por Producto: `vinculo.invitacion_enviada/aceptada` (no `expediente.invitacion_*`), `vinculo.activado` y los de estado por separado (no `vinculo.estado_cambiado`), `expediente.en_revision` (no `enviado_a_revision`) y `expediente.observado` (no `con_observaciones`). (4) Reintentos hasta 6 h (no 24 h) y deshabilitación por **N fallos seguidos** (no 7 días); timeout 5 s (no 10 s). (5) El pull devuelve `PaginaEventosDto` (con el cursor siempre presente) en lugar de `PaginaDto`. (6) La campana vive en `/notificaciones` (no `/novedades`); la auditoría de envíos que §2.7 ponía en `GET /notificaciones/{id}/entregas` queda pendiente con otro nombre. (7) Preferencias solo de correo por tipo (sin digest).
+
+**Pendiente**: `POST /webhooks/{id}/probar` (`prueba.ping`), `DELETE /webhooks/{id}`, el evento público `webhook.deshabilitado` y la deshabilitación por `empresas-fuera-de-alcance` al cambiar una API key; `certificado.con_pendientes` (H6); `legacy.estadoTercero`; Data Protection por tenant para los secretos; evidencia de entrega SMTP (`EntregasNotificacion`); plantillas editables por tenant (Fluid); digest diario; avisos a revisores de observación automática, SLA y revalidación; partición de la cola `webhooks` por suscripción si un receptor lento llega a frenar a los demás.
+
 ---
 
 ## 7. Catálogo de eventos públicos
+
+> **Implementado (NW, 2026-11-08)**: 18 tipos de vínculo, expediente y documento con sus `datos` exactos en §6.5 (algunos nombres difieren de esta tabla; ver allí). El resto de la tabla es el objetivo.
 
 | Tipo | Origen (03) | `datos` mínimo |
 |---|---|---|
@@ -772,6 +906,8 @@ Los eventos son **por empresa** (o por tenant cuando no tienen empresa): un inte
 ---
 
 ## 8. Alertas y notificaciones (catálogo P-10-1)
+
+> **Implementado (NW, 2026-11-08)**: campana (`/notificaciones`), correo consolidado a revisores (nuevo expediente en el área y respuesta del tercero), aviso a administradores por webhook deshabilitado, constancia al tercero (`consentimiento-empresa`) y preferencias de correo por tipo; detalle en §6.5. Lo demás de esta tabla sigue pendiente.
 
 Canales MVP: correo, campana, webhook (P-10-2). Consolidación: máximo un correo por tercero y hecho por día; una secuencia de avisos por documento; digest diario opcional para revisores (P-10-3). Remitente: dominio de la plataforma, nombre de la empresa, `Reply-To` de la empresa (P-10-4). Evidencia de entrega en `EntregasNotificacion` (adición 4).
 

@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Infraestructura.Almacenamiento;
+using Validasoft.Infraestructura.Certificados;
 using Validasoft.Infraestructura.Correo;
+using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Infraestructura.Http;
+using Validasoft.Infraestructura.Notificaciones;
 using Validasoft.Infraestructura.Persistencia;
 using Validasoft.Infraestructura.Seguridad;
 using Wolverine;
@@ -38,6 +42,12 @@ public static class ServiciosInfraestructura
     /// <summary>Cola local durable de vigencias: cálculo, avisos y vencimientos programados de las versiones (TD-6).</summary>
     public const string ColaVigencias = "vigencias";
 
+    /// <summary>
+    /// Cola local durable y <b>secuencial</b> de las entregas de webhooks (NW-5): un intento a la vez, en el orden en que se
+    /// encolaron, así un receptor sano recibe los eventos en orden. Los reintentos van programados y no bloquean la cola.
+    /// </summary>
+    public const string ColaWebhooks = "webhooks";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -63,7 +73,25 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<ReglasDeCarga>();
         servicios.AddSingleton<FabricaClienteS3>();
         servicios.AddSingleton<IAlmacenDeArchivos, AlmacenS3>();
+        // Eventos públicos, webhooks y notificaciones (NW-1…NW-13). Cada catálogo es un IMapeadorDeEventos.
+        servicios.AddSingleton<IMapeadorDeEventos, MapeadorDelProcesoDeValidacion>();
+        servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeCertificados>(); // certificado.* (NW-13)
+        servicios.AddSingleton<CatalogoDeEventos>();
+        servicios.AddSingleton<PlanificadorDeNotificaciones>();
+        servicios.AddSingleton<ProcesadorDeEventos>();
+        servicios.AddSingleton<OpcionesDeWebhooks>();
+        servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
+        // El manejador primario se arma en la configuración del HttpClientFactory (no es un servicio que Wolverine resuelva).
+        servicios.AddHttpClient(EnviadorDeWebhooksHttp.Cliente)
+            .ConfigurePrimaryHttpMessageHandler(proveedor => EnviadorDeWebhooksHttp.CrearManejador(proveedor.GetRequiredService<OpcionesDeWebhooks>()));
         servicios.AddHostedService<InicializadorDeAlmacen>();
+        // Certificados verificables (H5): sello Ed25519, emisión en la transacción de la aprobación, PDF y vencimientos después.
+        servicios.AddSingleton<ClavesDeCertificados>();
+        servicios.AddHostedService<VerificacionDeClavesDeCertificados>(); // sin clave de sellado la API no arranca (CE-11)
+        servicios.AddSingleton<EmisorDeCertificados>();
+        servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
+        servicios.AddSingleton<ArchivoDeCertificados>();
+        servicios.AddHostedService<ProcesadorDeCertificados>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)
@@ -125,6 +153,10 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Documentos.RecalcularVigenciasDelTipo>().ToLocalQueue(ColaVigencias).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.EnviarAvisosDeVencimiento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.VencerVersionDeDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeNotificacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeConstanciaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>().ToLocalQueue(ColaWebhooks);
+        opciones.LocalQueue(ColaWebhooks).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();

@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Dominio.Auditoria;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
@@ -20,7 +21,11 @@ using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
+using JasperFx.Events.Daemon;
+using Validasoft.Aplicacion.Notificaciones;
+using Validasoft.Dominio.Integraciones;
 using Validasoft.Infraestructura.Http;
+using Validasoft.Infraestructura.Notificaciones;
 using Validasoft.Infraestructura.Seguridad;
 using Weasel.Core;
 using Weasel.Postgresql.Tables;
@@ -145,14 +150,42 @@ public static class ConfiguracionMarten
                     .Index(x => x.ExpedienteId)
                     .Index(x => x.AreaId);
 
+                // Certificados (H5): uno por vínculo (id determinista); el folio raíz es único en el tenant y se busca entre
+                // tenants en la verificación pública (no es único entre tenants: lo desambigua la huella, CE-8).
+                opts.Schema.For<Certificado>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_certificado_folio", TenancyScope.PerTenant, x => x.FolioRaiz)
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.VinculoId);
+                // Secuencias de folio como streams que se bloquean al consumir (CE-3).
+                opts.Schema.For<SecuenciaDeFolios>().MultiTenanted();
+
                 // Proyecciones inline: Vinculo y Expediente son la lectura tras la escritura (VinculoResumen y
                 // ExpedienteDetalle, docs/03 §14).
+                // Eventos públicos (global, con su tenant), webhooks y notificaciones (NW-1…NW-11). El cursor es único por tenant.
+                opts.Schema.For<EventoPublico>()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_evento_publico_cursor", x => x.TenantId, x => x.Cursor);
+                // Concurrencia optimista: el manejador de entregas (fallos, deshabilitación) y la administración no se pisan.
+                opts.Schema.For<SuscripcionWebhook>().MultiTenanted().UseOptimisticConcurrency(true);
+                opts.Schema.For<EntregaWebhook>().MultiTenanted()
+                    .Index(x => x.SuscripcionId)
+                    .Index(x => x.Cursor);
+                opts.Schema.For<Notificacion>().MultiTenanted()
+                    .Index(x => x.UsuarioId)
+                    .Index(x => x.Orden);
+                opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
+
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
-            .IntegrateWithWolverine();
+            // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos
+            // públicos (NW-3). Con varias réplicas, solo el líder procesa; si cae, otra toma el relevo.
+            .AddAsyncDaemon(DaemonMode.HotCold)
+            .IntegrateWithWolverine()
+            .SubscribeToEventsWithServices<SuscripcionDeEventosPublicos>(ServiceLifetime.Singleton);
 
         servicios.AddScoped<ISesiones, Sesiones>();
         servicios.AddScoped<SesionDeEmpresa>();

@@ -115,6 +115,12 @@ public sealed record VigenciaDeVersionCalculada(
 /// <summary>Pasó <c>vigenteHasta + diasGracia</c> de la versión para ese vínculo (TD-6). No cambia el estado del vínculo (H6).</summary>
 public sealed record VersionVencida(int Numero, Guid VinculoId, DateOnly VigenteHasta, int DiasGracia, DateTimeOffset Fecha);
 
+/// <summary>
+/// Se avisó al tercero que la versión vence para ese vínculo (aviso consolidado del día, TD-7). Solo deja constancia del
+/// hecho para el evento público <c>documento.por_vencer</c> y las notificaciones (NW-1); no cambia el estado del documento.
+/// </summary>
+public sealed record VencimientoAvisado(int Numero, Guid VinculoId, DateOnly VigenteHasta, int DiasRestantes, DateTimeOffset Fecha);
+
 /// <summary>El mismo archivo (mismo SHA-256) ya es una versión del documento: no se crea otra (docs/02 §5 regla 1).</summary>
 public sealed record VersionDuplicadaDetectada(int NumeroExistente, string Sha256, DateTimeOffset Fecha, string? HashDatos = null);
 

@@ -270,6 +270,14 @@ public static class EnviarAvisosDeVencimientoHandler
                     .ToList();
                 await mensajes.PublishAsync(new CorreoDeVencimientoPendiente(grupo.Key, mensaje.Fecha, lineas));
             }
+
+            // Constancia por documento y vínculo para el evento público documento.por_vencer y las notificaciones (NW-1).
+            foreach (var (documento, version) in porAvisar)
+                foreach (var vigencia in version!.Vigencias.Where(v => v.VigenteHasta is not null && v.VencidaEn is null &&
+                                                                       vinculos.ContainsKey(v.VinculoId) &&
+                                                                       CalculadoraDeVigencia.FechasDeAviso(v.VigenteHasta!.Value, v.DiasAviso).Contains(mensaje.Fecha)))
+                    sesion.Events.Append(documento.Id, new VencimientoAvisado(version.Numero, vigencia.VinculoId, vigencia.VigenteHasta!.Value,
+                        vigencia.VigenteHasta!.Value.DayNumber - mensaje.Fecha.DayNumber, ahora));
         }
 
         aviso.Estado = porAvisar.Count > 0 ? EstadoAviso.Enviado : EstadoAviso.SinDocumentos;

@@ -37,6 +37,9 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public const string RedConfiable = "10.99.0.0/16";
 
+    /// <summary>Fallos seguidos que deshabilitan una suscripción de webhook en las pruebas (NW-7).</summary>
+    public const int FallosParaDeshabilitarWebhook = 3;
+
     /// <summary>Carpeta temporal con un <c>dist/</c> mínimo de cada app para servirlas desde la API (SE-3).</summary>
     public string CarpetaApps { get; } = Path.Combine(Path.GetTempPath(), "validasoft-apps-" + Guid.NewGuid().ToString("N"));
 
@@ -72,6 +75,13 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);
             b.UseSetting("Validasoft:Proxies:Confiables:0", ProxyConfiable);
             b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
+            b.UseSetting("Validasoft:Certificados:SegundosProceso", "1"); // PDF de los certificados casi al instante
+            // Webhooks (NW): receptor local por http, reintentos de segundos y deshabilitación tras 3 fallos seguidos.
+            b.UseSetting("Validasoft:Webhooks:PermitirHttpLocal", "true");
+            b.UseSetting("Validasoft:Webhooks:Reintentos:0", "00:00:01");
+            b.UseSetting("Validasoft:Webhooks:Reintentos:1", "00:00:01");
+            b.UseSetting("Validasoft:Webhooks:FallosParaDeshabilitar", FallosParaDeshabilitarWebhook.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("Validasoft:Webhooks:TimeoutSegundos", "3");
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();

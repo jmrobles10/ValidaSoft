@@ -131,12 +131,12 @@ public static class InvitacionesPublicasEndpoints
     [WolverinePost("/public/v1/invitaciones/{vinculoId}/aceptar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<InvitacionAceptadaDto> Aceptar(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http, ISesiones sesiones,
-        IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var enSesion = tercero.VinculoRequerido(vinculoId);
         // Si pierde una carrera (folio del expediente o el propio vínculo), se repite completa con una sesión nueva.
-        var aceptada = await Peticiones.ConReintentosAsync(() => AceptarUnaVezAsync(vinculoId, dto, http, sesiones, contexto, tercero, enSesion, reloj, ct));
+        var aceptada = await Peticiones.ConReintentosAsync(() => AceptarUnaVezAsync(vinculoId, dto, http, sesiones, contexto, tercero, enSesion, certificados, reloj, ct));
         // Lo compartido al aceptar (sin outbox de la bóveda) calcula sus vigencias por mensaje (TD-6).
         if (aceptada.Compartidos.Count > 0)
             await mensajes.PublishAsync(new Documentos.CalcularVigenciasDelVinculo(tercero.TerceroId, vinculoId));
@@ -144,7 +144,8 @@ public static class InvitacionesPublicasEndpoints
     }
 
     private static async Task<InvitacionAceptadaDto> AceptarUnaVezAsync(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http,
-        ISesiones sesiones, IContextoSolicitud contexto, SesionDeTercero tercero, VinculoEnSesion enSesion, TimeProvider reloj, CancellationToken ct)
+        ISesiones sesiones, IContextoSolicitud contexto, SesionDeTercero tercero, VinculoEnSesion enSesion, Certificados.EmisorDeCertificados certificados,
+        TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.ParaTenant(enSesion.TenantId);
@@ -190,7 +191,7 @@ public static class InvitacionesPublicasEndpoints
             RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.AlAceptarInvitacion, ahora, ct);
 
         if (flujo is not null)
-            await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, ahora, ct, documentos);
+            await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, certificados, ahora, ct, documentos);
 
         await sesion.SaveChangesAsync(ct);
 

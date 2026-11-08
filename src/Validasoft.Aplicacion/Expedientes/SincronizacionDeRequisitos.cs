@@ -1,4 +1,5 @@
 using Marten;
+using Validasoft.Aplicacion.Certificados;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Vinculos;
 
@@ -20,7 +21,8 @@ public sealed record SincronizarRequisitosDelVinculo(Guid TenantId, Guid Vinculo
 /// </summary>
 public static class SincronizarRequisitosDelVinculoHandler
 {
-    public static async Task Handle(SincronizarRequisitosDelVinculo mensaje, IDocumentStore store, TimeProvider reloj, CancellationToken ct)
+    public static async Task Handle(SincronizarRequisitosDelVinculo mensaje, IDocumentStore store, EmisorDeCertificados certificados, TimeProvider reloj,
+        CancellationToken ct)
     {
         await using var sesion = store.LightweightSession(mensaje.TenantId.ToString("N"));
         sesion.SetHeader("actorTipo", mensaje.ActorTipo);
@@ -38,7 +40,7 @@ public static class SincronizarRequisitosDelVinculoHandler
         if (eventos.Count == 0)
             return;
 
-        await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, ahora, ct);
+        await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
         await sesion.SaveChangesAsync(ct);
     }
 }
