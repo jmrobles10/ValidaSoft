@@ -8,6 +8,7 @@ export * from './formato';
 export * from './accesibilidad';
 export * from './Isotipo';
 export * from './patrones';
+export * from './campos';
 export * from './datos';
 export * from './filtros';
 export * from './ChipEstado';

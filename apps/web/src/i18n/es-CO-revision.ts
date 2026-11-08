@@ -442,6 +442,8 @@ export const flujos = {
       tipo: 'Tipo de documento',
       areas: 'Lo revisan',
       todas: 'Todas las áreas del flujo',
+      nAreas_one: '{{count}} área',
+      nAreas_other: '{{count}} áreas',
       aprobadores: 'Aprobadores',
       losDelArea: 'Los del área',
       obligatorio: 'Obligatorio',

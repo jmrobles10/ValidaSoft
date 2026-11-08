@@ -1,5 +1,6 @@
-import { Autocomplete, Box, Button, Chip, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import type { AreaDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
+import { AlineadoConCampo } from '@validasoft/ui';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { MAXIMO_APROBADORES, requisitoNuevo, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
@@ -41,7 +42,15 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
             aria-label={tipo?.nombre ?? t('flujos.editor.requisitos.nuevo')}
             sx={{ border: 1, borderColor: e ? 'error.main' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}
           >
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'flex-start' }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px,1fr) minmax(180px,1fr)', lg: 'minmax(200px,1.2fr) minmax(200px,1.2fr) 120px auto' },
+                columnGap: 1.5,
+                rowGap: 1,
+                alignItems: 'start',
+              }}
+            >
               <TextField
                 select
                 size="small"
@@ -49,7 +58,6 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 value={r.tipoDocumentoTenantId}
                 onChange={(ev) => cambiar(k, { tipoDocumentoTenantId: ev.target.value })}
                 disabled={soloLectura}
-                sx={{ minWidth: 240, flex: 1 }}
               >
                 {(tipo && !elegibles.includes(tipo) ? [tipo, ...elegibles] : elegibles).map((x) => (
                   <MenuItem key={x.id} value={x.id}>
@@ -57,19 +65,25 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                   </MenuItem>
                 ))}
               </TextField>
+              {/* Un resumen en una línea («Cumplimiento», «2 áreas») en vez de etiquetas: el campo mide lo mismo que los demás. */}
               <Autocomplete
                 multiple
                 size="small"
+                disableCloseOnSelect
                 options={areasDelFlujo}
                 value={r.areasQueRevisan.filter((a) => areasDelFlujo.includes(a))}
                 onChange={(_, valor) => cambiar(k, { areasQueRevisan: valor })}
                 getOptionLabel={nombreArea}
                 disabled={soloLectura}
-                renderTags={(valor, props) => valor.map((id, i) => <Chip {...props({ index: i })} key={id} size="small" label={nombreArea(id)} />)}
+                renderTags={(valor) => (
+                  <Typography component="span" noWrap title={valor.map(nombreArea).join(', ')} sx={{ fontSize: 14, pl: 0.75, flex: '0 1 auto', minWidth: 0 }}>
+                    {valor.length === 1 ? nombreArea(valor[0] ?? '') : t('flujos.editor.requisitos.nAreas', { count: valor.length })}
+                  </Typography>
+                )}
                 renderInput={(params) => (
                   <TextField {...params} label={t('flujos.editor.requisitos.areas')} placeholder={r.areasQueRevisan.length === 0 ? t('flujos.editor.requisitos.todas') : undefined} />
                 )}
-                sx={{ flex: 1.4, minWidth: 220 }}
+                sx={{ minWidth: 0, '& .MuiOutlinedInput-root': { flexWrap: 'nowrap' } }}
               />
               <TextField
                 size="small"
@@ -80,8 +94,8 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 onChange={(ev) => cambiar(k, { aprobadoresRequeridos: ev.target.value === '' ? null : Number(ev.target.value) })}
                 slotProps={{ htmlInput: { min: 1, max: MAXIMO_APROBADORES } }}
                 disabled={soloLectura}
-                sx={{ width: { md: 150 } }}
               />
+              <AlineadoConCampo desde="sm">
               <FormControlLabel
                 control={<Switch checked={r.obligatorio} onChange={(ev) => cambiar(k, { obligatorio: ev.target.checked })} disabled={soloLectura} />}
                 label={t('flujos.editor.requisitos.obligatorio')}
@@ -89,12 +103,13 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
               />
               {!soloLectura && (
                 <Tooltip title={t('flujos.editor.requisitos.quitar')}>
-                  <IconButton aria-label={t('flujos.editor.requisitos.quitar')} onClick={() => onCambiar(requisitos.filter((_, i) => i !== k))}>
+                  <IconButton size="small" aria-label={t('flujos.editor.requisitos.quitar')} onClick={() => onCambiar(requisitos.filter((_, i) => i !== k))} sx={{ ml: 'auto' }}>
                     <Trash2 size={16} strokeWidth={1.75} />
                   </IconButton>
                 </Tooltip>
               )}
-            </Stack>
+              </AlineadoConCampo>
+            </Box>
             {e && (
               <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
                 {t(`flujos.editor.errores.${e.codigo}`)}

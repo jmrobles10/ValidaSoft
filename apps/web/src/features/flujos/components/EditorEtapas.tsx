@@ -1,6 +1,7 @@
 import { Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import type { AreaDto } from '@validasoft/api-client';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
+import { AlineadoConCampo } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { areaNueva, areasElegibles, MAXIMO_APROBADORES, moverEtapa, nuevaClave, type AreaEnEditor, type ErrorFlujo, type EtapaEnEditor } from '../editor';
 
@@ -71,7 +72,7 @@ export function EditorEtapas({ etapas, areas, onCambiar, errores, soloLectura }:
                 return (
                   <Box
                     key={`${etapa.clave}-${String(j)}`}
-                    sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(180px,1fr) 104px 104px auto auto 32px' }, gap: 1, alignItems: 'start' }}
+                    sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(160px,1fr) 104px 104px', lg: 'minmax(180px,1fr) 104px 104px auto' }, columnGap: 1, rowGap: 0.5, alignItems: 'start' }}
                   >
                     <TextField
                       select
@@ -111,27 +112,28 @@ export function EditorEtapas({ etapas, areas, onCambiar, errores, soloLectura }:
                       disabled={soloLectura}
                       slotProps={{ htmlInput: { min: 1 } }}
                     />
+                    {/* Switches y «Quitar área» a la altura de los campos (no de sus etiquetas); en pantallas medianas, en una línea aparte. */}
+                    <AlineadoConCampo desde="lg" columna={{ xs: '1 / -1', lg: 'auto' }}>
                     <FormControlLabel
                       control={<Switch size="small" checked={area.puedeRechazarExpediente && !area.automatica} onChange={(e) => cambiarArea(i, j, { puedeRechazarExpediente: e.target.checked })} />}
                       label={t('flujos.editor.puedeRechazar')}
                       disabled={soloLectura || area.automatica}
-                      sx={{ mx: 0, height: 32, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
+                      sx={{ mx: 0, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
                     />
                     <Tooltip title={t('flujos.editor.automaticaAyuda')}>
                       <FormControlLabel
                         control={<Switch size="small" checked={area.automatica} onChange={(e) => cambiarArea(i, j, { automatica: e.target.checked, puedeRechazarExpediente: e.target.checked ? false : area.puedeRechazarExpediente })} />}
                         label={t('flujos.editor.automatica')}
                         disabled={soloLectura}
-                        sx={{ mx: 0, height: 32, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
+                        sx={{ mx: 0, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
                       />
                     </Tooltip>
-                    {!soloLectura ? (
-                      <IconButton size="small" aria-label={t('flujos.editor.quitarArea', { orden })} onClick={() => quitarArea(i, j)} sx={{ mt: '2px' }}>
+                    {!soloLectura && (
+                      <IconButton size="small" aria-label={t('flujos.editor.quitarArea', { orden })} onClick={() => quitarArea(i, j)} sx={{ ml: 'auto' }}>
                         <X size={16} strokeWidth={1.75} />
                       </IconButton>
-                    ) : (
-                      <span />
                     )}
+                    </AlineadoConCampo>
                   </Box>
                 );
               })}

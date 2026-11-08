@@ -222,6 +222,14 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
           paper: { backgroundColor: c.superficieElevada, border: `1px solid ${c.bordeSutil}`, boxShadow: s.menu, borderRadius: RADIO.sm },
           listbox: { padding: 4, '& .MuiAutocomplete-option': { minHeight: control, borderRadius: RADIO.xs, fontSize: 14 } },
           tag: { height: 24, borderRadius: RADIO.xs, margin: 2 },
+          // Mismo alto que los demás campos (32 web / 44 public): el relleno lo pone el input, no el contenedor.
+          inputRoot: {
+            paddingTop: 0,
+            paddingBottom: 0,
+            paddingLeft: 0,
+            '&.MuiInputBase-sizeSmall': { paddingTop: 0, paddingBottom: 0, paddingLeft: 0 },
+            '& .MuiAutocomplete-input, &.MuiInputBase-sizeSmall .MuiAutocomplete-input': { padding: web ? '6px 10px' : '10px 14px' },
+          },
         },
       },
       MuiCheckbox: {
@@ -232,17 +240,27 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
         defaultProps: { size: 'small' },
         styleOverrides: { root: { color: c.bordeControl, padding: web ? 6 : 12, '&.Mui-checked': { color: primario ? primario.accion : c.accionPrimaria } } },
       },
+      // Apagado = «no», no «deshabilitado»: pista clara con borde de control y perilla en texto secundario (≥ 3:1 sobre la
+      // superficie). Encendido: pista de acción y perilla blanca. Deshabilitado: pista nivel 2 con borde sutil y perilla
+      // en texto deshabilitado (apagado) o la pista de acción al 40 % (encendido). Corrige la guía del artifact
+      // («pista borde-control» sólida se leía como deshabilitado).
       MuiSwitch: {
         styleOverrides: {
           root: { width: 36, height: 20, padding: 0, margin: web ? 6 : 12, overflow: 'visible' },
           switchBase: {
-            padding: 2,
-            '&.Mui-checked': { transform: 'translateX(16px)', color: '#FFFFFF', '& + .MuiSwitch-track': { backgroundColor: primario ? primario.accion : c.accionPrimaria, opacity: 1 } },
+            padding: 3,
+            color: c.textoSecundario,
+            '&.Mui-checked': {
+              transform: 'translateX(16px)',
+              color: '#FFFFFF',
+              '& + .MuiSwitch-track': { backgroundColor: primario ? primario.accion : c.accionPrimaria, borderColor: primario ? primario.accion : c.accionPrimaria, opacity: 1 },
+            },
             '&.Mui-focusVisible': { outline: `${BORDE.anilloFoco}px solid ${c.foco}`, outlineOffset: 2 },
-            '&.Mui-disabled + .MuiSwitch-track': { opacity: 0.4 },
+            '&.Mui-disabled': { color: c.textoDeshabilitado, '& + .MuiSwitch-track': { backgroundColor: c.superficieNivel2, borderColor: c.bordeSutil, opacity: 1 } },
+            '&.Mui-checked.Mui-disabled': { color: '#FFFFFF', '& + .MuiSwitch-track': { backgroundColor: primario ? primario.accion : c.accionPrimaria, borderColor: 'transparent', opacity: 0.4 } },
           },
-          thumb: { width: 16, height: 16, boxShadow: 'none', color: '#FFFFFF' },
-          track: { borderRadius: 10, backgroundColor: c.bordeControl, opacity: 1 },
+          thumb: { width: 14, height: 14, boxShadow: 'none' },
+          track: { boxSizing: 'border-box', borderRadius: 10, backgroundColor: c.superficieNivel1, border: `1.5px solid ${c.bordeControl}`, opacity: 1 },
         },
       },
       MuiFormControlLabel: { styleOverrides: { root: { marginLeft: web ? -6 : -12, gap: 2 }, label: { fontSize: web ? 14 : 16 } } },

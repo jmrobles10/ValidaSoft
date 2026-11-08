@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Drawer, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { EmpresaDto, RolAsignadoDto, UsuarioDto } from '@validasoft/api-client';
-import { AvatarActor } from '@validasoft/ui';
+import { AvatarActor, AlineadoConCampo } from '@validasoft/ui';
 import { Ban, Plus, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -82,7 +82,7 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
               </Typography>
             )}
             {filas.map((fila, indice) => (
-              <Stack key={indice} direction="row" spacing={1} alignItems="center">
+              <Stack key={indice} direction="row" spacing={1} alignItems="flex-start">
                 <TextField
                   select
                   label={indice === 0 ? t('usuarios.alcance') : undefined}
@@ -112,11 +112,14 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
                     </MenuItem>
                   ))}
                 </TextField>
-                <Tooltip title={t('usuarios.quitarRol')}>
-                  <IconButton aria-label={t('usuarios.quitarRol')} onClick={() => setFilas((a) => a.filter((_, i) => i !== indice))} sx={{ alignSelf: indice === 0 ? 'flex-end' : 'center' }}>
-                    <X size={16} />
-                  </IconButton>
-                </Tooltip>
+                {/* Solo la primera fila lleva etiquetas: la X se centra en el control, no en la etiqueta. */}
+                <AlineadoConCampo conEtiqueta={indice === 0}>
+                  <Tooltip title={t('usuarios.quitarRol')}>
+                    <IconButton size="small" aria-label={t('usuarios.quitarRol')} onClick={() => setFilas((a) => a.filter((_, i) => i !== indice))}>
+                      <X size={16} />
+                    </IconButton>
+                  </Tooltip>
+                </AlineadoConCampo>
               </Stack>
             ))}
           </Stack>
