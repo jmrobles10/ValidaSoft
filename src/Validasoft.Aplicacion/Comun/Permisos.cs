@@ -37,13 +37,19 @@ public static class Permisos
     /// <summary>Ver los certificados de la empresa y descargar su PDF (cada descarga se audita). Revocar pide <c>expedientes:administrar</c>.</summary>
     public const string CertificadosLeer = "certificados:leer";
 
+    /// <summary>Leer los eventos públicos en modo pull y por SSE (<c>GET /eventos</c>, NW-1).</summary>
+    public const string EventosLeer = "eventos:leer";
+
+    /// <summary>Crear y gestionar suscripciones de webhooks y sus entregas (NW-4).</summary>
+    public const string WebhooksAdministrar = "webhooks:administrar";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer
+        CertificadosLeer, EventosLeer, WebhooksAdministrar
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];

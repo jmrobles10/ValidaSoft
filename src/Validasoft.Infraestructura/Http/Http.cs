@@ -114,8 +114,11 @@ public sealed class RegistroIdempotencia
 /// <c>Idempotency-Key</c>: obligatorio en los POST que crean recursos; misma clave y mismo cuerpo repiten la
 /// respuesta (<c>Idempotent-Replayed: true</c>); misma clave con otro cuerpo responde 422.
 /// </summary>
-public sealed class MiddlewareDeIdempotencia(RequestDelegate siguiente)
+public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
 {
+    [GeneratedRegex("^/api/v1/webhooks(/[^/]+/rotar-secreto)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex RutaConSecreto();
+
     public const string Cabecera = "Idempotency-Key";
 
     private static readonly string[] RutasQueCrean =
@@ -131,7 +134,9 @@ public sealed class MiddlewareDeIdempotencia(RequestDelegate siguiente)
         var clave = http.Request.Headers[Cabecera].ToString();
         var esPost = HttpMethods.IsPost(http.Request.Method) && ruta.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase);
 
-        if (!esPost || http.User.Identity?.IsAuthenticated != true)
+        // Las respuestas que muestran un secreto de webhook (crear y rotar) no se guardan: el registro de idempotencia lo
+        // dejaría en claro 24 h (NW-4). Esas rutas no repiten respuesta; un POST repetido crea otra suscripción.
+        if (!esPost || http.User.Identity?.IsAuthenticated != true || RutaConSecreto().IsMatch(ruta))
         {
             await siguiente(http);
             return;
