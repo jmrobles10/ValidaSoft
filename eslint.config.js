@@ -10,6 +10,8 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
+      // Copias de trabajo (git worktrees) de Claude Code dentro del repo: cada una se valida en su propia carpeta.
+      '.claude/**',
       '**/dist/**',
       '**/node_modules/**',
       '**/coverage/**',
