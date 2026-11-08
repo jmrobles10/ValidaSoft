@@ -9,13 +9,18 @@ using Wolverine.Http;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AgregarValidasoft(builder.Configuration);
+builder.Services.AgregarPlataformaWeb(builder.Configuration);
 builder.Services.AddOpenApi("v1");
 builder.Services.AddWolverineHttp();
 builder.Host.UseWolverine(opts => opts.ConfigurarMensajeria());
 
 var app = builder.Build();
 
+// La IP real (X-Forwarded-For) solo desde proxies confiables: la usan el límite por IP y la auditoría (SE-6).
+app.UsarProxiesConfiables();
 app.UseExceptionHandler();
+// apps/web en /app/ y apps/public en / con frame-ancestors (SE-3), y CORS opcional con lista explícita (SE-5).
+app.UsarAppsYCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<MiddlewareDeContexto>();

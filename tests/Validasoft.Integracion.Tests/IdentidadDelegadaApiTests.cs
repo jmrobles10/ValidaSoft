@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Alba;
+using Marten;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using Validasoft.Contratos;
@@ -54,7 +56,7 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
 
     /// <summary>Aserción como la firmaría el sistema integrado con su clave privada.</summary>
     private static string Asercion(Sistema sistema, string sub, string correo, AsymmetricAlgorithm? otraClave = null,
-        TimeSpan? venceEn = null, string nombre = "Laura Pérez")
+        TimeSpan? venceEn = null, string nombre = "Laura Pérez", string? jti = "")
     {
         var clave = otraClave ?? sistema.ClavePrivada;
         var credenciales = clave is RSA rsa
@@ -62,12 +64,16 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
             : new SigningCredentials(new ECDsaSecurityKey((ECDsa)clave), SecurityAlgorithms.EcdsaSha256);
         var ahora = DateTime.UtcNow;
         var expira = ahora + (venceEn ?? TimeSpan.FromMinutes(2));
+        List<Claim> reclamos = [new("sub", sub), new("name", nombre), new("email", correo)];
+        // jti de un solo uso (SE-4): "" = uno nuevo; null = sin jti.
+        if (jti is not null)
+            reclamos.Add(new Claim("jti", jti.Length > 0 ? jti : Guid.NewGuid().ToString()));
 
         return new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = sistema.Codigo,
             Audience = "validasoft",
-            Subject = new ClaimsIdentity([new Claim("sub", sub), new Claim("name", nombre), new Claim("email", correo)]),
+            Subject = new ClaimsIdentity(reclamos),
             IssuedAt = expira.AddMinutes(-3),
             NotBefore = expira.AddMinutes(-3),
             Expires = expira,
@@ -94,7 +100,7 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
     public async Task Un_usuario_nuevo_nace_sin_roles_y_con_rol_de_revisor_en_A_solo_trabaja_en_A()
     {
         var e = await PrepararAsync();
-        var laura = new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-42", "laura@constructora.co"));
+        var laura = new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-42", "laura@constructora.co"));
 
         // (a) Sin roles: la empresa no está a su alcance.
         var sinRoles = await EnviarAsync("POST", "/api/v1/vinculos", laura with { Empresa = e.EmpresaA.Id },
@@ -135,27 +141,61 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
 
         using var intrusa = RSA.Create(2048);
         var firmaAjena = await EnviarAsync("GET", "/api/v1/empresas",
-            new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-1", "a@x.co", otraClave: intrusa)), esperado: 401);
+            new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-1", "a@x.co", otraClave: intrusa)), esperado: 401);
         (await firmaAjena.ReadAsTextAsync()).ShouldContain("asercion-firma-invalida");
 
         var vencida = await EnviarAsync("GET", "/api/v1/empresas",
-            new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-1", "a@x.co", venceEn: TimeSpan.FromMinutes(-2))), esperado: 401);
+            new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-1", "a@x.co", venceEn: TimeSpan.FromMinutes(-2))), esperado: 401);
         (await vencida.ReadAsTextAsync()).ShouldContain("asercion-vencida");
 
         var larga = await EnviarAsync("GET", "/api/v1/empresas",
-            new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-1", "a@x.co", venceEn: TimeSpan.FromHours(1))), esperado: 401);
+            new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-1", "a@x.co", venceEn: TimeSpan.FromHours(1))), esperado: 401);
         (await larga.ReadAsTextAsync()).ShouldContain("asercion-vigencia-excesiva");
 
         // La aserción de SRM no vale con la llave de MARCO (iss y clave distintos).
-        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Marco.ApiKey, Delegado: Asercion(e.Srm, "u-1", "a@x.co")), esperado: 401);
+        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Marco.ApiKey, Delegado: () => Asercion(e.Srm, "u-1", "a@x.co")), esperado: 401);
 
-        var valida = new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-7", "pedro@x.co"));
+        var valida = new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-7", "pedro@x.co"));
         await EnviarAsync("GET", "/api/v1/empresas", valida, esperado: 200);
         var pedro = await UsuarioPorCorreoAsync(e, "pedro@x.co");
         await EnviarAsync<UsuarioDto>("POST", $"/api/v1/usuarios/{pedro.Id}/desactivar", new Credencial(e.Admin), new { }, esperado: 200);
 
         var inactivo = await EnviarAsync("GET", "/api/v1/empresas", valida, esperado: 401);
         (await inactivo.ReadAsTextAsync()).ShouldContain("usuario-inactivo");
+    }
+
+    [Fact]
+    public async Task Cada_asercion_vale_una_sola_vez_por_su_jti()
+    {
+        var e = await PrepararAsync();
+        var fija = Asercion(e.Srm, "u-9", "sofia@x.co");
+
+        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Srm.ApiKey, Delegado: () => fija), esperado: 200);
+        var repetida = await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Srm.ApiKey, Delegado: () => fija), esperado: 401);
+        (await repetida.ReadAsTextAsync()).ShouldContain("asercion-reutilizada");
+
+        // La misma persona con otro jti sigue entrando; el mismo jti en otro sistema es otra aserción.
+        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-9", "sofia@x.co")), esperado: 200);
+        const string jti = "jti-compartido-por-dos-sistemas";
+        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-9", "sofia@x.co", jti: jti)), esperado: 200);
+        await EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Marco.ApiKey, Delegado: () => Asercion(e.Marco, "u-9", "sofia@x.co", jti: jti)), esperado: 200);
+
+        var sinJti = await EnviarAsync("GET", "/api/v1/empresas",
+            new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-9", "sofia@x.co", jti: null)), esperado: 401);
+        (await sinJti.ReadAsTextAsync()).ShouldContain("asercion-sin-jti");
+
+        // Dos peticiones simultáneas con la misma aserción: solo una entra.
+        var carrera = Asercion(e.Srm, "u-9", "sofia@x.co");
+        var resultados = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+            EnviarAsync("GET", "/api/v1/empresas", new Credencial(e.Srm.ApiKey, Delegado: () => carrera), esperado: null)));
+        resultados.Select(r => r.Context.Response.StatusCode).OrderBy(c => c).ShouldBe([200, 401, 401, 401]);
+
+        // La limpieza borra las vencidas (aquí, todas: se mira 10 minutos en el futuro).
+        var registro = Host.Services.GetRequiredService<Infraestructura.Seguridad.RegistroDeAsercionesUsadas>();
+        await registro.LimpiarVencidasAsync(DateTimeOffset.UtcNow.AddMinutes(10), CancellationToken.None);
+        await using var consulta = Host.Services.GetRequiredService<IDocumentStore>().QuerySession();
+        var clave = Infraestructura.Seguridad.AsercionUsada.Clave(e.Srm.Id, jti);
+        (await consulta.LoadAsync<Infraestructura.Seguridad.AsercionUsada>(clave)).ShouldBeNull();
     }
 
     [Fact]
@@ -170,7 +210,7 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
 
         // Alta anticipada por correo: la primera aserción la enlaza en lugar de crear otro usuario.
         var sesion = await EnviarAsync<SesionUsuarioDto>("POST", "/api/v1/sesiones-usuario",
-            new Credencial(e.Srm.ApiKey, Delegado: Asercion(e.Srm, "u-88", "Marta@Constructora.co", nombre: "Marta Ruiz")), new { }, esperado: 200);
+            new Credencial(e.Srm.ApiKey, Delegado: () => Asercion(e.Srm, "u-88", "Marta@Constructora.co", nombre: "Marta Ruiz")), new { }, esperado: 200);
         sesion.Expira.ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddMinutes(25));
         (await UsuarioPorCorreoAsync(e, "marta@constructora.co")).Identidades.ShouldBe([new IdentidadExternaDto(e.Srm.Id, "u-88")]);
 
@@ -249,7 +289,8 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
 
     // ---------- utilidades ----------
 
-    private sealed record Credencial(string? ApiKey, Guid? Empresa = null, string? Delegado = null, string? Bearer = null);
+    /// <summary><see cref="Delegado"/> firma una aserción por petición (cada <c>jti</c> vale una vez, SE-4).</summary>
+    private sealed record Credencial(string? ApiKey, Guid? Empresa = null, Func<string>? Delegado = null, string? Bearer = null);
 
     private async Task<T> EnviarAsync<T>(string metodo, string url, Credencial credencial, object? cuerpo = null, int? esperado = 201)
     {
@@ -279,7 +320,7 @@ public sealed class IdentidadDelegadaApiTests(ApiFixture fixture)
             if (credencial.Bearer is not null)
                 s.WithRequestHeader("Authorization", "Bearer " + credencial.Bearer);
             if (credencial.Delegado is not null)
-                s.WithRequestHeader("X-Usuario-Delegado", credencial.Delegado);
+                s.WithRequestHeader("X-Usuario-Delegado", credencial.Delegado());
             if (credencial.Empresa is not null)
                 s.WithRequestHeader("X-Empresa", credencial.Empresa.Value.ToString());
 

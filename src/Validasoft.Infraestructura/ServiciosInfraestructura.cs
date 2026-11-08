@@ -51,6 +51,10 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<CookieDeSesionTercero>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
+        servicios.AddSingleton<RegistroDeAsercionesUsadas>();
+        servicios.AddHostedService<LimpiezaDeAsercionesUsadas>();
+        // Embebido desde otros dominios (SE-1…SE-3): orígenes de los sistemas, apps estáticas, CORS opcional y proxies.
+        servicios.AddSingleton<OrigenesDeEmbebido>();
         servicios.AddHostedService<SembradoDeTextosLegales>();
         // Bóveda de documentos: almacenamiento S3/MinIO y límites de carga (docs/04 §6).
         servicios.AddSingleton<ReglasDeCarga>();

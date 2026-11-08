@@ -12,7 +12,10 @@
  *   { tipo: 'validasoft:tema', mode: 'light' | 'dark' }
  *   { tipo: 'validasoft:cerrar-sesion' }
  *
- * Solo se aceptan mensajes de orígenes permitidos y solo se envían al origen del contenedor si está permitido.
+ * Solo se aceptan mensajes de orígenes permitidos y solo se envían al origen del contenedor si está permitido. Los
+ * orígenes permitidos se leen **en tiempo de ejecución** de `GET /public/v1/embed/origenes-permitidos` (los que cada
+ * sistema integrado registró en Validasoft; los mismos de `frame-ancestors`, SE-2). `VITE_ORIGENES_CONTENEDOR` queda
+ * como respaldo: se suma en desarrollo o si la consulta falla.
  */
 
 export const VERSION_PROTOCOLO = 1;
@@ -53,13 +56,42 @@ export function interpretarMensaje(datos: unknown): MensajeEntrante | null {
   }
 }
 
-/** Lista de orígenes permitidos: los configurados más el propio (la demo embebida vive en el mismo origen). */
-export function origenesPermitidos(configurados: string | undefined, propio: string): string[] {
+/** Ruta pública (sin credencial) con los orígenes que pueden alojar las pantallas embebidas. */
+export const RUTA_ORIGENES_PERMITIDOS = '/public/v1/embed/origenes-permitidos';
+
+/**
+ * Lista de orígenes permitidos: el propio (la demo embebida vive en el mismo origen), los que publica la API y los de
+ * `VITE_ORIGENES_CONTENEDOR`. Estos últimos son respaldo: entran si aún no hay lista de la API (`remotos` nulo, porque
+ * falló o no ha llegado) o si `incluirConfigurados` (desarrollo).
+ */
+export function origenesPermitidos(
+  configurados: string | undefined,
+  propio: string,
+  remotos: readonly string[] | null = null,
+  incluirConfigurados = false,
+): string[] {
   const lista = (configurados ?? '')
     .split(',')
     .map((o) => o.trim().replace(/\/$/, ''))
     .filter(Boolean);
-  return [...new Set([propio, ...lista])];
+  const respaldo = remotos === null || incluirConfigurados ? lista : [];
+  return [...new Set([propio, ...(remotos ?? []), ...respaldo])];
+}
+
+/**
+ * Pide a la API los orígenes permitidos. Devuelve `null` si no responde o la respuesta no tiene la forma esperada
+ * (`{ origenes: string[] }`): en ese caso se usa el respaldo.
+ */
+export async function cargarOrigenesPermitidos(baseUrl = '', fetchFn: typeof fetch = (...a) => globalThis.fetch(...a)): Promise<string[] | null> {
+  try {
+    const respuesta = await fetchFn(`${baseUrl}${RUTA_ORIGENES_PERMITIDOS}`, { headers: { Accept: 'application/json' } });
+    if (!respuesta.ok) return null;
+    const datos: unknown = await respuesta.json();
+    if (!esRegistro(datos) || !Array.isArray(datos.origenes)) return null;
+    return datos.origenes.filter((o): o is string => typeof o === 'string' && /^https?:\/\/[^/]+$/.test(o));
+  } catch {
+    return null;
+  }
 }
 
 export function origenPermitido(origen: string, permitidos: readonly string[]): boolean {

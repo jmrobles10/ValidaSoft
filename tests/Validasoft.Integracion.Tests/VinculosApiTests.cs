@@ -28,6 +28,17 @@ public sealed class ApiFixture : IAsyncLifetime
     /// <summary>Fork comunitario de MinIO (misma línea de comandos; minio/minio ya no se publica en Docker Hub).</summary>
     public const string ImagenMinio = "pgsty/minio:RELEASE.2026-08-04T00-00-00Z";
 
+    /// <summary>Origen de un frontend en otro dominio con CORS habilitado (SE-5).</summary>
+    public const string OrigenCors = "https://app.cliente.test";
+
+    /// <summary>Proxy confiable (IP suelta) y red confiable para <c>X-Forwarded-For</c> (SE-6).</summary>
+    public const string ProxyConfiable = "10.20.30.40";
+
+    public const string RedConfiable = "10.99.0.0/16";
+
+    /// <summary>Carpeta temporal con un <c>dist/</c> mínimo de cada app para servirlas desde la API (SE-3).</summary>
+    public string CarpetaApps { get; } = Path.Combine(Path.GetTempPath(), "validasoft-apps-" + Guid.NewGuid().ToString("N"));
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17").Build();
     private readonly MinioContainer _minio = new MinioBuilder(ImagenMinio).Build();
 
@@ -38,6 +49,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _minio.StartAsync());
+        CrearApps();
         Host = await AlbaHost.For<Program>(b =>
         {
             b.UseEnvironment("Development");
@@ -52,6 +64,11 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:LimitePublico:Peticiones", LimitePublico.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:LimitePublico:VentanaSegundos", "60");
             b.UseSetting("Validasoft:SesionTercero:CookieSegura", "true"); // como producción: se verifica el atributo Secure
+            b.UseSetting("Validasoft:Apps:Web", Path.Combine(CarpetaApps, "web"));
+            b.UseSetting("Validasoft:Apps:Publica", Path.Combine(CarpetaApps, "public"));
+            b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);
+            b.UseSetting("Validasoft:Proxies:Confiables:0", ProxyConfiable);
+            b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();
@@ -65,6 +82,17 @@ public sealed class ApiFixture : IAsyncLifetime
         await Host.DisposeAsync();
         await _postgres.DisposeAsync();
         await _minio.DisposeAsync();
+        Directory.Delete(CarpetaApps, recursive: true);
+    }
+
+    private void CrearApps()
+    {
+        Directory.CreateDirectory(Path.Combine(CarpetaApps, "web", "assets"));
+        Directory.CreateDirectory(Path.Combine(CarpetaApps, "public", "assets"));
+        File.WriteAllText(Path.Combine(CarpetaApps, "web", "index.html"), "<!doctype html><title>web</title><script src=\"./assets/web.js\"></script>");
+        File.WriteAllText(Path.Combine(CarpetaApps, "web", "assets", "web-abc123.js"), "console.log('web');");
+        File.WriteAllText(Path.Combine(CarpetaApps, "public", "index.html"), "<!doctype html><title>public</title>");
+        File.WriteAllText(Path.Combine(CarpetaApps, "public", "assets", "public-abc123.js"), "console.log('public');");
     }
 }
 

@@ -14,13 +14,17 @@ namespace Validasoft.Infraestructura.Seguridad;
 
 /// <summary>
 /// Identidad delegada (ADR-0011): verifica la aserción <c>X-Usuario-Delegado</c> — JWT RS256/ES256 firmado por el
-/// sistema integrado de la API key, <c>iss</c> = su código, <c>aud</c> = <c>validasoft</c>, vence en ≤ 5 minutos — y
-/// arma el principal del <b>usuario</b> con el permiso efectivo (intersección de llave y roles).
+/// sistema integrado de la API key, <c>iss</c> = su código, <c>aud</c> = <c>validasoft</c>, vence en ≤ 5 minutos, con
+/// <c>jti</c> de un solo uso (SE-4) — y arma el principal del <b>usuario</b> con el permiso efectivo (intersección de
+/// llave y roles).
 /// </summary>
-public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados usuarios, TimeProvider reloj)
+public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados usuarios, RegistroDeAsercionesUsadas usadas, TimeProvider reloj)
 {
     public const string Cabecera = "X-Usuario-Delegado";
     public const string Audiencia = "validasoft";
+
+    /// <summary>Longitud máxima del <c>jti</c> (un UUID tiene 36).</summary>
+    public const int LongitudMaximaJti = 128;
 
     private static readonly TimeSpan Tolerancia = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan VigenciaMaxima = TimeSpan.FromMinutes(5);
@@ -33,7 +37,9 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         if (sistema is null || !sistema.Activo)
             throw ReglaDeNegocioException.NoAutenticado("sistema-inactivo", "El sistema integrado de la API key no existe o está desactivado.");
 
-        var datos = await ValidarAsync(asercion, sistema);
+        var (datos, jti, expira) = await ValidarAsync(asercion, sistema);
+        // Después de la firma (nadie llena el registro con aserciones falsas) y antes de tocar al usuario.
+        await usadas.RegistrarAsync(sistema.Id, jti, reloj.GetUtcNow(), expira + Tolerancia, ct);
         var usuario = await usuarios.ResolverAsync(tenantId, sistema, apiKeyId, datos, correlationId, ct);
         var permisos = Permisos.ParaUsuario(usuario.Roles, scopesLlave, empresasLlave);
 
@@ -51,7 +57,7 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         return reclamos;
     }
 
-    private async Task<AsercionDelegada> ValidarAsync(string asercion, SistemaIntegrado sistema)
+    private async Task<(AsercionDelegada Datos, string Jti, DateTimeOffset Expira)> ValidarAsync(string asercion, SistemaIntegrado sistema)
     {
         var parametros = new TokenValidationParameters
         {
@@ -84,6 +90,13 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         if (jwt.ValidFrom != DateTime.MinValue && new DateTimeOffset(jwt.ValidFrom, TimeSpan.Zero) > ahora + Tolerancia)
             throw ReglaDeNegocioException.NoAutenticado("asercion-invalida", "La aserción aún no es válida (nbf).");
 
+        var jti = jwt.Id;
+        if (string.IsNullOrWhiteSpace(jti))
+            throw ReglaDeNegocioException.NoAutenticado("asercion-sin-jti",
+                "La aserción debe traer jti: un identificador único (p. ej. un UUID) por aserción; cada una vale una sola vez.");
+        if (jti.Length > LongitudMaximaJti || jti.Any(char.IsControl))
+            throw ReglaDeNegocioException.NoAutenticado("asercion-invalida", $"El jti admite hasta {LongitudMaximaJti} caracteres imprimibles.");
+
         var sub = jwt.Subject;
         jwt.TryGetPayloadValue<string>("name", out var nombre);
         jwt.TryGetPayloadValue<string>("email", out var correo);
@@ -92,7 +105,7 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
 
         try
         {
-            return new AsercionDelegada(sub.Trim(), nombre, Usuario.NormalizarCorreo(correo));
+            return (new AsercionDelegada(sub.Trim(), nombre, Usuario.NormalizarCorreo(correo)), jti, expira);
         }
         catch (ReglaDeNegocioException)
         {

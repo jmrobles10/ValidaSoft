@@ -44,11 +44,22 @@ public sealed record ApiKeyDto(
 
 // ---------- Sistemas integrados, usuarios y sesiones (ADR-0011) ----------
 
-public sealed record CrearSistemaIntegradoDto(string Codigo, string Nombre, string ClavePublicaPem);
+/// <summary><see cref="OrigenesPermitidos"/>: opcional; orígenes <c>https://host[:puerto]</c> que pueden alojar las pantallas embebidas (SE-1).</summary>
+public sealed record CrearSistemaIntegradoDto(string Codigo, string Nombre, string ClavePublicaPem, IReadOnlyList<string>? OrigenesPermitidos = null);
 
 public sealed record RotarClavePublicaDto(string ClavePublicaPem);
 
-public sealed record SistemaIntegradoDto(Guid Id, string Codigo, string Nombre, string ClavePublicaPem, bool Activo, DateTimeOffset CreadoEn);
+/// <summary>Reemplaza la lista completa de orígenes del sistema (<c>PUT /sistemas/{id}/origenes</c>, SE-1).</summary>
+public sealed record FijarOrigenesDto(IReadOnlyList<string> Origenes);
+
+public sealed record SistemaIntegradoDto(
+    Guid Id, string Codigo, string Nombre, string ClavePublicaPem, bool Activo, DateTimeOffset CreadoEn, IReadOnlyList<string> OrigenesPermitidos);
+
+/// <summary>
+/// <c>GET /public/v1/embed/origenes-permitidos</c> (SE-2): la unión de los orígenes de los sistemas activos, la misma
+/// que va en <c>frame-ancestors</c>; sin tenant, sistema ni nombres.
+/// </summary>
+public sealed record OrigenesEmbebidoDto(IReadOnlyList<string> Origenes, int VigenciaSegundos);
 
 /// <summary><see cref="EmpresaId"/> nulo = el rol vale en todo el tenant.</summary>
 public sealed record RolAsignadoDto(string Rol, Guid? EmpresaId);

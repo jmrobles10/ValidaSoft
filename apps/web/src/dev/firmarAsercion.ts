@@ -60,13 +60,31 @@ async function importarClave(pem: string): Promise<{ clave: CryptoKey; alg: 'RS2
   }
 }
 
-/** JWT RS256/ES256 de 5 minutos: `iss` = código del sistema, `aud` = validasoft, `sub`, `name`, `email`. */
-export async function firmarAsercion(sistema: string, clavePrivadaPem: string, persona: PersonaDelegada, ahora = new Date()): Promise<string> {
+/**
+ * JWT RS256/ES256 de 5 minutos: `iss` = código del sistema, `aud` = validasoft, `sub`, `name`, `email` y `jti`
+ * aleatorio. Cada aserción vale **una sola vez** (SE-4): se firma una nueva para cada petición.
+ */
+export async function firmarAsercion(
+  sistema: string,
+  clavePrivadaPem: string,
+  persona: PersonaDelegada,
+  ahora = new Date(),
+  jti: string = crypto.randomUUID(),
+): Promise<string> {
   const { clave, alg } = await importarClave(clavePrivadaPem);
   const iat = Math.floor(ahora.getTime() / 1000);
   const cabecera = textoABase64Url(JSON.stringify({ alg, typ: 'JWT' }));
   const carga = textoABase64Url(
-    JSON.stringify({ iss: sistema, aud: 'validasoft', sub: persona.sub, name: persona.nombre, email: persona.correo, iat, exp: iat + VIGENCIA_ASERCION_S }),
+    JSON.stringify({
+      iss: sistema,
+      aud: 'validasoft',
+      sub: persona.sub,
+      name: persona.nombre,
+      email: persona.correo,
+      jti,
+      iat,
+      exp: iat + VIGENCIA_ASERCION_S,
+    }),
   );
   const algoritmo = alg === 'RS256' ? { name: 'RSASSA-PKCS1-v1_5' } : { name: 'ECDSA', hash: 'SHA-256' };
   const firma = await crypto.subtle.sign(algoritmo, clave, new TextEncoder().encode(`${cabecera}.${carga}`));

@@ -17,10 +17,11 @@ public static class SistemasEndpoints
     [WolverinePost("/api/v1/sistemas")]
     [Authorize(Policy = Permisos.SistemasAdministrar)]
     public static async Task<IResult> Crear(CrearSistemaIntegradoDto dto, ISesiones sesiones, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+        OrigenesDeEmbebido embebido, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         var sistema = SistemaIntegrado.Crear(dto.Codigo, dto.Nombre, dto.ClavePublicaPem, ahora);
+        sistema.FijarOrigenes(dto.OrigenesPermitidos, embebido.PermiteHttpLocal);
 
         await using var sesion = sesiones.DelTenant();
         var codigo = sistema.Codigo;
@@ -30,6 +31,7 @@ public static class SistemasEndpoints
         sesion.Store(sistema);
         Auditoria.Registrar(sesion, contexto, "SistemaIntegrado", sistema.Id.ToString(), AccionConfiguracion.Creado, null, sistema.ADto(), ahora);
         await sesion.SaveChangesAsync(ct);
+        embebido.Invalidar();
         return Results.Created($"/api/v1/sistemas/{sistema.Id}", sistema.ADto());
     }
 
@@ -67,11 +69,32 @@ public static class SistemasEndpoints
         return sistema.ADto();
     }
 
-    /// <summary>Sus API keys dejan de autenticar y sus aserciones se rechazan.</summary>
+    /// <summary>
+    /// Reemplaza los orígenes desde los que el sistema aloja las pantallas embebidas (SE-1). Cambian
+    /// <c>frame-ancestors</c> y <c>GET /public/v1/embed/origenes-permitidos</c> (caché de 60 s por nodo).
+    /// </summary>
+    [WolverinePut("/api/v1/sistemas/{id}/origenes")]
+    [Authorize(Policy = Permisos.SistemasAdministrar)]
+    public static async Task<SistemaIntegradoDto> FijarOrigenes(Guid id, FijarOrigenesDto dto, ISesiones sesiones,
+        IContextoSolicitud contexto, OrigenesDeEmbebido embebido, TimeProvider reloj, CancellationToken ct)
+    {
+        await using var sesion = sesiones.DelTenant();
+        var sistema = await CargarAsync(sesion, id, ct);
+        var antes = sistema.ADto();
+        sistema.FijarOrigenes(dto.Origenes, embebido.PermiteHttpLocal);
+
+        sesion.Store(sistema);
+        Auditoria.Registrar(sesion, contexto, "SistemaIntegrado", sistema.Id.ToString(), AccionConfiguracion.Modificado, antes, sistema.ADto(), reloj.GetUtcNow());
+        await sesion.SaveChangesAsync(ct);
+        embebido.Invalidar();
+        return sistema.ADto();
+    }
+
+    /// <summary>Sus API keys dejan de autenticar, sus aserciones se rechazan y sus orígenes ya no pueden embeber.</summary>
     [WolverinePost("/api/v1/sistemas/{id}/desactivar")]
     [Authorize(Policy = Permisos.SistemasAdministrar)]
     public static async Task<SistemaIntegradoDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+        OrigenesDeEmbebido embebido, TimeProvider reloj, CancellationToken ct)
     {
         await using var sesion = sesiones.DelTenant();
         var sistema = await CargarAsync(sesion, id, ct);
@@ -81,6 +104,7 @@ public static class SistemasEndpoints
         sesion.Store(sistema);
         Auditoria.Registrar(sesion, contexto, "SistemaIntegrado", sistema.Id.ToString(), AccionConfiguracion.Desactivado, antes, sistema.ADto(), reloj.GetUtcNow());
         await sesion.SaveChangesAsync(ct);
+        embebido.Invalidar();
         return sistema.ADto();
     }
 

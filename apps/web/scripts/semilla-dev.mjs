@@ -50,12 +50,24 @@ function base64Url(datos) {
   return Buffer.from(datos).toString('base64url');
 }
 
-/** Aserción X-Usuario-Delegado (ADR-0011): JWT RS256 de 5 minutos firmado con la clave privada del sistema. */
+/**
+ * Aserción X-Usuario-Delegado (ADR-0011): JWT RS256 de 5 minutos firmado con la clave privada del sistema, con `jti`
+ * aleatorio: cada aserción vale una sola vez (SE-4), así que se firma una por petición.
+ */
 function asercion(clavePrivadaPem, usuario) {
   const ahora = Math.floor(Date.now() / 1000);
   const cabecera = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const carga = base64Url(
-    JSON.stringify({ iss: SISTEMA, aud: 'validasoft', sub: usuario.sub, name: usuario.nombre, email: usuario.correo, iat: ahora, exp: ahora + 300 }),
+    JSON.stringify({
+      iss: SISTEMA,
+      aud: 'validasoft',
+      sub: usuario.sub,
+      name: usuario.nombre,
+      email: usuario.correo,
+      jti: randomUUID(),
+      iat: ahora,
+      exp: ahora + 300,
+    }),
   );
   const firma = createSign('RSA-SHA256').update(`${cabecera}.${carga}`).sign(clavePrivadaPem);
   return `${cabecera}.${carga}.${base64Url(firma)}`;
@@ -85,9 +97,15 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', {
   publicKeyEncoding: { type: 'spki', format: 'pem' },
   privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
 });
+// Orígenes desde los que el sistema aloja las pantallas embebidas (SE-1): en desarrollo, la app web de Vite. Entran en
+// frame-ancestors y en GET /public/v1/embed/origenes-permitidos, que el puente embebido lee al arrancar.
+const ORIGENES_DEMO = (process.env.VALIDASOFT_ORIGENES_DEMO ?? 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 const sistema = await llamar('POST', '/api/v1/sistemas', {
   llave: admin,
-  cuerpo: { codigo: SISTEMA, nombre: 'Sistema integrado de demostración', clavePublicaPem: publicKey },
+  cuerpo: { codigo: SISTEMA, nombre: 'Sistema integrado de demostración', clavePublicaPem: publicKey, origenesPermitidos: ORIGENES_DEMO },
 });
 
 const scopes = [

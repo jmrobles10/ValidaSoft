@@ -88,7 +88,9 @@ describe('firmarAsercion (solo demo)', () => {
 
     const [cabecera = '', carga = '', firma = ''] = jwt.split('.');
     expect(JSON.parse(Buffer.from(cabecera, 'base64url').toString())).toEqual({ alg: 'RS256', typ: 'JWT' });
-    expect(JSON.parse(Buffer.from(carga, 'base64url').toString())).toEqual({
+    const { jti, ...reclamos } = JSON.parse(Buffer.from(carga, 'base64url').toString()) as Record<string, unknown>;
+    expect(jti).toMatch(/^[0-9a-f-]{36}$/);
+    expect(reclamos).toEqual({
       iss: 'SRM',
       aud: 'validasoft',
       sub: 'u-7',
@@ -99,6 +101,19 @@ describe('firmarAsercion (solo demo)', () => {
     });
     const valida = createVerify('RSA-SHA256').update(`${cabecera}.${carga}`).verify(publicKey, Buffer.from(firma, 'base64url'));
     expect(valida).toBe(true);
+  });
+
+  it('pone un jti distinto en cada aserción (cada una vale una sola vez, SE-4)', async () => {
+    const { privateKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    });
+    const persona = { sub: 'u-7', nombre: 'Marta Ruiz', correo: 'marta@cliente.co' };
+    const jti = (jwt: string) => (JSON.parse(Buffer.from(jwt.split('.')[1] ?? '', 'base64url').toString()) as { jti: string }).jti;
+
+    const [una, otra] = await Promise.all([firmarAsercion('SRM', privateKey, persona), firmarAsercion('SRM', privateKey, persona)]);
+    expect(jti(una)).not.toBe(jti(otra));
   });
 
   it('exige PEM PKCS#8', async () => {

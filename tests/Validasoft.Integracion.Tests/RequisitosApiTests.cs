@@ -611,7 +611,9 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         {
             Issuer = "SRM",
             Audience = "validasoft",
-            Subject = new ClaimsIdentity([new Claim("sub", p.Sub), new Claim("name", p.Usuario.Nombre), new Claim("email", p.Usuario.Correo)]),
+            // jti de un solo uso (SE-4): cada petición lleva su propia aserción.
+            Subject = new ClaimsIdentity([new Claim("sub", p.Sub), new Claim("name", p.Usuario.Nombre), new Claim("email", p.Usuario.Correo),
+                new Claim("jti", Guid.NewGuid().ToString())]),
             IssuedAt = ahora.AddSeconds(-5),
             NotBefore = ahora.AddSeconds(-5),
             Expires = ahora.AddMinutes(2),

@@ -1,9 +1,10 @@
-import { msRestantes } from '@validasoft/api-client';
-import { useEffect, useMemo } from 'react';
+import { configuracionCliente, msRestantes } from '@validasoft/api-client';
+import { useEffect, useMemo, useState } from 'react';
 import { usePreferencias } from '../shared/preferencias';
 import { alturaDisponible, useAlturaFija, ventanaDelContenedor } from './alturaFija';
 import { anclarOverlays } from './overlaysEmbebidos';
 import {
+  cargarOrigenesPermitidos,
   estaEmbebida,
   interpretarMensaje,
   origenDelContenedor,
@@ -40,9 +41,21 @@ export interface PuenteEmbed {
  */
 export function usePuenteEmbed(): PuenteEmbed {
   const embebida = useMemo(() => estaEmbebida(), []);
+  // Orígenes que registraron los sistemas integrados, leídos de la API al arrancar (null = aún no o falló).
+  const [remotos, fijarRemotos] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!embebida) return undefined;
+    let vigente = true;
+    void cargarOrigenesPermitidos(configuracionCliente().baseUrl).then((lista) => {
+      if (vigente) fijarRemotos(lista);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [embebida]);
   const permitidos = useMemo(
-    () => origenesPermitidos(import.meta.env.VITE_ORIGENES_CONTENEDOR, window.location.origin),
-    [],
+    () => origenesPermitidos(import.meta.env.VITE_ORIGENES_CONTENEDOR, window.location.origin, remotos, import.meta.env.DEV),
+    [remotos],
   );
   const origenContenedor = useMemo(() => (embebida ? origenDelContenedor(window, permitidos) : null), [embebida, permitidos]);
   const estado = useSesion((s) => s.estado);

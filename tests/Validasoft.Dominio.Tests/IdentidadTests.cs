@@ -68,6 +68,47 @@ public class SistemaIntegradoTests
         Should.Throw<ReglaDeNegocioException>(() => sistema.RotarClavePublica(ClaveRsa(2048))).Codigo.ShouldBe("sistema-inactivo");
         Should.Throw<ReglaDeNegocioException>(sistema.Desactivar).Codigo.ShouldBe("sistema-inactivo");
     }
+
+    [Theory]
+    [InlineData("https://SRM.Cliente.co/", false, "https://srm.cliente.co")]
+    [InlineData("https://srm.cliente.co:443", false, "https://srm.cliente.co")]
+    [InlineData("https://srm.cliente.co:8443", false, "https://srm.cliente.co:8443")]
+    [InlineData("https://bücher.co", false, "https://xn--bcher-kva.co")]
+    [InlineData("https://10.0.0.5", false, "https://10.0.0.5")]
+    [InlineData("http://localhost:5173", true, "http://localhost:5173")]
+    [InlineData("http://127.0.0.1:4000/", true, "http://127.0.0.1:4000")]
+    public void Normaliza_los_origenes_como_los_reporta_el_navegador(string origen, bool permitirHttpLocal, string esperado) =>
+        OrigenWeb.Normalizar(origen, permitirHttpLocal).ShouldBe(esperado);
+
+    [Theory]
+    [InlineData("http://srm.cliente.co", true)]
+    [InlineData("http://localhost:5173", false)]
+    [InlineData("https://srm.cliente.co/compras", false)]
+    [InlineData("https://srm.cliente.co?x=1", false)]
+    [InlineData("https://srm.cliente.co#a", false)]
+    [InlineData("https://ana@srm.cliente.co", false)]
+    [InlineData("https://*.cliente.co", false)]
+    [InlineData("http://localhost:*", true)]
+    [InlineData("srm.cliente.co", false)]
+    [InlineData("ftp://srm.cliente.co", false)]
+    [InlineData("", false)]
+    public void Rechaza_origenes_sin_https_con_ruta_o_comodines(string origen, bool permitirHttpLocal) =>
+        Should.Throw<ReglaDeNegocioException>(() => OrigenWeb.Normalizar(origen, permitirHttpLocal)).Codigo.ShouldBe("origen-invalido");
+
+    [Fact]
+    public void Fija_origenes_sin_repetidos_hasta_veinte_y_no_en_un_sistema_inactivo()
+    {
+        var sistema = SistemaIntegrado.Crear("SRM", "SRM", ClaveRsa(2048), Ahora);
+        sistema.FijarOrigenes(["https://a.co", "https://A.co/", "https://b.co"], permitirHttpLocal: false);
+        sistema.OrigenesPermitidos.ShouldBe(["https://a.co", "https://b.co"]);
+
+        Should.Throw<ReglaDeNegocioException>(() => sistema.FijarOrigenes(Enumerable.Range(0, 21).Select(i => $"https://s{i}.co"), false))
+            .Codigo.ShouldBe("origenes-excesivos");
+        sistema.OrigenesPermitidos.ShouldBe(["https://a.co", "https://b.co"]);
+
+        sistema.Desactivar();
+        Should.Throw<ReglaDeNegocioException>(() => sistema.FijarOrigenes([], false)).Codigo.ShouldBe("sistema-inactivo");
+    }
 }
 
 public class UsuarioTests

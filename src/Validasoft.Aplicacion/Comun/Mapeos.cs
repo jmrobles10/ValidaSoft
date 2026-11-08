@@ -29,7 +29,8 @@ public static class Mapeos
     public static ApiKeyDto ADto(this ApiKey k, string? valor = null) =>
         new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor, k.SistemaId);
 
-    public static SistemaIntegradoDto ADto(this SistemaIntegrado s) => new(s.Id, s.Codigo, s.Nombre, s.ClavePublicaPem, s.Activo, s.CreadoEn);
+    public static SistemaIntegradoDto ADto(this SistemaIntegrado s) =>
+        new(s.Id, s.Codigo, s.Nombre, s.ClavePublicaPem, s.Activo, s.CreadoEn, [.. s.OrigenesPermitidos]);
 
     public static RolAsignadoDto ADto(this RolAsignado r) => new(r.Rol.ToString(), r.EmpresaId);
 

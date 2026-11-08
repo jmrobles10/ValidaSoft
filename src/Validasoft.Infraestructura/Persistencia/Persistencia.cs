@@ -21,6 +21,7 @@ using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Validasoft.Infraestructura.Http;
+using Validasoft.Infraestructura.Seguridad;
 using Weasel.Core;
 using Weasel.Postgresql.Tables;
 using Wolverine;
@@ -94,6 +95,8 @@ public static class ConfiguracionMarten
                 opts.Schema.For<SesionDeRefresco>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
                     .Index(x => x.TerceroId)
                     .Index(x => x.ExpiraEn);
+                // Aserciones delegadas ya usadas (SE-4): la llave primaria {sistema}:{jti} rechaza la segunda; se borran al vencer.
+                opts.Schema.For<AsercionUsada>().DatabaseSchemaName("identidad").Index(x => x.ExpiraEn);
                 // Límite de enlaces pedidos con el correo (RE-2): un documento por correo (hash), con concurrencia optimista.
                 opts.Schema.For<LimiteDeAccesoPorCorreo>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
 

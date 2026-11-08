@@ -36,10 +36,16 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       strictPort: true,
-      // La API no publica CORS: en desarrollo el navegador habla con Vite y Vite con la API (mismo origen).
-      proxy: { '/api': { target: api, changeOrigin: true } },
+      // La API no publica CORS: en desarrollo el navegador habla con Vite y Vite con la API (mismo origen). El puente
+      // embebido lee de `/public/v1/embed` los orígenes que pueden alojarlo.
+      proxy: { '/api': { target: api, changeOrigin: true }, '/public/v1/embed': { target: api, changeOrigin: true } },
     },
-    preview: { port: 4173, proxy: { '/api': { target: api, changeOrigin: true } } },
+    preview: {
+      port: 4173,
+      proxy: { '/api': { target: api, changeOrigin: true }, '/public/v1/embed': { target: api, changeOrigin: true } },
+    },
+    // Rutas relativas: la app usa rutas con `#`, así que el mismo build sirve en la raíz (nginx) o en /app/ (la API, SE-3).
+    base: './',
     // El build solo empaqueta index.html: embed-demo.html es de desarrollo (Vite la sirve en `pnpm dev`).
     build: {
       rollupOptions: {

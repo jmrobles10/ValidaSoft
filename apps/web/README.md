@@ -50,7 +50,7 @@ La semilla crea un tenant nuevo en cada ejecución y escribe las credenciales en
 
 Aunque el contenedor ignore `visible`, en modo embebido los diálogos se centran en el punto del clic (o del control enfocado con el teclado), sin salirse del iframe, y los paneles laterales también, con 520 px de alto como mucho (`src/sesion/overlaysEmbebidos.ts`): quedan donde la persona está mirando aunque el iframe mida varios miles de px.
 
-Solo se aceptan mensajes del propio origen y de `VITE_ORIGENES_CONTENEDOR` (lista separada por comas), y solo se responde al contenedor si su origen está en esa lista. El token vive en memoria; nunca en `localStorage`.
+Solo se aceptan mensajes del propio origen y de los orígenes que publica la API en `GET /public/v1/embed/origenes-permitidos` (los que cada sistema integrado registró en Validasoft, SE-2), y solo se responde al contenedor si su origen está en esa lista. `VITE_ORIGENES_CONTENEDOR` (separada por comas) es respaldo: se suma en desarrollo o si la consulta falla. El token vive en memoria; nunca en `localStorage`.
 
 ## Design system
 
@@ -94,7 +94,7 @@ La fuente es el artifact *Design System* de Validasoft (README, tokens y `codigo
 2. `estado`, `origen` y `rol` se publican como `string` y los enteros como `integer | string`.
 3. ~~Nombres de personas~~: resuelto con `GET /usuarios/resumen?ids=` (RQ-9); `useNombresUsuarios(empresaId, ids)` pide solo los ids que aparecen en pantalla. «Persona del área» queda como respaldo sin `expedientes:leer` ni `vinculos:leer`.
 4. `VinculoDto` no trae nombre ni identificación del tercero: el listado consulta `GET /terceros/{id}` por fila (con caché).
-5. No hay CORS ni cabeceras CSP/`frame-ancestors` para servir el embed desde otro origen; tampoco un endpoint "quién soy" (nombre de la persona de la sesión).
+5. ~~CORS y CSP/`frame-ancestors`~~: resuelto (SE-1…SE-5; la API puede servir esta app en `/app/` con `frame-ancestors` y orígenes por sistema). Falta un endpoint "quién soy" (nombre de la persona de la sesión).
 6. `TerceroResumenDto.identificacion` (expediente y bandeja) llega como la clave interna `CO|NIT|900123456`, sin dígito de verificación; la UI muestra "NIT 900123456" (`identificacionResumida`). Pedir la identificación legible con su DV, como en `TerceroDto`.
 7. Los POST que crean flujo, motivo y expediente siguen publicándose como `IResult` y los enums de expedientes y flujos como `string`; `transformar.ts` los corrige.
 
