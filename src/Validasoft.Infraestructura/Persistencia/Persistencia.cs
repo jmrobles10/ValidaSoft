@@ -20,7 +20,11 @@ using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
+using JasperFx.Events.Daemon;
+using Validasoft.Aplicacion.Notificaciones;
+using Validasoft.Dominio.Integraciones;
 using Validasoft.Infraestructura.Http;
+using Validasoft.Infraestructura.Notificaciones;
 using Validasoft.Infraestructura.Seguridad;
 using Weasel.Core;
 using Weasel.Postgresql.Tables;
@@ -147,12 +151,29 @@ public static class ConfiguracionMarten
 
                 // Proyecciones inline: Vinculo y Expediente son la lectura tras la escritura (VinculoResumen y
                 // ExpedienteDetalle, docs/03 §14).
+                // Eventos públicos (global, con su tenant), webhooks y notificaciones (NW-1…NW-11). El cursor es único por tenant.
+                opts.Schema.For<EventoPublico>()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_evento_publico_cursor", x => x.TenantId, x => x.Cursor);
+                // Concurrencia optimista: el manejador de entregas (fallos, deshabilitación) y la administración no se pisan.
+                opts.Schema.For<SuscripcionWebhook>().MultiTenanted().UseOptimisticConcurrency(true);
+                opts.Schema.For<EntregaWebhook>().MultiTenanted()
+                    .Index(x => x.SuscripcionId)
+                    .Index(x => x.Cursor);
+                opts.Schema.For<Notificacion>().MultiTenanted()
+                    .Index(x => x.UsuarioId)
+                    .Index(x => x.Orden);
+                opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
+
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
-            .IntegrateWithWolverine();
+            // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos
+            // públicos (NW-3). Con varias réplicas, solo el líder procesa; si cae, otra toma el relevo.
+            .AddAsyncDaemon(DaemonMode.HotCold)
+            .IntegrateWithWolverine()
+            .SubscribeToEventsWithServices<SuscripcionDeEventosPublicos>(ServiceLifetime.Singleton);
 
         servicios.AddScoped<ISesiones, Sesiones>();
         servicios.AddScoped<SesionDeEmpresa>();
