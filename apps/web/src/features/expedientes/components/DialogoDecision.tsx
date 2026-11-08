@@ -2,6 +2,7 @@ import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, 
 import type { ExpedienteDto, MotivoTipificadoDto, Veredicto } from '@validasoft/api-client';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
@@ -35,7 +36,9 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const [veredicto, setVeredicto] = useState<Veredicto>('Aprobado');
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [texto, setTexto] = useState('');
-  const [intentado, setIntentado] = useState(false);
+  // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, el botón de enviar está deshabilitado.
+  const [motivosTocados, setMotivosTocados] = useState(false);
+  const [textoTocado, setTextoTocado] = useState(false);
 
   const aplica = aplicaAlExpediente || mutacion.isPending || mutacion.isSuccess;
   const area = 'area' in dialogo ? dialogo.area : null;
@@ -52,6 +55,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const faltanMotivos = conMotivos && elegidos.length === 0;
   const faltaTexto = !textoOpcional && !texto.trim();
   const disponibles = motivosPara(motivos, dialogo.tipo === 'rechazar' ? 'Rechazo' : 'Observacion');
+  const incompleto = faltanMotivos || faltaTexto;
   const ocupado = mutacion.isPending;
 
   const textos = (() => {
@@ -145,8 +149,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
-    setIntentado(true);
-    if (faltanMotivos || faltaTexto || !aplica) return;
+    if (incompleto || !aplica) return;
     mutacion.mutate(entrada(), {
       onSuccess: (resultado) => {
         mostrar(resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado' ? t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio }) : textos.exito);
@@ -157,10 +160,17 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
 
   const destructiva = dialogo.tipo === 'rechazar' || dialogo.tipo === 'anular' || dialogo.tipo === 'anularVeredicto';
   const mostrarCampo = !esVeredicto || observando;
+  const pendiente = !aplica
+    ? null
+    : faltanMotivos
+      ? t('expedientes.veredicto.motivosRequeridos')
+      : faltaTexto
+        ? t('expedientes.faltaCampo', { campo: textos.campo })
+        : null;
 
   return (
     <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-decision">
-      <form onSubmit={enviar} noValidate>
+      <FormularioDeDialogo onSubmit={enviar}>
         <DialogTitle id="titulo-decision">
           {textos.titulo}
           <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
@@ -216,8 +226,11 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                   ayuda={t('expedientes.veredicto.motivosAyuda')}
                   motivos={disponibles}
                   elegidos={elegidos}
-                  onCambiar={setElegidos}
-                  error={intentado && faltanMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
+                  onCambiar={(codigos) => {
+                    setElegidos(codigos);
+                    setMotivosTocados(true);
+                  }}
+                  error={motivosTocados && faltanMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
                   deshabilitado={!aplica}
                 />
               ))}
@@ -231,13 +244,15 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                 multiline
                 minRows={3}
                 disabled={!aplica}
-                error={intentado && faltaTexto}
-                helperText={intentado && faltaTexto ? t('expedientes.textoRequerido') : undefined}
+                onBlur={() => setTextoTocado(true)}
+                error={textoTocado && faltaTexto}
+                helperText={textoTocado && faltaTexto ? t('expedientes.textoRequerido') : undefined}
               />
             )}
           </Stack>
         </DialogContent>
         <DialogActions>
+          {pendiente && <FaltaParaEnviar>{pendiente}</FaltaParaEnviar>}
           <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
             {aplica ? t('comun.cancelar') : t('comun.cerrar')}
           </Button>
@@ -245,13 +260,13 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
             type="submit"
             variant="contained"
             color={destructiva ? 'error' : 'primary'}
-            disabled={ocupado || !aplica}
+            disabled={ocupado || !aplica || incompleto}
             startIcon={ocupado ? <IconoCarga /> : undefined}
           >
             {textos.confirmar}
           </Button>
         </DialogActions>
-      </form>
+      </FormularioDeDialogo>
     </Dialog>
   );
 }

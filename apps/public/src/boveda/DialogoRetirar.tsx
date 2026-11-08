@@ -12,12 +12,11 @@ export function DialogoRetirar({ documentoId, tipo, version, onCerrar }: { docum
   const mostrar = useAvisos((s) => s.mostrar);
   const retiro = useRetirarVersion(documentoId, version.n);
   const [motivo, setMotivo] = useState('');
-  const [intentado, setIntentado] = useState(false);
+  const [tocado, setTocado] = useState(false);
   const falta = !motivo.trim();
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
-    setIntentado(true);
     if (falta) return;
     retiro.mutate(motivo.trim(), {
       onSuccess: (r) => {
@@ -42,8 +41,9 @@ export function DialogoRetirar({ documentoId, tipo, version, onCerrar }: { docum
               required
               multiline
               minRows={2}
-              error={intentado && falta}
-              helperText={intentado && falta ? t('boveda.retiro.requerido') : t('boveda.retiro.motivoAyuda')}
+              onBlur={() => setTocado(true)}
+              error={tocado && falta}
+              helperText={tocado && falta ? t('boveda.retiro.requerido') : t('boveda.retiro.motivoAyuda')}
             />
           </Stack>
         </DialogContent>
@@ -51,7 +51,7 @@ export function DialogoRetirar({ documentoId, tipo, version, onCerrar }: { docum
           <Button variant="text" onClick={onCerrar} disabled={retiro.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}
           </Button>
-          <Button type="submit" variant="contained" color="error" disabled={retiro.isPending}>
+          <Button type="submit" variant="contained" color="error" disabled={retiro.isPending || falta}>
             {t('boveda.retiro.confirmar')}
           </Button>
         </DialogActions>

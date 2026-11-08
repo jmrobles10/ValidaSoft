@@ -76,9 +76,12 @@ export function useDescargarVersion() {
   });
 }
 
-/** Se refresca solo mientras falten documentos o esté devuelto: la versión subida llega por una cola (RQ-2). */
-export const useExpedientePublico = (id: string) =>
-  useQuery({ ...getObtenerExpedientePublicoQueryOptions(id), refetchInterval: (consulta) => debeRefrescar(consulta.state.data) });
+/**
+ * Se refresca solo mientras falten documentos o esté devuelto: la versión subida llega por una cola (RQ-2).
+ * `habilitado = false` no consulta (p. ej. «Mis empresas» con la invitación sin aceptar).
+ */
+export const useExpedientePublico = (id: string, habilitado = true) =>
+  useQuery({ ...getObtenerExpedientePublicoQueryOptions(id), enabled: habilitado, refetchInterval: (consulta) => debeRefrescar(consulta.state.data) });
 
 export function useReenviarExpediente(id: string) {
   const refrescar = useRefrescarTodo();

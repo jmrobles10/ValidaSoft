@@ -4,6 +4,7 @@ import { accionPermitidaPorEstado, esErrorApi, type DefinicionAccion, type Vincu
 import { RotateCcw } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
 import { mensajeDeError } from '../../../shared/errores';
@@ -20,6 +21,8 @@ export interface DialogoAccionProps {
 }
 
 const ANCHO = { width: 460, maxWidth: 'calc(100% - 32px)' } as const;
+/** Forma mínima de un correo (la API valida el resto). */
+const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Acción del vínculo con motivo, justificación o correo; se ejecuta con If-Match. Si alguien cambió el vínculo (412),
@@ -36,12 +39,22 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
   const [hasta, setHasta] = useState('');
   const [vigencia, setVigencia] = useState(72);
   const [confirmacion, setConfirmacion] = useState('');
-  const [intentado, setIntentado] = useState(false);
+  // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, el botón de enviar está deshabilitado.
+  const [textoTocado, setTextoTocado] = useState(false);
+  const [confirmacionTocada, setConfirmacionTocada] = useState(false);
   const [recargando, setRecargando] = useState(false);
 
   const conTexto = requiere !== 'correo';
   const vacio = conTexto && !texto.trim();
+  const correoInvalido = !conTexto && !CORREO.test(texto.trim());
   const faltaConfirmar = accion === 'anular' && confirmacion.trim().toUpperCase() !== PALABRA_ANULAR;
+  const pendiente = vacio
+    ? t('acciones.faltaCampo', { campo: t(`acciones.${accion}.campo`) })
+    : correoInvalido
+      ? t('acciones.correoInvalido')
+      : faltaConfirmar
+        ? t('acciones.anular.confirmarAyuda', { palabra: PALABRA_ANULAR })
+        : null;
   const Icono = ICONO_ACCION[accion];
   const ocupado = mutacion.isPending || recargando;
   const conflicto = esErrorApi(mutacion.error) && mutacion.error.esConflictoDeVersion;
@@ -50,8 +63,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
-    setIntentado(true);
-    if (vacio || faltaConfirmar) return;
+    if (pendiente) return;
     mutacion.mutate(
       { accion, vinculo, texto: texto.trim(), hasta: hasta ? new Date(`${hasta}T23:59:59`).toISOString() : null, vigenciaHoras: vigencia },
       {
@@ -112,7 +124,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
 
   return (
     <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: ANCHO } }} aria-labelledby="titulo-accion">
-      <form onSubmit={enviar} noValidate>
+      <FormularioDeDialogo onSubmit={enviar}>
         {encabezado(t(`acciones.${accion}.titulo`))}
         <DialogContent>
           <Stack spacing={2}>
@@ -132,15 +144,18 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
               onChange={(e) => setTexto(e.target.value.slice(0, MAXIMO_TEXTO))}
               multiline={conTexto}
               minRows={conTexto ? 3 : undefined}
-              error={intentado && vacio}
+              onBlur={() => setTextoTocado(true)}
+              error={textoTocado && (vacio || correoInvalido)}
               helperText={
                 conTexto ? (
                   <Stack component="span" direction="row" justifyContent="space-between" spacing={1}>
-                    <span>{intentado && vacio ? t('acciones.requerido') : t('acciones.quedaEnHistorial')}</span>
+                    <span>{textoTocado && vacio ? t('acciones.requerido') : t('acciones.quedaEnHistorial')}</span>
                     <Typography component="span" variant="monoTabla" color="text.secondary" sx={{ flex: 'none' }}>
                       {texto.length} / {MAXIMO_TEXTO}
                     </Typography>
                   </Stack>
+                ) : textoTocado && correoInvalido ? (
+                  t('acciones.correoInvalido')
                 ) : undefined
               }
               disabled={yaNoAplica}
@@ -164,8 +179,9 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
                 label={t('acciones.anular.confirmarPalabra', { palabra: PALABRA_ANULAR })}
                 value={confirmacion}
                 onChange={(e) => setConfirmacion(e.target.value)}
-                error={intentado && faltaConfirmar}
-                helperText={intentado && faltaConfirmar ? t('acciones.anular.confirmarAyuda', { palabra: PALABRA_ANULAR }) : undefined}
+                onBlur={() => setConfirmacionTocada(true)}
+                error={confirmacionTocada && faltaConfirmar}
+                helperText={confirmacionTocada && faltaConfirmar ? t('acciones.anular.confirmarAyuda', { palabra: PALABRA_ANULAR }) : undefined}
                 slotProps={{ htmlInput: { autoComplete: 'off', spellCheck: false } }}
                 sx={{ '& input': { fontFamily: (th) => th.typography.mono.fontFamily } }}
                 disabled={yaNoAplica}
@@ -174,10 +190,14 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
           </Stack>
         </DialogContent>
         <DialogActions>
-          {conTexto && (
-            <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto', fontWeight: 400 }}>
-              {t('acciones.registro')}
-            </Typography>
+          {!yaNoAplica && pendiente ? (
+            <FaltaParaEnviar>{pendiente}</FaltaParaEnviar>
+          ) : (
+            conTexto && (
+              <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto', fontWeight: 400 }}>
+                {t('acciones.registro')}
+              </Typography>
+            )
           )}
           <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
             {yaNoAplica ? t('comun.cerrar') : t('comun.cancelar')}
@@ -187,14 +207,14 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
               type="submit"
               variant="contained"
               color={destructiva ? 'error' : 'primary'}
-              disabled={ocupado}
+              disabled={ocupado || pendiente !== null}
               startIcon={mutacion.isPending ? <IconoCarga /> : <Icono size={16} aria-hidden />}
             >
               {t(`acciones.${accion}.confirmar`)}
             </Button>
           )}
         </DialogActions>
-      </form>
+      </FormularioDeDialogo>
     </Dialog>
   );
 }

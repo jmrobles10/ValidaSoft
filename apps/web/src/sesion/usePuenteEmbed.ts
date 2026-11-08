@@ -2,7 +2,7 @@ import { msRestantes } from '@validasoft/api-client';
 import { useEffect, useMemo } from 'react';
 import { usePreferencias } from '../shared/preferencias';
 import { alturaDisponible, useAlturaFija, ventanaDelContenedor } from './alturaFija';
-import { anclarOverlays } from './overlaysEmbebidos';
+import { anclarOverlays, regionVisibleDelIframe } from './overlaysEmbebidos';
 import {
   estaEmbebida,
   interpretarMensaje,
@@ -142,10 +142,13 @@ export function usePuenteEmbed(): PuenteEmbed {
     return () => contenedor?.removeEventListener('resize', remedir);
   }, [embebida, hayPaginaFija, enviar]);
 
-  // Diálogos y paneles junto a lo que la persona tocó, y aviso al contenedor de la región que debe verse.
+  // Diálogos y paneles centrados en la parte del iframe que se ve (o junto a lo que la persona tocó, si no se puede
+  // medir), y aviso al contenedor de la región que debe verse. Con altura fija el iframe entero queda a la vista.
   useEffect(() => {
     if (!embebida || typeof MutationObserver === 'undefined') return undefined;
-    return anclarOverlays((region) => enviar({ tipo: 'validasoft:visible', ...region }));
+    const regionVisible = () =>
+      regionVisibleDelIframe() ?? (useAlturaFija.getState().altura === null ? null : { top: 0, height: window.innerHeight });
+    return anclarOverlays((region) => enviar({ tipo: 'validasoft:visible', ...region }), regionVisible);
   }, [embebida, enviar]);
 
   return { embebida, origenContenedor };

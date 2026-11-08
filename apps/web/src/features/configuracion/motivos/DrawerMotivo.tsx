@@ -30,7 +30,9 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
   const [aplicaA, setAplicaA] = useState<AplicaMotivo>(motivo?.aplicaA ?? 'Observacion');
   const [texto, setTexto] = useState(motivo?.textoAlTercero ?? '');
   const [activo, setActivo] = useState(motivo?.activo ?? true);
-  const [intentado, setIntentado] = useState(false);
+  // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, «Crear» está deshabilitado.
+  const [tocados, setTocados] = useState<ReadonlySet<string>>(new Set());
+  const tocar = (campo: string) => () => setTocados((previos) => new Set(previos).add(campo));
 
   const mutacion = useMutation({
     mutationFn: () =>
@@ -47,11 +49,11 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
   const codigoInvalido = !motivo && (!PATRON_CODIGO.test(codigo.trim().toLowerCase()) || codigo.trim().length > 60);
   const faltaNombre = !nombre.trim();
   const faltaTexto = !texto.trim();
+  const incompleto = codigoInvalido || faltaNombre || faltaTexto;
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
-    setIntentado(true);
-    if (codigoInvalido || faltaNombre || faltaTexto) return;
+    if (incompleto) return;
     mutacion.mutate();
   };
 
@@ -76,11 +78,16 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
             onChange={(e) => setCodigo(e.target.value)}
             disabled={Boolean(motivo)}
             required={!motivo}
-            error={intentado && codigoInvalido}
-            helperText={intentado && codigoInvalido ? t('motivos.codigoInvalido') : t('motivos.codigoAyuda')}
+            onBlur={tocar('codigo')}
+            error={tocados.has('codigo') && codigoInvalido}
+            helperText={tocados.has('codigo') && codigoInvalido ? t('motivos.codigoInvalido') : t('motivos.codigoAyuda')}
             slotProps={{ htmlInput: { spellCheck: false, autoCapitalize: 'none' } }}
           />
-          <TextField label={t('motivos.nombre')} value={nombre} onChange={(e) => setNombre(e.target.value)} required error={intentado && faltaNombre} helperText={intentado && faltaNombre ? t('motivos.requerido') : undefined} />
+          <TextField label={t('motivos.nombre')} value={nombre} onChange={(e) => setNombre(e.target.value)} required
+            onBlur={tocar('nombre')}
+            error={tocados.has('nombre') && faltaNombre}
+            helperText={tocados.has('nombre') && faltaNombre ? t('motivos.requerido') : undefined}
+          />
           <Stack direction="row" spacing={1.5}>
             <TextField select fullWidth label={t('motivos.categoria')} value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaMotivo)}>
               {Object.values(CategoriaMotivo).map((c) => (
@@ -104,8 +111,9 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
             required
             multiline
             minRows={3}
-            error={intentado && faltaTexto}
-            helperText={intentado && faltaTexto ? t('motivos.requerido') : t('motivos.textoAyuda')}
+            onBlur={tocar('texto')}
+            error={tocados.has('texto') && faltaTexto}
+            helperText={tocados.has('texto') && faltaTexto ? t('motivos.requerido') : t('motivos.textoAyuda')}
           />
           {motivo && <FormControlLabel control={<Switch checked={activo} onChange={(e) => setActivo(e.target.checked)} />} label={t('motivos.disponible')} />}
         </Stack>
@@ -113,7 +121,7 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
           <Button variant="text" onClick={onCerrar} disabled={mutacion.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}
           </Button>
-          <Button type="submit" variant="contained" disabled={mutacion.isPending} startIcon={mutacion.isPending ? <IconoCarga /> : undefined}>
+          <Button type="submit" variant="contained" disabled={mutacion.isPending || incompleto} startIcon={mutacion.isPending ? <IconoCarga /> : undefined}>
             {motivo ? t('comun.guardar') : t('motivos.crear')}
           </Button>
         </Stack>

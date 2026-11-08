@@ -74,13 +74,23 @@ const json = (estado: number, cuerpo: unknown) =>
 afterEach(() => reiniciarCliente());
 
 describe('DialogoAccion', () => {
-  it('exige el motivo antes de llamar a la API', async () => {
+  it('sin motivo el botón de enviar está deshabilitado y dice qué falta; el error sale al dejar el campo', async () => {
     const usuario = userEvent.setup();
     const { peticiones } = preparar('bloquear', () => json(200, vinculo));
 
-    await usuario.click(screen.getByRole('button', { name: 'Bloquear vínculo' }));
+    const boton = screen.getByRole('button', { name: 'Bloquear vínculo' });
+    expect(boton).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Falta llenar «Motivo».');
+    expect(screen.queryByText(/Escribe el motivo/)).not.toBeInTheDocument();
 
+    await usuario.click(screen.getByLabelText(/Motivo/));
+    await usuario.tab();
     expect(screen.getByText(/Escribe el motivo/)).toBeInTheDocument();
+
+    await usuario.type(screen.getByLabelText(/Motivo/), '   ');
+    expect(boton).toBeDisabled();
+    await usuario.type(screen.getByLabelText(/Motivo/), 'Lista restrictiva');
+    expect(boton).toBeEnabled();
     expect(peticiones).toHaveLength(0);
   });
 
@@ -105,9 +115,13 @@ describe('DialogoAccion', () => {
     const { peticiones } = preparar('anular', () => json(200, vinculo));
 
     await usuario.type(screen.getByLabelText(/Motivo/), 'Duplicado');
-    await usuario.click(screen.getByRole('button', { name: 'Anular vínculo' }));
+    expect(screen.getByRole('button', { name: 'Anular vínculo' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(/Escribe ANULAR tal cual/);
 
-    expect(screen.getByText(/Escribe ANULAR tal cual/)).toBeInTheDocument();
+    await usuario.type(screen.getByLabelText(/Escribe ANULAR/), 'anula');
+    expect(screen.getByRole('button', { name: 'Anular vínculo' })).toBeDisabled();
+    await usuario.type(screen.getByLabelText(/Escribe ANULAR/), 'r');
+    expect(screen.getByRole('button', { name: 'Anular vínculo' })).toBeEnabled();
     expect(peticiones).toHaveLength(0);
   });
 

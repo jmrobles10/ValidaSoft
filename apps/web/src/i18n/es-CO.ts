@@ -200,6 +200,8 @@ export const esCO = {
     requerido: 'Escribe el motivo o la justificación; queda en el historial con tu nombre.',
     quedaEnHistorial: 'Queda en el historial; el tercero no lo ve.',
     registro: 'Queda registrado con tu nombre',
+    faltaCampo: 'Falta llenar «{{campo}}».',
+    correoInvalido: 'Escribe un correo válido.',
     yaNoAplica: 'El vínculo cambió y esta acción ya no aplica a su estado actual.',
     conflicto: {
       titulo: 'Alguien cambió este vínculo',
