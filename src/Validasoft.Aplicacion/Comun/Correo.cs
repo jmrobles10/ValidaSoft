@@ -89,8 +89,8 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     {
         var asunto = $"{correo.Empresa} tiene observaciones sobre tu validación {correo.Folio}";
         var lineas = correo.Observaciones.Select(o =>
-            (o.Requisito is null ? string.Empty : $"{o.Requisito}: ") + string.Join("; ", o.Motivos) +
-            (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion}")).ToList();
+            (o.Requisito is null ? string.Empty : $"{o.Requisito}: ") + UnirMotivos(o.Motivos) +
+            (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion.Trim()}")).ToList();
         var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y necesita que corrijas lo siguiente:\n\n" +
                     string.Join("\n", lineas.Select(l => "- " + l)) + "\n\n" + ComoEntrar(token, correo.EnlaceExpira);
         var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> " +
@@ -99,6 +99,16 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                    ComoEntrarHtml(token, correo.EnlaceExpira);
         return new MensajeDeCorreo(correo.Para, asunto, texto, html);
     }
+
+    /// <summary>
+    /// Los textos al tercero de los motivos son oraciones completas («Falta la firma requerida.»): se unen como un
+    /// párrafo, con su punto final, en lugar de separarlas con «; » (quedaba «…soportes.; Falta…»).
+    /// </summary>
+    public static string UnirMotivos(IEnumerable<string> motivos) =>
+        string.Join(" ", motivos
+            .Select(m => m.Trim())
+            .Where(m => m.Length > 0)
+            .Select(m => m[^1] is '.' or '!' or '?' ? m : m + "."));
 
     private string ComoEntrar(string? token, DateTimeOffset? expira) =>
         token is null
