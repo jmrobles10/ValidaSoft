@@ -10,6 +10,8 @@ import type { VersionDocumentoDtoPaginas } from './versionDocumentoDtoPaginas';
 import type { VersionDocumentoDtoMotivoDevolucion } from './versionDocumentoDtoMotivoDevolucion';
 import type { VersionDocumentoDtoDetalleDevolucion } from './versionDocumentoDtoDetalleDevolucion';
 import type { VersionDocumentoDtoHechos } from './versionDocumentoDtoHechos';
+import type { VersionDocumentoDtoDatosDeclarados } from './versionDocumentoDtoDatosDeclarados';
+import type { VersionDocumentoDtoVigencia } from './versionDocumentoDtoVigencia';
 
 export interface VersionDocumentoDto {
   documentoId: string;
@@ -26,4 +28,6 @@ export interface VersionDocumentoDto {
   motivoDevolucion: VersionDocumentoDtoMotivoDevolucion;
   detalleDevolucion: VersionDocumentoDtoDetalleDevolucion;
   hechos: VersionDocumentoDtoHechos;
+  datosDeclarados?: VersionDocumentoDtoDatosDeclarados;
+  vigencia?: VersionDocumentoDtoVigencia;
 }

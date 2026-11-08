@@ -8,6 +8,7 @@ import type { IniciarCargaDtoTipoCanonico } from './iniciarCargaDtoTipoCanonico'
 import type { IniciarCargaDtoTipoDocumentoTenantId } from './iniciarCargaDtoTipoDocumentoTenantId';
 import type { IniciarCargaDtoVinculoId } from './iniciarCargaDtoVinculoId';
 import type { IniciarCargaDtoSha256 } from './iniciarCargaDtoSha256';
+import type { IniciarCargaDtoDatos } from './iniciarCargaDtoDatos';
 
 export interface IniciarCargaDto {
   nombreArchivo: string;
@@ -17,4 +18,5 @@ export interface IniciarCargaDto {
   tipoDocumentoTenantId?: IniciarCargaDtoTipoDocumentoTenantId;
   vinculoId?: IniciarCargaDtoVinculoId;
   sha256?: IniciarCargaDtoSha256;
+  datos?: IniciarCargaDtoDatos;
 }

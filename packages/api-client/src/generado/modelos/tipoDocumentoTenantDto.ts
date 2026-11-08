@@ -8,6 +8,12 @@ import type { TipoDocumentoTenantDtoTipoCanonico } from './tipoDocumentoTenantDt
 import type { TipoDocumentoTenantDtoVersionCanonico } from './tipoDocumentoTenantDtoVersionCanonico';
 import type { TipoDocumentoTenantDtoTextoAyuda } from './tipoDocumentoTenantDtoTextoAyuda';
 import type { ReglaFrescuraDto } from './reglaFrescuraDto';
+import type { TipoDocumentoTenantDtoFormatosPermitidos } from './tipoDocumentoTenantDtoFormatosPermitidos';
+import type { TipoDocumentoTenantDtoTamanoMaximoMb } from './tipoDocumentoTenantDtoTamanoMaximoMb';
+import type { TipoDocumentoTenantDtoPaginasMaximas } from './tipoDocumentoTenantDtoPaginasMaximas';
+import type { TipoDocumentoTenantDtoCampos } from './tipoDocumentoTenantDtoCampos';
+import type { TipoDocumentoTenantDtoReglasEfectivas } from './tipoDocumentoTenantDtoReglasEfectivas';
+import type { TipoDocumentoTenantDtoPlantilla } from './tipoDocumentoTenantDtoPlantilla';
 
 export interface TipoDocumentoTenantDto {
   id: string;
@@ -24,4 +30,12 @@ export interface TipoDocumentoTenantDto {
   diasRevalidacion: number;
   activo: boolean;
   creadoEn: string;
+  formatosPermitidos?: TipoDocumentoTenantDtoFormatosPermitidos;
+  tamanoMaximoMb?: TipoDocumentoTenantDtoTamanoMaximoMb;
+  paginasMaximas?: TipoDocumentoTenantDtoPaginasMaximas;
+  modo?: string;
+  campos?: TipoDocumentoTenantDtoCampos;
+  reglasEfectivas?: TipoDocumentoTenantDtoReglasEfectivas;
+  plantilla?: TipoDocumentoTenantDtoPlantilla;
+  cargaSoportada?: boolean;
 }

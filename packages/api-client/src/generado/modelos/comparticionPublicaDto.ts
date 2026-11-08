@@ -7,6 +7,7 @@
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { ComparticionPublicaDtoVersion } from './comparticionPublicaDtoVersion';
 import type { ComparticionPublicaDtoCompartidaEn } from './comparticionPublicaDtoCompartidaEn';
+import type { ComparticionPublicaDtoVigencia } from './comparticionPublicaDtoVigencia';
 
 export interface ComparticionPublicaDto {
   vinculoId: string;
@@ -15,4 +16,5 @@ export interface ComparticionPublicaDto {
   version: ComparticionPublicaDtoVersion;
   versionActualCompartida: boolean;
   compartidaEn: ComparticionPublicaDtoCompartidaEn;
+  vigencia?: ComparticionPublicaDtoVigencia;
 }

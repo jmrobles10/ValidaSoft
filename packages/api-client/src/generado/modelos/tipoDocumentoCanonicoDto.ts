@@ -6,6 +6,9 @@
  */
 import type { TipoDocumentoCanonicoDtoPeriodicidad } from './tipoDocumentoCanonicoDtoPeriodicidad';
 import type { TipoDocumentoCanonicoDtoReglaFrescuraSugerida } from './tipoDocumentoCanonicoDtoReglaFrescuraSugerida';
+import type { TipoDocumentoCanonicoDtoFormatosPermitidos } from './tipoDocumentoCanonicoDtoFormatosPermitidos';
+import type { TipoDocumentoCanonicoDtoTamanoMaximoMb } from './tipoDocumentoCanonicoDtoTamanoMaximoMb';
+import type { TipoDocumentoCanonicoDtoPaginasMaximas } from './tipoDocumentoCanonicoDtoPaginasMaximas';
 
 export interface TipoDocumentoCanonicoDto {
   codigo: string;
@@ -26,4 +29,7 @@ export interface TipoDocumentoCanonicoDto {
   reglaFrescuraSugerida: TipoDocumentoCanonicoDtoReglaFrescuraSugerida;
   retencionAniosSugerida: number;
   cargaSoportada: boolean;
+  formatosPermitidos?: TipoDocumentoCanonicoDtoFormatosPermitidos;
+  tamanoMaximoMb?: TipoDocumentoCanonicoDtoTamanoMaximoMb;
+  paginasMaximas?: TipoDocumentoCanonicoDtoPaginasMaximas;
 }

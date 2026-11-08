@@ -12,6 +12,11 @@ import type { CrearTipoDocumentoDtoDiasAviso } from './crearTipoDocumentoDtoDias
 import type { CrearTipoDocumentoDtoDiasGracia } from './crearTipoDocumentoDtoDiasGracia';
 import type { CrearTipoDocumentoDtoDiasRevalidacion } from './crearTipoDocumentoDtoDiasRevalidacion';
 import type { CrearTipoDocumentoDtoTextoAyuda } from './crearTipoDocumentoDtoTextoAyuda';
+import type { CrearTipoDocumentoDtoFormatosPermitidos } from './crearTipoDocumentoDtoFormatosPermitidos';
+import type { CrearTipoDocumentoDtoTamanoMaximoMb } from './crearTipoDocumentoDtoTamanoMaximoMb';
+import type { CrearTipoDocumentoDtoPaginasMaximas } from './crearTipoDocumentoDtoPaginasMaximas';
+import type { CrearTipoDocumentoDtoModo } from './crearTipoDocumentoDtoModo';
+import type { CrearTipoDocumentoDtoCampos } from './crearTipoDocumentoDtoCampos';
 
 export interface CrearTipoDocumentoDto {
   codigo: string;
@@ -23,4 +28,9 @@ export interface CrearTipoDocumentoDto {
   diasGracia?: CrearTipoDocumentoDtoDiasGracia;
   diasRevalidacion?: CrearTipoDocumentoDtoDiasRevalidacion;
   textoAyuda?: CrearTipoDocumentoDtoTextoAyuda;
+  formatosPermitidos?: CrearTipoDocumentoDtoFormatosPermitidos;
+  tamanoMaximoMb?: CrearTipoDocumentoDtoTamanoMaximoMb;
+  paginasMaximas?: CrearTipoDocumentoDtoPaginasMaximas;
+  modo?: CrearTipoDocumentoDtoModo;
+  campos?: CrearTipoDocumentoDtoCampos;
 }

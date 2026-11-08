@@ -4,10 +4,18 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { VersionRequisitoDtoDatosDeclarados } from './versionRequisitoDtoDatosDeclarados';
+import type { VersionRequisitoDtoVigencia } from './versionRequisitoDtoVigencia';
+import type { VersionRequisitoDtoEstado } from './versionRequisitoDtoEstado';
+import type { VersionRequisitoDtoClase } from './versionRequisitoDtoClase';
 
 export interface VersionRequisitoDto {
   documentoId: string;
   n: number;
   sha256: string;
   cargadaEn: string;
+  datosDeclarados?: VersionRequisitoDtoDatosDeclarados;
+  vigencia?: VersionRequisitoDtoVigencia;
+  estado?: VersionRequisitoDtoEstado;
+  clase?: VersionRequisitoDtoClase;
 }

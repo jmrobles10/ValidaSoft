@@ -12,6 +12,11 @@ import type { ActualizarTipoDocumentoDtoDiasGracia } from './actualizarTipoDocum
 import type { ActualizarTipoDocumentoDtoDiasRevalidacion } from './actualizarTipoDocumentoDtoDiasRevalidacion';
 import type { ActualizarTipoDocumentoDtoTextoAyuda } from './actualizarTipoDocumentoDtoTextoAyuda';
 import type { ActualizarTipoDocumentoDtoActivo } from './actualizarTipoDocumentoDtoActivo';
+import type { ActualizarTipoDocumentoDtoFormatosPermitidos } from './actualizarTipoDocumentoDtoFormatosPermitidos';
+import type { ActualizarTipoDocumentoDtoTamanoMaximoMb } from './actualizarTipoDocumentoDtoTamanoMaximoMb';
+import type { ActualizarTipoDocumentoDtoPaginasMaximas } from './actualizarTipoDocumentoDtoPaginasMaximas';
+import type { ActualizarTipoDocumentoDtoModo } from './actualizarTipoDocumentoDtoModo';
+import type { ActualizarTipoDocumentoDtoCampos } from './actualizarTipoDocumentoDtoCampos';
 
 export interface ActualizarTipoDocumentoDto {
   nombre?: ActualizarTipoDocumentoDtoNombre;
@@ -22,4 +27,9 @@ export interface ActualizarTipoDocumentoDto {
   diasRevalidacion?: ActualizarTipoDocumentoDtoDiasRevalidacion;
   textoAyuda?: ActualizarTipoDocumentoDtoTextoAyuda;
   activo?: ActualizarTipoDocumentoDtoActivo;
+  formatosPermitidos?: ActualizarTipoDocumentoDtoFormatosPermitidos;
+  tamanoMaximoMb?: ActualizarTipoDocumentoDtoTamanoMaximoMb;
+  paginasMaximas?: ActualizarTipoDocumentoDtoPaginasMaximas;
+  modo?: ActualizarTipoDocumentoDtoModo;
+  campos?: ActualizarTipoDocumentoDtoCampos;
 }

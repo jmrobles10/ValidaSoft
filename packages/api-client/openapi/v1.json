@@ -3178,6 +3178,297 @@
         }
       }
     },
+    "/public/v1/boveda/formularios": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.FormulariosEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_formularios",
+        "description": "POST_public_v1_boveda_formularios",
+        "operationId": "POST_public_v1_boveda_formularios",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnviarFormularioDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmacionCargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tipos-documento/{id}/plantilla": {
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "PUT_api_v1_tipos_documento_id_plantilla",
+        "description": "PUT_api_v1_tipos_documento_id_plantilla",
+        "operationId": "PUT_api_v1_tipos_documento_id_plantilla",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarPlantillaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CargaDePlantillaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "GET_api_v1_tipos_documento_id_plantilla",
+        "description": "GET_api_v1_tipos_documento_id_plantilla",
+        "operationId": "GET_api_v1_tipos_documento_id_plantilla",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlantillaTipoDocumentoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "DELETE_api_v1_tipos_documento_id_plantilla",
+        "description": "DELETE_api_v1_tipos_documento_id_plantilla",
+        "operationId": "DELETE_api_v1_tipos_documento_id_plantilla",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlantillaTipoDocumentoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tipos-documento/{id}/plantilla/{version}/confirmar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "POST_api_v1_tipos_documento_id_plantilla_version_confirmar",
+        "description": "POST_api_v1_tipos_documento_id_plantilla_version_confirmar",
+        "operationId": "POST_api_v1_tipos_documento_id_plantilla_version_confirmar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmacionPlantillaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tipos-documento/{id}/plantilla/descarga": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "GET_api_v1_tipos_documento_id_plantilla_descarga",
+        "description": "GET_api_v1_tipos_documento_id_plantilla_descarga",
+        "operationId": "GET_api_v1_tipos_documento_id_plantilla_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/expedientes/{id}/requisitos/{requisitoId}/plantilla": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
+        ],
+        "summary": "GET_public_v1_expedientes_id_requisitos_requisitoId_plantilla",
+        "description": "GET_public_v1_expedientes_id_requisitos_requisitoId_plantilla",
+        "operationId": "GET_public_v1_expedientes_id_requisitos_requisitoId_plantilla",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requisitoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/catalogos/tipos-documento": {
       "get": {
         "tags": [
@@ -4429,6 +4720,48 @@
               "null",
               "boolean"
             ]
+          },
+          "formatosPermitidos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "tamanoMaximoMb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paginasMaximas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CampoFormularioDto"
+            }
           }
         }
       },
@@ -4875,6 +5208,69 @@
           }
         }
       },
+      "CampoFormularioDto": {
+        "required": [
+          "clave",
+          "etiqueta",
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "obligatorio": {
+            "type": "boolean",
+            "default": false
+          },
+          "opciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "ayuda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CargaDePlantillaDto": {
+        "required": [
+          "tipoDocumentoId",
+          "version",
+          "carga"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoDocumentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "carga": {
+            "$ref": "#/components/schemas/InstruccionCargaDto"
+          }
+        }
+      },
       "ComparticionPublicaDto": {
         "required": [
           "vinculoId",
@@ -4914,6 +5310,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "vigencia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaDto"
+              }
+            ]
           }
         }
       },
@@ -4971,6 +5377,21 @@
             "items": {
               "$ref": "#/components/schemas/CompartidoDto"
             }
+          }
+        }
+      },
+      "ConfirmacionPlantillaDto": {
+        "required": [
+          "duplicado",
+          "plantilla"
+        ],
+        "type": "object",
+        "properties": {
+          "duplicado": {
+            "type": "boolean"
+          },
+          "plantilla": {
+            "$ref": "#/components/schemas/PlantillaVersionDto"
           }
         }
       },
@@ -5362,6 +5783,48 @@
               "null",
               "string"
             ]
+          },
+          "formatosPermitidos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "tamanoMaximoMb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paginasMaximas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CampoFormularioDto"
+            }
           }
         }
       },
@@ -5513,6 +5976,29 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "DatoDeclaradoDto": {
+        "required": [
+          "clave",
+          "etiqueta",
+          "tipo",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "string"
           }
         }
       },
@@ -5867,6 +6353,38 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "EnviarFormularioDto": {
+        "required": [
+          "vinculoId",
+          "datos"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "datos": {
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tipoCanonico": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6678,6 +7196,69 @@
               "null",
               "string"
             ]
+          },
+          "datos": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        }
+      },
+      "IniciarPlantillaDto": {
+        "required": [
+          "nombreArchivo",
+          "tamanoBytes",
+          "tipoMime"
+        ],
+        "type": "object",
+        "properties": {
+          "nombreArchivo": {
+            "type": "string"
+          },
+          "tamanoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tipoMime": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "InstruccionCargaDto": {
+        "required": [
+          "metodo",
+          "url",
+          "cabeceras",
+          "expira"
+        ],
+        "type": "object",
+        "properties": {
+          "metodo": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "cabeceras": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "expira": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -7032,6 +7613,94 @@
           }
         }
       },
+      "PlantillaTipoDocumentoDto": {
+        "required": [
+          "tipoDocumentoId",
+          "vigente",
+          "historial"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoDocumentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "vigente": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlantillaVersionDto"
+              }
+            ]
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlantillaVersionDto"
+            }
+          }
+        }
+      },
+      "PlantillaVersionDto": {
+        "required": [
+          "version",
+          "nombreOriginal",
+          "mime",
+          "tamanoBytes",
+          "sha256",
+          "cargadaEn",
+          "cargadaPor",
+          "vigente",
+          "retiradaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nombreOriginal": {
+            "type": "string"
+          },
+          "mime": {
+            "type": "string"
+          },
+          "tamanoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "cargadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cargadaPor": {
+            "type": "string"
+          },
+          "vigente": {
+            "type": "boolean"
+          },
+          "retiradaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "PublicarTextoLegalDto": {
         "required": [
           "contenido"
@@ -7147,6 +7816,42 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ReglasArchivoDto": {
+        "required": [
+          "formatos",
+          "tamanoMaximoBytes",
+          "paginasMaximas",
+          "descripcion"
+        ],
+        "type": "object",
+        "properties": {
+          "formatos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tamanoMaximoBytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "paginasMaximas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "descripcion": {
+            "type": "string"
           }
         }
       },
@@ -7801,6 +8506,33 @@
           },
           "cargaSoportada": {
             "type": "boolean"
+          },
+          "formatosPermitidos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "tamanoMaximoMb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paginasMaximas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -7832,6 +8564,41 @@
           },
           "ambito": {
             "type": "string"
+          },
+          "modo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CampoFormularioDto"
+            }
+          },
+          "archivo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReglasArchivoDto"
+              }
+            ]
+          },
+          "tienePlantilla": {
+            "type": "boolean",
+            "default": false
+          },
+          "textoAyuda": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -7950,6 +8717,70 @@
           "creadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "formatosPermitidos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "tamanoMaximoMb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paginasMaximas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modo": {
+            "type": "string",
+            "default": "Archivo"
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CampoFormularioDto"
+            }
+          },
+          "reglasEfectivas": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReglasArchivoDto"
+              }
+            ]
+          },
+          "plantilla": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlantillaVersionDto"
+              }
+            ]
+          },
+          "cargaSoportada": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -8370,6 +9201,25 @@
                 "$ref": "#/components/schemas/HechosDto"
               }
             ]
+          },
+          "datosDeclarados": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DatoDeclaradoDto"
+            }
+          },
+          "vigencia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaDto"
+              }
+            ]
           }
         }
       },
@@ -8399,6 +9249,97 @@
           },
           "cargadaEn": {
             "type": "string",
+            "format": "date-time"
+          },
+          "datosDeclarados": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DatoDeclaradoDto"
+            }
+          },
+          "vigencia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaDto"
+              }
+            ]
+          },
+          "estado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VigenciaDto": {
+        "required": [
+          "vigenteHasta",
+          "base",
+          "estado",
+          "diasAviso",
+          "diasGracia",
+          "finDeGracia",
+          "vencidaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "base": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "diasAviso": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "diasGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "finDeGracia": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "vencidaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "date-time"
           }
         }
@@ -8728,6 +9669,12 @@
     },
     {
       "name": "Validasoft.Aplicacion.Documentos.CargaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.FormulariosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Documentos.PlantillasEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Documentos.CatalogoDocumentalEndpoints"

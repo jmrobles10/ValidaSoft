@@ -31,6 +31,7 @@ import type {
   ConfirmacionCargaDto,
   DescargaDto,
   DocumentoDto,
+  EnviarFormularioDto,
   ExpedientePublicoDto,
   IniciarCargaDto,
   InvitacionAceptadaDto,
@@ -1268,4 +1269,154 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const enviarFormularioBoveda = (
+    enviarFormularioDto: BodyType<EnviarFormularioDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<ConfirmacionCargaDto>(
+      {url: `/public/v1/boveda/formularios`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: enviarFormularioDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getEnviarFormularioBovedaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enviarFormularioBoveda>>, TError,{data: BodyType<EnviarFormularioDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof enviarFormularioBoveda>>, TError,{data: BodyType<EnviarFormularioDto>}, TContext> => {
+
+const mutationKey = ['enviarFormularioBoveda'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof enviarFormularioBoveda>>, {data: BodyType<EnviarFormularioDto>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  enviarFormularioBoveda(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnviarFormularioBovedaMutationResult = NonNullable<Awaited<ReturnType<typeof enviarFormularioBoveda>>>
+    export type EnviarFormularioBovedaMutationBody = BodyType<EnviarFormularioDto>
+    export type EnviarFormularioBovedaMutationError = ErrorType<void>
+
+    export const useEnviarFormularioBoveda = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof enviarFormularioBoveda>>, TError,{data: BodyType<EnviarFormularioDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof enviarFormularioBoveda>>,
+        TError,
+        {data: BodyType<EnviarFormularioDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getEnviarFormularioBovedaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const descargarPlantillaRequisito = (
+    id: string,
+    requisitoId: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<DescargaDto>(
+      {url: `/public/v1/expedientes/${id}/requisitos/${requisitoId}/plantilla`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getDescargarPlantillaRequisitoQueryKey = (id?: string,
+    requisitoId?: string,) => {
+    return [
+    `/public/v1/expedientes/${id}/requisitos/${requisitoId}/plantilla`
+    ] as const;
+    }
+
     
+export const getDescargarPlantillaRequisitoQueryOptions = <TData = Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError = ErrorType<void>>(id: string,
+    requisitoId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDescargarPlantillaRequisitoQueryKey(id,requisitoId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof descargarPlantillaRequisito>>> = ({ signal }) => descargarPlantillaRequisito(id,requisitoId, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id && requisitoId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DescargarPlantillaRequisitoQueryResult = NonNullable<Awaited<ReturnType<typeof descargarPlantillaRequisito>>>
+export type DescargarPlantillaRequisitoQueryError = ErrorType<void>
+
+
+export function useDescargarPlantillaRequisito<TData = Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError = ErrorType<void>>(
+ id: string,
+    requisitoId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof descargarPlantillaRequisito>>,
+          TError,
+          Awaited<ReturnType<typeof descargarPlantillaRequisito>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDescargarPlantillaRequisito<TData = Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError = ErrorType<void>>(
+ id: string,
+    requisitoId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof descargarPlantillaRequisito>>,
+          TError,
+          Awaited<ReturnType<typeof descargarPlantillaRequisito>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDescargarPlantillaRequisito<TData = Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError = ErrorType<void>>(
+ id: string,
+    requisitoId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useDescargarPlantillaRequisito<TData = Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError = ErrorType<void>>(
+ id: string,
+    requisitoId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarPlantillaRequisito>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDescargarPlantillaRequisitoQueryOptions(id,requisitoId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

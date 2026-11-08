@@ -6,6 +6,10 @@
  */
 import type { TipoDocumentoRequisitoDtoTipoCanonico } from './tipoDocumentoRequisitoDtoTipoCanonico';
 import type { AmbitoDocumento } from './ambitoDocumento';
+import type { TipoDocumentoRequisitoDtoModo } from './tipoDocumentoRequisitoDtoModo';
+import type { TipoDocumentoRequisitoDtoCampos } from './tipoDocumentoRequisitoDtoCampos';
+import type { TipoDocumentoRequisitoDtoArchivo } from './tipoDocumentoRequisitoDtoArchivo';
+import type { TipoDocumentoRequisitoDtoTextoAyuda } from './tipoDocumentoRequisitoDtoTextoAyuda';
 
 export interface TipoDocumentoRequisitoDto {
   id: string;
@@ -13,4 +17,9 @@ export interface TipoDocumentoRequisitoDto {
   nombre: string;
   tipoCanonico: TipoDocumentoRequisitoDtoTipoCanonico;
   ambito: AmbitoDocumento;
+  modo?: TipoDocumentoRequisitoDtoModo;
+  campos?: TipoDocumentoRequisitoDtoCampos;
+  archivo?: TipoDocumentoRequisitoDtoArchivo;
+  tienePlantilla?: boolean;
+  textoAyuda?: TipoDocumentoRequisitoDtoTextoAyuda;
 }
