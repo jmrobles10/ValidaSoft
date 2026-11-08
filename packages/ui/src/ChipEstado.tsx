@@ -14,6 +14,11 @@ export interface ChipEstadoProps {
   bloqueante?: boolean;
   /** small = web (24 px), medium = public (28 px). */
   size?: 'small' | 'medium';
+  /**
+   * Texto en vez del canónico del estado, para decirle al tercero lo que le toca («Faltan 3 documentos»); el ícono y
+   * el tono siguen siendo los del estado.
+   */
+  etiqueta?: string;
 }
 
 /** Tono final teniendo en cuenta `bloqueante`. */
@@ -36,9 +41,10 @@ export function textoTooltip(estado: Estado, fecha?: string | Date | null, autom
  * Estado de cualquier entidad (dirección Registro): contorno sutil, texto primario y solo el ícono en el tono del
  * estado. Se lee sin color: cada estado tiene su ícono y su texto.
  */
-export function ChipEstado({ estado, fecha = null, automatico = false, bloqueante = false, size = 'small' }: ChipEstadoProps) {
+export function ChipEstado({ estado, fecha = null, automatico = false, bloqueante = false, size = 'small', etiqueta: texto }: ChipEstadoProps) {
   const tema = useTheme();
-  const { etiqueta, tono, icono: Icono } = aparienciaDe(estado, bloqueante);
+  const { etiqueta: canonica, tono, icono: Icono } = aparienciaDe(estado, bloqueante);
+  const etiqueta = texto ?? canonica;
   const tamIcono = size === 'small' ? 14 : 16;
   const detalle = textoTooltip(estado, fecha, automatico, bloqueante);
 

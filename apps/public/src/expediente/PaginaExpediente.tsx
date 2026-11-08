@@ -9,6 +9,9 @@ import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
 import { mensajeDeError } from '../shared/errores';
+import { avanceDelTercero } from '../vinculos/avance';
+import { ChipAvance } from '../vinculos/ChipAvance';
+import { useTextoAvance } from '../vinculos/useTextoAvance';
 import { situacionDelVinculo } from '../vinculos/situacion';
 import { observacionesGenerales } from './requisitos';
 import { Observacion, RequisitosDelExpediente } from './RequisitosDelExpediente';
@@ -27,6 +30,7 @@ export function PaginaExpediente() {
   const vinculos = useVinculosPublicos();
   const reenvio = useReenviarExpediente(id);
   const mostrar = useAvisos((s) => s.mostrar);
+  const textoAvance = useTextoAvance();
   const [respuesta, setRespuesta] = useState('');
 
   if (consulta.isPending) return <EsqueletoTarjetas />;
@@ -47,6 +51,8 @@ export function PaginaExpediente() {
   const vinculoId = vinculo?.id ?? null;
   // Con el vínculo suspendido o terminado no se sube ni se reenvía para esta empresa (la API respondería 409).
   const situacion = situacionDelVinculo(vinculo?.estado);
+  // Lo que le toca al tercero («Faltan 3 documentos», «En revisión»…) en vez del estado interno.
+  const avance = avanceDelTercero(vinculo, expediente);
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
@@ -74,15 +80,17 @@ export function PaginaExpediente() {
 
       <Card sx={{ p: 2, mb: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
-          <ChipEstado estado={expediente.estado} fecha={expediente.actualizadoEn} size="medium" />
+          {avance ? <ChipAvance avance={avance} /> : <ChipEstado estado={expediente.estado} fecha={expediente.actualizadoEn} size="medium" />}
           <Typography color="text.secondary" sx={{ fontSize: 13 }}>
             {t('expediente.actualizado', { fecha: formatearFecha(expediente.actualizadoEn) })}
           </Typography>
         </Stack>
         <Typography sx={{ fontSize: 15, lineHeight: '22px' }}>
-          {expediente.estado === 'Abierto' && faltantes > 0
-            ? t('expediente.faltan', { count: faltantes, empresa })
-            : t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}
+          {avance
+            ? textoAvance(avance, empresa)
+            : expediente.estado === 'Abierto' && faltantes > 0
+              ? t('expediente.faltan', { count: faltantes, empresa })
+              : t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}
         </Typography>
         {expediente.reenvios > 0 && (
           <Typography color="text.secondary" sx={{ fontSize: 14, mt: 1 }}>

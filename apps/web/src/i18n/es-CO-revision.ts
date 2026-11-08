@@ -171,6 +171,7 @@ export const expedientes = {
     exito: 'Expediente anulado.',
   },
   textoRequerido: 'Escribe el texto; queda en el historial con tu nombre.',
+  faltaCampo: 'Falta llenar «{{campo}}».',
   yaNoAplica: 'El expediente cambió y esta decisión ya no aplica a su estado actual.',
   exitoExpedienteAprobado: 'Expediente {{folio}} aprobado: ya no falta ninguna área.',
   requisitos: {
@@ -236,6 +237,8 @@ export const expedientes = {
     ayudaAprobar_other: 'Apruebas de una vez estos {{count}} documentos, en la versión que revisaste:',
     ayudaObservar: 'Marca los documentos que tienen problema y elige los motivos de cada uno. El tercero recibe todo en un solo correo.',
     marcaUno: 'Marca al menos un documento.',
+    faltanMotivos_one: 'Falta el motivo de {{count}} documento.',
+    faltanMotivos_other: 'Faltan los motivos de {{count}} documentos.',
     nota: 'Nota para el tercero (opcional)',
     confirmarObservar_one: 'Observar {{count}} documento',
     confirmarObservar_other: 'Observar {{count}} documentos',

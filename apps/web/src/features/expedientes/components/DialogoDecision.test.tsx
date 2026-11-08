@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { conEmpresa } from '../../../shared/consultas';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useExpediente } from '../api';
-import { area, expediente, veredicto } from '../datosPrueba';
+import { area, expediente, requisito, veredicto } from '../datosPrueba';
 import { dialogoAplica, type ContextoRevisor, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { DialogoDecision } from './DialogoDecision';
 
@@ -134,5 +134,29 @@ describe('DialogoDecision', () => {
     await waitFor(() => expect(onCerrar).toHaveBeenCalled());
     expect(screen.queryByText(YA_NO_APLICA)).not.toBeInTheDocument();
     expect(useAvisos.getState().actual?.mensaje).toBe('Expediente reenviado; vuelven a revisar las áreas que observaron.');
+  });
+});
+
+describe('DialogoDecision: nada se envía con el formulario incompleto', () => {
+  it('eximir queda deshabilitado hasta escribir la justificación, y dice qué falta', async () => {
+    const usuario = userEvent.setup();
+    preparar({ inicial: { ...expediente('EnRevision'), requisitos: [requisito()] }, dialogo: { tipo: 'eximir', requisito: requisito() }, respuesta: () => json(200, expediente('EnRevision')), recarga: null });
+
+    const boton = screen.getByRole('button', { name: 'Eximir documento' });
+    expect(boton).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Falta llenar «Justificación».');
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación/ }), 'Lo exime la política de la empresa');
+    expect(boton).toBeEnabled();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('el veredicto «Observado» pide al menos un motivo; «Aprobado» se envía sin más', async () => {
+    const usuario = userEvent.setup();
+    preparar({ inicial: expediente('EnRevision'), dialogo: { tipo: 'veredicto', area: area() }, respuesta: () => json(200, expediente('EnRevision')), recarga: null });
+
+    expect(screen.getByRole('button', { name: /Aprobar/ })).toBeEnabled();
+    await usuario.click(screen.getByRole('radio', { name: /Observar/ }));
+    expect(screen.getByRole('button', { name: /Observar/ })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Elige al menos un motivo.');
   });
 });

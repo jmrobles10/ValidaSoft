@@ -2,6 +2,7 @@ import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, Dia
 import type { ExpedienteDto, MotivoTipificadoDto } from '@validasoft/api-client';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
@@ -36,13 +37,25 @@ export function DialogoDecisionArea({
   const mostrar = useAvisos((s) => s.mostrar);
   const mutacion = useAccionExpediente(empresaId, expediente.id);
   const [marcas, setMarcas] = useState<Marcas>(new Map());
-  const [intentado, setIntentado] = useState(false);
+  // Documentos cuyos motivos la persona ya tocó: solo a ellos se les marca el error de «sin motivos».
+  const [motivosTocados, setMotivosTocados] = useState<ReadonlySet<string>>(new Set());
   const area = dialogo.area;
   const observando = dialogo.tipo === 'observarArea';
   const documentos = documentosDelArea(expediente, area.areaId);
   const nombreDe = (requisitoId: string) => documentos.find((d) => d.requisito.id === requisitoId)?.requisito.tipoDocumento.nombre ?? '—';
   const aplica = aplicaAlExpediente || mutacion.isPending || mutacion.isSuccess;
   const errores = observando ? validarObservacion(marcas) : [];
+  const sinMotivos = errores.flatMap((e) => (e.tipo === 'sin-motivos' ? [e.requisitoId] : []));
+  // Sin nada completo no se puede enviar: Observar pide al menos un documento y cada uno con motivo; Aprobar, algo por aprobar.
+  const incompleto = observando ? errores.length > 0 : dialogo.documentos.length === 0;
+  const pendiente =
+    !observando || !aplica
+      ? null
+      : marcas.size === 0
+        ? t('expedientes.decisionArea.marcaUno')
+        : sinMotivos.length > 0
+          ? t('expedientes.decisionArea.faltanMotivos', { count: sinMotivos.length })
+          : null;
   const fallo = mutacion.isError ? falloDeDecision(mutacion.error) : null;
   const disponibles = motivosPara(motivos, 'Observacion');
   const ocupado = mutacion.isPending;
@@ -57,8 +70,7 @@ export function DialogoDecisionArea({
 
   const enviar = (evento: FormEvent) => {
     evento.preventDefault();
-    setIntentado(true);
-    if (!aplica || errores.length > 0) return;
+    if (!aplica || incompleto) return;
     const decision = observando
       ? { veredicto: 'Observado' as const, requisitos: requisitosParaObservar(marcas, expediente) }
       : { veredicto: 'Aprobado' as const, versiones: versionesParaAprobar(dialogo.documentos) };
@@ -81,7 +93,7 @@ export function DialogoDecisionArea({
 
   return (
     <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 600, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-decision-area">
-      <form onSubmit={enviar} noValidate>
+      <FormularioDeDialogo onSubmit={enviar}>
         <DialogTitle id="titulo-decision-area">
           {observando ? t('expedientes.decisionArea.tituloObservar', { area: area.nombre }) : t('expedientes.decisionArea.tituloAprobar', { area: area.nombre })}
           <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
@@ -101,10 +113,9 @@ export function DialogoDecisionArea({
             {observando ? (
               <>
                 <Typography>{t('expedientes.decisionArea.ayudaObservar')}</Typography>
-                {intentado && errores.some((e) => e.tipo === 'sin-documentos') && <Alert severity="error">{t('expedientes.decisionArea.marcaUno')}</Alert>}
                 {documentos.map(({ requisito }) => {
                   const marca = marcas.get(requisito.id);
-                  const sinMotivos = intentado && errores.some((e) => e.tipo === 'sin-motivos' && e.requisitoId === requisito.id);
+                  const faltanSusMotivos = motivosTocados.has(requisito.id) && sinMotivos.includes(requisito.id);
                   return (
                     <Box key={requisito.id} sx={{ border: 1, borderColor: marca ? 'estado.advertencia.borde' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.25 }}>
                       <FormControlLabel
@@ -120,8 +131,11 @@ export function DialogoDecisionArea({
                             ayuda={t('expedientes.veredicto.motivosAyuda')}
                             motivos={disponibles}
                             elegidos={marca.motivos}
-                            onCambiar={(codigos) => cambiarMarca(requisito.id, { motivos: codigos })}
-                            error={sinMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
+                            onCambiar={(codigos) => {
+                              cambiarMarca(requisito.id, { motivos: codigos });
+                              setMotivosTocados((previos) => new Set(previos).add(requisito.id));
+                            }}
+                            error={faltanSusMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
                             deshabilitado={!aplica}
                           />
                           <TextField
@@ -154,14 +168,25 @@ export function DialogoDecisionArea({
           </Stack>
         </DialogContent>
         <DialogActions>
+          {pendiente && <FaltaParaEnviar>{pendiente}</FaltaParaEnviar>}
           <Button variant="text" onClick={onCerrar} disabled={ocupado} sx={{ color: 'text.primary' }}>
             {aplica ? t('comun.cancelar') : t('comun.cerrar')}
           </Button>
-          <Button type="submit" variant="contained" color={observando ? 'warning' : 'primary'} disabled={ocupado || !aplica} startIcon={ocupado ? <IconoCarga /> : undefined}>
-            {observando ? t('expedientes.decisionArea.confirmarObservar', { count: marcas.size }) : t('expedientes.decisionArea.aprobar', { count: dialogo.documentos.length })}
+          <Button
+            type="submit"
+            variant="contained"
+            color={observando ? 'warning' : 'primary'}
+            disabled={ocupado || !aplica || incompleto}
+            startIcon={ocupado ? <IconoCarga /> : undefined}
+          >
+            {observando
+              ? marcas.size === 0
+                ? t('expedientes.decisionArea.observar')
+                : t('expedientes.decisionArea.confirmarObservar', { count: marcas.size })
+              : t('expedientes.decisionArea.aprobar', { count: dialogo.documentos.length })}
           </Button>
         </DialogActions>
-      </form>
+      </FormularioDeDialogo>
     </Dialog>
   );
 }

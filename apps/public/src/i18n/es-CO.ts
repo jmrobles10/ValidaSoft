@@ -78,6 +78,8 @@ export const esCO = {
     verExpediente: 'Ver mi revisión',
     pendienteAceptar: 'Te invitó: acepta para compartir tus documentos.',
     aceptada: 'Aceptaste la invitación el {{fecha}}.',
+    subirDocumentos: 'Subir documentos',
+    verObservaciones: 'Ver observaciones',
   },
   invitacion: {
     titulo: '{{empresa}} te invita a validar tu información',
@@ -110,6 +112,13 @@ export const esCO = {
       'otp-requerido': 'Esta empresa pide verificar tu correo con un código. Abre de nuevo el enlace de su invitación y escribe el código que te llegue.',
       'ya-aceptada': 'Ya habías aceptado esta invitación.',
     },
+  },
+  avance: {
+    faltan_one: 'Falta {{count}} documento',
+    faltan_other: 'Faltan {{count}} documentos',
+    enRevision: 'En revisión',
+    observado: 'Tienes observaciones',
+    aprobado: 'Aprobado',
   },
   vinculoSituacion: {
     suspendida: {

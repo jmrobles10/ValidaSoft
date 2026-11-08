@@ -1,5 +1,5 @@
-import { Box, useTheme, type Breakpoint, type Theme } from '@mui/material';
-import type { ReactNode } from 'react';
+import { Box, Typography, useTheme, type Breakpoint, type Theme } from '@mui/material';
+import type { FormEvent, ReactNode } from 'react';
 import { DENSIDAD } from './tokens';
 
 /**
@@ -45,5 +45,29 @@ export function AlineadoConCampo({
     >
       {children}
     </Box>
+  );
+}
+
+/**
+ * Formulario dentro de un `Dialog`: deja que solo `DialogContent` desplace y que el título y las acciones (el botón de
+ * enviar) queden siempre a la vista, aunque el contenido crezca.
+ */
+export function FormularioDeDialogo({ onSubmit, children }: { onSubmit: (evento: FormEvent<HTMLFormElement>) => void; children: ReactNode }) {
+  return (
+    <Box component="form" onSubmit={onSubmit} noValidate sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {children}
+    </Box>
+  );
+}
+
+/**
+ * Junto al botón de envío deshabilitado, qué falta para poder enviar («Marca al menos un documento»). Va a la izquierda
+ * de las acciones de un diálogo o formulario y se anuncia al cambiar (`role="status"`).
+ */
+export function FaltaParaEnviar({ children }: { children: ReactNode }) {
+  return (
+    <Typography role="status" variant="caption" color="text.secondary" sx={{ mr: 'auto', alignSelf: 'center' }}>
+      {children}
+    </Typography>
   );
 }
