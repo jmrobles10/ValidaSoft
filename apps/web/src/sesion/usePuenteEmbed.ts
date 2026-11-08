@@ -1,6 +1,7 @@
 import { msRestantes } from '@validasoft/api-client';
 import { useEffect, useMemo } from 'react';
 import { usePreferencias } from '../shared/preferencias';
+import { alturaDisponible, useAlturaFija, ventanaDelContenedor } from './alturaFija';
 import { anclarOverlays } from './overlaysEmbebidos';
 import {
   estaEmbebida,
@@ -121,6 +122,23 @@ export function usePuenteEmbed(): PuenteEmbed {
     observador.observe(document.body);
     return () => observador.disconnect();
   }, [embebida, enviar]);
+
+  // Páginas de edición con encabezado fijo: altura fija con scroll propio y el iframe a la vista (ver `alturaFija.ts`).
+  const hayPaginaFija = useAlturaFija((s) => s.paginas > 0);
+  useEffect(() => {
+    if (!embebida || !hayPaginaFija) {
+      useAlturaFija.getState().fijarAltura(null);
+      return undefined;
+    }
+    const altura = alturaDisponible();
+    useAlturaFija.getState().fijarAltura(altura);
+    enviar({ tipo: 'validasoft:visible', top: 0, height: altura });
+    // Del mismo origen se sigue el tamaño de la ventana del contenedor; de otro, no hay cómo enterarse.
+    const contenedor = ventanaDelContenedor();
+    const remedir = () => useAlturaFija.getState().fijarAltura(alturaDisponible());
+    contenedor?.addEventListener('resize', remedir);
+    return () => contenedor?.removeEventListener('resize', remedir);
+  }, [embebida, hayPaginaFija, enviar]);
 
   // Diálogos y paneles junto a lo que la persona tocó, y aviso al contenedor de la región que debe verse.
   useEffect(() => {

@@ -128,9 +128,10 @@ export function EditorFlujo() {
 
   return (
     <>
-      {volver}
       <EncabezadoPagina
+        antes={volver}
         titulo={titulo}
+        tituloCompleto={titulo}
         subtitulo={datos ? `${datos.codigo} · ${datos.tipoVinculo.nombre}` : t('flujos.ayuda')}
         acciones={
           puedeEscribir && !versionVista ? (

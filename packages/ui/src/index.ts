@@ -9,6 +9,7 @@ export * from './accesibilidad';
 export * from './Isotipo';
 export * from './patrones';
 export * from './campos';
+export * from './encabezado';
 export * from './datos';
 export * from './filtros';
 export * from './ChipEstado';

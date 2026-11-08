@@ -1,10 +1,11 @@
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { SCOPES } from '@validasoft/api-client';
-import { Isotipo, SelectorEmpresa } from '@validasoft/ui';
+import { Isotipo, SelectorEmpresa, VARIABLE_TOPE } from '@validasoft/ui';
 import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
+import { useAlturaFija } from '../sesion/alturaFija';
 import { useSesion } from '../sesion/sesionStore';
 import { useYo } from '../sesion/useYo';
 import { usePreferencias } from '../shared/preferencias';
@@ -34,6 +35,9 @@ export function AppShell() {
   const { modo, temaDelContenedor, fijarModo } = usePreferencias();
   const navegar = useNavigate();
   const { pathname } = useLocation();
+  // Embebida en una página de edición: alto fijo y `main` con scroll propio, para que el encabezado de la página se
+  // pegue arriba de él (ver `sesion/alturaFija.ts`). Si no, desplaza la ventana y se pega bajo esta barra.
+  const alturaFija = useAlturaFija((s) => s.altura);
 
   const configuracion = SECCIONES_CONFIGURACION.filter((s) => permisos.puede(s.scope));
   const pestanas: Pestana[] = [];
@@ -49,7 +53,17 @@ export function AppShell() {
   const seccionActual = primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento || 'vinculos';
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.default',
+        ...(alturaFija === null ? { minHeight: '100vh' } : { height: alturaFija, overflow: 'hidden' }),
+        // Con scroll de ventana, bajo esta barra; con scroll propio de `main`, el sticky se mide desde el borde del
+        // contenido, así que se resta el relleno de `main` para que la franja quede pegada a la barra.
+        [VARIABLE_TOPE]: (t) => (alturaFija === null ? `${String(t.densidad.cabeceraEmbebida)}px` : `-${t.spacing(3)}`),
+      }}
+    >
       <Box
         component="header"
         sx={{
@@ -130,7 +144,7 @@ export function AppShell() {
           </Tooltip>
         )}
       </Box>
-      <Box component="main" sx={{ flex: 1, p: 3, minWidth: 0 }}>
+      <Box component="main" sx={{ flex: 1, p: 3, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto' }) }}>
         <Outlet context={contexto satisfies ContextoEmpresa} />
       </Box>
     </Box>

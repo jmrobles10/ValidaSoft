@@ -61,6 +61,7 @@ export const esCO = {
     volver: 'Volver',
     reintentar: 'Reintentar',
     copiar: 'Copiar',
+    accionesPagina: 'Acciones de la página',
     copiado: 'Copiado',
     todos: 'Todos',
     todas: 'Todas',

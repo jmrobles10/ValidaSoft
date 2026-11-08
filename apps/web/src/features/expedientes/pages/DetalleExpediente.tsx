@@ -6,7 +6,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
 import { useSesion } from '../../../sesion/sesionStore';
-import { EnlaceVolver, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
+import { useScrollPropio } from '../../../sesion/alturaFija';
+import { EncabezadoPagina, EnlaceVolver, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAreas } from '../../configuracion/areas/api';
@@ -26,6 +27,8 @@ import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, areasQueVuelvenAR
 
 export function DetalleExpediente() {
   const { t } = useTranslation();
+  // Encabezado con las acciones siempre a la vista: embebida, la página usa scroll propio.
+  useScrollPropio();
   const { expedienteId = '' } = useParams();
   const { empresa } = useEmpresaActiva();
   const permisos = usePermisos(empresa.id);
@@ -90,13 +93,13 @@ export function DetalleExpediente() {
 
   return (
     <>
-      {volver}
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h2" component="h1" noWrap>
-            {expediente.tercero.nombre}
-          </Typography>
-          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 13 }}>
+      <EncabezadoPagina
+        antes={volver}
+        titulo={expediente.tercero.nombre}
+        tituloCompleto={expediente.tercero.nombre}
+        etiquetaAcciones={t('vinculos.detalle.acciones')}
+        subtitulo={
+          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.25, fontSize: 13 }}>
             <Typography component="span" variant="mono">
               {expediente.folio}
             </Typography>
@@ -107,39 +110,41 @@ export function DetalleExpediente() {
             <span aria-hidden>·</span>
             <ChipEstado estado={expediente.estado} fecha={expediente.cerradoEn ?? expediente.actualizadoEn} />
           </Stack>
-        </Box>
-        <Stack direction="row" spacing={1} role="group" aria-label={t('vinculos.detalle.acciones')} sx={{ flex: 'none' }}>
-          <Button component={RouterLink} to={`/e/${empresa.id}/vinculos/${expediente.vinculoId}`} variant="outlined" startIcon={<Link2 size={16} aria-hidden />}>
-            {t('expedientes.verVinculo')}
-          </Button>
-          {acciones.includes('reenviar') && (
-            <Button variant="contained" startIcon={<Send size={16} aria-hidden />} onClick={() => setDialogo({ tipo: 'reenviar' })}>
-              {t('expedientes.acciones.reenviar')}
+        }
+        acciones={
+          <>
+            <Button component={RouterLink} to={`/e/${empresa.id}/vinculos/${expediente.vinculoId}`} variant="outlined" startIcon={<Link2 size={16} aria-hidden />}>
+              {t('expedientes.verVinculo')}
             </Button>
-          )}
-          {acciones.includes('anular') && (
-            <>
-              <Button variant="outlined" endIcon={<ChevronDown size={16} aria-hidden />} aria-haspopup="menu" onClick={(e) => setAncla(e.currentTarget)}>
-                {t('expedientes.acciones.mas')}
+            {acciones.includes('reenviar') && (
+              <Button variant="contained" startIcon={<Send size={16} aria-hidden />} onClick={() => setDialogo({ tipo: 'reenviar' })}>
+                {t('expedientes.acciones.reenviar')}
               </Button>
-              <Menu anchorEl={ancla} open={Boolean(ancla)} onClose={() => setAncla(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
-                <MenuItem
-                  onClick={() => {
-                    setAncla(null);
-                    setDialogo({ tipo: 'anular' });
-                  }}
-                  sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
-                >
-                  <ListItemIcon>
-                    <Ban size={16} strokeWidth={1.75} aria-hidden />
-                  </ListItemIcon>
-                  <ListItemText primary={t('expedientes.acciones.anular')} />
-                </MenuItem>
-              </Menu>
-            </>
-          )}
-        </Stack>
-      </Stack>
+            )}
+            {acciones.includes('anular') && (
+              <>
+                <Button variant="outlined" endIcon={<ChevronDown size={16} aria-hidden />} aria-haspopup="menu" onClick={(e) => setAncla(e.currentTarget)}>
+                  {t('expedientes.acciones.mas')}
+                </Button>
+                <Menu anchorEl={ancla} open={Boolean(ancla)} onClose={() => setAncla(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+                  <MenuItem
+                    onClick={() => {
+                      setAncla(null);
+                      setDialogo({ tipo: 'anular' });
+                    }}
+                    sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
+                  >
+                    <ListItemIcon>
+                      <Ban size={16} strokeWidth={1.75} aria-hidden />
+                    </ListItemIcon>
+                    <ListItemText primary={t('expedientes.acciones.anular')} />
+                  </MenuItem>
+                </Menu>
+              </>
+            )}
+          </>
+        }
+      />
 
       {vinculoBloqueado && expediente.estado !== 'Aprobado' && (
         <Alert severity="error" icon={<Lock size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>

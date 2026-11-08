@@ -2,11 +2,12 @@ import { Alert, AlertTitle, Box, Button, Chip, ListItemIcon, ListItemText, Menu,
 import { accionesDisponibles, esErrorApi, SCOPES, type DefinicionAccion, type VinculoDto } from '@validasoft/api-client';
 import { AvatarActor, ChipEstado, Dato, EstadoVacio, formatearFecha, LineaDeTiempo, MarcoTabla, PaginaEstado, RejillaDatos } from '@validasoft/ui';
 import { ChevronDown, Lock, SearchX } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useSesion } from '../../../sesion/sesionStore';
-import { EnlaceVolver, ErrorRecuperable, EsqueletoHistorial, SinPermiso, Tarjeta } from '../../../shared/componentes';
+import { useScrollPropio } from '../../../sesion/alturaFija';
+import { EncabezadoPagina, EnlaceVolver, ErrorRecuperable, EsqueletoHistorial, SinPermiso, Tarjeta } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
@@ -27,6 +28,8 @@ const Mono = ({ children }: { children: string }) => (
 
 export function DetalleVinculo() {
   const { t } = useTranslation();
+  // Encabezado con las acciones siempre a la vista: embebida, la página usa scroll propio.
+  useScrollPropio();
   const { vinculoId = '' } = useParams();
   const { empresa } = useEmpresaActiva();
   const permisos = usePermisos(empresa.id);
@@ -67,8 +70,7 @@ export function DetalleVinculo() {
 
   return (
     <>
-      {volver}
-      <Encabezado vinculo={vinculo} acciones={disponibles} onAccion={setAccion} />
+      <Encabezado vinculo={vinculo} acciones={disponibles} onAccion={setAccion} antes={volver} />
       {vinculo.bloqueo && (
         <Alert severity="error" icon={<Lock size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>
           <AlertTitle>{t('vinculos.detalle.bloqueo')}</AlertTitle>
@@ -94,7 +96,7 @@ export function DetalleVinculo() {
 }
 
 /** Título con NIT, tipo y estado; las acciones seguras van como botones y las destructivas en "Más acciones". */
-function Encabezado({ vinculo, acciones, onAccion }: { vinculo: VinculoDto; acciones: DefinicionAccion[]; onAccion: (d: DefinicionAccion) => void }) {
+function Encabezado({ vinculo, acciones, onAccion, antes }: { vinculo: VinculoDto; acciones: DefinicionAccion[]; onAccion: (d: DefinicionAccion) => void; antes: ReactNode }) {
   const { t } = useTranslation();
   const tercero = useTercero(vinculo.terceroId);
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
@@ -102,77 +104,80 @@ function Encabezado({ vinculo, acciones, onAccion }: { vinculo: VinculoDto; acci
   const destructivas = acciones.filter((d) => d.destructiva);
 
   return (
-    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ md: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h2" component="h1" noWrap>
-          {tercero.data?.nombre ?? (tercero.isPending ? <Skeleton width={280} /> : t('vinculos.terceroDesconocido'))}
-        </Typography>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5, color: 'text.secondary', fontSize: 13, flexWrap: 'wrap' }} useFlexGap>
+    <EncabezadoPagina
+      antes={antes}
+      titulo={tercero.data?.nombre ?? (tercero.isPending ? <Skeleton width={280} /> : t('vinculos.terceroDesconocido'))}
+      tituloCompleto={tercero.data?.nombre}
+      etiquetaAcciones={t('vinculos.detalle.acciones')}
+      subtitulo={
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25, fontSize: 13, flexWrap: 'wrap' }} useFlexGap>
           {tercero.data && <Mono>{identificacionDe(tercero.data)}</Mono>}
           {tercero.data && <span aria-hidden>·</span>}
           <span>{vinculo.tipoVinculo.nombre}</span>
           <span aria-hidden>·</span>
           <ChipEstado estado={vinculo.estado} fecha={vinculo.bloqueo?.desde ?? vinculo.actualizadoEn} />
         </Stack>
-      </Box>
-      {acciones.length > 0 && (
-        <Stack direction="row" spacing={1} aria-label={t('vinculos.detalle.acciones')} role="group" sx={{ flex: 'none' }}>
-          {seguras.map((d) => {
-            const Icono = ICONO_ACCION[d.accion];
-            return (
-              <Button key={d.accion} variant="outlined" startIcon={<Icono size={16} aria-hidden />} onClick={() => onAccion(d)}>
-                {t(`acciones.${d.accion}.boton`)}
-              </Button>
-            );
-          })}
-          {destructivas.length > 0 && (
-            <>
-              <Button
-                variant="outlined"
-                endIcon={<ChevronDown size={16} aria-hidden />}
-                aria-haspopup="menu"
-                aria-expanded={ancla ? 'true' : undefined}
-                onClick={(e) => setAncla(e.currentTarget)}
-              >
-                {t('vinculos.detalle.masAcciones')}
-              </Button>
-              <Menu
-                anchorEl={ancla}
-                open={Boolean(ancla)}
-                onClose={() => setAncla(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                slotProps={{ paper: { sx: { width: 280, mt: 0.5 } } }}
-              >
-                {destructivas.map((d) => {
-                  const Icono = ICONO_ACCION[d.accion];
-                  return (
-                    <MenuItem
-                      key={d.accion}
-                      onClick={() => {
-                        setAncla(null);
-                        onAccion(d);
-                      }}
-                      sx={{ alignItems: 'flex-start', py: 0.75, color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto', mt: '2px' } }}
-                    >
-                      <ListItemIcon>
-                        <Icono size={16} strokeWidth={1.75} aria-hidden />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={t(`acciones.${d.accion}.boton`)}
-                        secondary={t(`acciones.${d.accion}.resumen`)}
-                        slotProps={{ primary: { sx: { fontSize: 14 } }, secondary: { sx: { fontSize: 12, lineHeight: '16px', whiteSpace: 'normal' } } }}
-                        sx={{ my: 0 }}
-                      />
-                    </MenuItem>
-                  );
-                })}
-              </Menu>
-            </>
-          )}
-        </Stack>
-      )}
-    </Stack>
+      }
+      acciones={
+        acciones.length > 0 ? (
+          <>
+            {seguras.map((d) => {
+              const Icono = ICONO_ACCION[d.accion];
+              return (
+                <Button key={d.accion} variant="outlined" startIcon={<Icono size={16} aria-hidden />} onClick={() => onAccion(d)}>
+                  {t(`acciones.${d.accion}.boton`)}
+                </Button>
+              );
+            })}
+            {destructivas.length > 0 && (
+              <>
+                <Button
+                  variant="outlined"
+                  endIcon={<ChevronDown size={16} aria-hidden />}
+                  aria-haspopup="menu"
+                  aria-expanded={ancla ? 'true' : undefined}
+                  onClick={(e) => setAncla(e.currentTarget)}
+                >
+                  {t('vinculos.detalle.masAcciones')}
+                </Button>
+                <Menu
+                  anchorEl={ancla}
+                  open={Boolean(ancla)}
+                  onClose={() => setAncla(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{ paper: { sx: { width: 280, mt: 0.5 } } }}
+                >
+                  {destructivas.map((d) => {
+                    const Icono = ICONO_ACCION[d.accion];
+                    return (
+                      <MenuItem
+                        key={d.accion}
+                        onClick={() => {
+                          setAncla(null);
+                          onAccion(d);
+                        }}
+                        sx={{ alignItems: 'flex-start', py: 0.75, color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto', mt: '2px' } }}
+                      >
+                        <ListItemIcon>
+                          <Icono size={16} strokeWidth={1.75} aria-hidden />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={t(`acciones.${d.accion}.boton`)}
+                          secondary={t(`acciones.${d.accion}.resumen`)}
+                          slotProps={{ primary: { sx: { fontSize: 14 } }, secondary: { sx: { fontSize: 12, lineHeight: '16px', whiteSpace: 'normal' } } }}
+                          sx={{ my: 0 }}
+                        />
+                      </MenuItem>
+                    );
+                  })}
+                </Menu>
+              </>
+            )}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 

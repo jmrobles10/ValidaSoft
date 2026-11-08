@@ -1,5 +1,5 @@
 import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Skeleton, Stack, Typography } from '@mui/material';
-import { ErrorEnLinea, PaginaEstado } from '@validasoft/ui';
+import { EncabezadoFijo, ErrorEnLinea, PaginaEstado, type EncabezadoFijoProps } from '@validasoft/ui';
 import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -32,27 +32,13 @@ export function EnlaceVolver({ a, children }: { a: string; children: ReactNode }
   );
 }
 
-/** Título de página (24/32) con subtítulo y acciones alineadas abajo a la derecha. */
-export function EncabezadoPagina({ titulo, subtitulo, acciones }: { titulo: ReactNode; subtitulo?: ReactNode; acciones?: ReactNode }) {
-  return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h2" component="h1">
-          {titulo}
-        </Typography>
-        {subtitulo && (
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-            {subtitulo}
-          </Typography>
-        )}
-      </Box>
-      {acciones && (
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-          {acciones}
-        </Stack>
-      )}
-    </Stack>
-  );
+/**
+ * Encabezado de página (título 24/32, subtítulo y acciones) que queda visible al desplazar el contenido
+ * (`EncabezadoFijo` de `@validasoft/ui`). `antes`: el enlace «‹ Sección» de los detalles, dentro de la franja.
+ */
+export function EncabezadoPagina(props: EncabezadoFijoProps) {
+  const { t } = useTranslation();
+  return <EncabezadoFijo etiquetaAcciones={t('comun.accionesPagina')} {...props} />;
 }
 
 /** Tarjeta de sección: borde sutil, radio 12, sin sombra. */

@@ -1,7 +1,9 @@
 import { Box, Typography } from '@mui/material';
+import { VARIABLE_TOPE } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Outlet, useLocation } from 'react-router';
 import { useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
+import { useScrollPropio } from '../sesion/alturaFija';
 import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION, type SeccionConfiguracion } from './secciones';
 
@@ -58,10 +60,12 @@ export function LayoutConfiguracion() {
   const { pathname } = useLocation();
   const actual = pathname.split('/')[3] ?? '';
   const visibles = SECCIONES_CONFIGURACION.filter((s) => permisos.puede(s.scope));
+  // Los formularios de configuración crecen (etapas, documentos, miembros): embebida, la sección usa scroll propio.
+  useScrollPropio();
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '232px minmax(0, 1fr)' }, gap: 3, alignItems: 'start' }}>
-      <Box component="nav" aria-label={t('nav.configuracion')} sx={{ position: { md: 'sticky' }, top: 72 }}>
+      <Box component="nav" aria-label={t('nav.configuracion')} sx={{ position: { md: 'sticky' }, top: `calc(var(${VARIABLE_TOPE}, 0px) + 24px)` }}>
         <Grupo titulo={t('configuracion.grupo')} secciones={visibles.filter((s) => s.alcance === 'grupo')} empresaId={empresa.id} actual={actual} />
         <Grupo titulo={empresa.nombre} secciones={visibles.filter((s) => s.alcance === 'empresa')} empresaId={empresa.id} actual={actual} />
       </Box>
