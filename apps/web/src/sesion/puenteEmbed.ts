@@ -94,6 +94,19 @@ export async function cargarOrigenesPermitidos(baseUrl = '', fetchFn: typeof fet
   }
 }
 
+/** Cada cuánto se vuelve a pedir la lista (la API la publica con `vigenciaSegundos: 60`). */
+export const RECARGA_ORIGENES_MS = 60_000;
+
+/**
+ * Lista vigente tras una consulta: si falló, se queda la última buena (y si nunca hubo, `null` = respaldo); si no
+ * cambió, la misma referencia, para no volver a anunciar `ready` al contenedor cada minuto.
+ */
+export function siguienteListaDeOrigenes(previa: readonly string[] | null | undefined, nueva: string[] | null): readonly string[] | null {
+  if (nueva === null) return previa ?? null;
+  if (previa?.length === nueva.length && previa.every((o, i) => o === nueva[i])) return previa;
+  return nueva;
+}
+
 export function origenPermitido(origen: string, permitidos: readonly string[]): boolean {
   return origen !== 'null' && permitidos.includes(origen);
 }

@@ -1283,6 +1283,52 @@
         }
       }
     },
+    "/api/v1/sistemas/{id}/origenes": {
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SistemasEndpoints"
+        ],
+        "summary": "PUT_api_v1_sistemas_id_origenes",
+        "description": "PUT_api_v1_sistemas_id_origenes",
+        "operationId": "PUT_api_v1_sistemas_id_origenes",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FijarOrigenesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaIntegradoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/sistemas/{id}/desactivar": {
       "post": {
         "tags": [
@@ -1522,6 +1568,31 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SesionUsuarioDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/embed/origenes-permitidos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.OrigenesEmbebidoEndpoints"
+        ],
+        "summary": "GET_public_v1_embed_origenes_permitidos",
+        "description": "GET_public_v1_embed_origenes_permitidos",
+        "operationId": "GET_public_v1_embed_origenes_permitidos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrigenesEmbebidoDto"
                 }
               }
             }
@@ -5138,6 +5209,15 @@
           },
           "clavePublicaPem": {
             "type": "string"
+          },
+          "origenesPermitidos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -6145,6 +6225,20 @@
           }
         }
       },
+      "FijarOrigenesDto": {
+        "required": [
+          "origenes"
+        ],
+        "type": "object",
+        "properties": {
+          "origenes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "FilaBandejaDto": {
         "required": [
           "expedienteId",
@@ -6830,6 +6924,29 @@
           }
         }
       },
+      "OrigenesEmbebidoDto": {
+        "required": [
+          "origenes",
+          "vigenciaSegundos"
+        ],
+        "type": "object",
+        "properties": {
+          "origenes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "vigenciaSegundos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PaginaDtoOfExpedienteDto": {
         "required": [
           "datos",
@@ -7310,7 +7427,8 @@
           "nombre",
           "clavePublicaPem",
           "activo",
-          "creadoEn"
+          "creadoEn",
+          "origenesPermitidos"
         ],
         "type": "object",
         "properties": {
@@ -7333,6 +7451,12 @@
           "creadoEn": {
             "type": "string",
             "format": "date-time"
+          },
+          "origenesPermitidos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -8577,6 +8701,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.SesionesUsuarioEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Identidad.OrigenesEmbebidoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"

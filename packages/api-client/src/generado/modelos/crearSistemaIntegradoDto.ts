@@ -4,9 +4,11 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { CrearSistemaIntegradoDtoOrigenesPermitidos } from './crearSistemaIntegradoDtoOrigenesPermitidos';
 
 export interface CrearSistemaIntegradoDto {
   codigo: string;
   nombre: string;
   clavePublicaPem: string;
+  origenesPermitidos?: CrearSistemaIntegradoDtoOrigenesPermitidos;
 }

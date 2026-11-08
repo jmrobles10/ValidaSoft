@@ -35,6 +35,7 @@ import type {
   IniciarCargaDto,
   InvitacionAceptadaDto,
   InvitacionPublicaDto,
+  OrigenesEmbebidoDto,
   OtpRequeridoDto,
   ReenviarExpedienteDto,
   RetirarVersionDto,
@@ -632,7 +633,93 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
-    export const obtenerExpedientePublico = (
+    export const listarOrigenesEmbebido = (
+    
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<OrigenesEmbebidoDto>(
+      {url: `/public/v1/embed/origenes-permitidos`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListarOrigenesEmbebidoQueryKey = () => {
+    return [
+    `/public/v1/embed/origenes-permitidos`
+    ] as const;
+    }
+
+    
+export const getListarOrigenesEmbebidoQueryOptions = <TData = Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarOrigenesEmbebidoQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarOrigenesEmbebido>>> = ({ signal }) => listarOrigenesEmbebido(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarOrigenesEmbebidoQueryResult = NonNullable<Awaited<ReturnType<typeof listarOrigenesEmbebido>>>
+export type ListarOrigenesEmbebidoQueryError = ErrorType<void>
+
+
+export function useListarOrigenesEmbebido<TData = Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarOrigenesEmbebido>>,
+          TError,
+          Awaited<ReturnType<typeof listarOrigenesEmbebido>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarOrigenesEmbebido<TData = Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarOrigenesEmbebido>>,
+          TError,
+          Awaited<ReturnType<typeof listarOrigenesEmbebido>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarOrigenesEmbebido<TData = Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListarOrigenesEmbebido<TData = Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarOrigenesEmbebido>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarOrigenesEmbebidoQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const obtenerExpedientePublico = (
     id: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {

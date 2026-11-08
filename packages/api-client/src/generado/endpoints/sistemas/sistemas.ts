@@ -25,6 +25,7 @@ import type {
 
 import type {
   CrearSistemaIntegradoDto,
+  FijarOrigenesDto,
   RotarClavePublicaDto,
   SistemaIntegradoDto
 } from '../../modelos';
@@ -326,6 +327,64 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
 
       const mutationOptions = getRotarClavePublicaSistemaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const actualizarOrigenesSistema = (
+    id: string,
+    fijarOrigenesDto: BodyType<FijarOrigenesDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,) => {
+      
+      
+      return clienteValidasoft<SistemaIntegradoDto>(
+      {url: `/api/v1/sistemas/${id}/origenes`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: fijarOrigenesDto
+    },
+      options);
+    }
+  
+
+
+export const getActualizarOrigenesSistemaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarOrigenesSistema>>, TError,{id: string;data: BodyType<FijarOrigenesDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof actualizarOrigenesSistema>>, TError,{id: string;data: BodyType<FijarOrigenesDto>}, TContext> => {
+
+const mutationKey = ['actualizarOrigenesSistema'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actualizarOrigenesSistema>>, {id: string;data: BodyType<FijarOrigenesDto>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  actualizarOrigenesSistema(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActualizarOrigenesSistemaMutationResult = NonNullable<Awaited<ReturnType<typeof actualizarOrigenesSistema>>>
+    export type ActualizarOrigenesSistemaMutationBody = BodyType<FijarOrigenesDto>
+    export type ActualizarOrigenesSistemaMutationError = ErrorType<void>
+
+    export const useActualizarOrigenesSistema = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarOrigenesSistema>>, TError,{id: string;data: BodyType<FijarOrigenesDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof actualizarOrigenesSistema>>,
+        TError,
+        {id: string;data: BodyType<FijarOrigenesDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getActualizarOrigenesSistemaMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

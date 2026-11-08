@@ -10,6 +10,8 @@ import {
   origenDelContenedor,
   origenesPermitidos,
   origenPermitido,
+  RECARGA_ORIGENES_MS,
+  siguienteListaDeOrigenes,
   VERSION_PROTOCOLO,
   type MensajeSaliente,
   type MotivoSesionRequerida,
@@ -41,20 +43,27 @@ export interface PuenteEmbed {
  */
 export function usePuenteEmbed(): PuenteEmbed {
   const embebida = useMemo(() => estaEmbebida(), []);
-  // Orígenes que registraron los sistemas integrados, leídos de la API al arrancar (null = aún no o falló).
-  const [remotos, fijarRemotos] = useState<string[] | null>(null);
+  // Orígenes que registraron los sistemas integrados, leídos de la API al arrancar y cada minuto.
+  // `undefined` = aún no llega: solo el propio (y en desarrollo los configurados), nunca el respaldo de producción.
+  // `null` = la consulta falló y nunca hubo lista: entra el respaldo `VITE_ORIGENES_CONTENEDOR`.
+  const [remotos, fijarRemotos] = useState<readonly string[] | null | undefined>(undefined);
   useEffect(() => {
     if (!embebida) return undefined;
     let vigente = true;
-    void cargarOrigenesPermitidos(configuracionCliente().baseUrl).then((lista) => {
-      if (vigente) fijarRemotos(lista);
-    });
+    const cargar = () =>
+      void cargarOrigenesPermitidos(configuracionCliente().baseUrl).then((lista) => {
+        if (vigente) fijarRemotos((previa) => siguienteListaDeOrigenes(previa, lista));
+      });
+    cargar();
+    const recarga = window.setInterval(cargar, RECARGA_ORIGENES_MS);
     return () => {
       vigente = false;
+      window.clearInterval(recarga);
     };
   }, [embebida]);
   const permitidos = useMemo(
-    () => origenesPermitidos(import.meta.env.VITE_ORIGENES_CONTENEDOR, window.location.origin, remotos, import.meta.env.DEV),
+    () =>
+      origenesPermitidos(import.meta.env.VITE_ORIGENES_CONTENEDOR, window.location.origin, remotos === undefined ? [] : remotos, import.meta.env.DEV),
     [remotos],
   );
   const origenContenedor = useMemo(() => (embebida ? origenDelContenedor(window, permitidos) : null), [embebida, permitidos]);

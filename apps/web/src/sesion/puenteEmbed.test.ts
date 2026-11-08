@@ -1,7 +1,7 @@
 import { configurarCliente, reiniciarCliente } from '@validasoft/api-client';
 import { renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cargarOrigenesPermitidos, origenesPermitidos, RUTA_ORIGENES_PERMITIDOS } from './puenteEmbed';
+import { cargarOrigenesPermitidos, origenesPermitidos, RECARGA_ORIGENES_MS, RUTA_ORIGENES_PERMITIDOS, siguienteListaDeOrigenes } from './puenteEmbed';
 import { usePuenteEmbed } from './usePuenteEmbed';
 
 // La página de pruebas no está en un iframe: se simula que sí para probar el puente completo.
@@ -85,5 +85,47 @@ describe('usePuenteEmbed con orígenes de la API', () => {
 
     expect(result.current.origenContenedor).toBeNull();
     expect(postMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe('vigencia de la lista de orígenes', () => {
+  it('una consulta fallida conserva la última lista buena; sin cambios, la misma referencia', () => {
+    const buena = [SRM];
+    expect(siguienteListaDeOrigenes(undefined, null)).toBeNull();
+    expect(siguienteListaDeOrigenes(buena, null)).toBe(buena);
+    expect(siguienteListaDeOrigenes(buena, [SRM])).toBe(buena);
+    expect(siguienteListaDeOrigenes(buena, [SRM, 'https://otro.cliente.co'])).toEqual([SRM, 'https://otro.cliente.co']);
+  });
+
+  it('mientras la lista no llega no confía en el respaldo de producción; si la consulta falla, sí', async () => {
+    vi.stubEnv('VITE_ORIGENES_CONTENEDOR', SRM);
+    vi.stubEnv('DEV', false);
+    let entregar: (r: Response) => void = () => undefined;
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(() => new Promise<Response>((resolver) => (entregar = resolver))));
+    vi.spyOn(document, 'referrer', 'get').mockReturnValue(`${SRM}/`);
+    vi.spyOn(window.parent, 'postMessage').mockImplementation(() => undefined);
+
+    const { result } = renderHook(() => usePuenteEmbed());
+    expect(result.current.origenContenedor).toBeNull();
+
+    entregar(respuestaJson({}, 503));
+    await waitFor(() => expect(result.current.origenContenedor).toBe(SRM));
+    vi.unstubAllEnvs();
+  });
+
+  it('vuelve a pedir la lista cada minuto: un origen agregado en Sistemas entra sin recargar', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const respuestas = [{ origenes: [], vigenciaSegundos: 60 }, { origenes: [SRM], vigenciaSegundos: 60 }];
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(() => Promise.resolve(respuestaJson(respuestas.shift() ?? { origenes: [SRM] }))));
+    vi.spyOn(document, 'referrer', 'get').mockReturnValue(`${SRM}/`);
+    vi.spyOn(window.parent, 'postMessage').mockImplementation(() => undefined);
+
+    const { result } = renderHook(() => usePuenteEmbed());
+    await waitFor(() => expect(vi.mocked(globalThis.fetch)).toHaveBeenCalledTimes(1));
+    expect(result.current.origenContenedor).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(RECARGA_ORIGENES_MS);
+    await waitFor(() => expect(result.current.origenContenedor).toBe(SRM));
+    vi.useRealTimers();
   });
 });

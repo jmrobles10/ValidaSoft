@@ -52,7 +52,7 @@ Aunque el contenedor ignore `visible`, en modo embebido los diálogos se centran
 
 **Formularios incompletos.** Ningún botón de envío queda habilitado con el formulario incompleto («Observar» con 0 documentos o con un documento sin motivo, eximir sin justificación, acciones del vínculo sin motivo o sin la palabra de confirmación…). A la izquierda de los botones, `FaltaParaEnviar` (`@validasoft/ui`) dice qué falta, y el error de cada campo sale cuando la persona ya lo tocó.
 
-Solo se aceptan mensajes del propio origen y de los orígenes que publica la API en `GET /public/v1/embed/origenes-permitidos` (los que cada sistema integrado registró en Validasoft, SE-2), y solo se responde al contenedor si su origen está en esa lista. `VITE_ORIGENES_CONTENEDOR` (separada por comas) es respaldo: se suma en desarrollo o si la consulta falla. El token vive en memoria; nunca en `localStorage`.
+Solo se aceptan mensajes del propio origen y de los orígenes que publica la API en `GET /public/v1/embed/origenes-permitidos` (los que cada sistema integrado registró en Validasoft, SE-2), y solo se responde al contenedor si su origen está en esa lista. `VITE_ORIGENES_CONTENEDOR` (separada por comas) es respaldo: se suma en desarrollo o si la consulta falla y nunca hubo lista; mientras la primera consulta no responde, solo vale el propio origen. La lista se vuelve a pedir cada minuto (`vigenciaSegundos: 60`): un sitio agregado en **Configuración › Sistemas integrados › Sitios que pueden incrustar Validasoft** entra sin recargar el iframe, y si una consulta falla se conserva la última lista buena. El token vive en memoria; nunca en `localStorage`.
 
 ## Design system
 

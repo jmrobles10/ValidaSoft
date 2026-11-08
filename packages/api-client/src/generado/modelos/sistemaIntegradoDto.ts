@@ -12,4 +12,5 @@ export interface SistemaIntegradoDto {
   clavePublicaPem: string;
   activo: boolean;
   creadoEn: string;
+  origenesPermitidos: string[];
 }
