@@ -76,6 +76,33 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/sistemas/{id}': 'obtenerSistema',
   'PUT /api/v1/sistemas/{id}/clave-publica': 'rotarClavePublicaSistema',
   'PUT /api/v1/sistemas/{id}/origenes': 'actualizarOrigenesSistema',
+  // Certificado verificable (H5).
+  'GET /api/v1/vinculos/{id}/certificado': 'obtenerCertificadoVinculo',
+  'GET /api/v1/certificados/{folio}': 'obtenerCertificado',
+  'POST /api/v1/certificados/{folio}/descarga': 'descargarCertificado',
+  'POST /api/v1/certificados/{folio}/revocar': 'revocarCertificado',
+  'GET /public/v1/verificar/{folio}': 'verificarCertificado',
+  'POST /public/v1/verificar/{folio}/descarga': 'descargarCertificadoVerificado',
+  // Notificaciones a personas, webhooks y eventos públicos.
+  'GET /api/v1/notificaciones': 'listarNotificaciones',
+  'POST /api/v1/notificaciones/{id}/leida': 'marcarNotificacionLeida',
+  'POST /api/v1/notificaciones/leidas': 'marcarNotificacionesLeidas',
+  'GET /api/v1/notificaciones/stream': 'streamNotificaciones',
+  'GET /api/v1/usuarios/me/preferencias-notificacion': 'obtenerPreferenciasNotificacion',
+  'PUT /api/v1/usuarios/me/preferencias-notificacion': 'actualizarPreferenciasNotificacion',
+  'GET /api/v1/webhooks': 'listarWebhooks',
+  'POST /api/v1/webhooks': 'crearWebhook',
+  'GET /api/v1/webhooks/{id}': 'obtenerWebhook',
+  'PUT /api/v1/webhooks/{id}': 'actualizarWebhook',
+  'POST /api/v1/webhooks/{id}/rotar-secreto': 'rotarSecretoWebhook',
+  'POST /api/v1/webhooks/{id}/activar': 'activarWebhook',
+  'POST /api/v1/webhooks/{id}/desactivar': 'desactivarWebhook',
+  'GET /api/v1/webhooks/{id}/entregas': 'listarEntregasWebhook',
+  'GET /api/v1/webhooks/{id}/entregas/{entregaId}': 'obtenerEntregaWebhook',
+  'POST /api/v1/webhooks/{id}/entregas/{entregaId}/reenviar': 'reenviarEntregaWebhook',
+  'GET /api/v1/eventos/tipos': 'listarTiposEvento',
+  'GET /api/v1/eventos': 'listarEventos',
+  'GET /api/v1/eventos/stream': 'streamEventos',
   'POST /api/v1/sistemas/{id}/desactivar': 'desactivarSistema',
   'POST /api/v1/usuarios': 'crearUsuario',
   'GET /api/v1/usuarios': 'listarUsuarios',
@@ -276,7 +303,8 @@ export function transformarOpenApi(entrada: unknown): DocumentoOpenApi {
   // Los datos de cada evento del historial son siempre un objeto JSON (el cuerpo del evento de dominio).
   const historial = esquemas.EventoHistorialDto?.properties;
   if (historial) historial.datos = { type: 'object', additionalProperties: true };
-  delete esquemas.JsonElement;
+  // `JsonElement` (contenido canónico del certificado, datos de un evento público): siempre un objeto JSON.
+  esquemas.JsonElement = { type: 'object', additionalProperties: true };
 
   esquemas.TenantCreadoDto = {
     type: 'object',

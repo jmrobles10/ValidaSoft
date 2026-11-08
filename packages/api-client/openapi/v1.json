@@ -830,6 +830,726 @@
         }
       }
     },
+    "/api/v1/eventos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
+        ],
+        "summary": "GET_api_v1_eventos",
+        "description": "GET_api_v1_eventos",
+        "operationId": "GET_api_v1_eventos",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipos",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaEventosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/eventos/tipos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
+        ],
+        "summary": "GET_api_v1_eventos_tipos",
+        "description": "GET_api_v1_eventos_tipos",
+        "operationId": "GET_api_v1_eventos_tipos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TipoEventoPublicoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/eventos/stream": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
+        ],
+        "summary": "GET_api_v1_eventos_stream",
+        "description": "GET_api_v1_eventos_stream",
+        "operationId": "GET_api_v1_eventos_stream",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipos",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/notificaciones": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_notificaciones",
+        "description": "GET_api_v1_notificaciones",
+        "operationId": "GET_api_v1_notificaciones",
+        "parameters": [
+          {
+            "name": "soloNoLeidas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BandejaNotificacionesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/notificaciones/{id}/leida": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_notificaciones_id_leida",
+        "description": "POST_api_v1_notificaciones_id_leida",
+        "operationId": "POST_api_v1_notificaciones_id_leida",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/notificaciones/leidas": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_notificaciones_leidas",
+        "description": "POST_api_v1_notificaciones_leidas",
+        "operationId": "POST_api_v1_notificaciones_leidas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificacionesMarcadasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/notificaciones/stream": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_notificaciones_stream",
+        "description": "GET_api_v1_notificaciones_stream",
+        "operationId": "GET_api_v1_notificaciones_stream",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/usuarios/me/preferencias-notificacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_usuarios_me_preferencias_notificacion",
+        "description": "GET_api_v1_usuarios_me_preferencias_notificacion",
+        "operationId": "GET_api_v1_usuarios_me_preferencias_notificacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciasNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+        ],
+        "summary": "PUT_api_v1_usuarios_me_preferencias_notificacion",
+        "description": "PUT_api_v1_usuarios_me_preferencias_notificacion",
+        "operationId": "PUT_api_v1_usuarios_me_preferencias_notificacion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPreferenciasNotificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciasNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "GET_api_v1_webhooks",
+        "description": "GET_api_v1_webhooks",
+        "operationId": "GET_api_v1_webhooks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WebhookDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "POST_api_v1_webhooks",
+        "description": "POST_api_v1_webhooks",
+        "operationId": "POST_api_v1_webhooks",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearWebhookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "GET_api_v1_webhooks_id",
+        "description": "GET_api_v1_webhooks_id",
+        "operationId": "GET_api_v1_webhooks_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "PUT_api_v1_webhooks_id",
+        "description": "PUT_api_v1_webhooks_id",
+        "operationId": "PUT_api_v1_webhooks_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditarWebhookDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/rotar-secreto": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "POST_api_v1_webhooks_id_rotar_secreto",
+        "description": "POST_api_v1_webhooks_id_rotar_secreto",
+        "operationId": "POST_api_v1_webhooks_id_rotar_secreto",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/activar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "POST_api_v1_webhooks_id_activar",
+        "description": "POST_api_v1_webhooks_id_activar",
+        "operationId": "POST_api_v1_webhooks_id_activar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/desactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "POST_api_v1_webhooks_id_desactivar",
+        "description": "POST_api_v1_webhooks_id_desactivar",
+        "operationId": "POST_api_v1_webhooks_id_desactivar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/entregas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "GET_api_v1_webhooks_id_entregas",
+        "description": "GET_api_v1_webhooks_id_entregas",
+        "operationId": "GET_api_v1_webhooks_id_entregas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfEntregaWebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/entregas/{entregaId}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "GET_api_v1_webhooks_id_entregas_entregaId",
+        "description": "GET_api_v1_webhooks_id_entregas_entregaId",
+        "operationId": "GET_api_v1_webhooks_id_entregas_entregaId",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entregaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntregaWebhookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks/{id}/entregas/{entregaId}/reenviar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+        ],
+        "summary": "POST_api_v1_webhooks_id_entregas_entregaId_reenviar",
+        "description": "POST_api_v1_webhooks_id_entregas_entregaId_reenviar",
+        "operationId": "POST_api_v1_webhooks_id_entregas_entregaId_reenviar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entregaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/enlaces/{token}/canjear": {
       "post": {
         "tags": [
@@ -4458,6 +5178,266 @@
         }
       }
     },
+    "/api/v1/vinculos/{id}/certificado": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_certificado",
+        "description": "GET_api_v1_vinculos_id_certificado",
+        "operationId": "GET_api_v1_vinculos_id_certificado",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificadoDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/certificados/{folio}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
+        ],
+        "summary": "GET_api_v1_certificados_folio",
+        "description": "GET_api_v1_certificados_folio",
+        "operationId": "GET_api_v1_certificados_folio",
+        "parameters": [
+          {
+            "name": "folio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/certificados/{folio}/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
+        ],
+        "summary": "POST_api_v1_certificados_folio_descarga",
+        "description": "POST_api_v1_certificados_folio_descarga",
+        "operationId": "POST_api_v1_certificados_folio_descarga",
+        "parameters": [
+          {
+            "name": "folio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/certificados/{folio}/revocar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
+        ],
+        "summary": "POST_api_v1_certificados_folio_revocar",
+        "description": "POST_api_v1_certificados_folio_revocar",
+        "operationId": "POST_api_v1_certificados_folio_revocar",
+        "parameters": [
+          {
+            "name": "folio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevocarCertificadoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/verificar/{folio}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.VerificacionPublicaEndpoints"
+        ],
+        "summary": "GET_public_v1_verificar_folio",
+        "description": "GET_public_v1_verificar_folio",
+        "operationId": "GET_public_v1_verificar_folio",
+        "parameters": [
+          {
+            "name": "folio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "huella",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CertificadoPublicoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/verificar/{folio}/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.VerificacionPublicaEndpoints"
+        ],
+        "summary": "POST_public_v1_verificar_folio_descarga",
+        "description": "POST_public_v1_verificar_folio_descarga",
+        "operationId": "POST_public_v1_verificar_folio_descarga",
+        "parameters": [
+          {
+            "name": "folio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "huella",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/.well-known/validasoft-certificados.json": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.VerificacionPublicaEndpoints"
+        ],
+        "summary": "GET_well_known_validasoft_certificados_json",
+        "description": "GET_well_known_validasoft_certificados_json",
+        "operationId": "GET_well_known_validasoft_certificados_json",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClavesDeCertificadosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "tags": [
@@ -4649,6 +5629,20 @@
               "null",
               "boolean"
             ]
+          }
+        }
+      },
+      "ActualizarPreferenciasNotificacionDto": {
+        "required": [
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
           }
         }
       },
@@ -4883,6 +5877,30 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "AreaDelCertificadoDto": {
+        "required": [
+          "area",
+          "codigo",
+          "origen",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "area": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -5146,6 +6164,36 @@
           }
         }
       },
+      "BandejaNotificacionesDto": {
+        "required": [
+          "datos",
+          "siguienteCursor",
+          "noLeidas"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificacionDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "noLeidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "BloquearVinculoDto": {
         "required": [
           "motivo",
@@ -5268,6 +6316,368 @@
           },
           "carga": {
             "$ref": "#/components/schemas/InstruccionCargaDto"
+          }
+        }
+      },
+      "CertificadoDelVinculoDto": {
+        "required": [
+          "vinculoId",
+          "actual",
+          "emisiones"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actual": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CertificadoDto"
+              }
+            ]
+          },
+          "emisiones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmisionDelCertificadoDto"
+            }
+          }
+        }
+      },
+      "CertificadoDto": {
+        "required": [
+          "id",
+          "folio",
+          "folioRaiz",
+          "emision",
+          "esLaActual",
+          "estado",
+          "bloqueante",
+          "empresa",
+          "vinculoId",
+          "expedienteId",
+          "expedienteFolio",
+          "tercero",
+          "tipoVinculo",
+          "flujo",
+          "emitidoEn",
+          "vigenteHasta",
+          "huella",
+          "hashContenido",
+          "urlVerificacion",
+          "requisitos",
+          "areas",
+          "pendientes",
+          "suspension",
+          "revocacion",
+          "pdf",
+          "descargas",
+          "firma",
+          "contenidoCanonico",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "folioRaiz": {
+            "type": "string"
+          },
+          "emision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "esLaActual": {
+            "type": "boolean"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          },
+          "empresa": {
+            "$ref": "#/components/schemas/EmpresaDelCertificadoDto"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expedienteFolio": {
+            "type": "string"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TitularDelCertificadoDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoDelCertificadoDto"
+          },
+          "flujo": {
+            "$ref": "#/components/schemas/FlujoDelCertificadoDto"
+          },
+          "emitidoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "huella": {
+            "type": "string"
+          },
+          "hashContenido": {
+            "type": "string"
+          },
+          "urlVerificacion": {
+            "type": "string"
+          },
+          "requisitos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequisitoDelCertificadoDto"
+            }
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AreaDelCertificadoDto"
+            }
+          },
+          "pendientes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suspension": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SuspensionDelCertificadoDto"
+              }
+            ]
+          },
+          "revocacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RevocacionDelCertificadoDto"
+              }
+            ]
+          },
+          "pdf": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PdfDelCertificadoDto"
+              }
+            ]
+          },
+          "descargas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "firma": {
+            "$ref": "#/components/schemas/FirmaDelCertificadoDto"
+          },
+          "contenidoCanonico": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "CertificadoPublicoDto": {
+        "required": [
+          "folio",
+          "emision",
+          "estado",
+          "bloqueante",
+          "titular",
+          "emisor",
+          "flujo",
+          "emitidoEn",
+          "vigenteHasta",
+          "huella",
+          "hashContenido",
+          "contenidoCanonico",
+          "urlVerificacion",
+          "pendientes",
+          "firma",
+          "estadoDesde",
+          "reemplazadoPor",
+          "pdfDescargable"
+        ],
+        "type": "object",
+        "properties": {
+          "folio": {
+            "type": "string"
+          },
+          "emision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          },
+          "titular": {
+            "$ref": "#/components/schemas/TitularPublicoDto"
+          },
+          "emisor": {
+            "$ref": "#/components/schemas/EmisorPublicoDto"
+          },
+          "flujo": {
+            "$ref": "#/components/schemas/FlujoDelCertificadoDto"
+          },
+          "emitidoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "huella": {
+            "type": "string"
+          },
+          "hashContenido": {
+            "type": "string"
+          },
+          "contenidoCanonico": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "urlVerificacion": {
+            "type": "string"
+          },
+          "pendientes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "firma": {
+            "$ref": "#/components/schemas/FirmaDelCertificadoDto"
+          },
+          "estadoDesde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reemplazadoPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pdfDescargable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClavePublicaDeCertificadosDto": {
+        "required": [
+          "kid",
+          "algoritmo",
+          "clavePublica",
+          "jwk",
+          "vigente"
+        ],
+        "type": "object",
+        "properties": {
+          "kid": {
+            "type": "string"
+          },
+          "algoritmo": {
+            "type": "string"
+          },
+          "clavePublica": {
+            "type": "string"
+          },
+          "jwk": {
+            "$ref": "#/components/schemas/JwkDto"
+          },
+          "vigente": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClavesDeCertificadosDto": {
+        "required": [
+          "emisor",
+          "algoritmo",
+          "mensajeFirmado",
+          "esquemas",
+          "claves"
+        ],
+        "type": "object",
+        "properties": {
+          "emisor": {
+            "type": "string"
+          },
+          "algoritmo": {
+            "type": "string"
+          },
+          "mensajeFirmado": {
+            "type": "string"
+          },
+          "esquemas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "claves": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClavePublicaDeCertificadosDto"
+            }
           }
         }
       },
@@ -5979,6 +7389,46 @@
           }
         }
       },
+      "CrearWebhookDto": {
+        "required": [
+          "url",
+          "tipos"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "tipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "empresas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "sistemaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DatoDeclaradoDto": {
         "required": [
           "clave",
@@ -6245,6 +7695,131 @@
           }
         }
       },
+      "EditarWebhookDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "empresas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EmisionDelCertificadoDto": {
+        "required": [
+          "folio",
+          "emision",
+          "estado",
+          "emitidoEn",
+          "vigenteHasta",
+          "huella",
+          "expedienteFolio",
+          "pdfDisponible"
+        ],
+        "type": "object",
+        "properties": {
+          "folio": {
+            "type": "string"
+          },
+          "emision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "emitidoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "huella": {
+            "type": "string"
+          },
+          "expedienteFolio": {
+            "type": "string"
+          },
+          "pdfDisponible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EmisorPublicoDto": {
+        "required": [
+          "empresa",
+          "logoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "empresa": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EmpresaDelCertificadoDto": {
+        "required": [
+          "id",
+          "nombre",
+          "logoUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "EmpresaDto": {
         "required": [
           "id",
@@ -6353,6 +7928,85 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "EntregaWebhookDto": {
+        "required": [
+          "id",
+          "webhookId",
+          "eventoId",
+          "tipoEvento",
+          "cursor",
+          "empresaId",
+          "estado",
+          "intentos",
+          "creadaEn",
+          "entregadaEn",
+          "proximoIntentoEn",
+          "historial"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "webhookId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoEvento": {
+            "type": "string"
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "intentos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entregadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "proximoIntentoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IntentoEntregaDto"
+            }
           }
         }
       },
@@ -6498,6 +8152,57 @@
               "null",
               "string"
             ]
+          },
+          "datos": {
+            "$ref": "#/components/schemas/JsonElement"
+          }
+        }
+      },
+      "EventoPublicoDto": {
+        "required": [
+          "id",
+          "tipo",
+          "version",
+          "ocurridoEn",
+          "tenantId",
+          "empresaId",
+          "cursor",
+          "datos"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "ocurridoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "cursor": {
+            "type": "string"
           },
           "datos": {
             "$ref": "#/components/schemas/JsonElement"
@@ -6856,6 +8561,29 @@
           }
         }
       },
+      "FirmaDelCertificadoDto": {
+        "required": [
+          "algoritmo",
+          "kid",
+          "clavePublicaUrl",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "algoritmo": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "clavePublicaUrl": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "string"
+          }
+        }
+      },
       "FlujoDeExpedienteDto": {
         "required": [
           "id",
@@ -6891,6 +8619,30 @@
           },
           "origen": {
             "type": "string"
+          }
+        }
+      },
+      "FlujoDelCertificadoDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -7262,6 +9014,66 @@
           }
         }
       },
+      "IntentoEntregaDto": {
+        "required": [
+          "numero",
+          "intentoId",
+          "fecha",
+          "codigoHttp",
+          "duracionMs",
+          "resultado",
+          "error",
+          "manual"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "intentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "codigoHttp": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duracionMs": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manual": {
+            "type": "boolean"
+          }
+        }
+      },
       "InvitacionAceptadaDto": {
         "required": [
           "aceptacion",
@@ -7354,6 +9166,37 @@
           }
         }
       },
+      "JwkDto": {
+        "required": [
+          "kty",
+          "crv",
+          "x",
+          "kid",
+          "alg",
+          "use"
+        ],
+        "type": "object",
+        "properties": {
+          "kty": {
+            "type": "string"
+          },
+          "crv": {
+            "type": "string"
+          },
+          "x": {
+            "type": "string"
+          },
+          "kid": {
+            "type": "string"
+          },
+          "alg": {
+            "type": "string"
+          },
+          "use": {
+            "type": "string"
+          }
+        }
+      },
       "MiembrosAreaDto": {
         "required": [
           "usuarios"
@@ -7432,6 +9275,97 @@
           },
           "activo": {
             "type": "boolean"
+          }
+        }
+      },
+      "NotificacionDto": {
+        "required": [
+          "id",
+          "tipo",
+          "titulo",
+          "mensaje",
+          "empresaId",
+          "expedienteId",
+          "vinculoId",
+          "folio",
+          "enlace",
+          "creadaEn",
+          "leidaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enlace": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "leidaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificacionesMarcadasDto": {
+        "required": [
+          "marcadas"
+        ],
+        "type": "object",
+        "properties": {
+          "marcadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -7528,6 +9462,27 @@
           }
         }
       },
+      "PaginaDtoOfEntregaWebhookDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntregaWebhookDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfExpedienteDto": {
         "required": [
           "datos",
@@ -7591,6 +9546,28 @@
           }
         }
       },
+      "PaginaEventosDto": {
+        "required": [
+          "datos",
+          "cursor",
+          "hayMas"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventoPublicoDto"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "hayMas": {
+            "type": "boolean"
+          }
+        }
+      },
       "PaisDto": {
         "required": [
           "codigo",
@@ -7610,6 +9587,31 @@
             "items": {
               "$ref": "#/components/schemas/TipoIdentificacionDto"
             }
+          }
+        }
+      },
+      "PdfDelCertificadoDto": {
+        "required": [
+          "sha256",
+          "tamano",
+          "generadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "sha256": {
+            "type": "string"
+          },
+          "tamano": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "generadoEn": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -7698,6 +9700,27 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "PreferenciasNotificacionDto": {
+        "required": [
+          "correo",
+          "tiposConCorreo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "tiposConCorreo": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -7852,6 +9875,57 @@
           },
           "descripcion": {
             "type": "string"
+          }
+        }
+      },
+      "RequisitoDelCertificadoDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "version",
+          "sha256",
+          "vigenteHasta",
+          "eximido",
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "eximido": {
+            "type": "boolean"
+          },
+          "justificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8040,6 +10114,37 @@
           }
         }
       },
+      "RevocacionDelCertificadoDto": {
+        "required": [
+          "motivo",
+          "origen",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RevocarCertificadoDto": {
+        "required": [
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "justificacion": {
+            "type": "string"
+          }
+        }
+      },
       "RolAsignadoDto": {
         "required": [
           "rol",
@@ -8176,6 +10281,22 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SuspensionDelCertificadoDto": {
+        "required": [
+          "motivo",
+          "desde"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": "string"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -8784,6 +10905,21 @@
           }
         }
       },
+      "TipoEventoPublicoDto": {
+        "required": [
+          "tipo",
+          "descripcion"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          }
+        }
+      },
       "TipoIdentificacionDto": {
         "required": [
           "pais",
@@ -8812,6 +10948,21 @@
           },
           "tieneDv": {
             "type": "boolean"
+          }
+        }
+      },
+      "TipoVinculoDelCertificadoDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
           }
         }
       },
@@ -8870,6 +11021,44 @@
             "type": "string"
           },
           "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "TitularDelCertificadoDto": {
+        "required": [
+          "nombre",
+          "identificacionEnmascarada",
+          "pais",
+          "tipoPersona"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "identificacionEnmascarada": {
+            "type": "string"
+          },
+          "pais": {
+            "type": "string"
+          },
+          "tipoPersona": {
+            "type": "string"
+          }
+        }
+      },
+      "TitularPublicoDto": {
+        "required": [
+          "nombre",
+          "identificacionEnmascarada"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "identificacionEnmascarada": {
             "type": "string"
           }
         }
@@ -9534,6 +11723,116 @@
           }
         }
       },
+      "WebhookDto": {
+        "required": [
+          "id",
+          "sistemaId",
+          "sistema",
+          "url",
+          "descripcion",
+          "tipos",
+          "empresas",
+          "version",
+          "activa",
+          "fallosSeguidos",
+          "deshabilitadaEn",
+          "causaDeshabilitacion",
+          "creadaEn",
+          "ultimaEntregaEn",
+          "secretoAnteriorVence"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sistemaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sistema": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "fallosSeguidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "deshabilitadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "causaDeshabilitacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ultimaEntregaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "secretoAnteriorVence": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "secreto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "YoDto": {
         "required": [
           "actorTipo",
@@ -9620,6 +11919,15 @@
       "name": "Validasoft.Aplicacion.Plataforma.CatalogosEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Interesado.EnlacesPublicosEndpoints"
     },
     {
@@ -9699,6 +12007,12 @@
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.MotivosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Certificados.VerificacionPublicaEndpoints"
     },
     {
       "name": "Validasoft.Api"

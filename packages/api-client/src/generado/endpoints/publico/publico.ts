@@ -28,8 +28,10 @@ import type {
   AutorregistroDto,
   BovedaDto,
   CargaPrefirmadaDto,
+  CertificadoPublicoDto,
   ConfirmacionCargaDto,
   DescargaDto,
+  DescargarCertificadoVerificadoParams,
   DocumentoDto,
   EnviarFormularioDto,
   ExpedientePublicoDto,
@@ -44,6 +46,7 @@ import type {
   SesionTerceroDto,
   SolicitarAccesoDto,
   SolicitudRecibidaDto,
+  VerificarCertificadoParams,
   VerificarOtpDto,
   VinculoPublicoDto
 } from '../../modelos';
@@ -1420,3 +1423,156 @@ export function useDescargarPlantillaRequisito<TData = Awaited<ReturnType<typeof
 
 
 
+export const verificarCertificado = (
+    folio: string,
+    params?: VerificarCertificadoParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<CertificadoPublicoDto>(
+      {url: `/public/v1/verificar/${folio}`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+
+export const getVerificarCertificadoQueryKey = (folio?: string,
+    params?: VerificarCertificadoParams,) => {
+    return [
+    `/public/v1/verificar/${folio}`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getVerificarCertificadoQueryOptions = <TData = Awaited<ReturnType<typeof verificarCertificado>>, TError = ErrorType<void>>(folio: string,
+    params?: VerificarCertificadoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getVerificarCertificadoQueryKey(folio,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof verificarCertificado>>> = ({ signal }) => verificarCertificado(folio,params, requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(folio), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type VerificarCertificadoQueryResult = NonNullable<Awaited<ReturnType<typeof verificarCertificado>>>
+export type VerificarCertificadoQueryError = ErrorType<void>
+
+
+export function useVerificarCertificado<TData = Awaited<ReturnType<typeof verificarCertificado>>, TError = ErrorType<void>>(
+ folio: string,
+    params: undefined |  VerificarCertificadoParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof verificarCertificado>>,
+          TError,
+          Awaited<ReturnType<typeof verificarCertificado>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useVerificarCertificado<TData = Awaited<ReturnType<typeof verificarCertificado>>, TError = ErrorType<void>>(
+ folio: string,
+    params?: VerificarCertificadoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof verificarCertificado>>,
+          TError,
+          Awaited<ReturnType<typeof verificarCertificado>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useVerificarCertificado<TData = Awaited<ReturnType<typeof verificarCertificado>>, TError = ErrorType<void>>(
+ folio: string,
+    params?: VerificarCertificadoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useVerificarCertificado<TData = Awaited<ReturnType<typeof verificarCertificado>>, TError = ErrorType<void>>(
+ folio: string,
+    params?: VerificarCertificadoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof verificarCertificado>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getVerificarCertificadoQueryOptions(folio,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const descargarCertificadoVerificado = (
+    folio: string,
+    params?: DescargarCertificadoVerificadoParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<DescargaDto>(
+      {url: `/public/v1/verificar/${folio}/descarga`, method: 'POST',
+        params, signal
+    },
+      options);
+    }
+  
+
+
+export const getDescargarCertificadoVerificadoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof descargarCertificadoVerificado>>, TError,{folio: string;params?: DescargarCertificadoVerificadoParams}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof descargarCertificadoVerificado>>, TError,{folio: string;params?: DescargarCertificadoVerificadoParams}, TContext> => {
+
+const mutationKey = ['descargarCertificadoVerificado'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof descargarCertificadoVerificado>>, {folio: string;params?: DescargarCertificadoVerificadoParams}> = (props) => {
+          const {folio,params} = props ?? {};
+
+          return  descargarCertificadoVerificado(folio,params,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DescargarCertificadoVerificadoMutationResult = NonNullable<Awaited<ReturnType<typeof descargarCertificadoVerificado>>>
+    
+    export type DescargarCertificadoVerificadoMutationError = ErrorType<void>
+
+    export const useDescargarCertificadoVerificado = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof descargarCertificadoVerificado>>, TError,{folio: string;params?: DescargarCertificadoVerificadoParams}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof descargarCertificadoVerificado>>,
+        TError,
+        {folio: string;params?: DescargarCertificadoVerificadoParams},
+        TContext
+      > => {
+
+      const mutationOptions = getDescargarCertificadoVerificadoMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
