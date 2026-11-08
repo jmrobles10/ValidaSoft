@@ -54,6 +54,9 @@ public static class ClavesDeAlmacen
     /// <summary>Zona temporal de la subida (paso 1); al confirmar se copia a la clave definitiva y se borra.</summary>
     public static string Carga(Guid cargaId) => $"cargas/{cargaId:N}";
 
+    /// <summary>Plantilla de un tipo de documento (TD-5): bucket del tenant, content-addressed por tipo.</summary>
+    public static string Plantilla(Guid tipoDocumentoTenantId, string sha256) => $"plantillas/{tipoDocumentoTenantId:N}/{sha256}";
+
     /// <summary>Versiones devueltas: nunca se comparten (docs/07 §6.1).</summary>
     public static string Cuarentena(Guid documentoId, int numero) => $"cuarentena/{documentoId:N}/v{numero}";
 }

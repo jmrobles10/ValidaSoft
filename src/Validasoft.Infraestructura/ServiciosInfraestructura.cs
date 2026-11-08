@@ -35,6 +35,9 @@ public static class ServiciosInfraestructura
     /// <summary>Cola local durable que adjunta a los expedientes las versiones que comparte la bóveda (RQ-2).</summary>
     public const string ColaRequisitos = "requisitos";
 
+    /// <summary>Cola local durable de vigencias: cálculo, avisos y vencimientos programados de las versiones (TD-6).</summary>
+    public const string ColaVigencias = "vigencias";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -112,6 +115,12 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.CorreoDeVencimientoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.CalcularVigenciasDelDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.CalcularVigenciasDelVinculo>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.RecalcularVigenciasDelTipo>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.EnviarAvisosDeVencimiento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Documentos.VencerVersionDeDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();

@@ -7,6 +7,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Vinculos;
@@ -31,12 +32,12 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/vinculos/{id}/expedientes")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<IResult> Abrir(Guid id, AbrirExpedienteDto dto, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
         var version = Peticiones.VersionEsperada(http);
         var resultado = await Peticiones.ConReintentosAsync(async () =>
         {
-            await using var empresa = new SesionDeEmpresa(sesiones, contexto);
+            await using var empresa = new SesionDeEmpresa(sesiones, contexto, reglas, reloj);
             var ahora = reloj.GetUtcNow();
             var vinculoStream = await empresa.VinculoParaEscribirAsync(id, version, ct);
             var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(empresa.Sesion, vinculoStream.Aggregate!, dto.FlujoId, ct)
@@ -48,6 +49,8 @@ public static class ExpedientesEndpoints
             return await DetalleAsync(empresa, abierto.Id, ct);
         }, version is null ? 10 : 1);
 
+        // La apertura pudo compartir documentos con el vínculo (sin outbox de la bóveda): calcula sus vigencias (TD-6).
+        await mensajes.PublishAsync(new Documentos.CalcularVigenciasDelVinculo(resultado.Tercero.Id, resultado.VinculoId));
         Peticiones.EscribirETag(http, resultado.Version);
         return Results.Created($"/api/v1/expedientes/{resultado.Id}", resultado);
     }
@@ -281,11 +284,14 @@ public static class ExpedientesEndpoints
         return detalle;
     }
 
+    /// <summary>Detalle con las áreas y, por requisito, el tipo (campos, reglas, plantilla) y la versión con sus datos y vigencia.</summary>
     internal static async Task<ExpedienteDto> DetalleAsync(SesionDeEmpresa empresa, Guid id, CancellationToken ct)
     {
         var expediente = await empresa.CargarExpedienteAsync(id, ct);
         var areas = expediente.AreaIds.Count == 0 ? [] : await empresa.Sesion.LoadManyAsync<Area>(ct, expediente.AreaIds.ToArray());
-        return expediente.ADto(areas.ToDictionary(a => a.Id, a => a.Miembros), empresa.UsuarioConsultante);
+        await using var boveda = empresa.ConsultaBoveda();
+        var documentacion = await DocumentacionDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.Reglas, empresa.Hoy, ct);
+        return expediente.ADto(areas.ToDictionary(a => a.Id, a => a.Miembros), empresa.UsuarioConsultante, documentacion);
     }
 }
 
@@ -361,7 +367,8 @@ public static class ExpedientesPublicosEndpoints
 {
     [WolverineGet("/public/v1/expedientes/{id}")]
     [Authorize(Policy = ReclamosTercero.Politica)]
-    public static async Task<ExpedientePublicoDto> Obtener(Guid id, HttpContext http, ISesiones sesiones, CancellationToken ct)
+    public static async Task<ExpedientePublicoDto> Obtener(Guid id, HttpContext http, ISesiones sesiones, ReglasDeCarga reglas, TimeProvider reloj,
+        CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         await using var consulta = sesiones.ConsultaGlobal();
@@ -369,7 +376,9 @@ public static class ExpedientesPublicosEndpoints
         if (expediente is null || expediente.TerceroId != tercero.TerceroId || tercero.Vinculos.All(v => v.VinculoId != expediente.VinculoId))
             throw ReglaDeNegocioException.NoEncontrado("expediente-no-encontrado", "No existe ese expediente.");
 
-        return expediente.APublico(await consulta.LoadAsync<Empresa>(expediente.EmpresaId, ct));
+        await using var boveda = sesiones.ConsultaBoveda();
+        var documentacion = await DocumentacionDelExpediente.CargarAsync(consulta, boveda, expediente, reglas, Documentos.MapeosDocumentos.Hoy(reloj), ct);
+        return expediente.APublico(await consulta.LoadAsync<Empresa>(expediente.EmpresaId, ct), documentacion);
     }
 
     /// <summary>
@@ -379,7 +388,7 @@ public static class ExpedientesPublicosEndpoints
     [WolverinePost("/public/v1/expedientes/{id}/reenviar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ExpedientePublicoDto> Reenviar(Guid id, ReenviarExpedienteDto dto, HttpContext http, ISesiones sesiones,
-        TimeProvider reloj, CancellationToken ct)
+        ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         Expediente? ubicado;
@@ -405,6 +414,8 @@ public static class ExpedientesPublicosEndpoints
         var eventos = await ExpedientesEndpoints.ReenvioConVersionesAsync(sesion, expediente, OrigenReenvio.Tercero, dto.Respuesta, ahora, ct);
         var estado = await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, ahora, ct);
         await sesion.SaveChangesAsync(ct);
-        return estado.APublico(await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct));
+        await using var boveda = sesiones.ConsultaBoveda();
+        var documentacion = await DocumentacionDelExpediente.CargarAsync(sesion, boveda, estado, reglas, CalculadoraDeVigencia.Fecha(ahora), ct);
+        return estado.APublico(await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct), documentacion);
     }
 }

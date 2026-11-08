@@ -101,6 +101,29 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     }
 
     /// <summary>
+    /// Aviso consolidado de vencimiento (TD-6, docs/02 §8.3): un correo por tercero y fecha con cada documento y su fecha por
+    /// empresa («vence para A el 31 de octubre de 2026 y para B el 30 de diciembre de 2026»). Sin enlace de acceso: remite a
+    /// pedir uno con el correo.
+    /// </summary>
+    public MensajeDeCorreo RedactarAvisoDeVencimiento(Documentos.CorreoDeVencimientoPendiente correo)
+    {
+        var lineas = correo.Documentos.Select(d =>
+            $"{d.Documento}: vence " + string.Join(" y ", d.Vencimientos.Select(v => $"para {v.Empresa} el {FechaLarga(v.VigenteHasta)}")) + ".").ToList();
+        var asunto = correo.Documentos.Count == 1
+            ? $"Tu {correo.Documentos[0].Documento} está por vencer"
+            : $"Tienes {correo.Documentos.Count} documentos por vencer";
+        var texto = "Estos documentos que entregaste están por vencer. Actualízalos antes de la fecha para seguir al día:\n\n" +
+                    string.Join("\n", lineas.Select(l => "- " + l)) +
+                    $"\n\nEntra a Validasoft ({UrlPublica}) y pide un enlace con tu correo para subir la versión nueva.";
+        var html = "<p>Estos documentos que entregaste están por vencer. Actualízalos antes de la fecha para seguir al día:</p><ul>" +
+                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) + "</ul>" +
+                   $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> y pide un enlace con tu correo para subir la versión nueva.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    private static string FechaLarga(DateOnly fecha) => fecha.ToString("d 'de' MMMM 'de' yyyy", Cultura);
+
+    /// <summary>
     /// Los textos al tercero de los motivos son oraciones completas («Falta la firma requerida.»): se unen como un
     /// párrafo, con su punto final, en lugar de separarlas con «; » (quedaba «…soportes.; Falta…»).
     /// </summary>

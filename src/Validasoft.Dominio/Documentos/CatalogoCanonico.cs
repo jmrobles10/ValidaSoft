@@ -67,25 +67,37 @@ public sealed record TipoDocumentoCanonico(
     IReadOnlyList<string> CamposCriticos,
     ReglaFrescura? ReglaFrescuraSugerida,
     int Version = 1,
-    int RetencionAniosSugerida = 10)
+    int RetencionAniosSugerida = 10,
+    IReadOnlyList<string>? FormatosPermitidos = null,
+    int? TamanoMaximoMb = null,
+    int? PaginasMaximas = null)
 {
-    /// <summary>En esta fase solo se cargan archivos; los formularios responden 422 <c>clase-no-soportada</c>.</summary>
+    /// <summary>
+    /// Un canónico global de clase <c>Formulario</c> aún no tiene esquema canónico: responde 422 <c>clase-no-soportada</c>.
+    /// Un tipo del tenant puede pedirlo como formulario propio restringido a <c>PorVinculo</c> (TD-4).
+    /// </summary>
     public bool CargaSoportada => Clase == ClaseDocumento.Archivo;
+
+    /// <summary>Formatos (MIME) que admite el canónico; vacío ⇒ todos los de la lista blanca (TD-1).</summary>
+    public IReadOnlyList<string> Formatos => FormatosPermitidos ?? [];
 }
 
 /// <summary>Catálogo canónico (Anexo A de docs/03, fuente única de códigos). Los códigos retirados no existen aquí.</summary>
 public static class CatalogoCanonico
 {
+    /// <summary>Solo PDF: documentos que se expiden o descargan como PDF (RUT, Cámara, estados financieros, renta). Va antes de <see cref="Tipos"/>: los estáticos se inicializan en orden.</summary>
+    private static readonly string[] SoloPdf = [InspectorDeArchivos.Pdf];
+
     private static readonly IReadOnlyList<TipoDocumentoCanonico> Tipos =
     [
         Archivo("RUT", "Registro Único Tributario", AmbitoDocumento.Global, Sensibilidad.Identidad, AplicaA.Ambas,
             vencimiento: false, expedicion: true, ratificable: true, persona: false,
             ["nit", "razonSocial", "actividadCiiuPrincipal", "responsabilidades", "direccion", "representanteLegal"],
-            ["nit", "razonSocial", "representanteLegal"], ReglaFrescura.DiasDesdeExpedicion(365)),
+            ["nit", "razonSocial", "representanteLegal"], ReglaFrescura.DiasDesdeExpedicion(365), formatos: SoloPdf),
         Archivo("CAMARA_COMERCIO", "Certificado de existencia y representación legal", AmbitoDocumento.Global, Sensibilidad.Identidad,
             AplicaA.Juridica, vencimiento: false, expedicion: true, ratificable: false, persona: false,
             ["nit", "razonSocial", "matricula", "representanteLegal", "suplentes", "objeto", "capital", "estadoMatricula", "fechaExpedicion"],
-            ["representanteLegal", "razonSocial", "estadoMatricula"], ReglaFrescura.DiasDesdeExpedicion(30)),
+            ["representanteLegal", "razonSocial", "estadoMatricula"], ReglaFrescura.DiasDesdeExpedicion(30), formatos: SoloPdf),
         Archivo("CEDULA", "Cédula de ciudadanía", AmbitoDocumento.Global, Sensibilidad.Identidad, AplicaA.Natural,
             vencimiento: false, expedicion: true, ratificable: true, persona: true,
             ["numero", "nombres", "fechaExpedicion"], ["numero", "nombres"], ReglaFrescura.Ninguna),
@@ -98,10 +110,10 @@ public static class CatalogoCanonico
         Archivo("ESTADOS_FINANCIEROS", "Estados financieros", AmbitoDocumento.Global, Sensibilidad.Financiera, AplicaA.Ambas,
             vencimiento: false, expedicion: false, ratificable: false, persona: false,
             ["periodo", "activos", "pasivos", "patrimonio", "ingresos", "firmaContador"], ["periodo"],
-            ReglaFrescura.Periodo("ultimo-anio-fiscal-cerrado"), periodicidad: "Anual"),
+            ReglaFrescura.Periodo("ultimo-anio-fiscal-cerrado"), periodicidad: "Anual", formatos: SoloPdf),
         Archivo("DECLARACION_RENTA", "Declaración de renta", AmbitoDocumento.Global, Sensibilidad.Financiera, AplicaA.Ambas,
             vencimiento: false, expedicion: false, ratificable: false, persona: false,
-            ["anioGravable", "nit", "formulario"], ["anioGravable"], ReglaFrescura.Periodo("ultimo-anio-gravable"), periodicidad: "Anual"),
+            ["anioGravable", "nit", "formulario"], ["anioGravable"], ReglaFrescura.Periodo("ultimo-anio-gravable"), periodicidad: "Anual", formatos: SoloPdf),
         Archivo("CERTIFICACION_BANCARIA", "Certificación bancaria", AmbitoDocumento.Global, Sensibilidad.Financiera, AplicaA.Ambas,
             vencimiento: false, expedicion: true, ratificable: false, persona: false,
             ["banco", "tipo", "numero", "titular", "identificacionTitular", "fecha"], ["numero", "titular"],
@@ -166,9 +178,9 @@ public static class CatalogoCanonico
 
     private static TipoDocumentoCanonico Archivo(string codigo, string nombre, AmbitoDocumento ambito, Sensibilidad sensibilidad, AplicaA aplicaA,
         bool vencimiento, bool expedicion, bool ratificable, bool persona, string[] clave, string[] criticos, ReglaFrescura? frescura,
-        string? periodicidad = null) =>
+        string? periodicidad = null, string[]? formatos = null) =>
         new(codigo, nombre, ClaseDocumento.Archivo, ambito, sensibilidad, aplicaA, vencimiento, expedicion, periodicidad is not null,
-            periodicidad, ratificable, persona, clave, criticos, frescura);
+            periodicidad, ratificable, persona, clave, criticos, frescura, FormatosPermitidos: formatos);
 
     private static TipoDocumentoCanonico Formulario(string codigo, string nombre, AmbitoDocumento ambito, Sensibilidad sensibilidad,
         bool ratificable, bool persona, string[] clave, string[] criticos, ReglaFrescura? frescura) =>

@@ -13,10 +13,19 @@ namespace Validasoft.Aplicacion.Comun;
 /// Acceso a los datos de la empresa activa (T-3): todo lo que devuelve ya viene filtrado por
 /// <c>EmpresaId</c>, y un recurso de otra empresa responde 404 (T-4), nunca 403.
 /// </summary>
-public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto) : IAsyncDisposable
+public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto, ReglasDeCarga reglas, TimeProvider reloj) : IAsyncDisposable
 {
     private IDocumentSession? _sesion;
     private IMessageBus? _mensajes;
+
+    /// <summary>Límites globales de carga (para las reglas efectivas de los tipos de documento, TD-1).</summary>
+    public ReglasDeCarga Reglas => reglas;
+
+    /// <summary>Hoy en UTC (para el estado de las vigencias, TD-6).</summary>
+    public DateOnly Hoy => Dominio.Documentos.CalculadoraDeVigencia.Fecha(reloj.GetUtcNow());
+
+    /// <summary>Lectura del tenant técnico <c>boveda</c> (documentos de los terceros).</summary>
+    public IQuerySession ConsultaBoveda() => sesiones.ConsultaBoveda();
 
     public IDocumentSession Sesion => _sesion ??= _mensajes is null ? sesiones.DelTenant() : sesiones.DelTenant(_mensajes);
 

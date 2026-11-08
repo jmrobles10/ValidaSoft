@@ -114,7 +114,7 @@ public sealed record DefinicionDeFlujo(
     }
 
     /// <summary>
-    /// Cada requisito: un tipo activo del tenant de clase <c>Archivo</c> (422 <c>requisito-invalido</c> /
+    /// Cada requisito: un tipo activo del tenant que el tercero pueda entregar (TD-4; 422 <c>requisito-invalido</c> /
     /// <c>clase-no-soportada</c>), sin repetir tipo ni id (<c>requisito-duplicado</c>), revisado por áreas del flujo
     /// (<c>requisito-area-invalida</c>) y con 1–10 aprobadores si se indican. Con requisitos, toda área del flujo debe
     /// revisar al menos uno (<c>area-sin-requisitos</c>): su aprobación se deriva de ellos (RQ-4).
@@ -134,8 +134,9 @@ public sealed record DefinicionDeFlujo(
             if (tipo is not { Activo: true })
                 throw ReglaDeNegocioException.Validacion("requisito-invalido",
                     $"El tipo de documento {(string.IsNullOrWhiteSpace(requisito.CodigoTipo) ? requisito.TipoDocumentoTenantId.ToString() : requisito.CodigoTipo)} no existe en el tenant o está inactivo.");
-            if (tipo.Clase != ClaseDocumento.Archivo)
-                throw ReglaDeNegocioException.Validacion("clase-no-soportada", $"{tipo.Codigo} es un formulario; aún no se puede pedir en un flujo.");
+            if (!tipo.CargaSoportada)
+                throw ReglaDeNegocioException.Validacion("clase-no-soportada",
+                    $"{tipo.Codigo} es un formulario sin campos (o global); defínele campos y déjalo PorVinculo para pedirlo en un flujo.");
             if (!tiposVistos.Add(tipo.Id))
                 throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {tipo.Codigo}.");
 
