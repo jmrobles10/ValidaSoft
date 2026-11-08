@@ -3,7 +3,8 @@ import type { AreaDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
 import { AlineadoConCampo } from '@validasoft/ui';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { MAXIMO_APROBADORES, requisitoNuevo, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
+import { resumenTipo } from '../../configuracion/tiposDocumento/resumen';
+import { MAXIMO_APROBADORES, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
 
 /** Chips de áreas a la vista en «Lo revisan»; el resto va en un chip «+N». */
 const CHIPS_VISIBLES = 2;
@@ -26,7 +27,7 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
   const { t } = useTranslation();
   const areasDelFlujo = etapas.flatMap((e) => e.areas.map((a) => a.areaId)).filter(Boolean);
   const nombreArea = (id: string) => areas.find((a) => a.id === id)?.nombre ?? id;
-  const elegibles = tiposDocumento.filter((tipo) => tipo.activo && tipo.clase === 'Archivo');
+  const elegibles = tiposDocumento.filter(sePuedePedir);
   const cambiar = (k: number, cambio: Partial<RequisitoEnEditor>) => onCambiar(requisitos.map((r, i) => (i === k ? { ...r, ...cambio } : r)));
   const error = (k: number) => errores.find((e) => e.campo === `requisito.${String(k)}`);
 
@@ -133,6 +134,11 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
               )}
               </AlineadoConCampo>
             </Box>
+            {tipo && (
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mt: 0.75 }} data-resumen-tipo="">
+                {resumenTipo(tipo, t)}
+              </Typography>
+            )}
             {e && (
               <Typography color="error" sx={{ fontSize: 12, mt: 1 }}>
                 {t(`flujos.editor.errores.${e.codigo}`)}

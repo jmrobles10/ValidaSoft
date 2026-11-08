@@ -185,7 +185,15 @@ export function validarFlujo(
 }
 
 /**
- * Requisitos (RQ-1): tipo elegido, activo, de archivo y sin repetir; áreas del flujo; 1–10 aprobadores; y, si hay
+ * Un tipo se puede pedir en un flujo si está activo y el proveedor lo puede entregar (`cargaSoportada`: archivo, o
+ * formulario en un tipo propio del vínculo, TD-4). Sin el dato (API anterior), solo los de clase Archivo.
+ */
+export function sePuedePedir(tipo: Pick<TipoDocumentoTenantDto, 'activo' | 'cargaSoportada' | 'clase'>): boolean {
+  return tipo.activo && (tipo.cargaSoportada ?? tipo.clase === 'Archivo');
+}
+
+/**
+ * Requisitos (RQ-1): tipo elegido, activo, que el proveedor pueda entregar y sin repetir; áreas del flujo; 1–10 aprobadores; y, si hay
  * requisitos, toda área del flujo revisa al menos uno (`area-sin-requisitos`: su aprobación se deriva de ellos).
  */
 export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requisitos'>, tiposDocumento: readonly TipoDocumentoTenantDto[]): ErrorFlujo[] {
@@ -200,7 +208,7 @@ export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requ
       if (tipos.has(r.tipoDocumentoTenantId)) errores.push({ codigo: 'requisito-duplicado', campo });
       tipos.add(r.tipoDocumentoTenantId);
       const tipo = tiposDocumento.find((t) => t.id === r.tipoDocumentoTenantId);
-      if (tiposDocumento.length > 0 && (!tipo?.activo || tipo.clase !== 'Archivo')) errores.push({ codigo: 'requisito-invalido', campo });
+      if (tiposDocumento.length > 0 && !(tipo && sePuedePedir(tipo))) errores.push({ codigo: 'requisito-invalido', campo });
     }
     if (r.areasQueRevisan.some((a) => !areasDelFlujo.has(a))) errores.push({ codigo: 'requisito-area-invalida', campo });
     if (r.aprobadoresRequeridos !== null && (!Number.isInteger(r.aprobadoresRequeridos) || r.aprobadoresRequeridos < 1 || r.aprobadoresRequeridos > MAXIMO_APROBADORES)) {

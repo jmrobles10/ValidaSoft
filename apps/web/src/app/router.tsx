@@ -60,6 +60,10 @@ export function crearRouter() {
                   lazy: () => import('../features/flujos/pages/EditorFlujo').then((m) => ({ Component: m.EditorFlujo })),
                 },
                 {
+                  path: 'tipos-documento',
+                  lazy: () => import('../features/configuracion/tiposDocumento/PaginaTiposDocumento').then((m) => ({ Component: m.PaginaTiposDocumento })),
+                },
+                {
                   path: 'sistemas',
                   lazy: () => import('../features/configuracion/sistemas/PaginaSistemas').then((m) => ({ Component: m.PaginaSistemas })),
                 },
