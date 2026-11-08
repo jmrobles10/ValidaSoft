@@ -15,16 +15,32 @@ export const MAXIMO_PAGINAS = 50;
 export const TIPOS_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const;
 export const ACEPTA_ARCHIVOS = TIPOS_PERMITIDOS.join(',');
 
-/** A qué documento va la versión: un canónico global de la bóveda, o un tipo de la empresa en un vínculo. */
-export type DestinoCarga = { tipoCanonico: string } | { tipoDocumentoTenantId: string; vinculoId: string };
+/**
+ * A qué documento va la versión: un canónico global de la bóveda, o un tipo de la empresa en un vínculo. En un canónico
+ * global, el `vinculoId` es solo contexto: la API aplica las reglas de archivo que configuró esa empresa (TD-1).
+ */
+export type DestinoCarga = { tipoCanonico: string; vinculoId?: string } | { tipoDocumentoTenantId: string; vinculoId: string };
 
-export type ProblemaArchivo = { tipo: 'vacio' } | { tipo: 'demasiado-grande'; tamano: number } | { tipo: 'formato'; mime: string };
+/** Lo que admite un tipo de documento: formatos (MIME), tamaño y páginas (estas solo se revisan en el servidor). */
+export interface ReglasArchivo {
+  formatos: readonly string[];
+  tamanoMaximoBytes: number;
+  paginasMaximas: number;
+}
 
-/** Revisión previa en el navegador, para no subir 30 MB y enterarse al final. */
-export function validarArchivo(archivo: Pick<File, 'size' | 'type'>): ProblemaArchivo | null {
+/** Las de la bóveda cuando el tipo no restringe nada (o se sube sin requisito). */
+export const REGLAS_GLOBALES: ReglasArchivo = { formatos: TIPOS_PERMITIDOS, tamanoMaximoBytes: TAMANO_MAXIMO_BYTES, paginasMaximas: MAXIMO_PAGINAS };
+
+export type ProblemaArchivo =
+  | { tipo: 'vacio' }
+  | { tipo: 'demasiado-grande'; tamano: number; maximo: number }
+  | { tipo: 'formato'; mime: string; formatos: readonly string[] };
+
+/** Revisión previa en el navegador con las reglas del tipo, para no subir 30 MB y enterarse al final. */
+export function validarArchivo(archivo: Pick<File, 'size' | 'type'>, reglas: ReglasArchivo = REGLAS_GLOBALES): ProblemaArchivo | null {
   if (archivo.size === 0) return { tipo: 'vacio' };
-  if (archivo.size > TAMANO_MAXIMO_BYTES) return { tipo: 'demasiado-grande', tamano: archivo.size };
-  if (!(TIPOS_PERMITIDOS as readonly string[]).includes(archivo.type)) return { tipo: 'formato', mime: archivo.type };
+  if (!reglas.formatos.includes(archivo.type)) return { tipo: 'formato', mime: archivo.type, formatos: reglas.formatos };
+  if (archivo.size > reglas.tamanoMaximoBytes) return { tipo: 'demasiado-grande', tamano: archivo.size, maximo: reglas.tamanoMaximoBytes };
   return null;
 }
 
@@ -70,6 +86,8 @@ export class ErrorSubida extends Error {
 export interface OpcionesSubida {
   archivo: File;
   destino: DestinoCarga;
+  /** Campos de un tipo `ArchivoYFormulario`: viajan en el paso 1 y la API los valida ahí (TD-4). */
+  datos?: Record<string, string | boolean> | null;
   alFase?: (fase: FaseSubida) => void;
   alProgreso?: (fraccion: number) => void;
   enviar?: EnviarArchivo;
@@ -77,11 +95,11 @@ export interface OpcionesSubida {
 }
 
 /** Los dos pasos de la carga (docs/05 §2.9.2): iniciar → PUT prefirmado → confirmar, con el estado final de la versión. */
-export async function subirDocumento({ archivo, destino, alFase, alProgreso, enviar = enviarConXhr, senal }: OpcionesSubida): Promise<ResultadoSubida> {
+export async function subirDocumento({ archivo, destino, datos, alFase, alProgreso, enviar = enviarConXhr, senal }: OpcionesSubida): Promise<ResultadoSubida> {
   alFase?.('preparando');
   const sha256 = await sha256Hex(archivo);
   const inicio = await iniciarCargaDocumento(
-    { nombreArchivo: archivo.name, tamanoBytes: archivo.size, tipoMime: archivo.type, sha256, ...destino },
+    { nombreArchivo: archivo.name, tamanoBytes: archivo.size, tipoMime: archivo.type, sha256, ...destino, ...(datos ? { datos } : {}) },
     undefined,
     senal,
   );

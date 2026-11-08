@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { FilaEmpresa } from '../shared/componentes';
+import { requiereAtencion } from '../vigencia/vigencia';
+import { AvisoVigencia, ChipVigencia, LineaVigencia } from '../vigencia/ChipVigencia';
 import { DialogoRetirar } from './DialogoRetirar';
 import { useDescargar } from './useDescargar';
 import { detalleComparticion, sePuedeDescargar, sePuedeRetirar } from './versiones';
@@ -37,6 +39,8 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
           <Typography color="text.secondary" sx={{ fontSize: 14 }}>
             {actual ? t('boveda.cargadaEl', { n: String(actual.n), fecha: formatearFecha(actual.cargadaEn) }) : t('boveda.sinVigente')}
           </Typography>
+          {/* La vigencia más próxima entre las empresas; la de cada una va en su fila. */}
+          <LineaVigencia vigencia={actual?.vigencia} />
         </Box>
         {actual && (
           <IconButton aria-label={`${t('comun.version', { n: String(actual.n) })}: ${titulo}`} aria-haspopup="menu" onClick={(e) => setMenu(e.currentTarget)} sx={{ width: 44, height: 44 }}>
@@ -86,17 +90,30 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
             <FilaEmpresa
               key={c.vinculoId}
               nombre={c.empresa.nombre}
-              estado={c.compartido && c.version !== null ? <Typography component="span" variant="mono">{`v${String(c.version)}`}</Typography> : undefined}
+              estado={
+                c.compartido && c.version !== null ? (
+                  <>
+                    {requiereAtencion(c.vigencia) && c.vigencia && <ChipVigencia vigencia={c.vigencia} />}
+                    <Typography component="span" variant="mono">{`v${String(c.version)}`}</Typography>
+                  </>
+                ) : undefined
+              }
               detalle={detalleComparticion(c, t)}
             />
           ))
         )}
       </Box>
 
+      <AvisoVigencia vigencia={actual?.vigencia} />
+
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
-        <Button component={RouterLink} to={`/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`} variant="outlined" startIcon={<Upload size={18} aria-hidden />}>
-          {t('boveda.nuevaVersion')}
-        </Button>
+        {/* Un formulario se actualiza desde la revisión de la empresa, que sabe qué campos pide. La API marca la clase en
+            la versión (el documento llega como `Archivo`). */}
+        {documento.clase !== 'Formulario' && actual?.clase !== 'Formulario' && (
+          <Button component={RouterLink} to={`/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`} variant="outlined" startIcon={<Upload size={18} aria-hidden />}>
+            {t('boveda.nuevaVersion')}
+          </Button>
+        )}
         {documento.versiones > 1 && (
           <Button variant="text" onClick={() => setVerVersiones((v) => !v)} aria-expanded={verVersiones}>
             {verVersiones ? t('boveda.ocultarVersiones') : t('boveda.versiones', { n: String(documento.versiones) })}

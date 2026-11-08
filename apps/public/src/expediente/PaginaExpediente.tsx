@@ -14,7 +14,8 @@ import { ChipAvance } from '../vinculos/ChipAvance';
 import { useTextoAvance } from '../vinculos/useTextoAvance';
 import { situacionDelVinculo } from '../vinculos/situacion';
 import { observacionesGenerales } from './requisitos';
-import { Observacion, RequisitosDelExpediente } from './RequisitosDelExpediente';
+import { Observacion } from './Observacion';
+import { RequisitosDelExpediente } from './RequisitosDelExpediente';
 
 const MAXIMO_RESPUESTA = 4000;
 

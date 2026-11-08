@@ -7,7 +7,7 @@ export function destinoFijo(parametros: URLSearchParams): { destino: DestinoCarg
   const vinculoId = parametros.get('vinculoId');
   if (tipoDocumentoTenantId && vinculoId) return { destino: { tipoDocumentoTenantId, vinculoId }, nombre };
   const tipo = parametros.get('tipo');
-  if (tipo && nombre) return { destino: { tipoCanonico: tipo }, nombre };
+  if (tipo && nombre) return { destino: vinculoId ? { tipoCanonico: tipo, vinculoId } : { tipoCanonico: tipo }, nombre };
   return null;
 }
 

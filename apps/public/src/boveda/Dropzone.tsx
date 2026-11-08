@@ -2,14 +2,27 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { Camera, CloudUpload, FileUp } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ACEPTA_ARCHIVOS, MAXIMO_PAGINAS, TAMANO_MAXIMO_BYTES } from './subida';
+import { aceptaDe, aceptaFotos, textoReglas } from '../tipoDocumento/reglas';
+import { REGLAS_GLOBALES, type ReglasArchivo } from './subida';
 
 /**
  * Zona de subida móvil (Dropzone del design system): «Tomar foto» abre la cámara trasera (`capture="environment"`),
- * «Elegir archivo» la galería o los archivos, y en escritorio se puede arrastrar. Botones cómodos de 44 px.
+ * «Elegir archivo» la galería o los archivos, y en escritorio se puede arrastrar. Botones cómodos de 44 px. Con las
+ * reglas del tipo: dice qué admite, el selector solo ofrece esos formatos y sin imágenes admitidas no hay cámara.
  */
-export function Dropzone({ titulo, deshabilitado, onArchivo }: { titulo: string; deshabilitado?: boolean; onArchivo: (archivo: File) => void }) {
+export function Dropzone({
+  titulo,
+  deshabilitado,
+  onArchivo,
+  reglas = REGLAS_GLOBALES,
+}: {
+  titulo: string;
+  deshabilitado?: boolean;
+  onArchivo: (archivo: File) => void;
+  reglas?: ReglasArchivo;
+}) {
   const { t } = useTranslation();
+  const fotos = aceptaFotos(reglas);
   const camara = useRef<HTMLInputElement>(null);
   const archivos = useRef<HTMLInputElement>(null);
   const [encima, setEncima] = useState(false);
@@ -52,22 +65,31 @@ export function Dropzone({ titulo, deshabilitado, onArchivo }: { titulo: string;
         </Box>
         <Typography sx={{ fontWeight: 600, fontSize: 16 }}>{titulo}</Typography>
         <Typography color="text.secondary" sx={{ fontSize: 14 }}>
-          {t('subir.limites', { mb: String(TAMANO_MAXIMO_BYTES / (1024 * 1024)), paginas: String(MAXIMO_PAGINAS) })}
+          {textoReglas(reglas, t)}
         </Typography>
       </Stack>
       <Stack spacing={1}>
-        <Button variant="contained" size="large" fullWidth startIcon={<Camera size={20} aria-hidden />} disabled={deshabilitado} onClick={() => camara.current?.click()}>
-          {t('subir.tomarFoto')}
-        </Button>
-        <Button variant="outlined" size="large" fullWidth startIcon={<FileUp size={20} aria-hidden />} disabled={deshabilitado} onClick={() => archivos.current?.click()}>
+        {fotos && (
+          <Button variant="contained" size="large" fullWidth startIcon={<Camera size={20} aria-hidden />} disabled={deshabilitado} onClick={() => camara.current?.click()}>
+            {t('subir.tomarFoto')}
+          </Button>
+        )}
+        <Button
+          variant={fotos ? 'outlined' : 'contained'}
+          size="large"
+          fullWidth
+          startIcon={<FileUp size={20} aria-hidden />}
+          disabled={deshabilitado}
+          onClick={() => archivos.current?.click()}
+        >
           {t('subir.elegirArchivo')}
         </Button>
         <Typography color="text.secondary" sx={{ fontSize: 13, textAlign: 'center', display: { xs: 'none', md: 'block' } }}>
           {t('subir.arrastra')}
         </Typography>
       </Stack>
-      <input ref={camara} type="file" accept="image/*" capture="environment" hidden onChange={alElegir} data-testid="entrada-camara" />
-      <input ref={archivos} type="file" accept={ACEPTA_ARCHIVOS} hidden onChange={alElegir} data-testid="entrada-archivo" />
+      {fotos && <input ref={camara} type="file" accept={fotos} capture="environment" hidden onChange={alElegir} data-testid="entrada-camara" />}
+      <input ref={archivos} type="file" accept={aceptaDe(reglas)} hidden onChange={alElegir} data-testid="entrada-archivo" />
     </Box>
   );
 }

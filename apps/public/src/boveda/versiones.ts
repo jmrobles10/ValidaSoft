@@ -1,6 +1,7 @@
 import type { ComparticionPublicaDto, VersionDocumentoDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
+import { textoVigencia } from '../vigencia/vigencia';
 import { MAXIMO_PAGINAS } from './subida';
 
 /** Por qué se devolvió una versión, en lenguaje del tercero y con qué hacer (BO-4). */
@@ -9,17 +10,24 @@ export function mensajeDevolucion(version: Pick<VersionDocumentoDto, 'motivoDevo
     case 'pdf-con-contenido-activo':
       return t('boveda.devolucion.pdf-con-contenido-activo');
     case 'demasiadas-paginas':
-      return t('boveda.devolucion.demasiadas-paginas', { max: String(MAXIMO_PAGINAS) });
+      // Con un tipo que limita sus páginas, el detalle de la API dice el límite del tipo y cuántas trae el PDF.
+      return version.detalleDevolucion ?? t('boveda.devolucion.demasiadas-paginas', { max: String(MAXIMO_PAGINAS) });
     default:
       return version.detalleDevolucion ?? t('boveda.devolucion.otro');
   }
 }
 
-/** Qué tiene cada empresa de este documento: la versión vigente, una anterior o nada (no la exige o no aceptó). */
+/**
+ * Qué tiene cada empresa de este documento: la versión vigente, una anterior o nada (no la exige o no aceptó), y hasta
+ * cuándo le sirve («Vence el 28/09/2026»): cada empresa calcula su propia vigencia (TD-6).
+ */
 export function detalleComparticion(c: ComparticionPublicaDto, t: TFunction): string {
   if (!c.compartido || c.version === null) return t('boveda.noCompartida');
-  if (c.versionActualCompartida) return t('boveda.compartidaActual', { fecha: c.compartidaEn ? formatearFecha(c.compartidaEn) : '—' });
-  return t('boveda.compartidaOtra', { n: String(c.version) });
+  const tiene = c.versionActualCompartida
+    ? t('boveda.compartidaActual', { fecha: c.compartidaEn ? formatearFecha(c.compartidaEn) : '—' })
+    : t('boveda.compartidaOtra', { n: String(c.version) });
+  const vence = c.vigencia ? textoVigencia(c.vigencia, t) : null;
+  return vence ? `${tiene} ${vence}.` : tiene;
 }
 
 /** Se puede retirar la vigente o una superada (BO-8); devueltas y retiradas no. */
@@ -27,7 +35,10 @@ export function sePuedeRetirar(version: Pick<VersionDocumentoDto, 'estado'>): bo
   return version.estado === 'Actual' || version.estado === 'Superada';
 }
 
-/** Se puede descargar lo que quedó en la bóveda (no lo devuelto, que está en cuarentena, ni lo retirado). */
-export function sePuedeDescargar(version: Pick<VersionDocumentoDto, 'estado'>): boolean {
-  return version.estado === 'Actual' || version.estado === 'Superada';
+/**
+ * Se puede descargar lo que quedó en la bóveda (no lo devuelto, que está en cuarentena, ni lo retirado). Un formulario
+ * no tiene archivo (la API respondería 409 `version-sin-archivo`).
+ */
+export function sePuedeDescargar(version: Pick<VersionDocumentoDto, 'estado'> & Partial<Pick<VersionDocumentoDto, 'clase'>>): boolean {
+  return (version.estado === 'Actual' || version.estado === 'Superada') && version.clase !== 'Formulario';
 }

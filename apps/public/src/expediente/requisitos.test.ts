@@ -57,11 +57,16 @@ describe('documentos que pide la empresa', () => {
     expect(observacionesDeRequisito(camara, exp).map((o) => o.requisito)).toEqual(['CAMARA']);
   });
 
-  it('arma el enlace de subida: canónico global a la bóveda, tipo propio con su vínculo, y la vuelta a la revisión', () => {
-    expect(enlaceDeSubida(requisito('camara', 'Pendiente'), null, '/expediente/e1')).toBe('/boveda/subir?nombre=camara&volver=%2Fexpediente%2Fe1&tipo=CAMARA');
+  it('arma el enlace de subida: canónico global a la bóveda, tipo propio con su vínculo, el requisito y la vuelta a la revisión', () => {
+    const base = 'nombre=camara&volver=%2Fexpediente%2Fe1&expediente=e1&requisito=camara';
+    expect(enlaceDeSubida(requisito('camara', 'Pendiente'), null, 'e1')).toBe(`/boveda/subir?${base}&tipo=CAMARA`);
+    // Con el vínculo como contexto, la API aplica las reglas de archivo que configuró la empresa.
+    expect(enlaceDeSubida(requisito('camara', 'Pendiente'), 'v1', 'e1')).toBe(`/boveda/subir?${base}&tipo=CAMARA&vinculoId=v1`);
     const propio = requisito('anexo', 'Pendiente', { tipoDocumento: { id: 'td-anexo', codigo: 'ANEXO', nombre: 'Anexo', tipoCanonico: null, ambito: 'PorVinculo' } });
-    expect(enlaceDeSubida(propio, 'v1', '/expediente/e1')).toBe('/boveda/subir?nombre=Anexo&volver=%2Fexpediente%2Fe1&tipoDocumentoTenantId=td-anexo&vinculoId=v1');
-    expect(enlaceDeSubida(propio, null, '/expediente/e1')).toBeNull();
+    expect(enlaceDeSubida(propio, 'v1', 'e1')).toBe(
+      '/boveda/subir?nombre=Anexo&volver=%2Fexpediente%2Fe1&expediente=e1&requisito=anexo&tipoDocumentoTenantId=td-anexo&vinculoId=v1',
+    );
+    expect(enlaceDeSubida(propio, null, 'e1')).toBeNull();
   });
 
   it('se refresca rápido mientras falten documentos o esté devuelto, y despacio mientras la empresa revisa', () => {
@@ -76,6 +81,7 @@ describe('documentos que pide la empresa', () => {
 describe('parámetros de «Subir documento»', () => {
   it('lee el destino fijado por un requisito', () => {
     expect(destinoFijo(new URLSearchParams('tipo=RUT&nombre=RUT'))).toEqual({ destino: { tipoCanonico: 'RUT' }, nombre: 'RUT' });
+    expect(destinoFijo(new URLSearchParams('tipo=RUT&nombre=RUT&vinculoId=v1'))).toEqual({ destino: { tipoCanonico: 'RUT', vinculoId: 'v1' }, nombre: 'RUT' });
     expect(destinoFijo(new URLSearchParams('tipoDocumentoTenantId=t1&vinculoId=v1&nombre=Anexo'))).toEqual({ destino: { tipoDocumentoTenantId: 't1', vinculoId: 'v1' }, nombre: 'Anexo' });
     expect(destinoFijo(new URLSearchParams('documento=d1'))).toBeNull();
   });

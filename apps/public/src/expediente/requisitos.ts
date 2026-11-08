@@ -50,13 +50,16 @@ export function observacionesDeRequisito(requisito: RequisitoPublicoDto, expedie
 }
 
 /**
- * Enlace a «Subir documento» para este requisito: un canónico global va a la bóveda; un tipo propio de la empresa
- * necesita el vínculo. `volver` trae al tercero de regreso a su revisión.
+ * Enlace a «Subir documento» (o llenar el formulario) de este requisito: un canónico global va a la bóveda (con el
+ * vínculo como contexto, para que apliquen las reglas de archivo de la empresa); un tipo propio de la empresa necesita
+ * el vínculo. `expediente` y `requisito` dejan a la página leer las reglas, los campos y la plantilla del tipo; `volver`
+ * trae al tercero de regreso a su revisión.
  */
-export function enlaceDeSubida(requisito: RequisitoPublicoDto, vinculoId: string | null, volver: string): string | null {
-  const parametros = new URLSearchParams({ nombre: requisito.tipoDocumento.nombre, volver });
+export function enlaceDeSubida(requisito: RequisitoPublicoDto, vinculoId: string | null, expedienteId: string): string | null {
+  const parametros = new URLSearchParams({ nombre: requisito.tipoDocumento.nombre, volver: `/expediente/${expedienteId}`, expediente: expedienteId, requisito: requisito.id });
   if (requisito.tipoDocumento.tipoCanonico && requisito.tipoDocumento.ambito === 'Global') {
     parametros.set('tipo', requisito.tipoDocumento.tipoCanonico);
+    if (vinculoId) parametros.set('vinculoId', vinculoId);
   } else if (vinculoId) {
     parametros.set('tipoDocumentoTenantId', requisito.tipoDocumento.id);
     parametros.set('vinculoId', vinculoId);

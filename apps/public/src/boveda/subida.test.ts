@@ -1,6 +1,6 @@
 import { configurarCliente, ErrorApi, ErrorDeRed, reiniciarCliente, type VersionDocumentoDto } from '@validasoft/api-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ErrorSubida, falloDeSubida, formatearTamano, sha256Hex, subirDocumento, TAMANO_MAXIMO_BYTES, validarArchivo, type EnviarArchivo } from './subida';
+import { ErrorSubida, falloDeSubida, formatearTamano, sha256Hex, subirDocumento, TAMANO_MAXIMO_BYTES, TIPOS_PERMITIDOS, validarArchivo, type EnviarArchivo } from './subida';
 
 const json = (estado: number, cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
 
@@ -46,8 +46,12 @@ afterEach(() => reiniciarCliente());
 describe('validación en el navegador', () => {
   it('rechaza vacío, más de 20 MB y formatos que la bóveda no acepta', () => {
     expect(validarArchivo({ size: 0, type: 'application/pdf' })).toEqual({ tipo: 'vacio' });
-    expect(validarArchivo({ size: TAMANO_MAXIMO_BYTES + 1, type: 'application/pdf' })).toEqual({ tipo: 'demasiado-grande', tamano: TAMANO_MAXIMO_BYTES + 1 });
-    expect(validarArchivo({ size: 10, type: 'image/heic' })).toEqual({ tipo: 'formato', mime: 'image/heic' });
+    expect(validarArchivo({ size: TAMANO_MAXIMO_BYTES + 1, type: 'application/pdf' })).toEqual({
+      tipo: 'demasiado-grande',
+      tamano: TAMANO_MAXIMO_BYTES + 1,
+      maximo: TAMANO_MAXIMO_BYTES,
+    });
+    expect(validarArchivo({ size: 10, type: 'image/heic' })).toEqual({ tipo: 'formato', mime: 'image/heic', formatos: TIPOS_PERMITIDOS });
     expect(validarArchivo({ size: 10, type: 'image/jpeg' })).toBeNull();
   });
 
@@ -83,6 +87,20 @@ describe('subida en dos pasos', () => {
       tipoCanonico: 'RUT',
       sha256: 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
     });
+  });
+
+  it('un tipo con archivo y formulario manda sus campos en el paso 1, con el tipo de la empresa y el vínculo', async () => {
+    const cuerpos = api(() => json(200, { documentoId: 'd1', version: 1, duplicado: true, carga: null }));
+    const destino = { tipoDocumentoTenantId: 't1', vinculoId: 'v1' };
+    await subirDocumento({ archivo: archivo(), destino, datos: { fecha_expedicion: '2026-10-01', con_firma: true }, enviar: () => Promise.resolve() });
+    expect(cuerpos[0]).toMatchObject({ ...destino, datos: { fecha_expedicion: '2026-10-01', con_firma: true } });
+  });
+
+  it('valida con las reglas del tipo: solo PDF de hasta 1 MB', () => {
+    const reglas = { formatos: ['application/pdf'], tamanoMaximoBytes: 1024 * 1024, paginasMaximas: 10 };
+    expect(validarArchivo({ size: 10, type: 'image/jpeg' }, reglas)).toEqual({ tipo: 'formato', mime: 'image/jpeg', formatos: ['application/pdf'] });
+    expect(validarArchivo({ size: 2 * 1024 * 1024, type: 'application/pdf' }, reglas)).toEqual({ tipo: 'demasiado-grande', tamano: 2 * 1024 * 1024, maximo: 1024 * 1024 });
+    expect(validarArchivo({ size: 10, type: 'application/pdf' }, reglas)).toBeNull();
   });
 
   it('si el archivo ya es una versión, el paso 1 lo dice y no se sube nada', async () => {

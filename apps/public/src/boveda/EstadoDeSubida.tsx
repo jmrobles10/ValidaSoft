@@ -3,12 +3,10 @@ import { FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { nombreEmpresaDeVinculo, useSesionTercero } from '../sesion/sesionTercero';
-import { mensajeDeError } from '../shared/errores';
-import { formatearTamano, TAMANO_MAXIMO_BYTES } from './subida';
+import { mensajeFallo, mensajeProblema } from './mensajesSubida';
+import { formatearTamano, REGLAS_GLOBALES, type ReglasArchivo } from './subida';
 import type { EstadoSubida } from './useSubida';
 import { mensajeDevolucion } from './versiones';
-
-const MB = String(TAMANO_MAXIMO_BYTES / (1024 * 1024));
 
 /** Progreso y resultado de la subida con su siguiente paso: lista, duplicado, devuelta, límite, formato o sin red. */
 export function EstadoDeSubida({
@@ -18,6 +16,7 @@ export function EstadoDeSubida({
   onReintentar,
   onOtroArchivo,
   volver = null,
+  reglas = REGLAS_GLOBALES,
 }: {
   estado: Exclude<EstadoSubida, { fase: 'inicio' }>;
   tipo: string;
@@ -26,15 +25,16 @@ export function EstadoDeSubida({
   onOtroArchivo: () => void;
   /** Ruta a la que regresar (la revisión de la que vino); si la hay, es la acción principal. */
   volver?: string | null;
+  /** Reglas de archivo del tipo, para explicar un rechazo con sus límites. */
+  reglas?: ReglasArchivo;
 }) {
   const { t } = useTranslation();
   const sesion = useSesionTercero((s) => s.sesion);
 
   if (estado.fase === 'problema') {
-    const p = estado.problema;
     return (
       <Alert severity="error" role="alert">
-        {p.tipo === 'demasiado-grande' ? t('subir.problemas.demasiado-grande', { tamano: formatearTamano(p.tamano), mb: MB }) : t(`subir.problemas.${p.tipo}`)}
+        {mensajeProblema(estado.problema, t)}
       </Alert>
     );
   }
@@ -81,7 +81,7 @@ export function EstadoDeSubida({
   );
 
   if (estado.fase === 'fallo') {
-    const texto = estado.fallo === 'otro' ? mensajeDeError(estado.error, t) : t(`subir.fallos.${estado.fallo}`, { mb: MB });
+    const texto = mensajeFallo(estado.fallo, estado.error, t, reglas);
     const reintentable = estado.fallo === 'red' || estado.fallo === 'vencida' || estado.fallo === 'otro';
     return (
       <Alert severity="error" role="alert">

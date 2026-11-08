@@ -3,6 +3,8 @@ import { debeRefrescar } from '../expediente/requisitos';
 import {
   aceptarInvitacion,
   descargarDocumentoBoveda,
+  descargarPlantillaRequisito,
+  enviarFormularioBoveda,
   esErrorApi,
   getListarVinculosPublicosQueryOptions,
   getObtenerBovedaQueryOptions,
@@ -12,6 +14,10 @@ import {
   reenviarExpedientePublico,
   retirarVersionDocumento,
   type ConsentimientoDto,
+  type DescargaDto,
+  type EnviarFormularioDto,
+  type ExpedientePublicoDto,
+  type RequisitoPublicoDto,
 } from '@validasoft/api-client';
 
 /** No se reintenta lo que el servidor ya rechazó (4xx): solo fallas de red o 5xx, hasta dos veces. */
@@ -60,20 +66,56 @@ export function useRetirarVersion(documentoId: string, numero: number) {
 }
 
 /** La URL prefirmada (5 min, `Content-Disposition: attachment`) se abre en el momento: el navegador descarga el archivo. */
+function abrirDescarga(descarga: DescargaDto): DescargaDto {
+  const enlace = document.createElement('a');
+  enlace.href = descarga.url;
+  enlace.rel = 'noopener';
+  enlace.download = descarga.nombre;
+  document.body.append(enlace);
+  enlace.click();
+  enlace.remove();
+  return descarga;
+}
+
 export function useDescargarVersion() {
   return useMutation({
-    mutationFn: async ({ documentoId, numero }: { documentoId: string; numero: number }) => {
-      const descarga = await descargarDocumentoBoveda(documentoId, numero);
-      const enlace = document.createElement('a');
-      enlace.href = descarga.url;
-      enlace.rel = 'noopener';
-      enlace.download = descarga.nombre;
-      document.body.append(enlace);
-      enlace.click();
-      enlace.remove();
-      return descarga;
+    mutationFn: async ({ documentoId, numero }: { documentoId: string; numero: number }) => abrirDescarga(await descargarDocumentoBoveda(documentoId, numero)),
+  });
+}
+
+/** Formato (plantilla) vigente del tipo de un requisito: «descárgalo, llénalo, fírmalo y súbelo» (TD-5). */
+export function useDescargarPlantilla() {
+  return useMutation({
+    mutationFn: async ({ expedienteId, requisitoId }: { expedienteId: string; requisitoId: string }) =>
+      abrirDescarga(await descargarPlantillaRequisito(expedienteId, requisitoId)),
+  });
+}
+
+/** Un requisito con la revisión a la que pertenece (empresa, id para la plantilla). */
+export interface RequisitoEnContexto {
+  expediente: ExpedientePublicoDto;
+  requisito: RequisitoPublicoDto;
+}
+
+/**
+ * Un requisito de la revisión, para subir o llenar lo que pide con sus reglas. Sin refresco automático (a diferencia de
+ * la revisión): el tercero está llenando un formulario o eligiendo un archivo.
+ */
+export function useRequisitoPublico(expedienteId: string | null, requisitoId: string | null) {
+  return useQuery({
+    ...getObtenerExpedientePublicoQueryOptions(expedienteId ?? ''),
+    enabled: Boolean(expedienteId && requisitoId),
+    select: (expediente: ExpedientePublicoDto): RequisitoEnContexto | null => {
+      const requisito = expediente.requisitos?.find((r) => r.id === requisitoId);
+      return requisito ? { expediente, requisito } : null;
     },
   });
+}
+
+/** Envía un tipo `Formulario` (TD-4): nace una versión sin archivo que se comparte con el vínculo. */
+export function useEnviarFormulario() {
+  const refrescar = useRefrescarTodo();
+  return useMutation({ mutationFn: (cuerpo: EnviarFormularioDto) => enviarFormularioBoveda(cuerpo), onSuccess: refrescar });
 }
 
 /**

@@ -1,93 +1,47 @@
-import { Box, MenuItem, Stack, TextField } from '@mui/material';
-import { useState } from 'react';
+import { Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
-import { useBoveda } from '../shared/api';
+import { camposDe, valoresIniciales } from '../formulario/formulario';
+import { FormularioRequisito } from '../formulario/FormularioRequisito';
+import { useRequisitoPublico } from '../shared/api';
 import { CabeceraPagina, EsqueletoTarjetas } from '../shared/componentes';
-import { tipoSubible, TIPOS_SUBIBLES } from './catalogo';
-import { Dropzone } from './Dropzone';
-import { EstadoDeSubida } from './EstadoDeSubida';
+import { modoDe } from '../tipoDocumento/reglas';
 import { destinoFijo, rutaSegura } from './parametrosSubida';
-import type { DestinoCarga } from './subida';
-import { useSubida } from './useSubida';
+import { SubirArchivo } from './SubirArchivo';
 
 /**
  * Subir un documento o una versión nueva. `?documento=`: otra versión del mismo documento de la bóveda. Desde un
  * requisito de la revisión: `?tipo=&nombre=` (canónico global) o `?tipoDocumentoTenantId=&vinculoId=&nombre=` (tipo
- * propio de la empresa), con `volver=` para regresar. Sin nada, el tercero elige el tipo entre los canónicos globales.
+ * propio de la empresa), con `expediente=&requisito=` para leer las reglas, los campos y la plantilla del tipo y
+ * `volver=` para regresar. Un tipo `Formulario` se llena aquí mismo, sin archivo. Sin nada, el tercero elige el tipo
+ * entre los canónicos globales.
  */
 export function PaginaSubir() {
   const { t } = useTranslation();
   const [parametros] = useSearchParams();
-  const documentoId = parametros.get('documento');
+  const contexto = useRequisitoPublico(parametros.get('expediente'), parametros.get('requisito'));
   const fijo = destinoFijo(parametros);
-  const volver = rutaSegura(parametros.get('volver'));
-  const boveda = useBoveda();
-  const [tipoElegido, setTipoElegido] = useState(parametros.get('tipo') ?? '');
-  const { estado, subir, cancelar, reiniciar } = useSubida();
 
-  const existente = documentoId ? boveda.data?.documentos.find((d) => d.id === documentoId) : undefined;
-  if (documentoId && boveda.isPending) return <EsqueletoTarjetas cantidad={1} />;
+  if (contexto.isLoading) return <EsqueletoTarjetas cantidad={1} />;
+  // Si la revisión no carga o el requisito ya no está, se sube como antes (con las reglas globales).
+  const delRequisito = fijo ? (contexto.data ?? null) : null;
+  const tipo = delRequisito?.requisito.tipoDocumento;
 
-  const destino: DestinoCarga | null = fijo
-    ? fijo.destino
-    : existente
-      ? existente.ambito === 'Global' || !existente.tipo.tipoDocumentoTenantId || !existente.vinculoId
-        ? { tipoCanonico: existente.tipo.codigo }
-        : { tipoDocumentoTenantId: existente.tipo.tipoDocumentoTenantId, vinculoId: existente.vinculoId }
-      : tipoElegido
-        ? { tipoCanonico: tipoElegido }
-        : null;
-  const nombreTipo = fijo?.nombre ?? existente?.tipo.nombre ?? tipoSubible(tipoElegido)?.nombre ?? null;
-  const tituloFijo = fijo ? fijo.nombre : existente?.tipo.nombre;
-  const ocupado = estado.fase === 'en-curso';
-  const mostrarZona = estado.fase === 'inicio' || estado.fase === 'problema';
+  if (fijo && delRequisito && tipo && modoDe(tipo) === 'Formulario') {
+    return (
+      <>
+        <CabeceraPagina titulo={t('formulario.titulo', { tipo: fijo.nombre })} sub={t('formulario.sub', { empresa: delRequisito.expediente.empresa.nombre })} />
+        {tipo.textoAyuda && <Typography sx={{ fontSize: 15, lineHeight: '22px', mb: 2 }}>{tipo.textoAyuda}</Typography>}
+        <FormularioRequisito
+          tipo={fijo.nombre}
+          campos={camposDe(tipo)}
+          destino={fijo.destino}
+          volver={rutaSegura(parametros.get('volver'))}
+          iniciales={valoresIniciales(camposDe(tipo), delRequisito.requisito.versionActual?.datosDeclarados)}
+        />
+      </>
+    );
+  }
 
-  return (
-    <>
-      <CabeceraPagina
-        titulo={fijo ? t('subir.tituloDocumento', { tipo: fijo.nombre }) : tituloFijo ? t('subir.tituloNueva', { tipo: tituloFijo }) : t('subir.titulo')}
-      />
-      <Stack spacing={2}>
-        {!existente && !fijo && (
-          <TextField
-            select
-            label={t('subir.tipo')}
-            value={tipoElegido}
-            onChange={(e) => setTipoElegido(e.target.value)}
-            helperText={tipoSubible(tipoElegido)?.ayuda ?? t('subir.tipoAyuda')}
-            disabled={ocupado}
-            fullWidth
-          >
-            {TIPOS_SUBIBLES.map((tipo) => (
-              <MenuItem key={tipo.codigo} value={tipo.codigo}>
-                {tipo.nombre}
-              </MenuItem>
-            ))}
-          </TextField>
-        )}
-
-        {estado.fase !== 'inicio' && (
-          <EstadoDeSubida
-            estado={estado}
-            tipo={nombreTipo ?? ''}
-            onCancelar={cancelar}
-            onReintentar={estado.fase === 'fallo' && destino ? () => subir(estado.archivo, destino) : undefined}
-            onOtroArchivo={reiniciar}
-            volver={volver}
-          />
-        )}
-
-        {mostrarZona && (
-          <Box>
-            <Dropzone
-              titulo={nombreTipo ? t('subir.zona', { tipo: nombreTipo }) : t('subir.zonaSinTipo')}
-              deshabilitado={!destino}
-              onArchivo={(archivo) => destino && subir(archivo, destino)}
-            />
-          </Box>
-        )}
-      </Stack>
-    </>
-  );
+  return <SubirArchivo parametros={parametros} delRequisito={delRequisito} />;
 }

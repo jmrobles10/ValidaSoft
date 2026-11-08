@@ -1,6 +1,24 @@
 import { useRef, useState } from 'react';
 import { useAlTerminarSubida } from '../shared/api';
-import { falloDeSubida, subirDocumento, validarArchivo, type DestinoCarga, type FalloSubida, type FaseSubida, type ProblemaArchivo, type ResultadoSubida } from './subida';
+import {
+  falloDeSubida,
+  subirDocumento,
+  validarArchivo,
+  type DestinoCarga,
+  type FalloSubida,
+  type FaseSubida,
+  type ProblemaArchivo,
+  type ReglasArchivo,
+  type ResultadoSubida,
+} from './subida';
+
+/** Reglas del tipo (para validar en el navegador) y campos de un `ArchivoYFormulario` (van en el paso 1). */
+export interface ExtrasSubida {
+  reglas?: ReglasArchivo;
+  datos?: Record<string, string | boolean> | null;
+  /** Para marcar en el formulario el campo de un 422 (`campo-requerido`, `valor-invalido`…). */
+  alFallar?: (error: unknown) => void;
+}
 
 export type EstadoSubida =
   | { fase: 'inicio' }
@@ -15,8 +33,8 @@ export function useSubida() {
   const control = useRef<AbortController | null>(null);
   const alTerminar = useAlTerminarSubida();
 
-  const subir = (archivo: File, destino: DestinoCarga) => {
-    const problema = validarArchivo(archivo);
+  const subir = (archivo: File, destino: DestinoCarga, { reglas, datos, alFallar }: ExtrasSubida = {}) => {
+    const problema = validarArchivo(archivo, reglas);
     if (problema) {
       setEstado({ fase: 'problema', problema });
       return;
@@ -28,6 +46,7 @@ export function useSubida() {
     subirDocumento({
       archivo,
       destino,
+      datos,
       senal: actual.signal,
       alFase: (etapa) => setEstado((e) => (e.fase === 'en-curso' ? { ...e, etapa } : e)),
       alProgreso: (progreso) => setEstado((e) => (e.fase === 'en-curso' ? { ...e, progreso } : e)),
@@ -40,6 +59,7 @@ export function useSubida() {
       (error: unknown) => {
         if (actual.signal.aborted) return;
         setEstado({ fase: 'fallo', archivo, fallo: falloDeSubida(error), error });
+        alFallar?.(error);
       },
     );
   };
