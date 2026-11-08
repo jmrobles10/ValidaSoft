@@ -68,6 +68,7 @@ public static class ServiciosInfraestructura
         servicios.AddHostedService<InicializadorDeAlmacen>();
         // Certificados verificables (H5): sello Ed25519, emisión en la transacción de la aprobación, PDF y vencimientos después.
         servicios.AddSingleton<ClavesDeCertificados>();
+        servicios.AddHostedService<VerificacionDeClavesDeCertificados>(); // sin clave de sellado la API no arranca (CE-11)
         servicios.AddSingleton<EmisorDeCertificados>();
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
         servicios.AddSingleton<ArchivoDeCertificados>();
