@@ -14,8 +14,8 @@ function editor(requisitos: RequisitoEnEditor[]) {
     <ThemeProvider theme={createValidasoftTheme('light')}>
       <EditorRequisitos
         requisitos={requisitos}
-        etapas={[{ clave: 'e1', areas: [areaNueva('compras'), areaNueva('cumplimiento')] }]}
-        areas={[area('compras', 'Compras'), area('cumplimiento', 'Cumplimiento')]}
+        etapas={[{ clave: 'e1', areas: [areaNueva('compras'), areaNueva('cumplimiento'), areaNueva('juridica'), areaNueva('tesoreria')] }]}
+        areas={[area('compras', 'Compras'), area('cumplimiento', 'Cumplimiento'), area('juridica', 'Jurídica'), area('tesoreria', 'Tesorería')]}
         tiposDocumento={[tipo]}
         onCambiar={vi.fn()}
         errores={[]}
@@ -26,11 +26,13 @@ function editor(requisitos: RequisitoEnEditor[]) {
 }
 
 describe('EditorRequisitos', () => {
-  it('«Lo revisan» resume las áreas en una línea («2 áreas» o el nombre) en vez de etiquetas que crecen', () => {
-    editor([{ ...requisitoNuevo('rut'), areasQueRevisan: ['compras', 'cumplimiento'] }, { ...requisitoNuevo('rut'), areasQueRevisan: ['cumplimiento'] }]);
-    expect(screen.getByText('2 áreas')).toHaveAttribute('title', 'Compras, Cumplimiento');
-    expect(screen.getByText('Cumplimiento')).toBeInTheDocument();
-    expect(document.querySelectorAll('.MuiChip-root')).toHaveLength(0);
+  it('«Lo revisan» muestra las áreas como chips en una sola línea: dos a la vista y el resto en «+N»', () => {
+    editor([{ ...requisitoNuevo('rut'), areasQueRevisan: ['compras', 'cumplimiento', 'juridica', 'tesoreria'] }]);
+    const chips = [...document.querySelectorAll('.MuiChip-root')].map((c) => c.textContent);
+    expect(chips).toEqual(['Compras', 'Cumplimiento', '+2']);
+    expect(screen.getByText('+2').closest('.MuiChip-root')).toHaveAttribute('title', 'Jurídica, Tesorería');
+    // Los chips se pueden quitar uno a uno, como antes.
+    expect(document.querySelectorAll('.MuiChip-deleteIcon')).toHaveLength(2);
   });
 
   it('«Obligatorio» y la papelera van juntos en la celda alineada con los campos', () => {

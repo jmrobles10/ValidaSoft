@@ -246,7 +246,19 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
       // («pista borde-control» sólida se leía como deshabilitado).
       MuiSwitch: {
         styleOverrides: {
-          root: { width: 36, height: 20, padding: 0, margin: web ? 6 : 12, overflow: 'visible' },
+          // `size="small"` de MUI trae su propia raíz (40×24), perilla (16 px) y relleno, que pisan estas medidas y
+          // descentran la perilla: el switch Registro tiene un solo tamaño.
+          root: {
+            width: 36,
+            height: 20,
+            padding: 0,
+            margin: web ? 6 : 12,
+            overflow: 'visible',
+            '&.MuiSwitch-sizeSmall': { width: 36, height: 20, padding: 0 },
+            '&.MuiSwitch-sizeSmall .MuiSwitch-switchBase': { padding: 3 },
+            '&.MuiSwitch-sizeSmall .MuiSwitch-switchBase.Mui-checked': { transform: 'translateX(16px)' },
+            '&.MuiSwitch-sizeSmall .MuiSwitch-thumb': { width: 14, height: 14 },
+          },
           switchBase: {
             padding: 3,
             color: c.textoSecundario,

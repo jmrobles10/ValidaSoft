@@ -52,4 +52,12 @@ describe('switch del tema', () => {
     expect(interruptor).not.toBeChecked();
     expect(interruptor).toBeEnabled();
   });
+
+  it('size="small" no cambia el switch: mismas medidas que el normal (la perilla no se descentra)', () => {
+    const tema = createValidasoftTheme('light');
+    const raiz = tema.components?.MuiSwitch?.styleOverrides?.root as Record<string, unknown>;
+    expect(raiz['&.MuiSwitch-sizeSmall']).toEqual({ width: 36, height: 20, padding: 0 });
+    expect(raiz['&.MuiSwitch-sizeSmall .MuiSwitch-thumb']).toEqual({ width: 14, height: 14 });
+    expect(raiz['&.MuiSwitch-sizeSmall .MuiSwitch-switchBase']).toEqual({ padding: 3 });
+  });
 });

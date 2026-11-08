@@ -115,14 +115,14 @@ export function EditorEtapas({ etapas, areas, onCambiar, errores, soloLectura }:
                     {/* Switches y «Quitar área» a la altura de los campos (no de sus etiquetas); en pantallas medianas, en una línea aparte. */}
                     <AlineadoConCampo desde="lg" columna={{ xs: '1 / -1', lg: 'auto' }}>
                     <FormControlLabel
-                      control={<Switch size="small" checked={area.puedeRechazarExpediente && !area.automatica} onChange={(e) => cambiarArea(i, j, { puedeRechazarExpediente: e.target.checked })} />}
+                      control={<Switch checked={area.puedeRechazarExpediente && !area.automatica} onChange={(e) => cambiarArea(i, j, { puedeRechazarExpediente: e.target.checked })} />}
                       label={t('flujos.editor.puedeRechazar')}
                       disabled={soloLectura || area.automatica}
                       sx={{ mx: 0, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
                     />
                     <Tooltip title={t('flujos.editor.automaticaAyuda')}>
                       <FormControlLabel
-                        control={<Switch size="small" checked={area.automatica} onChange={(e) => cambiarArea(i, j, { automatica: e.target.checked, puedeRechazarExpediente: e.target.checked ? false : area.puedeRechazarExpediente })} />}
+                        control={<Switch checked={area.automatica} onChange={(e) => cambiarArea(i, j, { automatica: e.target.checked, puedeRechazarExpediente: e.target.checked ? false : area.puedeRechazarExpediente })} />}
                         label={t('flujos.editor.automatica')}
                         disabled={soloLectura}
                         sx={{ mx: 0, '& .MuiFormControlLabel-label': { fontSize: 13, whiteSpace: 'nowrap' } }}
