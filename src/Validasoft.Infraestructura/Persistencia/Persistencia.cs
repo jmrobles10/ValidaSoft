@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Dominio.Auditoria;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
@@ -145,11 +146,22 @@ public static class ConfiguracionMarten
                     .Index(x => x.ExpedienteId)
                     .Index(x => x.AreaId);
 
+                // Certificados (H5): uno por vínculo (id determinista); el folio raíz es único en el tenant y se busca entre
+                // tenants en la verificación pública (no es único entre tenants: lo desambigua la huella, CE-8).
+                opts.Schema.For<Certificado>().MultiTenanted()
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_certificado_folio", TenancyScope.PerTenant, x => x.FolioRaiz)
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.VinculoId);
+                // Secuencias de folio como streams que se bloquean al consumir (CE-3).
+                opts.Schema.For<SecuenciaDeFolios>().MultiTenanted();
+
                 // Proyecciones inline: Vinculo y Expediente son la lectura tras la escritura (VinculoResumen y
                 // ExpedienteDetalle, docs/03 §14).
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             .IntegrateWithWolverine();

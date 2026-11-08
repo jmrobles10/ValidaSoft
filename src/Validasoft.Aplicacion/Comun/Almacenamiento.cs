@@ -33,6 +33,10 @@ public interface IAlmacenDeArchivos
     Task CopiarAsync(string bucketOrigen, string claveOrigen, string bucketDestino, string claveDestino, string tipoContenido,
         IReadOnlyDictionary<string, string> metadatos, CancellationToken ct);
 
+    /// <summary>Sube un objeto generado por el servidor (el PDF del certificado, CE-5); sobrescribe si la clave existe.</summary>
+    Task GuardarAsync(string bucket, string clave, byte[] contenido, string tipoContenido, IReadOnlyDictionary<string, string> metadatos,
+        CancellationToken ct);
+
     /// <summary>Elimina el objeto si existe (idempotente).</summary>
     Task EliminarAsync(string bucket, string clave, CancellationToken ct);
 
@@ -56,6 +60,9 @@ public static class ClavesDeAlmacen
 
     /// <summary>Plantilla de un tipo de documento (TD-5): bucket del tenant, content-addressed por tipo.</summary>
     public static string Plantilla(Guid tipoDocumentoTenantId, string sha256) => $"plantillas/{tipoDocumentoTenantId:N}/{sha256}";
+
+    /// <summary>PDF de una emisión del certificado (bucket del tenant), content-addressed por su SHA-256.</summary>
+    public static string Certificado(Guid empresaId, string folio, string sha256) => $"empresas/{empresaId:N}/certificados/{folio}/{sha256}";
 
     /// <summary>Versiones devueltas: nunca se comparten (docs/07 §6.1).</summary>
     public static string Cuarentena(Guid documentoId, int numero) => $"cuarentena/{documentoId:N}/v{numero}";

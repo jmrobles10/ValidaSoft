@@ -72,6 +72,7 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);
             b.UseSetting("Validasoft:Proxies:Confiables:0", ProxyConfiable);
             b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
+            b.UseSetting("Validasoft:Certificados:SegundosProceso", "1"); // PDF de los certificados casi al instante
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();

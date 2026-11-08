@@ -226,7 +226,7 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 | Binarios | MinIO con **SSE-KMS y clave por tenant** para `tenant-{id}` (P-14-3); `boveda` con clave de plataforma; buckets separados con IAM; versionado; Object Lock governance sobre versiones referenciadas (prod). Cierre de tenant ⇒ borrado criptográfico de su clave |
 | Región | Atributo del tenant (P-14-2); un despliegue por región; on-premise = instancia del cliente; la IA externa se declara en la autorización |
 | Base de datos | Cifrado de volumen; columnas sensibles (SMTP, secretos de webhook, credenciales de verificadores, números de cuenta) con Data Protection **por tenant**; claves protegidas por certificado X.509 o KMS |
-| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave |
+| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave. El sello de los certificados es una semilla Ed25519 (`Validasoft:Certificados:ClavePrivada`, 32 bytes en base64; en `appsettings.Development.json` solo una de desarrollo): su `kid`, la publicación de la pública en `/.well-known/validasoft-certificados.json` y la rotación (la anterior pasa a `ClavesAnteriores`) están en CE-4 del [registro](decisiones/registro.md) |
 | Logs | Sin tokens, llaves ni cuerpos; redacción de correos e identificaciones |
 | Backups | Cifrados; restauración probada en pipeline (GitHub Actions) |
 

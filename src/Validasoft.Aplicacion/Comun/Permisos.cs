@@ -34,12 +34,16 @@ public static class Permisos
     /// <summary>Emitir URLs prefirmadas de descarga; cada emisión queda como <c>DocumentoAccedido</c>.</summary>
     public const string DocumentosDescargar = "documentos:descargar";
 
+    /// <summary>Ver los certificados de la empresa y descargar su PDF (cada descarga se audita). Revocar pide <c>expedientes:administrar</c>.</summary>
+    public const string CertificadosLeer = "certificados:leer";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer,
-        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar
+        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
+        CertificadosLeer
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -51,9 +55,9 @@ public static class Permisos
     public static readonly IReadOnlySet<string> SoloDeTenant =
         new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
 
-    /// <summary>Lo que todo rol lee; los documentos compartidos se leen y descargan con cualquier rol (docs/07 §3.2).</summary>
+    /// <summary>Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol (docs/07 §3.2).</summary>
     private static readonly string[] Lecturas =
-        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar];
+        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar, CertificadosLeer];
 
     /// <summary>Mapeo rol → scopes (docs/07 §3.1).</summary>
     public static IReadOnlyList<string> DeRol(Rol rol) => rol switch

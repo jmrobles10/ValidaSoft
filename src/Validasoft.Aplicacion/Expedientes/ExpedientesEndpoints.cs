@@ -32,19 +32,19 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/vinculos/{id}/expedientes")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<IResult> Abrir(Guid id, AbrirExpedienteDto dto, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http,
-        IMessageBus mensajes, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, ReglasDeCarga reglas, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
     {
         var version = Peticiones.VersionEsperada(http);
         var resultado = await Peticiones.ConReintentosAsync(async () =>
         {
-            await using var empresa = new SesionDeEmpresa(sesiones, contexto, reglas, reloj);
+            await using var empresa = new SesionDeEmpresa(sesiones, contexto, reglas, reloj, certificados);
             var ahora = reloj.GetUtcNow();
             var vinculoStream = await empresa.VinculoParaEscribirAsync(id, version, ct);
             var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(empresa.Sesion, vinculoStream.Aggregate!, dto.FlujoId, ct)
                         ?? throw ReglaDeNegocioException.Validacion("falta-flujo-por-defecto",
                             "El vínculo no tiene flujo y su tipo no tiene flujo por defecto publicado en la empresa.");
 
-            var abierto = await ProcesoDeValidacion.AbrirAsync(empresa.Sesion, vinculoStream, flujo, contexto, ahora, ct);
+            var abierto = await ProcesoDeValidacion.AbrirAsync(empresa.Sesion, vinculoStream, flujo, contexto, certificados, ahora, ct);
             await empresa.Sesion.SaveChangesAsync(ct);
             return await DetalleAsync(empresa, abierto.Id, ct);
         }, version is null ? 10 : 1);
@@ -277,7 +277,8 @@ public static class ExpedientesEndpoints
         IReadOnlyList<object> eventos, IMessageBus mensajes, IProtectorDeSecretos protector, HttpContext http, TimeProvider reloj,
         CancellationToken ct)
     {
-        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, new CorreoAlTercero(mensajes, protector), reloj.GetUtcNow(), ct);
+        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, new CorreoAlTercero(mensajes, protector), empresa.Certificados,
+            reloj.GetUtcNow(), ct);
         await empresa.Sesion.SaveChangesAsync(ct);
         var detalle = await DetalleAsync(empresa, stream.Id, ct);
         Peticiones.EscribirETag(http, detalle.Version);
@@ -388,7 +389,7 @@ public static class ExpedientesPublicosEndpoints
     [WolverinePost("/public/v1/expedientes/{id}/reenviar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ExpedientePublicoDto> Reenviar(Guid id, ReenviarExpedienteDto dto, HttpContext http, ISesiones sesiones,
-        ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
+        ReglasDeCarga reglas, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         Expediente? ubicado;
@@ -412,7 +413,7 @@ public static class ExpedientesPublicosEndpoints
 
         var ahora = reloj.GetUtcNow();
         var eventos = await ExpedientesEndpoints.ReenvioConVersionesAsync(sesion, expediente, OrigenReenvio.Tercero, dto.Respuesta, ahora, ct);
-        var estado = await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, ahora, ct);
+        var estado = await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
         await sesion.SaveChangesAsync(ct);
         await using var boveda = sesiones.ConsultaBoveda();
         var documentacion = await DocumentacionDelExpediente.CargarAsync(sesion, boveda, estado, reglas, CalculadoraDeVigencia.Fecha(ahora), ct);

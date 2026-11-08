@@ -8,6 +8,8 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="AWSSDK.S3" />
+    <!-- QR de la URL de verificación en el PDF del certificado (CE-6). -->
+    <PackageReference Include="QRCoder" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
     <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />

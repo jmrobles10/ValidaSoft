@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Infraestructura.Almacenamiento;
+using Validasoft.Infraestructura.Certificados;
 using Validasoft.Infraestructura.Correo;
 using Validasoft.Infraestructura.Http;
 using Validasoft.Infraestructura.Persistencia;
@@ -64,6 +66,12 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<FabricaClienteS3>();
         servicios.AddSingleton<IAlmacenDeArchivos, AlmacenS3>();
         servicios.AddHostedService<InicializadorDeAlmacen>();
+        // Certificados verificables (H5): sello Ed25519, emisión en la transacción de la aprobación, PDF y vencimientos después.
+        servicios.AddSingleton<ClavesDeCertificados>();
+        servicios.AddSingleton<EmisorDeCertificados>();
+        servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
+        servicios.AddSingleton<ArchivoDeCertificados>();
+        servicios.AddHostedService<ProcesadorDeCertificados>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)

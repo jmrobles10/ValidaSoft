@@ -1,4 +1,5 @@
 using Marten;
+using Validasoft.Aplicacion.Certificados;
 using JasperFx.Events;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -13,10 +14,14 @@ namespace Validasoft.Aplicacion.Comun;
 /// Acceso a los datos de la empresa activa (T-3): todo lo que devuelve ya viene filtrado por
 /// <c>EmpresaId</c>, y un recurso de otra empresa responde 404 (T-4), nunca 403.
 /// </summary>
-public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto, ReglasDeCarga reglas, TimeProvider reloj) : IAsyncDisposable
+public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto, ReglasDeCarga reglas, TimeProvider reloj,
+    EmisorDeCertificados certificados) : IAsyncDisposable
 {
     private IDocumentSession? _sesion;
     private IMessageBus? _mensajes;
+
+    /// <summary>Emite el certificado cuando una decisión deja el vínculo <c>Activo</c> (CE-2).</summary>
+    public EmisorDeCertificados Certificados => certificados;
 
     /// <summary>Límites globales de carga (para las reglas efectivas de los tipos de documento, TD-1).</summary>
     public ReglasDeCarga Reglas => reglas;

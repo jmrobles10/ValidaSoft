@@ -1,5 +1,6 @@
 using JasperFx.Events;
 using Marten;
+using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
 using Validasoft.Dominio.Comun;
@@ -28,8 +29,8 @@ public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFluj
 /// Proceso de validación vínculo ↔ expediente (docs/03 §8) resuelto <b>en la misma transacción</b> (FL-5): abrir el
 /// expediente registra <c>ExpedienteVinculado</c> en el vínculo; aprobarlo, rechazarlo o anularlo registra
 /// <c>ExpedienteCerrado</c> (y <c>VinculoActivado</c> si se aprobó). Los dos streams son del mismo tenant y se escriben
-/// con la misma sesión, de modo que nunca quedan desalineados. También es el único punto que escribe la bandeja (FL-8) y
-/// publica el correo de observación al tercero.
+/// con la misma sesión, de modo que nunca quedan desalineados. También es el único punto que escribe la bandeja (FL-8),
+/// publica el correo de observación al tercero y emite el certificado al activarse el vínculo (CE-2, misma transacción).
 /// </summary>
 public static class ProcesoDeValidacion
 {
@@ -86,7 +87,7 @@ public static class ProcesoDeValidacion
     /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1).
     /// </summary>
     public static async Task<Expediente> AbrirAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, FlujoResuelto flujo,
-        IContextoSolicitud contexto, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null)
+        IContextoSolicitud contexto, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null)
     {
         var vinculo = vinculoStream.Aggregate ?? throw new InvalidOperationException("El vínculo no existe.");
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -124,20 +125,20 @@ public static class ProcesoDeValidacion
 
         sesion.Events.StartStream<Expediente>(expedienteId, eventos);
         var estado = Expediente.Reproducir(null, eventos);
-        await DespuesDeEscribirAsync(sesion, estado, eventos, vinculoStream, null, ahora, ct);
+        await DespuesDeEscribirAsync(sesion, estado, eventos, vinculoStream, null, certificados, ahora, ct);
         return estado;
     }
 
     /// <summary>
     /// Anexa los eventos de una decisión al expediente y propaga sus efectos en la misma sesión: bandeja, cierre del
-    /// vínculo y, con <paramref name="correo"/>, el correo de observación con su enlace de acceso.
+    /// vínculo, certificado si se aprobó y, con <paramref name="correo"/>, el correo de observación con su enlace de acceso.
     /// </summary>
     public static async Task<Expediente> AnexarAsync(IDocumentSession sesion, IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
-        CorreoAlTercero? correo, DateTimeOffset ahora, CancellationToken ct)
+        CorreoAlTercero? correo, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
     {
         var estado = Expediente.Reproducir(stream.Aggregate, eventos);
         stream.AppendMany(eventos);
-        await DespuesDeEscribirAsync(sesion, estado, eventos, null, correo, ahora, ct);
+        await DespuesDeEscribirAsync(sesion, estado, eventos, null, correo, certificados, ahora, ct);
         return estado;
     }
 
@@ -156,7 +157,7 @@ public static class ProcesoDeValidacion
     }
 
     private static async Task DespuesDeEscribirAsync(IDocumentSession sesion, Expediente estado, IReadOnlyList<object> eventos,
-        IEventStream<Vinculo>? vinculoStream, CorreoAlTercero? correo, DateTimeOffset ahora, CancellationToken ct)
+        IEventStream<Vinculo>? vinculoStream, CorreoAlTercero? correo, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
     {
         foreach (var fila in ProyeccionBandejaRevision.Filas(estado))
             sesion.Store(fila);
@@ -170,7 +171,13 @@ public static class ProcesoDeValidacion
         {
             vinculoStream ??= await sesion.Events.FetchForWriting<Vinculo>(estado.VinculoId, ct);
             if (vinculoStream.Aggregate is { } vinculo && vinculo.ExpedienteAbiertoId == estado.Id)
-                vinculoStream.AppendMany(vinculo.CerrarExpediente(estado.Id, cierre, ahora));
+            {
+                var cerrado = vinculo.CerrarExpediente(estado.Id, cierre, ahora);
+                vinculoStream.AppendMany(cerrado);
+                // Vínculo Activo por un expediente aprobado ⇒ certificado en la misma transacción (docs/03 §8, CE-2).
+                if (cerrado.OfType<VinculoActivado>().Any())
+                    await certificados.EmitirAsync(sesion, estado, vinculo, ahora, ct);
+            }
         }
 
         if (correo is not null && eventos.OfType<ExpedienteObservado>().Any())

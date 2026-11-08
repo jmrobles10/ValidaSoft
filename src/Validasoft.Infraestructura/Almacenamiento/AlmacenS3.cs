@@ -144,6 +144,24 @@ public sealed class AlmacenS3(FabricaClienteS3 clientes, TimeProvider reloj) : I
         await clientes.Interno.CopyObjectAsync(solicitud, ct);
     }
 
+    public async Task GuardarAsync(string bucket, string clave, byte[] contenido, string tipoContenido, IReadOnlyDictionary<string, string> metadatos,
+        CancellationToken ct)
+    {
+        using var flujo = new MemoryStream(contenido, writable: false);
+        var solicitud = new PutObjectRequest
+        {
+            BucketName = bucket,
+            Key = clave,
+            InputStream = flujo,
+            ContentType = tipoContenido,
+            // Cuerpo pequeño y en memoria: firma del contenido completo, sin codificación por fragmentos (MinIO y S3).
+            UseChunkEncoding = false
+        };
+        foreach (var (nombre, valor) in metadatos)
+            solicitud.Metadata.Add(nombre, valor);
+        await clientes.Interno.PutObjectAsync(solicitud, ct);
+    }
+
     public async Task EliminarAsync(string bucket, string clave, CancellationToken ct)
     {
         try
