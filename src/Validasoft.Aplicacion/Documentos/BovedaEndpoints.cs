@@ -20,10 +20,11 @@ public static class BovedaEndpoints
 {
     [WolverineGet("/public/v1/boveda")]
     [Authorize(Policy = ReclamosTercero.Politica)]
-    public static async Task<BovedaDto> Obtener(HttpContext http, ISesiones sesiones, CancellationToken ct)
+    public static async Task<BovedaDto> Obtener(HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var terceroId = tercero.TerceroId;
+        var hoy = reloj.Hoy();
         await using var consulta = sesiones.ConsultaBoveda();
         var documentos = await consulta.Query<Documento>().Where(d => d.TerceroId == terceroId).OrderBy(d => d.CreadoEn).ToListAsync(ct);
         var vinculos = await VinculosAsync(sesiones, tercero, ct);
@@ -31,18 +32,19 @@ public static class BovedaEndpoints
         return new BovedaDto(terceroId,
         [
             .. documentos.Where(d => d.Ambito == AmbitoDocumento.Global || tercero.Vinculos.Any(v => v.VinculoId == d.VinculoId)).Select(d => new DocumentoBovedaDto(d.Id, d.Resumen(), d.Ambito.ToString(), d.Clase.ToString(), d.VinculoId,
-                d.VersionActual is { } actual ? d.VersionRequerida(actual).ADto(d.Id) : null, d.Versiones.Count, d.PorEmpresa(vinculos)))
+                d.VersionActual is { } actual ? d.VersionRequerida(actual).ADto(d.Id, null, hoy) : null, d.Versiones.Count, d.PorEmpresa(vinculos, hoy)))
         ]);
     }
 
     [WolverineGet("/public/v1/boveda/documentos/{documentoId}")]
     [Authorize(Policy = ReclamosTercero.Politica)]
-    public static async Task<DocumentoDto> ObtenerDocumento(Guid documentoId, HttpContext http, ISesiones sesiones, CancellationToken ct)
+    public static async Task<DocumentoDto> ObtenerDocumento(Guid documentoId, HttpContext http, ISesiones sesiones, TimeProvider reloj,
+        CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         await using var consulta = sesiones.ConsultaBoveda();
         var documento = DelTercero(await consulta.LoadAsync<Documento>(documentoId, ct), tercero);
-        return documento.ADto(await VinculosAsync(sesiones, tercero, ct));
+        return documento.ADto(await VinculosAsync(sesiones, tercero, ct), reloj.Hoy());
     }
 
     /// <summary>URL prefirmada GET de una versión propia; queda como <c>DocumentoAccedido</c> con el tercero como actor.</summary>
@@ -88,11 +90,15 @@ public static class BovedaEndpoints
             : [];
         // Quienes ya tenían la versión restituida también deben volver a ella en sus requisitos.
         if (proyectado.VersionActual is { } restituida && restituida != documento.VersionActual)
+        {
             await ComparticionDeDocumentos.PedirSincronizacionAsync(mensajes,
                 proyectado.Comparticiones.Where(c => c.Numero == restituida).Select(c => (c.TenantId, c.VinculoId)), contexto);
+            await mensajes.PublishAsync(new CalcularVigenciasDelDocumento(documento.Id));
+        }
 
-        // El objeto es content-addressed: solo se elimina si nadie lo vio y ninguna otra versión del tercero apunta a él.
-        var nadieLoVio = !documento.Comparticiones.Any(c => c.Numero == numero) && !version.AccedidaPorEmpresa;
+        // El objeto es content-addressed: solo se elimina si nadie lo vio y ninguna otra versión del tercero apunta a él (una
+        // versión solo de formulario no tiene binario).
+        var nadieLoVio = version.TieneArchivo && !documento.Comparticiones.Any(c => c.Numero == numero) && !version.AccedidaPorEmpresa;
         var terceroId = tercero.TerceroId;
         var otros = nadieLoVio
             ? await sesion.Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct)
@@ -144,7 +150,7 @@ public static class DocumentosDeVinculoEndpoints
     [WolverineGet("/api/v1/vinculos/{id}/documentos")]
     [Authorize(Policy = Permisos.DocumentosLeer)]
     public static async Task<IReadOnlyList<DocumentoVistaEmpresaDto>> Listar(Guid id, SesionDeEmpresa empresa, ISesiones sesiones,
-        CancellationToken ct)
+        TimeProvider reloj, CancellationToken ct)
     {
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
         if (!Visible(vinculo))
@@ -153,18 +159,19 @@ public static class DocumentosDeVinculoEndpoints
         var terceroId = vinculo.TerceroId;
         await using var consulta = sesiones.ConsultaBoveda();
         var documentos = await consulta.Query<Documento>().Where(d => d.TerceroId == terceroId).OrderBy(d => d.CreadoEn).ToListAsync(ct);
-        return [.. documentos.Select(d => Vista(d, id)).OfType<DocumentoVistaEmpresaDto>()];
+        var hoy = reloj.Hoy();
+        return [.. documentos.Select(d => Vista(d, id, hoy)).OfType<DocumentoVistaEmpresaDto>()];
     }
 
     [WolverineGet("/api/v1/vinculos/{id}/documentos/{documentoId}")]
     [Authorize(Policy = Permisos.DocumentosLeer)]
     public static async Task<DocumentoVistaEmpresaDto> Obtener(Guid id, Guid documentoId, SesionDeEmpresa empresa, ISesiones sesiones,
-        CancellationToken ct)
+        TimeProvider reloj, CancellationToken ct)
     {
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
         await using var consulta = sesiones.ConsultaBoveda();
         var documento = await consulta.LoadAsync<Documento>(documentoId, ct);
-        return Visible(vinculo) && documento is not null && documento.TerceroId == vinculo.TerceroId && Vista(documento, id) is { } vista
+        return Visible(vinculo) && documento is not null && documento.TerceroId == vinculo.TerceroId && Vista(documento, id, reloj.Hoy()) is { } vista
             ? vista
             : throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
     }
@@ -196,7 +203,8 @@ public static class DocumentosDeVinculoEndpoints
     private static bool Visible(Dominio.Vinculos.Vinculo vinculo) =>
         vinculo.InvitacionAceptada && vinculo.Estado != Dominio.Vinculos.EstadoVinculo.Anulado;
 
-    private static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId)
+    /// <summary>Solo las versiones compartidas con el vínculo, cada una con sus datos declarados y la vigencia de este vínculo.</summary>
+    private static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId, DateOnly hoy)
     {
         var numeros = documento.Comparticiones.Where(c => c.VinculoId == vinculoId).Select(c => c.Numero).ToHashSet();
         if (numeros.Count == 0)
@@ -204,6 +212,6 @@ public static class DocumentosDeVinculoEndpoints
 
         var actual = documento.VersionActual is { } n && numeros.Contains(n) ? n : (int?)null;
         return new DocumentoVistaEmpresaDto(documento.Id, documento.Resumen(), documento.Ambito.ToString(), actual,
-            [.. documento.Versiones.Where(v => numeros.Contains(v.Numero)).OrderBy(v => v.Numero).Select(v => v.ADto(documento.Id))]);
+            [.. documento.Versiones.Where(v => numeros.Contains(v.Numero)).OrderBy(v => v.Numero).Select(v => v.ADto(documento.Id, vinculoId, hoy))]);
     }
 }

@@ -8,7 +8,13 @@ public enum EstadoVersion
     Actual,
     Superada,
     Devuelta,
-    Retirada
+    Retirada,
+
+    /// <summary>
+    /// La versión actual venció (pasó <c>vigenteHasta + diasGracia</c>) para todos los vínculos con vigencia (TD-6). Sigue
+    /// siendo la actual del documento: renovarla o abrir la renovación es H6.
+    /// </summary>
+    Vencida
 }
 
 /// <summary>Comparación de una versión con la actual (sin IA solo por hash, docs/03 §3.1).</summary>
@@ -70,7 +76,11 @@ public sealed record DocumentoCreado(
     Guid? VinculoId,
     DateTimeOffset Fecha);
 
-/// <summary>El binario ya está en su clave definitiva (confirmado por hash); la versión nace <c>Recibida</c>.</summary>
+/// <summary>
+/// El binario ya está en su clave definitiva (confirmado por hash); la versión nace <c>Recibida</c>. Con datos declarados
+/// (TD-4) llegan <see cref="Datos"/> y su huella <see cref="HashDatos"/>; una versión solo de formulario no tiene binario
+/// (<see cref="Bucket"/> y <see cref="ClaveObjeto"/> vacíos) y su <see cref="Sha256"/> es la huella de los datos.
+/// </summary>
 public sealed record VersionCargada(
     int Numero,
     ClaseDocumento Clase,
@@ -82,10 +92,31 @@ public sealed record VersionCargada(
     string NombreOriginal,
     Guid? ContextoVinculoId,
     string CargadaPor,
+    DateTimeOffset Fecha,
+    string? HashDatos = null,
+    IReadOnlyList<DatoDeclarado>? Datos = null);
+
+/// <summary>
+/// Vigencia de la versión actual para un vínculo, con la regla del tipo del tenant de ese vínculo (TD-6). Se recalcula si
+/// cambia la regla o la versión; idempotente (mismo resultado ⇒ sin evento).
+/// </summary>
+public sealed record VigenciaDeVersionCalculada(
+    int Numero,
+    Guid TenantId,
+    Guid EmpresaId,
+    Guid VinculoId,
+    Guid TipoDocumentoTenantId,
+    DateOnly? VigenteHasta,
+    BaseVigencia Base,
+    IReadOnlyList<int> DiasAviso,
+    int DiasGracia,
     DateTimeOffset Fecha);
 
+/// <summary>Pasó <c>vigenteHasta + diasGracia</c> de la versión para ese vínculo (TD-6). No cambia el estado del vínculo (H6).</summary>
+public sealed record VersionVencida(int Numero, Guid VinculoId, DateOnly VigenteHasta, int DiasGracia, DateTimeOffset Fecha);
+
 /// <summary>El mismo archivo (mismo SHA-256) ya es una versión del documento: no se crea otra (docs/02 §5 regla 1).</summary>
-public sealed record VersionDuplicadaDetectada(int NumeroExistente, string Sha256, DateTimeOffset Fecha);
+public sealed record VersionDuplicadaDetectada(int NumeroExistente, string Sha256, DateTimeOffset Fecha, string? HashDatos = null);
 
 public sealed record AnalisisDeVersionIniciado(int Numero, bool ConIa, DateTimeOffset Fecha);
 

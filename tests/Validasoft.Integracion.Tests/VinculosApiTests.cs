@@ -16,14 +16,15 @@ namespace Validasoft.Integracion.Tests;
 /// <summary>
 /// Levanta PostgreSQL 17 y MinIO en Docker (Testcontainers) y la API completa en memoria (Alba). Los correos no salen: los
 /// captura <see cref="CorreosCapturados"/>. El límite de peticiones públicas es bajo (20 por minuto y por IP) y el tamaño
-/// máximo de archivo también (<see cref="TamanoMaximo"/>) para probar el 413 sin subir 20 MB.
+/// máximo de archivo también (<see cref="TamanoMaximo"/>, 3 MB) para probar el 413 sin subir 20 MB y dejar espacio a un tipo
+/// de 1 MB (TD-1). El reloj de la aplicación es <see cref="Reloj"/>: el real, salvo que una prueba lo adelante.
 /// </summary>
 public sealed class ApiFixture : IAsyncLifetime
 {
     public const string ClavePlataforma = "dev-plataforma-solo-local-cambiar-0001";
     public const string UrlPublica = "https://publico.validasoft.test";
     public const int LimitePublico = 20;
-    public const long TamanoMaximo = 256 * 1024;
+    public const long TamanoMaximo = 3 * 1024 * 1024;
 
     /// <summary>Fork comunitario de MinIO (misma línea de comandos; minio/minio ya no se publica en Docker Hub).</summary>
     public const string ImagenMinio = "pgsty/minio:RELEASE.2026-08-04T00-00-00Z";
@@ -45,6 +46,8 @@ public sealed class ApiFixture : IAsyncLifetime
     public IAlbaHost Host { get; private set; } = null!;
 
     public CorreosCapturados Correos { get; } = new();
+
+    public RelojDePruebas Reloj { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -73,6 +76,8 @@ public sealed class ApiFixture : IAsyncLifetime
             {
                 s.RemoveAll<IEnviadorDeCorreo>();
                 s.AddSingleton<IEnviadorDeCorreo>(Correos);
+                s.RemoveAll<TimeProvider>();
+                s.AddSingleton<TimeProvider>(Reloj);
             });
         });
     }
@@ -94,6 +99,14 @@ public sealed class ApiFixture : IAsyncLifetime
         File.WriteAllText(Path.Combine(CarpetaApps, "public", "index.html"), "<!doctype html><title>public</title>");
         File.WriteAllText(Path.Combine(CarpetaApps, "public", "assets", "public-abc123.js"), "console.log('public');");
     }
+}
+
+/// <summary>Reloj real desplazado <see cref="Desfase"/> (las pruebas de vigencias lo adelantan y lo devuelven a cero).</summary>
+public sealed class RelojDePruebas : TimeProvider
+{
+    public TimeSpan Desfase { get; set; }
+
+    public override DateTimeOffset GetUtcNow() => base.GetUtcNow() + Desfase;
 }
 
 /// <summary>Enviador falso: guarda los correos para leer el enlace o el código; el envío real ocurre tras el commit (outbox).</summary>

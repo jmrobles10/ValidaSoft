@@ -95,7 +95,12 @@ public static class ComparticionDeDocumentos
         foreach (var evento in eventos)
             stream.AppendOne(evento);
         if (mensajes is not null && contexto is not null)
+        {
             await PedirSincronizacionAsync(mensajes, eventos.Select(e => (e.TenantId, e.VinculoId)), contexto);
+            if (eventos.Count > 0)
+                await mensajes.PublishAsync(new CalcularVigenciasDelDocumento(proyectado.Id));
+        }
+
         return [.. eventos.Select(e => e.ADto(proyectado))];
     }
 

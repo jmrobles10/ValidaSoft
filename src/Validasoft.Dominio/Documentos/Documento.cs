@@ -41,7 +41,29 @@ public sealed class VersionDocumento
 
     /// <summary>Alguna empresa emitió una descarga de esta versión: su binario ya no se elimina al retirarla (docs/02 §10.3).</summary>
     public bool AccedidaPorEmpresa { get; set; }
+
+    /// <summary>Huella de los datos declarados (TD-4); nula si la versión es solo archivo.</summary>
+    public string? HashDatos { get; set; }
+
+    /// <summary>Datos que declaró el tercero, en el orden del formulario; nulos si la versión es solo archivo.</summary>
+    public List<DatoDeclarado>? Datos { get; set; }
+
+    /// <summary>Vigencia por vínculo, cada una con la regla del tipo de su tenant (TD-6).</summary>
+    public List<VigenciaDeVersion> Vigencias { get; set; } = [];
+
+    /// <summary>Una versión solo de formulario no tiene binario que descargar.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool TieneArchivo => ClaveObjeto.Length > 0;
+
+    public VigenciaDeVersion? VigenciaPara(Guid vinculoId) => Vigencias.FirstOrDefault(v => v.VinculoId == vinculoId);
+
+    /// <summary>El vencimiento más próximo entre los vínculos (lo que obliga primero al tercero, docs/02 §8.3).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public VigenciaDeVersion? ProximaVigencia => Vigencias.Where(v => v.VigenteHasta is not null).MinBy(v => v.VigenteHasta);
 }
+
+/// <summary>Vínculo con el que la versión actual está compartida y el tipo del tenant cuya regla define su vigencia.</summary>
+public sealed record DestinoDeVigencia(Guid TenantId, Guid EmpresaId, Guid VinculoId, TipoDocumentoTenant Tipo);
 
 /// <summary>Versión visible para una empresa por su vínculo (<c>comparticion_version</c>); nunca se revoca (docs/02 §6).</summary>
 public sealed record Comparticion(int Numero, Guid TenantId, Guid EmpresaId, Guid VinculoId, OrigenComparticion Origen, DateTimeOffset Fecha);
@@ -137,6 +159,11 @@ public sealed class Documento
     public VersionDocumento? BuscarPorHash(string sha256) =>
         Versiones.FirstOrDefault(v => string.Equals(v.Sha256, sha256, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>Misma versión = mismo archivo y mismos datos declarados (docs/02 §5 regla 1: <c>sha256</c> o <c>hash_datos</c>).</summary>
+    public VersionDocumento? BuscarPorHuella(string sha256, string? hashDatos) =>
+        Versiones.FirstOrDefault(v => string.Equals(v.Sha256, sha256, StringComparison.OrdinalIgnoreCase) &&
+                                      string.Equals(v.HashDatos, hashDatos, StringComparison.OrdinalIgnoreCase));
+
     public bool EstaCompartida(int numero, Guid vinculoId) => Comparticiones.Any(c => c.Numero == numero && c.VinculoId == vinculoId);
 
     // ---------- Decisiones ----------
@@ -161,23 +188,33 @@ public sealed class Documento
             throw new InvalidOperationException("Un tipo de ámbito Global se guarda en el documento global del canónico.");
         if (tipo.TenantId != tenantId)
             throw new InvalidOperationException("El tipo de documento es de otro tenant.");
-        AsegurarClaseSoportada(tipo.Clase, tipo.Codigo);
+        AsegurarCargaSoportada(tipo);
 
         return new DocumentoCreado(Guid.CreateVersion7(), terceroId, AmbitoDocumento.PorVinculo, tipo.Clase, tipo.TipoCanonico, tipo.Id,
             tipo.Nombre, tenantId, empresaId, vinculoId, ahora);
     }
 
-    /// <summary>Esta fase solo carga archivos; un formulario ⇒ 422 <c>clase-no-soportada</c>.</summary>
+    /// <summary>Un canónico global de clase <c>Formulario</c> aún no tiene esquema: 422 <c>clase-no-soportada</c>.</summary>
     public static void AsegurarClaseSoportada(ClaseDocumento clase, string codigo)
     {
         if (clase != ClaseDocumento.Archivo)
             throw ReglaDeNegocioException.Validacion("clase-no-soportada",
-                $"{codigo} es un formulario; la carga de formularios aún no está disponible.");
+                $"{codigo} es un formulario sin esquema canónico todavía; la empresa puede pedirlo con sus propios campos (PorVinculo).");
     }
 
-    /// <summary>Mismo SHA-256 ya registrado en el documento ⇒ el hecho de duplicado (sin versión nueva); si no, nulo.</summary>
-    public VersionDuplicadaDetectada? DetectarDuplicado(string sha256, DateTimeOffset ahora) =>
-        BuscarPorHash(sha256) is { } existente ? new VersionDuplicadaDetectada(existente.Numero, existente.Sha256, ahora) : null;
+    /// <summary>El tipo del tenant se puede entregar (<see cref="TipoDocumentoTenant.CargaSoportada"/>); si no ⇒ 422 <c>clase-no-soportada</c>.</summary>
+    public static void AsegurarCargaSoportada(TipoDocumentoTenant tipo)
+    {
+        if (!tipo.CargaSoportada)
+            throw ReglaDeNegocioException.Validacion("clase-no-soportada",
+                $"{tipo.Codigo} es un formulario sin campos configurados (o global): la empresa debe definir sus campos y dejarlo PorVinculo.");
+    }
+
+    /// <summary>Mismo archivo y mismos datos ya registrados en el documento ⇒ el hecho de duplicado (sin versión nueva); si no, nulo.</summary>
+    public VersionDuplicadaDetectada? DetectarDuplicado(string sha256, DateTimeOffset ahora, string? hashDatos = null) =>
+        BuscarPorHuella(sha256, hashDatos) is { } existente
+            ? new VersionDuplicadaDetectada(existente.Numero, existente.Sha256, ahora, existente.HashDatos)
+            : null;
 
     /// <summary>
     /// Registra un archivo verificado: <c>VersionCargada</c> → <c>AnalisisDeVersionIniciado</c> (sin IA) →
@@ -186,11 +223,9 @@ public sealed class Documento
     /// el antivirus no está disponible y se exige, la versión espera en <c>EnAnalisis</c> (T-11).
     /// </summary>
     public IReadOnlyList<object> RegistrarVersionArchivo(ArchivoVerificado archivo, MotivoDeDevolucion? devolucion, Antivirus antivirus,
-        bool exigirAntivirus, DateTimeOffset ahora)
+        bool exigirAntivirus, DateTimeOffset ahora, DatosVerificados? datos = null)
     {
-        AsegurarClaseSoportada(Clase, NombreTipo);
-
-        if (BuscarPorHash(archivo.Sha256) is not null)
+        if (BuscarPorHuella(archivo.Sha256, datos?.Hash) is not null)
             throw ReglaDeNegocioException.Conflicto("version-duplicada", "Ese archivo ya es una versión de este documento.");
 
         if (archivo.Numero != SiguienteNumero)
@@ -203,7 +238,7 @@ public sealed class Documento
         var eventos = new List<object>
         {
             new VersionCargada(archivo.Numero, ClaseDocumento.Archivo, archivo.Sha256, archivo.Bucket, archivo.ClaveObjeto, archivo.MimeDeclarado,
-                archivo.Tamano, archivo.NombreOriginal, archivo.ContextoVinculoId, archivo.CargadaPor, ahora),
+                archivo.Tamano, archivo.NombreOriginal, archivo.ContextoVinculoId, archivo.CargadaPor, ahora, datos?.Hash, datos?.Datos),
             new AnalisisDeVersionIniciado(archivo.Numero, ConIa: false, ahora),
             new HechosDeVersionRegistrados(archivo.Numero, hechos, ahora)
         };
@@ -220,13 +255,80 @@ public sealed class Documento
     }
 
     /// <summary>
+    /// Registra una versión solo de formulario (TD-4): sin binario, su huella es la de los datos. No hay antivirus que
+    /// esperar ni páginas que revisar: pasa a <c>Actual</c> (la anterior queda superada). Mismos datos ⇒ 409
+    /// <c>version-duplicada</c> (el llamador detecta antes el duplicado con <see cref="DetectarDuplicado"/>).
+    /// </summary>
+    public IReadOnlyList<object> RegistrarVersionFormulario(DatosVerificados datos, Guid? contextoVinculoId, string cargadaPor, DateTimeOffset ahora)
+    {
+        if (BuscarPorHuella(datos.Hash, datos.Hash) is not null)
+            throw ReglaDeNegocioException.Conflicto("version-duplicada", "Esos datos ya son una versión de este documento.");
+
+        var numero = SiguienteNumero;
+        var comparacion = VersionActual is null ? Comparacion.SinAnterior : Comparacion.Distinta;
+        var hechos = new HechosBasicos(true, "application/json", null, Antivirus.NoDisponible, comparacion, ConIa: false, PendienteRevisionHumana: true);
+        return
+        [
+            new VersionCargada(numero, ClaseDocumento.Formulario, datos.Hash, string.Empty, string.Empty, "application/json", 0, "formulario",
+                contextoVinculoId, cargadaPor, ahora, datos.Hash, datos.Datos),
+            new AnalisisDeVersionIniciado(numero, ConIa: false, ahora),
+            new HechosDeVersionRegistrados(numero, hechos, ahora),
+            new VersionActualCambiada(numero, VersionActual, comparacion, [], [], ConIa: false, ahora)
+        ];
+    }
+
+    /// <summary>
+    /// Vigencias de la versión actual para cada vínculo con el que está compartida (TD-6), cada una con la regla del tipo
+    /// del tenant de ese vínculo: <c>MaxDiasDesdeExpedicion</c> desde <c>fecha_expedicion</c> declarada (o la carga),
+    /// acotada por <c>fecha_vencimiento</c> declarada (docs/02 §8.1). Solo emite lo que cambió (idempotente).
+    /// </summary>
+    public IReadOnlyList<VigenciaDeVersionCalculada> CalcularVigencias(IEnumerable<DestinoDeVigencia> destinos, DateTimeOffset ahora)
+    {
+        if (VersionActual is not { } numero)
+            return [];
+
+        var version = VersionRequerida(numero);
+        var eventos = new List<VigenciaDeVersionCalculada>();
+        foreach (var destino in destinos.DistinctBy(d => d.VinculoId))
+        {
+            if (!EstaCompartida(numero, destino.VinculoId))
+                continue;
+
+            var tipo = destino.Tipo;
+            var calculo = CalculadoraDeVigencia.Calcular(tipo.ReglaFrescura, version.CargadaEn, version.Datos);
+            var previa = version.VigenciaPara(destino.VinculoId);
+            if (previa is not null && previa.VigenteHasta == calculo.VigenteHasta && previa.Base == calculo.Base &&
+                previa.DiasGracia == tipo.DiasGracia && previa.TipoDocumentoTenantId == tipo.Id && previa.DiasAviso.SequenceEqual(tipo.DiasAviso))
+                continue;
+
+            eventos.Add(new VigenciaDeVersionCalculada(numero, destino.TenantId, destino.EmpresaId, destino.VinculoId, tipo.Id, calculo.VigenteHasta,
+                calculo.Base, [.. tipo.DiasAviso], tipo.DiasGracia, ahora));
+        }
+
+        return eventos;
+    }
+
+    /// <summary>
+    /// La versión vence para el vínculo si sigue siendo la actual, su vigencia allí tiene fecha y ya pasó
+    /// <c>vigenteHasta + diasGracia</c>; si no (o ya venció), nulo. No toca el vínculo ni abre renovaciones (H6).
+    /// </summary>
+    public VersionVencida? Vencer(int numero, Guid vinculoId, DateTimeOffset ahora)
+    {
+        if (VersionActual != numero || Buscar(numero)?.VigenciaPara(vinculoId) is not { VigenteHasta: { } hasta, VencidaEn: null } vigencia)
+            return null;
+        return CalculadoraDeVigencia.Fecha(ahora) > vigencia.FinDeGracia
+            ? new VersionVencida(numero, vinculoId, hasta, vigencia.DiasGracia, ahora)
+            : null;
+    }
+
+    /// <summary>
     /// El tercero retira una versión: no vuelve a usarse ni a compartirse. Si era la actual, la superada más reciente
     /// vuelve a serlo (I-11). Devuelta o ya retirada ⇒ 409. (Las aceptaciones y certificados que lo impedirían llegan con H3/H4.)
     /// </summary>
     public IReadOnlyList<object> RetirarVersion(int numero, string? motivo, DateTimeOffset ahora)
     {
         var version = VersionRequerida(numero);
-        if (version.Estado is not (EstadoVersion.Actual or EstadoVersion.Superada))
+        if (version.Estado is not (EstadoVersion.Actual or EstadoVersion.Superada or EstadoVersion.Vencida))
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se puede retirar una versión {version.Estado}.");
         if (string.IsNullOrWhiteSpace(motivo))
             throw ReglaDeNegocioException.Validacion("motivo-requerido", "Indica por qué retiras la versión.");
@@ -270,6 +372,8 @@ public sealed class Documento
         var version = VersionRequerida(numero);
         if (empresa is not null && !EstaCompartida(version.Numero, empresa.VinculoId))
             throw ReglaDeNegocioException.NoEncontrado("version-no-encontrada", $"El documento no tiene la versión {numero}.");
+        if (!version.TieneArchivo)
+            throw ReglaDeNegocioException.Conflicto("version-sin-archivo", $"La versión {numero} es un formulario: sus datos vienen en la versión, no hay archivo.");
 
         return new DocumentoAccedido(numero, empresa?.TenantId, empresa?.EmpresaId, empresa?.VinculoId, actorTipo, actorId, ip, userAgent,
             motivo, ahora);
@@ -298,6 +402,8 @@ public sealed class Documento
             case VersionActualRestituida e: Apply(e); break;
             case VersionCompartida e: Apply(e); break;
             case DocumentoAccedido e: Apply(e); break;
+            case VigenciaDeVersionCalculada e: Apply(e); break;
+            case VersionVencida e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento no aplicable a Documento: {evento.GetType().Name}.");
         }
     }
@@ -338,9 +444,54 @@ public sealed class Documento
             NombreOriginal = e.NombreOriginal,
             ContextoVinculoId = e.ContextoVinculoId,
             CargadaPor = e.CargadaPor,
-            CargadaEn = e.Fecha
+            CargadaEn = e.Fecha,
+            HashDatos = e.HashDatos,
+            Datos = e.Datos is null ? null : [.. e.Datos]
         });
         ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VigenciaDeVersionCalculada e)
+    {
+        var version = VersionRequerida(e.Numero);
+        var previa = version.VigenciaPara(e.VinculoId);
+        version.Vigencias.RemoveAll(v => v.VinculoId == e.VinculoId);
+        version.Vigencias.Add(new VigenciaDeVersion
+        {
+            TenantId = e.TenantId,
+            EmpresaId = e.EmpresaId,
+            VinculoId = e.VinculoId,
+            TipoDocumentoTenantId = e.TipoDocumentoTenantId,
+            VigenteHasta = e.VigenteHasta,
+            Base = e.Base,
+            DiasAviso = [.. e.DiasAviso],
+            DiasGracia = e.DiasGracia,
+            CalculadaEn = e.Fecha,
+            // Una vigencia recalculada solo conserva el vencimiento si su fin de gracia no cambió.
+            VencidaEn = previa?.VencidaEn is { } vencida && previa.FinDeGracia == CalculadoraDeVigencia.FinDeGracia(e.VigenteHasta, e.DiasGracia)
+                ? vencida
+                : null
+        });
+        if (version.Estado == EstadoVersion.Vencida && !TodasVencidas(version))
+            version.Estado = EstadoVersion.Actual;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VersionVencida e)
+    {
+        var version = VersionRequerida(e.Numero);
+        if (version.VigenciaPara(e.VinculoId) is { } vigencia)
+            vigencia.VencidaEn = e.Fecha;
+        if (version.Estado == EstadoVersion.Actual && TodasVencidas(version))
+            version.Estado = EstadoVersion.Vencida;
+        ActualizadoEn = e.Fecha;
+    }
+
+    /// <summary>La versión vence para el documento cuando venció en todos los vínculos donde tiene fecha de vigencia.</summary>
+    private static bool TodasVencidas(VersionDocumento version)
+    {
+        var conFecha = version.Vigencias.Where(v => v.VigenteHasta is not null).ToList();
+        return conFecha.Count > 0 && conFecha.All(v => v.VencidaEn is not null);
     }
 
     public void Apply(VersionDuplicadaDetectada e) => ActualizadoEn = e.Fecha;
