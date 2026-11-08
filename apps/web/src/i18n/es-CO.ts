@@ -1,5 +1,7 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
 import { documentos, erroresDocumentos } from './es-CO-documentos';
+import { certificados, webhooks } from './es-CO-integraciones';
+import { notificaciones } from './es-CO-notificaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
 
 export const esCO = {
@@ -214,6 +216,9 @@ export const esCO = {
   bandeja,
   expedientes,
   documentos,
+  notificaciones,
+  webhooks,
+  certificados,
   motivos,
   flujos,
   historial: {
