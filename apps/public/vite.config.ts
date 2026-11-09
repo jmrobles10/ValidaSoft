@@ -12,7 +12,12 @@ export default defineConfig(({ mode }) => {
   const mailpit = entorno.VALIDASOFT_MAILPIT_URL ?? 'http://localhost:8025';
   // `Set-Cookie` pasa tal cual (la cookie `vs_tercero` de la sesión, Path=/public/v1/sesion); sin `Domain`, queda en el
   // origen de Vite (:5181), el mismo que la app, así que SameSite=Lax basta y el navegador la manda al renovar.
-  const proxy = { '/public/v1': { target: api, changeOrigin: true, cookieDomainRewrite: { '*': '' } } };
+  // `/.well-known`: claves públicas del sello de los certificados, que la página de verificación lee del mismo origen
+  // (el certificado publica `firma.clavePublicaUrl` en `{UrlPublica}`).
+  const proxy = {
+    '/public/v1': { target: api, changeOrigin: true, cookieDomainRewrite: { '*': '' } },
+    '/.well-known': { target: api, changeOrigin: true },
+  };
 
   return {
     plugins: [react()],

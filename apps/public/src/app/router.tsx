@@ -13,6 +13,8 @@ const rutas: RouteObject[] = [
       { index: true, element: <Navigate to="/empresas" replace /> },
       { path: 'entrar', element: <PaginaEntrar /> },
       { path: 'e/:token', lazy: () => import('../enlace/PaginaEnlace').then((m) => ({ Component: m.PaginaEnlace })) },
+      // Anónima: a donde lleva el QR del certificado (`{UrlPublica}/verificar/{folio}?huella=…`).
+      { path: 'verificar/:folio', lazy: () => import('../verificacion/PaginaVerificacion').then((m) => ({ Component: m.PaginaVerificacion })) },
       {
         element: <RequiereSesion />,
         children: [

@@ -20,6 +20,8 @@ export function Shell() {
   const activa = useSesionTercero((s) => s.estado === 'activa');
   const salir = useSesionTercero((s) => s.salir);
   const actual = SECCIONES.find((s) => pathname.startsWith(s.ruta))?.ruta ?? (pathname.startsWith('/expediente') ? '/empresas' : false);
+  // La verificación del certificado es pública: quien escanea el QR no es el tercero.
+  const verificando = pathname.startsWith('/verificar/');
 
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
@@ -29,7 +31,7 @@ export function Shell() {
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>{t('comun.marca')}</Typography>
             <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
-              {t('comun.misDocumentos')}
+              {verificando ? t('verificacion.marca') : t('comun.misDocumentos')}
             </Typography>
           </Box>
           {activa && (

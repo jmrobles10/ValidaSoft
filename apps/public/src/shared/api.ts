@@ -66,7 +66,7 @@ export function useRetirarVersion(documentoId: string, numero: number) {
 }
 
 /** La URL prefirmada (5 min, `Content-Disposition: attachment`) se abre en el momento: el navegador descarga el archivo. */
-function abrirDescarga(descarga: DescargaDto): DescargaDto {
+export function abrirDescarga(descarga: DescargaDto): DescargaDto {
   const enlace = document.createElement('a');
   enlace.href = descarga.url;
   enlace.rel = 'noopener';
