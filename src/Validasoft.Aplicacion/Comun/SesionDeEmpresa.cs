@@ -51,7 +51,7 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
     public string? UsuarioConsultante =>
         contexto.ActorTipo == ActorTipo.Usuario && Guid.TryParse(contexto.ActorId, out var usuarioId) ? usuarioId.ToString() : null;
 
-    public IQueryable<Vinculo> Vinculos() => Sesion.Query<Vinculo>().Where(v => v.EmpresaId == EmpresaId);
+    public IQueryable<Vinculo> Vinculos() => Delimitar(Sesion.Query<Vinculo>(), EmpresaId);
 
     public async Task<Vinculo> CargarVinculoAsync(Guid id, CancellationToken ct)
     {
@@ -61,7 +61,7 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
             : throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo en la empresa.");
     }
 
-    public IQueryable<Area> Areas() => Sesion.Query<Area>().Where(a => a.EmpresaId == EmpresaId);
+    public IQueryable<Area> Areas() => Delimitar(Sesion.Query<Area>(), EmpresaId);
 
     public async Task<Area> CargarAreaAsync(Guid id, CancellationToken ct)
     {
@@ -84,7 +84,7 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
         return stream;
     }
 
-    public IQueryable<Flujo> Flujos() => Sesion.Query<Flujo>().Where(f => f.EmpresaId == EmpresaId);
+    public IQueryable<Flujo> Flujos() => Delimitar(Sesion.Query<Flujo>(), EmpresaId);
 
     public async Task<Flujo> CargarFlujoAsync(Guid id, CancellationToken ct)
     {
@@ -94,7 +94,7 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
             : throw ReglaDeNegocioException.NoEncontrado("flujo-no-encontrado", "No existe ese flujo en la empresa.");
     }
 
-    public IQueryable<Expediente> Expedientes() => Sesion.Query<Expediente>().Where(e => e.EmpresaId == EmpresaId);
+    public IQueryable<Expediente> Expedientes() => Delimitar(Sesion.Query<Expediente>(), EmpresaId);
 
     public async Task<Expediente> CargarExpedienteAsync(Guid id, CancellationToken ct)
     {
@@ -119,6 +119,16 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
 
         return stream;
     }
+
+    // La empresa se resuelve antes de armar la consulta: si falta X-Empresa, el 422 sale tal cual. Dentro de la expresión
+    // Marten la evaluaría al traducirla y envolvería la excepción en BadLinqExpressionException (500).
+    private static IQueryable<Vinculo> Delimitar(IQueryable<Vinculo> consulta, Guid empresaId) => consulta.Where(x => x.EmpresaId == empresaId);
+
+    private static IQueryable<Area> Delimitar(IQueryable<Area> consulta, Guid empresaId) => consulta.Where(x => x.EmpresaId == empresaId);
+
+    private static IQueryable<Flujo> Delimitar(IQueryable<Flujo> consulta, Guid empresaId) => consulta.Where(x => x.EmpresaId == empresaId);
+
+    private static IQueryable<Expediente> Delimitar(IQueryable<Expediente> consulta, Guid empresaId) => consulta.Where(x => x.EmpresaId == empresaId);
 
     public async ValueTask DisposeAsync()
     {
