@@ -136,7 +136,7 @@ test('lo que vence se ve en la bóveda del proveedor y en Vencimientos de Sur, q
   // El proveedor ve en su bóveda qué renovar primero y con quién.
   await page.goto('/boveda');
   const porRenovar = page.getByRole('region', { name: 'Por renovar' }).or(page.locator('section, .MuiCard-root', { hasText: 'Por renovar' }).first());
-  await expect(porRenovar).toContainText(`${SST.nombre}`);
+  await expect(porRenovar).toContainText(SST.nombre);
   await expect(porRenovar).toContainText(`vence para ${e.sur.nombre} el ${vence}`);
   await page.screenshot({ path: 'test-results/boveda-por-renovar.png', fullPage: true });
 
