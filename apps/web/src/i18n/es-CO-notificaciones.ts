@@ -54,6 +54,10 @@ export const notificaciones = {
       titulo: 'Documento vencido',
       explicacion: 'Cuando un documento de un vínculo de tus áreas venció y ya pasó su plazo de gracia.',
     },
+    cupoIa: {
+      titulo: 'Cupo de revisión automática',
+      explicacion: 'A los administradores, cuando la empresa llega al 80 % y al 100 % de las validaciones con IA incluidas en su plan del mes.',
+    },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',
       explicacion: 'A los administradores, cuando una suscripción de webhooks se deshabilita por entregas fallidas seguidas.',

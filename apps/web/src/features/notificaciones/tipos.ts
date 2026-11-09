@@ -11,6 +11,7 @@ export const CLAVES_TIPO = {
   'documento.por_vencer': 'porVencer',
   'documento.vencido': 'vencido',
   'webhook.deshabilitado': 'webhookDeshabilitado',
+  'ia.cupo': 'cupoIa',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];
