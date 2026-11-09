@@ -71,11 +71,14 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
             : throw ReglaDeNegocioException.NoEncontrado("area-no-encontrada", "No existe esa área en la empresa.");
     }
 
-    /// <summary>Carga el stream para escribir con concurrencia optimista (<c>If-Match</c> si llega).</summary>
+    /// <summary>
+    /// Stream del vínculo para escribir. Con <c>If-Match</c>, concurrencia optimista; sin él, bloqueo de fila (CE-12, como
+    /// FL-12): los procesos en segundo plano también escriben en el vínculo y no deben devolver 412 a quien no pidió versión.
+    /// </summary>
     public async Task<IEventStream<Vinculo>> VinculoParaEscribirAsync(Guid id, long? versionEsperada, CancellationToken ct)
     {
         var stream = versionEsperada is null
-            ? await Sesion.Events.FetchForWriting<Vinculo>(id, ct)
+            ? await Sesion.Events.FetchForExclusiveWriting<Vinculo>(id, ct)
             : await Sesion.Events.FetchForWriting<Vinculo>(id, versionEsperada.Value, ct);
 
         if (stream.Aggregate is null || stream.Aggregate.EmpresaId != EmpresaId)

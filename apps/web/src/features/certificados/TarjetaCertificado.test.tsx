@@ -94,7 +94,9 @@ describe('Certificado del vínculo', () => {
     const dialogo = await screen.findByRole('dialog');
     const confirmar = within(dialogo).getByRole('button', { name: 'Revocar certificado' });
     expect(confirmar).toBeDisabled();
-    await usuario.type(within(dialogo).getByRole('textbox', { name: /Justificación/ }), 'Se aprobó con un documento adulterado');
+    // Pegar en vez de teclear: escribir letra por letra en el diálogo pasaba de 5 s con la suite completa en paralelo.
+    await usuario.click(within(dialogo).getByRole('textbox', { name: /Justificación/ }));
+    await usuario.paste('Se aprobó con un documento adulterado');
     await usuario.click(confirmar);
     await waitFor(() => expect(peticiones).toContainEqual({ url: '/api/v1/certificados/NORTE-C-2026-000001-1/revocar', metodo: 'POST', cuerpo: { justificacion: 'Se aprobó con un documento adulterado' } }));
   });

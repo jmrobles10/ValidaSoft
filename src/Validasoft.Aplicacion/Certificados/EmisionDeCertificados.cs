@@ -160,13 +160,14 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
 /// <summary>
 /// El certificado sigue al vínculo en la misma transacción (docs/03 §8, B-5): bloquear ⇒ <c>Suspendido</c>; desbloquear ⇒
 /// <c>Restablecido</c> (o <c>Vencido</c> si su vigencia pasó durante el bloqueo); anular o desvincular ⇒ <c>Revocado</c> por
-/// el sistema con el motivo. Un vínculo sin certificado no hace nada.
+/// el sistema con el motivo. Un vínculo sin certificado no hace nada. El stream se toma con bloqueo de fila (CE-12): el
+/// generador del PDF escribe en él después del commit y una lectura optimista respondía 412 a quien no envió If-Match.
 /// </summary>
 public static class CicloDeCertificados
 {
     public static async Task AlBloquearAsync(IDocumentSession sesion, Guid vinculoId, string motivo, DateTimeOffset ahora, CancellationToken ct)
     {
-        var stream = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
+        var stream = await sesion.Events.FetchForExclusiveWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (stream.Aggregate is { Estado: EstadoCertificado.Vigente or EstadoCertificado.ConPendientes } certificado)
             stream.AppendOne(certificado.Suspender($"Vínculo bloqueado: {motivo}", ahora));
     }
@@ -174,7 +175,7 @@ public static class CicloDeCertificados
     public static async Task AlDesbloquearAsync(IDocumentSession sesion, Guid vinculoId, string justificacion, DateTimeOffset ahora,
         CancellationToken ct)
     {
-        var stream = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
+        var stream = await sesion.Events.FetchForExclusiveWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (stream.Aggregate is { Estado: EstadoCertificado.Suspendido } certificado)
             stream.AppendOne(certificado.Restablecer($"Vínculo desbloqueado: {justificacion}", ahora));
     }
@@ -183,7 +184,7 @@ public static class CicloDeCertificados
     public static async Task AlTerminarAsync(IDocumentSession sesion, Guid vinculoId, string causa, string motivo, string actor, DateTimeOffset ahora,
         CancellationToken ct)
     {
-        var stream = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
+        var stream = await sesion.Events.FetchForExclusiveWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (stream.Aggregate is { } certificado && certificado.Estado != EstadoCertificado.Revocado)
             stream.AppendOne(certificado.Revocar($"{causa}: {motivo}", OrigenRevocacion.Sistema, actor, ahora));
     }
