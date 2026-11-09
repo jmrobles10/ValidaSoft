@@ -4,6 +4,7 @@ import { AlineadoConCampo } from '@validasoft/ui';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { resumenTipo } from '../../configuracion/tiposDocumento/resumen';
+import { atajoDe, condicionDe, describirCondicion, type AtajoCondicion } from '../condiciones';
 import { MAXIMO_APROBADORES, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
 
 /** Chips de áreas a la vista en «Lo revisan»; el resto va en un chip «+N». */
@@ -21,7 +22,8 @@ export interface EditorRequisitosProps {
 
 /**
  * Documentos que pide el flujo (RQ-1): tipo, obligatorio, qué áreas lo revisan (ninguna elegida = todas las del flujo)
- * y cuántas personas deben aprobarlo (vacío = las del área). Sin documentos, el flujo decide por área (FL-1).
+ * y cuántas personas deben aprobarlo (vacío = las del área); a quién se le pide (RQ-12: todos, solo personas jurídicas o
+ * naturales; una condición armada por la API se describe y se conserva). Sin documentos, el flujo decide por área (FL-1).
  */
 export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, onCambiar, errores, soloLectura }: EditorRequisitosProps) {
   const { t } = useTranslation();
@@ -49,7 +51,11 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px,1fr) minmax(180px,1fr)', lg: 'minmax(200px,1.2fr) minmax(200px,1.2fr) 120px auto' },
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'minmax(180px,1fr) minmax(180px,1fr)',
+                  lg: 'minmax(180px,1.2fr) minmax(180px,1.2fr) minmax(170px,1fr) 120px auto',
+                },
                 columnGap: 1.5,
                 rowGap: 1,
                 alignItems: 'start',
@@ -110,6 +116,21 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 }}
               />
               <TextField
+                select
+                size="small"
+                label={t('flujos.editor.requisitos.sePideA')}
+                value={atajoDe(r.condicion)}
+                onChange={(ev) => cambiar(k, { condicion: condicionDe(ev.target.value as AtajoCondicion, r.condicion) })}
+                disabled={soloLectura}
+              >
+                {(['siempre', 'juridica', 'natural'] as const).map((a) => (
+                  <MenuItem key={a} value={a}>
+                    {t(`flujos.editor.requisitos.atajos.${a}`)}
+                  </MenuItem>
+                ))}
+                {atajoDe(r.condicion) === 'personalizada' && <MenuItem value="personalizada">{t('flujos.editor.requisitos.atajos.personalizada')}</MenuItem>}
+              </TextField>
+              <TextField
                 size="small"
                 type="number"
                 label={t('flujos.editor.requisitos.aprobadores')}
@@ -137,6 +158,11 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
             {tipo && (
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mt: 0.75 }} data-resumen-tipo="">
                 {resumenTipo(tipo, t)}
+              </Typography>
+            )}
+            {r.condicion && atajoDe(r.condicion) === 'personalizada' && (
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mt: 0.5 }}>
+                {t('flujos.editor.requisitos.personalizada', { condicion: describirCondicion(r.condicion, t) })}
               </Typography>
             )}
             {e && (

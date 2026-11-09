@@ -6768,6 +6768,47 @@
           }
         }
       },
+      "CondicionDto": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "nodos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CondicionDto"
+            }
+          },
+          "atributo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "operador": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valores": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ConfirmacionCargaDto": {
         "required": [
           "duplicado",
@@ -9974,6 +10015,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "condicion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CondicionDto"
+              }
+            ]
           }
         }
       },

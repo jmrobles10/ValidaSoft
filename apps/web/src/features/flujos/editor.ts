@@ -1,4 +1,4 @@
-import type { AreaDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion, RequisitoDelFlujoDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
+import type { AreaDto, CondicionDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion, RequisitoDelFlujoDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
 
 /**
  * Modelo del editor de flujos y su validación. Replica `DefinicionDeFlujo.Validar` y `Flujo.Crear` del dominio
@@ -34,6 +34,8 @@ export interface RequisitoEnEditor {
   areasQueRevisan: string[];
   /** `null` = los aprobadores de cada área. */
   aprobadoresRequeridos: number | null;
+  /** «Se pide a» (RQ-12); `null` = siempre. Se conserva tal cual aunque el editor no la sepa armar. */
+  condicion: CondicionDto | null;
 }
 
 export interface BorradorFlujo {
@@ -65,6 +67,7 @@ export type CodigoErrorFlujo =
   | 'requisito-invalido'
   | 'requisito-area-invalida'
   | 'requisito-aprobadores-invalidos'
+  | 'requisito-siempre-requerido'
   | 'area-sin-requisitos';
 
 export interface ErrorFlujo {
@@ -86,7 +89,7 @@ export function areaNueva(areaId = ''): AreaEnEditor {
 }
 
 export function requisitoNuevo(tipoDocumentoTenantId = ''): RequisitoEnEditor {
-  return { clave: nuevaClave(), id: null, tipoDocumentoTenantId, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: null };
+  return { clave: nuevaClave(), id: null, tipoDocumentoTenantId, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: null, condicion: null };
 }
 
 export function borradorVacio(): BorradorFlujo {
@@ -126,6 +129,7 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
       obligatorio: r.obligatorio ?? true,
       areasQueRevisan: [...(r.areasQueRevisan ?? [])],
       aprobadoresRequeridos: r.aprobadoresRequeridos ?? null,
+      condicion: r.condicion ?? null,
     })),
   };
 }
@@ -194,7 +198,8 @@ export function sePuedePedir(tipo: Pick<TipoDocumentoTenantDto, 'activo' | 'carg
 
 /**
  * Requisitos (RQ-1): tipo elegido, activo, que el proveedor pueda entregar y sin repetir; áreas del flujo; 1–10 aprobadores; y, si hay
- * requisitos, toda área del flujo revisa al menos uno (`area-sin-requisitos`: su aprobación se deriva de ellos).
+ * requisitos, toda área del flujo revisa al menos uno (`area-sin-requisitos`: su aprobación se deriva de ellos) y al menos uno se pide
+ * siempre (`requisito-siempre-requerido`, RQ-12: si todos tuvieran condición, a algún tercero no se le pediría nada).
  */
 export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requisitos'>, tiposDocumento: readonly TipoDocumentoTenantDto[]): ErrorFlujo[] {
   const errores: ErrorFlujo[] = [];
@@ -215,6 +220,9 @@ export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requ
       errores.push({ codigo: 'requisito-aprobadores-invalidos', campo });
     }
   });
+  if (borrador.requisitos.length > 0 && borrador.requisitos.every((r) => r.condicion !== null)) {
+    borrador.requisitos.forEach((_, k) => errores.push({ codigo: 'requisito-siempre-requerido', campo: `requisito.${String(k)}` }));
+  }
   if (borrador.requisitos.length > 0) {
     const cubiertas = new Set(borrador.requisitos.flatMap((r) => (r.areasQueRevisan.length === 0 ? [...areasDelFlujo] : r.areasQueRevisan)));
     borrador.etapas.forEach((etapa, i) =>
@@ -235,6 +243,7 @@ export function requisitosADto(requisitos: readonly RequisitoEnEditor[]): Requis
     obligatorio: r.obligatorio,
     areasQueRevisan: r.areasQueRevisan,
     aprobadoresRequeridos: r.aprobadoresRequeridos,
+    condicion: r.condicion,
   }));
 }
 

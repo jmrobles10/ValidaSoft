@@ -201,16 +201,28 @@ export async function crearEscenario(opciones: OpcionesEscenario = {}): Promise<
   };
 }
 
-/** Tercero (persona jurídica) independiente de los grupos: su bóveda es una sola para todas las empresas. */
+/** Tercero independiente de los grupos: su bóveda es una sola para todas las empresas. Por defecto, persona jurídica. */
 export interface Tercero {
   nombre: string;
-  identificacion: { pais: string; tipo: string; numero: string; digitoVerificacion: string };
+  identificacion: { pais: string; tipo: string; numero: string; digitoVerificacion: string | null };
   correo: string;
+  tipoPersona?: 'Juridica' | 'Natural';
 }
 
 export function nuevoTercero(nombre = 'Aceros del Norte S.A.S.'): Tercero {
   const identificacion = nitAleatorio();
   return { nombre, identificacion, correo: `proveedor.${identificacion.numero}.${randomUUID().slice(0, 6)}@e2e.validasoft.co` };
+}
+
+/** Persona natural con cédula de ciudadanía. */
+export function nuevaPersonaNatural(nombre = 'Ana María Pérez'): Tercero {
+  const numero = `10${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
+  return {
+    nombre,
+    identificacion: { pais: 'CO', tipo: 'CC', numero, digitoVerificacion: null },
+    correo: `persona.${numero}.${randomUUID().slice(0, 6)}@e2e.validasoft.co`,
+    tipoPersona: 'Natural',
+  };
 }
 
 export interface Invitacion {
@@ -232,7 +244,7 @@ export async function invitar(e: Escenario, empresa: Empresa, tercero: Tercero, 
     cuerpo: {
       tercero: {
         identificacion: tercero.identificacion,
-        tipoPersona: 'Juridica',
+        tipoPersona: tercero.tipoPersona ?? 'Juridica',
         nombre: tercero.nombre,
         nombreComercial: null,
         contactos: [{ nombre: 'Contacto comercial', correo: tercero.correo, telefono: null, rol: 'Comercial' }],

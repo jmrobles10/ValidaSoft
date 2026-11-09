@@ -1,8 +1,11 @@
 using Marten;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
+using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 
 namespace Validasoft.Aplicacion.Expedientes;
@@ -17,15 +20,29 @@ public sealed record RequisitoPedido(RequisitoDelFlujo Requisito, TipoDocumentoT
 /// </summary>
 public static class RequisitosDeExpediente
 {
-    /// <summary>Requisitos de la versión del flujo con su tipo del tenant (en el orden del flujo).</summary>
-    public static async Task<IReadOnlyList<RequisitoPedido>> DelFlujoAsync(IQuerySession sesionDelTenant, FlujoVersion version, CancellationToken ct)
+    /// <summary>
+    /// Requisitos de la versión del flujo que se le piden a este tercero en este vínculo (los que cumplen su condición,
+    /// RQ-12), con su tipo del tenant y en el orden del flujo.
+    /// </summary>
+    public static async Task<IReadOnlyList<RequisitoPedido>> DelFlujoAsync(IQuerySession sesionDelTenant, FlujoVersion version,
+        ContextoDeExigencia contexto, CancellationToken ct)
     {
-        if (version.Requisitos.Count == 0)
+        var aplican = EvaluadorDeExigencia.Filtrar(version.Requisitos, contexto);
+        if (aplican.Count == 0)
             return [];
 
-        var ids = version.Requisitos.Select(r => r.TipoDocumentoTenantId).Distinct().ToArray();
+        var ids = aplican.Select(r => r.TipoDocumentoTenantId).Distinct().ToArray();
         var tipos = (await sesionDelTenant.LoadManyAsync<TipoDocumentoTenant>(ct, ids)).ToDictionary(t => t.Id);
-        return [.. version.Requisitos.Where(r => tipos.ContainsKey(r.TipoDocumentoTenantId)).Select(r => new RequisitoPedido(r, tipos[r.TipoDocumentoTenantId]))];
+        return [.. aplican.Where(r => tipos.ContainsKey(r.TipoDocumentoTenantId)).Select(r => new RequisitoPedido(r, tipos[r.TipoDocumentoTenantId]))];
+    }
+
+    /// <summary>Tercero, tipo de vínculo y atributos del vínculo: con qué se evalúan las condiciones de sus requisitos.</summary>
+    public static async Task<ContextoDeExigencia> ContextoAsync(IQuerySession sesionDelTenant, Vinculo vinculo, CancellationToken ct)
+    {
+        var tercero = await sesionDelTenant.LoadAsync<Tercero>(vinculo.TerceroId, ct)
+                      ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "El tercero del vínculo no existe.");
+        var tipo = await sesionDelTenant.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
+        return ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
     }
 
     /// <summary>Canónicos de los tipos globales que se piden: lo que la bóveda del tercero comparte con el vínculo.</summary>
@@ -122,7 +139,8 @@ public static class RequisitosDeExpediente
 
     /// <summary>
     /// Vínculos (de cualquier tenant) que piden el canónico global <paramref name="codigo"/>: su expediente abierto tiene
-    /// un requisito de ese tipo o su flujo vigente (el del vínculo publicado, si no el por defecto) lo pide (RQ-3).
+    /// un requisito de ese tipo o su flujo vigente (el del vínculo publicado, si no el por defecto) lo pide a este tercero
+    /// en ese vínculo (RQ-3, RQ-12).
     /// </summary>
     public static async Task<IReadOnlySet<Guid>> VinculosQuePidenAsync(IQuerySession consulta, IReadOnlyList<Vinculo> vinculos, string codigo,
         CancellationToken ct)
@@ -153,9 +171,20 @@ public static class RequisitosDeExpediente
 
         var tipos = await consulta.Query<TipoDocumentoTenant>().Where(t => t.AnyTenant() && t.Id.IsOneOf(tipoIds)).ToListAsync(ct);
         var delCodigo = tipos.Where(t => t.Ambito == AmbitoDocumento.Global && t.TipoCanonico == codigo).Select(t => t.Id).ToHashSet();
+        if (delCodigo.Count == 0)
+            return piden;
+
+        var terceroIds = vinculos.Select(v => v.TerceroId).Distinct().ToArray();
+        var terceros = (await consulta.LoadManyAsync<Tercero>(ct, terceroIds)).ToDictionary(t => t.Id);
+        var tipoVinculoIds = vinculos.Select(v => v.TipoVinculoId).Distinct().ToArray();
+        var tiposVinculo = (await consulta.Query<TipoVinculo>().Where(t => t.AnyTenant() && t.Id.IsOneOf(tipoVinculoIds)).ToListAsync(ct))
+            .ToDictionary(t => t.Id);
         foreach (var vinculo in vinculos)
         {
-            if (ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto)?.Requisitos.Any(r => delCodigo.Contains(r.TipoDocumentoTenantId)) == true)
+            if (ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto) is not { } version || !terceros.TryGetValue(vinculo.TerceroId, out var tercero))
+                continue;
+            var contexto = ContextoDeExigencia.De(tercero, tiposVinculo.GetValueOrDefault(vinculo.TipoVinculoId)?.Codigo ?? string.Empty, vinculo.Atributos);
+            if (EvaluadorDeExigencia.Filtrar(version.Requisitos.Where(r => delCodigo.Contains(r.TipoDocumentoTenantId)), contexto).Count > 0)
                 piden.Add(vinculo.Id);
         }
 

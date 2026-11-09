@@ -104,7 +104,8 @@ public static class ProcesoDeValidacion
             areas.TryGetValue(a.AreaId, out var conNombre) ? conNombre.Nombre : "Área", a.AprobadoresRequeridos, a.PuedeRechazarExpediente,
             a.Automatica, a.SlaHoras))])).ToList();
 
-        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, ct);
+        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version,
+            ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos), ct);
         if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
             documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
                 RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);

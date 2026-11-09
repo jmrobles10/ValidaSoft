@@ -39,7 +39,7 @@ public static class FlujosEndpoints
         {
             Requisitos = [.. (dto.Requisitos ?? []).Select(r => r.ADominio(tipos))]
         };
-        var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos);
+        var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos, tipo);
 
         var codigo = flujo.Codigo;
         if (await empresa.Flujos().AnyAsync(f => f.Codigo == codigo, ct))
@@ -125,7 +125,8 @@ public static class FlujosEndpoints
             dto.SeparacionDeFunciones ?? ultima.SeparacionDeFunciones,
             dto.Requisitos is null ? ultima.Requisitos : [.. dto.Requisitos.Select(r => r.ADominio(tipos))]);
 
-        var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos);
+        var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos,
+            await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));
         return await GuardarAsync(empresa, contexto, flujo, "FlujoVersion", $"{flujo.Id}/v{borrador.Version}", AccionConfiguracion.Modificado, antes, ahora, ct);
     }
 
@@ -138,7 +139,8 @@ public static class FlujosEndpoints
         var ahora = reloj.GetUtcNow();
         var flujo = await empresa.CargarFlujoAsync(id, ct);
         var antes = await DtoAsync(empresa, flujo, ct);
-        var publicada = flujo.Publicar(await empresa.Areas().ToListAsync(ct), ahora, await TiposAsync(empresa, ct));
+        var publicada = flujo.Publicar(await empresa.Areas().ToListAsync(ct), ahora, await TiposAsync(empresa, ct),
+            await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));
 
         var clave = FlujoPorDefecto.Clave(flujo.EmpresaId, flujo.TipoVinculoId);
         if (await empresa.Sesion.LoadAsync<FlujoPorDefecto>(clave, ct) is null)

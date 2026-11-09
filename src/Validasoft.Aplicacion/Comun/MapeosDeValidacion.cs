@@ -25,7 +25,21 @@ public static class MapeosDeValidacion
         new(v.Id, v.Version, v.Estado.ToString(), [.. v.Etapas.Select(ADto)], v.PoliticaDevolucion.ToString(), v.SeparacionDeFunciones,
             v.CreadaEn, v.PublicadaEn, v.RetiradaEn,
             [.. v.Requisitos.Select(r => new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
-                r.AprobadoresRequeridos))]);
+                r.AprobadoresRequeridos, r.Condicion?.ADto()))]);
+
+    public static CondicionDto ADto(this CondicionDeExigencia c) =>
+        new(c.Tipo.ToString(), c.Nodos?.Select(ADto).ToList(), c.Atributo, c.Operador?.ToString(), c.Valores);
+
+    /// <summary>Condición del cuerpo a dominio; un tipo u operador desconocido responde 422 <c>condicion-invalida</c>.</summary>
+    public static CondicionDeExigencia ADominio(this CondicionDto c) =>
+        new(Enum.TryParse<TipoNodoCondicion>(c.Tipo, true, out var tipo) && Enum.IsDefined(tipo)
+                ? tipo
+                : throw ReglaDeNegocioException.Validacion("condicion-invalida", $"«{c.Tipo}» no es un tipo de condición (Y, O, No o Predicado)."),
+            c.Nodos?.Select(ADominio).ToList(), c.Atributo,
+            c.Operador is null ? null
+            : Enum.TryParse<OperadorCondicion>(c.Operador, true, out var operador) && Enum.IsDefined(operador) ? operador
+            : throw ReglaDeNegocioException.Validacion("condicion-invalida", $"«{c.Operador}» no es un operador de condición."),
+            c.Valores);
 
     /// <summary>
     /// Requisito del cuerpo a dominio: el tipo por id o por código (del tenant). Un código desconocido queda con id vacío y
@@ -37,7 +51,8 @@ public static class MapeosDeValidacion
         var tipoId = r.TipoDocumentoTenantId ?? tipos.FirstOrDefault(t => t.Codigo == codigo)?.Id ?? Guid.Empty;
         if (tipoId == Guid.Empty && codigo.Length == 0)
             throw ReglaDeNegocioException.Validacion("requisito-invalido", "Cada requisito necesita el tipo de documento (id o código).");
-        return new RequisitoDelFlujo(r.Id ?? Guid.Empty, tipoId, codigo, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos);
+        return new RequisitoDelFlujo(r.Id ?? Guid.Empty, tipoId, codigo, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
+            r.Condicion?.ADominio());
     }
 
     public static FlujoDto ADto(this Flujo f, TipoVinculo? tipo, bool esPorDefecto) =>

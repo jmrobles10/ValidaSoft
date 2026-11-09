@@ -50,11 +50,14 @@ export function eventoExpedienteATimeline(
       .map(area)
       .filter(Boolean)
       .join(', ');
+  // Un veredicto con origen Sistema (área automática, aprobación previa de la empresa o área sin nada que revisar) lo emite
+  // la cascada dentro de la petición de otro (el tercero que subió, la persona que aprobó): el actor es Sistema.
+  const porSistema = (tipo === 'veredicto_de_area_emitido' || tipo === 'veredicto_de_requisito_emitido') && campo(datos, 'origen') === 'Sistema';
   const base: EventoTimeline = {
     id: `${String(evento.version)}-${tipo}`,
     titulo: esTipoEvento(tipo) ? t(`expedientes.historial.eventos.${tipo}`) : tipo.replace(/_/g, ' '),
     fecha: evento.fecha,
-    actor: actorDe(evento, contexto, t),
+    actor: porSistema ? { nombre: t('expedientes.veredictos.sistema'), tipo: 'sistema' } : actorDe(evento, contexto, t),
     sistema: evento.sistema,
   };
 

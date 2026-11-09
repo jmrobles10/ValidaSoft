@@ -9,6 +9,7 @@ import type { RequisitoDelFlujoDtoTipoDocumentoTenantId } from './requisitoDelFl
 import type { RequisitoDelFlujoDtoTipoDocumento } from './requisitoDelFlujoDtoTipoDocumento';
 import type { RequisitoDelFlujoDtoAreasQueRevisan } from './requisitoDelFlujoDtoAreasQueRevisan';
 import type { RequisitoDelFlujoDtoAprobadoresRequeridos } from './requisitoDelFlujoDtoAprobadoresRequeridos';
+import type { RequisitoDelFlujoDtoCondicion } from './requisitoDelFlujoDtoCondicion';
 
 export interface RequisitoDelFlujoDto {
   id?: RequisitoDelFlujoDtoId;
@@ -17,4 +18,5 @@ export interface RequisitoDelFlujoDto {
   obligatorio?: boolean;
   areasQueRevisan?: RequisitoDelFlujoDtoAreasQueRevisan;
   aprobadoresRequeridos?: RequisitoDelFlujoDtoAprobadoresRequeridos;
+  condicion?: RequisitoDelFlujoDtoCondicion;
 }

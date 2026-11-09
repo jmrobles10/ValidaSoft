@@ -185,7 +185,7 @@ describe('requisitos del flujo (RQ-1)', () => {
     };
     const b = borradorDesdeVersion({ codigo: 'P', nombre: 'P', tipoVinculo: 'PROVEEDOR' }, version);
     expect(requisitosADto(b.requisitos)).toEqual([
-      { id: 'r1', tipoDocumentoTenantId: 'rut', tipoDocumento: null, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: 2 },
+      { id: 'r1', tipoDocumentoTenantId: 'rut', tipoDocumento: null, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: 2, condicion: null },
     ]);
   });
 });

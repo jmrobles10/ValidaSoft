@@ -29,11 +29,22 @@ public sealed record EtapaDto(int Orden, IReadOnlyList<AreaDeEtapaDto> Areas);
 /// Documento que pide el flujo (RQ-1). Al escribir, el tipo va por <see cref="TipoDocumentoTenantId"/> o por su código
 /// (<see cref="TipoDocumento"/>); <see cref="Id"/> opcional (se conserva entre versiones si se reenvía).
 /// <see cref="AreasQueRevisan"/> vacío o nulo ⇒ todas las áreas del flujo; <see cref="AprobadoresRequeridos"/> nulo ⇒ los
-/// del área. Al leer vienen los tres identificadores.
+/// del área. Al leer vienen los tres identificadores. <see cref="Condicion"/> nula ⇒ se pide siempre (RQ-12).
 /// </summary>
 public sealed record RequisitoDelFlujoDto(
     Guid? Id = null, Guid? TipoDocumentoTenantId = null, string? TipoDocumento = null, bool Obligatorio = true,
-    IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null);
+    IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null, CondicionDto? Condicion = null);
+
+/// <summary>
+/// «Se pide cuando» (docs/03 §12, RQ-12). <see cref="Tipo"/>: <c>Y</c>|<c>O</c>|<c>No</c> combinan <see cref="Nodos"/>
+/// (<c>No</c>, exactamente uno); <c>Predicado</c> compara <see cref="Atributo"/> (<c>tercero.tipoPersona</c>,
+/// <c>tercero.pais</c>, <c>tercero.tipoIdentificacion</c>, <c>tercero.esExtranjero</c>, <c>vinculo.tipo</c> o
+/// <c>vinculo.atributos.{clave}</c>) con <see cref="Valores"/> según <see cref="Operador"/>: <c>Igual</c>|<c>Distinto</c>|
+/// <c>En</c>|<c>NoEn</c>|<c>ContieneAlguno</c>|<c>ContieneTodos</c>|<c>Existe</c>|<c>Mayor</c>|<c>Menor</c>|<c>Entre</c>.
+/// Valores como texto invariante: números con punto, fechas <c>yyyy-MM-dd</c>, booleanos <c>true</c>/<c>false</c>.
+/// </summary>
+public sealed record CondicionDto(
+    string Tipo, IReadOnlyList<CondicionDto>? Nodos = null, string? Atributo = null, string? Operador = null, IReadOnlyList<string>? Valores = null);
 
 /// <summary>
 /// Sin <see cref="Etapas"/>: una sola etapa con todas las áreas activas de la empresa en paralelo (P-4-4).
