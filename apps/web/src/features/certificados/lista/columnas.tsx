@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatearFechaDeclarada } from '../../documentos/formatoDatos';
 import { TerceroEnLinea } from '../../expedientes/componentes';
+import { EnlaceFichaTercero } from '../../terceros/EnlaceFichaTercero';
 import { esEstadoCertificado } from '../api';
 import { fechaDelEstado } from './modelo';
 
@@ -14,12 +15,23 @@ function celdaEstado(fila: FilaCertificadoDto) {
   return <ChipEstado estado={fila.estado} fecha={fechaDelEstado(fila)} bloqueante={fila.bloqueante} />;
 }
 
-/** Columnas de la lista de certificados (densas: una línea por fila). */
-export function useColumnasCertificados(): ColumnaTabla<FilaCertificadoDto>[] {
+/** Columnas de la lista de certificados (densas: una línea por fila). `conFicha`: el tercero lleva a su ficha. */
+export function useColumnasCertificados(conFicha: boolean): ColumnaTabla<FilaCertificadoDto>[] {
   const { t } = useTranslation();
   return useMemo<ColumnaTabla<FilaCertificadoDto>[]>(
     () => [
-      { id: 'tercero', encabezado: t('certificados.lista.columnas.tercero'), celda: (f) => <TerceroEnLinea tercero={f.tercero} /> },
+      {
+        id: 'tercero',
+        encabezado: t('certificados.lista.columnas.tercero'),
+        celda: (f) =>
+          conFicha ? (
+            <EnlaceFichaTercero terceroId={f.tercero.id} etiqueta={t('terceros.ficha.abrirFicha', { tercero: f.tercero.nombre })}>
+              <TerceroEnLinea tercero={f.tercero} />
+            </EnlaceFichaTercero>
+          ) : (
+            <TerceroEnLinea tercero={f.tercero} />
+          ),
+      },
       { id: 'tipo', encabezado: t('certificados.lista.columnas.tipo'), ancho: 140, celda: (f) => f.tipoVinculo.nombre },
       {
         id: 'folio',
@@ -47,6 +59,6 @@ export function useColumnasCertificados(): ColumnaTabla<FilaCertificadoDto>[] {
         celda: (f) => <Typography variant="monoTabla">{formatearFecha(f.emitidoEn)}</Typography>,
       },
     ],
-    [t],
+    [t, conFicha],
   );
 }

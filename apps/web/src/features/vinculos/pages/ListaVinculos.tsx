@@ -57,10 +57,11 @@ export function ListaVinculos() {
     cursor: paginacion.cursor ?? undefined,
   });
   const tipos = useTiposVinculo(empresa.id, permisos.puede(SCOPES.configuracionLeer));
+  const conFicha = permisos.puede(SCOPES.tercerosLeer);
 
   const columnas = useMemo<ColumnaTabla<VinculoDto>[]>(
     () => [
-      { id: 'tercero', encabezado: t('vinculos.columnas.tercero'), celda: (v) => <NombreTercero terceroId={v.terceroId} /> },
+      { id: 'tercero', encabezado: t('vinculos.columnas.tercero'), celda: (v) => <NombreTercero terceroId={v.terceroId} conFicha={conFicha} /> },
       { id: 'tipo', encabezado: t('vinculos.columnas.tipo'), ancho: 120, celda: (v) => v.tipoVinculo.nombre },
       {
         id: 'estado',
@@ -91,7 +92,7 @@ export function ListaVinculos() {
         celda: (v) => <Typography variant="monoTabla">{formatearFecha(v.creadoEn)}</Typography>,
       },
     ],
-    [t],
+    [t, conFicha],
   );
 
   if (!permisos.puede(SCOPES.vinculosLeer)) return <SinPermiso seccion={t('nav.vinculos')} />;

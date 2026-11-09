@@ -171,7 +171,7 @@ public static class CuentaDesignadaEndpoints
             : throw ReglaDeNegocioException.Validacion("usuario-delegado-requerido",
                 "Las cuentas las aprueba una persona: actúa con la identidad delegada (X-Usuario-Delegado) o con su sesión.");
 
-    private static async Task<CuentaDesignadaDelVinculoDto> DtoAsync(SesionDeEmpresa empresa, Vinculo vinculo, IContextoSolicitud contexto,
+    internal static async Task<CuentaDesignadaDelVinculoDto> DtoAsync(SesionDeEmpresa empresa, Vinculo vinculo, IContextoSolicitud contexto,
         IProtectorDeSecretos protector, CancellationToken ct)
     {
         var puedeAprobar = contexto.Scopes.Contains(Permisos.CuentasAprobar);

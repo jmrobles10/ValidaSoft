@@ -209,11 +209,11 @@ public static class DocumentosDeVinculoEndpoints
     }
 
     /// <summary>docs/07 §5.2: invitación aceptada y vínculo no anulado (desvinculado o bloqueado conserva lo ya compartido).</summary>
-    private static bool Visible(Dominio.Vinculos.Vinculo vinculo) =>
+    internal static bool Visible(Dominio.Vinculos.Vinculo vinculo) =>
         vinculo.InvitacionAceptada && vinculo.Estado != Dominio.Vinculos.EstadoVinculo.Anulado;
 
     /// <summary>Solo las versiones compartidas con el vínculo, cada una con sus datos declarados y la vigencia de este vínculo.</summary>
-    private static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId, DateOnly hoy)
+    internal static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId, DateOnly hoy)
     {
         var numeros = documento.Comparticiones.Where(c => c.VinculoId == vinculoId).Select(c => c.Numero).ToHashSet();
         if (numeros.Count == 0)

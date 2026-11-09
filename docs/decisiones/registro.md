@@ -457,6 +457,12 @@ Producto pidió completar los PR de Dependabot abiertos; se integraron en un sol
 |---|---|---|---|
 | DEP-1 | Versiones mayores | React 19, MUI 9, React Router 8, orval 8, Vitest 5, jsdom 31, `@vitejs/plugin-react` 5, lucide-react 1, `@types/node` 26, Playwright 1.65 (actualiza M-5). MUI 9 quita las *system props*: los estilos de `Box`/`Stack`/`Typography`/`Link` van en `sx` (`direction` y `spacing` de `Stack` siguen siendo props); `Switch` expone `role="switch"`; el Autocomplete usa `renderValue`/`getItemProps` y `params.slotProps`. orval 8 se fija con `httpClient: 'axios'` para conservar la firma del `fetcher` propio (que sigue usando `fetch`) y genera consultas solo para los GET; ya no crea alias para las propiedades anulables. React 19: `SubmitEvent` en lugar de `FormEvent`. Zustand se queda en 5.1 (Dependabot proponía bajarlo). | E (PR de Dependabot #15–#24) |
 
+## 5-sexvicies. Ficha del tercero (2026-11-09, P2)
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| T360-1 | Tercero 360 | `GET /api/v1/terceros/{id}/ficha` (`terceros:leer`): identificación y contactos del tercero y, por cada vínculo con la empresa activa (con `vinculos:leer`), el vínculo, su certificado (con `certificados:leer`; nulo sin el permiso), su cuenta designada y los documentos compartidos con él (con `documentos:leer`; nulo sin el permiso). De las otras empresas del grupo solo `empresaId` y estado del vínculo, sin decisiones ni documentos. Sin vínculo con la empresa activa responde 404 `tercero-no-encontrado` y no revela los de otras empresas (T-4). Se arma al consultar (sin proyección). Pendiente: personas relacionadas (ADR-0010) e histórico de aceptaciones. Web: `/terceros/:id`, enlazada desde el detalle del vínculo. | docs/03 §14, docs/06 |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

@@ -12,6 +12,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { TarjetaCertificado } from '../../certificados/TarjetaCertificado';
+import { EnlaceFichaTercero } from '../../terceros/EnlaceFichaTercero';
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
@@ -85,7 +86,7 @@ export function DetalleVinculo() {
       )}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
-          <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} />
+          <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} conFicha={permisos.puede(SCOPES.tercerosLeer)} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
           <TarjetaCertificado vinculo={vinculo} />
           <TarjetaCuentaDesignada vinculo={vinculo} />
@@ -185,7 +186,8 @@ function Encabezado({ vinculo, acciones, onAccion, antes }: { vinculo: VinculoDt
   );
 }
 
-function DatosVinculo({ vinculo, empresaNombre }: { vinculo: VinculoDto; empresaNombre: string }) {
+/** `conFicha`: el nombre del tercero lleva a su ficha (Tercero 360) si la persona puede verla. */
+function DatosVinculo({ vinculo, empresaNombre, conFicha }: { vinculo: VinculoDto; empresaNombre: string; conFicha: boolean }) {
   const { t } = useTranslation();
   const tercero = useTercero(vinculo.terceroId);
   const atributos = Object.entries(vinculo.atributos);
@@ -198,7 +200,15 @@ function DatosVinculo({ vinculo, empresaNombre }: { vinculo: VinculoDto; empresa
   return (
     <Tarjeta titulo={t('vinculos.detalle.datos')}>
       <RejillaDatos>
-        <Dato etiqueta={t('vinculos.detalle.tercero')}>{tercero.data?.nombre ?? '—'}</Dato>
+        <Dato etiqueta={t('vinculos.detalle.tercero')}>
+          {tercero.data && conFicha ? (
+            <EnlaceFichaTercero terceroId={vinculo.terceroId} etiqueta={t('terceros.ficha.abrirFicha', { tercero: tercero.data.nombre })}>
+              {tercero.data.nombre}
+            </EnlaceFichaTercero>
+          ) : (
+            (tercero.data?.nombre ?? '—')
+          )}
+        </Dato>
         <Dato etiqueta={t('vinculos.detalle.identificacion')}>{tercero.data ? <Mono>{identificacionDe(tercero.data)}</Mono> : '—'}</Dato>
         <Dato etiqueta={t('vinculos.detalle.tipo')}>{vinculo.tipoVinculo.nombre}</Dato>
         <Dato etiqueta={t('vinculos.detalle.empresa')}>{empresaNombre}</Dato>
