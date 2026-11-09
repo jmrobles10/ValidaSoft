@@ -163,18 +163,17 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
   Lo que no se pueda convertir va al CSV de rechazos.
 - **Coexistencia por empresa** (FM-11). Mientras una empresa no haya hecho el corte, el Portal sigue siendo su UI. Un sincronizador de un solo sentido, del Portal a Validasoft, lleva cada guardado de sección como una versión nueva, con origen `Portal`. Después del corte, el Portal lee la ficha de Validasoft o embebe su UI, y ya no escribe en `Ter*`.
 
-## 9. Orden de construcción (propuesto)
-Cada entrega es un PR con pruebas y e2e.
+## 9. Orden de construcción
+Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sectores de información con sus soportes, más la sección de documentos que ya existe. La parte de la información es global del tercero, y cada empresa hace su propia validación. La IA entra al final, sobre una base que ya funciona como hoy.
 
 | Entrega | Contenido |
 |---|---|
-| F1 | Catálogos de plataforma (DANE, CIIU, bancos, responsabilidades DIAN, especialidades de 3 niveles) y esquemas canónicos de `FICHA_GENERAL`, `FICHA_TRIBUTARIA` y `FICHA_ESPECIALIDADES` como formularios globales; el tercero las diligencia en el portal; versiones en la bóveda |
-| F2 | Las secciones como requisitos del flujo: completitud, aceptación y observación por área con motivos, revalidación y aviso; la empresa ve la ficha en Tercero 360 y en el expediente |
-| F3 | `FICHA_LEGAL` (fase 1) y `FICHA_FINANCIERA` por periodo |
-| F4 | Mapa documento → secciones, opción «Usar como soporte» en los requisitos, cruce sección ↔ documento con los hechos de IA y **actualización desde el documento** (propuesta de cambios, confirmación del tercero, revisión de tres columnas) |
-| F5 | Evento `seccion.aceptada` y `GET /vinculos/{id}/ficha` para el SRM (H9) |
-| F6 | Importador desde las tablas del Portal y sincronizador de coexistencia (H10) |
-| F7 | `FICHA_SST`, cargo de contactos por empresa y personas relacionadas con bóveda propia (fase 2) |
+| F1 | **Sectores de información con soporte.** Catálogos de plataforma: DANE, CIIU, bancos, responsabilidades DIAN y especialidades de 3 niveles. Esquemas canónicos de `FICHA_GENERAL`, `FICHA_TRIBUTARIA` (+ ICA), `FICHA_FINANCIERA` (por periodo + moneda extranjera), `FICHA_LEGAL` (personas, fase 1), `FICHA_SST` y `FICHA_ESPECIALIDADES`. El tercero los diligencia en el portal (el «wizard») y quedan como versiones globales en la bóveda. Cada versión guarda su **soporte**, como en el SRM: la versión de un documento de la bóveda (RUT, Cámara, certificación, estados financieros) o un archivo adjunto. Qué tipos sirven de soporte para cada sector sale del mapa de §5.1. |
+| F2 | **Validación por empresa en paridad con el SRM.** Las secciones son requisitos del flujo, con completitud y su motivo legible. Cada empresa acepta u observa cada sección por área, con motivos. Al cambiar una sección aceptada, se revalida **solo esa sección**, con comparación anterior → nuevo y su soporte: son las Actualizaciones del SRM, con un responsable por sección configurado como áreas que revisan. La empresa ve la ficha en Tercero 360 y en el expediente. |
+| F3 | **Integración con el SRM:** evento `seccion.aceptada` y `GET /api/v1/vinculos/{id}/ficha`, para que el SRM aplique en AyF lo aceptado (General, Tributaria, representante legal y cuenta designada). |
+| F4 | **Importador** desde las tablas `Ter*` del Portal y **sincronizador** de coexistencia. |
+| F5 | **IA:** cruce sección ↔ documento, la opción «Usar como soporte» con cruce automático en los requisitos de documento y la **actualización desde el documento** (§5.2, §5.3, §6). |
+| F6 | Personas relacionadas con bóveda propia (fase 2) y cargo de los contactos por empresa. |
 
 ## Decisiones abiertas
 1. ¿Las 13 calidades tributarias se exponen al SRM como hoy (S/N) además de los códigos DIAN? Propuesta: sí, derivadas, para no romper AyF.
