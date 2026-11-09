@@ -157,6 +157,8 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/expedientes/{id}/anular': 'anularExpediente',
   'GET /api/v1/bandeja': 'listarBandeja',
   'GET /api/v1/bandeja/aperturas-pendientes': 'listarAperturasPendientes',
+  'GET /api/v1/revalidaciones': 'listarRevalidaciones',
+  'POST /api/v1/revalidaciones/aprobar': 'aprobarRevalidaciones',
   'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto': 'emitirVeredictoRequisito',
   'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir': 'eximirRequisito',
   'GET /api/v1/usuarios/resumen': 'resumirUsuarios',

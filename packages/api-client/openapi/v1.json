@@ -3503,6 +3503,95 @@
         }
       }
     },
+    "/api/v1/revalidaciones": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RevalidacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_revalidaciones",
+        "description": "GET_api_v1_revalidaciones",
+        "operationId": "GET_api_v1_revalidaciones",
+        "parameters": [
+          {
+            "name": "area",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfRevalidacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/revalidaciones/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RevalidacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_revalidaciones_aprobar",
+        "description": "POST_api_v1_revalidaciones_aprobar",
+        "operationId": "POST_api_v1_revalidaciones_aprobar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AprobarRevalidacionesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeLoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/boveda": {
       "get": {
         "tags": [
@@ -6128,6 +6217,20 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "AprobarRevalidacionesDto": {
+        "required": [
+          "revalidaciones"
+        ],
+        "type": "object",
+        "properties": {
+          "revalidaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevalidacionAAprobarDto"
+            }
           }
         }
       },
@@ -8821,6 +8924,31 @@
           }
         }
       },
+      "FalloDeLoteDto": {
+        "required": [
+          "expedienteId",
+          "requisitoId",
+          "codigo",
+          "detalle"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requisitoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": "string"
+          }
+        }
+      },
       "FijarOrigenesDto": {
         "required": [
           "origenes"
@@ -9898,6 +10026,27 @@
           }
         }
       },
+      "PaginaDtoOfRevalidacionDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevalidacionDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfVinculoDto": {
         "required": [
           "datos",
@@ -10464,6 +10613,29 @@
           }
         }
       },
+      "ResultadoDeLoteDto": {
+        "required": [
+          "aprobadas",
+          "fallidas"
+        ],
+        "type": "object",
+        "properties": {
+          "aprobadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fallidas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FalloDeLoteDto"
+            }
+          }
+        }
+      },
       "RetirarVersionDto": {
         "required": [
           "motivo"
@@ -10494,6 +10666,132 @@
             "items": {
               "$ref": "#/components/schemas/CompartidoDto"
             }
+          }
+        }
+      },
+      "RevalidacionAAprobarDto": {
+        "required": [
+          "expedienteId",
+          "requisitoId",
+          "sobreVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requisitoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sobreVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RevalidacionDto": {
+        "required": [
+          "expedienteId",
+          "folio",
+          "vinculoId",
+          "requisitoId",
+          "tercero",
+          "tipoVinculo",
+          "tipoDocumentoCodigo",
+          "tipoDocumento",
+          "versionAceptada",
+          "versionActual",
+          "comparacion",
+          "aprobableEnLote",
+          "estadoRequisito",
+          "areas",
+          "desde",
+          "plazoHasta",
+          "diasRestantes",
+          "bloqueante"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requisitoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "tipoDocumentoCodigo": {
+            "type": "string"
+          },
+          "tipoDocumento": {
+            "type": "string"
+          },
+          "versionAceptada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VersionResumenDto"
+              }
+            ]
+          },
+          "versionActual": {
+            "$ref": "#/components/schemas/VersionResumenDto"
+          },
+          "comparacion": {
+            "type": "string"
+          },
+          "aprobableEnLote": {
+            "type": "boolean"
+          },
+          "estadoRequisito": {
+            "type": "string"
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "desde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "plazoHasta": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "diasRestantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bloqueante": {
+            "type": "boolean"
           }
         }
       },
@@ -11863,6 +12161,27 @@
           }
         }
       },
+      "VersionResumenDto": {
+        "required": [
+          "numero",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "VigenciaDto": {
         "required": [
           "vigenteHasta",
@@ -12358,6 +12677,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ExpedientesPublicosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.RevalidacionesEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Documentos.BovedaEndpoints"

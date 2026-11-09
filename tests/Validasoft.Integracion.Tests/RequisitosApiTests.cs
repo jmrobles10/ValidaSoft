@@ -593,6 +593,88 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task La_bandeja_de_revalidaciones_muestra_la_version_aceptada_y_la_nueva_y_solo_aprueba_en_lote_las_que_no_cambiaron()
+    {
+        var e = await PrepararAsync();
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT v1"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara v1"));
+        await AceptarAsync(sesion, vinculo.Id);
+
+        async Task<Guid> ExpedienteAbiertoAsync()
+        {
+            var limite = DateTime.UtcNow.AddSeconds(20);
+            while (true)
+            {
+                if ((await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId is { } id)
+                    return id;
+                if (DateTime.UtcNow > limite)
+                    throw new TimeoutException("No se abrió el expediente.");
+                await Task.Delay(200);
+            }
+        }
+
+        var inicial = await ExpedienteAbiertoAsync();
+        foreach (var (area, persona, codigo) in new[] { (e.Compras, e.Laura, "COMPRAS"), (e.Cumplimiento, e.Carlos, "CUMPLIMIENTO") })
+        {
+            var leido = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{inicial}", Delegado(e.Norte, persona), null, 200);
+            var porDecidir = Area(leido, codigo).DocumentosPorDecidir ?? [];
+            await AreaAsync<ExpedienteDto>(e, inicial, area, persona,
+                new VeredictoDto("Aprobado", Versiones: porDecidir.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+        }
+
+        await SubirAsync(sesion, "RUT", Pdf("RUT v2"));
+        var actualizacion = await ExpedienteAbiertoAsync();
+        actualizacion.ShouldNotBe(inicial);
+
+        async Task<RevalidacionDto?> FilaAsync(Persona persona) =>
+            (await ApiAsync<PaginaDto<RevalidacionDto>>("GET", "/api/v1/revalidaciones", Delegado(e.Norte, persona), null, 200)).Datos
+            .SingleOrDefault(r => r.VinculoId == vinculo.Id);
+
+        var fila = (await FilaAsync(e.Laura)).ShouldNotBeNull();
+        fila.ExpedienteId.ShouldBe(actualizacion);
+        fila.TipoDocumentoCodigo.ShouldBe("RUT");
+        fila.VersionAceptada!.Numero.ShouldBe(1);
+        fila.VersionActual.Numero.ShouldBe(2);
+        fila.Comparacion.ShouldBe("Distinta"); // sin IA la bóveda solo compara por hash
+        fila.AprobableEnLote.ShouldBeFalse();
+        fila.DiasRestantes.ShouldBeInRange(14, Revalidacion.DiasDePlazo);
+        fila.Bloqueante.ShouldBeFalse();
+
+        var lote = new AprobarRevalidacionesDto([new RevalidacionAAprobarDto(actualizacion, fila.RequisitoId, 2)]);
+        var rechazado = await ApiAsync<ResultadoDeLoteDto>("POST", "/api/v1/revalidaciones/aprobar", Delegado(e.Norte, e.Laura), lote, 200);
+        rechazado.Aprobadas.ShouldBe(0);
+        rechazado.Fallidas.ShouldHaveSingleItem().Codigo.ShouldBe("revalidacion-con-cambios");
+
+        // La revisión automática concluye que los campos clave no cambiaron (el hecho que registrará la IA, H7).
+        var documentoId = (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{actualizacion}", Admin(e.Norte), null, 200))
+            .Requisitos!.Single().VersionActual!.DocumentoId;
+        await using (var boveda = Host.Services.GetRequiredService<IDocumentStore>().LightweightSession(TenantsTecnicos.Boveda))
+        {
+            var hechos = (await boveda.LoadAsync<Documento>(documentoId))!.Buscar(2)!.Hechos!;
+            boveda.Events.Append(documentoId, new HechosDeVersionRegistrados(2, hechos with { Comparacion = Comparacion.SinCambios, ConIa = true }, DateTimeOffset.UtcNow));
+            await boveda.SaveChangesAsync();
+        }
+
+        (await FilaAsync(e.Laura))!.AprobableEnLote.ShouldBeTrue();
+        // Cada revisor aprueba en lote por sus áreas; con la última se aprueba la actualización y se reemite el certificado.
+        (await ApiAsync<ResultadoDeLoteDto>("POST", "/api/v1/revalidaciones/aprobar", Delegado(e.Norte, e.Laura), lote, 200)).Aprobadas.ShouldBe(1);
+        (await FilaAsync(e.Laura)).ShouldNotBeNull(); // Cumplimiento aún no la aprueba
+        (await ApiAsync<ResultadoDeLoteDto>("POST", "/api/v1/revalidaciones/aprobar", Delegado(e.Norte, e.Carlos), lote, 200)).Aprobadas.ShouldBe(1);
+
+        (await FilaAsync(e.Carlos)).ShouldBeNull();
+        var aprobada = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{actualizacion}", Admin(e.Norte), null, 200);
+        aprobada.Estado.ShouldBe("Aprobado");
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!
+            .Estado.ShouldBe("Vigente");
+        // Repetir el lote no aprueba dos veces.
+        (await ApiAsync<ResultadoDeLoteDto>("POST", "/api/v1/revalidaciones/aprobar", Delegado(e.Norte, e.Carlos), lote, 200))
+            .Fallidas.ShouldHaveSingleItem().Codigo.ShouldBe("no-es-revalidacion");
+    }
+
     // ---------- sincronización: no se pierde ni se duplica ----------
 
     [Fact]
