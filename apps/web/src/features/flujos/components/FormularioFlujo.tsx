@@ -90,7 +90,7 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
                       <Typography component="span" sx={{ display: 'block', fontSize: 14, fontWeight: 500 }}>
                         {t(`flujos.editor.politicas.${p}.titulo`)}
                       </Typography>
-                      <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 12 }}>
+                      <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
                         {t(`flujos.editor.politicas.${p}.ayuda`)}
                       </Typography>
                     </Box>
@@ -109,7 +109,7 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
                 <Typography component="span" sx={{ display: 'block', fontSize: 14, fontWeight: 500 }}>
                   {t('flujos.editor.separacion')}
                 </Typography>
-                <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 12 }}>
+                <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
                   {t('flujos.editor.separacionAyuda')}
                 </Typography>
               </Box>

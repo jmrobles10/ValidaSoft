@@ -86,8 +86,8 @@ export function PaginaTiposDocumento() {
                     <Typography component="span" sx={{ display: 'block', fontWeight: 500, fontSize: 14 }}>
                       {tipo.nombre}
                     </Typography>
-                    <Stack direction="row" columnGap={0.75} flexWrap="wrap" useFlexGap sx={{ color: 'text.secondary', fontSize: 12, '& > *': { whiteSpace: 'nowrap' } }}>
-                      <Typography component="span" variant="monoTabla" color="text.secondary">
+                    <Stack direction="row" useFlexGap sx={{ columnGap: 0.75, flexWrap: 'wrap', color: 'text.secondary', fontSize: 12, '& > *': { whiteSpace: 'nowrap' } }}>
+                      <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                         {tipo.codigo}
                       </Typography>
                       <span>· {t(`tiposDocumento.ambitos.${tipo.ambito === 'Global' ? 'Global' : 'PorVinculo'}`)}</span>

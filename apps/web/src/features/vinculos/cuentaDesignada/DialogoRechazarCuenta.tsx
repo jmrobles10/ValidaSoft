@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from '@mui/material';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 
@@ -20,7 +20,7 @@ export function DialogoRechazarCuenta({ ocupado, error, onRechazar, onCerrar }: 
   const [tocado, setTocado] = useState(false);
   const falta = !motivo.trim();
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (falta) return;
     onRechazar(motivo.trim());

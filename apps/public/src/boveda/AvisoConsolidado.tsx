@@ -18,7 +18,7 @@ export function AvisoConsolidado({ documentos }: { documentos: readonly Document
 
   return (
     <Card component="section" aria-labelledby="por-renovar" sx={{ p: 0, overflow: 'hidden', mb: 1.5 }}>
-      <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ py: 1, px: { xs: 1.5, sm: 2 } }}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start', py: 1, px: { xs: 1.5, sm: 2 } }}>
         <Box aria-hidden sx={{ display: 'grid', placeItems: 'center', flex: 'none', height: 20, color: urgente ? 'error.main' : 'warning.main' }}>
           <CalendarClock size={18} />
         </Box>
@@ -26,7 +26,7 @@ export function AvisoConsolidado({ documentos }: { documentos: readonly Document
           <Typography id="por-renovar" component="h2" sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>
             {t('boveda.porRenovar.titulo')}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {t('boveda.porRenovar.sub')}
           </Typography>
         </Box>
@@ -37,8 +37,7 @@ export function AvisoConsolidado({ documentos }: { documentos: readonly Document
             key={l.documentoId}
             component="li"
             direction={{ xs: 'column', sm: 'row' }}
-            alignItems={{ xs: 'stretch', sm: 'center' }}
-            sx={{ columnGap: 2, rowGap: 0.5, py: { xs: 1, sm: 0.75 }, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}
+            sx={{ alignItems: { xs: 'stretch', sm: 'center' }, columnGap: 2, rowGap: 0.5, py: { xs: 1, sm: 0.75 }, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}
           >
             <Box sx={{ minWidth: 0, flex: 1 }}>
               <Box sx={{ mb: 0.25 }}>

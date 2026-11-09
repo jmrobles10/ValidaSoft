@@ -25,7 +25,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { actualizarArea, crearArea, definirMiembrosArea, SCOPES, type AreaDto, type UsuarioDto } from '@validasoft/api-client';
 import { AvatarActor, EstadoVacio, MarcoTabla } from '@validasoft/ui';
 import { ChevronRight, Pencil, Plus, Users, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EncabezadoPagina, ErrorRecuperable, IconoCarga, SinPermiso, Tarjeta } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
@@ -103,7 +103,7 @@ export function PaginaAreas() {
                         <Box component="span" sx={{ flex: 1, fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {area.nombre}
                         </Box>
-                        <Typography component="span" variant="monoTabla" color="text.secondary">
+                        <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                           {area.activa ? t('areas.nMiembros', { count: area.miembros.length }) : t('comun.inactiva')}
                         </Typography>
                         <Box component="span" sx={{ display: 'flex', color: 'text.secondary' }}>
@@ -182,7 +182,7 @@ function DetalleArea({
       titulo={
         <>
           {area.nombre}
-          <Typography component="span" variant="mono" color="text.secondary" sx={{ ml: 1, fontWeight: 400 }}>
+          <Typography component="span" variant="mono" sx={{ color: 'text.secondary', ml: 1, fontWeight: 400 }}>
             {area.codigo}
           </Typography>
         </>
@@ -200,7 +200,7 @@ function DetalleArea({
           {t('areas.inactivaAyuda')}
         </Alert>
       )}
-      <Typography variant="overline" component="h3" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+      <Typography variant="overline" component="h3" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
         {t('areas.miembros')}
       </Typography>
       {editable && (
@@ -212,7 +212,7 @@ function DetalleArea({
             getOptionLabel={(u) => `${u.nombre} (${u.correo})`}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             noOptionsText={t('areas.sinCandidatos')}
-            renderInput={(params) => <TextField {...params} placeholder={t('areas.agregarMiembro')} slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': t('areas.agregarMiembro') } }} />}
+            renderInput={(params) => <TextField {...params} placeholder={t('areas.agregarMiembro')} slotProps={{ ...params.slotProps, htmlInput: { ...params.slotProps.htmlInput, 'aria-label': t('areas.agregarMiembro') } }} />}
             sx={{ flex: 1, maxWidth: 420 }}
           />
           <Button
@@ -247,7 +247,7 @@ function DetalleArea({
                 return (
                   <TableRow key={id}>
                     <TableCell>
-                      <Stack direction="row" spacing={1.25} alignItems="center">
+                      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
                         <AvatarActor tipo="persona" nombre={u?.nombre ?? '?'} />
                         <span style={{ fontWeight: 500 }}>{nombre}</span>
                       </Stack>
@@ -303,7 +303,7 @@ function DialogoArea({ empresaId, edicion, onCerrar, onCreada }: { empresaId: st
     onSettled: () => invalidarRuta(cliente, '/api/v1/areas'),
   });
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     guardar.mutate();
   };

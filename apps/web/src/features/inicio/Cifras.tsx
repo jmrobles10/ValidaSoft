@@ -14,7 +14,7 @@ export function GrupoCifras({ titulo, nota, children }: { titulo: string; nota?:
         {children}
       </Box>
       {nota && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
           {nota}
         </Typography>
       )}
@@ -35,12 +35,12 @@ export function Cifra({ etiqueta, valor, a, nota }: { etiqueta: string; valor: s
             {etiqueta}
           </Link>
         ) : (
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {etiqueta}
           </Typography>
         )}
         {nota && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
             {nota}
           </Typography>
         )}

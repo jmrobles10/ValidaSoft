@@ -47,7 +47,7 @@ export function DetalleWebhook({ webhook, empresas, onEditar, onSecreto }: { web
           <Dato etiqueta={t('webhooks.ultimaEntrega')}>{webhook.ultimaEntregaEn ? formatearFechaHora(webhook.ultimaEntregaEn) : '—'}</Dato>
           {webhook.secretoAnteriorVence && <Dato etiqueta={t('webhooks.secretoAnterior')}>{formatearFechaHora(webhook.secretoAnteriorVence)}</Dato>}
         </RejillaDatos>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }} useFlexGap>
           <Button variant="outlined" startIcon={<Pencil size={16} aria-hidden />} onClick={onEditar}>
             {t('webhooks.editar')}
           </Button>

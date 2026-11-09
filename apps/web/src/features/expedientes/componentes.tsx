@@ -51,7 +51,7 @@ export function TerceroEnLinea({ tercero }: { tercero: TerceroResumenDto }) {
       <Typography component="span" noWrap sx={{ fontWeight: 500 }}>
         {tercero.nombre}
       </Typography>
-      <Typography component="span" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+      <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
         {identificacionResumida(tercero.identificacion)}
       </Typography>
     </Box>

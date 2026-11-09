@@ -42,7 +42,7 @@ export function VersionesFlujo({ versiones, actual, onVer }: { versiones: readon
                   v{v.version}
                 </Typography>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 12 }}>
+                  <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
                     {fecha}
                   </Typography>
                 </Box>

@@ -14,7 +14,7 @@ export function NombreTercero({ terceroId }: { terceroId: string }) {
   if (isPending) return <Skeleton variant="rounded" height={12} width={200} />;
   if (isError) {
     return (
-      <Typography component="span" color="text.secondary">
+      <Typography component="span" sx={{ color: 'text.secondary' }}>
         {t('vinculos.terceroDesconocido')}
       </Typography>
     );
@@ -25,7 +25,7 @@ export function NombreTercero({ terceroId }: { terceroId: string }) {
       <Typography component="span" noWrap sx={{ fontWeight: 500 }}>
         {data.nombre}
       </Typography>
-      <Typography component="span" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+      <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
         {identificacionDe(data)}
       </Typography>
     </Box>

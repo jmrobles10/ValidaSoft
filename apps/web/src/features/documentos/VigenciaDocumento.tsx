@@ -35,11 +35,11 @@ export function VigenciaDocumento({ vigencia }: { vigencia: VigenciaDto }) {
   if (!estado) return null;
   const explicacion = explicacionVigencia(vigencia, t);
   return (
-    <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+    <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
       <ChipEstado estado={CHIP_VIGENCIA[estado]} etiqueta={t(`expedientes.vigencia.estados.${estado}`)} />
       {estado !== 'SinVencimiento' && <Typography sx={{ fontSize: 13 }}>{textoVencimiento(vigencia, t)}</Typography>}
       {explicacion && (
-        <Typography color="text.secondary" sx={{ fontSize: 12 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
           {explicacion}
         </Typography>
       )}

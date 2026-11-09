@@ -27,7 +27,7 @@ export function TarjetaEstadoCertificado({ certificado: c, huella }: { certifica
         role="status"
         sx={(tema) => ({ p: 2.5, bgcolor: tema.palette.estado[tono].fondo, borderBottom: `1px solid ${tema.palette.estado[tono].borde}` })}
       >
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1.5 }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1.5 }}>
           <LogoEmpresa nombre={c.emisor.empresa} logoUrl={c.emisor.logoUrl} />
           <Typography sx={{ fontWeight: 500, fontSize: 15, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{c.emisor.empresa}</Typography>
           {estado && <ChipEstado estado={estado} bloqueante={c.bloqueante} size="medium" />}
@@ -35,7 +35,7 @@ export function TarjetaEstadoCertificado({ certificado: c, huella }: { certifica
         <Typography id="estado-certificado" variant="h3" component="h2">
           {titulo}
         </Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.5, fontSize: 15, lineHeight: '22px' }}>
+        <Typography sx={{ color: 'text.secondary', mt: 0.5, fontSize: 15, lineHeight: '22px' }}>
           {texto}
         </Typography>
         {c.reemplazadoPor && (
@@ -64,7 +64,7 @@ export function TarjetaEstadoCertificado({ certificado: c, huella }: { certifica
               {descargar.isPending ? t('verificacion.descargando') : t('verificacion.descargar')}
             </Button>
           ) : (
-            <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
               {t('verificacion.soloVigente')}
             </Typography>
           )}

@@ -29,13 +29,12 @@ export function ItemNotificacion({ notificacion, ahora, onAbrir }: { notificacio
               component="time"
               dateTime={notificacion.creadaEn}
               title={formatearFechaHora(notificacion.creadaEn)}
-              color="text.secondary"
-              sx={{ flex: 'none', fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
+              sx={{ color: 'text.secondary', flex: 'none', fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
             >
               {haceCuanto(notificacion.creadaEn, ahora)}
             </Typography>
           </Box>
-          <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 13, lineHeight: '18px', overflowWrap: 'anywhere' }}>
+          <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 13, lineHeight: '18px', overflowWrap: 'anywhere' }}>
             {notificacion.mensaje}
           </Typography>
         </Box>

@@ -30,12 +30,12 @@ export function EditorEtapas({ etapas, areas, onCambiar, errores, soloLectura }:
         const errorEtapa = error(`etapa.${String(i)}`);
         return (
           <Box key={etapa.clave} component="section" aria-label={t('flujos.editor.etapa', { orden })} sx={{ border: 1, borderColor: errorEtapa ? 'error.main' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Box>
                 <Typography component="h4" sx={{ fontWeight: 600, fontSize: 14 }}>
                   {t('flujos.editor.etapa', { orden })}
                 </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: 12 }}>
+                <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>
                   {errorEtapa ? t(`flujos.editor.errores.${errorEtapa.codigo}`) : t('flujos.editor.etapaAyuda')}
                 </Typography>
               </Box>

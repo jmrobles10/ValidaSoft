@@ -60,9 +60,8 @@ export function EncabezadoFijo({ titulo, subtitulo, acciones, antes, etiquetaAcc
             <Typography
               component="div"
               variant="body2"
-              color="text.secondary"
               // En pantallas angostas, una sola línea: la franja fija no debe comerse la pantalla.
-              sx={{ mt: 0.25, minWidth: 0, whiteSpace: { xs: 'nowrap', sm: 'normal' }, overflow: { xs: 'hidden', sm: 'visible' }, textOverflow: 'ellipsis' }}
+              sx={{ color: 'text.secondary', mt: 0.25, minWidth: 0, whiteSpace: { xs: 'nowrap', sm: 'normal' }, overflow: { xs: 'hidden', sm: 'visible' }, textOverflow: 'ellipsis' }}
             >
               {subtitulo}
             </Typography>
@@ -73,10 +72,9 @@ export function EncabezadoFijo({ titulo, subtitulo, acciones, antes, etiquetaAcc
             direction="row"
             spacing={1}
             useFlexGap
-            flexWrap="wrap"
             role="group"
             aria-label={etiquetaAcciones}
-            sx={{ flex: '0 1 auto', ml: { xs: 0, sm: 'auto' }, justifyContent: { sm: 'flex-end' } }}
+            sx={{ flexWrap: 'wrap', flex: '0 1 auto', ml: { xs: 0, sm: 'auto' }, justifyContent: { sm: 'flex-end' } }}
           >
             {acciones}
           </Stack>

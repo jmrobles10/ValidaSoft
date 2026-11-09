@@ -49,7 +49,7 @@ export function DialogoDesignar({ vinculo, cuentas, onCerrar }: { vinculo: Vincu
       <DialogTitle id="titulo-designar">{t('cuentas.designar.titulo', { empresa })}</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
-          <Typography color="text.secondary">{t('cuentas.designar.ayuda', { empresa })}</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>{t('cuentas.designar.ayuda', { empresa })}</Typography>
           {designacion.isError && (
             <Alert
               severity={sinCertificacion ? 'warning' : 'error'}
@@ -80,7 +80,7 @@ export function DialogoDesignar({ vinculo, cuentas, onCerrar }: { vinculo: Vincu
                       <Typography component="span" sx={{ display: 'block', fontSize: 14, lineHeight: '20px' }}>
                         {t('cuentas.designar.opcion', { banco: c.banco, tipo: esTipoCuenta(c.tipoCuenta) ? t(`cuentas.tipos.${c.tipoCuenta}`) : c.tipoCuenta, numero: c.numeroEnmascarado })}
                       </Typography>
-                      <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 13, lineHeight: '18px' }}>
+                      <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 13, lineHeight: '18px' }}>
                         {detalle(c)}
                       </Typography>
                     </>

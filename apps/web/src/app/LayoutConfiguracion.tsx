@@ -12,7 +12,7 @@ function Grupo({ titulo, secciones, empresaId, actual }: { titulo: string; secci
   if (secciones.length === 0) return null;
   return (
     <>
-      <Typography variant="overline" component="p" color="text.secondary" sx={{ display: 'block', px: 1, pt: 2, pb: 0.75, '&:first-of-type': { pt: 0 } }}>
+      <Typography variant="overline" component="p" sx={{ color: 'text.secondary', display: 'block', px: 1, pt: 2, pb: 0.75, '&:first-of-type': { pt: 0 } }}>
         {titulo}
       </Typography>
       <Box component="ul" sx={{ m: 0, p: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '2px' }}>

@@ -3,7 +3,7 @@ import {
   TextField, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { esErrorApi } from '@validasoft/api-client';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRegistrarCuenta } from '../shared/api';
 import { mensajeDeError } from '../shared/errores';
@@ -36,7 +36,7 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
     if (errorApi && CAMPO_POR_CODIGO[errorApi] === campo) setErrorApi(null);
   };
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     setIntentado(true);
     if (Object.keys(locales).length > 0) return;
@@ -74,7 +74,7 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
         <DialogTitle id="titulo-nueva-cuenta">{t('cuentas.nueva.titulo')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
-            <Typography color="text.secondary">{t('cuentas.nueva.ayuda')}</Typography>
+            <Typography sx={{ color: 'text.secondary' }}>{t('cuentas.nueva.ayuda')}</Typography>
             {errorGeneral && <Alert severity="error">{errorGeneral}</Alert>}
             {campoDeTexto('banco', t('cuentas.nueva.banco'), t('cuentas.nueva.bancoAyuda'))}
             <FormControl required error={Boolean(errorTipo)}>
@@ -90,7 +90,7 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
             {campoDeTexto('titular', t('cuentas.nueva.titular'), undefined, { autoComplete: 'name' })}
             {campoDeTexto('identificacionTitular', t('cuentas.nueva.identificacion'), t('cuentas.nueva.identificacionAyuda'), { maxLength: 30 })}
             {campoDeTexto('moneda', t('cuentas.nueva.moneda'), t('cuentas.nueva.monedaAyuda'), { maxLength: 3 })}
-            <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: '18px' }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px' }}>
               {t('cuentas.nueva.protegido')}
             </Typography>
           </Stack>

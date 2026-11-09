@@ -16,7 +16,7 @@ export function MarcaDeEmpresa({ empresa, children }: { empresa: EmpresaPublicaD
   const tema = useMemo(() => (color ? createValidasoftTheme('light', { app: 'public', colorEmpresa: color }) : null), [color]);
   const contenido = (
     <>
-      <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.5 }}>
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 1.5 }}>
         <LogoEmpresa nombre={empresa.nombre} logoUrl={empresa.logoUrl} tamano={32} />
         <Typography component="span" sx={{ fontSize: 14, color: 'text.secondary' }}>
           {empresa.nombre}

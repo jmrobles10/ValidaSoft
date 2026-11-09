@@ -35,9 +35,9 @@ describe('DialogoPreferencias', () => {
     const onCerrar = vi.fn();
     montar(<DialogoPreferencias onCerrar={onCerrar} />);
 
-    const nuevo = await screen.findByRole('checkbox', { name: /Nuevo expediente en tu área/ });
-    const respondio = screen.getByRole('checkbox', { name: /El tercero respondió/ });
-    const webhook = screen.getByRole('checkbox', { name: /Webhook deshabilitado/ });
+    const nuevo = await screen.findByRole('switch', { name: /Nuevo expediente en tu área/ });
+    const respondio = screen.getByRole('switch', { name: /El tercero respondió/ });
+    const webhook = screen.getByRole('switch', { name: /Webhook deshabilitado/ });
     expect(nuevo).toBeChecked();
     expect(webhook).not.toBeChecked();
     expect(screen.getByText(/Cuando el tercero corrige lo observado/)).toBeInTheDocument();

@@ -45,13 +45,13 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
 
   return (
     <Box component="li" sx={{ listStyle: 'none', border: 1, borderColor: requisito.estado === 'Observado' ? 'estado.advertencia.borde' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}>
-      <Stack direction="row" spacing={1} alignItems="flex-start" useFlexGap flexWrap="wrap">
+      <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <FileText size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', marginTop: 2, opacity: 0.7 }} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography component="h4" sx={{ fontWeight: 600, fontSize: 14, lineHeight: '20px' }}>
             {documento}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {requisito.obligatorio ? t('expedientes.requisitos.obligatorio') : t('expedientes.requisitos.opcional')}
             {version && (
               <>
@@ -82,12 +82,12 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
         </Box>
       )}
       {!version && requisito.estado === 'Pendiente' && (
-        <Typography color="text.secondary" sx={{ fontSize: 13, mt: 1 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 1 }}>
           {t('expedientes.requisitos.sinVersion')}
         </Typography>
       )}
       {requisito.reenvios > 0 && (
-        <Typography color="text.secondary" sx={{ fontSize: 13, mt: 1 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 1 }}>
           {t('expedientes.requisitos.versionesNuevas', { count: requisito.reenvios })}
         </Typography>
       )}
@@ -151,14 +151,14 @@ function AreaDelRequisito({
 
   return (
     <Box component="li" sx={{ listStyle: 'none', pl: 1.5, borderLeft: 2, borderColor: 'divider' }}>
-      <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+      <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
         <Typography sx={{ fontWeight: 500, fontSize: 13, flex: '1 1 auto' }}>{nombreArea}</Typography>
         {areaRequisito.estado === 'Esperando' ? (
           <Chip size="small" variant="outlined" icon={<Clock size={14} aria-hidden />} label={t('expedientes.requisitos.areaEsperando')} sx={{ color: 'text.secondary' }} />
         ) : (
           <ChipEstado estado={areaRequisito.estado} />
         )}
-        <Typography component="span" variant="monoTabla" color="text.secondary">
+        <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
           {t('bandeja.aprobaciones', { aprobaciones: String(areaRequisito.aprobaciones), requeridas: String(areaRequisito.aprobadoresRequeridos) })}
         </Typography>
         {bloqueo === null && decidirPorDocumento && (
@@ -180,12 +180,12 @@ function AreaDelRequisito({
         </Typography>
       ))}
       {veredictosInvalidados(areaRequisito).map((v) => (
-        <Typography key={v.id} color="text.secondary" sx={{ fontSize: 12, mt: 0.5, textDecoration: 'line-through' }}>
+        <Typography key={v.id} sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5, textDecoration: 'line-through' }}>
           {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.invalidado', { n: String(v.sobreVersion ?? '—') })}
         </Typography>
       ))}
       {explicar && (
-        <Typography color="text.secondary" sx={{ fontSize: 12, mt: 0.5 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5 }}>
           {t(`expedientes.requisitos.bloqueos.${explicar}`)}
         </Typography>
       )}

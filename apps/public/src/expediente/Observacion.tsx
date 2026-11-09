@@ -8,7 +8,7 @@ export function Observacion({ observacion }: { observacion: ObservacionPublicaDt
   const { t } = useTranslation();
   return (
     <Box sx={(th) => ({ mt: 1, py: 1, px: 1.5, borderRadius: `${String(th.radio.sm)}px`, bgcolor: 'superficie.nivel2' })}>
-      <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', mb: 0.25 }}>
+      <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px', mb: 0.25 }}>
         {t('expediente.observacionDel', { fecha: formatearFecha(observacion.fecha) })}
       </Typography>
       <Stack component="ul" spacing={0.5} sx={{ p: 0, m: 0, listStyle: 'none' }}>

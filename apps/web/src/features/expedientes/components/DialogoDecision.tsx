@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
 import type { ExpedienteDto, MotivoTipificadoDto, Veredicto } from '@validasoft/api-client';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
@@ -149,7 +149,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
     }
   };
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (incompleto || !aplica) return;
     mutacion.mutate(entrada(), {
@@ -175,7 +175,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
       <FormularioDeDialogo onSubmit={enviar}>
         <DialogTitle id="titulo-decision">
           {textos.titulo}
-          <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+          <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
             {expediente.folio} · {expediente.tercero.nombre}
           </Typography>
         </DialogTitle>
@@ -207,7 +207,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                         <Typography component="span" sx={{ display: 'block', fontWeight: 600, fontSize: 14 }}>
                           {opcion === 'Aprobado' ? t('expedientes.veredicto.aprobar') : t('expedientes.veredicto.observar')}
                         </Typography>
-                        <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 13 }}>
+                        <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 13 }}>
                           {opcion === 'Aprobado'
                             ? t('expedientes.veredicto.aprobarAyuda')
                             : expediente.politicaDevolucion === 'AlCerrarArea'

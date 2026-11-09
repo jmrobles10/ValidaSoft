@@ -18,7 +18,7 @@ export function TextosLegalesEmpresa({ empresa, puedeLeer, puedeEscribir }: { em
       <Typography id={`textos-${empresa.id}`} component="h3" sx={{ fontSize: 14, fontWeight: 600 }}>
         {t('empresasGrupo.textos.titulo')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1, maxWidth: 720 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, mb: 1, maxWidth: 720 }}>
         {t('empresasGrupo.textos.ayuda', { nombre: empresa.nombre })}
       </Typography>
       {consulta.isError && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}

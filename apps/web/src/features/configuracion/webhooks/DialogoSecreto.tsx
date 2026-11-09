@@ -16,11 +16,11 @@ export function DialogoSecreto({ secreto, anteriorVence, onCerrar }: { secreto: 
       textoListo={t('webhooks.secreto.listo')}
       onCerrar={onCerrar}
     >
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {t('webhooks.secreto.comoVerificar')}
       </Typography>
       {anteriorVence && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {t('webhooks.secreto.anteriorVence', { fecha: formatearFecha(anteriorVence) })}
         </Typography>
       )}

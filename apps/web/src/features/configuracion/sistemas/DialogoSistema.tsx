@@ -2,7 +2,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { crearSistema, rotarClavePublicaSistema, type SistemaIntegradoDto } from '@validasoft/api-client';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
@@ -54,7 +54,7 @@ export function DialogoSistema({ edicion, onCerrar, onListo }: { edicion: Edicio
     onSettled: () => invalidarRuta(cliente, '/api/v1/sistemas'),
   });
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (pendiente) return;
     guardar.mutate();

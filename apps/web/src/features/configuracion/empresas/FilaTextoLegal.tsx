@@ -43,15 +43,15 @@ export function FilaTextoLegal({ empresaId, empresaNombre, ruta, vigente, puedeE
 
   return (
     <Box component="li" sx={{ py: 1, '& + &': { borderTop: 1, borderColor: 'divider' } }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minHeight: 32 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minHeight: 32 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography component="h4" sx={{ fontSize: 14, fontWeight: 500 }}>
             {nombre}
           </Typography>
           {vigente ? (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {t('empresasGrupo.textos.version', { version: String(vigente.version) })} ·{' '}
-              <Typography component="span" variant="monoTabla" color="text.secondary">
+              <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                 {t('empresasGrupo.textos.vigenteDesde', { fecha: formatearFecha(vigente.publicadoEn) })}
               </Typography>
             </Typography>
@@ -95,7 +95,7 @@ export function FilaTextoLegal({ empresaId, empresaNombre, ruta, vigente, puedeE
             onChange={(e) => setContenido(e.target.value)}
             helperText={t('empresasGrupo.textos.caracteres', { n: contenido.trim().length.toLocaleString('es-CO'), maximo: LONGITUD_MAXIMA_TEXTO.toLocaleString('es-CO') })}
           />
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
             {error && <FaltaParaEnviar>{t(`empresasGrupo.textos.errores.${error}`)}</FaltaParaEnviar>}
             <Button variant="text" onClick={() => setModo('cerrado')} disabled={publicar.isPending} sx={{ color: 'text.primary' }}>
               {t('comun.cancelar')}

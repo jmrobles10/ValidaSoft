@@ -60,7 +60,8 @@ afterEach(() => reiniciarCliente());
 
 describe('Tipo de documento: crear y editar', () => {
   it('crear un formulario: «Crear tipo» queda deshabilitado hasta tener código, nombre y un campo válido', async () => {
-    const usuario = userEvent.setup();
+    // Sin pausa entre teclas: escribe ~50 caracteres y con la pausa por omisión se pasaba del tiempo en la suite completa.
+    const usuario = userEvent.setup({ delay: null });
     const { peticiones, onCerrar } = montar(null, (url, metodo) => (metodo === 'POST' ? json({ ...EXISTENTE, nombre: 'Declaración de fondos' }, 201) : json(url.includes('catalogos') ? [] : {})));
     const crear = screen.getByRole('button', { name: 'Crear tipo' });
     expect(crear).toBeDisabled();

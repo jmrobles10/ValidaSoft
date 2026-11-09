@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField } from '@mui/material';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { Ban } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
@@ -17,7 +17,7 @@ export function DialogoRevocarCertificado({ empresaId, folio, onCerrar }: { empr
   const [tocado, setTocado] = useState(false);
   const falta = !justificacion.trim();
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (falta) return;
     revocar.mutate(

@@ -2,7 +2,7 @@ import { Alert, Box, Button, Drawer, IconButton, MenuItem, Stack, TextField, Too
 import type { EmpresaDto, RolAsignadoDto, UsuarioDto } from '@validasoft/api-client';
 import { AvatarActor, AlineadoConCampo } from '@validasoft/ui';
 import { Ban, Plus, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
@@ -27,7 +27,7 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
   const [filas, setFilas] = useState<FilaRol[]>(() => aFilas(usuario?.roles ?? []));
 
   const cambiar = (indice: number, cambios: Partial<FilaRol>) => setFilas((actuales) => actuales.map((f, i) => (i === indice ? { ...f, ...cambios } : f)));
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     onGuardar({ nombre: nombre.trim(), correo: correo.trim(), roles: aRoles(filas) });
   };
@@ -35,13 +35,13 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
   return (
     <Drawer anchor="right" open onClose={guardando ? undefined : onCerrar} slotProps={{ paper: { sx: { width: { xs: '100%', sm: 480 } }, 'aria-labelledby': 'titulo-roles' } }}>
       <Box component="form" onSubmit={enviar} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ px: 3, pt: 2.5, pb: 1 }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', px: 3, pt: 2.5, pb: 1 }}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h3" component="h2" id="titulo-roles">
             {usuario ? t('usuarios.editarRoles') : t('usuarios.nuevo')}
           </Typography>
           {usuario && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {usuario.nombre}
             </Typography>
           )}
@@ -53,11 +53,11 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
 
       <Stack spacing={2.5} sx={{ px: 3, py: 1.5, flex: 1, overflowY: 'auto' }}>
         {usuario ? (
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
             <AvatarActor tipo="persona" nombre={usuario.nombre} tamano={40} />
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontWeight: 600 }}>{usuario.nombre}</Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }} noWrap>
                 {usuario.correo}
               </Typography>
             </Box>
@@ -77,12 +77,12 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
           </Typography>
           <Stack spacing={1}>
             {filas.length === 0 && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 {t('usuarios.sinRolesAyuda')}
               </Typography>
             )}
             {filas.map((fila, indice) => (
-              <Stack key={indice} direction="row" spacing={1} alignItems="flex-start">
+              <Stack key={indice} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
                 <TextField
                   select
                   label={indice === 0 ? t('usuarios.alcance') : undefined}
@@ -139,13 +139,11 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
           <Stack
             direction="row"
             spacing={1.5}
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ px: 1.75, py: 1.5, border: 1, borderColor: 'estado.error.borde', borderRadius: (th) => `${String(th.radio.md)}px` }}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1.5, border: 1, borderColor: 'estado.error.borde', borderRadius: (th) => `${String(th.radio.md)}px` }}
           >
             <Box>
               <Typography sx={{ fontWeight: 600 }}>{t('usuarios.desactivarA', { nombre: usuario.nombre })}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 {t('usuarios.desactivarAyuda')}
               </Typography>
             </Box>
@@ -156,7 +154,7 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
         )}
       </Stack>
 
-      <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+      <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
         <Button variant="text" onClick={onCerrar} disabled={guardando} sx={{ color: 'text.primary' }}>
           {t('comun.cancelar')}
         </Button>

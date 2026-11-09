@@ -95,7 +95,7 @@ export function useColumnasVencimientos({ conSeleccion, seleccion, alternar }: O
         celda: (f) => {
           const base = baseVencimiento(f);
           return (
-            <Typography component="span" variant="body2" color="text.secondary">
+            <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
               {base ? t(`vencimientos.bases.${base}`) : f.base}
             </Typography>
           );
@@ -110,7 +110,7 @@ export function useColumnasVencimientos({ conSeleccion, seleccion, alternar }: O
             <Tooltip title={t('vencimientos.ratificableAyuda')}>
               <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
                 <RefreshCw size={14} strokeWidth={1.75} aria-hidden />
-                <Typography component="span" variant="body2" color="text.primary">
+                <Typography component="span" variant="body2" sx={{ color: 'text.primary' }}>
                   {t('vencimientos.ratificable')}
                 </Typography>
               </Box>

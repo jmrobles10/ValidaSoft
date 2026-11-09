@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Skeleton, Stack, Switch, Typography } from '@mui/material';
 import { ErrorEnLinea, FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
@@ -24,7 +24,7 @@ export function DialogoPreferencias({ onCerrar }: { onCerrar: () => void }) {
   const cambios = preferencias ? cambiosDePreferencias(preferencias.correo, editados) : {};
   const hayCambios = Object.keys(cambios).length > 0;
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (!hayCambios) return;
     guardar.mutate(cambios, {
@@ -47,7 +47,7 @@ export function DialogoPreferencias({ onCerrar }: { onCerrar: () => void }) {
         <DialogTitle id="titulo-preferencias-notificacion">{t('notificaciones.preferencias.titulo')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {t('notificaciones.preferencias.ayuda')}
             </Typography>
             {guardar.isError && <Alert severity="error">{mensajeDeError(guardar.error, t)}</Alert>}
@@ -81,7 +81,7 @@ export function DialogoPreferencias({ onCerrar }: { onCerrar: () => void }) {
                             {clave ? t(`notificaciones.tipos.${clave}.titulo`) : tipo}
                           </Typography>
                           {clave && (
-                            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                            <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block' }}>
                               {t(`notificaciones.tipos.${clave}.explicacion`)}
                             </Typography>
                           )}

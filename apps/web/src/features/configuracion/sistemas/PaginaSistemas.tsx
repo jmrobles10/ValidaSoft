@@ -105,10 +105,10 @@ export function PaginaSistemas() {
                   sx={{ cursor: 'pointer', '&:focus-visible': { outlineOffset: -2 } }}
                 >
                   <TableCell>
-                    <Stack direction="row" spacing={1.25} alignItems="center">
+                    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
                       <AvatarActor tipo="integracion" />
                       <span style={{ fontWeight: 500 }}>{s.nombre}</span>
-                      <Typography component="span" variant="monoTabla" color="text.secondary">
+                      <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                         {s.codigo}
                       </Typography>
                     </Stack>
@@ -137,7 +137,7 @@ export function PaginaSistemas() {
       {elegido && (
         <Box sx={{ mt: 2 }}>
           <Tarjeta etiqueta={elegido.nombre} titulo={elegido.nombre}>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 2 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: -1, mb: 2 }}>
               {t('sistemas.detalleAyuda', { codigo: elegido.codigo })}
             </Typography>
             <Stack spacing={2}>

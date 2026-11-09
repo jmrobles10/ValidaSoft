@@ -36,7 +36,7 @@ function Paso({ estado, titulo, detalle }: { estado: EstadoPaso; titulo: string;
             {`: ${t(`verificacion.cripto.estadosPaso.${estado}`)}`}
           </Box>
         </Typography>
-        <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: '20px', overflowWrap: 'anywhere' }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px', overflowWrap: 'anywhere' }}>
           {detalle}
         </Typography>
       </Box>
@@ -58,7 +58,7 @@ export function PasosVerificacion({ certificado: c, huella }: { certificado: Cer
       <Typography id="autenticidad" variant="h3" component="h2">
         {t('verificacion.cripto.titulo')}
       </Typography>
-      <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2, fontSize: 14, lineHeight: '20px' }}>
+      <Typography sx={{ color: 'text.secondary', mt: 0.5, mb: 2, fontSize: 14, lineHeight: '20px' }}>
         {t('verificacion.cripto.sub')}
       </Typography>
 
@@ -81,9 +81,9 @@ export function PasosVerificacion({ certificado: c, huella }: { certificado: Cer
           <DetallesTecnicos certificado={c} hashCalculado={resultado.hashCalculado} />
         </>
       ) : (
-        <Stack direction="row" spacing={1.5} alignItems="center" role="status" sx={{ py: 1 }}>
+        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: 'center', py: 1 }}>
           <CircularProgress size={20} aria-hidden />
-          <Typography color="text.secondary">{t('verificacion.cripto.verificando')}</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>{t('verificacion.cripto.verificando')}</Typography>
         </Stack>
       )}
     </Card>

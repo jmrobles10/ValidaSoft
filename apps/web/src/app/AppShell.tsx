@@ -136,8 +136,7 @@ export function AppShell() {
         {sistema && (
           <Typography
             component="span"
-            color="text.secondary"
-            sx={{ display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
+            sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
           >
             <Link2 size={14} strokeWidth={1.75} aria-hidden />
             {persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}

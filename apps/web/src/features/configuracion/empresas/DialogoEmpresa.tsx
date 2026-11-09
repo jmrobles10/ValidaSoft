@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
 import type { EmpresaDto } from '@validasoft/api-client';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
@@ -30,7 +30,7 @@ export function DialogoEmpresa({ claveIdempotencia, onCerrar, onCreada }: { clav
   const cambiar = (parcial: Partial<BorradorEmpresa>) => setB((previo) => ({ ...previo, ...parcial }));
   const tocar = (campo: keyof BorradorEmpresa) => setTocados((previos) => new Set([...previos, campo]));
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (primero) return;
     crear.mutate(b, {

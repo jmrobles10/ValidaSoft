@@ -114,7 +114,7 @@ function Encabezado({ vinculo, acciones, onAccion, antes }: { vinculo: VinculoDt
       tituloCompleto={tercero.data?.nombre}
       etiquetaAcciones={t('vinculos.detalle.acciones')}
       subtitulo={
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25, fontSize: 13, flexWrap: 'wrap' }} useFlexGap>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 0.25, fontSize: 13, flexWrap: 'wrap' }} useFlexGap>
           {tercero.data && <Mono>{identificacionDe(tercero.data)}</Mono>}
           {tercero.data && <span aria-hidden>·</span>}
           <span>{vinculo.tipoVinculo.nombre}</span>
@@ -251,7 +251,7 @@ function ReferenciasVinculo({ vinculo }: { vinculo: VinculoDto }) {
               {vinculo.referencias.map((r) => (
                 <tr key={`${r.sistema}|${r.id}`}>
                   <td>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                       <AvatarActor tipo="integracion" tamano={24} />
                       <span>{r.sistema}</span>
                     </Stack>

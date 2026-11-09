@@ -30,7 +30,7 @@ export function PropuestaCuenta({ cuenta, aprobadoresRequeridos, hayDesignada, p
 
   return (
     <SeccionCuenta titulo={t('cuentas.secciones.porAprobar')} cuenta={cuenta} fecha={cuenta.propuestaEn}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {t('cuentas.propuestaEl', { fecha: formatearFecha(cuenta.propuestaEn) })}
       </Typography>
       <DatosCuenta cuenta={cuenta} />
@@ -41,7 +41,7 @@ export function PropuestaCuenta({ cuenta, aprobadoresRequeridos, hayDesignada, p
         {t(hayDesignada ? 'cuentas.cuatroOjos' : 'cuentas.cuatroOjosSinAnterior', { total })}
       </Alert>
       {yaAprobo && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {t('cuentas.yaAprobaste')}
         </Typography>
       )}

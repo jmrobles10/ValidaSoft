@@ -37,7 +37,7 @@ describe('EditorRequisitos', () => {
 
   it('«Obligatorio» y la papelera van juntos en la celda alineada con los campos', () => {
     editor([requisitoNuevo('rut')]);
-    const obligatorio = screen.getByRole('checkbox', { name: 'Obligatorio' });
+    const obligatorio = screen.getByRole('switch', { name: 'Obligatorio' });
     const quitar = screen.getByRole('button', { name: 'Quitar documento' });
     const celda = obligatorio.closest('label')?.parentElement;
     expect(celda).toBe(quitar.parentElement);

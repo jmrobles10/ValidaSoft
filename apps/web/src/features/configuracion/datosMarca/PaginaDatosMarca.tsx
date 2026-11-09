@@ -71,7 +71,7 @@ export function PaginaDatosMarca() {
               <Typography component="span" variant="mono">{empresa.prefijoFolio}</Typography>
             </Dato>
           </RejillaDatos>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
             {t('datosMarca.prefijoAyuda')}
           </Typography>
           <TextField
@@ -90,7 +90,7 @@ export function PaginaDatosMarca() {
         <Tarjeta titulo={t('datosMarca.marca')}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0,1fr) 280px' }, gap: 2, alignItems: 'start' }}>
             <Stack spacing={2}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                 <Box
                   sx={(th) => ({ width: 48, height: 48, flex: 'none', display: 'grid', placeItems: 'center', borderRadius: `${String(th.radio.sm)}px`, border: 1, borderColor: 'divider', bgcolor: 'superficie.nivel2', overflow: 'hidden' })}
                 >
@@ -122,11 +122,11 @@ export function PaginaDatosMarca() {
               />
             </Stack>
             <Box aria-label={t('datosMarca.vistaPrevia')} role="group" sx={(th) => ({ p: 2, border: 1, borderColor: 'divider', borderRadius: `${String(th.radio.md)}px`, bgcolor: 'background.default' })}>
-              <Typography variant="overline" color="text.secondary" component="p">
+              <Typography variant="overline" sx={{ color: 'text.secondary' }} component="p">
                 {t('datosMarca.vistaPrevia')}
               </Typography>
               <Typography sx={{ fontSize: 14, mb: 1 }}>{t('datosMarca.vistaPreviaTexto', { empresa: empresa.nombre })}</Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                 <Box component="span" sx={(th) => ({ px: 1.5, py: 0.75, borderRadius: `${String(th.radio.sm)}px`, fontSize: 14, fontWeight: 600, bgcolor: paleta?.accion ?? 'primary.main', color: paleta?.textoAccion ?? 'primary.contrastText' })}>
                   {t('datosMarca.vistaPreviaBoton')}
                 </Box>

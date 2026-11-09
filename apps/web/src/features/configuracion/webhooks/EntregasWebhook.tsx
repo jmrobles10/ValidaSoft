@@ -41,7 +41,7 @@ function FilaEntrega({ entrega, webhookId }: { entrega: EntregaWebhookDto; webho
         <TableCell>
           <Typography variant="body2">{formatearFechaHora(entrega.creadaEn)}</Typography>
           {entrega.proximoIntentoEn && (
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               {t('webhooks.entregas.proximo', { fecha: formatearFechaHora(entrega.proximoIntentoEn) })}
             </Typography>
           )}
@@ -62,7 +62,7 @@ function FilaEntrega({ entrega, webhookId }: { entrega: EntregaWebhookDto; webho
         <TableCell colSpan={6} sx={{ py: 0, borderBottom: abierta ? undefined : 0 }}>
           <Collapse in={abierta} unmountOnExit>
             <Stack component="ol" spacing={0.5} sx={{ m: 0, py: 1, pl: 3 }}>
-              {entrega.historial.length === 0 && <Typography variant="body2" color="text.secondary">{t('webhooks.entregas.sinIntentos')}</Typography>}
+              {entrega.historial.length === 0 && <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('webhooks.entregas.sinIntentos')}</Typography>}
               {entrega.historial.map((i) => (
                 <Typography component="li" variant="body2" key={i.intentoId}>
                   {t('webhooks.entregas.intento', {
@@ -92,7 +92,7 @@ export function EntregasWebhook({ webhookId }: { webhookId: string }) {
 
   return (
     <Box component="section" aria-labelledby={`entregas-${webhookId}`}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <Typography id={`entregas-${webhookId}`} component="h3" sx={{ fontSize: 14, fontWeight: 600 }}>
           {t('webhooks.entregas.titulo')}
         </Typography>
@@ -122,7 +122,7 @@ export function EntregasWebhook({ webhookId }: { webhookId: string }) {
             {consulta.data && entregas.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6}>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {t('webhooks.entregas.vacio')}
                   </Typography>
                 </TableCell>

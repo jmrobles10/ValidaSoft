@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { verificarOtpEnlace, type SesionTerceroDto } from '@validasoft/api-client';
 import { formatearHora, PaginaEstado } from '@validasoft/ui';
 import { CircleAlert, Clock, Link2Off, WifiOff } from 'lucide-react';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router';
 import { useSesionTercero } from '../sesion/sesionTercero';
@@ -100,15 +100,15 @@ export function PaginaEnlace() {
 
   if (canje?.tipo !== 'otp') {
     return (
-      <Stack alignItems="center" spacing={2} sx={{ py: 10 }} role="status">
+      <Stack spacing={2} sx={{ alignItems: 'center', py: 10 }} role="status">
         <CircularProgress size={28} aria-hidden />
-        <Typography color="text.secondary">{t('enlace.abriendo')}</Typography>
+        <Typography sx={{ color: 'text.secondary' }}>{t('enlace.abriendo')}</Typography>
       </Stack>
     );
   }
 
   const restantes = intentosRestantesDe(verificacion.error);
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (codigo.length === 6 && !verificacion.isPending) verificacion.mutate();
   };
@@ -118,7 +118,7 @@ export function PaginaEnlace() {
       <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
         {t('enlace.otpTitulo')}
       </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3, fontSize: 15, lineHeight: '22px' }}>
+      <Typography sx={{ color: 'text.secondary', mb: 3, fontSize: 15, lineHeight: '22px' }}>
         {t('enlace.otpTexto', { hora: formatearHora(canje.expira) })}
       </Typography>
       <Stack spacing={2.5}>
@@ -131,7 +131,7 @@ export function PaginaEnlace() {
         <Button type="submit" variant="contained" size="large" fullWidth disabled={codigo.length !== 6 || verificacion.isPending}>
           {t('enlace.otpVerificar')}
         </Button>
-        <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
           {t('enlace.otpSpam')}
         </Typography>
       </Stack>

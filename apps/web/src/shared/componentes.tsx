@@ -58,7 +58,7 @@ export function Tarjeta({
   return (
     <Box component="section" aria-label={etiqueta} sx={{ py: 1.5, px: 2, border: 1, borderColor: 'divider', borderRadius: (t) => `${String(t.radio.md)}px`, bgcolor: 'background.paper', minWidth: 0 }}>
       {(titulo ?? acciones) && (
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1, minHeight: 28 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1, minHeight: 28 }}>
           {titulo && (
             <Typography variant="h4" component={nivel}>
               {titulo}
@@ -123,7 +123,7 @@ export function DialogoConfirmacion({
       <DialogTitle id="titulo-confirmacion">
         {titulo}
         {subtitulo && (
-          <Typography variant="body2" color="text.secondary" component="span" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+          <Typography variant="body2" component="span" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
             {subtitulo}
           </Typography>
         )}

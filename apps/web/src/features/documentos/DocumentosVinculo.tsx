@@ -45,14 +45,14 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
             // Una versión de solo formulario no se descarga (409 `version-sin-archivo`): se ven sus datos.
             const sinArchivo = version ? esVersionSinArchivo(version) : false;
             return (
-              <Stack component="li" key={documento.documentoId} direction="row" spacing={1.25} alignItems="center" sx={{ py: 0.5, minHeight: 44 }}>
+              <Stack component="li" key={documento.documentoId} direction="row" spacing={1.25} sx={{ alignItems: 'center', py: 0.5, minHeight: 44 }}>
                 <FileText size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', opacity: 0.7 }} />
                 <Stack sx={{ minWidth: 0, flex: 1 }}>
                   <Typography sx={{ fontWeight: 500 }} noWrap>
                     {documento.tipo.nombre}
                   </Typography>
                   {version && (
-                    <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+                    <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
                       {t('documentos.version', { n: String(version.n), fecha: formatearFecha(version.cargadaEn) })}
                       {' · '}
                       <Typography component="span" variant="mono" title={version.sha256} sx={{ fontSize: 12 }}>

@@ -9,8 +9,8 @@ import { esEstadoCuenta, numeroVisible, textoTipoCuenta } from './modelo';
 export function SeccionCuenta({ titulo, cuenta, fecha, children }: { titulo: string; cuenta: CuentaDesignadaDto; fecha?: string | null; children: ReactNode }) {
   return (
     <Stack component="section" aria-label={titulo} spacing={1}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="overline" component="h3" color="text.secondary">
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Typography variant="overline" component="h3" sx={{ color: 'text.secondary' }}>
           {titulo}
         </Typography>
         {esEstadoCuenta(cuenta.estado) && <ChipEstado estado={cuenta.estado} fecha={fecha ?? null} />}
@@ -42,7 +42,7 @@ export function DatosCuenta({ cuenta }: { cuenta: CuentaDesignadaDto }) {
         <Dato etiqueta={t('cuentas.campos.moneda')}>{cuenta.moneda}</Dato>
       </RejillaDatos>
       {cuenta.numero === null && (
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           {t('cuentas.numeroOculto')}
         </Typography>
       )}
@@ -55,11 +55,11 @@ export function CuentaRechazada({ cuenta }: { cuenta: CuentaDesignadaDto }) {
   const { t } = useTranslation();
   return (
     <SeccionCuenta titulo={t('cuentas.secciones.rechazada')} cuenta={cuenta}>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {t('cuentas.rechazadaResumen', { banco: cuenta.banco, tipo: textoTipoCuenta(cuenta.tipoCuenta, t), numero: numeroVisible(cuenta) })}
       </Typography>
       {cuenta.motivoRechazo && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {t('cuentas.motivo', { motivo: cuenta.motivoRechazo })}
         </Typography>
       )}

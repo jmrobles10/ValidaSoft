@@ -46,7 +46,7 @@ function Textos({ empresa }: { empresa: EmpresaOpcion }) {
         {empresa.nombre}
       </Typography>
       {empresa.identificacion && (
-        <Typography component="span" noWrap color="text.secondary" sx={{ fontSize: 12, lineHeight: '14px' }}>
+        <Typography component="span" noWrap sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '14px' }}>
           NIT {empresa.identificacion}
         </Typography>
       )}
@@ -70,7 +70,7 @@ export function SelectorEmpresa({ empresas, actual, onCambiar, etiqueta = 'Empre
 
   if (!seleccionada) {
     return (
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         Sin empresas disponibles
       </Typography>
     );

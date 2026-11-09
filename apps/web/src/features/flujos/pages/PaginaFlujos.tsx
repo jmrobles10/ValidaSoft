@@ -79,11 +79,11 @@ export function PaginaFlujos() {
                     sx={{ cursor: 'pointer' }}
                   >
                     <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                         <Typography component="span" sx={{ fontWeight: 500 }}>
                           {f.nombre}
                         </Typography>
-                        <Typography component="span" variant="monoTabla" color="text.secondary">
+                        <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                           {f.codigo}
                         </Typography>
                         {f.esPorDefecto && <Chip size="small" variant="outlined" icon={<Star size={12} aria-hidden />} label={t('flujos.porDefecto')} />}
@@ -97,7 +97,7 @@ export function PaginaFlujos() {
                           {t('flujos.version', { version: String(f.publicada.version) })}
                         </Typography>
                       ) : (
-                        <Typography component="span" color="text.secondary">
+                        <Typography component="span" sx={{ color: 'text.secondary' }}>
                           {t('flujos.sinPublicar')}
                         </Typography>
                       )}
@@ -134,7 +134,7 @@ function PorDefecto({ empresaId, flujos, editable }: { empresaId: string; flujos
 
   return (
     <Tarjeta titulo={t('flujos.porDefectoTitulo')}>
-      <Typography color="text.secondary" sx={{ mb: 2 }}>
+      <Typography sx={{ color: 'text.secondary', mb: 2 }}>
         {t('flujos.porDefectoAyuda')}
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(2, minmax(0,1fr))' }, gap: 2 }}>

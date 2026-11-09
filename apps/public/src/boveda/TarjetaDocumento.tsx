@@ -32,7 +32,7 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
   return (
     <Card component="article" aria-labelledby={`doc-${documento.id}`} sx={{ p: 0, overflow: 'hidden' }}>
       {/* Si el título no cabe junto a las acciones (móvil, nombres largos), las acciones bajan a su propia línea. */}
-      <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" sx={{ columnGap: 1.25, rowGap: 0.25, py: 1, pl: { xs: 1.5, sm: 2 }, pr: 1 }}>
+      <Stack direction="row" useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0.25, py: 1, pl: { xs: 1.5, sm: 2 }, pr: 1 }}>
         <Box aria-hidden sx={(th) => ({ display: 'grid', placeItems: 'center', flex: 'none', width: 28, height: 28, borderRadius: `${String(th.radio.sm)}px`, bgcolor: 'superficie.nivel2', color: 'text.secondary' })}>
           <FileText size={18} />
         </Box>
@@ -40,13 +40,13 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
           <Typography id={`doc-${documento.id}`} component="h2" sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>
             {titulo}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {actual ? t('boveda.cargadaEl', { n: String(actual.n), fecha: formatearFecha(actual.cargadaEn) }) : t('boveda.sinVigente')}
           </Typography>
           {/* La vigencia más próxima entre las empresas; la de cada una va en su fila. */}
           <LineaVigencia vigencia={actual?.vigencia} />
         </Box>
-        <Stack direction="row" alignItems="center" sx={{ ml: 'auto', flex: 'none' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', ml: 'auto', flex: 'none' }}>
           {subible && (
             <Button
               component={RouterLink}
@@ -99,7 +99,7 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
 
       <Box component="ul" aria-label={t('boveda.empresas')} sx={{ p: 0, m: 0 }}>
         {documento.porEmpresa.length === 0 ? (
-          <Typography component="li" color="text.secondary" sx={{ fontSize: 13, py: 1, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
+          <Typography component="li" sx={{ color: 'text.secondary', fontSize: 13, py: 1, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
             {t('boveda.sinEmpresas')}
           </Typography>
         ) : (

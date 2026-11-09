@@ -32,7 +32,7 @@ function Esperando() {
   const { t } = useTranslation();
   return (
     <Stack spacing={1.5} sx={{ p: 3 }} aria-busy>
-      <Stack direction="row" spacing={1} alignItems="center" role="status" sx={{ color: 'text.secondary', fontSize: 13, mb: 1 }}>
+      <Stack direction="row" spacing={1} role="status" sx={{ alignItems: 'center', color: 'text.secondary', fontSize: 13, mb: 1 }}>
         <Link2 size={16} strokeWidth={1.75} aria-hidden />
         <span>{t('sesion.conectando')}</span>
       </Stack>

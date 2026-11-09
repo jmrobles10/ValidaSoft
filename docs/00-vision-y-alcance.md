@@ -198,7 +198,7 @@ El trabajo se divide en hitos pequeños y verificables (detalle, responsables y 
 | Seguimiento y CI | **GitHub** (Issues/Projects, PR con dos aprobaciones, GitHub Actions) |
 | Definición de hecho | Criterios + pruebas + demo + docs/ADR + sin bloqueantes del siguiente hito |
 | IA | Validación inicial con Claude desde el MVP; revisión automática por niveles como servicio |
-| Frontend | React 18 + TypeScript strict + Vite + MUI v6 + TanStack Query + Zustand; dos apps |
+| Frontend | React 19 + TypeScript strict + Vite + MUI v9 + TanStack Query + Zustand; dos apps (actualizado de React 18 + MUI v6 el 2026-11-09, DEP-1) |
 | Identidad | OpenIddict embebido + ASP.NET Identity |
 | Compartición de documentos globales | Automática con todas las empresas vinculadas que exijan ese tipo; sin exclusión por el tercero (A-8) |
 | Revalidación desactualizada | 15 días de aviso y luego el certificado queda `ConPendientes` bloqueante hasta revalidar (A-2); la ratificación nunca pasa por un área (A-7) |

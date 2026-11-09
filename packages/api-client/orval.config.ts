@@ -14,11 +14,11 @@ export default defineConfig({
       target: './src/generado/endpoints',
       schemas: './src/generado/modelos',
       client: 'react-query',
+      httpClient: 'axios',
       clean: true,
-      prettier: false,
       override: {
         mutator: { path: './src/fetcher.ts', name: 'clienteValidasoft' },
-        query: { useQuery: true, useMutation: true, signal: true },
+        query: { signal: true },
       },
     },
   },

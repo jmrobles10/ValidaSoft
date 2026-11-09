@@ -29,7 +29,7 @@ export function DialogoClaveCreada({ llave, valor, empresas, onCerrar }: { llave
           <ResumenPermisos scopes={llave.scopes} />
         </Dato>
       </RejillaDatos>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
         {t('apiKeys.claveCreada.uso')}
       </Typography>
     </DialogoValorUnaVez>

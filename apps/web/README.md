@@ -9,7 +9,7 @@ Workspace pnpm en la raíz del repo con dos apps y dos paquetes (docs/06 §1.1):
 | `packages/api-client` | Cliente generado con **orval** desde el snapshot `openapi/v1.json` + fetcher, errores tipados, lectura del token de sesión y reglas de acciones del vínculo. |
 | `packages/ui` | Design system (dirección **Registro**): `tokens.ts`, `createValidasoftTheme(modo, { app, colorEmpresa })`, mapa canónico de estados (`estados.ts`), paleta segura por empresa (`marcaEmpresa.ts`) y componentes: `ChipEstado`, `SelectorEmpresa`, `LineaDeTiempo`, `TablaConCursor`, `PaginacionCursor`, `BarraFiltros`/`FiltroMenu`/`CampoBusqueda`, `EstadoVacio`, `PaginaEstado`, `ErrorEnLinea`, `RejillaDatos`/`Dato`, `AvatarActor`, `ReferenciaExterna`, `Isotipo`. |
 
-Stack: React 18, TypeScript estricto (sin `any`), Vite 6, MUI v6 (solo `@mui/material`), TanStack Query v5, Zustand v5, React Router 7 (hash), i18next (es-CO), Vitest + Testing Library.
+Stack: React 19, TypeScript estricto (sin `any`), Vite 6, MUI v9 (solo `@mui/material`; estilos en `sx`, sin *system props*), TanStack Query v5, Zustand v5, React Router 8 (hash), i18next (es-CO), Vitest + Testing Library.
 
 ## Comandos (desde la raíz del repo)
 

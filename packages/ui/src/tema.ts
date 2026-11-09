@@ -178,7 +178,7 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
           sizeLarge: { padding: '10px 16px', fontSize: 15, lineHeight: '20px', [ESCRITORIO]: { minHeight: DENSIDAD.controlMedio, padding: '6px 14px', fontSize: 14 } },
           outlined: { borderColor: c.bordeControl, color: c.textoPrimario, backgroundColor: c.superficieNivel1, '&:hover': { borderColor: c.bordeControl, backgroundColor: c.superficieNivel2 } },
           text: { color: acento, '&:hover': { backgroundColor: primario ? primario.tinte : c.acentoTinte } },
-          containedPrimary: { '&:hover': { backgroundColor: primario ? primario.accion : c.accionPrimariaHover } },
+          contained: { '&.MuiButton-colorPrimary:hover': { backgroundColor: primario ? primario.accion : c.accionPrimariaHover } },
         },
       },
       MuiIconButton: {
@@ -210,12 +210,12 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: c.foco, borderWidth: BORDE.anilloFoco },
             '&.Mui-error .MuiOutlinedInput-notchedOutline': { borderColor: c.accionDestructiva },
             '&.Mui-disabled': { backgroundColor: c.superficieNivel2 },
+            '&.MuiInputBase-sizeSmall .MuiInputBase-input': { padding: '6px 10px' },
           },
           input: {
             padding: web ? '6px 10px' : '10px 14px', lineHeight: web ? '20px' : '24px', height: 'auto', '&::placeholder': { color: c.textoSecundario, opacity: 1 },
             ...(web ? {} : { [ESCRITORIO]: { padding: '8px 12px', fontSize: 14, lineHeight: '20px' } }),
           },
-          inputSizeSmall: { padding: '6px 10px' },
         },
       },
       MuiFormHelperText: {

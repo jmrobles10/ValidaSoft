@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Card, Stack } from '@mui/material';
 import type { CampoFormularioDto, ConfirmacionCargaDto } from '@validasoft/api-client';
 import { FaltaParaEnviar } from '@validasoft/ui';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import type { DestinoCarga } from '../boveda/subida';
@@ -34,7 +34,7 @@ export function FormularioRequisito({
   const envio = useEnviarFormulario();
   const [resultado, setResultado] = useState<ConfirmacionCargaDto | null>(null);
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     const cuerpo = cuerpoFormulario(destino, formulario.datos());
     if (!formulario.completo || !cuerpo) return;
@@ -52,7 +52,7 @@ export function FormularioRequisito({
           </Alert>
         )}
         <CamposFormulario campos={campos} formulario={formulario} deshabilitado={envio.isPending} />
-        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+        <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
           {formulario.falta && <FaltaParaEnviar>{formulario.falta}</FaltaParaEnviar>}
           <Button type="submit" variant="contained" size="large" disabled={!formulario.completo || envio.isPending} sx={{ ml: { sm: 'auto' } }}>
             {t('formulario.enviar')}

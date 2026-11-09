@@ -34,7 +34,7 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
 
   return (
     <Box component="section" aria-labelledby="titulo-indicadores" sx={{ mt: 3 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} useFlexGap flexWrap="wrap" sx={{ mb: 1.5 }}>
+      <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', mb: 1.5 }}>
         <Typography variant="h3" component="h2" id="titulo-indicadores">
           {t('inicio.indicadores.titulo')}
         </Typography>

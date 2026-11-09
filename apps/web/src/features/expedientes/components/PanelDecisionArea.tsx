@@ -53,7 +53,7 @@ export function PanelDecisionArea({
           const explicar = seExplica(bloqueo) && ctx.scopes.has(SCOPES.expedientesRevisar) ? bloqueo : null;
           return (
             <Box key={area.areaId} component="section" aria-label={area.nombre} sx={{ border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}>
-              <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Typography component="h4" sx={{ fontWeight: 600, fontSize: 14 }}>
                   {area.nombre}
                 </Typography>
@@ -64,11 +64,11 @@ export function PanelDecisionArea({
                   const version = requisito.versionActual;
                   const documento = documentoEnVisor(requisito);
                   return (
-                    <Stack component="li" key={requisito.id} direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+                    <Stack component="li" key={requisito.id} direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                       <Typography sx={{ fontSize: 13, flex: '1 1 auto', minWidth: 0 }} noWrap>
                         {requisito.tipoDocumento.nombre}
                         {version && (
-                          <Typography component="span" color="text.secondary" sx={{ fontSize: 12 }}>
+                          <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12 }}>
                             {` · v${String(version.n)}`}
                           </Typography>
                         )}
@@ -91,7 +91,7 @@ export function PanelDecisionArea({
                 </Stack>
               )}
               {explicar && (
-                <Typography color="text.secondary" sx={{ fontSize: 12, mt: 1 }}>
+                <Typography sx={{ color: 'text.secondary', fontSize: 12, mt: 1 }}>
                   {t(`expedientes.decisionArea.bloqueos.${explicar}`)}
                 </Typography>
               )}

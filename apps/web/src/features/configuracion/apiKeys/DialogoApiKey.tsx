@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
 import type { ApiKeyDto, EmpresaDto, SistemaIntegradoDto } from '@validasoft/api-client';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
@@ -32,7 +32,7 @@ export function DialogoApiKey({ claveIdempotencia, empresas, sistemas, onCerrar,
   const errorNombre = nombreTocado && errores.includes('nombre-requerido');
   const errorExpira = errores.includes('expiracion-invalida');
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (primero) return;
     crear.mutate(b, { onSuccess: onCreada });
