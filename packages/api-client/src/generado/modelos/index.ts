@@ -353,6 +353,7 @@ export * from './rolAsignadoDtoEmpresaId';
 export * from './rotarClavePublicaDto';
 export * from './sesionTerceroDto';
 export * from './sesionTerceroDtoExpedienteOrigen';
+export * from './sesionTerceroDtoVinculoOrigen';
 export * from './sesionUsuarioDto';
 export * from './sistemaIntegradoDto';
 export * from './solicitarAccesoDto';

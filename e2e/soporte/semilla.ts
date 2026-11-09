@@ -36,7 +36,8 @@ export interface Empresa {
  * Un grupo empresarial (tenant) nuevo por prueba, con dos empresas que deciden por separado y el sistema integrado E2E:
  *
  * - **Constructora Norte**: PROVEEDOR con Compras y Cumplimiento en paralelo (Cumplimiento puede rechazar); pide RUT
- *   (lo revisan las dos) y Cámara de comercio (solo Cumplimiento). CLIENTE con solo Compras; pide RUT.
+ *   (lo revisan las dos) y Cámara de comercio (solo Cumplimiento). CLIENTE con solo Compras; pide RUT y certificación
+ *   bancaria (un documento que no pide como proveedor).
  * - **Constructora Sur**: PROVEEDOR con un área, Revisión (puede rechazar); pide RUT y el certificado propio {@link SST}.
  *
  * Personas: Ana administra el grupo (no es de ningún área); Rubén (Compras de Norte); Olga, oficial de cumplimiento
@@ -179,7 +180,10 @@ export async function crearEscenario(opciones: OpcionesEscenario = {}): Promise<
     requisito('RUT', [compras, cumplimiento]),
     requisito('CAMARA_COMERCIO', [cumplimiento]),
   ]);
-  await publicarFlujo(norte, 'CLIENTES', 'Vinculación de clientes', 'CLIENTE', [area(compras, false)], [requisito('RUT', [compras])]);
+  await publicarFlujo(norte, 'CLIENTES', 'Vinculación de clientes', 'CLIENTE', [area(compras, false)], [
+    requisito('RUT', [compras]),
+    requisito('CERTIFICACION_BANCARIA', [compras]),
+  ]);
   await publicarFlujo(sur, 'PROVEEDORES_SUR', 'Proveedores de Sur', 'PROVEEDOR', [area(revision, true)], [requisito('RUT', [revision]), requisito(SST.codigo, [revision])]);
 
   return {

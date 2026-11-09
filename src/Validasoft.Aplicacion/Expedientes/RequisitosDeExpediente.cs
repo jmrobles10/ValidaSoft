@@ -44,6 +44,42 @@ public static class RequisitosDeExpediente
     }
 
     /// <summary>
+    /// Marca en cada requisito ya cubierto si la misma empresa aprobó esa misma versión del documento en otro expediente
+    /// aprobado del mismo tercero (otro tipo de vínculo, RQ-11): el expediente nuevo la aprueba sin volver a revisarla y
+    /// solo pide lo que falte. Toma el expediente aprobado más reciente; la versión debe ser exactamente la misma.
+    /// </summary>
+    public static async Task<IReadOnlyList<RequisitoCalculado>> ConAprobacionesPreviasAsync(IQuerySession sesionDelTenant, Vinculo vinculo,
+        IReadOnlyList<RequisitoCalculado> requisitos, CancellationToken ct)
+    {
+        if (requisitos.All(r => r.Version is null))
+            return requisitos;
+
+        var empresaId = vinculo.EmpresaId;
+        var terceroId = vinculo.TerceroId;
+        var vinculoId = vinculo.Id;
+        var aprobados = (await sesionDelTenant.Query<Expediente>()
+                .Where(e => e.EmpresaId == empresaId && e.TerceroId == terceroId && e.VinculoId != vinculoId && e.Estado == EstadoExpediente.Aprobado)
+                .ToListAsync(ct))
+            .OrderByDescending(e => e.ActualizadoEn)
+            .ToList();
+        if (aprobados.Count == 0)
+            return requisitos;
+
+        return [.. requisitos.Select(requisito =>
+        {
+            if (requisito.Version is not { } version)
+                return requisito;
+            var previa = aprobados
+                .SelectMany(e => e.Requisitos
+                    .Where(r => !r.Eximido && r.Estado == EstadoRequisito.Aprobado && r.VersionActual is { } v &&
+                                v.DocumentoId == version.DocumentoId && v.Numero == version.Numero)
+                    .Select(_ => new AprobacionPrevia(e.Id, e.Folio, e.TipoVinculoNombre, version.DocumentoId, version.Numero)))
+                .FirstOrDefault();
+            return previa is null ? requisito : requisito with { Previa = previa };
+        })];
+    }
+
+    /// <summary>
     /// Versión que cubre un requisito: la actual del documento global del canónico (o del <c>PorVinculo</c> del vínculo y
     /// ese tipo), siempre que ya esté compartida con el vínculo; si no, nula.
     /// </summary>

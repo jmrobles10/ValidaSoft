@@ -63,9 +63,20 @@ public static class EnlacesDeAcceso
     /// Sesión del tercero: incluye los vínculos de ese tercero cuyo correo de invitación coincide con el del enlace, en
     /// todos los tenants (consulta entre tenants de Marten). Canjear solo abre sesión: no comparte nada (B-1).
     /// </summary>
-    public static Task<SesionTerceroDto> AbrirSesionAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
-        bool otpVerificado, DateTimeOffset ahora, CancellationToken ct) =>
-        EmitirAccesoAsync(consulta, emisor, enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora, ct);
+    public static async Task<SesionTerceroDto> AbrirSesionAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
+        bool otpVerificado, DateTimeOffset ahora, CancellationToken ct)
+    {
+        var sesion = await EmitirAccesoAsync(consulta, emisor, enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora, ct);
+        // El enlace sabe de qué vínculo es: la app entra directo a esa invitación (o al expediente observado), aunque el
+        // tercero tenga otras pendientes. Antes, con varias, llevaba a «Mis empresas».
+        if (enlace.VinculoId is not { } vinculoId || sesion.Vinculos.All(v => v.Id != vinculoId))
+            return sesion;
+        if (enlace.Motivo != MotivoEnlace.Observacion)
+            return sesion with { VinculoOrigen = vinculoId };
+
+        var vinculo = await consulta.Query<Vinculo>().Where(v => v.AnyTenant() && v.Id == vinculoId).FirstOrDefaultAsync(ct);
+        return sesion with { VinculoOrigen = vinculoId, ExpedienteOrigen = vinculo?.ExpedienteAbiertoId };
+    }
 
     /// <summary>
     /// Access token del tercero con la lista de vínculos <b>calculada ahora</b> (al canjear y en cada renovación, RE-3):

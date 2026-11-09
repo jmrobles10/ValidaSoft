@@ -65,6 +65,10 @@ describe('canje del enlace', () => {
   it('con un solo vínculo va directo a su invitación; con varios, a Mis empresas', () => {
     expect(destinoTrasSesion(sesion([vinculo('v1')]))).toBe('/empresas/v1');
     expect(destinoTrasSesion(sesion([vinculo('v1'), vinculo('v2')]))).toBe('/empresas');
+    // El enlace de la invitación de una empresa lleva a esa invitación aunque haya otras pendientes.
+    expect(destinoTrasSesion({ ...sesion([vinculo('v1'), vinculo('v2')]), vinculoOrigen: 'v2' })).toBe('/empresas/v2');
+    // Un origen que no está en la sesión no se usa.
+    expect(destinoTrasSesion({ ...sesion([vinculo('v1'), vinculo('v2')]), vinculoOrigen: 'v9' })).toBe('/empresas');
     expect(destinoTrasSesion(sesion([]))).toBe('/empresas');
   });
 });

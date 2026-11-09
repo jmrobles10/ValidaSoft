@@ -213,10 +213,13 @@ public sealed record VinculoDeSesionDto(Guid Id, EmpresaPublicaDto Empresa, stri
 /// Sesión del tercero tras canjear el enlace (y el OTP si aplica) o renovarla: JWT de 30 minutos que viaja en el cuerpo y
 /// se envía como <c>Authorization: Bearer</c> en <c>/public/v1</c>. El token de refresco va aparte, en la cookie
 /// <c>HttpOnly</c> <c>vs_tercero</c> (<c>POST /public/v1/sesion/renovar</c>).
+/// <see cref="VinculoOrigen"/>: el vínculo del enlace canjeado (la invitación de esa empresa) y
+/// <see cref="ExpedienteOrigen"/>: su expediente abierto si el enlace vino en un correo de observación. La app del tercero
+/// entra directo ahí aunque tenga otras invitaciones.
 /// </summary>
 public sealed record SesionTerceroDto(
     string AccessToken, DateTimeOffset Expira, Guid TerceroId, bool OtpVerificado, IReadOnlyList<VinculoDeSesionDto> Vinculos,
-    Guid? ExpedienteOrigen = null);
+    Guid? ExpedienteOrigen = null, Guid? VinculoOrigen = null);
 
 /// <summary>Respuesta 202 del canje cuando el enlace exige OTP: el código llegó al correo y vence en <see cref="Expira"/>.</summary>
 public sealed record OtpRequeridoDto(bool RequiereOtp, DateTimeOffset Expira);

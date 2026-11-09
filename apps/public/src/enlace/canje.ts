@@ -70,12 +70,14 @@ export function normalizarCodigo(texto: string): string {
 }
 
 /**
- * A dónde ir con la sesión recién abierta: si el enlace es de un expediente (`expedienteOrigen`, p. ej. el del correo
- * de observación), a esa revisión; si la sesión trae un solo vínculo, a su invitación (allí ve los textos o, si ya
- * aceptó, pasa a su revisión); con varios, a "Mis empresas".
+ * A dónde ir con la sesión recién abierta: si el enlace es de un expediente (`expedienteOrigen`, el del correo de
+ * observación), a esa revisión; si es de una invitación (`vinculoOrigen`), a esa invitación aunque tenga otras (allí ve
+ * los textos o, si ya aceptó, pasa a su revisión); si la sesión trae un solo vínculo, a ese; con varios y sin origen
+ * (acceso pedido con el correo), a "Mis empresas".
  */
 export function destinoTrasSesion(sesion: SesionTerceroDto): string {
   if (sesion.expedienteOrigen) return `/expediente/${sesion.expedienteOrigen}`;
+  if (sesion.vinculoOrigen && sesion.vinculos.some((v) => v.id === sesion.vinculoOrigen)) return `/empresas/${sesion.vinculoOrigen}`;
   const [unico, ...otros] = sesion.vinculos;
   if (unico && otros.length === 0) return `/empresas/${unico.id}`;
   return '/empresas';

@@ -163,7 +163,15 @@ public sealed record RequisitoCalculado(
     bool Obligatorio,
     IReadOnlyList<Guid> AreasQueRevisan,
     int? AprobadoresRequeridos,
-    VersionDeRequisito? Version);
+    VersionDeRequisito? Version,
+    AprobacionPrevia? Previa = null);
+
+/// <summary>
+/// La misma empresa ya aprobó esa misma versión del documento en otro expediente del mismo tercero (otro tipo de vínculo,
+/// RQ-11): <see cref="DocumentoId"/> y <see cref="Version"/> la identifican; el expediente la aprueba solo mientras el
+/// requisito siga en esa versión.
+/// </summary>
+public sealed record AprobacionPrevia(Guid ExpedienteId, string Folio, string TipoVinculo, Guid DocumentoId, int Version);
 
 /// <summary>Los requisitos de la versión del flujo, congelados en el expediente (docs/03 §6.3). Un flujo sin requisitos no lo emite.</summary>
 public sealed record RequisitosCalculados(IReadOnlyList<RequisitoCalculado> Requisitos, DateTimeOffset Fecha);

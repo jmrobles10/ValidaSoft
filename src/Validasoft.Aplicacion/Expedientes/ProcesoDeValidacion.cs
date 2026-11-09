@@ -108,7 +108,8 @@ public static class ProcesoDeValidacion
         if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
             documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
                 RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
-        var requisitos = pedidos.Select(p => RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)).ToList();
+        var requisitos = await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
+            [.. pedidos.Select(p => RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id))], ct);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var datos = new DatosDeApertura(vinculo.EmpresaId, vinculo.Id, TipoExpediente.Inicial, folio, tercero.Id, tercero.Nombre,
