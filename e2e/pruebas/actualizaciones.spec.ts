@@ -131,7 +131,7 @@ test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: lleg
   // El RUT se actualiza una sola vez, desde la bóveda.
   await page.goto('/boveda');
   const rutEnBoveda = page.getByRole('article', { name: RUT });
-  await rutEnBoveda.getByRole('link', { name: 'Subir nueva versión' }).click();
+  await rutEnBoveda.getByRole('link', { name: 'Subir versión' }).click();
   const selector = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Elegir archivo' }).click();
   await (await selector).setFiles(pdf('RUT Pacifico v2'));

@@ -18,10 +18,10 @@ export function LineaVigencia({ vigencia }: { vigencia: VigenciaDto | null | und
   if (!vigencia || !estadoDeVigencia(vigencia)) return null;
   const texto = textoVigencia(vigencia, t);
   return (
-    <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.75 }}>
+    <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.5 }}>
       <ChipVigencia vigencia={vigencia} />
       {texto && (
-        <Typography component="span" color="text.secondary" sx={{ fontSize: 14 }}>
+        <Typography component="span" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
           {texto}
         </Typography>
       )}
@@ -35,7 +35,7 @@ export function AvisoVigencia({ vigencia }: { vigencia: VigenciaDto | null | und
   const aviso = vigencia ? avisoDeVigencia(vigencia, t) : null;
   if (!aviso) return null;
   return (
-    <Alert severity={aviso.severidad} sx={{ mt: 1.5 }}>
+    <Alert severity={aviso.severidad} sx={{ mt: 1 }}>
       {aviso.texto}
     </Alert>
   );

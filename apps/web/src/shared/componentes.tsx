@@ -44,9 +44,9 @@ export function EncabezadoPagina(props: EncabezadoFijoProps) {
 /** Tarjeta de sección: borde sutil, radio 12, sin sombra. */
 export function Tarjeta({ titulo, acciones, children, etiqueta }: { titulo?: ReactNode; acciones?: ReactNode; children: ReactNode; etiqueta?: string }) {
   return (
-    <Box component="section" aria-label={etiqueta} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: (t) => `${String(t.radio.md)}px`, bgcolor: 'background.paper', minWidth: 0 }}>
+    <Box component="section" aria-label={etiqueta} sx={{ py: 1.5, px: 2, border: 1, borderColor: 'divider', borderRadius: (t) => `${String(t.radio.md)}px`, bgcolor: 'background.paper', minWidth: 0 }}>
       {(titulo ?? acciones) && (
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} sx={{ mb: 1, minHeight: 28 }}>
           {titulo && (
             <Typography variant="h4" component="h2">
               {titulo}

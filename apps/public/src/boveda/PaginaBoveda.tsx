@@ -28,6 +28,7 @@ export function PaginaBoveda() {
         <EstadoVacio icono={FolderOpen} titulo={t('boveda.vacio')} texto={t('boveda.vacioTexto')} />
       ) : (
         <Stack spacing={1.5}>
+          {/* Una tarjeta compacta por documento: la versión es una para todas las empresas y cada fila es una empresa. */}
           {consulta.data.documentos.map((d) => (
             <TarjetaDocumento key={d.id} documento={d} />
           ))}

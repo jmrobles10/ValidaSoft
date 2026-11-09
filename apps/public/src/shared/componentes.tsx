@@ -4,16 +4,16 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from './errores';
 
-/** Título de página del tercero (22/28) con su explicación y, a la derecha en escritorio, la acción principal. */
+/** Título de página del tercero (20/26 en móvil, 20/28 en escritorio) con su explicación y, a la derecha en escritorio, la acción principal. */
 export function CabeceraPagina({ titulo, sub, accion }: { titulo: string; sub?: ReactNode; accion?: ReactNode }) {
   return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2.5 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h2" component="h1">
           {titulo}
         </Typography>
         {sub && (
-          <Typography color="text.secondary" sx={{ mt: 0.5, fontSize: 15, lineHeight: '22px' }}>
+          <Typography color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: 15, sm: 14 }, lineHeight: { xs: '22px', sm: '20px' } }}>
             {sub}
           </Typography>
         )}
@@ -29,7 +29,7 @@ export function EsqueletoTarjetas({ cantidad = 2 }: { cantidad?: number }) {
   return (
     <Stack spacing={1.5} aria-busy aria-label={t('comun.cargando')}>
       {Array.from({ length: cantidad }, (_, i) => (
-        <Skeleton key={i} variant="rounded" height={132} />
+        <Skeleton key={i} variant="rounded" height={96} />
       ))}
     </Stack>
   );
@@ -40,22 +40,40 @@ export function ErrorRecuperable({ error, onReintentar }: { error: unknown; onRe
   return <ErrorEnLinea mensaje={mensajeDeError(error, t)} onReintentar={onReintentar} textoReintentar={t('comun.reintentar')} />;
 }
 
-/** Fila "Empresa · estado · detalle" dentro de una tarjeta (TarjetaDocumentoBoveda y Mis empresas). */
+/**
+ * Fila «Empresa · estado · detalle · acción» de una lista con divisores (TarjetaDocumentoBoveda y Mis empresas). En móvil
+ * el detalle y la acción van debajo; en escritorio, en la misma línea (empresa 220 px, estado, detalle, acción).
+ */
 export function FilaEmpresa({ nombre, estado, detalle, accion }: { nombre: string; estado?: ReactNode; detalle?: ReactNode; accion?: ReactNode }) {
   return (
-    <Box component="li" sx={{ py: 1.25, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
-      <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
-        <Typography component="span" sx={{ fontWeight: 500, fontSize: 15, flex: '1 1 auto', minWidth: 0 }}>
-          {nombre}
-        </Typography>
-        {estado}
-      </Stack>
-      {detalle && (
-        <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: '20px', mt: 0.5 }}>
+    <Box
+      component="li"
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', sm: '220px max-content minmax(0, 1fr) auto' },
+        alignItems: 'center',
+        columnGap: { xs: 1, sm: 2 },
+        rowGap: 0.25,
+        py: { xs: 1, sm: 0.75 },
+        px: { xs: 1.5, sm: 2 },
+        minHeight: { xs: 44, sm: 40 },
+        borderTop: 1,
+        borderColor: 'divider',
+        listStyle: 'none',
+      }}
+    >
+      <Typography component="span" sx={{ fontWeight: 500, fontSize: 14, lineHeight: '20px', minWidth: 0 }}>
+        {nombre}
+      </Typography>
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, justifySelf: { xs: 'end', sm: 'start' } }}>{estado}</Box>
+      {detalle ? (
+        <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: '18px', gridColumn: { xs: '1 / -1', sm: 3 } }}>
           {detalle}
         </Typography>
+      ) : (
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }} />
       )}
-      {accion && <Box sx={{ mt: 1 }}>{accion}</Box>}
+      {accion && <Box sx={{ gridColumn: { xs: '1 / -1', sm: 4 } }}>{accion}</Box>}
     </Box>
   );
 }

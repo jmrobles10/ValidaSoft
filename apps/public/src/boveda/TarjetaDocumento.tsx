@@ -14,8 +14,9 @@ import { detalleComparticion, sePuedeDescargar, sePuedeRetirar } from './version
 import { VersionesDocumento } from './VersionesDocumento';
 
 /**
- * Un documento de la bóveda (TarjetaDocumentoBoveda del design system): la versión vigente una sola vez y una fila
- * por empresa con lo que tiene. Acciones: subir nueva versión, descargar, retirar y ver todas las versiones.
+ * Un documento de la bóveda (TarjetaDocumentoBoveda del design system): cabecera compacta con la versión vigente y una
+ * sola acción «Subir versión» (la versión es una para todas las empresas), y debajo una fila por empresa con lo que
+ * tiene. Descargar y retirar van en el menú «…»; ver todas las versiones, al pie.
  */
 export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto }) {
   const { t } = useTranslation();
@@ -25,28 +26,46 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
   const descargar = useDescargar();
   const actual = documento.versionActual;
   const titulo = documento.tipo.nombre;
+  // Un formulario se actualiza desde la revisión de la empresa, que sabe qué campos pide. La API marca la clase en la
+  // versión (el documento llega como `Archivo`).
+  const subible = documento.clase !== 'Formulario' && actual?.clase !== 'Formulario';
+  const pie = documento.versiones > 1 || requiereAtencion(actual?.vigencia);
 
   return (
-    <Card component="article" aria-labelledby={`doc-${documento.id}`} sx={{ p: 2 }}>
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-        <Box sx={{ color: 'text.secondary', pt: 0.25 }} aria-hidden>
-          <FileText size={22} />
+    <Card component="article" aria-labelledby={`doc-${documento.id}`} sx={{ p: 0, overflow: 'hidden' }}>
+      {/* Si el título no cabe junto a las acciones (móvil, nombres largos), las acciones bajan a su propia línea. */}
+      <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" sx={{ columnGap: 1.25, rowGap: 0.25, py: 1, pl: { xs: 1.5, sm: 2 }, pr: 1 }}>
+        <Box aria-hidden sx={(th) => ({ display: 'grid', placeItems: 'center', flex: 'none', width: 28, height: 28, borderRadius: `${String(th.radio.sm)}px`, bgcolor: 'superficie.nivel2', color: 'text.secondary' })}>
+          <FileText size={18} />
         </Box>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography id={`doc-${documento.id}`} component="h2" sx={{ fontWeight: 600, fontSize: 16, lineHeight: '22px' }}>
+        <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
+          <Typography id={`doc-${documento.id}`} component="h2" sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>
             {titulo}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
             {actual ? t('boveda.cargadaEl', { n: String(actual.n), fecha: formatearFecha(actual.cargadaEn) }) : t('boveda.sinVigente')}
           </Typography>
           {/* La vigencia más próxima entre las empresas; la de cada una va en su fila. */}
           <LineaVigencia vigencia={actual?.vigencia} />
         </Box>
-        {actual && (
-          <IconButton aria-label={`${t('comun.version', { n: String(actual.n) })}: ${titulo}`} aria-haspopup="menu" onClick={(e) => setMenu(e.currentTarget)} sx={{ width: 44, height: 44 }}>
-            <EllipsisVertical size={20} />
-          </IconButton>
-        )}
+        <Stack direction="row" alignItems="center" sx={{ ml: 'auto', flex: 'none' }}>
+          {subible && (
+            <Button
+              component={RouterLink}
+              to={`/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`}
+              variant="text"
+              startIcon={<Upload size={16} aria-hidden />}
+              sx={{ minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}
+            >
+              {t('boveda.nuevaVersion')}
+            </Button>
+          )}
+          {actual && (
+            <IconButton aria-label={`${t('comun.version', { n: String(actual.n) })}: ${titulo}`} aria-haspopup="menu" onClick={(e) => setMenu(e.currentTarget)} sx={{ width: { xs: 44, sm: 36 }, height: { xs: 44, sm: 36 } }}>
+              <EllipsisVertical size={18} />
+            </IconButton>
+          )}
+        </Stack>
       </Stack>
 
       {actual && (
@@ -80,9 +99,9 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
         </Menu>
       )}
 
-      <Box component="ul" aria-label={t('boveda.empresas')} sx={{ p: 0, m: 0, mt: 1.5 }}>
+      <Box component="ul" aria-label={t('boveda.empresas')} sx={{ p: 0, m: 0 }}>
         {documento.porEmpresa.length === 0 ? (
-          <Typography component="li" color="text.secondary" sx={{ fontSize: 14, py: 1.25, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
+          <Typography component="li" color="text.secondary" sx={{ fontSize: 13, py: 1, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
             {t('boveda.sinEmpresas')}
           </Typography>
         ) : (
@@ -104,24 +123,17 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
         )}
       </Box>
 
-      <AvisoVigencia vigencia={actual?.vigencia} />
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
-        {/* Un formulario se actualiza desde la revisión de la empresa, que sabe qué campos pide. La API marca la clase en
-            la versión (el documento llega como `Archivo`). */}
-        {documento.clase !== 'Formulario' && actual?.clase !== 'Formulario' && (
-          <Button component={RouterLink} to={`/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`} variant="outlined" startIcon={<Upload size={18} aria-hidden />}>
-            {t('boveda.nuevaVersion')}
-          </Button>
-        )}
-        {documento.versiones > 1 && (
-          <Button variant="text" onClick={() => setVerVersiones((v) => !v)} aria-expanded={verVersiones}>
-            {verVersiones ? t('boveda.ocultarVersiones') : t('boveda.versiones', { n: String(documento.versiones) })}
-          </Button>
-        )}
-      </Stack>
-
-      {verVersiones && <VersionesDocumento documentoId={documento.id} onRetirar={setRetirando} />}
+      {pie && (
+        <Box sx={{ px: { xs: 1.5, sm: 2 }, py: 0.75, borderTop: 1, borderColor: 'divider' }}>
+          <AvisoVigencia vigencia={actual?.vigencia} />
+          {documento.versiones > 1 && (
+            <Button variant="text" size="small" onClick={() => setVerVersiones((v) => !v)} aria-expanded={verVersiones} sx={{ ml: -1 }}>
+              {verVersiones ? t('boveda.ocultarVersiones') : t('boveda.versiones', { n: String(documento.versiones) })}
+            </Button>
+          )}
+          {verVersiones && <VersionesDocumento documentoId={documento.id} onRetirar={setRetirando} />}
+        </Box>
+      )}
       {retirando && <DialogoRetirar documentoId={documento.id} tipo={titulo} version={retirando} onCerrar={() => setRetirando(null)} />}
     </Card>
   );

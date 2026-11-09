@@ -45,7 +45,7 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
             // Una versión de solo formulario no se descarga (409 `version-sin-archivo`): se ven sus datos.
             const sinArchivo = version ? esVersionSinArchivo(version) : false;
             return (
-              <Stack component="li" key={documento.documentoId} direction="row" spacing={1.5} alignItems="center" sx={{ py: 1 }}>
+              <Stack component="li" key={documento.documentoId} direction="row" spacing={1.25} alignItems="center" sx={{ py: 0.5, minHeight: 44 }}>
                 <FileText size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', opacity: 0.7 }} />
                 <Stack sx={{ minWidth: 0, flex: 1 }}>
                   <Typography sx={{ fontWeight: 500 }} noWrap>
@@ -65,7 +65,7 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
                 {version && version.n !== documento.versionActual && <ChipEstado estado="Superada" />}
                 {version && (sinArchivo || puedeDescargar) && (
                   <Button
-                    variant="outlined"
+                    variant="text"
                     size="small"
                     startIcon={sinArchivo ? <ClipboardList size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
                     onClick={() =>

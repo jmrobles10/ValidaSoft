@@ -58,7 +58,7 @@ export function Shell() {
         </Stack>
       </Box>
 
-      <Box component="main" sx={{ flex: 1, width: '100%', maxWidth: 720, mx: 'auto', px: 2, pt: 3, pb: activa ? { xs: 12, md: 4 } : 4 }}>
+      <Box component="main" sx={{ flex: 1, width: '100%', maxWidth: 880, mx: 'auto', px: { xs: 1.5, sm: 3 }, pt: { xs: 1.5, sm: 2.5 }, pb: activa ? { xs: 12, md: 4 } : 4 }}>
         <Outlet />
       </Box>
 
