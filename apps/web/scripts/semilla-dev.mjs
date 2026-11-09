@@ -374,7 +374,7 @@ for (const [persona, codigoArea] of [
   [usuarios[2], 'cumplimiento'],
 ]) {
   const visto = await llamar('GET', `/api/v1/expedientes/${expediente.id}`, { llave: llaveSistema.valor, empresa: norte.id, delegado: asercion(privateKey, persona) });
-  const area = visto.etapas.flatMap((e) => e.areas).find((a) => a.codigo === codigoArea);
+  const area = visto.etapas.flatMap((e) => e.areas).find((a) => a.codigo.toLowerCase() === codigoArea);
   const versiones = Object.fromEntries((area.documentosPorDecidir ?? []).map((d) => [d.requisitoId, d.versionVigente]));
   await llamar('POST', `/api/v1/expedientes/${expediente.id}/areas/${area.areaId}/veredicto`, {
     llave: llaveSistema.valor,
