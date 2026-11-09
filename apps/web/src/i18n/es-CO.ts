@@ -1,4 +1,5 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
+import { auditoria } from './es-CO-auditoria';
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { certificadosLista } from './es-CO-certificados-lista';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
@@ -26,6 +27,7 @@ export const esCO = {
     vencimientos: 'Vencimientos',
     certificados: 'Certificados',
     vinculos: 'Vínculos',
+    auditoria: 'Auditoría',
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
     'tipos-documento': 'Tipos de documento',
@@ -246,6 +248,7 @@ export const esCO = {
   certificados: { ...certificados, lista: certificadosLista },
   cuentas,
   terceros,
+  auditoria,
   motivos,
   flujos,
   historial: {

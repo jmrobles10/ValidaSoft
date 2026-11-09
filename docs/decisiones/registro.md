@@ -463,6 +463,12 @@ Producto pidió completar los PR de Dependabot abiertos; se integraron en un sol
 |---|---|---|---|
 | T360-1 | Tercero 360 | `GET /api/v1/terceros/{id}/ficha` (`terceros:leer`): identificación y contactos del tercero y, por cada vínculo con la empresa activa (con `vinculos:leer`), el vínculo, su certificado (con `certificados:leer`; nulo sin el permiso), su cuenta designada y los documentos compartidos con él (con `documentos:leer`; nulo sin el permiso). De las otras empresas del grupo solo `empresaId` y estado del vínculo, sin decisiones ni documentos. Sin vínculo con la empresa activa responde 404 `tercero-no-encontrado` y no revela los de otras empresas (T-4). Se arma al consultar (sin proyección). Pendiente: personas relacionadas (ADR-0010) e histórico de aceptaciones. Web: `/terceros/:id`, enlazada desde el detalle del vínculo. | docs/03 §14, docs/06 |
 
+## 5-septvicies. Auditoría (2026-11-09, P2)
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| AU-1 | Consulta de auditoría | `GET /api/v1/auditoria?tipo=&entidad=&entidadId=&actor=&desde=&hasta=` (`auditoria:leer`, cursor, lo más reciente primero) para la empresa activa. `Configuracion` (por omisión): los `RegistroDeCambioDeConfiguracion` de la empresa y los de todo el grupo (`empresaId` nulo: usuarios, API keys, tipos de documento…), con `antes`, `despues` y el **diff campo por campo** calculado al consultar (rutas con puntos; los arreglos se comparan enteros). `Acceso`: descargas de versiones de documentos (`DocumentoAccedido` con la empresa) y de PDF de certificados de la empresa (`CertificadoDescargado`, también la verificación pública), con IP y navegador; `entidadId` acepta también el vínculo. El actor usuario lleva su nombre. `Dominio` e `Identidad` responden 422 `tipo-no-disponible`: los eventos de dominio están en el historial de cada vínculo y expediente, y la auditoría de identidad (logins, 2FA, uso de API keys) aún no se registra. Pendiente: identidad, exportación ZIP firmada (`auditoria:exportar`, H8) y una proyección si el volumen lo pide. Web: pestaña Auditoría con Configuración y Accesos. | docs/05 §2.7, docs/06 |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |
