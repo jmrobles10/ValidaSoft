@@ -3,9 +3,12 @@ import { debeRefrescar } from '../expediente/requisitos';
 import {
   aceptarInvitacion,
   descargarDocumentoBoveda,
+  designarCuenta,
   descargarPlantillaRequisito,
   enviarFormularioBoveda,
   esErrorApi,
+  getListarCuentasBancariasQueryKey,
+  getListarCuentasBancariasQueryOptions,
   getListarVinculosPublicosQueryOptions,
   getObtenerBovedaQueryOptions,
   getObtenerDocumentoBovedaQueryOptions,
@@ -13,11 +16,14 @@ import {
   getObtenerInvitacionPublicaQueryOptions,
   ratificarRequisito,
   reenviarExpedientePublico,
+  registrarCuentaBancaria,
+  retirarCuentaBancaria,
   retirarVersionDocumento,
   type ConsentimientoDto,
   type DescargaDto,
   type EnviarFormularioDto,
   type ExpedientePublicoDto,
+  type RegistrarCuentaBancariaDto,
   type RequisitoPublicoDto,
 } from '@validasoft/api-client';
 
@@ -140,4 +146,32 @@ export function useRatificarRequisito(expedienteId: string) {
 /** Tras subir una versión: bóveda, documento y vínculos cambian. */
 export function useAlTerminarSubida() {
   return useRefrescarTodo();
+}
+
+/** Las cuentas solo cambian por lo que hace el tercero en «Mis cuentas»: basta refrescar su lista (trae las designaciones). */
+function useRefrescarCuentas() {
+  const cliente = useQueryClient();
+  return () => {
+    void cliente.invalidateQueries({ queryKey: getListarCuentasBancariasQueryKey() });
+  };
+}
+
+/** Cuentas bancarias del tercero (CB-1), con la empresa y el estado de cada designación (CB-2). */
+export const useCuentasBancarias = () => useQuery(getListarCuentasBancariasQueryOptions());
+
+export function useRegistrarCuenta() {
+  const refrescar = useRefrescarCuentas();
+  return useMutation({ mutationFn: (cuerpo: RegistrarCuentaBancariaDto) => registrarCuentaBancaria(cuerpo), onSuccess: refrescar });
+}
+
+/** 409 `cuenta-en-uso` si está designada o por aprobar con alguna empresa. */
+export function useRetirarCuenta() {
+  const refrescar = useRefrescarCuentas();
+  return useMutation({ mutationFn: (cuentaId: string) => retirarCuentaBancaria(cuentaId), onSettled: refrescar });
+}
+
+/** Propone la cuenta para cobrarle a la empresa del vínculo; 422 `certificacion-requerida` sin certificación en la bóveda. */
+export function useDesignarCuenta(vinculoId: string) {
+  const refrescar = useRefrescarCuentas();
+  return useMutation({ mutationFn: (cuentaId: string) => designarCuenta(vinculoId, { cuentaId }), onSettled: refrescar });
 }

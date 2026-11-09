@@ -10,7 +10,7 @@ export type ClavePermiso = Exclude<keyof typeof SCOPES, 'plataformaTenants'>;
 export const GRUPOS_PERMISOS = [
   { grupo: 'administracion', claves: ['empresasAdministrar', 'apiKeysAdministrar', 'sistemasAdministrar', 'usuariosAdministrar'] },
   { grupo: 'configuracion', claves: ['configuracionLeer', 'configuracionEscribir', 'flujosLeer', 'flujosEscribir'] },
-  { grupo: 'vinculos', claves: ['tercerosLeer', 'tercerosEscribir', 'vinculosLeer', 'vinculosEscribir', 'vinculosBloquear'] },
+  { grupo: 'vinculos', claves: ['tercerosLeer', 'tercerosEscribir', 'vinculosLeer', 'vinculosEscribir', 'vinculosBloquear', 'cuentasAprobar'] },
   { grupo: 'revision', claves: ['expedientesLeer', 'expedientesRevisar', 'expedientesAdministrar', 'documentosLeer', 'documentosDescargar', 'certificadosLeer'] },
   { grupo: 'integracion', claves: ['eventosLeer', 'webhooksAdministrar'] },
   { grupo: 'auditoria', claves: ['auditoriaLeer'] },

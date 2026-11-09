@@ -1,6 +1,6 @@
 import { BottomNavigation, BottomNavigationAction, Box, Button, Stack, Typography } from '@mui/material';
 import { Isotipo } from '@validasoft/ui';
-import { Building2, FolderCheck, LogOut } from 'lucide-react';
+import { Building2, FolderCheck, Landmark, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
 import { useSesionTercero } from '../sesion/sesionTercero';
@@ -8,6 +8,7 @@ import { useSesionTercero } from '../sesion/sesionTercero';
 const SECCIONES = [
   { ruta: '/boveda', clave: 'nav.boveda', icono: FolderCheck },
   { ruta: '/empresas', clave: 'nav.empresas', icono: Building2 },
+  { ruta: '/cuentas', clave: 'nav.cuentas', icono: Landmark },
 ] as const;
 
 /**

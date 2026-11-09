@@ -30,8 +30,10 @@ import type {
   CargaPrefirmadaDto,
   CertificadoPublicoDto,
   ConfirmacionCargaDto,
+  CuentaBancariaPublicaDto,
   DescargaDto,
   DescargarCertificadoVerificadoParams,
+  DesignarCuentaDto,
   DocumentoDto,
   EnviarFormularioDto,
   ExpedientePublicoDto,
@@ -41,6 +43,7 @@ import type {
   OrigenesEmbebidoDto,
   OtpRequeridoDto,
   ReenviarExpedienteDto,
+  RegistrarCuentaBancariaDto,
   RetirarVersionDto,
   RetiroDto,
   SesionTerceroDto,
@@ -63,7 +66,266 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export const canjearEnlace = (
+export const listarCuentasBancarias = (
+    
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<CuentaBancariaPublicaDto[]>(
+      {url: `/public/v1/boveda/cuentas-bancarias`, method: 'GET', signal
+    },
+      options);
+    }
+  
+
+
+
+export const getListarCuentasBancariasQueryKey = () => {
+    return [
+    `/public/v1/boveda/cuentas-bancarias`
+    ] as const;
+    }
+
+    
+export const getListarCuentasBancariasQueryOptions = <TData = Awaited<ReturnType<typeof listarCuentasBancarias>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarCuentasBancariasQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarCuentasBancarias>>> = ({ signal }) => listarCuentasBancarias(requestOptions, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarCuentasBancariasQueryResult = NonNullable<Awaited<ReturnType<typeof listarCuentasBancarias>>>
+export type ListarCuentasBancariasQueryError = ErrorType<void>
+
+
+export function useListarCuentasBancarias<TData = Awaited<ReturnType<typeof listarCuentasBancarias>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarCuentasBancarias>>,
+          TError,
+          Awaited<ReturnType<typeof listarCuentasBancarias>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarCuentasBancarias<TData = Awaited<ReturnType<typeof listarCuentasBancarias>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarCuentasBancarias>>,
+          TError,
+          Awaited<ReturnType<typeof listarCuentasBancarias>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarCuentasBancarias<TData = Awaited<ReturnType<typeof listarCuentasBancarias>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListarCuentasBancarias<TData = Awaited<ReturnType<typeof listarCuentasBancarias>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarCuentasBancarias>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarCuentasBancariasQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const registrarCuentaBancaria = (
+    registrarCuentaBancariaDto: BodyType<RegistrarCuentaBancariaDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<CuentaBancariaPublicaDto>(
+      {url: `/public/v1/boveda/cuentas-bancarias`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: registrarCuentaBancariaDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getRegistrarCuentaBancariaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registrarCuentaBancaria>>, TError,{data: BodyType<RegistrarCuentaBancariaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof registrarCuentaBancaria>>, TError,{data: BodyType<RegistrarCuentaBancariaDto>}, TContext> => {
+
+const mutationKey = ['registrarCuentaBancaria'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registrarCuentaBancaria>>, {data: BodyType<RegistrarCuentaBancariaDto>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registrarCuentaBancaria(data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegistrarCuentaBancariaMutationResult = NonNullable<Awaited<ReturnType<typeof registrarCuentaBancaria>>>
+    export type RegistrarCuentaBancariaMutationBody = BodyType<RegistrarCuentaBancariaDto>
+    export type RegistrarCuentaBancariaMutationError = ErrorType<unknown>
+
+    export const useRegistrarCuentaBancaria = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registrarCuentaBancaria>>, TError,{data: BodyType<RegistrarCuentaBancariaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof registrarCuentaBancaria>>,
+        TError,
+        {data: BodyType<RegistrarCuentaBancariaDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getRegistrarCuentaBancariaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const retirarCuentaBancaria = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<CuentaBancariaPublicaDto>(
+      {url: `/public/v1/boveda/cuentas-bancarias/${id}/retirar`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getRetirarCuentaBancariaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retirarCuentaBancaria>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof retirarCuentaBancaria>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['retirarCuentaBancaria'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof retirarCuentaBancaria>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  retirarCuentaBancaria(id,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RetirarCuentaBancariaMutationResult = NonNullable<Awaited<ReturnType<typeof retirarCuentaBancaria>>>
+    
+    export type RetirarCuentaBancariaMutationError = ErrorType<void>
+
+    export const useRetirarCuentaBancaria = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof retirarCuentaBancaria>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof retirarCuentaBancaria>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRetirarCuentaBancariaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const designarCuenta = (
+    id: string,
+    designarCuentaDto: BodyType<DesignarCuentaDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<CuentaBancariaPublicaDto>(
+      {url: `/public/v1/vinculos/${id}/cuenta-designada`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: designarCuentaDto, signal
+    },
+      options);
+    }
+  
+
+
+export const getDesignarCuentaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof designarCuenta>>, TError,{id: string;data: BodyType<DesignarCuentaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof designarCuenta>>, TError,{id: string;data: BodyType<DesignarCuentaDto>}, TContext> => {
+
+const mutationKey = ['designarCuenta'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof designarCuenta>>, {id: string;data: BodyType<DesignarCuentaDto>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  designarCuenta(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DesignarCuentaMutationResult = NonNullable<Awaited<ReturnType<typeof designarCuenta>>>
+    export type DesignarCuentaMutationBody = BodyType<DesignarCuentaDto>
+    export type DesignarCuentaMutationError = ErrorType<void>
+
+    export const useDesignarCuenta = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof designarCuenta>>, TError,{id: string;data: BodyType<DesignarCuentaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof designarCuenta>>,
+        TError,
+        {id: string;data: BodyType<DesignarCuentaDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getDesignarCuentaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const canjearEnlace = (
     token: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {

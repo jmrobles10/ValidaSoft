@@ -17,6 +17,9 @@ public static class Permisos
     public const string VinculosLeer = "vinculos:leer";
     public const string VinculosEscribir = "vinculos:escribir";
     public const string VinculosBloquear = "vinculos:bloquear";
+
+    /// <summary>Aprobar o rechazar la cuenta bancaria que designa el tercero (cuatro ojos, CB-2).</summary>
+    public const string CuentasAprobar = "cuentas:aprobar";
     public const string AuditoriaLeer = "auditoria:leer";
     public const string FlujosLeer = "flujos:leer";
     public const string FlujosEscribir = "flujos:escribir";
@@ -47,7 +50,7 @@ public static class Permisos
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
-        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, AuditoriaLeer,
+        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
         CertificadosLeer, EventosLeer, WebhooksAdministrar
     ];
@@ -77,7 +80,7 @@ public static class Permisos
     {
         Rol.Administrador => DelTenant,
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
-        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, ExpedientesRevisar],
+        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar],
         Rol.Auditor => [.. Lecturas, AuditoriaLeer],
         _ => []
     };

@@ -34,7 +34,7 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
 
     private static readonly string[] ScopesDeSistema =
     [
-        "configuracion:leer", "vinculos:leer", "flujos:leer", "expedientes:leer", "expedientes:revisar", "documentos:leer"
+        "configuracion:leer", "vinculos:leer", "flujos:leer", "expedientes:leer", "expedientes:revisar", "documentos:leer", "cuentas:aprobar"
     ];
 
     private IAlbaHost Host => fixture.Host;

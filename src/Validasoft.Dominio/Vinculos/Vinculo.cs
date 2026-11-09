@@ -17,7 +17,7 @@ public sealed record InvitacionVigente(string Correo, DateTimeOffset Expira, int
 /// terminación y la relación con su expediente (<c>EnValidacion</c> al abrirlo, <c>Activo</c> al aprobarse); los
 /// vencimientos llegan con H6.
 /// </summary>
-public sealed class Vinculo
+public sealed partial class Vinculo
 {
     private static readonly EstadoVinculo[] Terminales = [EstadoVinculo.Anulado, EstadoVinculo.Desvinculado];
 

@@ -15,6 +15,7 @@ export const SCOPES = {
   vinculosLeer: 'vinculos:leer',
   vinculosEscribir: 'vinculos:escribir',
   vinculosBloquear: 'vinculos:bloquear',
+  cuentasAprobar: 'cuentas:aprobar',
   auditoriaLeer: 'auditoria:leer',
   flujosLeer: 'flujos:leer',
   flujosEscribir: 'flujos:escribir',

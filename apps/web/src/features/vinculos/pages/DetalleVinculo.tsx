@@ -18,6 +18,7 @@ import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usua
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
 import { DialogoAccion } from '../components/DialogoAccion';
+import { TarjetaCuentaDesignada } from '../cuentaDesignada/TarjetaCuentaDesignada';
 import { identificacionDe } from '../tercero';
 import { eventoATimeline } from '../historial';
 
@@ -87,6 +88,7 @@ export function DetalleVinculo() {
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
           <TarjetaCertificado vinculo={vinculo} />
+          <TarjetaCuentaDesignada vinculo={vinculo} />
           <DocumentosVinculo vinculo={vinculo} />
           <ReferenciasVinculo vinculo={vinculo} />
         </Stack>

@@ -14,7 +14,7 @@ import { alternarGrupo, claveDeScope, resumirScopes, SCOPES_DEL_TENANT, scopesDe
 /** `Permisos.DelTenant` (src/Validasoft.Aplicacion/Comun/Permisos.cs): lo único que la API acepta en una llave. */
 const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
-  'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'auditoria:leer',
+  'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer',
   'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'documentos:leer', 'documentos:descargar',
   'certificados:leer', 'eventos:leer', 'webhooks:administrar',
 ];
@@ -74,7 +74,7 @@ describe('permisos de una API key', () => {
     const resumen = resumirScopes(['vinculos:leer', 'vinculos:escribir', 'eventos:leer', 'eventos:leer', 'nuevo:scope']);
     expect(resumen.todos).toBe(false);
     expect(resumen.grupos).toEqual([
-      { grupo: 'vinculos', cuantos: 2, total: 5 },
+      { grupo: 'vinculos', cuantos: 2, total: 6 },
       { grupo: 'integracion', cuantos: 1, total: 2 },
     ]);
     expect(resumen.desconocidos).toEqual(['nuevo:scope']);

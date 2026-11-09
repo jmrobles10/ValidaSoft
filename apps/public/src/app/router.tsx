@@ -22,6 +22,7 @@ const rutas: RouteObject[] = [
           { path: 'empresas/:vinculoId', lazy: () => import('../invitacion/PaginaInvitacion').then((m) => ({ Component: m.PaginaInvitacion })) },
           { path: 'boveda', lazy: () => import('../boveda/PaginaBoveda').then((m) => ({ Component: m.PaginaBoveda })) },
           { path: 'boveda/subir', lazy: () => import('../boveda/PaginaSubir').then((m) => ({ Component: m.PaginaSubir })) },
+          { path: 'cuentas', lazy: () => import('../cuentas/PaginaCuentas').then((m) => ({ Component: m.PaginaCuentas })) },
           { path: 'expediente/:id', lazy: () => import('../expediente/PaginaExpediente').then((m) => ({ Component: m.PaginaExpediente })) },
         ],
       },
