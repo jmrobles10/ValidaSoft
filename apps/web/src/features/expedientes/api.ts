@@ -22,9 +22,16 @@ import {
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
 import type { DecisionDeArea } from './decisionArea';
 
+/**
+ * Bandeja, expediente e historial se vuelven a pedir cada vez que se abren (aunque estén en caché): otras áreas y el
+ * tercero los cambian mientras tanto, y con la caché de 30 s quien volvía al expediente veía otra versión de los
+ * documentos u otras áreas «Pendiente» que ya habían decidido. Lo cacheado se muestra mientras llega lo nuevo.
+ */
+const SIEMPRE_AL_ABRIR = { refetchOnMount: 'always' } as const;
+
 export function useBandeja(empresaId: string, params: ListarBandejaParams) {
   const opciones = getListarBandejaQueryOptions(params, { request: { empresa: empresaId } });
-  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId), placeholderData: (previo) => previo });
+  return useQuery({ ...opciones, ...SIEMPRE_AL_ABRIR, queryKey: conEmpresa(opciones.queryKey, empresaId), placeholderData: (previo) => previo });
 }
 
 export function useAperturasPendientes(empresaId: string, habilitado: boolean) {
@@ -34,12 +41,12 @@ export function useAperturasPendientes(empresaId: string, habilitado: boolean) {
 
 export function useExpediente(empresaId: string, id: string) {
   const opciones = getObtenerExpedienteQueryOptions(id, { request: { empresa: empresaId } });
-  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId), enabled: Boolean(id) });
+  return useQuery({ ...opciones, ...SIEMPRE_AL_ABRIR, queryKey: conEmpresa(opciones.queryKey, empresaId), enabled: Boolean(id) });
 }
 
 export function useHistorialExpediente(empresaId: string, id: string) {
   const opciones = getObtenerHistorialExpedienteQueryOptions(id, { request: { empresa: empresaId } });
-  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId) });
+  return useQuery({ ...opciones, ...SIEMPRE_AL_ABRIR, queryKey: conEmpresa(opciones.queryKey, empresaId) });
 }
 
 /** Catálogo de motivos (base + propios del tenant); cambia poco. */
