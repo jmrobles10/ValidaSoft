@@ -3,6 +3,7 @@ import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracio
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
+import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
 
 export const esCO = {
@@ -15,6 +16,7 @@ export const esCO = {
   },
   nav: {
     bandeja: 'Bandeja',
+    revalidaciones: 'Revalidaciones',
     vinculos: 'Vínculos',
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
@@ -221,6 +223,7 @@ export const esCO = {
     },
   },
   bandeja,
+  revalidaciones,
   expedientes,
   documentos,
   notificaciones,
@@ -555,6 +558,7 @@ export const esCO = {
     ...erroresRevision,
     ...erroresDocumentos,
     ...erroresConfiguracion,
+    ...erroresRevalidaciones,
   },
 } as const;
 

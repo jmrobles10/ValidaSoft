@@ -70,15 +70,27 @@ public static class Revalidacion
         return $"Revalidación de {lista}";
     }
 
-    /// <summary>La versión que la empresa aprobó para ese tipo en el expediente (no eximida); nula si no lo aprobó.</summary>
     private static VersionDeRequisito? AprobadoAntes(Expediente aprobado, RequisitoPedido pedido) =>
+        AprobadoEn(aprobado, pedido.Tipo.Id, pedido.Tipo.TipoCanonico, pedido.Tipo.Ambito);
+
+    /// <summary>La versión que la empresa aprobó para ese tipo en el expediente (no eximida); nula si no lo aprobó.</summary>
+    public static VersionDeRequisito? AprobadoEn(Expediente aprobado, Guid tipoDocumentoTenantId, string? tipoCanonico, AmbitoDocumento ambito) =>
         aprobado.Requisitos
             .Where(r => !r.Eximido && r.Estado == EstadoRequisito.Aprobado && r.VersionActual is not null &&
-                        (r.TipoDocumentoTenantId == pedido.Tipo.Id ||
-                         (r.Ambito == AmbitoDocumento.Global && pedido.Tipo.Ambito == AmbitoDocumento.Global &&
-                          r.TipoCanonico is not null && r.TipoCanonico == pedido.Tipo.TipoCanonico)))
+                        (r.TipoDocumentoTenantId == tipoDocumentoTenantId ||
+                         (r.Ambito == AmbitoDocumento.Global && ambito == AmbitoDocumento.Global &&
+                          r.TipoCanonico is not null && r.TipoCanonico == tipoCanonico)))
             .Select(r => r.VersionActual)
             .FirstOrDefault();
+
+    /// <summary>Hasta cuándo puede resolverse la revalidación antes de que sus pendientes bloqueen (RV-4).</summary>
+    public static DateTimeOffset PlazoHasta(Expediente actualizacion) => actualizacion.AbiertoEn.AddDays(DiasDePlazo);
+
+    /// <summary>
+    /// ¿Se puede aprobar en lote (A-18)? Solo si la bóveda no ve cambios frente a la anterior: <c>Identica</c> por hash o
+    /// <c>SinCambios</c> en los campos clave (con IA). Sin IA toda versión nueva es <c>Distinta</c> y se revisa una a una.
+    /// </summary>
+    public static bool AprobableEnLote(Comparacion? comparacion) => comparacion is Comparacion.Identica or Comparacion.SinCambios;
 }
 
 /// <summary>Programado al abrir la revalidación: al cumplirse el plazo, si sigue abierta, los pendientes bloquean (RV-4).</summary>

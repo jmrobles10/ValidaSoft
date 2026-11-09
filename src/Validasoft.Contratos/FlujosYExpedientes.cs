@@ -205,6 +205,32 @@ public sealed record FilaBandejaDto(
     string AreaCodigo, string AreaNombre, int Etapa, string EstadoArea, string EstadoExpediente, int Aprobaciones, int AprobadoresRequeridos,
     DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0);
 
+/// <summary>Número y fecha de carga de una versión de la bóveda.</summary>
+public sealed record VersionResumenDto(int Numero, DateTimeOffset Fecha);
+
+/// <summary>
+/// Fila de la bandeja de revalidaciones (RV-5, docs/05 §4 <c>RevalidacionDto</c>): un documento de un expediente de
+/// actualización abierto que la empresa aún no aprueba. <see cref="VersionAceptada"/> es la que aprobó en su último
+/// expediente aprobado; <see cref="Comparacion"/> el hecho de la bóveda sobre la versión actual (sin IA solo
+/// <c>Distinta</c>); <see cref="AprobableEnLote"/> si es <c>Identica</c> o <c>SinCambios</c> (A-18).
+/// <see cref="Bloqueante"/>: venció el plazo y los pendientes del certificado ya bloquean (RV-4).
+/// </summary>
+public sealed record RevalidacionDto(
+    Guid ExpedienteId, string Folio, Guid VinculoId, Guid RequisitoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo,
+    string TipoDocumentoCodigo, string TipoDocumento, VersionResumenDto? VersionAceptada, VersionResumenDto VersionActual, string Comparacion,
+    bool AprobableEnLote, string EstadoRequisito, IReadOnlyList<Guid> Areas, DateTimeOffset Desde, DateTimeOffset PlazoHasta, int DiasRestantes,
+    bool Bloqueante);
+
+/// <summary>Una revalidación a aprobar en lote, sobre la versión que el revisor vio.</summary>
+public sealed record RevalidacionAAprobarDto(Guid ExpedienteId, Guid RequisitoId, int SobreVersion);
+
+/// <summary>Aprobación en lote (A-18): hasta 100 revalidaciones sin cambios; cada una queda registrada por separado.</summary>
+public sealed record AprobarRevalidacionesDto(IReadOnlyList<RevalidacionAAprobarDto> Revalidaciones);
+
+public sealed record FalloDeLoteDto(Guid ExpedienteId, Guid RequisitoId, string Codigo, string Detalle);
+
+public sealed record ResultadoDeLoteDto(int Aprobadas, IReadOnlyList<FalloDeLoteDto> Fallidas);
+
 // ---------- Público: el tercero ----------
 
 public sealed record MotivoPublicoDto(string Codigo, string Texto);

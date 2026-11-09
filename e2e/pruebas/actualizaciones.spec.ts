@@ -155,6 +155,20 @@ test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: Nort
   await expect(vinculo.getByRole('button', { name: `Ver o descargar ${RUT}, versión 2` })).toBeVisible();
   await expect(vinculo.getByRole('button', { name: `Ver o descargar ${CAMARA}, versión 1` })).toBeVisible();
 
+  // La bandeja de revalidaciones lo lista con la versión aceptada, la nueva y el plazo (RV-5). Sin IA la bóveda solo
+  // sabe que el archivo cambió: no se ofrece aprobar en lote.
+  const paginaRevalidaciones = await (await browser.newContext()).newPage();
+  const revalidaciones = await abrirEmbebido(paginaRevalidaciones, e, e.ruben, e.norte, 'revalidaciones');
+  await expect(revalidaciones.getByRole('heading', { level: 1, name: 'Revalidaciones' })).toBeVisible();
+  const fila = revalidaciones.getByRole('row').filter({ hasText: tercero.nombre });
+  await expect(fila).toContainText(RUT);
+  await expect(fila).toContainText('v1 → v2');
+  await expect(fila).toContainText('Distinta');
+  await expect(fila).toContainText(/Quedan 1[45] días/);
+  await expect(revalidaciones.getByText(/Ninguna se puede aprobar en lote/)).toBeVisible();
+  await expect(revalidaciones.getByRole('button', { name: /Aprobar .* sin cambios/ })).toHaveCount(0);
+  await paginaRevalidaciones.screenshot({ path: 'test-results/revalidaciones.png', fullPage: true });
+
   // Norte revalida solo el RUT v2 en un expediente de actualización (RV-1): la Cámara no vuelve a revisarse.
   await abrirDesdeBandeja(ruben, tercero.nombre, 'Compras');
   await expect(regionDeArea(ruben, 'Compras')).toContainText(`${RUT} · v2`);

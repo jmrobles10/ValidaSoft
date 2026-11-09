@@ -266,7 +266,7 @@ public static class ExpedientesEndpoints
             : throw ReglaDeNegocioException.Validacion("veredicto-invalido", "El veredicto es Aprobado u Observado (el rechazo es del expediente).");
 
     /// <summary>Un vínculo bloqueado no recibe decisiones sobre su expediente (B-5).</summary>
-    private static async Task AsegurarVinculoNoBloqueadoAsync(SesionDeEmpresa empresa, Expediente expediente, CancellationToken ct)
+    internal static async Task AsegurarVinculoNoBloqueadoAsync(SesionDeEmpresa empresa, Expediente expediente, CancellationToken ct)
     {
         var vinculo = await empresa.Sesion.LoadAsync<Vinculo>(expediente.VinculoId, ct);
         if (vinculo is { Estado: EstadoVinculo.Bloqueado })
@@ -277,12 +277,19 @@ public static class ExpedientesEndpoints
         IReadOnlyList<object> eventos, IMessageBus mensajes, IProtectorDeSecretos protector, HttpContext http, TimeProvider reloj,
         CancellationToken ct)
     {
-        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, new CorreoAlTercero(mensajes, protector), empresa.Certificados,
-            reloj.GetUtcNow(), ct);
-        await empresa.Sesion.SaveChangesAsync(ct);
+        await AnexarYGuardarAsync(empresa, stream, eventos, mensajes, protector, reloj, ct);
         var detalle = await DetalleAsync(empresa, stream.Id, ct);
         Peticiones.EscribirETag(http, detalle.Version);
         return detalle;
+    }
+
+    /// <summary>Anexa los eventos con sus efectos (cierre, certificado, correo al tercero) y guarda.</summary>
+    internal static async Task AnexarYGuardarAsync(SesionDeEmpresa empresa, JasperFx.Events.IEventStream<Expediente> stream,
+        IReadOnlyList<object> eventos, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+    {
+        await ProcesoDeValidacion.AnexarAsync(empresa.Sesion, stream, eventos, new CorreoAlTercero(mensajes, protector), empresa.Certificados,
+            reloj.GetUtcNow(), ct);
+        await empresa.Sesion.SaveChangesAsync(ct);
     }
 
     /// <summary>Detalle con las áreas y, por requisito, el tipo (campos, reglas, plantilla) y la versión con sus datos y vigencia.</summary>
