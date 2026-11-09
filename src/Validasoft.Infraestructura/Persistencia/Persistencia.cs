@@ -79,6 +79,8 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Documento>().DatabaseSchemaName("boveda").MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_documento_clave", TenancyScope.PerTenant, x => x.ClaveNatural)
                     .Index(x => x.TerceroId);
+                // Cuentas bancarias del tercero (CB-1): en la bóveda, como sus documentos globales.
+                opts.Schema.For<Validasoft.Dominio.Terceros.CuentaBancaria>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
                     .Index(x => x.DocumentoId);
                 // Avisos de vencimiento programados (TD-6): uno por tercero y fecha, en el tenant técnico "boveda" para

@@ -27,6 +27,7 @@ export * from './generado/endpoints/sistemas/sistemas';
 export * from './generado/endpoints/tenants/tenants';
 export * from './generado/endpoints/accesos-soporte/accesos-soporte';
 export * from './generado/endpoints/revalidaciones/revalidaciones';
+export * from './generado/endpoints/cuenta-designada/cuenta-designada';
 export * from './generado/endpoints/terceros/terceros';
 export * from './generado/endpoints/textos-legales/textos-legales';
 export * from './generado/endpoints/tipos-documento/tipos-documento';

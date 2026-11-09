@@ -293,3 +293,35 @@ public sealed record SolicitudRecibidaDto(string Mensaje);
 
 /// <summary>Pedir un enlace para volver a entrar (<c>POST /public/v1/acceso</c>); la respuesta es la misma exista o no el correo.</summary>
 public sealed record SolicitarAccesoDto(string? Correo);
+
+// ---------- Cuentas bancarias y cuenta designada (CB-1, CB-2) ----------
+
+/// <summary>Lo que declara el tercero de una cuenta. <see cref="TipoCuenta"/>: Ahorros o Corriente; moneda ISO (COP por defecto).</summary>
+public sealed record RegistrarCuentaBancariaDto(string? Banco, string? TipoCuenta, string? Numero, string? Titular, string? IdentificacionTitular,
+    string? Moneda = null, string? Pais = null);
+
+/// <summary>Con qué empresa está designada (o propuesta, o rechazada) una cuenta del tercero.</summary>
+public sealed record DesignacionDeCuentaDto(Guid VinculoId, Guid EmpresaId, string Empresa, string Estado, string? MotivoRechazo);
+
+/// <summary>Cuenta del tercero, siempre enmascarada, con las empresas a las que la designó.</summary>
+public sealed record CuentaBancariaPublicaDto(Guid Id, string Banco, string TipoCuenta, string NumeroEnmascarado, string Titular,
+    string IdentificacionTitular, string Moneda, string Estado, DateTimeOffset RegistradaEn, IReadOnlyList<DesignacionDeCuentaDto> DesignadaEn);
+
+public sealed record DesignarCuentaDto(Guid CuentaId);
+
+public sealed record AprobacionDeCuentaDto(string UsuarioId, string? Nombre, DateTimeOffset Fecha);
+
+/// <summary>
+/// Una cuenta designada (o propuesta) vista por la empresa. <see cref="Numero"/> completo solo para quien puede aprobar
+/// cuentas (<c>cuentas:aprobar</c>); para el resto, nulo.
+/// </summary>
+public sealed record CuentaDesignadaDto(Guid CuentaId, string Banco, string TipoCuenta, string NumeroEnmascarado, string? Numero, string Titular,
+    string IdentificacionTitular, string Moneda, string Estado, DateTimeOffset PropuestaEn, IReadOnlyList<AprobacionDeCuentaDto> Aprobaciones,
+    DateTimeOffset? AprobadaEn, string? MotivoRechazo);
+
+/// <summary>
+/// La cuenta designada del vínculo: la aprobada vigente, la propuesta pendiente y la última rechazada.
+/// <see cref="PuedesAprobar"/>: quien consulta tiene <c>cuentas:aprobar</c>, es una persona y aún no aprobó la propuesta.
+/// </summary>
+public sealed record CuentaDesignadaDelVinculoDto(CuentaDesignadaDto? Actual, CuentaDesignadaDto? Propuesta, CuentaDesignadaDto? Rechazada,
+    int AprobadoresRequeridos, bool PuedesAprobar);

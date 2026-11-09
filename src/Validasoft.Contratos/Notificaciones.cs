@@ -46,6 +46,14 @@ public sealed record DatosInvitacionAceptadaDto(
 /// <c>vinculo.anulado</c>: estado resultante y el anterior (si se conoce), motivo o justificación, fin del bloqueo y el
 /// expediente que activó el vínculo.
 /// </summary>
+/// <summary>
+/// Cuenta bancaria designada del vínculo (<c>vinculo.cuenta_designada*</c>), siempre enmascarada: el número completo lo
+/// consulta el ERP con <c>GET /vinculos/{id}/cuenta-designada</c> y <c>cuentas:aprobar</c>.
+/// </summary>
+public sealed record DatosCuentaDesignadaDto(
+    Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, Guid CuentaId, string Banco, string TipoCuenta, string NumeroEnmascarado,
+    string Titular, string IdentificacionTitular, string Moneda, string Estado, string? Motivo);
+
 public sealed record DatosEstadoVinculoDto(
     Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string Estado, string? EstadoAnterior, string? Motivo,
     DateTimeOffset? Hasta, Guid? ExpedienteId);

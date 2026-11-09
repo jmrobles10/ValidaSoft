@@ -221,7 +221,7 @@ public class PermisosTests
         Permisos.DeRol(Rol.Administrador).ShouldBe(Permisos.DelTenant);
         Permisos.DeRol(Rol.Revisor).ShouldBe([.. Lecturas, Permisos.VinculosEscribir, Permisos.ExpedientesRevisar], ignoreOrder: true);
         Permisos.DeRol(Rol.OficialCumplimiento).ShouldBe(
-            [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.ExpedientesRevisar], ignoreOrder: true);
+            [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.CuentasAprobar, Permisos.ExpedientesRevisar], ignoreOrder: true);
         Permisos.DeRol(Rol.Auditor).ShouldBe([.. Lecturas, Permisos.AuditoriaLeer], ignoreOrder: true);
     }
 

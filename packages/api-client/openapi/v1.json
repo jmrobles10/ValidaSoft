@@ -10,6 +10,264 @@
     }
   ],
   "paths": {
+    "/public/v1/boveda/cuentas-bancarias": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
+        ],
+        "summary": "GET_public_v1_boveda_cuentas_bancarias",
+        "description": "GET_public_v1_boveda_cuentas_bancarias",
+        "operationId": "GET_public_v1_boveda_cuentas_bancarias",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CuentaBancariaPublicaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_cuentas_bancarias",
+        "description": "POST_public_v1_boveda_cuentas_bancarias",
+        "operationId": "POST_public_v1_boveda_cuentas_bancarias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarCuentaBancariaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaPublicaDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/cuentas-bancarias/{id}/retirar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_cuentas_bancarias_id_retirar",
+        "description": "POST_public_v1_boveda_cuentas_bancarias_id_retirar",
+        "operationId": "POST_public_v1_boveda_cuentas_bancarias_id_retirar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaPublicaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/vinculos/{id}/cuenta-designada": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
+        ],
+        "summary": "POST_public_v1_vinculos_id_cuenta_designada",
+        "description": "POST_public_v1_vinculos_id_cuenta_designada",
+        "operationId": "POST_public_v1_vinculos_id_cuenta_designada",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesignarCuentaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaBancariaPublicaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/cuenta-designada": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_cuenta_designada",
+        "description": "GET_api_v1_vinculos_id_cuenta_designada",
+        "operationId": "GET_api_v1_vinculos_id_cuenta_designada",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaDesignadaDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/cuenta-designada/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_cuenta_designada_aprobar",
+        "description": "POST_api_v1_vinculos_id_cuenta_designada_aprobar",
+        "operationId": "POST_api_v1_vinculos_id_cuenta_designada_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaDesignadaDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/cuenta-designada/rechazar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_cuenta_designada_rechazar",
+        "description": "POST_api_v1_vinculos_id_cuenta_designada_rechazar",
+        "operationId": "POST_api_v1_vinculos_id_cuenta_designada_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuentaDesignadaDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/terceros": {
       "post": {
         "tags": [
@@ -6265,6 +6523,29 @@
           }
         }
       },
+      "AprobacionDeCuentaDto": {
+        "required": [
+          "usuarioId",
+          "nombre",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "AprobarRevalidacionesDto": {
         "required": [
           "revalidaciones"
@@ -7932,6 +8213,185 @@
           }
         }
       },
+      "CuentaBancariaPublicaDto": {
+        "required": [
+          "id",
+          "banco",
+          "tipoCuenta",
+          "numeroEnmascarado",
+          "titular",
+          "identificacionTitular",
+          "moneda",
+          "estado",
+          "registradaEn",
+          "designadaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "banco": {
+            "type": "string"
+          },
+          "tipoCuenta": {
+            "type": "string"
+          },
+          "numeroEnmascarado": {
+            "type": "string"
+          },
+          "titular": {
+            "type": "string"
+          },
+          "identificacionTitular": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "registradaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "designadaEn": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DesignacionDeCuentaDto"
+            }
+          }
+        }
+      },
+      "CuentaDesignadaDelVinculoDto": {
+        "required": [
+          "actual",
+          "propuesta",
+          "rechazada",
+          "aprobadoresRequeridos",
+          "puedesAprobar"
+        ],
+        "type": "object",
+        "properties": {
+          "actual": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CuentaDesignadaDto"
+              }
+            ]
+          },
+          "propuesta": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CuentaDesignadaDto"
+              }
+            ]
+          },
+          "rechazada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CuentaDesignadaDto"
+              }
+            ]
+          },
+          "aprobadoresRequeridos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "puedesAprobar": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CuentaDesignadaDto": {
+        "required": [
+          "cuentaId",
+          "banco",
+          "tipoCuenta",
+          "numeroEnmascarado",
+          "numero",
+          "titular",
+          "identificacionTitular",
+          "moneda",
+          "estado",
+          "propuestaEn",
+          "aprobaciones",
+          "aprobadaEn",
+          "motivoRechazo"
+        ],
+        "type": "object",
+        "properties": {
+          "cuentaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "banco": {
+            "type": "string"
+          },
+          "tipoCuenta": {
+            "type": "string"
+          },
+          "numeroEnmascarado": {
+            "type": "string"
+          },
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "titular": {
+            "type": "string"
+          },
+          "identificacionTitular": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "propuestaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "aprobaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AprobacionDeCuentaDto"
+            }
+          },
+          "aprobadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivoRechazo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DatoDeclaradoDto": {
         "required": [
           "clave",
@@ -7976,6 +8436,50 @@
           },
           "mime": {
             "type": "string"
+          }
+        }
+      },
+      "DesignacionDeCuentaDto": {
+        "required": [
+          "vinculoId",
+          "empresaId",
+          "empresa",
+          "estado",
+          "motivoRechazo"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "motivoRechazo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DesignarCuentaDto": {
+        "required": [
+          "cuentaId"
+        ],
+        "type": "object",
+        "properties": {
+          "cuentaId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -10387,6 +10891,60 @@
           }
         }
       },
+      "RegistrarCuentaBancariaDto": {
+        "required": [
+          "banco",
+          "tipoCuenta",
+          "numero",
+          "titular",
+          "identificacionTitular"
+        ],
+        "type": "object",
+        "properties": {
+          "banco": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoCuenta": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "titular": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "identificacionTitular": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "moneda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ReglaFrescuraDto": {
         "required": [
           "tipo"
@@ -12675,6 +13233,12 @@
     }
   },
   "tags": [
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+    },
     {
       "name": "Validasoft.Aplicacion.Vinculos.TercerosEndpoints"
     },

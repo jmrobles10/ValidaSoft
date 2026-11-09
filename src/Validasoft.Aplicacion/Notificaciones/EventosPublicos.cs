@@ -97,6 +97,9 @@ public static class CatalogoEventosPublicos
         new("vinculo.desvinculado", "El vínculo terminó (desvinculación)."),
         new("vinculo.anulado", "El vínculo se anuló."),
         new("vinculo.referencia_agregada", "Otro sistema integrado comparte el vínculo."),
+        new("vinculo.cuenta_designada_propuesta", "El tercero eligió una cuenta bancaria para cobrarle a la empresa; espera aprobación."),
+        new("vinculo.cuenta_designada", "La empresa aprobó la cuenta bancaria designada (cuatro ojos)."),
+        new("vinculo.cuenta_designada_rechazada", "La empresa rechazó la cuenta bancaria propuesta."),
         new("expediente.abierto", "Se abrió un expediente de validación."),
         new("expediente.en_revision", "El expediente pasó a revisión de las áreas."),
         new("expediente.observado", "El expediente volvió al tercero con observaciones."),
@@ -122,7 +125,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         evento.Data switch
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
-                or VinculoDesvinculado or VinculoAnulado or ReferenciaExternaAgregada => await DeVinculoAsync(evento, contexto, ct),
+                or VinculoDesvinculado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
+                or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
                 or ExpedienteAprobado or ExpedienteRechazado => await DeExpedienteAsync(evento, contexto, ct),
             VersionCompartida or VencimientoAvisado or VersionVencida => await DeDocumentoAsync(evento, contexto, ct),
@@ -160,6 +164,13 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoDesvinculado d => Estado(id, referencias, EstadoVinculo.Desvinculado, d.EstadoPrevio, d.Motivo, null, null),
             VinculoAnulado a => Estado(id, referencias, EstadoVinculo.Anulado, a.EstadoPrevio, a.Motivo, null, null),
             ReferenciaExternaAgregada r => new DatosReferenciaAgregadaDto(id, referencias, new ReferenciaExternaDto(r.Sistema, r.Id)),
+            CuentaDesignadaPropuesta p => Cuenta(id, referencias, p.Cuenta, EstadoCuentaDesignada.Propuesta, null),
+            CuentaDesignadaAprobada a => (a.Cuenta ?? CuentaDe(vinculo, a.CuentaId)) is { } aprobada
+                ? Cuenta(id, referencias, aprobada, EstadoCuentaDesignada.Aprobada, null)
+                : null,
+            CuentaDesignadaRechazada r => (r.Cuenta ?? CuentaDe(vinculo, r.CuentaId)) is { } rechazada
+                ? Cuenta(id, referencias, rechazada, EstadoCuentaDesignada.Rechazada, r.Motivo)
+                : null,
             _ => null
         };
 
@@ -173,10 +184,22 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoDesbloqueado => "vinculo.desbloqueado",
             VinculoDesvinculado => "vinculo.desvinculado",
             VinculoAnulado => "vinculo.anulado",
+            CuentaDesignadaPropuesta => "vinculo.cuenta_designada_propuesta",
+            CuentaDesignadaAprobada => "vinculo.cuenta_designada",
+            CuentaDesignadaRechazada => "vinculo.cuenta_designada_rechazada",
             _ => "vinculo.referencia_agregada"
         };
         return datos is null ? null : new EventoPublicoMapeado(tipo, tenantId, empresaId, datos);
     }
+
+    /// <summary>La cuenta del evento según el vínculo ya proyectado: la designada o la última rechazada (para el ERP, enmascarada).</summary>
+    private static CuentaParaDesignar? CuentaDe(Vinculo? vinculo, Guid cuentaId) =>
+        new[] { vinculo?.CuentaDesignada, vinculo?.CuentaRechazada, vinculo?.CuentaPropuesta }.FirstOrDefault(c => c?.Cuenta.CuentaId == cuentaId)?.Cuenta;
+
+    private static DatosCuentaDesignadaDto Cuenta(Guid id, IReadOnlyList<ReferenciaExternaDto> referencias, CuentaParaDesignar cuenta,
+        EstadoCuentaDesignada estado, string? motivo) =>
+        new(id, referencias, cuenta.CuentaId, cuenta.Banco, cuenta.TipoCuenta, Dominio.Terceros.CuentaBancaria.Enmascarar(cuenta.Ultimos4), cuenta.Titular,
+            cuenta.IdentificacionTitular, cuenta.Moneda, estado.ToString(), motivo);
 
     private static DatosEstadoVinculoDto Estado(Guid id, IReadOnlyList<ReferenciaExternaDto> referencias, EstadoVinculo estado, EstadoVinculo? anterior,
         string? motivo, DateTimeOffset? hasta, Guid? expedienteId) =>

@@ -34,7 +34,11 @@ export async function abrirEmpresa(page: Page, empresa: string, tipo = 'PROVEEDO
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { level: 2, name: empresa, exact: true }) })
     .filter({ has: page.getByText(nombreTipo, { exact: true }) });
-  await item.getByRole('link').first().click();
+  // Si el clic cae mientras la lista se vuelve a pintar (se refresca sola), la página no cambia: se repite hasta salir.
+  await expect(async () => {
+    if (/\/empresas\/?$/.test(new URL(page.url()).pathname)) await item.getByRole('link').first().click({ timeout: 3000 });
+    await expect(page).not.toHaveURL(/\/empresas\/?$/, { timeout: 3000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 /** Pantalla «Escribe el código»: lee el OTP nuevo de Mailpit y lo escribe dígito a dígito. */

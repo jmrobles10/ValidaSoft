@@ -120,6 +120,7 @@ const scopes = [
   'vinculos:leer',
   'vinculos:escribir',
   'vinculos:bloquear',
+  'cuentas:aprobar',
   'auditoria:leer',
   'flujos:leer',
   'flujos:escribir',
