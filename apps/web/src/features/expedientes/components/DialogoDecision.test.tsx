@@ -44,9 +44,15 @@ function Detalle({ dialogo, cerrarDesmonta, onCerrar }: { dialogo: Exclude<Dialo
  * (una red lenta: el diálogo no debe esperarla).
  */
 function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true }: { inicial: ExpedienteDto; dialogo: Exclude<DialogoExpediente, DialogoDeArea>; respuesta: () => Response; recarga: ExpedienteDto | null; cerrarDesmonta?: boolean }) {
+  // El detalle vuelve a pedir el expediente al abrirse: antes de decidir, el servidor devuelve el mismo estado inicial.
+  let decidido = false;
   configurarCliente({
     fetch: vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
-      if ((init?.method ?? 'GET') === 'GET') return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
+      if ((init?.method ?? 'GET') === 'GET') {
+        if (!decidido) return Promise.resolve(json(200, inicial));
+        return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
+      }
+      decidido = true;
       return Promise.resolve(respuesta());
     }),
   });
