@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Reemplaza |
 |---|---|---|
-| Propuesto | 2026-11-09 (decisiones FM-1 a FM-15) | Concreta P-3-1/P-3-2 (formularios canónicos) y B-3 (personas relacionadas); amplía ADR-0004 y ADR-0005 |
+| Propuesto | 2026-11-09 (decisiones FM-1 a FM-16) | Concreta P-3-1/P-3-2 (formularios canónicos) y B-3 (personas relacionadas); amplía ADR-0004 y ADR-0005 |
 
 ## Contexto
 La información del tercero que hoy usa el SRM para validar, aprobar y crear el proveedor en el ERP vive en las tablas del Portal de Proveedores, organizada por **secciones**: general, tributaria, bancaria, financiera, legal (representantes, socios, revisor fiscal, contador), SISO/SST, especialidades, contactos, términos y tratamiento de datos (análisis en [docs/14](../14-ficha-maestra-del-tercero.md) §1). El SRM la usa para:
@@ -35,6 +35,7 @@ Producto decidió que **la ficha maestra es de Validasoft y se migra desde el Po
 - **Las secciones son requisitos de los flujos**, igual que los documentos. La completitud, los veredictos por área, los motivos tipificados, la vigencia y avisos por sección, la revalidación y la auditoría reutilizan lo que ya existe.
 - **El documento es la fuente de las secciones.** Un mismo documento respalda campos de varias secciones: el RUT respalda la general, la tributaria y los representantes; la Cámara, la legal; los estados financieros, la financiera; la certificación, la cuenta. Un documento que la empresa exige como requisito **también sirve de soporte** de esas secciones (opción por requisito, activa por omisión). La **actualización nace del documento**: el tercero sube el RUT nuevo, la IA propone los cambios de sus secciones, el tercero los confirma y cada empresa revisa una sola actualización con el documento como evidencia (FM-13, FM-14).
 - **Cruce automático sección ↔ documento** con los hechos de IA del documento (ADR-0012). Se compara campo por campo, con resultado `Coincide`, `Discrepa` o `NoVerificable`. Es evidencia para el revisor y entrada para la revisión automática. El SRM no tiene este cruce: es valor agregado de Validasoft.
+- **La completitud de cada sector es un dato guardado** (FM-16). La calcula una sola regla del dominio al guardar la versión y la publica una proyección por tercero y sección. El wizard avanza con ella, y de ella sale el motivo legible de cada empresa. Nunca se deduce en pantalla ni se fabrica al leer.
 - **Hacia el ERP**: la aceptación de una sección por una empresa emite el evento público `seccion.aceptada` con el contenido aceptado. El SRM lo aplica en AyF con el mismo mapeo de hoy (H9).
 
 ## Alternativas descartadas

@@ -4,7 +4,7 @@
 |---|---|---|
 | Propuesto (para revisión de Producto) | 2026-11-09 | Arquitectura |
 
-**Propósito.** Validasoft se vuelve el **dueño de la información del tercero**: la que hoy vive en las tablas del Portal de Proveedores y que el SRM usa para validar, aprobar y crear el proveedor en el ERP. Este documento cuenta lo que hay hoy (§1–§2), cómo lo modela Validasoft (§3–§7), cómo se migra (§8) y en qué orden se construye (§9). Las decisiones están en el [registro](decisiones/registro.md) (FM-1 a FM-15) y en [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
+**Propósito.** Validasoft se vuelve el **dueño de la información del tercero**: la que hoy vive en las tablas del Portal de Proveedores y que el SRM usa para validar, aprobar y crear el proveedor en el ERP. Este documento cuenta lo que hay hoy (§1–§2), cómo lo modela Validasoft (§3–§7), cómo se migra (§8) y en qué orden se construye (§9). Las decisiones están en el [registro](decisiones/registro.md) (FM-1 a FM-16) y en [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
 
 **Relacionados.** [01](01-analisis-legado-srm-portal.md) · [02](02-modelo-documental-compartido.md) · [03](03-dominio-y-eventos.md) · [08](08-integracion-y-migracion.md) · [ADR-0004](adr/0004-boveda-global-y-tenancy-conjoined.md) · [ADR-0005](adr/0005-version-unica-y-revalidacion.md) · [ADR-0010](adr/0010-personas-relacionadas-con-boveda-propia.md) · [ADR-0012](adr/0012-ia-openai-con-cupo-por-empresa.md).
 
@@ -95,6 +95,30 @@ Reglas de completitud (FM-6), configurables por flujo:
 - `FICHA_ESPECIALIDADES` con al menos una especialidad.
 - La cuenta designada (CB-2) cuando el flujo pide pagos.
 
+### 4.1 Completitud de cada sector: un dato guardado y exacto (FM-16)
+El wizard pasa solo al siguiente sector cuando el actual está **completo**. Ese «completo» no lo deduce la pantalla ni se calcula distinto en cada consulta. Es un **dato persistido** que calcula **una sola regla en el servidor**, la misma que valida al guardar.
+
+**Lo que no se repite del legado:**
+- **Ceros fabricados.** El GET de la financiera del Portal insertaba filas en cero y la sección quedaba «completa» con solo abrirla.
+- **Reglas duplicadas.** La completitud se calculaba distinto en el SRM (`ValidarEstadoTercero`), en el wizard nuevo del Portal (`RegistroEstadoService`) y en el front.
+- **Estado inferido.** Los motivos se recalculaban borrando y recreando `DocumentacionPendiente`, y había estados que nadie sabía de dónde salían.
+
+**Cómo se hace en Validasoft:**
+- **Una regla por sección, versionada.** Cada esquema canónico trae sus reglas de completitud:
+  - obligatorios por tipo de persona;
+  - mínimos de filas: legal con al menos un representante legal y, si es jurídica, un socio; especialidades con al menos una; ICA cuando hay responsabilidad de ICA;
+  - coherencias: activos = pasivos + patrimonio, con tolerancia; suma de participaciones ≤ 100 %; resolución y fecha cuando es gran contribuyente o autorretenedor.
+
+  La regla vive en el dominio (C#). Es **la misma** que rechaza un guardado inválido y la que calcula la completitud, y tiene su tabla de casos en pruebas.
+- **Vacío no es cero.** Un campo sin diligenciar es `null`. Una cifra en 0 es un valor declarado. Ninguna lectura crea datos.
+- **Se guarda con la versión.** Cada versión de la sección guarda `completitud: { completa, faltantes[] { campo o regla, mensaje }, reglaVersion }`, calculada al guardarla. Además hay una proyección `EstadoDeFicha` por tercero, con una fila por sección: sección, versión vigente, completa, faltantes y fecha. El wizard y el SRM leen esa proyección; nadie recalcula.
+- **Guardado parcial permitido.** El tercero puede guardar a medias, como borrador de la sección; la versión queda `completa = false` con sus faltantes exactos. El wizard avanza solo con `completa = true`, y el servidor lo confirma en la respuesta de guardado (`siguienteSeccion`).
+- **Dos niveles:**
+  - **completa (base):** cumple el esquema canónico; es la que mueve el wizard.
+  - **completa para la empresa X:** además cumple lo que pide el flujo de esa empresa (campos privados obligatorios, periodos financieros adicionales, soporte exigido). Es la que alimenta la completitud del expediente de esa empresa y su motivo legible («Falta el soporte de la información bancaria»).
+- **Si cambia la regla:** cuando se publica una versión nueva del esquema o de sus reglas, un proceso recalcula `EstadoDeFicha` de todos los terceros y deja registrada la versión de regla con que se calculó. Así ninguna marca queda desactualizada en silencio.
+- **Pruebas:** tabla de casos por sección (persona natural y jurídica, filas mínimas, coherencias, null frente a 0) y pruebas de integración que guardan, leen la proyección y verifican que el wizard avance solo cuando corresponde.
+
 ## 5. El documento como fuente de las secciones
 
 ### 5.1 Qué respalda cada documento (mapa de plataforma, FM-13)
@@ -168,7 +192,7 @@ Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sect
 
 | Entrega | Contenido |
 |---|---|
-| F1 | **Sectores de información con soporte.** Catálogos de plataforma: DANE, CIIU, bancos, responsabilidades DIAN y especialidades de 3 niveles. Esquemas canónicos de `FICHA_GENERAL`, `FICHA_TRIBUTARIA` (+ ICA), `FICHA_FINANCIERA` (por periodo + moneda extranjera), `FICHA_LEGAL` (personas, fase 1), `FICHA_SST` y `FICHA_ESPECIALIDADES`. El tercero los diligencia en el portal (el «wizard») y quedan como versiones globales en la bóveda. Cada versión guarda su **soporte**, como en el SRM: la versión de un documento de la bóveda (RUT, Cámara, certificación, estados financieros) o un archivo adjunto. Qué tipos sirven de soporte para cada sector sale del mapa de §5.1. |
+| F1 | **Sectores de información con soporte y su completitud guardada** (§4.1). Catálogos de plataforma: DANE, CIIU, bancos, responsabilidades DIAN y especialidades de 3 niveles. Esquemas canónicos de `FICHA_GENERAL`, `FICHA_TRIBUTARIA` (+ ICA), `FICHA_FINANCIERA` (por periodo + moneda extranjera), `FICHA_LEGAL` (personas, fase 1), `FICHA_SST` y `FICHA_ESPECIALIDADES`. El tercero los diligencia en el portal (el «wizard») y quedan como versiones globales en la bóveda. Cada versión guarda su **soporte**, como en el SRM: la versión de un documento de la bóveda (RUT, Cámara, certificación, estados financieros) o un archivo adjunto. Qué tipos sirven de soporte para cada sector sale del mapa de §5.1. |
 | F2 | **Validación por empresa en paridad con el SRM.** Las secciones son requisitos del flujo, con completitud y su motivo legible. Cada empresa acepta u observa cada sección por área, con motivos. Al cambiar una sección aceptada, se revalida **solo esa sección**, con comparación anterior → nuevo y su soporte: son las Actualizaciones del SRM, con un responsable por sección configurado como áreas que revisan. La empresa ve la ficha en Tercero 360 y en el expediente. |
 | F3 | **Integración con el SRM:** evento `seccion.aceptada` y `GET /api/v1/vinculos/{id}/ficha`, para que el SRM aplique en AyF lo aceptado (General, Tributaria, representante legal y cuenta designada). |
 | F4 | **Importador** desde las tablas `Ter*` del Portal y **sincronizador** de coexistencia. |
