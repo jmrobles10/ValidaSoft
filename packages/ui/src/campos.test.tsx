@@ -63,3 +63,18 @@ describe('switch del tema', () => {
     // 3 + 14 + 3 = 20 de alto; encendida queda a 3 px del borde derecho: 16 + 3 + 14 + 3 = 36.
   });
 });
+
+describe('avisos (Alert) con botón de cerrar', () => {
+  it('ícono, primera línea y botón comparten la fila de 32 px: el aviso no se ve descentrado', () => {
+    const tema = createValidasoftTheme('light');
+    const raiz = tema.components?.MuiAlert?.styleOverrides?.root;
+    if (typeof raiz !== 'function') throw new Error('MuiAlert.root debería ser una función del ownerState');
+    const conCerrar = raiz({ ownerState: { severity: 'success', onClose: () => undefined }, theme: tema }) as Record<string, Record<string, unknown>>;
+    expect(conCerrar['& .MuiAlert-icon']).toMatchObject({ padding: '7px 0' });
+    expect(conCerrar['& .MuiAlert-message']).toEqual({ padding: '6px 0' });
+    const sinCerrar = raiz({ ownerState: { severity: 'info' }, theme: tema }) as Record<string, Record<string, unknown>>;
+    expect(sinCerrar['& .MuiAlert-icon']).toMatchObject({ padding: '2px 0' });
+    expect(sinCerrar['& .MuiAlert-message']).toBeUndefined();
+    expect(tema.components?.MuiAlert?.styleOverrides?.action).toMatchObject({ alignItems: 'flex-start' });
+  });
+});
