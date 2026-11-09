@@ -8,6 +8,7 @@ import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
+import { terceros } from './es-CO-terceros';
 import { vencimientos } from './es-CO-vencimientos';
 
 export const esCO = {
@@ -244,6 +245,7 @@ export const esCO = {
   tiposVinculo,
   certificados: { ...certificados, lista: certificadosLista },
   cuentas,
+  terceros,
   motivos,
   flujos,
   historial: {

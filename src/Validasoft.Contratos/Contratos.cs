@@ -151,6 +151,23 @@ public sealed record TerceroDto(
     Guid Id, IdentificacionDto Identificacion, string TipoPersona, string Nombre, string? NombreComercial,
     IReadOnlyList<ContactoDto> Contactos, bool EsExtranjero, DateTimeOffset CreadoEn);
 
+/// <summary>
+/// Ficha del tercero para la empresa activa (<c>Tercero360</c>): sus vínculos con esta empresa y, de las demás empresas
+/// del grupo, solo que existe el vínculo y su estado (sin decisiones ni documentos).
+/// </summary>
+public sealed record FichaTerceroDto(TerceroDto Tercero, IReadOnlyList<VinculoEnFichaDto> Vinculos,
+    IReadOnlyList<VinculoEnOtraEmpresaDto> OtrasEmpresasDelGrupo);
+
+/// <summary>
+/// Un vínculo del tercero con la empresa activa. <see cref="Certificado"/> y <see cref="Documentos"/> son nulos cuando
+/// quien consulta no tiene <c>certificados:leer</c> o <c>documentos:leer</c>; el certificado sin emitir viene con
+/// <c>Actual</c> nulo.
+/// </summary>
+public sealed record VinculoEnFichaDto(VinculoDto Vinculo, CertificadoDelVinculoDto? Certificado, CuentaDesignadaDelVinculoDto CuentaDesignada,
+    IReadOnlyList<DocumentoVistaEmpresaDto>? Documentos);
+
+public sealed record VinculoEnOtraEmpresaDto(Guid EmpresaId, string Estado);
+
 // ---------- Vínculos ----------
 
 /// <summary>Al crear, <see cref="Sistema"/> puede omitirse: lo fija la API key; si viene y no coincide, 422.</summary>

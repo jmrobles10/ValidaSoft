@@ -268,6 +268,42 @@
         }
       }
     },
+    "/api/v1/terceros/{id}/ficha": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.FichaTerceroEndpoints"
+        ],
+        "summary": "GET_api_v1_terceros_id_ficha",
+        "description": "GET_api_v1_terceros_id_ficha",
+        "operationId": "GET_api_v1_terceros_id_ficha",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/vencimientos": {
       "get": {
         "tags": [
@@ -9756,6 +9792,31 @@
           }
         }
       },
+      "FichaTerceroDto": {
+        "required": [
+          "tercero",
+          "vinculos",
+          "otrasEmpresasDelGrupo"
+        ],
+        "type": "object",
+        "properties": {
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroDto"
+          },
+          "vinculos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VinculoEnFichaDto"
+            }
+          },
+          "otrasEmpresasDelGrupo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VinculoEnOtraEmpresaDto"
+            }
+          }
+        }
+      },
       "FijarOrigenesDto": {
         "required": [
           "origenes"
@@ -13741,6 +13802,58 @@
           }
         }
       },
+      "VinculoEnFichaDto": {
+        "required": [
+          "vinculo",
+          "certificado",
+          "cuentaDesignada",
+          "documentos"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculo": {
+            "$ref": "#/components/schemas/VinculoDto"
+          },
+          "certificado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CertificadoDelVinculoDto"
+              }
+            ]
+          },
+          "cuentaDesignada": {
+            "$ref": "#/components/schemas/CuentaDesignadaDelVinculoDto"
+          },
+          "documentos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DocumentoVistaEmpresaDto"
+            }
+          }
+        }
+      },
+      "VinculoEnOtraEmpresaDto": {
+        "required": [
+          "empresaId",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          }
+        }
+      },
       "VinculoPublicoDto": {
         "required": [
           "id",
@@ -13972,6 +14085,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.FichaTerceroEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"

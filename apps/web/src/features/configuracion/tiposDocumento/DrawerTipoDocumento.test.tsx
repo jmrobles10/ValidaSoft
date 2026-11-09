@@ -60,15 +60,20 @@ afterEach(() => reiniciarCliente());
 
 describe('Tipo de documento: crear y editar', () => {
   it('crear un formulario: «Crear tipo» queda deshabilitado hasta tener código, nombre y un campo válido', async () => {
-    // Sin pausa entre teclas: escribe ~50 caracteres y con la pausa por omisión se pasaba del tiempo en la suite completa.
-    const usuario = userEvent.setup({ delay: null });
+    const usuario = userEvent.setup();
+    // Los textos se pegan: teclear ~50 caracteres en el drawer pasaba del tiempo en la suite completa, y lo que se prueba
+    // es la validación del formulario, no el tecleo.
+    const escribir = async (campo: HTMLElement, texto: string) => {
+      await usuario.click(campo);
+      await usuario.paste(texto);
+    };
     const { peticiones, onCerrar } = montar(null, (url, metodo) => (metodo === 'POST' ? json({ ...EXISTENTE, nombre: 'Declaración de fondos' }, 201) : json(url.includes('catalogos') ? [] : {})));
     const crear = screen.getByRole('button', { name: 'Crear tipo' });
     expect(crear).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Obligatorio.');
 
-    await usuario.type(screen.getByRole('textbox', { name: /Código/ }), 'decl fondos');
-    await usuario.type(screen.getByRole('textbox', { name: /^Nombre/ }), 'Declaración de fondos');
+    await escribir(screen.getByRole('textbox', { name: /Código/ }), 'decl fondos');
+    await escribir(screen.getByRole('textbox', { name: /^Nombre/ }), 'Declaración de fondos');
     await usuario.click(screen.getByRole('combobox', { name: 'Se entrega como' }));
     await usuario.click(screen.getByRole('option', { name: 'Formulario' }));
     expect(screen.getByRole('status')).toHaveTextContent('Agrega al menos un campo al formulario.');
@@ -78,7 +83,7 @@ describe('Tipo de documento: crear y editar', () => {
     const campos = screen.getByRole('list', { name: 'Campos del formulario' });
     const segundo = within(campos).getAllByRole('listitem')[1];
     if (!segundo) throw new Error('falta el segundo campo');
-    await usuario.type(within(segundo).getByRole('textbox', { name: /Etiqueta/ }), 'Origen de los fondos');
+    await escribir(within(segundo).getByRole('textbox', { name: /Etiqueta/ }), 'Origen de los fondos');
     expect(within(segundo).getByRole('textbox', { name: /Clave/ })).toHaveValue('origen_de_los_fondos');
 
     await waitFor(() => expect(crear).toBeEnabled());

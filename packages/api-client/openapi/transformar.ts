@@ -52,6 +52,7 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/terceros': 'crearTercero',
   'GET /api/v1/terceros/{id}': 'obtenerTercero',
   'GET /api/v1/terceros/por-identificacion': 'buscarTerceroPorIdentificacion',
+  'GET /api/v1/terceros/{id}/ficha': 'obtenerFichaTercero',
   'POST /api/v1/vinculos': 'crearVinculo',
   'GET /api/v1/vinculos': 'listarVinculos',
   'GET /api/v1/vinculos/por-referencia': 'obtenerVinculoPorReferencia',

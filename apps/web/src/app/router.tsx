@@ -53,6 +53,10 @@ export function crearRouter() {
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
             },
             {
+              path: 'terceros/:terceroId',
+              lazy: () => import('../features/terceros/PaginaFichaTercero').then((m) => ({ Component: m.PaginaFichaTercero })),
+            },
+            {
               element: <LayoutConfiguracion />,
               children: [
                 {

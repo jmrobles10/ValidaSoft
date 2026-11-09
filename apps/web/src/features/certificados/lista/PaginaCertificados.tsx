@@ -31,7 +31,7 @@ export function PaginaCertificados() {
   const busqueda = useBusquedaEnUrl(ESPERA_BUSQUEDA_MS);
   const paginacion = usePaginacionCursor();
   const { reiniciar } = paginacion;
-  const columnas = useColumnasCertificados();
+  const columnas = useColumnasCertificados(permisos.puede(SCOPES.tercerosLeer));
 
   useEffect(() => {
     reiniciar();

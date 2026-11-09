@@ -10,6 +10,7 @@ export * from './documentos-de-vinculo/documentos-de-vinculo';
 export * from './empresas/empresas';
 export * from './eventos/eventos';
 export * from './expedientes/expedientes';
+export * from './ficha-tercero/ficha-tercero';
 export * from './flujos/flujos';
 export * from './inicio/inicio';
 export * from './lista-de-certificados/lista-de-certificados';

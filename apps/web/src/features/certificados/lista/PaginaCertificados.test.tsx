@@ -67,6 +67,7 @@ function montar(filas: FilaCertificadoDto[], ruta = '/e/emp/certificados') {
           <Routes>
             <Route path="/e/:empresaId/certificados" element={<PaginaCertificados />} />
             <Route path="/e/:empresaId/vinculos/:vinculoId" element={<UbicacionActual />} />
+            <Route path="/e/:empresaId/terceros/:terceroId" element={<UbicacionActual />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -146,6 +147,14 @@ describe('Certificados', () => {
     montar(FILAS);
     await usuario.click(await screen.findByText('Aceros del Norte'));
     expect(await screen.findByText('Ubicación: /e/emp/vinculos/v2')).toBeInTheDocument();
+  });
+
+  it('con terceros:leer el nombre del tercero abre su ficha sin abrir el vínculo', async () => {
+    permisos.scopes = new Set([SCOPES.certificadosLeer, SCOPES.tercerosLeer]);
+    const usuario = userEvent.setup();
+    montar(FILAS);
+    await usuario.click(await screen.findByRole('link', { name: 'Abrir la ficha de Aceros del Norte' }));
+    expect(await screen.findByText('Ubicación: /e/emp/terceros/t2')).toBeInTheDocument();
   });
 
   it('vacío con filtros: lo dice y limpiar vuelve a la lista completa', async () => {
