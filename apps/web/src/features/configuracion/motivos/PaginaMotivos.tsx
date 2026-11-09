@@ -76,8 +76,8 @@ export function PaginaMotivos() {
                     <Typography component="span" sx={{ fontWeight: 500 }}>
                       {m.nombre}
                     </Typography>
-                    <Stack direction="row" spacing={0.75} alignItems="center">
-                      <Typography component="span" variant="monoTabla" color="text.secondary">
+                    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+                      <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                         {m.codigo}
                       </Typography>
                       {m.base && <Chip size="small" variant="outlined" icon={<Lock size={12} aria-hidden />} label={t('motivos.base')} />}
@@ -87,7 +87,7 @@ export function PaginaMotivos() {
                 <TableCell>{t(`motivos.categorias.${m.categoria}`)}</TableCell>
                 <TableCell>{t(`motivos.aplica.${m.aplicaA}`)}</TableCell>
                 <TableCell>
-                  <Typography color="text.secondary" sx={{ fontSize: 13 }}>
+                  <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {m.textoAlTercero}
                   </Typography>
                 </TableCell>

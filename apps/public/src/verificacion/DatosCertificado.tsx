@@ -11,7 +11,7 @@ export function DatosCertificado({ certificado: c }: { certificado: CertificadoP
     <RejillaDatos columnas={2}>
       <Dato etiqueta={t('verificacion.datos.tercero')}>
         {c.titular.nombre}
-        <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 14 }}>
+        <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 14 }}>
           {c.titular.identificacionEnmascarada}
         </Typography>
       </Dato>
@@ -24,7 +24,7 @@ export function DatosCertificado({ certificado: c }: { certificado: CertificadoP
         <Typography component="span" variant="mono">
           {c.folio}
         </Typography>
-        <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 14 }}>
+        <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 14 }}>
           {t('verificacion.datos.emision', { n: String(c.emision) })}
         </Typography>
       </Dato>

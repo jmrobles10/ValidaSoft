@@ -27,7 +27,7 @@ export function DatosDeclarados({ datos, limite, conTitulo = false }: DatosDecla
   return (
     <Box>
       {conTitulo && (
-        <Typography variant="overline" component="h3" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+        <Typography variant="overline" component="h3" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
           {t('expedientes.datosDeclarados.titulo')}
         </Typography>
       )}

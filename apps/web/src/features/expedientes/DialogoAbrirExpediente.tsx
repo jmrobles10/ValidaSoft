@@ -1,7 +1,7 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { TipoVinculoResumenDto } from '@validasoft/api-client';
 import { FolderOpen } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { IconoCarga } from '../../shared/componentes';
@@ -32,7 +32,7 @@ export function DialogoAbrirExpediente({ empresaId, vinculoId, tipoVinculo, terc
   const flujoPorDefecto = publicados.find((f) => f.esPorDefecto);
   const sinFlujos = flujos.isSuccess && publicados.length === 0;
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     mutacion.mutate(
       { vinculoId, flujoId: flujoId || null },
@@ -58,7 +58,7 @@ export function DialogoAbrirExpediente({ empresaId, vinculoId, tipoVinculo, terc
         <DialogTitle id="titulo-abrir-expediente">
           {t('expedientes.abrir.titulo')}
           {tercero && (
-            <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+            <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
               {tercero} · {tipoVinculo.nombre}
             </Typography>
           )}

@@ -22,11 +22,11 @@ export function VersionesDocumento({ documentoId, onRetirar }: { documentoId: st
     <Stack component="ol" spacing={1} sx={{ p: 0, m: 0, mt: 1.5, listStyle: 'none' }}>
       {versiones.map((v) => (
         <Box component="li" key={v.n} sx={{ p: 1.5, borderRadius: 1, bgcolor: 'superficie.nivel2' }}>
-          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap">
+          <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             <Typography sx={{ fontWeight: 600, fontSize: 14 }}>{t('comun.version', { n: String(v.n) })}</Typography>
             <ChipEstado estado={v.estado} fecha={v.cargadaEn} />
           </Stack>
-          <Typography color="text.secondary" sx={{ fontSize: 13, mt: 0.5, wordBreak: 'break-word' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 0.5, wordBreak: 'break-word' }}>
             {v.nombreOriginal} · {formatearTamano(v.tamanoBytes)} · {formatearFecha(v.cargadaEn)}
           </Typography>
           {v.estado === 'Devuelta' && (

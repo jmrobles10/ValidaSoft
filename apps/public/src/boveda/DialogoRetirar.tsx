@@ -1,6 +1,6 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import type { VersionDocumentoDto } from '@validasoft/api-client';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRetirarVersion } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
@@ -15,7 +15,7 @@ export function DialogoRetirar({ documentoId, tipo, version, onCerrar }: { docum
   const [tocado, setTocado] = useState(false);
   const falta = !motivo.trim();
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (falta) return;
     retiro.mutate(motivo.trim(), {
@@ -32,7 +32,7 @@ export function DialogoRetirar({ documentoId, tipo, version, onCerrar }: { docum
         <DialogTitle id="titulo-retiro">{t('boveda.retiro.titulo', { n: String(version.n), tipo })}</DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
-            <Typography color="text.secondary">{t('boveda.retiro.ayuda')}</Typography>
+            <Typography sx={{ color: 'text.secondary' }}>{t('boveda.retiro.ayuda')}</Typography>
             {retiro.isError && <Alert severity="error">{mensajeDeError(retiro.error, t)}</Alert>}
             <TextField
               label={t('boveda.retiro.motivo')}

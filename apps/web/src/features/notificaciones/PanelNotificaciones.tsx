@@ -29,7 +29,7 @@ export function PanelNotificaciones(props: PanelNotificacionesProps) {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 'none', pl: 2, pr: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flex: 'none', pl: 2, pr: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}>
         <Typography id="titulo-notificaciones" component="h2" sx={{ flex: 1, fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>
           {t('notificaciones.titulo')}
         </Typography>
@@ -76,7 +76,7 @@ export function PanelNotificaciones(props: PanelNotificacionesProps) {
           </List>
         )}
         {bandeja?.siguienteCursor && (
-          <Typography variant="caption" color="text.secondary" component="p" sx={{ px: 2, py: 1.5, textAlign: 'center' }}>
+          <Typography variant="caption" component="p" sx={{ color: 'text.secondary', px: 2, py: 1.5, textAlign: 'center' }}>
             {t('notificaciones.hayMas')}
           </Typography>
         )}

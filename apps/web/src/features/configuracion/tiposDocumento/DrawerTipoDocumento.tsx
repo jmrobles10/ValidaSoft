@@ -2,7 +2,7 @@ import { Alert, Box, Button, Drawer, IconButton, Stack, Typography } from '@mui/
 import type { TipoDocumentoTenantDto } from '@validasoft/api-client';
 import { FaltaParaEnviar } from '@validasoft/ui';
 import { X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
@@ -42,7 +42,7 @@ export function DrawerTipoDocumento({ tipoDocumento, claveIdempotencia, onCerrar
   const primero = errores[0];
   const pendiente = primero ? (primero.campo === 'campo' ? t('tiposDocumento.errores.enCampo', { n: String(primero.indice + 1), error: mensaje(primero) }) : mensaje(primero)) : null;
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (pendiente) return;
     guardar.mutate(borrador, {
@@ -56,7 +56,7 @@ export function DrawerTipoDocumento({ tipoDocumento, claveIdempotencia, onCerrar
   return (
     <Drawer anchor="right" open onClose={guardar.isPending ? undefined : onCerrar} slotProps={{ paper: { sx: { width: 600, maxWidth: '100%' } } }} aria-labelledby="titulo-tipo-documento">
       <Box component="form" onSubmit={enviar} noValidate sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography id="titulo-tipo-documento" variant="h4" component="h2">
             {creando ? t('tiposDocumento.nuevo') : t('tiposDocumento.editarNombre', { nombre: tipoDocumento.nombre })}
           </Typography>
@@ -78,7 +78,7 @@ export function DrawerTipoDocumento({ tipoDocumento, claveIdempotencia, onCerrar
           <SeccionVigencia borrador={borrador} cambiar={cambiar} error={error} />
           {tipoDocumento && borrador.modo !== 'Formulario' && <SeccionPlantilla tipoId={tipoDocumento.id} />}
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
           {pendiente && <FaltaParaEnviar>{pendiente}</FaltaParaEnviar>}
           <Button variant="text" onClick={onCerrar} disabled={guardar.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}

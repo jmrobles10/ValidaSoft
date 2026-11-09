@@ -38,10 +38,10 @@ function Correo({ correo }: { correo: ResumenCorreo }) {
   return (
     <Card sx={{ p: 1.5 }}>
       <Typography sx={{ fontWeight: 600, fontSize: 14 }}>{correo.asunto}</Typography>
-      <Typography color="text.secondary" sx={{ fontSize: 13 }}>
+      <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
         {correo.para} · {formatearFechaHora(correo.fecha)}
       </Typography>
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: 1 }}>
         {enlace && (
           <Button component={RouterLink} to={enlace} variant="contained" size="small">
             {t('dev.abrir')}

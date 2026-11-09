@@ -77,7 +77,7 @@ function ContenidoCuenta({ datos, empresaId, vinculoId, tienePermiso }: Contenid
           <SeccionCuenta titulo={t('cuentas.secciones.designada')} cuenta={actual} fecha={actual.aprobadaEn}>
             <DatosCuenta cuenta={actual} />
             {actual.aprobadaEn && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 {actual.aprobaciones.length > 0
                   ? t('cuentas.aprobadaPor', { nombres: nombresDe(actual.aprobaciones, t), fecha: formatearFechaHora(actual.aprobadaEn) })
                   : t('cuentas.aprobadaEl', { fecha: formatearFechaHora(actual.aprobadaEn) })}

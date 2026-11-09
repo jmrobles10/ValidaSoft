@@ -64,7 +64,7 @@ export function EditorCampos({ borrador, cambiar, error, erroresCampos }: PropsS
                     <TextField size="small" multiline minRows={2} fullWidth label={t('tiposDocumento.entrega.opciones')} helperText={t('tiposDocumento.entrega.opcionesAyuda')} value={c.opciones} onChange={(e) => cambiarCampo(i, { opciones: e.target.value })} sx={{ mt: 1.5 }} />
                   )}
                   <TextField size="small" fullWidth label={t('tiposDocumento.entrega.ayudaCampo')} value={c.ayuda} onChange={(e) => cambiarCampo(i, { ayuda: e.target.value })} sx={{ mt: 1.5 }} />
-                  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 1 }}>
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', mt: 1 }}>
                     <FormControlLabel control={<Switch checked={c.obligatorio} onChange={(e) => cambiarCampo(i, { obligatorio: e.target.checked })} />} label={t('tiposDocumento.entrega.obligatorio')} sx={{ mr: 'auto' }} />
                     <IconButton size="small" aria-label={t('tiposDocumento.entrega.subir', { campo: c.etiqueta || String(i + 1) })} disabled={i === 0} onClick={() => mover(i, -1)}>
                       <ArrowUp size={16} aria-hidden />
@@ -85,7 +85,7 @@ export function EditorCampos({ borrador, cambiar, error, erroresCampos }: PropsS
               );
             })}
           </Stack>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }} useFlexGap>
             <Button variant="outlined" startIcon={<Plus size={16} aria-hidden />} disabled={campos.length >= MAXIMO_CAMPOS} onClick={() => cambiar({ campos: [...campos, campoNuevo()] })}>
               {t('tiposDocumento.entrega.agregar')}
             </Button>
@@ -99,7 +99,7 @@ export function EditorCampos({ borrador, cambiar, error, erroresCampos }: PropsS
               </Button>
             )}
           </Stack>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {t('tiposDocumento.entrega.reservadas')}
           </Typography>
         </>

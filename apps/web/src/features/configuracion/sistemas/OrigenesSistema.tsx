@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { actualizarOrigenesSistema, type SistemaIntegradoDto } from '@validasoft/api-client';
 import { AlineadoConCampo, FaltaParaEnviar } from '@validasoft/ui';
 import { Globe, Plus, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
@@ -35,7 +35,7 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
     },
   });
 
-  const agregar = (evento: FormEvent) => {
+  const agregar = (evento: SubmitEvent) => {
     evento.preventDefault();
     const paso = agregarOrigen(lista, texto);
     if ('error' in paso) {
@@ -52,7 +52,7 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
       <Typography id={`origenes-${sistema.id}`} component="h3" sx={{ fontSize: 14, fontWeight: 600 }}>
         {t('sistemas.origenes.titulo')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5, maxWidth: 720 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5, maxWidth: 720 }}>
         {t('sistemas.origenes.ayuda', { nombre: sistema.nombre })}
       </Typography>
 
@@ -64,7 +64,7 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
 
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, mb: 1.5 }}>
         {lista.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ px: 1.5, py: 1.25 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', px: 1.5, py: 1.25 }}>
             {t('sistemas.origenes.vacio', { codigo: sistema.codigo })}
           </Typography>
         ) : (
@@ -74,9 +74,8 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
                 key={origen}
                 component="li"
                 direction="row"
-                alignItems="center"
                 spacing={1}
-                sx={{ px: 1.5, minHeight: 40, borderTop: i === 0 ? 0 : 1, borderColor: 'divider' }}
+                sx={{ alignItems: 'center', px: 1.5, minHeight: 40, borderTop: i === 0 ? 0 : 1, borderColor: 'divider' }}
               >
                 <Globe size={14} strokeWidth={1.75} aria-hidden />
                 <Typography variant="mono" sx={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
@@ -94,12 +93,12 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
       </Box>
 
       {soloLectura ? (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {t('sistemas.origenes.inactivo')}
         </Typography>
       ) : (
         <>
-          <Stack component="form" noValidate onSubmit={agregar} direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'flex-start' }}>
+          <Stack component="form" noValidate onSubmit={agregar} direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'flex-start' } }}>
             <TextField
               size="small"
               label={t('sistemas.origenes.nuevo')}
@@ -121,7 +120,7 @@ export function OrigenesSistema({ sistema }: { sistema: SistemaIntegradoDto }) {
               </Button>
             </AlineadoConCampo>
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ mt: 1.5 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', mt: 1.5 }}>
             <FaltaParaEnviar>
               {cambiada ? t('sistemas.origenes.sinGuardar') : t('sistemas.origenes.cuenta', { n: String(lista.length), maximo: String(MAXIMO_ORIGENES) })}
             </FaltaParaEnviar>

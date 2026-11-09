@@ -1,6 +1,6 @@
 import { Box, ButtonBase, InputBase, ListItemText, Menu, MenuItem } from '@mui/material';
 import { Check, ChevronDown, Search } from 'lucide-react';
-import { useId, useState, type FormEvent, type ReactNode } from 'react';
+import { useId, useState, type SubmitEvent, type ReactNode } from 'react';
 
 const ALTO_CONTROL = 32;
 
@@ -15,7 +15,7 @@ export interface CampoBusquedaProps {
 
 /** Búsqueda de la barra de filtros: ícono, borde de control y foco visible. */
 export function CampoBusqueda({ valor, onCambiar, onBuscar, placeholder, ancho = 320 }: CampoBusquedaProps) {
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     onBuscar?.(valor.trim());
   };

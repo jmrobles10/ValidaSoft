@@ -99,7 +99,7 @@ export function DetalleExpediente() {
         tituloCompleto={expediente.tercero.nombre}
         etiquetaAcciones={t('vinculos.detalle.acciones')}
         subtitulo={
-          <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mt: 0.25, fontSize: 13 }}>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', mt: 0.25, fontSize: 13 }}>
             <Typography component="span" variant="mono">
               {expediente.folio}
             </Typography>

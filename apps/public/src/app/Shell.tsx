@@ -27,11 +27,11 @@ export function Shell() {
   return (
     <Box sx={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Box component="header" sx={{ borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
-        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ maxWidth: 960, mx: 'auto', px: 2, height: 56 }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', maxWidth: 960, mx: 'auto', px: 2, height: 56 }}>
           <Isotipo tamano={28} />
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>{t('comun.marca')}</Typography>
-            <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
               {verificando ? t('verificacion.marca') : t('comun.misDocumentos')}
             </Typography>
           </Box>
@@ -64,7 +64,7 @@ export function Shell() {
       </Box>
 
       <Box component="footer" sx={{ display: activa ? { xs: 'none', md: 'block' } : 'block', borderTop: 1, borderColor: 'divider' }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems="center" justifyContent="center" spacing={{ xs: 0.5, sm: 1 }} sx={{ py: 2, px: 2, color: 'text.secondary', fontSize: 13, textAlign: 'center' }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 1 }} sx={{ alignItems: 'center', justifyContent: 'center', py: 2, px: 2, color: 'text.secondary', fontSize: 13, textAlign: 'center' }}>
           <span>{t('comun.pie')}</span>
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
             <Isotipo tamano={14} />

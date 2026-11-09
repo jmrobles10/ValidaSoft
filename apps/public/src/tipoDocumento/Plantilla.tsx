@@ -22,13 +22,13 @@ export function Plantilla({ expedienteId, requisitoId, empresa }: { expedienteId
 
   return (
     <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'superficie.nivel2' }}>
-      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
         <Box sx={{ color: 'text.secondary', pt: 0.25 }} aria-hidden>
           <FileSignature size={20} />
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography sx={{ fontWeight: 600, fontSize: 15 }}>{t('plantilla.titulo', { empresa })}</Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: '20px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px' }}>
             {t('plantilla.texto')}
           </Typography>
           <Button variant="outlined" onClick={descargar} disabled={descarga.isPending} startIcon={<Download size={18} aria-hidden />} sx={{ mt: 1 }}>

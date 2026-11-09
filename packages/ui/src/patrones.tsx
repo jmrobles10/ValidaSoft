@@ -26,11 +26,11 @@ export interface EstadoVacioProps {
 /** Vacío: ícono en círculo, frase que dice qué falta y dónde aparecerá, y una acción. Dentro del área del contenido. */
 export function EstadoVacio({ titulo, texto, icono = Inbox, accion, compacto = false }: EstadoVacioProps) {
   return (
-    <Stack alignItems="center" spacing={0.75} sx={{ py: compacto ? 3 : 6, px: 3, textAlign: 'center' }}>
+    <Stack spacing={0.75} sx={{ alignItems: 'center', py: compacto ? 3 : 6, px: 3, textAlign: 'center' }}>
       <CirculoIcono icono={icono} />
       <Typography sx={{ fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>{titulo}</Typography>
       {texto && (
-        <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 380 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 380 }}>
           {texto}
         </Typography>
       )}
@@ -51,16 +51,16 @@ export interface PaginaEstadoProps {
 /** Página de estado (sesión vencida o cerrada, 403, 404): ícono grande, título, explicación y siguiente paso. */
 export function PaginaEstado({ icono, titulo, texto, acciones, rol }: PaginaEstadoProps) {
   return (
-    <Stack component="section" role={rol} alignItems="center" spacing={1} sx={{ maxWidth: 520, mx: 'auto', px: 3, py: 8, textAlign: 'center' }}>
+    <Stack component="section" role={rol} spacing={1} sx={{ alignItems: 'center', maxWidth: 520, mx: 'auto', px: 3, py: 8, textAlign: 'center' }}>
       <CirculoIcono icono={icono} grande />
       <Typography variant="h2" component="h1">
         {titulo}
       </Typography>
-      <Typography variant="body1" color="text.secondary">
+      <Typography variant="body1" sx={{ color: 'text.secondary' }}>
         {texto}
       </Typography>
       {acciones && (
-        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" justifyContent="center" sx={{ pt: 1.5 }}>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap', justifyContent: 'center', pt: 1.5 }}>
           {acciones}
         </Stack>
       )}

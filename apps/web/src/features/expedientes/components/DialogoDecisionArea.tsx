@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Stack, TextField, Typography } from '@mui/material';
 import type { ExpedienteDto, MotivoTipificadoDto } from '@validasoft/api-client';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
@@ -68,7 +68,7 @@ export function DialogoDecisionArea({
       return siguientes;
     });
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (!aplica || incompleto) return;
     const decision = observando
@@ -96,7 +96,7 @@ export function DialogoDecisionArea({
       <FormularioDeDialogo onSubmit={enviar}>
         <DialogTitle id="titulo-decision-area">
           {observando ? t('expedientes.decisionArea.tituloObservar', { area: area.nombre }) : t('expedientes.decisionArea.tituloAprobar', { area: area.nombre })}
-          <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+          <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
             {expediente.folio} · {expediente.tercero.nombre}
           </Typography>
         </DialogTitle>

@@ -35,7 +35,7 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
 
   return (
     <Stack spacing={1.5}>
-      <Typography color="text.secondary" sx={{ fontSize: 13 }}>
+      <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
         {requisitos.length === 0 ? t('flujos.editor.requisitos.vacio') : t('flujos.editor.requisitos.ayuda')}
       </Typography>
       {requisitos.map((r, k) => {
@@ -88,12 +88,12 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 onChange={(_, valor) => cambiar(k, { areasQueRevisan: valor })}
                 getOptionLabel={nombreArea}
                 disabled={soloLectura}
-                renderTags={(valor, getTagProps) => {
+                renderValue={(valor, getItemProps) => {
                   const ocultas = valor.slice(CHIPS_VISIBLES);
                   return (
                     <Box className="chips-areas" sx={{ display: 'flex', alignItems: 'center', flex: '0 1 auto', minWidth: 0, overflow: 'hidden', pl: 0.5 }}>
                       {valor.slice(0, CHIPS_VISIBLES).map((id, index) => {
-                        const { key, ...props } = getTagProps({ index });
+                        const { key, ...props } = getItemProps({ index });
                         return <Chip key={key} {...props} size="small" label={nombreArea(id)} title={nombreArea(id)} sx={{ minWidth: 0, flexShrink: 1 }} />;
                       })}
                       {ocultas.length > 0 && (
@@ -156,12 +156,12 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
               </AlineadoConCampo>
             </Box>
             {tipo && (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mt: 0.75 }} data-resumen-tipo="">
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12, mt: 0.75 }} data-resumen-tipo="">
                 {resumenTipo(tipo, t)}
               </Typography>
             )}
             {r.condicion && atajoDe(r.condicion) === 'personalizada' && (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12, mt: 0.5 }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5 }}>
                 {t('flujos.editor.requisitos.personalizada', { condicion: describirCondicion(r.condicion, t) })}
               </Typography>
             )}

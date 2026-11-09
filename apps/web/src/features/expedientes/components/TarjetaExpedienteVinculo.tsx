@@ -32,12 +32,12 @@ export function TarjetaExpedienteVinculo({ vinculo }: { vinculo: VinculoDto }) {
     <Tarjeta titulo={t('expedientes.enVinculo.titulo')}>
       <Stack spacing={1.5}>
         {abiertoId && (
-          <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" useFlexGap flexWrap="wrap">
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={1.5} useFlexGap sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <Typography sx={{ fontWeight: 500 }}>{t('expedientes.enVinculo.enCurso')}</Typography>
               {expediente.data && (
                 <>
-                  <Typography component="span" variant="mono" color="text.secondary">
+                  <Typography component="span" variant="mono" sx={{ color: 'text.secondary' }}>
                     {expediente.data.folio}
                   </Typography>
                   <ChipEstado estado={expediente.data.estado} fecha={expediente.data.actualizadoEn} />
@@ -52,7 +52,7 @@ export function TarjetaExpedienteVinculo({ vinculo }: { vinculo: VinculoDto }) {
           </Stack>
         )}
         {!abiertoId && vinculo.aperturaDeExpedientePendiente && <Alert severity="warning">{t('expedientes.enVinculo.pendiente')}</Alert>}
-        {!abiertoId && !vinculo.aperturaDeExpedientePendiente && <Typography color="text.secondary">{t('expedientes.enVinculo.sinExpediente')}</Typography>}
+        {!abiertoId && !vinculo.aperturaDeExpedientePendiente && <Typography sx={{ color: 'text.secondary' }}>{t('expedientes.enVinculo.sinExpediente')}</Typography>}
         {abrir && (
           <div>
             <Button variant="contained" startIcon={<FolderOpen size={16} aria-hidden />} onClick={() => setAbriendo(true)}>

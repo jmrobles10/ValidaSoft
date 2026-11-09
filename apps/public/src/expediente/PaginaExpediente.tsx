@@ -2,7 +2,7 @@ import { Alert, AlertTitle, Box, Button, Card, Stack, TextField, Typography } fr
 import { esErrorApi } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { SearchX, Upload } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
 import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from '../shared/api';
@@ -56,7 +56,7 @@ export function PaginaExpediente() {
   // Lo que le toca al tercero («Faltan 3 documentos», «En revisión»…) en vez del estado interno.
   const avance = avanceDelTercero(vinculo, expediente);
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     reenvio.mutate(respuesta, {
       onSuccess: () => {
@@ -81,9 +81,9 @@ export function PaginaExpediente() {
       />
 
       <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" spacing={1} alignItems="center" useFlexGap flexWrap="wrap" sx={{ mb: 1 }}>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
           {avance ? <ChipAvance avance={avance} /> : <ChipEstado estado={expediente.estado} fecha={expediente.actualizadoEn} size="medium" />}
-          <Typography color="text.secondary" sx={{ fontSize: 13 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
             {t('expediente.actualizado', { fecha: formatearFecha(expediente.actualizadoEn) })}
           </Typography>
         </Stack>
@@ -95,7 +95,7 @@ export function PaginaExpediente() {
               : t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}
         </Typography>
         {expediente.reenvios > 0 && (
-          <Typography color="text.secondary" sx={{ fontSize: 14, mt: 1 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 14, mt: 1 }}>
             {t('expediente.reenvios', { count: expediente.reenvios })}
           </Typography>
         )}

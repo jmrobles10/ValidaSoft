@@ -71,7 +71,7 @@ export function Dropzone({
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>{titulo}</Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {textoReglas(reglas, t)}
             <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
               {' · '}

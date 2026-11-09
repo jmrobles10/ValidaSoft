@@ -10,9 +10,9 @@ import { useSesionTercero } from './sesionTercero';
 function Restaurando() {
   const { t } = useTranslation();
   return (
-    <Stack alignItems="center" spacing={2} sx={{ py: 10 }} role="status">
+    <Stack spacing={2} sx={{ alignItems: 'center', py: 10 }} role="status">
       <CircularProgress size={28} aria-hidden />
-      <Typography color="text.secondary">{t('acceso.restaurando')}</Typography>
+      <Typography sx={{ color: 'text.secondary' }}>{t('acceso.restaurando')}</Typography>
     </Stack>
   );
 }

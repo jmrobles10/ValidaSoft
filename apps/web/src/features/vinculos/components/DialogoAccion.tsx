@@ -2,7 +2,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack
 import { useQueryClient } from '@tanstack/react-query';
 import { accionPermitidaPorEstado, esErrorApi, type DefinicionAccion, type VinculoDto } from '@validasoft/api-client';
 import { RotateCcw } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
@@ -61,7 +61,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
   // Solo si el cambio llegó antes de enviar: la recarga que dispara la propia acción no cuenta.
   const yaNoAplica = !mutacion.isPending && !mutacion.isSuccess && !accionPermitidaPorEstado(accion, vinculo);
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (pendiente) return;
     mutacion.mutate(
@@ -93,7 +93,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
     <DialogTitle id="titulo-accion">
       {titulo}
       {subtitulo && (
-        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontWeight: 400 }}>
+        <Typography component="span" variant="body2" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
           {subtitulo}
         </Typography>
       )}
@@ -148,9 +148,9 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
               error={textoTocado && (vacio || correoInvalido)}
               helperText={
                 conTexto ? (
-                  <Stack component="span" direction="row" justifyContent="space-between" spacing={1}>
+                  <Stack component="span" direction="row" sx={{ justifyContent: 'space-between' }} spacing={1}>
                     <span>{textoTocado && vacio ? t('acciones.requerido') : t('acciones.quedaEnHistorial')}</span>
-                    <Typography component="span" variant="monoTabla" color="text.secondary" sx={{ flex: 'none' }}>
+                    <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary', flex: 'none' }}>
                       {texto.length} / {MAXIMO_TEXTO}
                     </Typography>
                   </Stack>
@@ -194,7 +194,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
             <FaltaParaEnviar>{pendiente}</FaltaParaEnviar>
           ) : (
             conTexto && (
-              <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto', fontWeight: 400 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', mr: 'auto', fontWeight: 400 }}>
                 {t('acciones.registro')}
               </Typography>
             )

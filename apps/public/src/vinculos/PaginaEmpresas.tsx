@@ -53,19 +53,19 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
 
   return (
     <Card component="li" sx={{ p: 2 }}>
-      <Stack direction="row" spacing={1.5} alignItems="center">
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
         <LogoEmpresa nombre={v.empresa.nombre} logoUrl={v.empresa.logoUrl} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography component="h2" sx={{ fontWeight: 600, fontSize: 16, lineHeight: '22px' }}>
             {v.empresa.nombre}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
             {v.tipoVinculo.nombre}
           </Typography>
         </Box>
         {avance ? <ChipAvance avance={avance} /> : !esperando && <ChipEstado estado={v.estado} size="medium" />}
       </Stack>
-      <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: '20px', mt: 1.5 }}>
+      <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px', mt: 1.5 }}>
         {situacion !== 'vigente'
           ? t(`vinculoSituacion.${situacion}.corto`)
           : avance

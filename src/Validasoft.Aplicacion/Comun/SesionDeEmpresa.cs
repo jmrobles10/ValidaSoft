@@ -7,6 +7,7 @@ using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
+using Wolverine.Runtime;
 
 namespace Validasoft.Aplicacion.Comun;
 
@@ -43,6 +44,21 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
         if (_sesion is not null)
             throw new InvalidOperationException("La sesión de la empresa ya se abrió sin mensajería.");
         _mensajes = mensajes;
+    }
+
+    /// <summary>
+    /// Descarta la sesión y los mensajes que esperaban su transacción, tras perder una carrera de concurrencia, para
+    /// reintentar con una sesión nueva (enlistada en el mismo outbox) sin enviar dos veces lo del intento fallido.
+    /// </summary>
+    public async Task DescartarAsync()
+    {
+        if (_sesion is not null)
+        {
+            await _sesion.DisposeAsync();
+            _sesion = null;
+        }
+        if (_mensajes is MessageContext pendientes)
+            await pendientes.ClearAllAsync();
     }
 
     public Guid EmpresaId => contexto.EmpresaRequerida();

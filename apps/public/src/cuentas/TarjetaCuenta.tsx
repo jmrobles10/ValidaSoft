@@ -21,7 +21,7 @@ export function TarjetaCuenta({ cuenta }: { cuenta: CuentaBancariaPublicaDto }) 
 
   return (
     <Card component="article" aria-labelledby={`cuenta-${cuenta.id}`} sx={{ p: 0, overflow: 'hidden' }}>
-      <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" sx={{ columnGap: 1.25, rowGap: 0.5, py: 1, pl: { xs: 1.5, sm: 2 }, pr: 1 }}>
+      <Stack direction="row" useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0.5, py: 1, pl: { xs: 1.5, sm: 2 }, pr: 1 }}>
         <Box aria-hidden sx={(th) => ({ display: 'grid', placeItems: 'center', flex: 'none', width: 28, height: 28, borderRadius: `${String(th.radio.sm)}px`, bgcolor: 'superficie.nivel2', color: 'text.secondary' })}>
           <Landmark size={18} />
         </Box>
@@ -29,14 +29,14 @@ export function TarjetaCuenta({ cuenta }: { cuenta: CuentaBancariaPublicaDto }) 
           <Typography id={`cuenta-${cuenta.id}`} component="h2" sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>
             {cuenta.banco}
           </Typography>
-          <Typography variant="mono" component="p" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography variant="mono" component="p" sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {t('cuentas.resumen', { tipo, numero: cuenta.numeroEnmascarado, moneda: cuenta.moneda })}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {t('cuentas.titularCon', { titular: cuenta.titular, identificacion: cuenta.identificacionTitular })}
           </Typography>
         </Box>
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ ml: 'auto', flex: 'none' }}>
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', ml: 'auto', flex: 'none' }}>
           {activa ? <ChipEstado estado="Activo" etiqueta={t('cuentas.estados.Activa')} size="medium" /> : <ChipEstado estado="Retirada" etiqueta={t('cuentas.estados.Retirada')} size="medium" />}
           {activa && (
             <Button variant="text" onClick={() => setRetirando(true)} startIcon={<Archive size={16} aria-hidden />} aria-label={`${t('cuentas.retirar')}: ${nombreCuenta(cuenta)}`} sx={{ color: 'text.secondary', minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}>
@@ -48,7 +48,7 @@ export function TarjetaCuenta({ cuenta }: { cuenta: CuentaBancariaPublicaDto }) 
 
       <Box component="ul" aria-label={t('cuentas.empresas')} sx={{ p: 0, m: 0 }}>
         {designaciones.length === 0 ? (
-          <Typography component="li" color="text.secondary" sx={{ fontSize: 13, py: 1, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
+          <Typography component="li" sx={{ color: 'text.secondary', fontSize: 13, py: 1, px: { xs: 1.5, sm: 2 }, borderTop: 1, borderColor: 'divider', listStyle: 'none' }}>
             {t('cuentas.sinEmpresas')}
           </Typography>
         ) : (

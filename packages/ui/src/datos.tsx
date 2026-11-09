@@ -22,7 +22,7 @@ export function RejillaDatos({ children, columnas = 3 }: { children: ReactNode; 
 export function Dato({ etiqueta, children, ancho = false }: { etiqueta: string; children: ReactNode; ancho?: boolean }) {
   return (
     <Stack spacing={0.25} sx={{ minWidth: 0, gridColumn: ancho ? '1 / -1' : undefined }}>
-      <Typography component="dt" variant="caption" color="text.secondary" sx={{ fontWeight: 400 }}>
+      <Typography component="dt" variant="caption" sx={{ color: 'text.secondary', fontWeight: 400 }}>
         {etiqueta}
       </Typography>
       <Typography component="dd" variant="body1" sx={{ m: 0, overflowWrap: 'anywhere' }}>

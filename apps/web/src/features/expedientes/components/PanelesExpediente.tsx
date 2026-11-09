@@ -32,7 +32,7 @@ export function DatosExpediente({ expediente }: { expediente: ExpedienteDto }) {
           {flujo ? (
             <>
               {t('expedientes.datos.flujoValor', { nombre: flujo.nombre, version: String(flujo.version) })}{' '}
-              <Typography component="span" color="text.secondary" sx={{ fontSize: 12 }}>
+              <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12 }}>
                 ({t(`expedientes.datos.origenFlujo.${flujo.origen}`)})
               </Typography>
             </>
@@ -64,7 +64,7 @@ export function UltimaRespuesta({ expediente }: { expediente: ExpedienteDto }) {
   return (
     <Tarjeta titulo={t('expedientes.respuesta.titulo')}>
       <Typography sx={{ whiteSpace: 'pre-wrap' }}>{expediente.ultimaRespuesta ?? t('expedientes.respuesta.sinTexto')}</Typography>
-      <Typography color="text.secondary" sx={{ fontSize: 12, mt: 0.5 }}>
+      <Typography sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5 }}>
         {t('expedientes.datos.reenvios')}: {String(expediente.reenvios)} · {formatearFecha(expediente.actualizadoEn)}
       </Typography>
     </Tarjeta>

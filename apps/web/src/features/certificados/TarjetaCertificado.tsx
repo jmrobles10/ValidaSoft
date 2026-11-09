@@ -33,13 +33,13 @@ export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'
     <Tarjeta titulo={t('certificados.titulo')}>
       {consulta.isError && <ErrorRecuperable mensaje={`${t('certificados.errorCarga')} ${mensajeDeError(consulta.error, t)}`} onReintentar={() => void consulta.refetch()} />}
       {consulta.data && !actual && (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {t('certificados.sinCertificado')}
         </Typography>
       )}
       {actual && (
         <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
             {esEstadoCertificado(actual.estado) ? <ChipEstado estado={actual.estado} bloqueante={actual.bloqueante} /> : <Typography variant="body2">{actual.estado}</Typography>}
             <Typography variant="mono" sx={{ fontSize: 13 }}>
               {actual.folio}
@@ -71,7 +71,7 @@ export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'
             </Dato>
           </RejillaDatos>
           {descargar.isError && <Alert severity={pdfPendiente(descargar.error) ? 'info' : 'error'}>{pdfPendiente(descargar.error) ? t('certificados.generando') : mensajeDeError(descargar.error, t)}</Alert>}
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }} useFlexGap>
             <Button variant="outlined" startIcon={descargar.isPending ? <IconoCarga /> : <Download size={16} aria-hidden />} disabled={descargar.isPending} onClick={() => descargar.mutate(actual.folio)}>
               {t('certificados.descargar')}
             </Button>

@@ -2,7 +2,7 @@ import { Alert, Box, Button, Card, Checkbox, FormControlLabel, Stack, Typography
 import { esErrorApi } from '@validasoft/api-client';
 import { formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { CircleCheck, CirclePause, CircleSlash, FileClock, SearchX } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Link as RouterLink, useParams } from 'react-router';
 import { useAceptarInvitacion, useInvitacion } from '../shared/api';
@@ -96,7 +96,7 @@ export function PaginaInvitacion() {
       return siguientes;
     });
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     setIntentado(true);
     if (!listo) return;
@@ -131,7 +131,7 @@ export function PaginaInvitacion() {
               <Typography id={`texto-${clave}`} component="h3" sx={{ fontWeight: 600, fontSize: 16 }}>
                 {t(`invitacion.tipos.${texto.tipo}`, { empresa })}
               </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 13, mb: 1 }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: 13, mb: 1 }}>
                 {t('invitacion.versionPublicada', { version: String(texto.textoVersion), fecha: formatearFecha(texto.publicadoEn) })}
               </Typography>
               <Box
@@ -155,7 +155,7 @@ export function PaginaInvitacion() {
         {fallo && fallo !== 'otro' && <Alert severity={fallo === 'ya-aceptada' ? 'info' : 'warning'}>{t(`invitacion.fallos.${fallo}`)}</Alert>}
         {fallo === 'otro' && <Alert severity="error">{mensajeDeError(aceptacion.error, t)}</Alert>}
         {intentado && !listo && <Alert severity="info">{t('invitacion.marcaTodos')}</Alert>}
-        <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
           {t('invitacion.ayudaAceptar', { empresa })}
         </Typography>
         <Button type="submit" variant="contained" size="large" fullWidth disabled={aceptacion.isPending}>

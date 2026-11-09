@@ -33,7 +33,7 @@ function Fila({ icono: Icono, children }: { icono: LucideIcon; children: ReactNo
 function Lista({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <Box sx={{ minWidth: 0 }}>
-      <Typography variant="overline" component="h3" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
+      <Typography variant="overline" component="h3" sx={{ color: 'text.secondary', display: 'block', mb: 0.75 }}>
         {titulo}
       </Typography>
       <Stack component="ul" spacing={1} sx={{ m: 0, p: 0, listStyle: 'none' }}>
@@ -58,7 +58,7 @@ function Pendientes({ datos, empresaId }: { datos: MisPendientesDto; empresaId: 
                   {textoArea(a, t)}
                 </Link>
               ) : (
-                <Typography color="text.secondary">{textoArea(a, t)}</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>{textoArea(a, t)}</Typography>
               )}
             </Fila>
           ))}
@@ -78,12 +78,12 @@ function Pendientes({ datos, empresaId }: { datos: MisPendientesDto; empresaId: 
                   <Typography>{texto}</Typography>
                 )}
                 {a.bloqueantes !== undefined && a.bloqueantes > 0 && (
-                  <Typography variant="body2" color="error.main">
+                  <Typography variant="body2" sx={{ color: 'error.main' }}>
                     {t('inicio.pendientes.bloqueantes', { count: a.bloqueantes })}
                   </Typography>
                 )}
                 {a.clave === 'cuentas' && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {t('inicio.pendientes.cuentasAyuda')}
                   </Typography>
                 )}

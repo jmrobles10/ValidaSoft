@@ -1,5 +1,5 @@
 import { Alert, Button, Card, CardContent, Link, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { abrirSesionDelegada, canjearSesion, cargarSemilla, type SemillaDev } from '../dev/firmarAsercion';
 import { mensajeDeError } from '../shared/errores';
@@ -47,7 +47,7 @@ export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) 
     setCorreo(persona.correo);
   };
 
-  const enviar = async (evento: FormEvent) => {
+  const enviar = async (evento: SubmitEvent) => {
     evento.preventDefault();
     setEnviando(true);
     setError(null);
@@ -70,7 +70,7 @@ export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) 
           <Typography variant="h2" component="h1">
             {t('sesion.dev.titulo')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {t('sesion.dev.ayuda')}
           </Typography>
           {vencida && <Alert severity="warning">{t('sesion.vencida')}</Alert>}
@@ -104,7 +104,7 @@ export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) 
             slotProps={{ htmlInput: { style: { fontFamily: 'monospace', fontSize: 11 } } }}
           />
           <TextField label={t('sesion.dev.asercion')} value={asercion} onChange={(e) => setAsercion(e.target.value)} />
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
             <Button type="submit" variant="contained" disabled={enviando || !apiKey}>
               {t('sesion.dev.entrar')}
             </Button>

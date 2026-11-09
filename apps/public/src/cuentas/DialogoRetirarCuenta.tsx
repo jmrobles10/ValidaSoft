@@ -26,7 +26,7 @@ export function DialogoRetirarCuenta({ cuenta, onCerrar }: { cuenta: CuentaBanca
       <DialogTitle id="titulo-retiro-cuenta">{t('cuentas.retiro.titulo', { cuenta: nombre })}</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
-          <Typography color="text.secondary">{t('cuentas.retiro.texto')}</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>{t('cuentas.retiro.texto')}</Typography>
           {retiro.isError && <Alert severity="error">{mensajeDeError(retiro.error, t)}</Alert>}
         </Stack>
       </DialogContent>

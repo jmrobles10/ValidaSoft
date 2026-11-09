@@ -73,7 +73,7 @@ export function ListaVinculos() {
         encabezado: t('vinculos.columnas.referencias'),
         celda: (v) =>
           v.referencias.length === 0 ? (
-            <Typography component="span" color="text.secondary" aria-label={t('vinculos.sinReferencias')}>
+            <Typography component="span" sx={{ color: 'text.secondary' }} aria-label={t('vinculos.sinReferencias')}>
               —
             </Typography>
           ) : (

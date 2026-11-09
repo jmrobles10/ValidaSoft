@@ -8,7 +8,7 @@ import {
   type MotivoTipificadoDto,
 } from '@validasoft/api-client';
 import { X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
@@ -51,7 +51,7 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
   const faltaTexto = !texto.trim();
   const incompleto = codigoInvalido || faltaNombre || faltaTexto;
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (incompleto) return;
     mutacion.mutate();
@@ -62,7 +62,7 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
   return (
     <Drawer anchor="right" open onClose={mutacion.isPending ? undefined : onCerrar} slotProps={{ paper: { sx: { width: 460, maxWidth: '100%' } } }} aria-labelledby="titulo-motivo">
       <Box component="form" onSubmit={enviar} noValidate sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography id="titulo-motivo" variant="h4" component="h2">
             {titulo}
           </Typography>
@@ -117,7 +117,7 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
           />
           {motivo && <FormControlLabel control={<Switch checked={activo} onChange={(e) => setActivo(e.target.checked)} />} label={t('motivos.disponible')} />}
         </Stack>
-        <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+        <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
           <Button variant="text" onClick={onCerrar} disabled={mutacion.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}
           </Button>

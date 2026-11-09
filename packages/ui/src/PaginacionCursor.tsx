@@ -14,7 +14,7 @@ export interface PaginacionCursorProps {
 export function PaginacionCursor({ pagina, hayAnterior, haySiguiente, onAnterior, onSiguiente, cargando = false }: PaginacionCursorProps) {
   return (
     <Box component="nav" aria-label="Paginación" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, py: 1 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
         Página {pagina}
       </Typography>
       <Button variant="text" startIcon={<ChevronLeft size={16} aria-hidden />} disabled={!hayAnterior || cargando} onClick={onAnterior}>

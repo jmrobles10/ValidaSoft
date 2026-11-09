@@ -95,7 +95,7 @@ export function PaginaApiKeys() {
                 return (
                   <TableRow key={k.id}>
                     <TableCell>
-                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0 }}>
                         <Typography component="span" noWrap sx={{ fontWeight: 500, fontSize: 14 }}>
                           {k.nombre}
                         </Typography>
@@ -115,7 +115,7 @@ export function PaginaApiKeys() {
                       <Typography variant="monoTabla">{nombreSistema(k.sistemaId)}</Typography>
                     </TableCell>
                     <TableCell>
-                      {k.expiraEn ? <Typography variant="monoTabla">{formatearFecha(k.expiraEn)}</Typography> : <Typography variant="body2" color="text.secondary">{t('apiKeys.noExpira')}</Typography>}
+                      {k.expiraEn ? <Typography variant="monoTabla">{formatearFecha(k.expiraEn)}</Typography> : <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('apiKeys.noExpira')}</Typography>}
                     </TableCell>
                     <TableCell>
                       <EstadoActivo activo={estado === 'vigente'} texto={t(`apiKeys.estados.${estado}`)} icono={estado === 'vencida' ? CalendarX : undefined} />

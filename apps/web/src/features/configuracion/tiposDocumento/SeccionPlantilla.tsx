@@ -39,10 +39,10 @@ export function SeccionPlantilla({ tipoId }: { tipoId: string }) {
     <Seccion titulo={t('tiposDocumento.secciones.plantilla')} ayuda={t('tiposDocumento.plantilla.ayuda')}>
       {(aviso ?? fallo) && <Alert severity="error">{aviso ?? mensajeDeError(fallo, t)}</Alert>}
       {vigente ? (
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, px: 1.5, py: 1 }}>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, px: 1.5, py: 1 }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography sx={{ fontSize: 14, fontWeight: 500, overflowWrap: 'anywhere' }}>{vigente.nombreOriginal}</Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {t('tiposDocumento.plantilla.detalle', { version: String(vigente.version), peso: megas(vigente.tamanoBytes), fecha: formatearFecha(vigente.cargadaEn) })}
             </Typography>
           </Box>
@@ -54,7 +54,7 @@ export function SeccionPlantilla({ tipoId }: { tipoId: string }) {
           </Button>
         </Stack>
       ) : (
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {consulta.isPending ? t('comun.cargando') : t('tiposDocumento.plantilla.sinPlantilla')}
         </Typography>
       )}
@@ -63,7 +63,7 @@ export function SeccionPlantilla({ tipoId }: { tipoId: string }) {
         <Button variant="outlined" startIcon={subir.isPending ? <IconoCarga /> : <FileUp size={16} aria-hidden />} disabled={ocupado} onClick={() => entrada.current?.click()}>
           {vigente ? t('tiposDocumento.plantilla.reemplazar') : t('tiposDocumento.plantilla.subir')}
         </Button>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
           {t('tiposDocumento.plantilla.formatos')}
         </Typography>
       </Box>

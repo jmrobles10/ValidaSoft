@@ -43,7 +43,7 @@ export function SelectorMotivos({ etiqueta, ayuda, motivos, elegidos, onCambiar,
                 <Typography component="span" sx={{ display: 'block', fontSize: 14, lineHeight: '20px' }}>
                   {m.nombre}
                 </Typography>
-                <Typography component="span" color="text.secondary" sx={{ display: 'block', fontSize: 12, lineHeight: '16px' }}>
+                <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 12, lineHeight: '16px' }}>
                   {m.textoAlTercero}
                 </Typography>
               </Box>

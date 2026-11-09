@@ -7,13 +7,13 @@ import { mensajeDeError } from './errores';
 /** Título de página del tercero (20/26 en móvil, 20/28 en escritorio) con su explicación y, a la derecha en escritorio, la acción principal. */
 export function CabeceraPagina({ titulo, sub, accion }: { titulo: string; sub?: ReactNode; accion?: ReactNode }) {
   return (
-    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'flex-end' }} justifyContent="space-between" sx={{ mb: 2 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'flex-end' }, justifyContent: 'space-between', mb: 2 }}>
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h2" component="h1">
           {titulo}
         </Typography>
         {sub && (
-          <Typography color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: 15, sm: 14 }, lineHeight: { xs: '22px', sm: '20px' } }}>
+          <Typography sx={{ color: 'text.secondary', mt: 0.5, fontSize: { xs: 15, sm: 14 }, lineHeight: { xs: '22px', sm: '20px' } }}>
             {sub}
           </Typography>
         )}
@@ -67,7 +67,7 @@ export function FilaEmpresa({ nombre, estado, detalle, accion }: { nombre: strin
       </Typography>
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, justifySelf: { xs: 'end', sm: 'start' } }}>{estado}</Box>
       {detalle ? (
-        <Typography color="text.secondary" sx={{ fontSize: 13, lineHeight: '18px', gridColumn: { xs: '1 / -1', sm: 3 } }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px', gridColumn: { xs: '1 / -1', sm: 3 } }}>
           {detalle}
         </Typography>
       ) : (

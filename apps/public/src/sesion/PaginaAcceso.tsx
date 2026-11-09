@@ -2,7 +2,7 @@ import { Alert, AlertTitle, Box, Button, Stack, TextField, Typography } from '@m
 import { useMutation } from '@tanstack/react-query';
 import { esErrorApi } from '@validasoft/api-client';
 import { MailCheck } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../shared/errores';
 import { correoValido } from './correo';
@@ -21,7 +21,7 @@ export function PaginaAcceso({ motivo = 'sin-sesion' }: { motivo?: Exclude<Estad
   const solicitud = useMutation({ mutationFn: (valor: string) => solicitarAcceso(valor) });
   const invalido = !correoValido(correo);
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     setIntentado(true);
     if (!invalido && !solicitud.isPending) solicitud.mutate(correo);
@@ -29,14 +29,14 @@ export function PaginaAcceso({ motivo = 'sin-sesion' }: { motivo?: Exclude<Estad
 
   if (solicitud.isSuccess) {
     return (
-      <Stack alignItems="center" spacing={1.5} sx={{ maxWidth: 440, mx: 'auto', py: 6, textAlign: 'center' }} role="status">
+      <Stack spacing={1.5} sx={{ alignItems: 'center', maxWidth: 440, mx: 'auto', py: 6, textAlign: 'center' }} role="status">
         <Box sx={{ color: 'text.secondary' }} aria-hidden>
           <MailCheck size={40} strokeWidth={1.5} />
         </Box>
         <Typography variant="h2" component="h1">
           {t('acceso.enviadoTitulo')}
         </Typography>
-        <Typography color="text.secondary" sx={{ fontSize: 15, lineHeight: '22px' }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 15, lineHeight: '22px' }}>
           {t('acceso.enviado')}
         </Typography>
         <Button variant="text" onClick={() => solicitud.reset()}>
@@ -60,7 +60,7 @@ export function PaginaAcceso({ motivo = 'sin-sesion' }: { motivo?: Exclude<Estad
       <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
         {t('acceso.titulo')}
       </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3, fontSize: 15, lineHeight: '22px' }}>
+      <Typography sx={{ color: 'text.secondary', mb: 3, fontSize: 15, lineHeight: '22px' }}>
         {t('acceso.texto')}
       </Typography>
       <Stack spacing={2}>

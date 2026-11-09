@@ -38,7 +38,7 @@ export function CuentasPorEmpresa({ vinculos, cuentas }: { vinculos: readonly Vi
         {t('cuentas.porEmpresa.titulo')}
       </Typography>
       {elegibles.length === 0 ? (
-        <Typography color="text.secondary" sx={{ fontSize: 14, lineHeight: '20px' }}>
+        <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px' }}>
           {t('cuentas.porEmpresa.sinVinculos')}
         </Typography>
       ) : (

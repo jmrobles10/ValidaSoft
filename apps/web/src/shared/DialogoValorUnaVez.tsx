@@ -37,7 +37,7 @@ export function DialogoValorUnaVez({ titulo, aviso, valor, textoCopiar, textoCop
       <DialogContent>
         <Stack spacing={2}>
           <Alert severity="warning">{aviso}</Alert>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1, bgcolor: 'superficie.nivel2', borderRadius: (th) => `${String(th.radio.sm)}px` }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 1.5, py: 1, bgcolor: 'superficie.nivel2', borderRadius: (th) => `${String(th.radio.sm)}px` }}>
             <Box component="code" sx={{ flex: 1, minWidth: 0, fontFamily: (th) => th.typography.mono.fontFamily, fontSize: 13, overflowWrap: 'anywhere' }} data-secreto="">
               {valor}
             </Box>

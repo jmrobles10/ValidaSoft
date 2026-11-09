@@ -36,7 +36,7 @@ export function ConfirmarRatificacion({ expedienteId, requisitoId, documento, em
         <DialogContent>
           <Stack spacing={2}>
             <Typography>{t('expediente.ratificar.texto', { documento, empresa })}</Typography>
-            <Typography color="text.secondary">{t('expediente.ratificar.siCambio')}</Typography>
+            <Typography sx={{ color: 'text.secondary' }}>{t('expediente.ratificar.siCambio')}</Typography>
             {ratificacion.isError && <Alert severity="error">{mensajeDeError(ratificacion.error, t)}</Alert>}
           </Stack>
         </DialogContent>

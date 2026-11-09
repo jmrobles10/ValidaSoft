@@ -29,7 +29,7 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
 
   return (
     <Box component="li" sx={{ py: 1, px: { xs: 1.5, sm: 2 }, minHeight: 44 }}>
-      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+      <Stack direction="row" spacing={1.25} sx={{ alignItems: 'flex-start' }}>
         <Box sx={{ color: 'text.secondary', pt: '2px', display: 'flex' }} aria-hidden>
           <FileText size={16} />
         </Box>
@@ -37,7 +37,7 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
           <Typography component="h4" sx={{ fontWeight: 500, fontSize: 14, lineHeight: '20px' }}>
             {tipo.nombre}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
             {requisito.ratificadoEn
               ? t('expediente.ratificar.ratificado', { fecha: formatearFecha(requisito.ratificadoEn) })
               : version
@@ -64,7 +64,7 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
         <Box sx={{ mt: 0.75, pl: 3.25 }}>
           {tipo.textoAyuda && <Typography sx={{ fontSize: 13, lineHeight: '18px' }}>{tipo.textoAyuda}</Typography>}
           {modo !== 'Formulario' && (
-            <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', mt: tipo.textoAyuda ? 0.25 : 0 }}>
+            <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px', mt: tipo.textoAyuda ? 0.25 : 0 }}>
               {textoReglas(reglasDe(tipo.archivo), t)}
             </Typography>
           )}

@@ -2,7 +2,7 @@ import { Alert, Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Rad
 import type { EmpresaDto, TipoEventoPublicoDto, WebhookDto } from '@validasoft/api-client';
 import { FaltaParaEnviar } from '@validasoft/ui';
 import { X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
@@ -34,7 +34,7 @@ export function DrawerWebhook({
   const tipos = catalogo.map((c) => c.tipo);
   const primero = errores[0];
 
-  const enviar = (evento: FormEvent) => {
+  const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     if (primero) return;
     guardar.mutate(b, { onSuccess: (resultado) => (webhook ? onCerrar() : onCreado(resultado)) });
@@ -43,7 +43,7 @@ export function DrawerWebhook({
   return (
     <Drawer anchor="right" open onClose={guardar.isPending ? undefined : onCerrar} slotProps={{ paper: { sx: { width: 560, maxWidth: '100%' } } }} aria-labelledby="titulo-webhook">
       <Box component="form" onSubmit={enviar} noValidate sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 2.5, py: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography id="titulo-webhook" variant="h4" component="h2">
             {webhook ? t('webhooks.editar') : t('webhooks.nuevo')}
           </Typography>
@@ -78,7 +78,7 @@ export function DrawerWebhook({
             <Stack spacing={1.25} sx={{ pl: 1, mt: 0.5 }}>
               {agruparTipos(catalogo).map(({ grupo, tipos: delGrupo }) => (
                 <Box key={grupo}>
-                  <Typography variant="overline" color="text.secondary">
+                  <Typography variant="overline" sx={{ color: 'text.secondary' }}>
                     {esGrupoConocido(grupo) ? t(`webhooks.grupos.${grupo}`) : grupo}
                   </Typography>
                   {delGrupo.map((tipo) => (
@@ -91,7 +91,7 @@ export function DrawerWebhook({
                           <Typography component="span" variant="mono" sx={{ fontSize: 13, display: 'block' }}>
                             {tipo.tipo}
                           </Typography>
-                          <Typography component="span" variant="body2" color="text.secondary">
+                          <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
                             {tipo.descripcion}
                           </Typography>
                         </Box>
@@ -124,7 +124,7 @@ export function DrawerWebhook({
             )}
           </Box>
         </Stack>
-        <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end" sx={{ px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end', px: 2.5, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
           {primero && <FaltaParaEnviar>{t(`webhooks.errores.${primero}`)}</FaltaParaEnviar>}
           <Button variant="text" onClick={onCerrar} disabled={guardar.isPending} sx={{ color: 'text.primary' }}>
             {t('comun.cancelar')}

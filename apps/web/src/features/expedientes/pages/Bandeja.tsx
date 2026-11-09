@@ -64,7 +64,7 @@ export function Bandeja() {
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
             <ChipEstadoArea estado={f.estadoArea} desde={f.desde} />
             {f.estadoExpediente === 'Observado' && f.estadoArea !== 'Observada' && (
-              <Typography component="span" color="text.secondary" sx={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+              <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12, whiteSpace: 'nowrap' }}>
                 {t('bandeja.devuelto')}
               </Typography>
             )}
@@ -88,7 +88,7 @@ export function Bandeja() {
               {t('bandeja.documentos', { count: f.requisitosPendientes ?? 0 })}
             </Typography>
           ) : (
-            <Typography variant="monoTabla" color="text.secondary">
+            <Typography variant="monoTabla" sx={{ color: 'text.secondary' }}>
               —
             </Typography>
           ),

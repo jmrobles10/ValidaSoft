@@ -449,6 +449,14 @@ Primera pantalla de la P2 del design system: lo que le toca a cada persona y có
 |---|---|---|---|
 | CE-11 | Lista de certificados | `GET /api/v1/certificados?estado=&q=` (`certificados:leer`, cursor): la emisión actual del certificado de cada vínculo de la empresa con tercero, tipo de vínculo, folio, estado, si bloquea la certificación, vigencia y emisión. `estado` acepta los de `EstadoCertificado` o `Bloqueante` (lo que la consulta de certificación responde bloqueado: suspendido, vencido, revocado o con pendientes ya bloqueantes); `q` busca en nombre e identificación del tercero y en el folio. Ordenada por la vigencia más próxima. Se calcula al consultar. Web: pestaña Certificados; el detalle sigue en el vínculo. | docs/06 P2 |
 
+## 5-quinvicies. Actualización de dependencias del frontend (2026-11-09)
+
+Producto pidió completar los PR de Dependabot abiertos; se integraron en un solo cambio porque todos tocan `pnpm-lock.yaml`.
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| DEP-1 | Versiones mayores | React 19, MUI 9, React Router 8, orval 8, Vitest 5, jsdom 31, `@vitejs/plugin-react` 5, lucide-react 1, `@types/node` 26, Playwright 1.65 (actualiza M-5). MUI 9 quita las *system props*: los estilos de `Box`/`Stack`/`Typography`/`Link` van en `sx` (`direction` y `spacing` de `Stack` siguen siendo props); `Switch` expone `role="switch"`; el Autocomplete usa `renderValue`/`getItemProps` y `params.slotProps`. orval 8 se fija con `httpClient: 'axios'` para conservar la firma del `fetcher` propio (que sigue usando `fetch`) y genera consultas solo para los GET; ya no crea alias para las propiedades anulables. React 19: `SubmitEvent` en lugar de `FormEvent`. Zustand se queda en 5.1 (Dependabot proponía bajarlo). | E (PR de Dependabot #15–#24) |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

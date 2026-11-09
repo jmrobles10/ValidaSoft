@@ -148,13 +148,13 @@ export function PaginaUsuarios() {
               {visibles.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell sx={{ height: 48 }}>
-                    <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
                       <AvatarActor tipo="persona" nombre={u.nombre} />
                       <Box sx={{ minWidth: 0 }}>
                         <Typography noWrap sx={{ fontWeight: 500 }}>
                           {u.nombre}
                         </Typography>
-                        <Typography noWrap color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+                        <Typography noWrap sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
                           {u.correo}
                         </Typography>
                       </Box>
@@ -162,7 +162,7 @@ export function PaginaUsuarios() {
                   </TableCell>
                   <TableCell>
                     {u.roles.length === 0 ? (
-                      <Typography component="span" variant="body2" color="text.secondary">
+                      <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
                         {t('usuarios.sinRoles')}
                       </Typography>
                     ) : (
@@ -170,7 +170,7 @@ export function PaginaUsuarios() {
                         {u.roles.map((r) => (
                           <Box component="span" key={`${r.rol}|${r.empresaId ?? ''}`} sx={{ display: 'inline-flex', flexDirection: 'column', fontSize: 13, lineHeight: '16px' }}>
                             <span style={{ fontWeight: 500 }}>{t(`usuarios.roles.${r.rol}`)}</span>
-                            <Typography component="span" color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
+                            <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
                               {nombreEmpresa(r.empresaId)}
                             </Typography>
                           </Box>

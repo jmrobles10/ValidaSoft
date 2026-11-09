@@ -19,7 +19,7 @@ export function Seccion({ titulo, ayuda, children }: { titulo: string; ayuda?: s
         {titulo}
       </Typography>
       {ayuda && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, mb: 1.5 }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25, mb: 1.5 }}>
           {ayuda}
         </Typography>
       )}

@@ -11,7 +11,7 @@ export function SelectorPermisos({ valor, onCambiar }: { valor: readonly string[
       <Typography component="legend" sx={{ fontSize: 14, fontWeight: 600 }}>
         {t('apiKeys.campos.permisos')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
         {t('apiKeys.campos.permisosAyuda', { n: String(valor.length) })}
       </Typography>
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px` }}>
@@ -44,7 +44,7 @@ export function SelectorPermisos({ valor, onCambiar }: { valor: readonly string[
                           <Typography component="span" variant="body2">
                             {t(`apiKeys.permisos.${clave}`)}
                           </Typography>
-                          <Typography component="span" variant="monoTabla" color="text.secondary">
+                          <Typography component="span" variant="monoTabla" sx={{ color: 'text.secondary' }}>
                             {scope}
                           </Typography>
                         </Box>

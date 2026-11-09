@@ -51,12 +51,12 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
         },
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography id="titulo-visor" variant="h4" component="h2" noWrap>
             {titulo}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 12 }} noWrap>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12 }} noWrap>
             {conArchivo ? (descarga?.nombre ?? ' ') : t('expedientes.datosDeclarados.formulario')}
           </Typography>
         </Box>
@@ -82,7 +82,7 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
         <Stack spacing={2} sx={{ p: 2, overflow: 'auto' }}>
           <Alert severity="info">{t('expedientes.datosDeclarados.soloDatos')}</Alert>
           {resumen}
-          {datos.length === 0 && <Typography color="text.secondary">{t('expedientes.datosDeclarados.vacio')}</Typography>}
+          {datos.length === 0 && <Typography sx={{ color: 'text.secondary' }}>{t('expedientes.datosDeclarados.vacio')}</Typography>}
         </Stack>
       )}
     </Dialog>
@@ -97,13 +97,13 @@ function ArchivoEnVisor({ contenido, mime, titulo, errorAlPedir }: { contenido: 
   return (
     <Box sx={{ minHeight: 0, bgcolor: 'superficie.nivel2', display: 'grid', placeItems: 'center', overflow: 'auto' }}>
       {visor === 'otro' ? (
-        <Typography color="text.secondary" sx={{ p: 3 }}>
+        <Typography sx={{ color: 'text.secondary', p: 3 }}>
           {t('documentos.sinVisor')}
         </Typography>
       ) : contenido.estado === 'cargando' ? (
-        <Stack alignItems="center" spacing={1} role="status">
+        <Stack sx={{ alignItems: 'center' }} spacing={1} role="status">
           <CircularProgress size={24} aria-hidden />
-          <Typography color="text.secondary">{t('documentos.cargando')}</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>{t('documentos.cargando')}</Typography>
         </Stack>
       ) : contenido.estado === 'error' ? (
         <Alert severity="error" sx={{ m: 3 }}>

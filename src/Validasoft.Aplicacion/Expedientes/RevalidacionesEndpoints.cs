@@ -24,6 +24,9 @@ public static class RevalidacionesEndpoints
     /// <summary>Tope de la aprobación en lote.</summary>
     public const int MaximoPorLote = 100;
 
+    /// <summary>Intentos de cada veredicto del lote cuando pierde una carrera de concurrencia.</summary>
+    private const int ReintentosPorCarrera = 5;
+
     public const string ObservacionDeLote = "Aprobada en lote: sin cambios frente a la versión aceptada.";
 
     private static readonly EstadoExpediente[] Abiertos = [EstadoExpediente.Abierto, EstadoExpediente.EnRevision, EstadoExpediente.Observado];
@@ -118,6 +121,13 @@ public static class RevalidacionesEndpoints
             {
                 fallidas.Add(new FalloDeLoteDto(item.ExpedienteId, item.RequisitoId, ex.Codigo, ex.Message));
             }
+            catch (Exception ex) when (Peticiones.EsCarrera(ex))
+            {
+                // Siguió perdiendo la carrera tras los reintentos: falla esta, no el lote.
+                await empresa.DescartarAsync();
+                fallidas.Add(new FalloDeLoteDto(item.ExpedienteId, item.RequisitoId, "version-desactualizada",
+                    "La revalidación cambió mientras se aprobaba; vuelve a intentarlo."));
+            }
         }
 
         return new ResultadoDeLoteDto(aprobadas, fallidas);
@@ -150,12 +160,26 @@ public static class RevalidacionesEndpoints
         {
             try
             {
-                var stream = await empresa.ExpedienteParaEscribirAsync(item.ExpedienteId, null, ct);
-                await ExpedientesEndpoints.AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-                var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
-                var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(item.RequisitoId, areaId, revisor, Veredicto.Aprobado, item.SobreVersion, [],
-                    ObservacionDeLote, reloj.GetUtcNow());
-                await ExpedientesEndpoints.AnexarYGuardarAsync(empresa, stream, eventos, mensajes, protector, reloj, ct);
+                // El veredicto que cierra la revalidación reemite el certificado, que otro proceso puede estar tocando
+                // (su PDF): si pierde esa carrera se reintenta con una sesión nueva.
+                for (var intento = 1; ; intento++)
+                {
+                    try
+                    {
+                        var stream = await empresa.ExpedienteParaEscribirAsync(item.ExpedienteId, null, ct);
+                        await ExpedientesEndpoints.AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+                        var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
+                        var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(item.RequisitoId, areaId, revisor, Veredicto.Aprobado,
+                            item.SobreVersion, [], ObservacionDeLote, reloj.GetUtcNow());
+                        await ExpedientesEndpoints.AnexarYGuardarAsync(empresa, stream, eventos, mensajes, protector, reloj, ct);
+                        break;
+                    }
+                    catch (Exception ex) when (intento < ReintentosPorCarrera && Peticiones.EsCarrera(ex))
+                    {
+                        await empresa.DescartarAsync();
+                        await Task.Delay(Random.Shared.Next(5, 25 * intento), ct);
+                    }
+                }
                 alguna = true;
             }
             catch (ReglaDeNegocioException ex)

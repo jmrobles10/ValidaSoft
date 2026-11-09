@@ -28,7 +28,7 @@ export function EditorAtributos({
       <Typography component="legend" sx={{ fontSize: 14, fontWeight: 600 }}>
         {t('tiposVinculo.atributos.titulo')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
         {t('tiposVinculo.atributos.ayuda')}
       </Typography>
       {editando && atributos.length > 0 && (
@@ -43,7 +43,7 @@ export function EditorAtributos({
             const nombre = a.clave.trim() || String(i + 1);
             return (
               <Box component="li" key={i} sx={{ px: 1.5, py: 1, borderTop: i === 0 ? 0 : 1, borderColor: 'divider' }}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' } }}>
                   <TextField
                     size="small"
                     required

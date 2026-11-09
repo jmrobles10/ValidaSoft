@@ -48,7 +48,7 @@ describe('switch del tema', () => {
         <FormControlLabel control={<Switch checked={false} onChange={() => undefined} />} label="Automática" />
       </ThemeProvider>,
     );
-    const interruptor = screen.getByRole('checkbox', { name: 'Automática' });
+    const interruptor = screen.getByRole('switch', { name: 'Automática' });
     expect(interruptor).not.toBeChecked();
     expect(interruptor).toBeEnabled();
   });

@@ -92,7 +92,7 @@ export function LineaDeTiempo({ eventos, zonaHoraria = ZONA_HORARIA_POR_DEFECTO,
                 </Box>
                 <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 600 }}>{evento.titulo}</Typography>
-                  <Typography variant="body2" color="text.secondary" component="p">
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }} component="p">
                     {evento.actor.nombre}
                     {evento.sistema && (
                       <>
@@ -116,7 +116,7 @@ export function LineaDeTiempo({ eventos, zonaHoraria = ZONA_HORARIA_POR_DEFECTO,
                     </Box>
                   )}
                   {evento.detalle && (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       {evento.detalle}
                     </Typography>
                   )}
