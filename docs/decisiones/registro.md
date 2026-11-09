@@ -434,6 +434,15 @@ Tercer tramo de H6: la cuenta con la que cada empresa le paga al tercero (docs/0
 | VE-3 | Recordar al tercero | `POST /api/v1/vencimientos/recordar` (`vinculos:escribir`, hasta 200): reutiliza el correo consolidado de TD-7 (uno por destinatario con cada documento y su fecha para la empresa). Lo ya recordado hoy se omite (`RecordatorioDeVencimiento`, id `{vínculo}\|{documento}`) y se informa cuántos. Pendiente: campañas de renovación (H8). | docs/05 §2.7 |
 | VE-4 | Aviso consolidado al tercero | En `public:/boveda`, un bloque «Por renovar» arma con los datos que ya trae la bóveda una línea por documento: con qué empresas vence, en gracia o venció y antes de qué fecha renovarlo para quedar al día con todas, con la acción de subir la versión nueva. | docs/02 §8.3 |
 
+## 5-tervicies. Inicio de la empresa (2026-11-09, P2)
+
+Primera pantalla de la P2 del design system: lo que le toca a cada persona y cómo va la empresa (docs/03 §14 `MisPendientes` y `KpisEmpresa`, docs/06 `/inicio`).
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| IN-1 | Mis pendientes | `GET /api/v1/mis-pendientes` (`expedientes:leer`): por cada área activa de quien consulta (todas para una integración), los expedientes en revisión cuya decisión del área sigue pendiente y los días del más antiguo; además, revalidaciones (y cuántas ya bloquean), cuentas por aprobar (solo con `cuentas:aprobar` y sin su aprobación), aperturas pendientes (solo con `expedientes:administrar`) y documentos por vencer o vencidos en 30 días. Consulta compuesta al momento sobre la bandeja, los vínculos y los vencimientos (como dice docs/03, no es una proyección). La web abre en «Inicio» para quien lee expedientes. | docs/03 §14 |
+| IN-2 | Indicadores | `GET /api/v1/indicadores?dias=` (`expedientes:leer`, ventana 1–365, 30 por defecto): foto de hoy (vínculos por estado, expedientes en curso y observados, certificados vigentes, con pendientes y no válidos) y flujo de la ventana (aprobados, rechazados, tiempo promedio y mediana de apertura a aprobación en días corridos). Se calcula al consultar. Pendiente: la proyección diaria `KpisEmpresa`/`KpisTenant`, días hábiles con el calendario del tenant, SLA por área y los indicadores de la revisión automática (H7). | docs/05 §4 `KpisDto` |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

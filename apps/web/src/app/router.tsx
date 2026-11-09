@@ -21,6 +21,10 @@ export function crearRouter() {
           children: [
             { index: true, element: <InicioEmpresa /> },
             {
+              path: 'inicio',
+              lazy: () => import('../features/inicio/PaginaInicio').then((m) => ({ Component: m.PaginaInicio })),
+            },
+            {
               path: 'bandeja',
               lazy: () => import('../features/expedientes/pages/Bandeja').then((m) => ({ Component: m.Bandeja })),
             },
