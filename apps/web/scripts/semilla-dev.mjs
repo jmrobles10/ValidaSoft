@@ -129,6 +129,9 @@ const scopes = [
   'expedientes:administrar',
   'documentos:leer',
   'documentos:descargar',
+  'certificados:leer',
+  'eventos:leer',
+  'webhooks:administrar',
 ];
 const llaveSistema = await llamar('POST', '/api/v1/api-keys', {
   llave: admin,
