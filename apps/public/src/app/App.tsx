@@ -2,7 +2,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { configurarCliente } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { envolverConRenovacion } from '../sesion/renovacion';
 import { useSesionTercero } from '../sesion/sesionTercero';
@@ -30,10 +30,14 @@ export function App() {
   const [clienteConsultas] = useState(crearClienteConsultas);
   const [router] = useState(crearRouter);
   const terceroId = useSesionTercero((s) => s.sesion?.terceroId ?? null);
+  const terceroAnterior = useRef(terceroId);
 
-  // Otra persona (o ninguna): nada de la caché anterior debe verse.
+  // Otra persona (o ninguna): nada de la caché anterior debe verse. Solo al salir o al cambiar de persona: cuando la
+  // sesión se restaura al recargar (de ninguna a alguien), la página ya lanzó sus consultas y vaciar la caché las
+  // cancelaba, así que se quedaba en «Cargando…» para siempre.
   useEffect(() => {
-    clienteConsultas.clear();
+    if (terceroAnterior.current !== null && terceroAnterior.current !== terceroId) clienteConsultas.clear();
+    terceroAnterior.current = terceroId;
   }, [terceroId, clienteConsultas]);
 
   return (
