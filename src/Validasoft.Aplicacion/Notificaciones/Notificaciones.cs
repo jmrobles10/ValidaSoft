@@ -272,7 +272,8 @@ public sealed class PlanificadorDeNotificaciones
                 correos.Add(new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, $"{titulo}: {folio}",
                 [
                     $"{mensaje}",
-                    $"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}.",
+                    // «de Constructora Sur S.A.S.» ya termina en punto: no se agrega otro («S.A.S..»).
+                    ConPunto($"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}"),
                     (areasDe.Count == 1 ? "Tu área: " : "Tus áreas: ") + string.Join(", ", areasDe) + "."
                 ], ruta));
             }
@@ -280,6 +281,8 @@ public sealed class PlanificadorDeNotificaciones
 
         return new PlanDeNotificaciones(campana, correos);
     }
+
+    private static string ConPunto(string frase) => frase.EndsWith('.') ? frase : frase + ".";
 
     private static async Task<PlanDeNotificaciones> ConstanciaAsync(IEvent evento, ConsentimientosRegistrados consentimientos, IContextoDeEventos contexto,
         CancellationToken ct)

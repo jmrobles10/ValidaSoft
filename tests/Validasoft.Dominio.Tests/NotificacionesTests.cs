@@ -339,6 +339,7 @@ public class NotificacionesTests
         correo.Para.ShouldBe(contexto.Laura.Correo);
         correo.Lineas.ShouldContain("Tus áreas: Aprobador inicial, Cumplimiento.");
         correo.Asunto.ShouldBe("Nuevo expediente en tu área: NORTE-E-2026-000001");
+        correo.Lineas.ShouldContain("Expediente NORTE-E-2026-000001 de Norte S.A.S."); // sin «S.A.S..»
 
         // Reprocesar el mismo evento produce los mismos ids (no duplica).
         var otraVez = await new PlanificadorDeNotificaciones().PlanearAsync(etapa, contexto, 1, CancellationToken.None);
