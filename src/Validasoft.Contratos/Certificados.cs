@@ -120,3 +120,10 @@ public sealed record JwkDto(string Kty, string Crv, string X, string Kid, string
 /// </summary>
 public sealed record ClavesDeCertificadosDto(
     string Emisor, string Algoritmo, string MensajeFirmado, IReadOnlyList<string> Esquemas, IReadOnlyList<ClavePublicaDeCertificadosDto> Claves);
+
+/// <summary>
+/// Fila de la lista de certificados de la empresa (CE-11): la emisión actual de cada vínculo con su estado, si bloquea
+/// (suspendido, vencido, revocado o con pendientes ya bloqueantes) y su vigencia.
+/// </summary>
+public sealed record FilaCertificadoDto(Guid Id, string Folio, int Emision, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo,
+    string Estado, bool Bloqueante, DateTimeOffset EmitidoEn, DateOnly? VigenteHasta, DateTimeOffset EstadoDesde);

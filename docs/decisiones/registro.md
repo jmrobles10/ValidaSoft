@@ -443,6 +443,12 @@ Primera pantalla de la P2 del design system: lo que le toca a cada persona y có
 | IN-1 | Mis pendientes | `GET /api/v1/mis-pendientes` (`expedientes:leer`): por cada área activa de quien consulta (todas para una integración), los expedientes en revisión cuya decisión del área sigue pendiente y los días del más antiguo; además, revalidaciones (y cuántas ya bloquean), cuentas por aprobar (solo con `cuentas:aprobar` y sin su aprobación), aperturas pendientes (solo con `expedientes:administrar`) y documentos por vencer o vencidos en 30 días. Consulta compuesta al momento sobre la bandeja, los vínculos y los vencimientos (como dice docs/03, no es una proyección). La web abre en «Inicio» para quien lee expedientes. | docs/03 §14 |
 | IN-2 | Indicadores | `GET /api/v1/indicadores?dias=` (`expedientes:leer`, ventana 1–365, 30 por defecto): foto de hoy (vínculos por estado, expedientes en curso y observados, certificados vigentes, con pendientes y no válidos) y flujo de la ventana (aprobados, rechazados, tiempo promedio y mediana de apertura a aprobación en días corridos). Se calcula al consultar. Pendiente: la proyección diaria `KpisEmpresa`/`KpisTenant`, días hábiles con el calendario del tenant, SLA por área y los indicadores de la revisión automática (H7). | docs/05 §4 `KpisDto` |
 
+## 5-quatervicies. Lista de certificados (2026-11-09, P2)
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| CE-11 | Lista de certificados | `GET /api/v1/certificados?estado=&q=` (`certificados:leer`, cursor): la emisión actual del certificado de cada vínculo de la empresa con tercero, tipo de vínculo, folio, estado, si bloquea la certificación, vigencia y emisión. `estado` acepta los de `EstadoCertificado` o `Bloqueante` (lo que la consulta de certificación responde bloqueado: suspendido, vencido, revocado o con pendientes ya bloqueantes); `q` busca en nombre e identificación del tercero y en el folio. Ordenada por la vigencia más próxima. Se calcula al consultar. Web: pestaña Certificados; el detalle sigue en el vínculo. | docs/06 P2 |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

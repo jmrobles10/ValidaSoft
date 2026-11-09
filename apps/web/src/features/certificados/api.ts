@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { descargarCertificado, esErrorApi, getObtenerCertificadoVinculoQueryOptions, revocarCertificado } from '@validasoft/api-client';
+import {
+  descargarCertificado,
+  esErrorApi,
+  getListarCertificadosQueryOptions,
+  getObtenerCertificadoVinculoQueryOptions,
+  revocarCertificado,
+  type ListarCertificadosParams,
+} from '@validasoft/api-client';
 import type { Estado } from '@validasoft/ui';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
 
@@ -12,6 +19,18 @@ export const esEstadoCertificado = (v: string): v is EstadoCertificado => ESTADO
 export function useCertificadoVinculo(empresaId: string, vinculoId: string, habilitado: boolean) {
   const opciones = getObtenerCertificadoVinculoQueryOptions(vinculoId, { request: { empresa: empresaId } });
   return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId), enabled: habilitado });
+}
+
+/** Certificados de la empresa activa (`GET /certificados`, la emisión actual de cada vínculo); se piden al abrir la pantalla. */
+export function useCertificados(empresaId: string, params: ListarCertificadosParams, habilitado: boolean) {
+  const opciones = getListarCertificadosQueryOptions(params, { request: { empresa: empresaId } });
+  return useQuery({
+    ...opciones,
+    queryKey: conEmpresa(opciones.queryKey, empresaId),
+    refetchOnMount: 'always',
+    placeholderData: (previo) => previo,
+    enabled: habilitado,
+  });
 }
 
 /** `409 pdf-pendiente`: el PDF aún se genera (se reintenta en unos segundos). */
