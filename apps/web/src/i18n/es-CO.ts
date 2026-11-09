@@ -21,6 +21,7 @@ export const esCO = {
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
     sistemas: 'Sistemas integrados',
+    webhooks: 'Webhooks',
     configuracion: 'Configuración',
     principal: 'Secciones',
   },

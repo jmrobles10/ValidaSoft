@@ -11,6 +11,7 @@ import { EncabezadoPagina, EnlaceVolver, ErrorRecuperable, EsqueletoHistorial, S
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { TarjetaCertificado } from '../../certificados/TarjetaCertificado';
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
@@ -85,6 +86,7 @@ export function DetalleVinculo() {
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
+          <TarjetaCertificado vinculo={vinculo} />
           <DocumentosVinculo vinculo={vinculo} />
           <ReferenciasVinculo vinculo={vinculo} />
         </Stack>
