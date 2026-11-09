@@ -342,6 +342,8 @@ Lo que Validasoft debe cubrir como mínimo y el hito que lo cubre según [09](09
 
 ## Decisiones abiertas
 
+> **2026-11-09.** El análisis a fondo de las secciones de información del tercero en el Portal y de su uso en el SRM, y el modelo con que Validasoft las adopta, están en [14 — Ficha maestra del tercero](14-ficha-maestra-del-tercero.md) y [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
+
 1. ~~**Alcance de los formularios de sectores.**~~ **Cerrada** (P-3-1, P-3-2): los sectores se modelan como tipos de documento clase `Formulario` con esquema base canónico y campos privados por tenant; el modelo entra en H2 y el render dinámico en H4.
 2. **Aplicación en AyF.** ¿Sigue haciéndola el SRM al recibir `certificado.emitido` / `vinculo.revalidado` (como hoy) o la hace un conector de Validasoft hacia Marco? Propuesta: la sigue haciendo el SRM durante la coexistencia; conector directo cuando el SRM se retire. Quién decide: Arquitectura con el equipo de Marco.
 3. **Proveedores de listas restrictivas a mantener.** De los siete integrados, ¿cuáles están en uso por algún cliente? Propuesta: migrar solo los activos; el resto como adaptadores opcionales. Quién decide: Producto con Operaciones.
