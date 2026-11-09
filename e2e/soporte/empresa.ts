@@ -6,10 +6,14 @@ import { expect, type FrameLocator, type Locator } from '@playwright/test';
  */
 
 /** Abre desde la bandeja el expediente del tercero para el área indicada. */
-export async function abrirDesdeBandeja(app: FrameLocator, tercero: string, area: string): Promise<void> {
+export async function abrirDesdeBandeja(app: FrameLocator, tercero: string, area: string, tipoVinculo?: 'Proveedor' | 'Cliente'): Promise<void> {
+  // Se pasa por «Vínculos» para que la bandeja se monte de nuevo y se pida otra vez (si ya estaba abierta, no se refresca).
+  await app.getByRole('link', { name: 'Vínculos' }).first().click();
   await app.getByRole('link', { name: 'Bandeja' }).first().click();
   await expect(app.getByRole('heading', { level: 1, name: 'Bandeja de revisión' })).toBeVisible();
-  const fila = app.getByRole('row', { name: new RegExp(`Abrir expediente .* de ${escapar(tercero)} \\(${escapar(area)}\\)`) });
+  let fila = app.getByRole('row', { name: new RegExp(`Abrir expediente .* de ${escapar(tercero)} \\(${escapar(area)}\\)`) });
+  // El mismo tercero puede tener dos vínculos con la empresa (proveedor y cliente): la columna «Tipo» los separa.
+  if (tipoVinculo) fila = fila.filter({ has: app.getByRole('cell', { name: tipoVinculo, exact: true }) });
   await expect(fila).toBeVisible();
   await fila.click();
   await expect(app.getByRole('heading', { level: 1, name: tercero })).toBeVisible();

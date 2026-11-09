@@ -21,9 +21,23 @@ export async function entrarPorInvitacion(page: Page, invitacion: Invitacion): P
   await page.goto(enlace(correo, '/e/'));
   const pideCodigo = page.getByRole('heading', { name: 'Escribe el código' });
   const invita = page.getByRole('heading', { level: 1, name: `${invitacion.empresa.nombre} te invita a validar tu información` });
-  await expect(pideCodigo.or(invita)).toBeVisible();
+  const misEmpresas = page.getByRole('heading', { level: 1, name: 'Mis empresas' });
+  await expect(pideCodigo.or(invita).or(misEmpresas)).toBeVisible();
   if (await pideCodigo.isVisible()) await escribirCodigo(page, invitacion.correo);
+  // Con varias invitaciones pendientes, el enlace lleva a «Mis empresas»: se entra por la de esta empresa.
+  await expect(invita.or(misEmpresas)).toBeVisible();
+  if (await misEmpresas.isVisible()) await abrirEmpresa(page, invitacion.empresa.nombre, invitacion.tipo);
   await expect(invita).toBeVisible();
+}
+
+/** En «Mis empresas», abre la tarjeta de la empresa (y tipo de vínculo) con su acción: aceptar o ver la revisión. */
+export async function abrirEmpresa(page: Page, empresa: string, tipo = 'PROVEEDOR'): Promise<void> {
+  const nombreTipo = tipo === 'CLIENTE' ? 'Cliente' : 'Proveedor';
+  const item = page
+    .getByRole('listitem')
+    .filter({ has: page.getByRole('heading', { level: 2, name: empresa, exact: true }) })
+    .filter({ has: page.getByText(nombreTipo, { exact: true }) });
+  await item.getByRole('link').first().click();
 }
 
 /** Pantalla «Escribe el código»: lee el OTP nuevo de Mailpit y lo escribe dígito a dígito. */
