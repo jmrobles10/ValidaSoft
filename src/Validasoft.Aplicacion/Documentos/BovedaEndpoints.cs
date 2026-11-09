@@ -54,13 +54,18 @@ public static class BovedaEndpoints
         IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
-        await using var sesion = sesiones.Boveda();
-        var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
-        var documento = DelTercero(stream.Aggregate, tercero);
-
-        stream.AppendOne(documento.RegistrarAcceso(numero, null, ActorTipo.Tercero.ToString(), contexto.ActorId, Ip(http), UserAgent(http),
-            "Descarga del tercero", reloj.GetUtcNow()));
-        await sesion.SaveChangesAsync(ct);
+        // El acceso se anota en el stream del documento, donde también escriben las vigencias y la compartición en segundo
+        // plano: si una de ellas gana la carrera, se reintenta en lugar de responder 412 a quien solo quería descargar.
+        var documento = await Peticiones.ConReintentosAsync(async () =>
+        {
+            await using var sesion = sesiones.Boveda();
+            var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
+            var delTercero = DelTercero(stream.Aggregate, tercero);
+            stream.AppendOne(delTercero.RegistrarAcceso(numero, null, ActorTipo.Tercero.ToString(), contexto.ActorId, Ip(http), UserAgent(http),
+                "Descarga del tercero", reloj.GetUtcNow()));
+            await sesion.SaveChangesAsync(ct);
+            return delTercero;
+        });
         return await UrlDeDescargaAsync(almacen, reglas, documento.VersionRequerida(numero), ct);
     }
 
@@ -186,16 +191,20 @@ public static class DocumentosDeVinculoEndpoints
         if (!Visible(vinculo))
             throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
 
-        await using var sesion = sesiones.Boveda();
-        var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
-        var documento = stream.Aggregate;
-        if (documento is null || documento.TerceroId != vinculo.TerceroId)
-            throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
-
         var destino = new DestinoDeComparticion(contexto.TenantRequerido(), vinculo.EmpresaId, vinculo.Id);
-        stream.AppendOne(documento.RegistrarAcceso(numero, destino, contexto.ActorTipo.ToString(), contexto.ActorId, BovedaEndpoints.Ip(http),
-            BovedaEndpoints.UserAgent(http), "Descarga", reloj.GetUtcNow()));
-        await sesion.SaveChangesAsync(ct);
+        // Mismo criterio que la descarga del tercero: el acceso se reintenta si un proceso en segundo plano escribió antes.
+        var documento = await Peticiones.ConReintentosAsync(async () =>
+        {
+            await using var sesion = sesiones.Boveda();
+            var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
+            var encontrado = stream.Aggregate;
+            if (encontrado is null || encontrado.TerceroId != vinculo.TerceroId)
+                throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
+            stream.AppendOne(encontrado.RegistrarAcceso(numero, destino, contexto.ActorTipo.ToString(), contexto.ActorId, BovedaEndpoints.Ip(http),
+                BovedaEndpoints.UserAgent(http), "Descarga", reloj.GetUtcNow()));
+            await sesion.SaveChangesAsync(ct);
+            return encontrado;
+        });
         return await BovedaEndpoints.UrlDeDescargaAsync(almacen, reglas, documento.VersionRequerida(numero), ct);
     }
 
