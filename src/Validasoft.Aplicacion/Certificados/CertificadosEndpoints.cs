@@ -216,7 +216,7 @@ internal static class MapeosCertificados
     {
         var contenido = ContenidoDeCertificado.Leer(e.ContenidoCanonico);
         return new CertificadoDto(
-            c.Id, e.Folio, c.FolioRaiz, e.Numero, e.Numero == c.EmisionActual, e.Estado.ToString(), Bloqueante(e.Estado),
+            c.Id, e.Folio, c.FolioRaiz, e.Numero, e.Numero == c.EmisionActual, e.Estado.ToString(), Bloqueante(c, e),
             new EmpresaDelCertificadoDto(c.EmpresaId, contenido.Empresa.Nombre, empresa?.LogoUrl),
             c.VinculoId, e.ExpedienteId, e.ExpedienteFolio,
             new TitularDelCertificadoDto(contenido.Tercero.Nombre, contenido.Tercero.IdentificacionEnmascarada, contenido.Tercero.Pais,
@@ -243,7 +243,7 @@ internal static class MapeosCertificados
     {
         var contenido = ContenidoDeCertificado.Leer(e.ContenidoCanonico);
         return new CertificadoPublicoDto(
-            e.Folio, e.Numero, e.Estado.ToString(), Bloqueante(e.Estado),
+            e.Folio, e.Numero, e.Estado.ToString(), Bloqueante(c, e),
             new TitularPublicoDto(contenido.Tercero.Nombre, contenido.Tercero.IdentificacionEnmascarada),
             new EmisorPublicoDto(contenido.Empresa.Nombre, empresa?.LogoUrl),
             new FlujoDelCertificadoDto(contenido.Flujo.Codigo, contenido.Flujo.Nombre, contenido.Flujo.Version),
@@ -252,9 +252,13 @@ internal static class MapeosCertificados
             e.Estado == EstadoCertificado.Vigente);
     }
 
-    /// <summary>Suspendido (B-5), revocado o vencido: no debe aceptarse (consulta <c>bloqueado: true</c>).</summary>
-    private static bool Bloqueante(EstadoCertificado estado) =>
-        estado is EstadoCertificado.Suspendido or EstadoCertificado.Revocado or EstadoCertificado.Vencido;
+    /// <summary>
+    /// Suspendido (B-5), revocado, vencido o, la emisión actual, con pendientes de revalidación vencidos (RV-4): no debe
+    /// aceptarse (consulta <c>bloqueado: true</c>).
+    /// </summary>
+    private static bool Bloqueante(Certificado c, EmisionDeCertificado e) =>
+        e.Estado is EstadoCertificado.Suspendido or EstadoCertificado.Revocado or EstadoCertificado.Vencido ||
+        (e.Numero == c.EmisionActual && e.Estado == EstadoCertificado.ConPendientes && c.PendientesBloqueantes);
 
     private static FirmaDelCertificadoDto Firma(EmisionDeCertificado e, EmisorDeCertificados emisor) =>
         new(SelloEd25519.Algoritmo, e.Kid, $"{emisor.UrlPublica.TrimEnd('/')}{VerificacionPublicaEndpoints.RutaClaves}", e.Sello);

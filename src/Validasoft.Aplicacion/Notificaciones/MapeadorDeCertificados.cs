@@ -27,7 +27,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
 
     public async ValueTask<EventoPublicoMapeado?> MapearAsync(IEvent evento, IContextoDeEventos contexto, CancellationToken ct)
     {
-        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoConPendientes or CertificadoSuspendido or CertificadoRestablecido
+        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoConPendientes or PlazoDeRevalidacionVencido or CertificadoSuspendido or CertificadoRestablecido
                 or CertificadoRevocado or CertificadoVencido))
             return null;
         if (!Guid.TryParse(evento.TenantId, out var tenantId))
@@ -66,6 +66,9 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
                 : null),
             CertificadoConPendientes p => ("certificado.con_pendientes", Datos(Emision(p.Emision, EstadoCertificado.ConPendientes)) is { } d
                 ? d with { EstadoAnterior = nameof(EstadoCertificado.Vigente), Motivo = p.Motivo, ExpedienteId = p.ExpedienteId }
+                : null),
+            PlazoDeRevalidacionVencido v => ("certificado.con_pendientes", Datos(Emision(v.Emision, EstadoCertificado.ConPendientes)) is { } d
+                ? d with { ExpedienteId = v.ExpedienteId, Bloqueante = true, Motivo = "Venció el plazo de la revalidación." }
                 : null),
             CertificadoSuspendido s => ("certificado.suspendido", Datos(Emision(s.Emision, EstadoCertificado.Suspendido)) is { } d
                 ? d with { EstadoAnterior = s.EstadoPrevio.ToString(), Motivo = s.Motivo }

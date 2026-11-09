@@ -67,6 +67,9 @@ public sealed record CertificadoSuspendido(int Emision, string Motivo, EstadoCer
 /// </summary>
 public sealed record CertificadoConPendientes(int Emision, string Motivo, Guid ExpedienteId, DateTimeOffset Fecha);
 
+/// <summary>Venció el plazo de la revalidación sin resolverse (RV-4): los pendientes pasan a ser bloqueantes hasta la reemisión.</summary>
+public sealed record PlazoDeRevalidacionVencido(int Emision, Guid ExpedienteId, DateTimeOffset Fecha);
+
 /// <summary>Vuelve al estado previo a la suspensión (desbloqueo).</summary>
 public sealed record CertificadoRestablecido(int Emision, EstadoCertificado EstadoRestituido, string Motivo, DateTimeOffset Fecha);
 

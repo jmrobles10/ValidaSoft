@@ -148,6 +148,7 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeResultadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
+        opciones.PublishMessage<VencerPlazoDeRevalidacion>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CorreoDeVencimientoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CalcularVigenciasDelDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CalcularVigenciasDelVinculo>().ToLocalQueue(ColaVigencias).UseDurableInbox();

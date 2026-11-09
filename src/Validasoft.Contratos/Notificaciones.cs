@@ -84,7 +84,8 @@ public sealed record CertificadoEnEventoDto(string Folio, int Emision, string Es
 /// </summary>
 public sealed record DatosCertificadoDto(
     Guid CertificadoId, Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, Guid TerceroId, CertificadoEnEventoDto Certificado,
-    string? EstadoAnterior = null, string? Motivo = null, Guid? ExpedienteId = null, string? ExpedienteFolio = null, string? FolioReemplazo = null);
+    string? EstadoAnterior = null, string? Motivo = null, Guid? ExpedienteId = null, string? ExpedienteFolio = null, string? FolioReemplazo = null,
+    bool? Bloqueante = null);
 
 // ---------- Webhooks ----------
 

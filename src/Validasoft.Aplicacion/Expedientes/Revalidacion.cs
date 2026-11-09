@@ -6,6 +6,7 @@ using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 
 namespace Validasoft.Aplicacion.Expedientes;
 
@@ -17,12 +18,15 @@ namespace Validasoft.Aplicacion.Expedientes;
 /// </summary>
 public static class Revalidacion
 {
+    /// <summary>Días para resolver la revalidación antes de que los pendientes del certificado bloqueen (RV-4, A-2).</summary>
+    public const int DiasDePlazo = 15;
+
     /// <summary>
     /// Abre la actualización si hace falta (idempotente: con un expediente abierto o sin cambios no hace nada). Escribe en
     /// <paramref name="sesion"/> sin guardar. Devuelve el expediente abierto, o nulo.
     /// </summary>
     public static async Task<Expediente?> AbrirSiCorrespondeAsync(IDocumentSession sesion, Guid vinculoId, ActorDeExpediente actor,
-        EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
+        EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, IMessageBus? mensajes = null)
     {
         var vinculoStream = await sesion.Events.FetchForWriting<Vinculo>(vinculoId, ct);
         if (vinculoStream.Aggregate is not { } vinculo || vinculo.ExpedienteAbiertoId is not null || !vinculo.TuvoAprobacion ||
@@ -53,6 +57,8 @@ public static class Revalidacion
         var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (expediente.EstaAbierto && certificado.Aggregate?.MarcarConPendientes(MotivoDePendientes(afectados), expediente.Id, ahora) is { } pendientes)
             certificado.AppendOne(pendientes);
+        if (expediente.EstaAbierto && mensajes is not null && Guid.TryParse(sesion.TenantId, out var tenantId))
+            await mensajes.ScheduleAsync(new VencerPlazoDeRevalidacion(tenantId, vinculoId, expediente.Id), ahora.AddDays(DiasDePlazo));
         return expediente;
     }
 
@@ -73,4 +79,26 @@ public static class Revalidacion
                           r.TipoCanonico is not null && r.TipoCanonico == pedido.Tipo.TipoCanonico)))
             .Select(r => r.VersionActual)
             .FirstOrDefault();
+}
+
+/// <summary>Programado al abrir la revalidación: al cumplirse el plazo, si sigue abierta, los pendientes bloquean (RV-4).</summary>
+public sealed record VencerPlazoDeRevalidacion(Guid TenantId, Guid VinculoId, Guid ExpedienteId);
+
+public static class VencerPlazoDeRevalidacionHandler
+{
+    /// <summary>Idempotente: si la actualización ya se cerró o el certificado se reemitió o cambió de estado, no hace nada.</summary>
+    public static async Task Handle(VencerPlazoDeRevalidacion mensaje, IDocumentStore store, TimeProvider reloj, CancellationToken ct)
+    {
+        await using var sesion = store.LightweightSession(mensaje.TenantId.ToString("N"));
+        sesion.SetHeader("actorTipo", nameof(ActorTipo.Sistema));
+        sesion.SetHeader("actorId", "plazo-revalidacion");
+        if (await sesion.Events.AggregateStreamAsync<Expediente>(mensaje.ExpedienteId, token: ct) is not { EstaAbierto: true, Tipo: TipoExpediente.Actualizacion })
+            return;
+
+        var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(mensaje.VinculoId), ct);
+        if (certificado.Aggregate?.VencerPlazoDeRevalidacion(mensaje.ExpedienteId, reloj.GetUtcNow()) is not { } vencido)
+            return;
+        certificado.AppendOne(vencido);
+        await sesion.SaveChangesAsync(ct);
+    }
 }

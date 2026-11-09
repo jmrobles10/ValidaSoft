@@ -154,11 +154,22 @@ public class CertificadoTests
         certificado.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(2)).ShouldBeNull();
         certificado.Suspender("Bloqueo", Ahora.AddDays(2)).EstadoPrevio.ShouldBe(EstadoCertificado.ConPendientes);
 
+        // Restablecido (sigue con pendientes), el plazo vence: los pendientes bloquean; una sola vez.
+        certificado = Aplicar(certificado, certificado.Suspender("Bloqueo", Ahora.AddDays(2)));
+        certificado = Aplicar(certificado, (CertificadoRestablecido)certificado.Restablecer("Desbloqueo", Ahora.AddDays(2)));
+        certificado.Estado.ShouldBe(EstadoCertificado.ConPendientes);
+        certificado.Bloqueante.ShouldBeFalse();
+        certificado = Aplicar(certificado, certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(16)).ShouldNotBeNull());
+        certificado.Bloqueante.ShouldBeTrue();
+        certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(17)).ShouldBeNull();
+
         var otro = Guid.NewGuid();
         certificado = Aplicar(certificado, [.. certificado.Reemitir(Origen with { ExpedienteId = otro }, Plantilla(), Claves(), "https://valida.norte.co/",
             "Expediente aprobado", Ahora.AddDays(3))]);
         certificado.Estado.ShouldBe(EstadoCertificado.Vigente);
         certificado.EmisionActual.ShouldBe(2);
+        certificado.Bloqueante.ShouldBeFalse(); // la reemisión limpia los pendientes vencidos
+        certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(30)).ShouldBeNull();
     }
 
     private static Certificado Aplicar(Certificado certificado, params object[] eventos)
@@ -171,6 +182,7 @@ public class CertificadoTests
                 case CertificadoReemplazado e: certificado.Apply(e); break;
                 case CertificadoSuspendido e: certificado.Apply(e); break;
                 case CertificadoConPendientes e: certificado.Apply(e); break;
+                case PlazoDeRevalidacionVencido e: certificado.Apply(e); break;
                 case CertificadoRestablecido e: certificado.Apply(e); break;
                 case CertificadoRevocado e: certificado.Apply(e); break;
                 case CertificadoVencido e: certificado.Apply(e); break;

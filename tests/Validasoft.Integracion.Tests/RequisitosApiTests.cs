@@ -489,12 +489,22 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
 
         // El vínculo sigue activo y el certificado avisa que tiene pendientes.
         (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Activo");
-        ((await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!).Estado.ShouldBe("ConPendientes");
+        var conPendientes = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        conPendientes.Estado.ShouldBe("ConPendientes");
+        conPendientes.Bloqueante.ShouldBeFalse(); // informativo durante el plazo (A-2)
+
+        // Vence el plazo sin resolverse (el mensaje programado a 15 días, aquí invocado): los pendientes bloquean (RV-4).
+        using (var alcance = Host.Services.CreateScope())
+            await alcance.ServiceProvider.GetRequiredService<IMessageBus>()
+                .InvokeAsync(new VencerPlazoDeRevalidacion(e.Norte.Datos.TenantId, vinculo.Id, actualizacionId));
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!
+            .Bloqueante.ShouldBeTrue();
 
         // Al aprobar la actualización se reemite el certificado con el RUT v2.
         (await AprobarTodoAsync(actualizacionId)).Estado.ShouldBe("Aprobado");
         var reemitido = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
         reemitido.Estado.ShouldBe("Vigente");
+        reemitido.Bloqueante.ShouldBeFalse();
         reemitido.Emision.ShouldBe(certificado.Emision + 1);
         reemitido.Requisitos.ShouldContain(r => r.Codigo == "RUT" && r.Version == 2);
         (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId.ShouldBeNull();

@@ -3,6 +3,7 @@ using Validasoft.Aplicacion.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 
 namespace Validasoft.Aplicacion.Expedientes;
 
@@ -24,7 +25,7 @@ public sealed record SincronizarRequisitosDelVinculo(Guid TenantId, Guid Vinculo
 public static class SincronizarRequisitosDelVinculoHandler
 {
     public static async Task Handle(SincronizarRequisitosDelVinculo mensaje, IDocumentStore store, EmisorDeCertificados certificados, TimeProvider reloj,
-        CancellationToken ct)
+        IMessageContext mensajes, CancellationToken ct)
     {
         await using var sesion = store.LightweightSession(mensaje.TenantId.ToString("N"));
         sesion.SetHeader("actorTipo", mensaje.ActorTipo);
@@ -38,7 +39,7 @@ public static class SincronizarRequisitosDelVinculoHandler
         if (vinculo.ExpedienteAbiertoId is not { } expedienteId)
         {
             var actor = new ActorDeExpediente(Enum.TryParse<ActorTipo>(mensaje.ActorTipo, out var tipo) ? tipo : ActorTipo.Sistema, mensaje.ActorId);
-            if (await Revalidacion.AbrirSiCorrespondeAsync(sesion, vinculo.Id, actor, certificados, reloj.GetUtcNow(), ct) is not null)
+            if (await Revalidacion.AbrirSiCorrespondeAsync(sesion, vinculo.Id, actor, certificados, reloj.GetUtcNow(), ct, mensajes) is not null)
                 await sesion.SaveChangesAsync(ct);
             return;
         }
