@@ -127,3 +127,39 @@ test('cambiar la regla del tipo recalcula la vigencia que ya tenía el documento
   await esperarTarjeta(page, SST.nombre, `Vence el ${enPantalla(fecha(65))}`);
   await expect(tarjeta(page, SST.nombre)).toContainText('Vigente');
 });
+
+test('lo que vence se ve en la bóveda del proveedor y en Vencimientos de Sur, que lo exporta a Excel y se lo recuerda', async ({ page, browser }) => {
+  const { e, invitacion } = await proveedorDeSur(page, fecha(-25));
+  const vence = enPantalla(fecha(5));
+  await esperarTarjeta(page, SST.nombre, 'Por vencer');
+
+  // El proveedor ve en su bóveda qué renovar primero y con quién.
+  await page.goto('/boveda');
+  const porRenovar = page.getByRole('region', { name: 'Por renovar' }).or(page.locator('section, .MuiCard-root', { hasText: 'Por renovar' }).first());
+  await expect(porRenovar).toContainText(SST.nombre);
+  await expect(porRenovar).toContainText(`vence para ${e.sur.nombre} el ${vence}`);
+  await page.screenshot({ path: 'test-results/boveda-por-renovar.png', fullPage: true });
+
+  // Sur lo ve en Vencimientos con sus días y su estado.
+  const paginaSofia = await (await browser.newContext({ acceptDownloads: true })).newPage();
+  const sofia = await abrirEmbebido(paginaSofia, e, e.sofia, e.sur, 'vencimientos');
+  await expect(sofia.getByRole('heading', { level: 1, name: 'Vencimientos' })).toBeVisible();
+  const fila = sofia.getByRole('row').filter({ hasText: invitacion.nombre });
+  await expect(fila).toContainText(SST.nombre);
+  await expect(fila).toContainText('Vence en 5 días');
+  await expect(fila).toContainText('Por vencer');
+
+  // Lo exporta a Excel.
+  const descarga = paginaSofia.waitForEvent('download');
+  await sofia.getByRole('button', { name: 'Descargar Excel' }).click();
+  expect((await descarga).suggestedFilename()).toMatch(/^vencimientos-.*\.xlsx$/);
+
+  // Se lo recuerda al proveedor: un correo con el documento y la fecha para Sur.
+  await fila.getByRole('checkbox').check();
+  await sofia.getByRole('button', { name: 'Recordar al tercero (1)' }).click();
+  await sofia.getByRole('dialog').getByRole('button', { name: 'Enviar recordatorio' }).click();
+  await expect(sofia.getByText(/^Enviaste 1 recordatorio a/)).toBeVisible();
+  const correo = await esperarCorreo(invitacion.correo, /vencer/);
+  expect(correo.texto).toContain(`${SST.nombre}: vence para ${e.sur.nombre} el`);
+  await paginaSofia.screenshot({ path: 'test-results/vencimientos-web.png', fullPage: true });
+});

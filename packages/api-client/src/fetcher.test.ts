@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { configurarCliente, reiniciarCliente } from './configuracion';
 import { ErrorApi, ErrorDeRed } from './errores';
-import { clienteValidasoft, construirUrl } from './fetcher';
+import { clienteValidasoft, construirUrl, descargarArchivo, nombreDeArchivo } from './fetcher';
 import { bloquearVinculo, crearVinculo, listarVinculos } from './generado/endpoints/vinculos/vinculos';
 import { revocarApiKey } from './generado/endpoints/api-keys/api-keys';
 
@@ -181,5 +181,44 @@ describe('clienteValidasoft', () => {
   it('deja pasar la cancelación sin convertirla', async () => {
     configurarCliente({ fetch: () => Promise.reject(new DOMException('cancelada', 'AbortError')) });
     await expect(listarVinculos()).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('descargarArchivo', () => {
+  it('pide el archivo con la sesión y la empresa y devuelve el blob con el nombre de Content-Disposition', async () => {
+    const llamadas = prepararFetch(
+      () =>
+        new Response(new Uint8Array([80, 75, 3, 4]), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': "attachment; filename=vencimientos-norte.xlsx; filename*=UTF-8''vencimientos-norte.xlsx",
+          },
+        }),
+    );
+
+    const archivo = await descargarArchivo({ url: '/api/v1/vencimientos/excel', params: { dias: 30, estado: '' } }, { empresa: 'empresa-2' });
+
+    expect(llamadas[0]?.url).toBe('http://api.prueba/api/v1/vencimientos/excel?dias=30');
+    expect(llamadas[0]?.metodo).toBe('GET');
+    expect(llamadas[0]?.cabeceras.get('Authorization')).toBe('Bearer token-de-sesion');
+    expect(llamadas[0]?.cabeceras.get('X-Empresa')).toBe('empresa-2');
+    expect(archivo.nombre).toBe('vencimientos-norte.xlsx');
+    expect(archivo.blob.size).toBe(4);
+  });
+
+  it('traduce el error de la API a ErrorApi', async () => {
+    prepararFetch(() => json(400, { codigo: 'estado-invalido', detail: 'El estado es Vigente…', status: 400 }));
+    await expect(descargarArchivo({ url: '/api/v1/vencimientos/excel' })).rejects.toMatchObject({ codigo: 'estado-invalido' });
+  });
+});
+
+describe('nombreDeArchivo', () => {
+  it('prefiere filename* (UTF-8) y si no, filename con o sin comillas', () => {
+    expect(nombreDeArchivo("attachment; filename=a.xlsx; filename*=UTF-8''informe%20%C3%A1rea.xlsx")).toBe('informe área.xlsx');
+    expect(nombreDeArchivo('attachment; filename="con espacios.xlsx"')).toBe('con espacios.xlsx');
+    expect(nombreDeArchivo('attachment; filename=simple.xlsx')).toBe('simple.xlsx');
+    expect(nombreDeArchivo('attachment')).toBeNull();
+    expect(nombreDeArchivo(null)).toBeNull();
   });
 });

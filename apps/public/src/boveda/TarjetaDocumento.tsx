@@ -10,7 +10,7 @@ import { requiereAtencion } from '../vigencia/vigencia';
 import { AvisoVigencia, ChipVigencia, LineaVigencia } from '../vigencia/ChipVigencia';
 import { DialogoRetirar } from './DialogoRetirar';
 import { useDescargar } from './useDescargar';
-import { detalleComparticion, sePuedeDescargar, sePuedeRetirar } from './versiones';
+import { detalleComparticion, enlaceSubirVersion, sePuedeDescargar, sePuedeRetirar, sePuedeSubirVersion } from './versiones';
 import { VersionesDocumento } from './VersionesDocumento';
 
 /**
@@ -26,9 +26,7 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
   const descargar = useDescargar();
   const actual = documento.versionActual;
   const titulo = documento.tipo.nombre;
-  // Un formulario se actualiza desde la revisión de la empresa, que sabe qué campos pide. La API marca la clase en la
-  // versión (el documento llega como `Archivo`).
-  const subible = documento.clase !== 'Formulario' && actual?.clase !== 'Formulario';
+  const subible = sePuedeSubirVersion(documento);
   const pie = documento.versiones > 1 || requiereAtencion(actual?.vigencia);
 
   return (
@@ -52,7 +50,7 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
           {subible && (
             <Button
               component={RouterLink}
-              to={`/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`}
+              to={enlaceSubirVersion(documento)}
               variant="text"
               startIcon={<Upload size={16} aria-hidden />}
               sx={{ minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}

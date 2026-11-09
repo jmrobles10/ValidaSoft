@@ -76,13 +76,14 @@ async function leerCuerpo(respuesta: Response): Promise<unknown> {
 }
 
 /**
- * Mutator de orval: arma la petición con `Authorization: Bearer`, `X-Empresa`, `Idempotency-Key`, `If-Match` y
- * `X-Correlation-Id`, y convierte cualquier respuesta no exitosa en `ErrorApi` (o `ErrorDeRed` si no hubo respuesta).
+ * Arma y envía la petición con `Authorization: Bearer`, `X-Empresa`, `Idempotency-Key`, `If-Match` y
+ * `X-Correlation-Id`. Devuelve la respuesta exitosa sin leer su cuerpo; si no lo es, lanza `ErrorApi` (o `ErrorDeRed`
+ * si no hubo respuesta).
  */
-export async function clienteValidasoft<T>(config: ConfigPeticion, opciones: OpcionesPeticion = {}): Promise<T> {
+async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, aceptar: string): Promise<Response> {
   const cfg = configuracionCliente();
   const metodo = config.method.toUpperCase();
-  const cabeceras = new Headers({ Accept: 'application/json, application/problem+json' });
+  const cabeceras = new Headers({ Accept: aceptar });
 
   const token = opciones.token === undefined ? cfg.obtenerToken() : opciones.token;
   if (token) cabeceras.set('Authorization', `Bearer ${token}`);
@@ -122,13 +123,60 @@ export async function clienteValidasoft<T>(config: ConfigPeticion, opciones: Opc
     throw new ErrorDeRed('No pudimos comunicarnos con Validasoft. Revisa tu conexión e intenta de nuevo.', causa);
   }
 
-  const datos = await leerCuerpo(respuesta);
   if (!respuesta.ok) {
+    const datos = await leerCuerpo(respuesta);
     const error = errorDesdeProblema(respuesta.status, datos, respuesta.headers.get('X-Correlation-Id') ?? correlationId);
     if (error.esNoAutenticado) cfg.alNoAutenticado?.(error);
     throw error;
   }
-  return datos as T;
+  return respuesta;
+}
+
+/**
+ * Mutator de orval: arma la petición con `Authorization: Bearer`, `X-Empresa`, `Idempotency-Key`, `If-Match` y
+ * `X-Correlation-Id`, y convierte cualquier respuesta no exitosa en `ErrorApi` (o `ErrorDeRed` si no hubo respuesta).
+ */
+export async function clienteValidasoft<T>(config: ConfigPeticion, opciones: OpcionesPeticion = {}): Promise<T> {
+  const respuesta = await enviar(config, opciones, 'application/json, application/problem+json');
+  return (await leerCuerpo(respuesta)) as T;
+}
+
+/** Archivo que devolvió la API: el contenido y el nombre que propuso en `Content-Disposition` (`null` si no lo dijo). */
+export interface ArchivoDescargado {
+  blob: Blob;
+  nombre: string | null;
+}
+
+/**
+ * Nombre del archivo de `Content-Disposition`: prefiere `filename*` (RFC 5987, UTF-8) sobre `filename`. `null` si la
+ * cabecera no trae nombre (o no se expuso por CORS).
+ */
+export function nombreDeArchivo(contentDisposition: string | null): string | null {
+  if (!contentDisposition) return null;
+  const extendido = /filename\*\s*=\s*([^']*)'[^']*'([^;]+)/i.exec(contentDisposition);
+  if (extendido?.[2]) {
+    try {
+      return decodeURIComponent(extendido[2].trim().replace(/^"|"$/g, ''));
+    } catch {
+      // Codificación inválida: se intenta con `filename`.
+    }
+  }
+  const simple = /filename\s*=\s*("([^"]*)"|[^;]+)/i.exec(contentDisposition);
+  const nombre = (simple?.[2] ?? simple?.[1])?.trim();
+  if (!nombre) return null;
+  return nombre;
+}
+
+/**
+ * Descarga binaria (informes en Excel, etc.) con la misma sesión, empresa y manejo de errores que el resto del cliente.
+ * Los generados por orval tipan estas respuestas como JSON; para ellas se usa esta función.
+ */
+export async function descargarArchivo(
+  config: Pick<ConfigPeticion, 'url' | 'params' | 'signal'>,
+  opciones: OpcionesPeticion = {},
+): Promise<ArchivoDescargado> {
+  const respuesta = await enviar({ ...config, method: 'GET' }, opciones, '*/*');
+  return { blob: await respuesta.blob(), nombre: nombreDeArchivo(respuesta.headers.get('Content-Disposition')) };
 }
 
 /** Tipos que orval toma del mutator para los errores y cuerpos de los hooks generados. */
