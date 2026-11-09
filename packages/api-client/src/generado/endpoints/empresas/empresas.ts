@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActualizarEmpresaDto,
   CrearEmpresaDto,
   EmpresaDto
 } from '../../modelos';
@@ -270,7 +271,65 @@ export function useObtenerEmpresa<TData = Awaited<ReturnType<typeof obtenerEmpre
 
 
 
-export const desactivarEmpresa = (
+export const actualizarEmpresa = (
+    id: string,
+    actualizarEmpresaDto: BodyType<ActualizarEmpresaDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,) => {
+      
+      
+      return clienteValidasoft<EmpresaDto>(
+      {url: `/api/v1/empresas/${id}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: actualizarEmpresaDto
+    },
+      options);
+    }
+  
+
+
+export const getActualizarEmpresaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarEmpresa>>, TError,{id: string;data: BodyType<ActualizarEmpresaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof actualizarEmpresa>>, TError,{id: string;data: BodyType<ActualizarEmpresaDto>}, TContext> => {
+
+const mutationKey = ['actualizarEmpresa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actualizarEmpresa>>, {id: string;data: BodyType<ActualizarEmpresaDto>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  actualizarEmpresa(id,data,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActualizarEmpresaMutationResult = NonNullable<Awaited<ReturnType<typeof actualizarEmpresa>>>
+    export type ActualizarEmpresaMutationBody = BodyType<ActualizarEmpresaDto>
+    export type ActualizarEmpresaMutationError = ErrorType<void>
+
+    export const useActualizarEmpresa = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarEmpresa>>, TError,{id: string;data: BodyType<ActualizarEmpresaDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof actualizarEmpresa>>,
+        TError,
+        {id: string;data: BodyType<ActualizarEmpresaDto>},
+        TContext
+      > => {
+
+      const mutationOptions = getActualizarEmpresaMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const desactivarEmpresa = (
     id: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {

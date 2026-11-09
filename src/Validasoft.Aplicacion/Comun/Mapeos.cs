@@ -24,7 +24,7 @@ public static class Mapeos
         new(t.Id, t.Slug, t.Nombre, t.Region, t.Plan, t.ZonaHoraria, t.Idioma, t.Activo, t.CreadoEn);
 
     public static EmpresaDto ADto(this Empresa e) =>
-        new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa);
+        new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa, e.ColorMarca);
 
     public static ApiKeyDto ADto(this ApiKey k, string? valor = null) =>
         new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor, k.SistemaId);
@@ -78,7 +78,7 @@ public static class Mapeos
 
     public static TextoLegalPublicoDto APublico(this TextoLegal t) => new(t.Tipo.ToString(), t.Version, t.Hash, t.Contenido, t.PublicadoEn);
 
-    public static EmpresaPublicaDto APublica(this Empresa? e, Guid id) => new(id, e?.Nombre ?? string.Empty, e?.LogoUrl);
+    public static EmpresaPublicaDto APublica(this Empresa? e, Guid id) => new(id, e?.Nombre ?? string.Empty, e?.LogoUrl, e?.ColorMarca, e?.ReplyTo);
 
     public static VinculoPublicoDto APublico(this Vinculo v, Empresa? empresa, TipoVinculo? tipo) =>
         new(v.Id, empresa.APublica(v.EmpresaId),

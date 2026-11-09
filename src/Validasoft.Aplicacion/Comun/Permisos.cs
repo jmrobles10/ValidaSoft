@@ -55,6 +55,13 @@ public static class Permisos
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
 
     /// <summary>
+    /// Lo que puede la Plataforma con un acceso de soporte vigente (B-6): leer configuración, flujos, vínculos, terceros,
+    /// expedientes, certificados y auditoría de esa empresa. Nunca documentos (ni verlos ni descargarlos) ni escribir.
+    /// </summary>
+    public static readonly IReadOnlyList<string> DeSoporte =
+        [ConfiguracionLeer, FlujosLeer, VinculosLeer, TercerosLeer, ExpedientesLeer, CertificadosLeer, AuditoriaLeer];
+
+    /// <summary>
     /// Administración del tenant: solo se obtiene con un rol de todo el tenant. Un administrador de una empresa no
     /// gestiona usuarios, sistemas, llaves ni empresas (evita que se otorgue alcance de tenant a sí mismo).
     /// </summary>

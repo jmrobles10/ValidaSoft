@@ -74,9 +74,14 @@ public sealed class Empresa
     /// <summary>Prefijo de folios de expediente y certificado (<c>{Prefijo}-E-…</c>, T-9). Único en el tenant.</summary>
     public string PrefijoFolio { get; set; } = string.Empty;
 
+    /// <summary>Logo para el portal del tercero y el certificado: URL https o imagen SVG/PNG embebida (data URI, ≤ 200 KB).</summary>
     public string? LogoUrl { get; set; }
 
+    /// <summary>Correo de soporte para terceros: aparece en el pie de sus pantallas y es el Reply-To de los correos.</summary>
     public string? ReplyTo { get; set; }
+
+    /// <summary>Color de marca (#RRGGBB). El portal deriva de él una paleta que cumple contraste (marcaEmpresa).</summary>
+    public string? ColorMarca { get; set; }
 
     public bool Activa { get; set; } = true;
 
@@ -101,9 +106,63 @@ public sealed class Empresa
             ClaveIdentificacion = identificacion.Clave,
             Nombre = nombre.Trim(),
             PrefijoFolio = prefijo,
-            LogoUrl = logoUrl,
-            ReplyTo = replyTo,
+            LogoUrl = ValidarLogo(logoUrl),
+            ReplyTo = ValidarSoporte(replyTo),
             CreadaEn = ahora
         };
+    }
+
+    public const int TamanoMaximoLogo = 200 * 1024;
+
+    /// <summary>
+    /// Datos y marca (P2ConfigEmpresa): contacto de soporte, color y logo. La razón social, la identificación y el prefijo
+    /// de folio no cambian aquí (el prefijo ya está en folios emitidos). <c>null</c> conserva; cadena vacía quita.
+    /// </summary>
+    public void ActualizarMarca(string? contactoSoporte, string? colorMarca, string? logoUrl)
+    {
+        if (contactoSoporte is not null)
+            ReplyTo = ValidarSoporte(contactoSoporte);
+        if (colorMarca is not null)
+            ColorMarca = ValidarColor(colorMarca);
+        if (logoUrl is not null)
+            LogoUrl = ValidarLogo(logoUrl);
+    }
+
+    private static string? ValidarSoporte(string? correo)
+    {
+        if (string.IsNullOrWhiteSpace(correo))
+            return null;
+        var limpio = correo.Trim();
+        if (limpio.Length > 254 || !Regex.IsMatch(limpio, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            throw ReglaDeNegocioException.Validacion("contacto-soporte-invalido", "El contacto de soporte debe ser un correo válido.");
+        return limpio;
+    }
+
+    private static string? ValidarColor(string color)
+    {
+        if (string.IsNullOrWhiteSpace(color))
+            return null;
+        var limpio = color.Trim().ToUpperInvariant();
+        if (!Regex.IsMatch(limpio, "^#[0-9A-F]{6}$"))
+            throw ReglaDeNegocioException.Validacion("color-marca-invalido", "El color de marca debe ser hexadecimal, como #E07A1F.");
+        return limpio;
+    }
+
+    /// <summary>URL https o data URI de SVG/PNG en base64 de hasta <see cref="TamanoMaximoLogo"/> bytes.</summary>
+    private static string? ValidarLogo(string? logo)
+    {
+        if (string.IsNullOrWhiteSpace(logo))
+            return null;
+        var limpio = logo.Trim();
+        if (Uri.TryCreate(limpio, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps && limpio.Length <= 2048)
+            return limpio;
+
+        var datos = Regex.Match(limpio, @"^data:(image/svg\+xml|image/png);base64,([A-Za-z0-9+/=]+)$");
+        if (!datos.Success)
+            throw ReglaDeNegocioException.Validacion("logo-invalido", "El logo debe ser una imagen SVG o PNG (o una URL https).");
+        var bytes = datos.Groups[2].Value.Length / 4 * 3;
+        if (bytes > TamanoMaximoLogo)
+            throw ReglaDeNegocioException.Validacion("logo-demasiado-grande", "El logo pesa más de 200 KB.");
+        return limpio;
     }
 }
