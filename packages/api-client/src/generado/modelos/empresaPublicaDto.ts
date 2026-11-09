@@ -5,9 +5,13 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EmpresaPublicaDtoLogoUrl } from './empresaPublicaDtoLogoUrl';
+import type { EmpresaPublicaDtoColorMarca } from './empresaPublicaDtoColorMarca';
+import type { EmpresaPublicaDtoContactoSoporte } from './empresaPublicaDtoContactoSoporte';
 
 export interface EmpresaPublicaDto {
   id: string;
   nombre: string;
   logoUrl: EmpresaPublicaDtoLogoUrl;
+  colorMarca?: EmpresaPublicaDtoColorMarca;
+  contactoSoporte?: EmpresaPublicaDtoContactoSoporte;
 }

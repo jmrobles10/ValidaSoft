@@ -88,6 +88,7 @@ public static class ConfiguracionMarten
 
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);
+                opts.Schema.For<AccesoSoporte>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.ExpiraEn);
                 opts.Schema.For<RegistroIdempotencia>().DatabaseSchemaName("identidad");
                 opts.Schema.For<SistemaIntegrado>().DatabaseSchemaName("identidad").MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_sistema_codigo", TenancyScope.PerTenant, x => x.Codigo);

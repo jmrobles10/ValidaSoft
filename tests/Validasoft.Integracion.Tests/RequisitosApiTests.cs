@@ -430,6 +430,89 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await SubirAsync(sesionJuridica, "CAMARA_COMERCIO", Pdf("Cámara v2"))).Compartidos.ShouldHaveSingleItem().VinculoId.ShouldBe(vinculoJuridica.Id);
     }
 
+    // ---------- datos y marca de la empresa ----------
+
+    [Fact]
+    public async Task Datos_y_marca_de_la_empresa_llegan_al_tercero_y_solo_los_edita_quien_administra_empresas()
+    {
+        var a = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        await FlujoConAsync(a, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]);
+
+        var editada = await ApiAsync<EmpresaDto>("PUT", $"/api/v1/empresas/{a.Datos.Id}", Admin(a),
+            new ActualizarEmpresaDto("proveedores@norte.example", "#e07a1f", "https://cdn.norte.example/logo.svg"), 200);
+        editada.ColorMarca.ShouldBe("#E07A1F");
+        editada.ReplyTo.ShouldBe("proveedores@norte.example");
+        editada.PrefijoFolio.ShouldBe("NORTE"); // no cambia
+
+        (await CodigoAsync(await ApiAsync("PUT", $"/api/v1/empresas/{a.Datos.Id}", Admin(a), new ActualizarEmpresaDto(ColorMarca: "naranja"), 422)))
+            .ShouldBe("color-marca-invalido");
+
+        // La integración (scopes de sistema, sin empresas:administrar) no edita la marca.
+        await ApiAsync("PUT", $"/api/v1/empresas/{a.Datos.Id}", new Credencial(a.LlaveSrm, a.Datos.Id), new ActualizarEmpresaDto(ColorMarca: "#000000"), 403);
+
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(a, "CLIENTE", correo);
+        var sesion = await SesionAsync(correo);
+        var invitacion = await TerceroAsync<InvitacionPublicaDto>("GET", $"/public/v1/invitaciones/{vinculo.Id}", sesion.AccessToken, null, 200);
+        invitacion.Vinculo.Empresa.ColorMarca.ShouldBe("#E07A1F");
+        invitacion.Vinculo.Empresa.ContactoSoporte.ShouldBe("proveedores@norte.example");
+        invitacion.Vinculo.Empresa.LogoUrl.ShouldBe("https://cdn.norte.example/logo.svg");
+    }
+
+    // ---------- accesos de soporte de la Plataforma (B-6) ----------
+
+    [Fact]
+    public async Task La_plataforma_solo_entra_con_un_acceso_vigente_a_esa_empresa_en_lectura_y_sin_documentos()
+    {
+        var a = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        var otra = await ApiAsync<EmpresaDto>("POST", "/api/v1/empresas", new Credencial(a.Admin),
+            new CrearEmpresaDto(new IdentificacionDto("CO", "NIT", Nit()), "Norte Inmobiliaria S.A.S.", "NINMO", null, null), 201);
+        await FlujoConAsync(a, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]);
+        var vinculo = await CrearVinculoAsync(a, "CLIENTE", CorreoNuevo());
+
+        Task<IScenarioResult> ComoSoporte(string metodo, string url, string? acceso, Guid empresa, int esperado, object? cuerpo = null) =>
+            Host.Scenario(s =>
+            {
+                Preparar(s, metodo, url, cuerpo);
+                s.WithRequestHeader("X-Api-Key", ApiFixture.ClavePlataforma);
+                if (acceso is not null)
+                    s.WithRequestHeader("X-Acceso-Soporte", acceso);
+                s.WithRequestHeader("X-Empresa", empresa.ToString());
+                if (metodo == "POST")
+                    s.WithRequestHeader("Idempotency-Key", Guid.NewGuid().ToString());
+                s.StatusCodeShouldBe(esperado);
+            });
+
+        // Por defecto la Plataforma no ve nada del tenant: ni siquiera sabe que la empresa existe.
+        await ComoSoporte("GET", $"/api/v1/vinculos/{vinculo.Id}", null, a.Datos.Id, 404);
+
+        (await CodigoAsync(await ApiAsync("POST", "/api/v1/accesos-soporte", Admin(a), new ConcederAccesoSoporteDto(a.Datos.Id, 100, "Revisar el error al importar"), 422)))
+            .ShouldBe("duracion-invalida");
+        await ApiAsync("POST", "/api/v1/accesos-soporte", new Credencial(a.LlaveSrm, a.Datos.Id), new ConcederAccesoSoporteDto(a.Datos.Id, 4, "Revisar el error al importar"), 403);
+        var acceso = await ApiAsync<AccesoSoporteDto>("POST", "/api/v1/accesos-soporte", Admin(a),
+            new ConcederAccesoSoporteDto(a.Datos.Id, 4, "Revisar el error al importar vínculos desde SRM"), 201);
+        acceso.Vigente.ShouldBeTrue();
+        acceso.Empresa.ShouldBe("Norte S.A.S.");
+
+        var concedidos = await ApiAsync<List<AccesoSoporteConcedidoDto>>("GET", "/api/v1/plataforma/accesos-soporte", new Credencial(ApiFixture.ClavePlataforma), null, 200);
+        concedidos.ShouldContain(c => c.Id == acceso.Id && c.EmpresaId == a.Datos.Id && c.Grupo == "Grupo Norte S.A.S.");
+
+        var id = acceso.Id.ToString();
+        // Lee vínculos y configuración de esa empresa…
+        (await (await ComoSoporte("GET", $"/api/v1/vinculos/{vinculo.Id}", id, a.Datos.Id, 200)).ReadAsJsonAsync<VinculoDto>())!.Id.ShouldBe(vinculo.Id);
+        await ComoSoporte("GET", "/api/v1/flujos", id, a.Datos.Id, 200);
+        // …pero no documentos, no escribe y no ve otra empresa del grupo.
+        await ComoSoporte("GET", $"/api/v1/vinculos/{vinculo.Id}/documentos", id, a.Datos.Id, 403);
+        await ComoSoporte("POST", "/api/v1/areas", id, a.Datos.Id, 403, new CrearAreaDto("SOPORTE", "Soporte"));
+        await ComoSoporte("GET", "/api/v1/flujos", id, otra.Id, 404);
+
+        var revocado = await ApiAsync<AccesoSoporteDto>("POST", $"/api/v1/accesos-soporte/{acceso.Id}/revocar", Admin(a), new { }, 200);
+        revocado.Vigente.ShouldBeFalse();
+        await ComoSoporte("GET", $"/api/v1/vinculos/{vinculo.Id}", id, a.Datos.Id, 401);
+        (await ApiAsync<List<AccesoSoporteDto>>("GET", "/api/v1/accesos-soporte", Admin(a), null, 200)).ShouldContain(x => x.Id == acceso.Id && x.RevocadoEn != null);
+        (await CodigoAsync(await ApiAsync("POST", $"/api/v1/accesos-soporte/{acceso.Id}/revocar", Admin(a), new { }, 409))).ShouldBe("acceso-no-vigente");
+    }
+
     // ---------- sincronización: no se pierde ni se duplica ----------
 
     [Fact]

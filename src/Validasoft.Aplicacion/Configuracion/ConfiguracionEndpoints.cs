@@ -57,6 +57,23 @@ public static class EmpresasEndpoints
     public static async Task<EmpresaDto> Obtener(Guid id, ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct) =>
         (await CargarAsync(id, sesiones, contexto, ct)).ADto();
 
+    /// <summary>Datos y marca (contacto de soporte, color y logo). La identificación, la razón social y el prefijo no cambian.</summary>
+    [WolverinePut("/api/v1/empresas/{id}")]
+    [Authorize(Policy = Permisos.EmpresasAdministrar)]
+    public static async Task<EmpresaDto> Actualizar(Guid id, ActualizarEmpresaDto dto, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj,
+        CancellationToken ct)
+    {
+        var empresa = await CargarAsync(id, sesiones, contexto, ct);
+        var antes = empresa.ADto();
+        empresa.ActualizarMarca(dto.ContactoSoporte, dto.ColorMarca, dto.LogoUrl);
+
+        await using var sesion = sesiones.DelTenant();
+        sesion.Store(empresa);
+        Auditoria.Registrar(sesion, contexto, "Empresa", empresa.Id.ToString(), AccionConfiguracion.Modificado, antes, empresa.ADto(), reloj.GetUtcNow(), empresa.Id);
+        await sesion.SaveChangesAsync(ct);
+        return empresa.ADto();
+    }
+
     [WolverinePost("/api/v1/empresas/{id}/desactivar")]
     [Authorize(Policy = Permisos.EmpresasAdministrar)]
     public static async Task<EmpresaDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)

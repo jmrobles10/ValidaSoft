@@ -7,6 +7,7 @@
 import type { IdentificacionDto } from './identificacionDto';
 import type { EmpresaDtoLogoUrl } from './empresaDtoLogoUrl';
 import type { EmpresaDtoReplyTo } from './empresaDtoReplyTo';
+import type { EmpresaDtoColorMarca } from './empresaDtoColorMarca';
 
 export interface EmpresaDto {
   id: string;
@@ -17,4 +18,5 @@ export interface EmpresaDto {
   replyTo: EmpresaDtoReplyTo;
   prefijoFolio: string;
   activa: boolean;
+  colorMarca?: EmpresaDtoColorMarca;
 }

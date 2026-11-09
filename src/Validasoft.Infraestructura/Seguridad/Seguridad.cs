@@ -185,8 +185,13 @@ public sealed class AutenticacionPorApiKey(
         var valor = encabezado.ToString().Trim();
 
         if (EsClaveDePlataforma(valor))
-            return Exito([new(Reclamos.Scope, Permisos.PlataformaTenants), new(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
-                new(ClaimTypes.NameIdentifier, "plataforma-bootstrap")]);
+        {
+            var soporte = Request.Headers[CabeceraAccesoSoporte].ToString();
+            if (string.IsNullOrWhiteSpace(soporte))
+                return Exito([new(Reclamos.Scope, Permisos.PlataformaTenants), new(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
+                    new(ClaimTypes.NameIdentifier, "plataforma-bootstrap")]);
+            return await ConAccesoDeSoporteAsync(soporte.Trim());
+        }
 
         var claveCache = "apikey:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(valor)));
         if (!cache.TryGetValue(claveCache, out LlaveValidada? validada) || validada is null)
@@ -224,6 +229,34 @@ public sealed class AutenticacionPorApiKey(
 
         reclamos.AddRange(validada.Scopes.Select(s => new Claim(Reclamos.Scope, s)));
         reclamos.AddRange(validada.Empresas.Select(e => new Claim(Reclamos.Empresa, e)));
+        return Exito(reclamos);
+    }
+
+    /// <summary>Id de un acceso de soporte vigente (B-6) con el que la Plataforma entra a una empresa de un tenant.</summary>
+    public const string CabeceraAccesoSoporte = "X-Acceso-Soporte";
+
+    /// <summary>
+    /// La Plataforma con un acceso de soporte vigente actúa en el tenant y la empresa que se lo concedió, solo con los
+    /// permisos de lectura de soporte (sin documentos). Expirado, revocado o inexistente: 401 sin pistas.
+    /// </summary>
+    private async Task<AuthenticateResult> ConAccesoDeSoporteAsync(string id)
+    {
+        if (!Guid.TryParse(id, out var accesoId))
+            return AuthenticateResult.Fail("Acceso de soporte inválido.");
+
+        await using var global = store.QuerySession();
+        var acceso = await global.Query<AccesoSoporte>().Where(a => a.AnyTenant() && a.Id == accesoId).FirstOrDefaultAsync();
+        if (acceso is null || !acceso.VigenteEn(reloj.GetUtcNow()))
+            return AuthenticateResult.Fail("El acceso de soporte no existe, expiró o fue revocado.");
+
+        var reclamos = new List<Claim>
+        {
+            new(Reclamos.Tenant, acceso.TenantId.ToString()),
+            new(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
+            new(ClaimTypes.NameIdentifier, $"plataforma-soporte:{acceso.Id}"),
+            new(Reclamos.Empresa, acceso.EmpresaId.ToString())
+        };
+        reclamos.AddRange(Permisos.DeSoporte.Select(s => new Claim(Reclamos.Scope, s)));
         return Exito(reclamos);
     }
 
