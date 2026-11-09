@@ -172,6 +172,22 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     }
 
     /// <summary>
+    /// Un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): sin enlace de acceso, remite a pedir uno
+    /// con el correo para subir la versión nueva.
+    /// </summary>
+    public MensajeDeCorreo RedactarVencido(Notificaciones.CorreoDeVencidoPendiente correo)
+    {
+        var fecha = FechaLarga(correo.VigenteHasta);
+        var asunto = $"Tu {correo.Documento} venció para {correo.Empresa}";
+        var texto = $"Tu {correo.Documento} venció para {correo.Empresa} (vigente hasta el {fecha}) y ya pasó el plazo de gracia.\n\n" +
+                    $"Entra a Validasoft ({UrlPublica}) con tu correo y sube la versión nueva para seguir al día.";
+        var html = $"<p>Tu {WebUtility.HtmlEncode(correo.Documento)} venció para {WebUtility.HtmlEncode(correo.Empresa)} " +
+                   $"(vigente hasta el {WebUtility.HtmlEncode(fecha)}) y ya pasó el plazo de gracia.</p>" +
+                   $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con tu correo y sube la versión nueva para seguir al día.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
     /// Aviso consolidado de vencimiento (TD-6, docs/02 §8.3): un correo por tercero y fecha con cada documento y su fecha por
     /// empresa («vence para A el 31 de octubre de 2026 y para B el 30 de diciembre de 2026»). Sin enlace de acceso: remite a
     /// pedir uno con el correo.

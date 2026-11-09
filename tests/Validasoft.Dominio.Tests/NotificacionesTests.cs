@@ -346,6 +346,26 @@ public class NotificacionesTests
     }
 
     [Fact]
+    public async Task El_documento_vencido_avisa_al_tercero_por_correo_y_a_las_areas_en_la_campana()
+    {
+        var contexto = new ContextoFalso();
+        var vencida = Evento(new VersionVencida(2, VinculoId, new DateOnly(2026, 11, 1), 5, Ahora), DocumentoId, TenantsTecnicos());
+
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(vencida, contexto, 1, CancellationToken.None);
+
+        var alTercero = plan.Correos.OfType<CorreoDeVencidoPendiente>().ShouldHaveSingleItem();
+        alTercero.Para.ShouldBe(CorreoTercero);
+        alTercero.Empresa.ShouldBe("Norte S.A.S.");
+        alTercero.VigenteHasta.ShouldBe(new DateOnly(2026, 11, 1));
+        plan.Campana.ShouldNotBeEmpty();
+        plan.Campana.ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.Vencido && c.Notificacion.Titulo == "Documento vencido");
+
+        var mensaje = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarVencido(alTercero);
+        mensaje.Asunto.ShouldBe($"Tu {alTercero.Documento} venció para Norte S.A.S.");
+        mensaje.Texto.ShouldContain("vigente hasta el 1 de noviembre de 2026");
+    }
+
+    [Fact]
     public async Task La_constancia_al_tercero_lista_los_textos_aceptados_sin_la_ip()
     {
         var contexto = new ContextoFalso();
