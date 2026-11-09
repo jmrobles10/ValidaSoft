@@ -75,12 +75,17 @@ export function anclarDialogo(raiz: Element, ancla: Ancla, altoVentana: number):
   const contenedor = raiz.querySelector<HTMLElement>('.MuiDialog-container');
   const papel = raiz.querySelector<HTMLElement>('.MuiDialog-paper');
   if (!contenedor || !papel) return null;
-  if ('region' in ancla) papel.style.maxHeight = `${String(ancla.region.height - 2 * MARGEN)}px`;
+  const tope = ('region' in ancla ? ancla.region.height : altoVentana) - 2 * MARGEN;
+  papel.style.maxHeight = `${String(tope)}px`;
   const alto = papel.offsetHeight;
   const top = 'region' in ancla ? posicionEnRegion(ancla.region, alto, altoVentana) : posicionAnclada(ancla.puntoY, alto, altoVentana);
   contenedor.style.alignItems = 'flex-start';
   papel.style.marginTop = `${String(top)}px`;
-  return { top, height: alto };
+  // Nunca pasa del borde inferior del iframe, aunque crezca después de abrirse (p. ej. al marcar un documento aparecen
+  // sus motivos): desplaza por dentro. Sin este tope, con el iframe de otro origen, el botón de confirmar quedaba fuera.
+  const hastaElBorde = Math.max(0, altoVentana - top - MARGEN);
+  papel.style.maxHeight = `${String(Math.min(tope, hastaElBorde))}px`;
+  return { top, height: Math.min(alto, hastaElBorde) };
 }
 
 /** Un panel lateral (`.MuiDrawer-modal`) ocupa la parte visible; sin ella, {@link ALTO_PANEL} centrado en el punto. */

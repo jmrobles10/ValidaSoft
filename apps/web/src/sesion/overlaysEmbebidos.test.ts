@@ -84,6 +84,25 @@ describe('anclarOverlays', () => {
     expect(avisos).toEqual([{ top, height: 280 }]);
   });
 
+  it('anclado al clic, el diálogo no pasa del borde inferior del iframe aunque crezca después de abrirse', async () => {
+    // Iframe de otro origen y alto fijo (672 px): al marcar un documento el diálogo crece con sus motivos y el botón de
+    // confirmar quedaba debajo del borde, inalcanzable. Ahora desplaza por dentro.
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(672);
+    const avisos: RegionVisible[] = [];
+    detener = anclarOverlays((region) => avisos.push(region));
+
+    document.dispatchEvent(new MouseEvent('pointerdown', { clientY: 340 }));
+    const dialogo = portal('MuiDialog-root MuiModal-root', 'MuiDialog-paper', 300);
+    document.body.append(dialogo);
+    await Promise.resolve();
+
+    const papel = dialogo.querySelector<HTMLElement>('.MuiDialog-paper');
+    const top = 340 - 150;
+    expect(papel?.style.marginTop).toBe(`${String(top)}px`);
+    expect(papel?.style.maxHeight).toBe(`${String(672 - top - MARGEN)}px`);
+    expect(avisos).toEqual([{ top, height: 300 }]);
+  });
+
   it('limita el panel lateral a una altura que cabe en una ventana pequeña', async () => {
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(3000);
     const avisos: RegionVisible[] = [];
