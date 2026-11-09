@@ -513,6 +513,86 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await CodigoAsync(await ApiAsync("POST", $"/api/v1/accesos-soporte/{acceso.Id}/revocar", Admin(a), new { }, 409))).ShouldBe("acceso-no-vigente");
     }
 
+    // ---------- revalidación por versión nueva (RV-1…RV-3) ----------
+
+    [Fact]
+    public async Task Una_version_nueva_de_un_documento_aprobado_abre_una_actualizacion_solo_con_ese_documento_y_el_certificado_queda_con_pendientes()
+    {
+        var e = await PrepararAsync();
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT v1"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara v1"));
+        await AceptarAsync(sesion, vinculo.Id);
+
+        async Task<ExpedienteDto> AprobarTodoAsync(Guid expedienteId)
+        {
+            ExpedienteDto? ultimo = null;
+            foreach (var (area, persona, codigo) in new[] { (e.Compras, e.Laura, "COMPRAS"), (e.Cumplimiento, e.Carlos, "CUMPLIMIENTO") })
+            {
+                var leido = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Delegado(e.Norte, persona), null, 200);
+                var porDecidir = Area(leido, codigo).DocumentosPorDecidir ?? [];
+                ultimo = porDecidir.Count == 0
+                    ? leido
+                    : await AreaAsync<ExpedienteDto>(e, expedienteId, area, persona,
+                        new VeredictoDto("Aprobado", Versiones: porDecidir.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+            }
+            return ultimo!;
+        }
+
+        async Task<Guid> ExpedienteAbiertoAsync()
+        {
+            var limite = DateTime.UtcNow.AddSeconds(20);
+            while (true)
+            {
+                if ((await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId is { } id)
+                    return id;
+                if (DateTime.UtcNow > limite)
+                    throw new TimeoutException("No se abrió la actualización.");
+                await Task.Delay(200);
+            }
+        }
+
+        var inicial = await ExpedienteAbiertoAsync();
+        (await AprobarTodoAsync(inicial)).Estado.ShouldBe("Aprobado");
+        var certificado = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        certificado.Estado.ShouldBe("Vigente");
+
+        // El proveedor actualiza su RUT: Norte lo revalida en un expediente de actualización, solo con el RUT.
+        await SubirAsync(sesion, "RUT", Pdf("RUT v2"));
+        var actualizacionId = await ExpedienteAbiertoAsync();
+        actualizacionId.ShouldNotBe(inicial);
+        var actualizacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{actualizacionId}", Admin(e.Norte), null, 200);
+        actualizacion.Tipo.ShouldBe("Actualizacion");
+        actualizacion.Estado.ShouldBe("EnRevision");
+        var rut = actualizacion.Requisitos!.ShouldHaveSingleItem();
+        rut.TipoDocumento.Codigo.ShouldBe("RUT");
+        rut.VersionActual!.N.ShouldBe(2);
+
+        // El vínculo sigue activo y el certificado avisa que tiene pendientes.
+        (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Activo");
+        var conPendientes = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        conPendientes.Estado.ShouldBe("ConPendientes");
+        conPendientes.Bloqueante.ShouldBeFalse(); // informativo durante el plazo (A-2)
+
+        // Vence el plazo sin resolverse (el mensaje programado a 15 días, aquí invocado): los pendientes bloquean (RV-4).
+        using (var alcance = Host.Services.CreateScope())
+            await alcance.ServiceProvider.GetRequiredService<IMessageBus>()
+                .InvokeAsync(new VencerPlazoDeRevalidacion(e.Norte.Datos.TenantId, vinculo.Id, actualizacionId));
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!
+            .Bloqueante.ShouldBeTrue();
+
+        // Al aprobar la actualización se reemite el certificado con el RUT v2.
+        (await AprobarTodoAsync(actualizacionId)).Estado.ShouldBe("Aprobado");
+        var reemitido = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        reemitido.Estado.ShouldBe("Vigente");
+        reemitido.Bloqueante.ShouldBeFalse();
+        reemitido.Emision.ShouldBe(certificado.Emision + 1);
+        reemitido.Requisitos.ShouldContain(r => r.Codigo == "RUT" && r.Version == 2);
+        (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId.ShouldBeNull();
+    }
+
     // ---------- sincronización: no se pierde ni se duplica ----------
 
     [Fact]

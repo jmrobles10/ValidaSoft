@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Vinculos;
 
 namespace Validasoft.Dominio.Tests;
@@ -17,6 +18,33 @@ public class VinculoTests
     }
 
     private static Vinculo Nuevo() => Nuevo(out _);
+
+    [Fact]
+    public void Una_actualizacion_solo_se_abre_sobre_un_vinculo_ya_aprobado_y_no_cambia_su_estado()
+    {
+        var vinculo = Nuevo();
+        Should.Throw<ReglaDeNegocioException>(() => vinculo.VincularExpediente(Guid.NewGuid(), TipoExpediente.Actualizacion, "N-E-1", Ahora))
+            .Codigo.ShouldBe("estado-invalido");
+
+        var inicial = Guid.NewGuid();
+        vinculo.Apply(vinculo.VincularExpediente(inicial, TipoExpediente.Inicial, "N-E-1", Ahora));
+        foreach (var evento in vinculo.CerrarExpediente(inicial, ResultadoExpediente.Aprobado, Ahora))
+        {
+            if (evento is ExpedienteCerrado cerrado) vinculo.Apply(cerrado);
+            if (evento is VinculoActivado activado) vinculo.Apply(activado);
+        }
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+
+        var actualizacion = Guid.NewGuid();
+        vinculo.Apply(vinculo.VincularExpediente(actualizacion, TipoExpediente.Actualizacion, "N-E-2", Ahora.AddDays(1)));
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+        vinculo.ExpedienteAbiertoId.ShouldBe(actualizacion);
+
+        // Rechazada o anulada, la actualización no le quita la activación al vínculo.
+        vinculo.Apply((ExpedienteCerrado)vinculo.CerrarExpediente(actualizacion, ResultadoExpediente.Rechazado, Ahora.AddDays(2)).Single());
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+        vinculo.ExpedienteAbiertoId.ShouldBeNull();
+    }
 
     [Fact]
     public void Nace_invitado_con_identificador_propio_y_correo_normalizado()

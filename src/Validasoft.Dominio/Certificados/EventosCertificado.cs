@@ -61,6 +61,15 @@ public sealed record CertificadoReemplazado(int EmisionAnterior, int EmisionNuev
 /// <summary>El vínculo se bloqueó (B-5): no es revocación; al desbloquear se restablece si sigue vigente.</summary>
 public sealed record CertificadoSuspendido(int Emision, string Motivo, EstadoCertificado EstadoPrevio, DateTimeOffset Fecha);
 
+/// <summary>
+/// Una versión nueva de un documento aceptado está en revalidación (RV-3): el certificado sigue siendo válido pero informa
+/// que tiene pendientes hasta que el expediente de actualización se apruebe (entonces se reemite).
+/// </summary>
+public sealed record CertificadoConPendientes(int Emision, string Motivo, Guid ExpedienteId, DateTimeOffset Fecha);
+
+/// <summary>Venció el plazo de la revalidación sin resolverse (RV-4): los pendientes pasan a ser bloqueantes hasta la reemisión.</summary>
+public sealed record PlazoDeRevalidacionVencido(int Emision, Guid ExpedienteId, DateTimeOffset Fecha);
+
 /// <summary>Vuelve al estado previo a la suspensión (desbloqueo).</summary>
 public sealed record CertificadoRestablecido(int Emision, EstadoCertificado EstadoRestituido, string Motivo, DateTimeOffset Fecha);
 
