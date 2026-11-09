@@ -96,7 +96,7 @@ export function EntregasWebhook({ webhookId }: { webhookId: string }) {
         <Typography id={`entregas-${webhookId}`} component="h3" sx={{ fontSize: 14, fontWeight: 600 }}>
           {t('webhooks.entregas.titulo')}
         </Typography>
-        <TextField select size="small" label={t('webhooks.entregas.filtro')} value={estado} onChange={(e) => setEstado(esEstadoEntrega(e.target.value) ? e.target.value : '')} sx={{ minWidth: 170 }}>
+        <TextField select size="small" label={t('webhooks.entregas.filtro')} value={estado} onChange={(e) => setEstado(esEstadoEntrega(e.target.value) ? e.target.value : '')} slotProps={{ select: { displayEmpty: true } }} sx={{ minWidth: 170 }}>
           <MenuItem value="">{t('webhooks.entregas.todas')}</MenuItem>
           {ESTADOS_ENTREGA.map((e) => (
             <MenuItem key={e} value={e}>
