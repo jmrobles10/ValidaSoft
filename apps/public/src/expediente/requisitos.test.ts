@@ -50,6 +50,15 @@ describe('documentos que pide la empresa', () => {
     expect(accionDeRequisito({ estado: 'Pendiente' }, expediente('Aprobado', []))).toBeNull();
   });
 
+  it('un documento aprobado que está por vencer o vencido se puede renovar aunque la revisión esté aprobada', () => {
+    const porVencer = { estado: 'Aprobado' as const, versionActual: { vigencia: { estado: 'PorVencer' as const } } };
+    const vigente = { estado: 'Aprobado' as const, versionActual: { vigencia: { estado: 'Vigente' as const } } };
+    expect(accionDeRequisito(porVencer, expediente('Aprobado', []))).toBe('reemplazar');
+    expect(accionDeRequisito({ ...porVencer, versionActual: { vigencia: { estado: 'Vencida' as const } } }, expediente('Aprobado', []))).toBe('reemplazar');
+    expect(accionDeRequisito(vigente, expediente('Aprobado', []))).toBeNull();
+    expect(accionDeRequisito(porVencer, expediente('Rechazado', []))).toBeNull();
+  });
+
   it('separa las observaciones de cada documento de las del expediente completo', () => {
     const camara = requisito('camara', 'Observado');
     const exp = expediente('Observado', [camara], [observacion(null), observacion('CAMARA')]);

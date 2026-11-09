@@ -1,9 +1,17 @@
-import type { ExpedientePublicoDto, ObservacionPublicaDto, RequisitoPublicoDto } from '@validasoft/api-client';
+import type { ExpedientePublicoDto, ObservacionPublicaDto, RequisitoPublicoDto, VigenciaDto } from '@validasoft/api-client';
+import { requiereAtencion } from '../vigencia/vigencia';
 
 /** Lo que el tercero puede hacer con un documento que le piden. */
 export type AccionRequisito = 'subir' | 'corregir' | 'reemplazar' | null;
 
-export function accionDeRequisito(requisito: Pick<RequisitoPublicoDto, 'estado'>, expediente: Pick<ExpedientePublicoDto, 'estado'>): AccionRequisito {
+export function accionDeRequisito(
+  requisito: Pick<RequisitoPublicoDto, 'estado'> & { versionActual?: { vigencia?: Pick<VigenciaDto, 'estado'> | null } | null },
+  expediente: Pick<ExpedientePublicoDto, 'estado'>,
+): AccionRequisito {
+  // Aprobado pero por vencer, en gracia o vencido: la tarjeta pide renovarlo, así que ofrece subir la versión nueva
+  // aunque la revisión ya se haya cerrado aprobada (antes decía «sube una versión nueva» sin dar cómo).
+  if (requisito.estado === 'Aprobado' && ['EnRevision', 'Observado', 'Aprobado'].includes(expediente.estado) && requiereAtencion(requisito.versionActual?.vigencia))
+    return 'reemplazar';
   if (!['Abierto', 'EnRevision', 'Observado'].includes(expediente.estado)) return null;
   switch (requisito.estado) {
     case 'Pendiente':
