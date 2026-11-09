@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+node_modules/
+dist/
+.env
+
+# Frontend
+.pnpm-store/
+*.tsbuildinfo
+coverage/
+apps/web/.semilla.local.json

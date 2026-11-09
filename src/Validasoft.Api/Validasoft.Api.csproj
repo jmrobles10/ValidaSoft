@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="WolverineFx.Http" />
+    <!-- Compila los manejadores en tiempo de ejecución. En producción: código pre-generado (codegen write) y TypeLoadMode.Static (H1). -->
+    <PackageReference Include="WolverineFx.RuntimeCompilation" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Infraestructura\Validasoft.Infraestructura.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Validasoft.Integracion.Tests" />
+  </ItemGroup>
+</Project>

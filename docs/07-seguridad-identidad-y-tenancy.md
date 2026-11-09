@@ -26,16 +26,17 @@
 
 ## 2. Identidad: OpenIddict + ASP.NET Identity
 
-Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`). Keycloak descartado en el MVP (ADR-0003); federable después (§2.5).
+Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`). Keycloak descartado en el MVP (ADR-0003); federable después (§2.5). Las personas que ya iniciaron sesión en un **sistema integrado** (SRM, Marco, Portal, sistemas del cliente) no tienen cuenta propia: actúan por **identidad delegada** (§2.6, ADR-0011, que precisa ADR-0003).
 
 ### 2.1 Flujos
 
 | Cliente | Flujo | Tokens |
 |---|---|---|
 | `apps/web` (revisor/admin/plataforma) | Authorization Code + PKCE | Access JWT 15 min; refresh rotativo 8 h deslizante con detección de reuso; solo en memoria |
-| `apps/public` (tercero) | Grant `urn:validasoft:magic-link` | Access JWT 30 min ligado a `terceroId` y vínculos; refresh deslizante máx. 8 h; cookie `HttpOnly; Secure; SameSite=Lax` |
+| `apps/public` (tercero) | Grant `urn:validasoft:magic-link` | Access JWT 30 min ligado a `terceroId` y vínculos; refresh deslizante máx. 8 h; cookie `HttpOnly; Secure; SameSite=Lax` (**implementado**: §2.2 «Reingreso», RE-1…RE-7) |
 | SRM/Portal dentro del marco ERP | Grant `urn:validasoft:erp-token` (token exchange) | Access JWT 15 min con `tenant`, `empresas[]`, `sub`, roles |
 | Integraciones servidor-a-servidor | `X-Api-Key` | §4 |
+| Persona de un sistema integrado (SRM, Marco, Portal…) | `X-Api-Key` del sistema + `X-Usuario-Delegado` (JWT ≤ 5 min firmado por el sistema) | §2.6; pantallas embebidas: sesión de Validasoft HS256 de 30 min (`POST /sesiones-usuario`) |
 | CLI de importación | Client Credentials con `importacion:escribir` | 15 min |
 
 ### 2.2 Grant `urn:validasoft:magic-link`
@@ -46,8 +47,25 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 5. Claims: `tipo=tercero`, `terceroId`, `vinculos[] { vinculoId, tenantId, empresaId, invitacionAceptada }` (todos los vínculos cuyo contacto coincide con el correo), `expedienteOrigen`. Canjear el enlace **solo abre sesión**; no comparte nada.
 6. **Aceptar la invitación** (`POST /public/v1/invitaciones/{expedienteId}/aceptar`) registra `ConsentimientosRegistrados` —aviso de la plataforma la primera vez (incluye expresamente el procesamiento por IA externa y la transferencia internacional, P-6-5), autorización de datos y T&C de **esa** empresa— con versión del texto, fecha, IP, user-agent y OTP como evidencia (`AceptacionDto`; P-3-5, P-16-4). Solo entonces se comparte con esa empresa la versión actual de cada tipo global que exige (B-1). Hasta que el tercero no haya aceptado el aviso de plataforma, sus versiones se procesan **sin IA** (B-2/B-8).
 
+**Implementado (2026-11-06, fase «Validación por el interesado»; IN-1…IN-12 del [registro](decisiones/registro.md)).**
+- `EnlaceDeAcceso` global (esquema `identidad`): `Id` = SHA-256 hex del token de 256 bits (base64url), `tenantId?`, `vinculoId?`, `terceroId`, `correoDestino`, `expira`, `requiereOtp`, `usado`, hash del OTP, intentos; concurrencia optimista. Cada `InvitacionEnviada` crea uno con la vigencia de la invitación y **borra** los no usados del vínculo (el anterior responde `404 enlace-no-encontrado`). `requiereOtp` sale de `TipoVinculo.exigeOtpEnEnlace` (semilla: solo `PROVEEDOR`).
+- Canje: usado ⇒ `410 enlace-usado`; vencido ⇒ `410 enlace-vencido`; con OTP ⇒ `202 { requiereOtp, expira }` y código de 6 dígitos (hash ligado al enlace, 10 min) al mismo correo; `…/otp`: malo ⇒ `422 otp-invalido` con `intentosRestantes`, agotado ⇒ `429 otp-bloqueado` (5 fallos **por enlace**; volver a canjear da otro código pero no reinicia la cuenta), vencido ⇒ `410 otp-vencido`.
+- Sesión del tercero: JWT HS256 de 30 min con `Validasoft:Sesiones:ClaveFirma` y audiencia `validasoft:tercero`; reclamos `tipo=tercero`, `terceroId`, `correo`, `otpVerificado` y `vinculos` (`vinculoId|tenantId|empresaId`: los de ese tercero cuyo correo de invitación coincide con el del enlace, en todos los tenants, fijados al emitir). Esquema `Tercero` solo en `/public/v1/*` (el selector de esquema es por ruta): ahí no valen API keys ni sesiones de usuario, y `/api/v1` no acepta el token del tercero. El access token viaja en el cuerpo y se usa como `Authorization: Bearer` (en memoria del navegador); lo que sobrevive a recargar es el **token de refresco** en la cookie `HttpOnly` `vs_tercero` (ver «Reingreso» abajo). Los vínculos ya no quedan fijados por toda la sesión: se recalculan en cada renovación.
+- Correo: `IEnviadorDeCorreo` (MailKit/SMTP, `Validasoft:Correo:{Host, Puerto, Seguridad, Remitente, UrlPublica}`); en desarrollo **Mailpit** (`infra/compose`: SMTP 1025, bandeja en http://localhost:8025). Los correos salen por el **outbox de Wolverine** (cola local durable `correo`) después del commit; el token y el OTP viajan **cifrados** (AES-256-GCM con clave HKDF de `ClaveFirma`) en el sobre, y el segmento del token se enmascara en logs y en `instance` de los ProblemDetails.
+- Aceptación por `vinculoId` (no hay expedientes aún): exige autorización y T&C **vigentes** de la empresa (si no están publicados ⇒ `409 textos-legales-faltantes`) y el aviso de la plataforma si el tercero no tiene su versión vigente; versión distinta ⇒ `409 texto-desactualizado`; no aceptado ⇒ `422`. Si el tipo de vínculo exige OTP y la sesión no lo verificó ⇒ `403 otp-requerido`. Eventos `ConsentimientosRegistrados` + `InvitacionAceptada` con actor `Tercero`; el aviso aceptado queda también en el `Tercero`. Aún no se comparte nada porque no hay documentos.
+- Rate limit por IP en `/public/v1/*` (ventana fija, 60/min por defecto); detrás de un proxy cuenta la IP real de `X-Forwarded-For` solo si la petición viene de un proxy confiable (§2.6 punto 8, SE-6). Pendiente: constancia por correo de la aceptación (`consentimiento-empresa`).
+
+**Reingreso (2026-11-06, H2-reingreso; RE-1…RE-7 del [registro](decisiones/registro.md)).** En una demo el proveedor observado no podía volver a entrar: el enlace era de un solo uso, la sesión vivía en memoria del navegador y el correo de observación no traía enlace.
+- **Sesión de refresco** (`SesionDeRefresco`, global, esquema `identidad`, concurrencia optimista): familia (`Id`), hash SHA-256 del token **vigente**, `terceroId`, `correo`, `otpVerificado`, `creadaEn`, `expiraEn` (= canje + 8 h, **absoluto**), `rotadaEn`, `rotaciones`, `revocadaEn` y `motivoRevocacion` (`reuso` \| `cierre`). El token es opaco: `{familia}.{secreto de 256 bits en base64url}`; en la BD solo queda su hash.
+- **Cookie `vs_tercero`**: `HttpOnly; SameSite=Lax; Path=/public/v1/sesion; Secure` (configurable con `Validasoft:SesionTercero:CookieSegura`, `false` solo en `appsettings.Development.json` porque en local es http), `Expires` = vencimiento absoluto. La ponen el canje sin OTP y la verificación del OTP (misma transacción que marca el enlace usado). Por su `Path` el navegador solo la envía a renovar y cerrar.
+- **Renovar** (`POST /public/v1/sesion/renovar`): exige `X-Validasoft-Cliente: public` (defensa CSRF adicional a `SameSite`; sin ella `403 cliente-invalido`). Con el token vigente rota la cookie y devuelve un `SesionTerceroDto` nuevo con los vínculos **recalculados** y `otpVerificado` conservado. Sin cookie, mal formada, desconocida o vencida ⇒ `401 sesion-expirada`. Un token de la familia que no es el vigente (ya rotado) ⇒ **reuso**: se revoca la familia completa y `401 sesion-revocada` (también para el token vigente, que quizá tiene quien la robó). Dos renovaciones simultáneas con el mismo token: la concurrencia optimista deja ganar a una; la otra recibe `409 renovacion-concurrente` sin revocar. No hay ventana de inactividad propia: la sesión dura lo que dure el navegador renovando, hasta 8 h desde el canje.
+- **Cerrar** (`POST /public/v1/sesion/cerrar`, misma cabecera): revoca la familia y borra la cookie; `204` siempre (idempotente).
+- **Acceso con el correo** (`POST /public/v1/acceso { correo }`): siempre `202` con el mismo cuerpo, exista o no. Si hay vínculos **no terminales** (de cualquier tenant) con ese `correoTercero`, envía **un** enlace por tercero (sin vínculo, 1 h, motivo `AccesoPorCorreo`, `requiereOtp` si alguno de esos tipos lo exige) con la plantilla «Tu enlace para entrar a Validasoft». Límite: 3 envíos por hora por correo (`LimiteDeAccesoPorCorreo`, id = SHA-256 del correo), además del límite por IP; superado, responde igual y no envía. Correo mal formado ⇒ `422 correo-invalido` (no depende de que exista).
+- **Correo de observación** con enlace: en la misma transacción del veredicto se crea un `EnlaceDeAcceso` de un solo uso (motivo `Observacion`, del vínculo, 72 h, OTP según el tipo) y su token viaja **cifrado** en `CorreoDeObservacionPendiente` (IN-3). Ningún correo vuelve a pedir «ingresa con el enlace de tu invitación».
+- Los mensajes de `410 enlace-usado`/`enlace-vencido` y `429 otp-bloqueado` ahora remiten a pedir un enlace con el correo.
+
 ### 2.3 Grant `urn:validasoft:erp-token`
-Validación del token del marco contra el endpoint de introspección del ERP del tenant (cache 5 min) o firma compartida rotable; mapeo a usuario Validasoft del tenant con roles por empresa según mapeo configurado; nunca se guarda el token del ERP.
+Validación del token del marco contra el endpoint de introspección del ERP del tenant (cache 5 min) o firma compartida rotable; mapeo a usuario Validasoft del tenant con roles por empresa según mapeo configurado; nunca se guarda el token del ERP. **Precisado por ADR-0011:** Marco es un sistema integrado más y usa la identidad delegada de §2.6; los roles no vienen del ERP.
 
 ### 2.4 Usuarios internos
 - Contraseñas Argon2id; mínimo 12 caracteres; bloqueo progresivo.
@@ -57,6 +75,22 @@ Validación del token del marco contra el endpoint de introspección del ERP del
 
 ### 2.5 Federación futura
 Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cuentas locales desactivables.
+
+### 2.6 Identidad delegada desde sistemas integrados (ADR-0011)
+1. **Sistemas integrados.** El administrador registra cada sistema (`POST /sistemas`: código en mayúsculas único en el tenant, nombre y **clave pública** PEM RSA ≥ 2048 o EC P-256; se rechazan claves privadas). Las API keys del sistema llevan su `sistemaId`. Validasoft no guarda nada que permita suplantar al sistema; rotar la clave (`PUT /sistemas/{id}/clave-publica`) invalida al instante las aserciones con la anterior y desactivar el sistema deja sin efecto sus llaves (como mucho 5 min por la caché de llaves).
+2. **Aserción.** Con su API key, el sistema envía `X-Usuario-Delegado`: JWT RS256/ES256 firmado con su clave privada, `iss` = código del sistema, `aud` = `validasoft`, `exp` no vencido y a lo sumo 5 min en el futuro (tolerancia 30 s), `sub`, `name`, `email` y `jti`. Firma, emisor, audiencia o vigencia inválidos, llave sin sistema, sistema inactivo o usuario desactivado ⇒ `401` ProblemDetails (`asercion-*`, `llave-sin-sistema`, `sistema-inactivo`, `usuario-inactivo`).
+   - **Un solo uso (SE-4).** Sin `jti` ⇒ `401 asercion-sin-jti`. Tras verificar la firma y la vigencia (para que nadie llene el registro con aserciones falsas) y antes de tocar al usuario, Validasoft inserta `AsercionUsada` (global, esquema `identidad`, `Id` = `{sistemaId}:{jti}`, `ExpiraEn` = `exp` + 30 s, índice por `ExpiraEn`): la llave primaria hace que un segundo uso —aunque llegue en paralelo— responda `401 asercion-reutilizada`. Un servicio en segundo plano borra las vencidas cada `Validasoft:AsercionesUsadas:MinutosLimpieza` (10) minutos. Una aserción robada (logs, proxy) ya no sirve para repetir la petición dentro de sus 5 minutos.
+3. **Usuario.** Se busca por la identidad externa `(sistema, sub)` (única por tenant). Si no existe se **enlaza** al usuario con el mismo correo (alta anticipada por el administrador u otro sistema) o se **crea sin roles** (JIT, ID-2). El sistema es la fuente de nombre y correo; `ultimoAcceso` se actualiza como mucho una vez por minuto. Altas y enlaces quedan en la auditoría de configuración con la API key del sistema como actor.
+4. **Permiso efectivo = intersección.** Scopes = scopes de la llave ∩ scopes de los roles del usuario (§3.1); empresas = empresas de la llave ∩ empresas donde el usuario tiene rol (`*` si tiene un rol de todo el tenant). Los scopes de un rol por empresa solo valen cuando `X-Empresa` es esa empresa; la administración del tenant (`usuarios`, `sistemas`, `api-keys`, `empresas`) solo se obtiene con un rol de todo el tenant. Sin roles, el usuario no ve ninguna empresa (`404`).
+5. **Actor.** La petición queda con actor `Usuario` (`actorId` = id del usuario) y el sistema de origen; los eventos guardan `actorTipo`, `actorId` y `sistema` en sus metadatos, y la auditoría de configuración registra `sistema`.
+6. **Sesiones embebidas (ID-3).** El sistema canjea, servidor a servidor, la aserción por una sesión de Validasoft (`POST /sesiones-usuario` ⇒ `{ token, expira }`): JWT HS256 de **30 min** firmado con `Validasoft:Sesiones:ClaveFirma` (≥ 32 bytes, secreto de configuración) que copia tenant, usuario, sistema, scopes y empresas efectivos. El iframe o Web Component lo envía como `Authorization: Bearer`; `X-Empresa`, idempotencia y autorización funcionan igual que con la API key. Un cambio de roles o la desactivación del usuario se aplican a la siguiente sesión (la vigente expira sola).
+7. **Referencias externas.** El sistema de la referencia de un vínculo lo fija la credencial, no el cuerpo; un vínculo guarda una referencia por sistema y todos comparten la misma validación (I-0, [05 §2.3](05-api-contratos-y-webhooks.md)).
+8. **Embebido desde otro dominio (2026-11-08, SE-1…SE-6; contrato en [05 §2.9.4](05-api-contratos-y-webhooks.md)).**
+   - **Orígenes del sistema (SE-1).** `SistemaIntegrado.origenesPermitidos[]` (`PUT /sistemas/{id}/origenes`, auditado): orígenes `https://host[:puerto]` normalizados como los reporta el navegador; `http` solo hacia `localhost` en desarrollo (`Validasoft:Embebido:PermitirHttpLocal`). Un sistema desactivado deja de contar.
+   - **`frame-ancestors` (SE-1).** Las páginas de `apps/web` que sirve la API llevan `Content-Security-Policy: frame-ancestors 'self' {unión de los orígenes de los sistemas activos}` (caché de 60 s por nodo, invalidada en ese nodo al crear, editar o desactivar un sistema; los demás nodos la ven al vencer). Es el navegador quien impide que un sitio no registrado enmarque Validasoft (clickjacking). `apps/public` solo se deja enmarcar por Validasoft (`'self'`).
+   - **Orígenes en tiempo de ejecución (SE-2).** `GET /public/v1/embed/origenes-permitidos` (sin credencial) devuelve **la misma unión** que ya publica `frame-ancestors`, sin tenant, sistema ni nombre: no revela nada que la cabecera no revele. La app embebida solo acepta `postMessage` (y solo responde) a un origen de esa lista; `VITE_ORIGENES_CONTENEDOR` queda como respaldo. Los orígenes no son secretos (cualquier página que embebe expone el suyo); lo que no se publica es a quién pertenecen. Con muchos tenants la cabecera crece: si llega a ser un problema, la alternativa es servir la app por tenant (`/app/t/{slug}/`) con la lista de ese tenant.
+   - **Un solo origen recomendado; CORS opcional (SE-5).** La API puede servir las apps (SE-3) y así no hace falta CORS. Para dominios separados, `Validasoft:Cors:OrigenesPermitidos[]` con orígenes exactos (sin comodines; con `PermitirCredenciales` nunca se combina `*`) y sin admitir `X-Api-Key` ni `X-Usuario-Delegado` en el preflight: las credenciales de sistema no pueden viajar desde un navegador.
+   - **IP real detrás de un proxy (SE-6).** `X-Forwarded-For` / `X-Forwarded-Proto` se leen solo si la conexión llega desde `Validasoft:Proxies:Confiables[]` (IP o CIDR; se quitan los valores por defecto de loopback), tomando como máximo `Validasoft:Proxies:Saltos` (1) entradas desde la derecha: lo que el cliente anteponga en la cabecera no cuenta. Sin proxies configurados el middleware ni se registra.
 
 ---
 
@@ -75,6 +109,8 @@ Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cue
 | `Tercero` | Sesión | Lo propio |
 
 Un rol se asigna **por empresa** (`RolAsignado { rol, empresaId, areas[] }`) o **para todo el tenant** (`empresaId = *`). Un usuario puede pertenecer a varios tenants (claim `tenants[]`).
+
+Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los del tenant; `Revisor` = `configuracion:leer`, `terceros:leer`, `vinculos:leer` + `vinculos:escribir`; `OficialCumplimiento` (el `Cumplimiento` de esta tabla) = `Revisor` + `vinculos:bloquear`; `Auditor` = lecturas + `auditoria:leer`. En peticiones delegadas se intersecan con la API key (§2.6).
 
 ### 3.2 Permisos (claims finos; la UI solo oculta botones)
 
@@ -119,12 +155,13 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | Formato | `vsk_{entorno}_{tenantSlug}_{32 bytes base62}`; prefijo visible; valor completo solo al crear/rotar |
 | Almacenamiento | Hash Argon2id + prefijo en claro |
 | Scopes | Lista cerrada de [05 §2](05-api-contratos-y-webhooks.md); `importacion:escribir` no se combina |
+| **Sistema integrado** | `sistemaId` opcional (ADR-0011): fija el sistema de las referencias externas y permite `X-Usuario-Delegado`; la llave del alta del tenant no tiene sistema |
 | **Alcance por empresa** | `empresas[]` o `*`; una llave con `[A1]` no ve nada de `A2` aunque sea del mismo tenant: la API responde **`404 no-encontrado`** (T-4), nunca un 403 que revele existencia |
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
 | Rotación / revocación | Solapamiento 24 h (0–72); revocación inmediata; cache 60 s invalidado por evento |
 | Registro | `ultimoUsoEn`, `ultimaIp`, contador; alerta por uso de llave inactiva 90 días |
 | Restricción | IPs/CIDR, `expiraEn`; **sandbox** por llave de prueba (`vsk_test_…`) en H9 (P-11-4) |
-| Prohibido | API keys en navegadores; el embed usa `POST /sesiones-tercero` servidor a servidor |
+| Prohibido | API keys en navegadores; el embed usa `POST /sesiones-usuario` servidor a servidor. El CORS opcional (SE-5) no admite `X-Api-Key` ni `X-Usuario-Delegado` |
 
 ---
 
@@ -189,7 +226,7 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 | Binarios | MinIO con **SSE-KMS y clave por tenant** para `tenant-{id}` (P-14-3); `boveda` con clave de plataforma; buckets separados con IAM; versionado; Object Lock governance sobre versiones referenciadas (prod). Cierre de tenant ⇒ borrado criptográfico de su clave |
 | Región | Atributo del tenant (P-14-2); un despliegue por región; on-premise = instancia del cliente; la IA externa se declara en la autorización |
 | Base de datos | Cifrado de volumen; columnas sensibles (SMTP, secretos de webhook, credenciales de verificadores, números de cuenta) con Data Protection **por tenant**; claves protegidas por certificado X.509 o KMS |
-| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave |
+| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave. El sello de los certificados es una semilla Ed25519 (`Validasoft:Certificados:ClavePrivada`, 32 bytes en base64; en `appsettings.Development.json` solo una de desarrollo): su `kid`, la publicación de la pública en `/.well-known/validasoft-certificados.json` y la rotación (la anterior pasa a `ClavesAnteriores`) están en CE-4 del [registro](decisiones/registro.md) |
 | Logs | Sin tokens, llaves ni cuerpos; redacción de correos e identificaciones |
 | Backups | Cifrados; restauración probada en pipeline (GitHub Actions) |
 
@@ -241,7 +278,15 @@ Firma HMAC con timestamp; secretos de 256 bits con rotación solapada; payloads 
 | Amenaza | Ejemplo | Mitigación |
 |---|---|---|
 | Suplantación | Magic link interceptado | Un solo uso, 72 h, OTP, sesión ligada, `410` |
+| Suplantación | Token de refresco del tercero robado (XSS, equipo compartido) | Cookie `HttpOnly; Secure; SameSite=Lax` con `Path=/public/v1/sesion`; rotación en cada renovación y **detección de reuso** que revoca la familia (RE-3); máximo absoluto 8 h; cierre explícito |
+| Suplantación | CSRF contra renovar o cerrar | `SameSite=Lax` + cabecera obligatoria `X-Validasoft-Cliente: public` (un formulario de otro sitio no puede ponerla; sin ella `403`) |
+| Divulgación | Enumerar correos con «pedir acceso» | Respuesta idéntica (`202`) exista o no; límite por IP y 3 envíos por hora por correo sin revelarlo; la carrera entre dos solicitudes se resuelve sin cambiar la respuesta |
+| Denegación | Bombardear el buzón de un tercero con «pedir acceso» | 3 enlaces por hora por correo (RE-2) además de 60/min por IP |
 | Suplantación | Token del ERP falsificado | Introspección/firma por tenant |
+| Suplantación | Aserción `X-Usuario-Delegado` capturada (log, proxy) y repetida dentro de sus 5 min | `jti` obligatorio de un solo uso por sistema (SE-4): segundo uso ⇒ `401 asercion-reutilizada`, también en paralelo |
+| Manipulación | Clickjacking: un sitio ajeno enmarca las pantallas de Validasoft | `frame-ancestors 'self'` + orígenes registrados de sistemas activos (SE-1); la app del tercero solo `'self'` |
+| Suplantación | Página ajena que aloja el iframe le entrega una sesión o recibe sus mensajes | El puente solo acepta y envía `postMessage` a orígenes publicados por la API (SE-2) |
+| Denegación | Evadir el límite por IP falseando `X-Forwarded-For` | La cabecera solo cuenta desde proxies confiables configurados y se toma la entrada que agregó el proxy (SE-6) |
 | Suplantación | Cambio de cuenta bancaria fraudulento | Solo el tercero propone; certificación con `IdentidadCoincide`; 2 aprobadores de la empresa; evento al ERP |
 | Manipulación | Binario ya aceptado | Hash, Object Lock, hash en certificado |
 | Manipulación | Documento editado | Señales de manipulación como hecho; humano en caso de duda |
@@ -261,6 +306,8 @@ Firma HMAC con timestamp; secretos de 256 bits con rotación solapada; payloads 
 ---
 
 ## 11. Operación de seguridad
+**Implementado (2026-11-08, SE-7):** `.github/workflows/ci.yml` (build con advertencias como error, pruebas con Testcontainers, frontend completo, imagen Docker sin publicar y `dotnet list package --vulnerable` informativo) y `.github/dependabot.yml` (NuGet, npm/pnpm, Actions y Docker, semanal). Pendiente: `pnpm audit`, SBOM, Trivy, cosign, ZAP.
+
 Dependabot, `dotnet list package --vulnerable`, `pnpm audit` en GitHub Actions; SBOM (Syft), Trivy, cosign, no root, FS de solo lectura; CSP estricta; suite de autorización negativa generada desde OpenAPI (endpoint × rol × empresa); pruebas de tenancy cruzada (dos tenants, dos empresas por tenant, un tercero); ZAP baseline; respuesta a incidentes (rotación masiva, revocación de sesiones, export firmado).
 
 ---

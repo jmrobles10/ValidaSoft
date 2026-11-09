@@ -1,0 +1,19 @@
+import { useTranslation } from 'react-i18next';
+import type { AvanceTercero } from './avance';
+
+/** Frase debajo del chip, la misma en «Mis empresas» y en la revisión. */
+export function useTextoAvance() {
+  const { t } = useTranslation();
+  return (avance: AvanceTercero, empresa: string) => {
+    switch (avance.tipo) {
+      case 'faltan':
+        return t('expediente.faltan', { count: avance.documentos, empresa });
+      case 'enRevision':
+        return t('expediente.estadoTexto.EnRevision', { empresa });
+      case 'observado':
+        return t('expediente.estadoTexto.Observado', { empresa });
+      case 'aprobado':
+        return t('expediente.estadoTexto.Aprobado', { empresa });
+    }
+  };
+}

@@ -24,8 +24,14 @@ Sistema de validación documental para cualquier vínculo comercial (proveedor, 
 | 09 | [Plan de hitos y responsabilidades](docs/09-plan-de-hitos-y-responsabilidades.md) | Hitos H0–H11 con entregables, responsables y criterios de aceptación |
 | 10 | [Glosario](docs/10-glosario.md) | Lenguaje ubicuo y equivalencias con el legado |
 | 11 | [Trazabilidad por hito](docs/11-trazabilidad-por-hito.md) | Qué endpoints, DTOs, eventos, alertas y pantallas entrega cada hito |
+| 12 | [Plan de ejecución con Claude](docs/12-plan-de-ejecucion-con-claude.md) | Tareas por hito con modelo, esfuerzo de razonamiento y días-persona |
+| 13 | [Flujo de trabajo con Claude Code](docs/13-flujo-de-trabajo-con-claude-code.md) | Qué sesión abrir, con qué modelo, qué prompt dar, en qué orden y cómo se pasan trabajo |
 | ADR | [Decisiones de arquitectura](docs/adr/) | Por qué se decidió cada cosa estructural |
 | — | [Cuestionario](docs/decisiones/cuestionario.md) y [Registro de decisiones](docs/decisiones/registro.md) | Las 97 preguntas del experto y lo que Producto decidió |
+
+## Frontend
+
+Workspace pnpm (`apps/web`, `apps/public`, `packages/ui`, `packages/api-client`): ver [apps/web/README.md](apps/web/README.md) para comandos, la demo embebida y lo pendiente, y [apps/public/README.md](apps/public/README.md) para la app del tercero.
 
 ## Reglas de oro del producto (resumen)
 

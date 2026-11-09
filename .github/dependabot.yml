@@ -1,0 +1,48 @@
+# Actualizaciones semanales de dependencias (docs/04 §11, SE-7). Las menores y de parche se agrupan en un solo PR por
+# ecosistema; las mayores llegan una por una para revisarlas con calma.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      nuget-menores:
+        update-types: ["minor", "patch"]
+
+  # pnpm: Dependabot lee pnpm-lock.yaml en la raíz del workspace.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-menores:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      acciones:
+        patterns: ["*"]
+
+  # Imágenes base del Dockerfile de la API (node, dotnet sdk y aspnet).
+  - package-ecosystem: docker
+    directory: "/src/Validasoft.Api"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(docker)"

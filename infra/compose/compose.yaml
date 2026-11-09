@@ -1,0 +1,77 @@
+# Entorno local de Validasoft (docs/04 §11).
+#   docker compose -f infra/compose/compose.yaml up -d          -> PostgreSQL, Mailpit y MinIO (la API corre con dotnet run)
+#   docker compose -f infra/compose/compose.yaml --profile app up -d --build   -> PostgreSQL + API en contenedor
+name: validasoft
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: validasoft
+      POSTGRES_USER: validasoft
+      POSTGRES_PASSWORD: validasoft
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U validasoft -d validasoft"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Correo de desarrollo: SMTP en 1025 y bandeja web en http://localhost:8025 (invitaciones, códigos OTP, autorregistro).
+  mailpit:
+    image: axllent/mailpit:v1.33
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  # Binarios de la bóveda (S3 compatible, docs/04 §6): API S3 en 9000 y consola web en http://localhost:9001
+  # (usuario validasoft / validasoft-minio-solo-local). Los buckets los crea la API al arrancar en desarrollo.
+  # Imagen: fork comunitario pgsty/minio (misma línea de comandos que minio/minio, que ya no se publica en Docker Hub).
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: validasoft
+      MINIO_ROOT_PASSWORD: validasoft-minio-solo-local
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-datos:/data
+
+  api:
+    profiles: ["app"]
+    build:
+      context: ../..
+      dockerfile: src/Validasoft.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Validasoft: "Host=postgres;Port=5432;Database=validasoft;Username=validasoft;Password=validasoft"
+      Validasoft__Plataforma__ClaveBootstrap: "dev-plataforma-solo-local-cambiar-0001"
+      Validasoft__Sesiones__ClaveFirma: "dev-sesiones-solo-local-cambiar-000000000001"
+      Validasoft__Persistencia__CrearEsquemaAlIniciar: "true"
+      Validasoft__Correo__Host: "mailpit"
+      Validasoft__Correo__Puerto: "1025"
+      Validasoft__Correo__Seguridad: "None"
+      Validasoft__Almacen__Endpoint: "http://minio:9000"
+      Validasoft__Almacen__EndpointPublico: "http://localhost:9000"
+      Validasoft__Almacen__AccessKey: "validasoft"
+      Validasoft__Almacen__SecretKey: "validasoft-minio-solo-local"
+      Validasoft__Almacen__CrearBucketsAlIniciar: "true"
+    ports:
+      - "5080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      minio:
+        condition: service_started
+
+volumes:
+  postgres-datos:
+  minio-datos:

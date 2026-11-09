@@ -1,0 +1,17 @@
+# Contexto de `docker build` = raíz del repositorio (src/Validasoft.Api/Dockerfile).
+.git
+.github
+.claude
+.vs
+.idea
+docs
+tests
+**/bin
+**/obj
+**/TestResults
+**/node_modules
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+apps/web/.semilla.local.json

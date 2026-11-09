@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx.Http" />
+    <!-- Sello Ed25519 de los certificados (CE-4): .NET 10 no expone Ed25519. -->
+    <PackageReference Include="BouncyCastle.Cryptography" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Dominio\Validasoft.Dominio.csproj" />
+    <ProjectReference Include="..\Validasoft.Contratos\Validasoft.Contratos.csproj" />
+  </ItemGroup>
+</Project>

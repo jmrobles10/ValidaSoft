@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    El dominio no depende de Marten ni de la base de datos. Solo usa la abstracción de eventos de JasperFx y su
+    generador de código, que Marten 9 exige en el ensamblado donde viven los agregados (Apply/Create).
+  -->
+  <ItemGroup>
+    <PackageReference Include="JasperFx.Events" />
+    <PackageReference Include="JasperFx.Events.SourceGenerator" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

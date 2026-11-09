@@ -208,6 +208,7 @@ Reconstrucción: `dotnet Validasoft.Api -- proyecciones rebuild <nombre>` (coman
 | Scheduled messages | SLA de etapa (`VencerSlaRevision`), expiración de magic link, recordatorio de carga pendiente, `PlazoRevalidacionVencido` (tras `diasRevalidacion`, 15 por defecto ⇒ certificado `ConPendientes` bloqueante, A-2) |
 | Job diario | `ProcesarVencimientosDelDia` lee `VencimientoProgramado` y `FrescuraDocumentoTercero` y emite comandos idempotentes (`MarcarPorVencer`, `MarcarVencido`, `EnviarAvisoConsolidado`) |
 | Errores | `RetryWithCooldown(1s, 5s, 30s)` para transitorios; `MoveToErrorQueue` tras N; panel de dead letters en Configuración con reintento manual |
+| **Implementado (NW, 2026-11-08)** | Colas **locales** durables (aún no el transporte PostgreSQL): `correo`, `requisitos`, `vigencias` y **`webhooks`** (secuencial: un intento a la vez, en orden; los reintentos con backoff van como mensajes programados y no la bloquean). **Daemon asíncrono de Marten** en modo *hot/cold* (un líder por bloqueo consultivo) con la suscripción `eventos-publicos` (`BatchSubscription` de Wolverine): lee el event store en orden y, en la misma transacción que su avance, registra los eventos públicos, crea las entregas de webhook, encola sus envíos, guarda la campana y encola los correos a personas (docs/05 §6.5, NW-3). Es el primer uso del daemon; el resto de proyecciones siguen inline. |
 
 ### Sagas (persistidas en Marten)
 | Saga | Dispara | Pasos | Compensación |
@@ -227,7 +228,7 @@ Reconstrucción: `dotnet Validasoft.Api -- proyecciones rebuild <nombre>` (coman
 | Regla | Detalle |
 |---|---|
 | Buckets | `boveda` para documentos globales (clave de plataforma); `tenant-{id}` para `PorVinculo` de todas las empresas del tenant (SSE-KMS con la clave del tenant); **no** hay bucket por empresa: el aislamiento entre empresas del grupo es lógico (`empresa_id` en la clave y en la autorización) |
-| Clave | `terceros/{terceroId}/{sha256}.{ext}` y `empresas/{empresaId}/vinculos/{vinculoId}/{sha256}.{ext}`; nombre original en `x-amz-meta-nombre-original` (nunca en la clave: el Portal usaba el nombre del tercero como carpeta) |
+| Clave | `terceros/{terceroId}/{sha256}` y `empresas/{empresaId}/vinculos/{vinculoId}/{sha256}` (sin extensión, como en [02 §10.2](02-modelo-documental-compartido.md); el tipo real va en `Content-Type`, BO-2); nombre original en `x-amz-meta-nombre-original` (nunca en la clave: el Portal usaba el nombre del tercero como carpeta). Zonas auxiliares: `cargas/{cargaId}` (subida temporal) y `cuarentena/{documentoId}/v{n}` (versiones devueltas) |
 | Subida | Dos pasos: `POST …/documentos` declara nombre, tamaño, mime y sha256 → URL prefirmada PUT (5 min) con `x-amz-checksum-sha256` → `POST /documentos/{docId}/versiones/{n}/confirmar` verifica existencia y hash, emite `VersionCargada` |
 | Descarga | Solo URL prefirmada GET (5–15 min) emitida tras comprobar `comparticion_version` o propiedad; cada emisión registra `DocumentoAccedido` |
 | Dedupe | Único `(documento_id, sha256)`: subir el mismo archivo devuelve la versión existente y propone "ratificar" si el tipo lo permite |
@@ -384,6 +385,7 @@ Cada decisión automática emite `VeredictoAutomaticoEmitido(expediente, requisi
 | Preferencias | Por usuario: evento × canal; resumen diario opcional |
 | Soporte | Todo correo y pantalla del tercero muestra el contacto de soporte de la **empresa** (primer nivel, P-15-4); la plataforma solo aparece para incidentes técnicos |
 | Prohibido | Enviar contraseñas; enlaces sin expiración; HTML sin escape del comentario de la empresa (bug conocido del Portal) |
+| **Implementado (NW, 2026-11-08)** | Disparo por la suscripción `eventos-publicos` (§5); campana como documento `Notificacion` por usuario y tenant (+ SSE `/notificaciones/stream`); correos consolidados por persona y hecho por la cola `correo`; preferencias de correo por tipo (`PreferenciasNotificacion`); plantillas en código (`RedactorDeCorreos`), sin Fluid ni edición por tenant todavía; dedupe por id determinista `(evento, usuario, tipo)`. Ver docs/05 §6.5. |
 
 ---
 
@@ -430,6 +432,20 @@ services:
     environment: { VALIDASOFT_ROL: worker }
 ```
 
+**Implementado en `infra/compose/compose.yaml` (2026-11-06):** `postgres:17`, `mailpit` (SMTP 1025, bandeja 8025) y `minio` con la imagen `pgsty/minio:RELEASE.2026-08-04T00-00-00Z` (fork comunitario con la misma línea de comandos; `minio/minio` ya no se publica en Docker Hub), API S3 en `9000` y consola en `http://localhost:9001` (`validasoft` / `validasoft-minio-solo-local`, solo local). La API crea el bucket `boveda` al arrancar si `Validasoft:Almacen:CrearBucketsAlIniciar` está activo (desarrollo) y los `tenant-{id}` con la primera carga `PorVinculo`. El servicio `api` (perfil `app`) usa `Validasoft__Almacen__Endpoint=http://minio:9000` para leer y `Validasoft__Almacen__EndpointPublico=http://localhost:9000` para firmar las URLs que abre el navegador. Las pruebas de integración levantan la misma imagen con `Testcontainers.Minio`. Aún no hay `worker`, `otel-lgtm` ni `clamav`.
+
+**Un solo origen: la API sirve las apps (2026-11-08, SE-3).** Opcional por configuración; la imagen de `src/Validasoft.Api/Dockerfile` lo trae encendido.
+
+| Ruta | Qué sirve | Configuración |
+|---|---|---|
+| `/app/` (`/app` redirige 301 a `/app/`) | `apps/web` (embebible; rutas con `#`, build con `base: './'`). Cualquier ruta sin extensión o `.html` bajo `/app/` ⇒ `index.html` con `Cache-Control: no-cache` y `Content-Security-Policy: frame-ancestors 'self' {orígenes de los sistemas activos}; base-uri 'self'; object-src 'none'` | `Validasoft:Apps:Web` = carpeta del `dist/` (relativa a la raíz de contenido) |
+| `/` | `apps/public` (tercero; rutas con historial, p. ej. `/e/{token}`). Fallback a `index.html` con `frame-ancestors 'self'` salvo en `/api`, `/public`, `/health`, `/openapi`, `/docs` y `/app` | `Validasoft:Apps:Publica` |
+| `…/assets/*` | Archivos con hash: `Cache-Control: public, max-age=31536000, immutable` y `X-Content-Type-Options: nosniff` | — |
+
+Vacías, la API no sirve esa app (en desarrollo se usa Vite: `/app` y `/` no existen en la API). Configuradas y sin `index.html` ⇒ la API no arranca. Con este despliegue `UrlPublica` es el mismo host, `apps/public` y `apps/web` llaman a `/public/v1` y `/api/v1` del mismo origen y no hace falta CORS; `Validasoft:Cors:OrigenesPermitidos[]` solo para dominios separados ([07 §2.6](07-seguridad-identidad-y-tenancy.md) punto 8). Detrás de un proxy o balanceador, `Validasoft:Proxies:Confiables[]` (IP o CIDR) y `Validasoft:Proxies:Saltos` para que el límite por IP use la IP real.
+
+**Imagen (`src/Validasoft.Api/Dockerfile`, contexto = raíz).** Tres etapas: `node:22-bookworm-slim` con corepack/pnpm (`pnpm install --frozen-lockfile` sobre los manifiestos y `pnpm --filter @validasoft/web --filter @validasoft/public build`), `dotnet/sdk:10.0` (`dotnet publish`) y `dotnet/aspnet:10.0` con los `dist/` en `/app/frontend/{web,public}` y `Validasoft__Apps__Web=frontend/web`, `Validasoft__Apps__Publica=frontend/public`. `.dockerignore` deja fuera `node_modules`, `bin/obj`, `dist`, `.git`, `.claude`, `docs` y `tests`.
+
 Comandos: `make up | down | migrar | seed | test | e2e | logs` y `build.ps1` equivalentes. `-- seed demo` crea el tenant `demo` con **dos empresas internas** (`Constructora Norte`, `Constructora Sur`), flujo "Habilitación de proveedores" (Compras, Legal, Financiera, Cumplimiento; SST opcional), semilla de tipos canónicos (P-2-3), catálogo de identificación multipaís, usuarios por rol y tres terceros con documentos fixture (uno compartido por las dos empresas para demostrar aislamiento de decisiones y revalidación).
 
 Entornos (P-15-3): **SaaS** con `dev`/`test`/`prod` compartidos entre tenants, región como atributo del tenant (P-14-2; MVP una región + on-premise); **on-premise** una instancia por cliente con sus propios entornos. Variables de tenant que cambian por región: endpoint de MinIO, KMS, SMTP.
@@ -446,6 +462,8 @@ Secretos: variables `_FILE` (Docker secrets) o proveedor `IConfiguration` de Key
 | `e2e.yml` | PR con etiqueta `e2e`, nightly y antes de `desplegar` | Playwright sobre compose efímero con IA en modo fixture; ensayo mensual de restauración de backup | flujos a–h rojos |
 | `imagenes.yml` | Tag `v*` y `main` | Build multi-stage de `app` (`api`/`worker`), `web`, `public`; SBOM (Syft); escaneo (Trivy); firma (cosign keyless); push a **GHCR**; publicación de NuGet (`Contratos`, `Sdk`) en GitHub Packages y de `@validasoft/sdk` en npm interno | vulnerabilidad crítica |
 | `desplegar.yml` | Manual (`workflow_dispatch`) o tras `imagenes` | Por entorno con **GitHub Environments** (`test` automático, `prod` con *required reviewers*); `-- migrar` antes del `api`; smoke de `/health/ready` | migración o smoke fallidos |
+
+**Implementado (2026-11-08, SE-7):** `.github/workflows/ci.yml` en cada push y PR con tres jobs en paralelo: **backend** (`setup-dotnet` 10.0.x, caché de `~/.nuget/packages` por hash de `Directory.Packages.props`/`*.csproj`, `dotnet build -c Release` —`TreatWarningsAsErrors`: una advertencia de compilación rompe el job—, `dotnet test` con Testcontainers sobre el Docker del runner, `dotnet list package --vulnerable` informativo y los `.trx` como artefacto si falla), **frontend** (`pnpm/action-setup` con la versión de `packageManager`, `setup-node` 22 con caché de pnpm, `pnpm install --frozen-lockfile`, `lint`, `typecheck`, `test`, `build`) e **imagen** (Buildx + `build-push-action` con `push: false` y caché `gha`). `.github/dependabot.yml`: NuGet, npm (pnpm), GitHub Actions y las imágenes base del Dockerfile, semanal, menores y parches agrupados. Aún no: snapshot de OpenAPI, regeneración del `api-client`, NetArchTest, `e2e.yml`, `imagenes.yml`, `desplegar.yml`.
 
 Gobierno:
 - `main` protegida: PR obligatoria, **2 aprobaciones**, CI verde, conversaciones resueltas, sin *force push*; `CODEOWNERS` por carpeta (dominio → Backend A, infraestructura → Backend B, `apps/` → Frontend, `docs/` → Arquitectura + Producto).

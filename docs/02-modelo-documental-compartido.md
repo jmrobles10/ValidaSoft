@@ -112,6 +112,8 @@ flowchart LR
 
 (`tiposAceptados[]` no es atributo del tipo: pertenece a la regla de exigencia del flujo.)
 
+**Implementado (TD-1…TD-5, 2026-11-08).** El tipo del tenant configura además `formatosPermitidos`, `tamanoMaximoMb` y `paginasMaximas` (nunca más laxos que el canónico ni que los límites globales; el canónico trae su techo: RUT, Cámara, EEFF y renta solo PDF), `modo` (`Archivo`, `Formulario`, `ArchivoYFormulario`) con `campos[]` propios —que reemplazan, por ahora, al esquema canónico + `camposPrivados`: un tipo con campos es siempre `PorVinculo`— y una plantilla descargable versionada (`plantillaVersionId` es la versión vigente del tipo). Contrato: [05 §2.9.4](05-api-contratos-y-webhooks.md).
+
 ### 4.3-bis Jerarquía de configuración (B-4)
 
 ```
@@ -189,8 +191,9 @@ Sin IA, la comparación es solo por hash (`Distinta`) y no hay revisión automá
 
 ### 6.1 Cuándo se comparte (B-1, ADR-0009)
 - **Nunca antes de que el tercero acepte la invitación de esa empresa.** Al crear un vínculo, la empresa solo recibe "tercero existente en Validasoft; N de tus requisitos podrían quedar cubiertos con lo que ya tiene", sin nombres de documentos ni versiones. Esto cierra la cosecha de información por NIT y cumple la Ley 1581 (autorización previa por responsable).
-- Al aceptar la invitación (`InvitacionAceptada` + consentimientos para esa empresa), se comparte la versión actual de cada tipo exigido que ya exista en la bóveda; el tercero no vuelve a subir el RUT para cada empresa.
-- Al volverse `Actual` una versión nueva, se comparte automáticamente con **todos los vínculos ya aceptados** del tercero cuyo snapshot de requisitos incluya ese tipo canónico (P8).
+- Al aceptar la invitación (`InvitacionAceptada` + consentimientos para esa empresa), se comparte la versión actual de cada tipo que **piden los requisitos del flujo** resuelto para ese vínculo (el suyo o el por defecto de la empresa y el tipo de vínculo) y que ya exista en la bóveda; el tercero no vuelve a subir el RUT para cada empresa. En la misma transacción se abre el expediente y esos requisitos nacen `Cargado`.
+- Al volverse `Actual` una versión nueva, se comparte automáticamente con **todos los vínculos ya aceptados** del tercero cuyo expediente abierto o flujo vigente pide ese tipo canónico (P8), y se adjunta a los requisitos de su expediente abierto (invalidando solo los veredictos de ese requisito).
+- **Fuente de la compartición (RQ-3, 2026-11-06).** Lo que se comparte con una empresa lo decide el **flujo** (sus requisitos), no una lista de exigencias por tipo de documento (la decisión BO-3 queda reemplazada). Si un vínculo aceptado no tiene flujo publicado, no recibe ningún documento global hasta que se abra su expediente (al abrirlo se comparte lo que pide). Los documentos `PorVinculo` siguen ligados a su vínculo y se comparten con él al aceptar. Mientras no existan las reglas de exigencia por condiciones (§12 de [03](03-dominio-y-eventos.md)), los requisitos de una versión de flujo son fijos y el revisor puede eximir uno con justificación.
 - El tercero **no puede excluir** a una empresa vinculada (A-8): la única forma de que una empresa deje de recibir versiones nuevas es la desvinculación o el bloqueo del vínculo.
 - Al desvincularse o bloquearse, la compartición se **congela** hacia adelante (`ComparticionCongelada`: no llegan versiones nuevas); lo ya compartido sigue legible para la empresa por retención. Al desbloquear se reanuda y se comparte la versión actual si cambió.
 
@@ -263,6 +266,8 @@ vigente_hasta = mín(capa1, capa2);  motivo_vigencia = cuál ganó
 | RUT, regla `MaxDiasDesdeExpedicion(365)` (Anexo A de 03) | 365 días desde la generación del PDF; ratificable | según B |
 
 Es correcto que A vea vencida la misma versión que B ve vigente: **el hecho es uno; la exigencia es de cada una**.
+
+**Implementado (TD-6, TD-7, 2026-11-08).** La vigencia se registra por versión **y vínculo** en el stream del documento con la regla del tipo del tenant de ese vínculo; `fecha_expedicion` y `fecha_vencimiento` salen de los campos declarados (claves reservadas) y, sin `fecha_expedicion`, la base es la fecha de carga (también para `MaxDiasDesdeAprobacion` hasta H6); `PeriodoMinimo` aún no da fecha. Los avisos de §8.3 ya salen (un correo por tercero y fecha, con la fecha de cada empresa) y la versión queda `Vencida` para el vínculo al pasar la gracia (`EstadoVersion.Vencida` cuando vence para todos). Los pasos 2–4 de §8.2 (vínculo `PorVencer`/`Vencido`, renovación, certificado) siguen pendientes (H6).
 
 ### 8.2 Qué pasa al vencer en A
 1. `version_aceptada` de A pasa a `Vencida`; el requisito de A queda `Vencido`.
