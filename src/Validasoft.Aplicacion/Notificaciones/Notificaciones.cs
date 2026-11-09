@@ -73,16 +73,18 @@ public static class TiposNotificacion
 {
     public const string NuevoEnArea = "expediente.nuevo_en_area";
     public const string TerceroRespondio = "expediente.tercero_respondio";
+    public const string VersionNueva = "expediente.version_nueva";
     public const string Aprobado = "expediente.aprobado";
     public const string Rechazado = "expediente.rechazado";
     public const string PorVencer = "documento.por_vencer";
     public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
 
-    public static readonly IReadOnlyList<string> Todos = [NuevoEnArea, TerceroRespondio, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado];
+    public static readonly IReadOnlyList<string> Todos =
+        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
-    public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, WebhookDeshabilitado];
+    public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -127,6 +129,8 @@ public sealed class PlanificadorDeNotificaciones
                 return await AAreasAsync(evento, contexto, TiposNotificacion.NuevoEnArea, etapa.Areas, orden, ct);
             case ExpedienteReenviado reenviado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.TerceroRespondio, reenviado.AreasReabiertas, orden, ct);
+            case VersionAdjuntadaARequisito { NumeroAnterior: not null } adjuntada:
+                return await VersionNuevaAsync(evento, adjuntada, contexto, orden, ct);
             case ExpedienteAprobado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Aprobado, null, orden, ct);
             case ExpedienteRechazado:
@@ -162,6 +166,28 @@ public sealed class PlanificadorDeNotificaciones
         };
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, tipo, titulo, mensaje, expediente.Id,
             expediente.VinculoId, expediente.Folio, deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+    }
+
+    /// <summary>
+    /// El tercero subió una versión nueva de un documento mientras el expediente está en revisión (p. ej. una revalidación
+    /// ya abierta): avisa a las áreas que revisan ese requisito, porque lo decidido sobre la versión anterior quedó sin efecto
+    /// (RQ-10). Con el expediente observado no avisa: de eso se encarga «El tercero respondió» al reenviar.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> VersionNuevaAsync(IEvent evento, VersionAdjuntadaARequisito adjuntada, IContextoDeEventos contexto,
+        long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.ExpedienteAsync(tenantId, evento.StreamId, ct) is not { } expediente ||
+            expediente.Estado != EstadoExpediente.EnRevision || expediente.Requisitos.FirstOrDefault(r => r.Id == adjuntada.RequisitoId) is not { } requisito)
+            return PlanDeNotificaciones.Vacio;
+
+        var ids = requisito.AreasQueRevisan.Count > 0 ? requisito.AreasQueRevisan : expediente.AreaIds;
+        var deLasAreas = (await contexto.AreasAsync(tenantId, [.. ids], ct)).Where(a => a.EmpresaId == expediente.EmpresaId).ToList();
+        var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+        var mensaje = $"{expediente.TerceroNombre} subió la versión {adjuntada.Version.Numero} de {requisito.Nombre} (antes la " +
+                      $"{adjuntada.NumeroAnterior}): lo decidido sobre la anterior quedó sin efecto y hay que revisarla de nuevo.";
+        return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
+            "Versión nueva de un documento", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
+            deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
     }
 
     private static async Task<PlanDeNotificaciones> PorVencerAsync(IEvent evento, VencimientoAvisado aviso, IContextoDeEventos contexto, long orden,
