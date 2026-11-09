@@ -169,7 +169,8 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
         var e = await PrepararAsync();
         await CrearFlujoAsync(e, "CLIENTE",
             [new EtapaDto(1, [new AreaDeEtapaDto(e.Aprobador.Id), new AreaDeEtapaDto(e.Cumplimiento.Id, PuedeRechazarExpediente: true)])]);
-        var vinculo = await CrearVinculoAsync(e, "CLIENTE", CorreoNuevo());
+        var correoTercero = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e, "CLIENTE", correoTercero);
         var expediente = await ApiAsync<ExpedienteDto>("POST", $"/api/v1/vinculos/{vinculo.Id}/expedientes", Admin(e), new AbrirExpedienteDto(), 201);
 
         // El aprobador inicial no puede rechazar; cumplimiento sí, con motivos y justificación.
@@ -184,6 +185,11 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
             new RechazarExpedienteDto(e.Cumplimiento.Id, ["no-corresponde-al-tercero"], "Aparece en listas restrictivas."), 200);
         rechazado.Estado.ShouldBe("Rechazado");
         rechazado.Rechazo!.Justificacion.ShouldBe("Aparece en listas restrictivas.");
+
+        // El tercero se entera por correo con el texto del motivo; la justificación es interna.
+        var aviso = await Correos.EsperarAsync(correoTercero, m => m.Asunto.Contains("sin aprobarla"));
+        aviso.Texto.ShouldContain("El documento no corresponde a la persona o empresa que se está validando.");
+        aviso.Texto.ShouldNotContain("listas restrictivas");
 
         var despues = await ApiAsync("POST", $"/api/v1/expedientes/{expediente.Id}/areas/{e.Aprobador.Id}/veredicto", Delegado(e, e.Laura),
             new VeredictoDto("Aprobado"), 409);

@@ -182,6 +182,25 @@ public static class ProcesoDeValidacion
 
         if (correo is not null && eventos.OfType<ExpedienteObservado>().Any())
             await PublicarObservacionAsync(sesion, estado, correo, ahora, ct);
+        if (correo is not null && resultado is ResultadoExpediente.Aprobado or ResultadoExpediente.Rechazado)
+            await PublicarResultadoAsync(sesion, estado, eventos, correo, ct);
+    }
+
+    /// <summary>
+    /// Aviso al tercero de que su validación se cerró (docs/05 §8): aprobada o rechazada con los textos al tercero de los
+    /// motivos. Antes solo se enteraban las áreas: el tercero no sabía del rechazo si no volvía a entrar.
+    /// </summary>
+    private static async Task PublicarResultadoAsync(IDocumentSession sesion, Expediente estado, IReadOnlyList<object> eventos, CorreoAlTercero correo,
+        CancellationToken ct)
+    {
+        var vinculo = await sesion.LoadAsync<Vinculo>(estado.VinculoId, ct);
+        if (vinculo is null || string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
+            return;
+
+        var empresa = await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct);
+        var rechazo = eventos.OfType<ExpedienteRechazado>().FirstOrDefault();
+        await correo.Mensajes.PublishAsync(new CorreoDeResultadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
+            rechazo is null, rechazo is null ? [] : [.. rechazo.Motivos.Select(m => m.TextoAlTercero)]));
     }
 
     /// <summary>
