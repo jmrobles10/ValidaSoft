@@ -139,7 +139,12 @@ public static class InvitacionesPublicasEndpoints
         var aceptada = await Peticiones.ConReintentosAsync(() => AceptarUnaVezAsync(vinculoId, dto, http, sesiones, contexto, tercero, enSesion, certificados, reloj, ct));
         // Lo compartido al aceptar (sin outbox de la bóveda) calcula sus vigencias por mensaje (TD-6).
         if (aceptada.Compartidos.Count > 0)
+        {
             await mensajes.PublishAsync(new Documentos.CalcularVigenciasDelVinculo(tercero.TerceroId, vinculoId));
+            // Y su análisis con IA (o el consumo de la validación si ya está analizado, ADR-0012).
+            await mensajes.PublishAsync(new Ia.AnalizarIaDelVinculo(tercero.TerceroId, vinculoId));
+        }
+
         return aceptada;
     }
 

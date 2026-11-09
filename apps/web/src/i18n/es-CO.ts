@@ -5,6 +5,7 @@ import { certificadosLista } from './es-CO-certificados-lista';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { inicio } from './es-CO-inicio';
+import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
@@ -32,6 +33,7 @@ export const esCO = {
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
     plantillas: 'Plantillas de correo',
+    'uso-ia': 'Plan y uso de IA',
     'tipos-documento': 'Tipos de documento',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
@@ -252,6 +254,7 @@ export const esCO = {
   terceros,
   auditoria,
   plantillas,
+  ia,
   motivos,
   flujos,
   historial: {

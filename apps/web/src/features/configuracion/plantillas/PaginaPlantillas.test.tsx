@@ -128,14 +128,14 @@ describe('Plantillas de correo', () => {
     await usuario.paste('Bienvenido');
 
     await waitFor(() => expect(within(drawer).getByTestId('asunto-previa')).toHaveTextContent('Asunto: Constructora Norte te espera'));
+    // La vista previa con el asunto puede haberse pedido antes de pegar la cabecera: se espera la que ya la trae.
+    const marco = within(drawer).getByTitle('Vista previa del correo «Invitación»');
+    await waitFor(() => expect(marco.getAttribute('srcdoc')).toContain('<p>Bienvenido</p>'));
+    expect(marco).toHaveAttribute('sandbox', '');
     const previas = peticiones.filter((p) => p.url.endsWith('/vista-previa'));
     expect(previas.at(-1)).toEqual({ metodo: 'POST', url: `${RUTA}/invitacion/correo/vista-previa`, cuerpo: { asunto: '{{empresa}} te espera', cabecera: 'Bienvenido', pie: null } });
     expect(previas.length).toBeLessThanOrEqual(3); // diferida: no una petición por tecla
     expect(peticiones.some((p) => p.metodo === 'PUT')).toBe(false);
-
-    const marco = within(drawer).getByTitle('Vista previa del correo «Invitación»');
-    expect(marco).toHaveAttribute('sandbox', '');
-    expect(marco.getAttribute('srcdoc')).toContain('<p>Bienvenido</p>');
 
     await usuario.click(within(drawer).getByRole('button', { name: 'Texto plano' }));
     expect(within(drawer).getByText(/Bienvenido\s+Cuerpo del correo\./)).toBeInTheDocument();

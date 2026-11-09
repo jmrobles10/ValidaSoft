@@ -1,5 +1,5 @@
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
-import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type ExpedienteDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
+import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type ExpedienteDto, type HechosDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha } from '@validasoft/ui';
 import { Clock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -29,17 +29,19 @@ export interface TarjetaRequisitoProps {
   onAccion: (dialogo: DialogoExpediente) => void;
   /** Muestra «Aprobar u observar» por documento (acción secundaria; la principal es la decisión del área). */
   decidirPorDocumento?: boolean;
+  /** Hechos de la versión vigente (de los documentos del vínculo): la revisión automática (IA-11). */
+  hechos?: HechosDto | null;
 }
 
 /**
  * Un documento que pide el flujo: estado, versión vigente (con «Ver» en el visor si trae archivo), su vigencia, los
- * datos que declaró el tercero y, por cada área que lo revisa, su
+ * datos que declaró el tercero, la revisión automática y, por cada área que lo revisa, su
  * estado, sus veredictos sobre la versión y «Aprobar u observar» cuando le toca a quien mira (RQ-4).
  */
-export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false }: TarjetaRequisitoProps) {
+export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false, hechos }: TarjetaRequisitoProps) {
   const { t } = useTranslation();
   const version = requisito.versionActual;
-  const visor = documentoEnVisor(requisito);
+  const visor = documentoEnVisor(requisito, hechos);
   const documento = requisito.tipoDocumento.nombre;
   const eximir = puedeEximir(expediente, requisito, contexto(null).scopes);
 
@@ -78,7 +80,7 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
 
       {visor && (
         <Box sx={{ mt: 1 }}>
-          <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} />
+          <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} hechos={visor.sinArchivo ? null : visor.hechos} tipoEsperado={visor.tipoEsperado} />
         </Box>
       )}
       {!version && requisito.estado === 'Pendiente' && (

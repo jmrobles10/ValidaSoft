@@ -3,6 +3,7 @@ import { SCOPES, type AreaExpedienteDto, type ExpedienteDto } from '@validasoft/
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
+import { claveVersion, hechosPorVersion, useDocumentosVinculo } from '../../documentos/api';
 import { VisorDocumento, type DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import type { ContextoRevisor, DialogoExpediente } from '../reglas';
 import { enFaseDeCarga, requisitosDe, requisitosFaltantes } from '../requisitos';
@@ -10,7 +11,8 @@ import { TarjetaRequisito } from './TarjetaRequisito';
 
 /**
  * Documentos que pide el flujo (docs/05 §2.4.2): la fase de carga mientras falten obligatorios y, por documento, su
- * versión vigente, el visor y las decisiones de cada área. No se muestra en un flujo sin requisitos (FL-1).
+ * versión vigente, el visor, la revisión automática y las decisiones de cada área. No se muestra en un flujo sin
+ * requisitos (FL-1). Los hechos de cada versión (IA-11) vienen de los documentos del vínculo (`documentos:leer`).
  */
 export function PanelRequisitos({
   expediente,
@@ -31,6 +33,8 @@ export function PanelRequisitos({
   const requisitos = requisitosDe(expediente);
   const faltantes = requisitosFaltantes(expediente);
   const puedeVer = contexto(null).scopes.has(SCOPES.documentosDescargar);
+  const documentos = useDocumentosVinculo(expediente.empresaId, expediente.vinculoId, contexto(null).scopes.has(SCOPES.documentosLeer));
+  const hechos = useMemo(() => hechosPorVersion(documentos.data ?? []), [documentos.data]);
   if (requisitos.length === 0) return null;
 
   return (
@@ -63,6 +67,7 @@ export function PanelRequisitos({
             onVer={setAbierto}
             onAccion={onAccion}
             decidirPorDocumento={porDocumento}
+            hechos={requisito.versionActual ? hechos.get(claveVersion(requisito.versionActual.documentoId, requisito.versionActual.n)) : null}
           />
         ))}
       </Stack>

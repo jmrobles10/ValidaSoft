@@ -76,6 +76,10 @@ export function crearRouter() {
                   lazy: () => import('../features/configuracion/plantillas/PaginaPlantillas').then((m) => ({ Component: m.PaginaPlantillas })),
                 },
                 {
+                  path: 'uso-ia',
+                  lazy: () => import('../features/configuracion/usoIa/PaginaUsoIa').then((m) => ({ Component: m.PaginaUsoIa })),
+                },
+                {
                   path: 'motivos',
                   lazy: () => import('../features/configuracion/motivos/PaginaMotivos').then((m) => ({ Component: m.PaginaMotivos })),
                 },

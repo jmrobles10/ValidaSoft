@@ -181,6 +181,14 @@ public static class ConfiguracionMarten
                     .Index(x => x.Orden);
                 opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
 
+                // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
+                // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
+                opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
+                opts.Schema.For<Validasoft.Dominio.Ia.ValidacionIaConsumida>().MultiTenanted()
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.DocumentoId);
+                opts.Schema.For<Validasoft.Dominio.Ia.UsoMensualIa>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
+
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);

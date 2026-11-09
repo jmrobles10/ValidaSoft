@@ -77,6 +77,8 @@ export function DocumentosVinculo({ vinculo }: { vinculo: VinculoDto }) {
                         datosDeclarados: datosDe(version),
                         vigencia: version.vigencia ?? null,
                         sinArchivo,
+                        hechos: version.hechos,
+                        tipoEsperado: { codigo: documento.tipo.codigo || null, nombre: documento.tipo.nombre },
                       })
                     }
                     aria-label={

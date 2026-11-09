@@ -80,11 +80,14 @@ public static class TiposNotificacion
     public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
 
+    /// <summary>La empresa llegó al 80 % o al 100 % de sus validaciones con IA incluidas del mes (IA-4).</summary>
+    public const string CupoIa = "ia.cupo";
+
     public static readonly IReadOnlyList<string> Todos =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
-    public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado];
+    public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -360,6 +363,44 @@ public sealed class PlanificadorDeNotificaciones
         })).ToList();
         var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.WebhookDeshabilitado))
             .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, "Webhook deshabilitado: " + suscripcion.Sistema, [mensaje], null))
+            .ToList();
+        return new PlanDeNotificaciones(campana, correos);
+    }
+
+    /// <summary>
+    /// Aviso a los administradores de la empresa (rol de todo el tenant o de esa empresa) cuando consume el 80 % o el 100 %
+    /// de sus validaciones con IA incluidas del mes (IA-4): campana y correo, uno por umbral y mes (id determinista).
+    /// </summary>
+    public static PlanDeNotificaciones CupoDeIa(Guid tenantId, Guid empresaId, string? empresa, int umbral, string mes, int consumidas, int incluidas,
+        bool adicionalHabilitado, IEnumerable<Usuario> usuarios, Func<Guid, PreferenciasNotificacion?> preferencias, DateTimeOffset ahora, long orden)
+    {
+        var administradores = usuarios
+            .Where(u => u.Activo && u.Roles.Any(r => r.Rol == Rol.Administrador && (r.EmpresaId is null || r.EmpresaId == empresaId)))
+            .OrderBy(u => u.Id)
+            .ToList();
+        var titulo = umbral >= 100 ? "Validaciones con IA agotadas" : $"Validaciones con IA al {umbral} %";
+        var siguiente = umbral < 100
+            ? "Cuando se agoten, "
+              + (adicionalHabilitado ? "las siguientes se cobran como adicionales." : "los documentos nuevos quedan sin análisis automático, para revisión humana.")
+            : adicionalHabilitado
+                ? "Las siguientes se cobran como adicionales."
+                : "Los documentos nuevos quedan sin análisis automático, para revisión humana, hasta el próximo mes.";
+        var mensaje = $"{empresa ?? "La empresa"} usó {consumidas} de {incluidas} validaciones con IA incluidas en {mes}. {siguiente}";
+        var ruta = $"/e/{empresaId}/uso-ia";
+        var campana = administradores.Select(u => (tenantId, new Notificacion
+        {
+            Id = Deterministas.Guid($"notificacion:ia-cupo:{empresaId:N}:{mes}:{umbral}:{u.Id:N}"),
+            UsuarioId = u.Id,
+            EmpresaId = empresaId,
+            Tipo = TiposNotificacion.CupoIa,
+            Titulo = titulo,
+            Mensaje = mensaje,
+            Enlace = ruta,
+            CreadaEn = ahora,
+            Orden = orden
+        })).ToList();
+        var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.CupoIa))
+            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}: {empresa ?? mes}", [mensaje], ruta))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }

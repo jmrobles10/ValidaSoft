@@ -166,6 +166,10 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plantillas-notificacion': 'listarPlantillasNotificacion',
   'PUT /api/v1/plantillas-notificacion/{evento}/{canal}': 'actualizarPlantillaNotificacion',
   'POST /api/v1/plantillas-notificacion/{evento}/{canal}/vista-previa': 'previsualizarPlantillaNotificacion',
+  // IA con OpenAI y cupo por empresa (ADR-0012): plan por Plataforma y uso de la empresa activa.
+  'GET /api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia': 'obtenerPlanIaEmpresa',
+  'PUT /api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia': 'actualizarPlanIaEmpresa',
+  'GET /api/v1/ia/uso': 'obtenerUsoIa',
   'GET /api/v1/indicadores': 'obtenerIndicadores',
   'GET /api/v1/vencimientos/excel': 'exportarVencimientos',
   'POST /api/v1/vencimientos/recordar': 'recordarVencimientos',

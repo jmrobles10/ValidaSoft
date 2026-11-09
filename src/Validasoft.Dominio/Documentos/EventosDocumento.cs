@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Validasoft.Dominio.Ia;
+
 namespace Validasoft.Dominio.Documentos;
 
 /// <summary>Estado de una versión (docs/03 §3.1). Un solo enum textual.</summary>
@@ -46,7 +49,8 @@ public enum OrigenComparticion
 
 /// <summary>
 /// Hechos básicos de una versión, calculados por la plataforma una sola vez (P5) y sin IA: hash verificado, MIME real
-/// por magic bytes, páginas, antivirus y comparación por hash. Los hechos de IA llegan con su módulo.
+/// por magic bytes, páginas, antivirus y comparación por hash. El análisis con OpenAI (ADR-0012) los marca <c>ConIa</c>
+/// y ajusta la revisión humana y la comparación; quien no consumió su validación los sigue viendo sin IA.
 /// </summary>
 public sealed record HechosBasicos(
     bool HashVerificado,
@@ -172,3 +176,42 @@ public sealed record DocumentoAccedido(
     string UserAgent,
     string Motivo,
     DateTimeOffset Fecha);
+
+/// <summary>
+/// Análisis de la versión con OpenAI (ADR-0012, IA-1…IA-6): se hace una sola vez por versión y se paga con la llave de
+/// <see cref="EmpresaQuePago"/>. Valen los hechos de la última llamada (la de escalamiento si la hubo); <see cref="Llamadas"/>
+/// guarda ambas y los tokens y el costo son la suma. <see cref="Campos"/> son los datos extraídos según el esquema del tipo;
+/// las páginas omitidas no se enviaron (IA-5). La comparación es la de los campos clave con el análisis de la versión
+/// anterior, sin otra llamada. Nunca guarda el contenido enviado.
+/// </summary>
+public sealed record AnalisisDeIaRegistrado(
+    int Numero,
+    string Modelo,
+    bool Escalado,
+    decimal Confianza,
+    bool Legible,
+    string TipoDetectado,
+    IReadOnlyDictionary<string, JsonElement> Campos,
+    IReadOnlyList<string> Alertas,
+    int? PaginasEnviadas,
+    int? PaginasOmitidas,
+    long TokensEntrada,
+    long TokensSalida,
+    decimal CostoUsd,
+    Guid TenantQuePago,
+    Guid EmpresaQuePago,
+    DateTimeOffset Fecha,
+    string? Observaciones = null,
+    bool PendienteRevisionHumana = true,
+    Comparacion? ComparacionConAnterior = null,
+    IReadOnlyList<string>? CamposCambiados = null,
+    IReadOnlyList<string>? CamposCriticosCambiados = null,
+    IReadOnlyList<LlamadaDeIa>? Llamadas = null,
+    long TokensEntradaEnCache = 0);
+
+/// <summary>
+/// El análisis con OpenAI falló (error, tiempo agotado, respuesta incompleta o fuera del esquema, llave inválida): la
+/// versión queda sin IA para revisión humana y no se vuelve a intentar (fail-closed, IA-6). <see cref="Motivo"/> es un
+/// código estable, nunca el contenido del documento.
+/// </summary>
+public sealed record AnalisisDeIaFallido(int Numero, string Motivo, DateTimeOffset Fecha, Guid? EmpresaQuePago = null);

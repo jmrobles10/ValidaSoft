@@ -51,6 +51,8 @@ public static class ExpedientesEndpoints
 
         // La apertura pudo compartir documentos con el vínculo (sin outbox de la bóveda): calcula sus vigencias (TD-6).
         await mensajes.PublishAsync(new Documentos.CalcularVigenciasDelVinculo(resultado.Tercero.Id, resultado.VinculoId));
+        // Y su análisis con IA o el consumo de la validación de lo que recibió (ADR-0012).
+        await mensajes.PublishAsync(new Ia.AnalizarIaDelVinculo(resultado.Tercero.Id, resultado.VinculoId));
         Peticiones.EscribirETag(http, resultado.Version);
         return Results.Created($"/api/v1/expedientes/{resultado.Id}", resultado);
     }

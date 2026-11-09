@@ -99,6 +99,8 @@ public static class ComparticionDeDocumentos
             await PedirSincronizacionAsync(mensajes, eventos.Select(e => (e.TenantId, e.VinculoId)), contexto);
             if (eventos.Count > 0)
                 await mensajes.PublishAsync(new CalcularVigenciasDelDocumento(proyectado.Id));
+            // Análisis con IA de la versión actual y consumo de las empresas que la reciben (ADR-0012); idempotente.
+            await Ia.AnalisisConIa.PedirAsync(mensajes, proyectado);
         }
 
         return [.. eventos.Select(e => e.ADto(proyectado))];

@@ -165,7 +165,8 @@ public static class DocumentosDeVinculoEndpoints
         await using var consulta = sesiones.ConsultaBoveda();
         var documentos = await consulta.Query<Documento>().Where(d => d.TerceroId == terceroId).OrderBy(d => d.CreadoEn).ToListAsync(ct);
         var hoy = reloj.Hoy();
-        return [.. documentos.Select(d => Vista(d, id, hoy)).OfType<DocumentoVistaEmpresaDto>()];
+        var conIa = await ValidacionesDeIaAsync(empresa, documentos, ct);
+        return [.. documentos.Select(d => Vista(d, id, hoy, conIa)).OfType<DocumentoVistaEmpresaDto>()];
     }
 
     [WolverineGet("/api/v1/vinculos/{id}/documentos/{documentoId}")]
@@ -176,9 +177,24 @@ public static class DocumentosDeVinculoEndpoints
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
         await using var consulta = sesiones.ConsultaBoveda();
         var documento = await consulta.LoadAsync<Documento>(documentoId, ct);
-        return Visible(vinculo) && documento is not null && documento.TerceroId == vinculo.TerceroId && Vista(documento, id, reloj.Hoy()) is { } vista
-            ? vista
-            : throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
+        if (!Visible(vinculo) || documento is null || documento.TerceroId != vinculo.TerceroId)
+            throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
+        return Vista(documento, id, reloj.Hoy(), await ValidacionesDeIaAsync(empresa, [documento], ct))
+               ?? throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento para el vínculo.");
+    }
+
+    /// <summary>Versiones (documento, número) cuya validación de IA consumió la empresa activa: solo en ellas ve los hechos de IA (IA-3).</summary>
+    internal static async Task<IReadOnlySet<(Guid DocumentoId, int Numero)>> ValidacionesDeIaAsync(SesionDeEmpresa empresa,
+        IReadOnlyList<Documento> documentos, CancellationToken ct)
+    {
+        var ids = documentos.Where(d => d.Versiones.Any(v => v.Ia is not null)).Select(d => d.Id).ToArray();
+        if (ids.Length == 0)
+            return new HashSet<(Guid, int)>();
+        var empresaId = empresa.EmpresaId;
+        var consumidas = await empresa.Sesion.Query<Dominio.Ia.ValidacionIaConsumida>()
+            .Where(v => v.EmpresaId == empresaId && v.DocumentoId.IsOneOf(ids))
+            .ToListAsync(ct);
+        return consumidas.Select(v => (v.DocumentoId, v.Numero)).ToHashSet();
     }
 
     /// <summary>URL prefirmada GET (5 min) de una versión compartida con el vínculo; registra <c>DocumentoAccedido</c> con el actor.</summary>
@@ -212,8 +228,11 @@ public static class DocumentosDeVinculoEndpoints
     internal static bool Visible(Dominio.Vinculos.Vinculo vinculo) =>
         vinculo.InvitacionAceptada && vinculo.Estado != Dominio.Vinculos.EstadoVinculo.Anulado;
 
-    /// <summary>Solo las versiones compartidas con el vínculo, cada una con sus datos declarados y la vigencia de este vínculo.</summary>
-    internal static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId, DateOnly hoy)
+    /// <summary>
+    /// Solo las versiones compartidas con el vínculo, cada una con sus datos declarados, la vigencia de este vínculo y, si la
+    /// empresa consumió su validación (<paramref name="conIa"/>), los hechos de IA.
+    /// </summary>
+    internal static DocumentoVistaEmpresaDto? Vista(Documento documento, Guid vinculoId, DateOnly hoy, IReadOnlySet<(Guid DocumentoId, int Numero)> conIa)
     {
         var numeros = documento.Comparticiones.Where(c => c.VinculoId == vinculoId).Select(c => c.Numero).ToHashSet();
         if (numeros.Count == 0)
@@ -221,6 +240,6 @@ public static class DocumentosDeVinculoEndpoints
 
         var actual = documento.VersionActual is { } n && numeros.Contains(n) ? n : (int?)null;
         return new DocumentoVistaEmpresaDto(documento.Id, documento.Resumen(), documento.Ambito.ToString(), actual,
-            [.. documento.Versiones.Where(v => numeros.Contains(v.Numero)).OrderBy(v => v.Numero).Select(v => v.ADto(documento.Id, vinculoId, hoy))]);
+            [.. documento.Versiones.Where(v => numeros.Contains(v.Numero)).OrderBy(v => v.Numero).Select(v => v.ADto(documento.Id, vinculoId, hoy, conIa.Contains((documento.Id, v.Numero))))]);
     }
 }

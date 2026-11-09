@@ -107,17 +107,23 @@ public static class MapeosDocumentos
 
     /// <summary>
     /// <paramref name="vinculoId"/>: la empresa que consulta ve la vigencia de su vínculo; sin él (el tercero) la más próxima
-    /// a vencer. <paramref name="hoy"/> nulo ⇒ la fecha UTC del sistema.
+    /// a vencer. <paramref name="hoy"/> nulo ⇒ la fecha UTC del sistema. <paramref name="conIa"/>: la empresa consumió su
+    /// validación de IA de esta versión y ve el análisis (ADR-0012); si no (y siempre el tercero), los hechos sin IA.
     /// </summary>
-    public static VersionDocumentoDto ADto(this VersionDocumento v, Guid documentoId, Guid? vinculoId = null, DateOnly? hoy = null) =>
+    public static VersionDocumentoDto ADto(this VersionDocumento v, Guid documentoId, Guid? vinculoId = null, DateOnly? hoy = null, bool conIa = false) =>
         new(documentoId, v.Numero, v.Estado.ToString(), v.CargadaEn, v.CargadaPor, v.Clase.ToString(), v.NombreOriginal,
             v.Hechos?.MimeReal ?? v.MimeDeclarado, v.Tamano, v.Hechos?.Paginas, v.Sha256, v.MotivoDevolucion, v.DetalleDevolucion,
-            v.Hechos is { } h
-                ? new HechosDto(h.ConIa, h.HashVerificado, h.Antivirus.ToString(), h.MimeReal, h.Paginas, h.Comparacion.ToString(), [], [],
-                    h.PendienteRevisionHumana)
-                : null,
+            v.HechosPara(conIa) is { } h ? Hechos(h, h.ConIa ? v.Ia : null) : null,
             v.Datos is null ? null : [.. v.Datos.Select(ADto)],
             (vinculoId is { } id ? v.VigenciaPara(id) : v.ProximaVigencia)?.ADto(hoy ?? CalculadoraDeVigencia.Fecha(TimeProvider.System.GetUtcNow())));
+
+    private static HechosDto Hechos(HechosBasicos h, AnalisisDeIaDeVersion? ia) =>
+        new(h.ConIa, h.HashVerificado, h.Antivirus.ToString(), h.MimeReal, h.Paginas, h.Comparacion.ToString(), ia?.CamposCambiados ?? [],
+            ia?.CamposCriticosCambiados ?? [], h.PendienteRevisionHumana,
+            ia is null
+                ? null
+                : new HechosIaDto(ia.Modelo, ia.Escalado, ia.Confianza, ia.Legible, ia.TipoDetectado, ia.Campos, ia.Alertas, ia.Observaciones,
+                    ia.PaginasEnviadas, ia.PaginasOmitidas, ia.Fecha));
 
     public static CompartidoDto ADto(this VersionCompartida c, Documento d) => new(d.Id, d.Codigo(), c.Numero, c.VinculoId, c.EmpresaId);
 

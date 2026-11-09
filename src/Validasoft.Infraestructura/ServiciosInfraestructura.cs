@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
 using Validasoft.Aplicacion.Expedientes;
+using Validasoft.Aplicacion.Ia;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Infraestructura.Almacenamiento;
@@ -15,6 +16,7 @@ using Validasoft.Infraestructura.Certificados;
 using Validasoft.Infraestructura.Correo;
 using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Infraestructura.Http;
+using Validasoft.Infraestructura.IA;
 using Validasoft.Infraestructura.Notificaciones;
 using Validasoft.Infraestructura.Persistencia;
 using Validasoft.Infraestructura.Seguridad;
@@ -47,6 +49,12 @@ public static class ServiciosInfraestructura
     /// encolaron, así un receptor sano recibe los eventos en orden. Los reintentos van programados y no bloquean la cola.
     /// </summary>
     public const string ColaWebhooks = "webhooks";
+
+    /// <summary>
+    /// Cola local durable y <b>secuencial</b> del análisis con IA (ADR-0012): una versión a la vez, así dos mensajes de la
+    /// misma versión (carga y aceptación) no llaman dos veces a OpenAI; el segundo encuentra el análisis y solo consume.
+    /// </summary>
+    public const string ColaIa = "ia";
 
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
@@ -93,6 +101,12 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
         servicios.AddSingleton<ArchivoDeCertificados>();
         servicios.AddHostedService<ProcesadorDeCertificados>();
+        // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
+        servicios.AddSingleton<OpcionesDeIa>();
+        servicios.AddScoped<CupoDeIa>();
+        servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
+            cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
+        servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)
@@ -163,6 +177,9 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeCertificadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>().ToLocalQueue(ColaWebhooks);
         opciones.LocalQueue(ColaWebhooks).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Ia.AnalizarVersionConIa>().ToLocalQueue(ColaIa);
+        opciones.PublishMessage<Aplicacion.Ia.AnalizarIaDelVinculo>().ToLocalQueue(ColaIa);
+        opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();
