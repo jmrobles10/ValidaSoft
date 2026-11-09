@@ -17,8 +17,15 @@ import { cuerpoCrearWebhook, cuerpoEditarWebhook, type BorradorWebhook } from '.
 /** Webhooks y su catálogo de eventos son del grupo (tenant): sin empresa activa. */
 const SIN_EMPRESA = { empresa: null } as const;
 
+/**
+ * Pantalla de monitoreo: la lista (con su «Última entrega») y las entregas se piden al abrirse y se refrescan solas
+ * mientras está abierta. Con la caché de 30 s, quien acababa de crear el webhook seguía viendo «Aún no hay entregas» y
+ * «Última entrega: —» aunque las entregas ya habían salido.
+ */
+const AL_DIA = { refetchOnMount: 'always', refetchInterval: 15_000 } as const;
+
 export function useWebhooks(habilitado: boolean) {
-  return useQuery({ ...getListarWebhooksQueryOptions({ request: SIN_EMPRESA }), enabled: habilitado });
+  return useQuery({ ...getListarWebhooksQueryOptions({ request: SIN_EMPRESA }), ...AL_DIA, enabled: habilitado });
 }
 
 export function useTiposEvento(habilitado: boolean) {
@@ -26,7 +33,7 @@ export function useTiposEvento(habilitado: boolean) {
 }
 
 export function useEntregas(webhookId: string, estado: string | null) {
-  return useQuery(getListarEntregasWebhookQueryOptions(webhookId, { limite: 50, ...(estado ? { estado } : {}) }, { request: SIN_EMPRESA }));
+  return useQuery({ ...getListarEntregasWebhookQueryOptions(webhookId, { limite: 50, ...(estado ? { estado } : {}) }, { request: SIN_EMPRESA }), ...AL_DIA });
 }
 
 /** Crear (la respuesta trae el secreto, que se muestra una sola vez) o editar una suscripción. */
