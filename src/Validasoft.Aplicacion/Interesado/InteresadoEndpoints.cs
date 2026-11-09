@@ -186,7 +186,9 @@ public static class InvitacionesPublicasEndpoints
 
         // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que pide su flujo: misma transacción.
         var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
-        var pedidos = flujo is null ? [] : await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, ct);
+        var pedidos = flujo is null
+            ? []
+            : await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct), ct);
         var documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, enSesion.TenantId,
             RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.AlAceptarInvitacion, ahora, ct);
 

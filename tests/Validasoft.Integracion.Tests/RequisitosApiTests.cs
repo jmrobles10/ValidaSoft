@@ -356,6 +356,80 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await SubirAsync(sesion, "RUT", Pdf("RUT v2"))).Compartidos.ShouldHaveSingleItem().VinculoId.ShouldBe(vinculoA.Id);
     }
 
+    // ---------- requisitos condicionados (RQ-12) ----------
+
+    [Fact]
+    public async Task Un_mismo_flujo_pide_distinto_a_una_persona_juridica_y_a_una_natural_y_solo_comparte_lo_que_le_pide()
+    {
+        var a = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        var juridica = new CondicionDto("Predicado", Atributo: "tercero.tipoPersona", Operador: "Igual", Valores: ["juridica"]);
+        var natural = new CondicionDto("Predicado", Atributo: "tercero.tipoPersona", Operador: "Igual", Valores: ["Natural"]);
+
+        var flujo = await FlujoConAsync(a, "CLIENTE",
+        [
+            new RequisitoDelFlujoDto(TipoDocumento: "RUT"),
+            new RequisitoDelFlujoDto(TipoDocumento: "CAMARA_COMERCIO", Condicion: juridica),
+            new RequisitoDelFlujoDto(TipoDocumento: "CEDULA", Condicion: natural)
+        ]);
+        var leidos = flujo.Publicada!.Requisitos!;
+        leidos[0].Condicion.ShouldBeNull();
+        leidos[1].Condicion!.Valores.ShouldBe(["Juridica"]); // normalizada al guardar
+        leidos[2].Condicion!.Atributo.ShouldBe("tercero.tipoPersona");
+
+        // Validación al guardar: condición mal formada y flujo sin nada que se pida siempre.
+        (await CodigoAsync(await ApiAsync("POST", "/api/v1/flujos", Admin(a), new CrearFlujoDto("MAL", "Mal", "CLIENTE",
+            Requisitos: [new RequisitoDelFlujoDto(TipoDocumento: "RUT"),
+                new RequisitoDelFlujoDto(TipoDocumento: "CAMARA_COMERCIO", Condicion: juridica with { Operador = "Mayor" })]), 422)))
+            .ShouldBe("condicion-invalida");
+        (await CodigoAsync(await ApiAsync("POST", "/api/v1/flujos", Admin(a), new CrearFlujoDto("MAL", "Mal", "CLIENTE",
+            Requisitos: [new RequisitoDelFlujoDto(TipoDocumento: "RUT", Condicion: juridica)]), 422)))
+            .ShouldBe("requisito-siempre-requerido");
+
+        // La persona jurídica y la natural ya tienen RUT y Cámara en su bóveda antes de aceptar.
+        var correoJuridica = CorreoNuevo();
+        var correoNatural = CorreoNuevo();
+        var vinculoJuridica = await CrearVinculoAsync(a, "CLIENTE", correoJuridica);
+        var vinculoNatural = await ApiAsync<VinculoDto>("POST", "/api/v1/vinculos", Admin(a), new CrearVinculoDto(
+            TerceroId: null,
+            Tercero: new CrearTerceroDto(new IdentificacionDto("CO", "CC", "10" + Random.Shared.Next(10_000_000, 99_999_999)), "Natural", "Ana Pérez", null,
+                [new ContactoDto("Ana Pérez", correoNatural, null, "Titular")]),
+            TipoVinculo: "CLIENTE", Atributos: null, CorreoInvitacion: correoNatural, ReferenciaExterna: null), 201);
+
+        var sesionJuridica = await SesionAsync(correoJuridica);
+        var sesionNatural = await SesionAsync(correoNatural);
+        foreach (var sesion in new[] { sesionJuridica, sesionNatural })
+        {
+            await SubirAsync(sesion, "RUT", Pdf("RUT " + sesion.TerceroId));
+            await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara " + sesion.TerceroId));
+        }
+
+        (await AceptarAsync(sesionJuridica, vinculoJuridica.Id)).Compartidos.Select(c => c.Tipo).Order().ShouldBe(["CAMARA_COMERCIO", "RUT"]);
+        (await AceptarAsync(sesionNatural, vinculoNatural.Id)).Compartidos.ShouldHaveSingleItem().Tipo.ShouldBe("RUT"); // la Cámara no se le pide
+
+        async Task<ExpedienteDto> ExpedienteAsync(VinculoDto vinculo)
+        {
+            var id = (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(a), null, 200)).ExpedienteAbiertoId!.Value;
+            return await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{id}", Admin(a), null, 200);
+        }
+
+        var deJuridica = await ExpedienteAsync(vinculoJuridica);
+        deJuridica.Requisitos!.Select(r => r.TipoDocumento.Codigo).ShouldBe(["RUT", "CAMARA_COMERCIO"]);
+        deJuridica.Estado.ShouldBe("EnRevision"); // todo lo que se le pide ya estaba en su bóveda
+
+        var deNatural = await ExpedienteAsync(vinculoNatural);
+        deNatural.Requisitos!.Select(r => r.TipoDocumento.Codigo).ShouldBe(["RUT", "CEDULA"]);
+        deNatural.Estado.ShouldBe("Abierto"); // le falta la cédula
+        Requisito(deNatural, "CEDULA").Estado.ShouldBe("Pendiente");
+
+        // Lo que el tercero ve en su expediente es lo mismo que se le pidió.
+        var publico = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{deNatural.Id}", sesionNatural.AccessToken, null, 200);
+        publico.Requisitos!.Select(r => r.TipoDocumento.Codigo).ShouldBe(["RUT", "CEDULA"]);
+
+        // Una versión nueva de la Cámara de la persona natural no se comparte: su vínculo no la pide.
+        (await SubirAsync(sesionNatural, "CAMARA_COMERCIO", Pdf("Cámara v2"))).Compartidos.ShouldBeEmpty();
+        (await SubirAsync(sesionJuridica, "CAMARA_COMERCIO", Pdf("Cámara v2"))).Compartidos.ShouldHaveSingleItem().VinculoId.ShouldBe(vinculoJuridica.Id);
+    }
+
     // ---------- sincronización: no se pierde ni se duplica ----------
 
     [Fact]
