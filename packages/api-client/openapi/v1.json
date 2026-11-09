@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5080/"
+      "url": "http://localhost:5095/"
     }
   ],
   "paths": {
@@ -4506,6 +4506,131 @@
         }
       }
     },
+    "/api/v1/accesos-soporte": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.AccesosSoporteEndpoints"
+        ],
+        "summary": "POST_api_v1_accesos_soporte",
+        "description": "POST_api_v1_accesos_soporte",
+        "operationId": "POST_api_v1_accesos_soporte",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConcederAccesoSoporteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.AccesosSoporteEndpoints"
+        ],
+        "summary": "GET_api_v1_accesos_soporte",
+        "description": "GET_api_v1_accesos_soporte",
+        "operationId": "GET_api_v1_accesos_soporte",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccesoSoporteDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/accesos-soporte/{id}/revocar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.AccesosSoporteEndpoints"
+        ],
+        "summary": "POST_api_v1_accesos_soporte_id_revocar",
+        "description": "POST_api_v1_accesos_soporte_id_revocar",
+        "operationId": "POST_api_v1_accesos_soporte_id_revocar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccesoSoporteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/accesos-soporte": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.AccesosSoporteEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_accesos_soporte",
+        "description": "GET_api_v1_plataforma_accesos_soporte",
+        "operationId": "GET_api_v1_plataforma_accesos_soporte",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccesoSoporteConcedidoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/empresas": {
       "post": {
         "tags": [
@@ -4586,6 +4711,50 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmpresaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.EmpresasEndpoints"
+        ],
+        "summary": "PUT_api_v1_empresas_id",
+        "description": "PUT_api_v1_empresas_id",
+        "operationId": "PUT_api_v1_empresas_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -5477,6 +5646,103 @@
           }
         }
       },
+      "AccesoSoporteConcedidoDto": {
+        "required": [
+          "id",
+          "tenantId",
+          "grupo",
+          "empresaId",
+          "empresa",
+          "justificacion",
+          "expiraEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grupo": {
+            "type": "string"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "type": "string"
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccesoSoporteDto": {
+        "required": [
+          "id",
+          "empresaId",
+          "empresa",
+          "justificacion",
+          "concedidoPor",
+          "concedidoEn",
+          "expiraEn",
+          "revocadoEn",
+          "revocadoPor",
+          "vigente"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "type": "string"
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "concedidoPor": {
+            "type": "string"
+          },
+          "concedidoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "revocadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "revocadoPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vigente": {
+            "type": "boolean"
+          }
+        }
+      },
       "AceptacionDto": {
         "required": [
           "tipo",
@@ -5600,6 +5866,29 @@
         "properties": {
           "atributos": {
             "type": "object"
+          }
+        }
+      },
+      "ActualizarEmpresaDto": {
+        "type": "object",
+        "properties": {
+          "contactoSoporte": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "colorMarca": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "logoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6768,6 +7057,31 @@
           }
         }
       },
+      "ConcederAccesoSoporteDto": {
+        "required": [
+          "empresaId",
+          "horas",
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "horas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "justificacion": {
+            "type": "string"
+          }
+        }
+      },
       "CondicionDto": {
         "required": [
           "tipo"
@@ -7905,6 +8219,12 @@
           },
           "activa": {
             "type": "boolean"
+          },
+          "colorMarca": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -7924,6 +8244,18 @@
             "type": "string"
           },
           "logoUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "colorMarca": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactoSoporte": {
             "type": [
               "null",
               "string"
@@ -12050,6 +12382,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Consentimientos.TextosLegalesEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Configuracion.AccesosSoporteEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.EmpresasEndpoints"

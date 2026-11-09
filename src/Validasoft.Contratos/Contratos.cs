@@ -29,7 +29,27 @@ public sealed record TenantCreadoDto(TenantDto Tenant, ApiKeyDto ApiKeyAdministr
 public sealed record CrearEmpresaDto(IdentificacionDto Identificacion, string Nombre, string PrefijoFolio, string? LogoUrl, string? ReplyTo);
 
 public sealed record EmpresaDto(
-    Guid Id, Guid TenantId, IdentificacionDto Identificacion, string Nombre, string? LogoUrl, string? ReplyTo, string PrefijoFolio, bool Activa);
+    Guid Id, Guid TenantId, IdentificacionDto Identificacion, string Nombre, string? LogoUrl, string? ReplyTo, string PrefijoFolio, bool Activa,
+    string? ColorMarca = null);
+
+/// <summary>
+/// Datos y marca de la empresa: <see cref="ContactoSoporte"/> (correo; queda como <c>replyTo</c>), <see cref="ColorMarca"/>
+/// (#RRGGBB) y <see cref="LogoUrl"/> (https o data URI SVG/PNG ≤ 200 KB). Nulo conserva; cadena vacía quita.
+/// </summary>
+public sealed record ActualizarEmpresaDto(string? ContactoSoporte = null, string? ColorMarca = null, string? LogoUrl = null);
+
+// ---------- Accesos de soporte (B-6) ----------
+
+/// <summary>Concede a la Plataforma acceso de lectura a una empresa por <see cref="Horas"/> (1–72), con justificación.</summary>
+public sealed record ConcederAccesoSoporteDto(Guid EmpresaId, int Horas, string Justificacion);
+
+/// <summary><see cref="ConcedidoPor"/>/<see cref="RevocadoPor"/>: id del actor (usuario o API key). <see cref="Vigente"/> a la hora de la consulta.</summary>
+public sealed record AccesoSoporteDto(
+    Guid Id, Guid EmpresaId, string Empresa, string Justificacion, string ConcedidoPor, DateTimeOffset ConcedidoEn, DateTimeOffset ExpiraEn,
+    DateTimeOffset? RevocadoEn, string? RevocadoPor, bool Vigente);
+
+/// <summary>Lo que ve la Plataforma: los accesos vigentes que le concedieron, con el grupo (tenant) y la empresa.</summary>
+public sealed record AccesoSoporteConcedidoDto(Guid Id, Guid TenantId, string Grupo, Guid EmpresaId, string Empresa, string Justificacion, DateTimeOffset ExpiraEn);
 
 // ---------- API keys ----------
 
@@ -205,7 +225,8 @@ public sealed record TextosLegalesEmpresaDto(Guid EmpresaId, IReadOnlyList<Texto
 
 // ---------- Público: el tercero (docs/05 §2.9) ----------
 
-public sealed record EmpresaPublicaDto(Guid Id, string Nombre, string? LogoUrl);
+/// <summary>Lo que el tercero ve de la empresa: nombre, logo, color de marca y correo de soporte.</summary>
+public sealed record EmpresaPublicaDto(Guid Id, string Nombre, string? LogoUrl, string? ColorMarca = null, string? ContactoSoporte = null);
 
 public sealed record VinculoDeSesionDto(Guid Id, EmpresaPublicaDto Empresa, string Estado);
 

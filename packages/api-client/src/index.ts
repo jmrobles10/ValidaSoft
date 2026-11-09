@@ -25,6 +25,7 @@ export * from './generado/endpoints/quien-soy/quien-soy';
 export * from './generado/endpoints/sesiones-usuario/sesiones-usuario';
 export * from './generado/endpoints/sistemas/sistemas';
 export * from './generado/endpoints/tenants/tenants';
+export * from './generado/endpoints/accesos-soporte/accesos-soporte';
 export * from './generado/endpoints/terceros/terceros';
 export * from './generado/endpoints/textos-legales/textos-legales';
 export * from './generado/endpoints/tipos-documento/tipos-documento';

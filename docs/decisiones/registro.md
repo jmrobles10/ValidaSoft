@@ -383,6 +383,15 @@ Que las personas y los sistemas se enteren de lo que pasa: eventos públicos v1,
 | NW-15 | Documento vencido | `VersionVencida` (vigencia y gracia cumplidas, TD-7) avisa al tercero por correo («Tu {documento} venció para {empresa}», plantilla `vencido`) y a las áreas del expediente del vínculo en la campana (tipo `documento.vencido`, sin correo a revisores, como `documento.por_vencer`). Antes no se avisaba a nadie. Los avisos de «por vencer» siguen sin programarse para fechas ya pasadas: quien sube un documento que ya está por vencer lo ve marcado en pantalla. | Pruebas e2e (2026-11-09) |
 | NW-16 | Certificado revocado o suspendido | `CertificadoRevocado` y `CertificadoSuspendido` avisan al tercero por correo con el folio y la empresa (plantilla `certificado-revocado`, docs/05 §8), sin el motivo: es interno, como en la verificación pública (CE-8). El restablecimiento no se avisa. La ayuda del diálogo de revocar ya no promete que la justificación sea pública. | Pruebas e2e (2026-11-09) |
 
+## 5-octodecies. Configuración del grupo y soporte (2026-11-09)
+
+Lo que el design system v10 pide en Configuración y que el H1 dejaba sin pantalla o sin backend.
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| CF-1 | Datos y marca de la empresa | `PUT /empresas/{id}` (`empresas:administrar`) edita solo el **contacto de soporte** (correo; se guarda en `ReplyTo`: pie del portal del tercero y Reply-To de los correos), el **color de marca** (`#RRGGBB`, mayúsculas) y el **logo** (URL https o data URI SVG/PNG de hasta 200 KB, sin almacenamiento aparte). Nulo conserva y cadena vacía quita. La identificación, la razón social y el prefijo de folio no cambian (el prefijo ya está en folios emitidos). `EmpresaPublicaDto` suma `colorMarca` y `contactoSoporte` para que el portal aplique la marca (paleta derivada con contraste, `marcaEmpresa`). Cada cambio queda en la auditoría de configuración. | Design system v10 (P2ConfigEmpresa) |
+| CF-2 | Acceso temporal de soporte | Implementa B-6: `AccesoSoporte` (esquema `identidad`, por tenant) lo concede un administrador del tenant (`empresas:administrar`) para **una empresa**, 1–72 h y justificación (10–500 caracteres); expira solo y se revoca (`POST /accesos-soporte/{id}/revocar`, 409 `acceso-no-vigente` si ya no está vigente). La Plataforma lista los suyos en `GET /plataforma/accesos-soporte` y entra con su credencial más `X-Acceso-Soporte: {id}`: el contexto queda en ese tenant y esa empresa con `Permisos.DeSoporte` (configuración, flujos, vínculos, terceros, expedientes, certificados y auditoría, **solo lectura y nunca documentos**) y actor `Plataforma` (`plataforma-soporte:{id}`). Sin acceso, expirado o revocado: 401; otra empresa o sin acceso a esa: 404 (no revela que exista). El alcance por expediente o tercero de 07 §3.1 queda para cuando haga falta. | B-6, design system v10 |
+
 ## 5-novodecies. Revalidación por versión nueva (2026-11-09, H6)
 
 Primer tramo de H6: que una versión nueva de un documento ya aceptado no pase sin que la empresa la revise.

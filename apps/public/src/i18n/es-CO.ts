@@ -132,6 +132,9 @@ export const esCO = {
       corto: 'Cerró esta relación; la invitación ya no está vigente.',
     },
   },
+  marca: {
+    soporte: '¿Dudas sobre lo que te pide {{empresa}}? Escribe a',
+  },
   boveda: {
     titulo: 'Mi bóveda',
     sub: 'Cada documento una sola vez: cada empresa recibe la versión vigente de lo que te exige.',
