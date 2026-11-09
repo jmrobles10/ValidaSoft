@@ -84,10 +84,13 @@ public static class ProcesoDeValidacion
     /// registra <c>ExpedienteVinculado</c> en <paramref name="vinculoStream"/> y, si todo fue automático, lo cierra aprobado.
     /// Con requisitos, cada uno nace <c>Cargado</c> si la bóveda ya compartió con el vínculo la versión actual de su tipo:
     /// <paramref name="documentos"/> los trae la aceptación (que acaba de compartir); en una apertura manual de un vínculo
-    /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1).
+    /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1). Una
+    /// <c>Actualizacion</c> (RV-1) lleva solo los requisitos de <paramref name="soloRequisitos"/> y la abre el sistema en
+    /// nombre de <paramref name="actor"/> (quien subió la versión).
     /// </summary>
     public static async Task<Expediente> AbrirAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, FlujoResuelto flujo,
-        IContextoSolicitud contexto, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null)
+        IContextoSolicitud? contexto, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null,
+        TipoExpediente tipoExpediente = TipoExpediente.Inicial, IReadOnlySet<Guid>? soloRequisitos = null, ActorDeExpediente? actor = null)
     {
         var vinculo = vinculoStream.Aggregate ?? throw new InvalidOperationException("El vínculo no existe.");
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -104,8 +107,10 @@ public static class ProcesoDeValidacion
             areas.TryGetValue(a.AreaId, out var conNombre) ? conNombre.Nombre : "Área", a.AprobadoresRequeridos, a.PuedeRechazarExpediente,
             a.Automatica, a.SlaHoras))])).ToList();
 
-        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version,
-            ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos), ct);
+        var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version,
+                ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos), ct))
+            .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
+            .ToList();
         if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
             documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
                 RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
@@ -113,14 +118,15 @@ public static class ProcesoDeValidacion
             [.. pedidos.Select(p => RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id))], ct);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
-        var datos = new DatosDeApertura(vinculo.EmpresaId, vinculo.Id, TipoExpediente.Inicial, folio, tercero.Id, tercero.Nombre,
+        var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
+        var datos = new DatosDeApertura(vinculo.EmpresaId, vinculo.Id, tipoExpediente, folio, tercero.Id, tercero.Nombre,
             tercero.ClaveIdentificacion, vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty,
-            new ActorDeExpediente(contexto.ActorTipo, contexto.ActorId), await QuienesInvitaronAsync(sesion, vinculo.Id, ct));
+            abiertoPor, await QuienesInvitaronAsync(sesion, vinculo.Id, ct));
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
             flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
-        var vinculado = vinculo.VincularExpediente(expedienteId, TipoExpediente.Inicial, folio, ahora);
+        var vinculado = vinculo.VincularExpediente(expedienteId, tipoExpediente, folio, ahora);
         vinculoStream.AppendOne(vinculado);
         if (vinculo.ExpedienteAbiertoId != expedienteId)
             vinculo.Apply(vinculado); // El agregado del stream decide el cierre inmediato (todo automático) con el estado al día.

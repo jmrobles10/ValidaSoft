@@ -277,8 +277,10 @@ public sealed class Vinculo
     }
 
     /// <summary>
-    /// Registra el expediente que se abre. Un solo expediente abierto; nunca bloqueado ni terminado (invariante 4). En
-    /// esta fase solo hay expedientes <c>Inicial</c>, que se abren desde <c>Invitado</c> (aceptación o apertura manual).
+    /// Registra el expediente que se abre. Un solo expediente abierto; nunca bloqueado ni terminado (invariante 4). Un
+    /// <c>Inicial</c> se abre desde <c>Invitado</c> sin aprobación previa (aceptación o apertura manual); una
+    /// <c>Actualizacion</c> (RV-1), sobre un vínculo que ya tuvo aprobación (Activo, PorVencer o Vencido) y sin cambiar su
+    /// estado mientras se revisa (A-2).
     /// </summary>
     public ExpedienteVinculado VincularExpediente(Guid expedienteId, TipoExpediente tipo, string folio, DateTimeOffset ahora)
     {
@@ -289,8 +291,16 @@ public sealed class Vinculo
         if (ExpedienteAbiertoId is { } abierto)
             throw ReglaDeNegocioException.Conflicto("expediente-abierto-existente", $"El vínculo ya tiene el expediente {abierto} abierto.");
 
+        if (tipo == TipoExpediente.Actualizacion)
+        {
+            if (!TuvoAprobacion || Estado is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer or EstadoVinculo.Vencido))
+                throw ReglaDeNegocioException.Conflicto("estado-invalido",
+                    $"Una actualización se abre sobre un vínculo que ya fue aprobado; este está {Estado}.");
+            return new ExpedienteVinculado(expedienteId, tipo, folio, ahora);
+        }
+
         if (tipo != TipoExpediente.Inicial)
-            throw ReglaDeNegocioException.Validacion("tipo-expediente-no-soportado", "Por ahora solo se abren expedientes iniciales.");
+            throw ReglaDeNegocioException.Validacion("tipo-expediente-no-soportado", "Por ahora solo se abren expedientes iniciales y de actualización.");
 
         if (Estado != EstadoVinculo.Invitado || TuvoAprobacion)
             throw ReglaDeNegocioException.Conflicto("estado-invalido",

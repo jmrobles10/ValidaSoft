@@ -406,7 +406,8 @@ public sealed partial class Expediente
 
             if (area.Estado == EstadoAreaExpediente.Aprobada && !area.Veredictos.Any(v => v.Vigente && v.Derivado))
             {
-                // Sin nada que revisar (lo que pide no aplica a este tercero, RQ-12, o solo opcionales sin cargar) aprueba Sistema.
+                // Sin nada que revisar (lo que pide no aplica a este tercero, RQ-12; una actualización que no trae sus
+                // documentos, RV-1; o solo opcionales sin cargar) aprueba Sistema.
                 var sinAlcance = !expediente.RequisitosDelArea(area.AreaId).Any();
                 simulacion.Emitir(new VeredictoDeAreaEmitido(Guid.CreateVersion7(), area.AreaId, Veredicto.Aprobado,
                     sinAlcance ? OrigenVeredicto.Sistema : OrigenDerivado(expediente, area), null, [], null,
@@ -418,7 +419,7 @@ public sealed partial class Expediente
         return emitio;
     }
 
-    public const string SinDocumentosQueRevisar = "A este tercero no se le pidió ningún documento que revise esta área.";
+    public const string SinDocumentosQueRevisar = "Esta área no tiene documentos que revisar en este expediente.";
 
     /// <summary>Quién aprobó los requisitos del área: <c>Administrador</c> si intervino (o solo hubo exenciones), si no <c>Humano</c>, si no <c>Sistema</c>.</summary>
     private static OrigenVeredicto OrigenDerivado(Expediente expediente, AreaDeExpediente area)
