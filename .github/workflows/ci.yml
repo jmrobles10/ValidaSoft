@@ -2,6 +2,7 @@
 #   backend   -> dotnet build (TreatWarningsAsErrors: una advertencia de compilación rompe el build) y dotnet test
 #                (las pruebas de integración levantan PostgreSQL y MinIO con Testcontainers: el runner ya trae Docker).
 #   frontend  -> pnpm install --frozen-lockfile, lint, typecheck, test y build.
+#   e2e       -> Playwright contra la API que sirve las dos apps, con PostgreSQL, Mailpit y MinIO reales (e2e/).
 #   imagen    -> construye la imagen de la API con el frontend (src/Validasoft.Api/Dockerfile) sin publicarla.
 name: ci
 
@@ -93,6 +94,48 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  e2e:
+    name: Pruebas de punta a punta (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # PostgreSQL, Mailpit (correo) y MinIO (archivos) como en desarrollo; la API los usa con appsettings.Development.json.
+      - name: Servicios
+        run: docker compose -f infra/compose/compose.yaml up -d --wait postgres mailpit minio
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      - name: Navegador
+        run: pnpm --filter @validasoft/e2e exec playwright install --with-deps chromium
+
+      # playwright.config.ts levanta la API (e2e/soporte/api.mjs): compila las dos apps, publica la API y la sirve en :5090.
+      - name: Probar
+        run: pnpm --filter @validasoft/e2e test
+
+      - name: Publicar informe y trazas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-informe
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
 
   imagen:
     name: Imagen Docker (sin publicar)
