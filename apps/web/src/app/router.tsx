@@ -71,6 +71,18 @@ export function crearRouter() {
                   path: 'sistemas',
                   lazy: () => import('../features/configuracion/sistemas/PaginaSistemas').then((m) => ({ Component: m.PaginaSistemas })),
                 },
+                {
+                  path: 'empresas',
+                  lazy: () => import('../features/configuracion/empresas/PaginaEmpresas').then((m) => ({ Component: m.PaginaEmpresas })),
+                },
+                {
+                  path: 'api-keys',
+                  lazy: () => import('../features/configuracion/apiKeys/PaginaApiKeys').then((m) => ({ Component: m.PaginaApiKeys })),
+                },
+                {
+                  path: 'tipos-vinculo',
+                  lazy: () => import('../features/configuracion/tiposVinculo/PaginaTiposVinculo').then((m) => ({ Component: m.PaginaTiposVinculo })),
+                },
               ],
             },
           ],
