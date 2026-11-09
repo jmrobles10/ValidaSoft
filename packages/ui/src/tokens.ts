@@ -112,23 +112,23 @@ export const SOMBRA = {
 
 export const RADIO = { "lg": 18, "md": 12, "sm": 9, "xs": 6, "pill": 999 } as const;
 export const ESPACIO = { "e4": 4, "e8": 8, "e12": 12, "e16": 16, "e24": 24, "e32": 32, "e48": 48, "e64": 64 } as const;
-export const DENSIDAD = { "filaCompacta": 36, "filaComoda": 48, "controlCompacto": 32, "controlComodo": 44, "objetivoTactil": 44, "cabeceraEmbebida": 48, "barraLateral": 248, "barraLateralColapsada": 64 } as const;
+export const DENSIDAD = { "filaCompacta": 32, "filaComoda": 44, "controlCompacto": 32, "controlComodo": 44, "controlMedio": 36, "objetivoTactil": 44, "cabeceraEmbebida": 48, "barraLateral": 248, "barraLateralColapsada": 64 } as const;
 export const BORDE = { "grosorHairline": 1, "grosorCertificado": 1.5, "anilloFoco": 2, "separacionFoco": 2, "grosorIndicador": 2 } as const;
 export const MOVIMIENTO = { "duracionCorta": '120ms', "duracionMedia": '200ms', "duracionLarga": '320ms', "curvaEstandar": 'cubic-bezier(0.2, 0, 0, 1)', "curvaSalida": 'cubic-bezier(0.3, 0, 1, 1)' } as const;
 
 export const FUENTE = { sans: "'Geist Variable', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif", mono: "'Geist Mono Variable', 'Geist Mono', ui-monospace, 'Cascadia Mono', monospace" } as const;
 
 export const TIPOGRAFIA = {
-  titulo1: { fontSize: 32, lineHeight: '40px', fontWeight: 600, letterSpacing: '-0.02em' },
-  titulo2: { fontSize: 24, lineHeight: '32px', fontWeight: 600, letterSpacing: '-0.01em' },
-  titulo3: { fontSize: 18, lineHeight: '26px', fontWeight: 600 },
-  titulo4: { fontSize: 16, lineHeight: '24px', fontWeight: 600 },
+  titulo1: { fontSize: 28, lineHeight: '36px', fontWeight: 600, letterSpacing: '-0.02em' },
+  titulo2: { fontSize: 20, lineHeight: '28px', fontWeight: 600, letterSpacing: '-0.01em' },
+  titulo3: { fontSize: 16, lineHeight: '24px', fontWeight: 600 },
+  titulo4: { fontSize: 15, lineHeight: '22px', fontWeight: 600 },
   cuerpo: { fontSize: 14, lineHeight: '20px', fontWeight: 400 },
   cuerpo2: { fontSize: 13, lineHeight: '18px', fontWeight: 400 },
   etiqueta: { fontSize: 12, lineHeight: '16px', fontWeight: 500 },
   boton: { fontSize: 14, lineHeight: '20px', fontWeight: 600 },
   sobretitulo: { fontSize: 11, lineHeight: '16px', fontWeight: 600, letterSpacing: '0.06em' },
-  publicoTitulo: { fontSize: 22, lineHeight: '28px', fontWeight: 600, letterSpacing: '-0.01em' },
+  publicoTitulo: { fontSize: 20, lineHeight: '26px', fontWeight: 600, letterSpacing: '-0.01em' },
   publicoCuerpo: { fontSize: 16, lineHeight: '24px', fontWeight: 400 },
   publicoEtiqueta: { fontSize: 14, lineHeight: '20px', fontWeight: 500 },
   mono: { fontSize: 13, lineHeight: '18px', fontWeight: 400, fontFamily: FUENTE.mono, fontVariantNumeric: 'tabular-nums' },

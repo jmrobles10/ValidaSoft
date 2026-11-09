@@ -1,4 +1,4 @@
-import { Box, Button, Card, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import type { ExpedientePublicoDto, RequisitoPublicoDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha } from '@validasoft/ui';
 import { FileText, PencilLine, Upload } from 'lucide-react';
@@ -12,8 +12,9 @@ import { Observacion } from './Observacion';
 import { accionDeRequisito, observacionesDeRequisito } from './requisitos';
 
 /**
- * Un documento que pide la empresa: su estado, la versión con su vigencia y, si le toca al tercero, qué admite (formatos,
- * tamaño, páginas), la plantilla para descargar y la acción para subirlo o llenar el formulario.
+ * Un documento que pide la empresa, como fila de la lista de su grupo: nombre y estado, la versión con su vigencia y, si
+ * le toca al tercero, qué admite (formatos, tamaño, páginas), la plantilla y la acción de tamaño natural para subirlo o
+ * llenar el formulario.
  */
 export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito: RequisitoPublicoDto; expediente: ExpedientePublicoDto; enlace: string | null }) {
   const { t } = useTranslation();
@@ -26,16 +27,16 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
   const teToca = Boolean(accion && enlace) && (accion !== 'reemplazar' || requiereAtencion(version?.vigencia));
 
   return (
-    <Card component="li" sx={{ p: 2, borderColor: requisito.estado === 'Observado' ? 'estado.advertencia.borde' : undefined }}>
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-        <Box sx={{ color: 'text.secondary', pt: 0.25 }} aria-hidden>
-          <FileText size={20} />
+    <Box component="li" sx={{ py: 1, px: { xs: 1.5, sm: 2 }, minHeight: 44 }}>
+      <Stack direction="row" spacing={1.25} alignItems="flex-start">
+        <Box sx={{ color: 'text.secondary', pt: '2px', display: 'flex' }} aria-hidden>
+          <FileText size={16} />
         </Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography component="h4" sx={{ fontWeight: 600, fontSize: 16, lineHeight: '22px' }}>
+          <Typography component="h4" sx={{ fontWeight: 500, fontSize: 14, lineHeight: '20px' }}>
             {tipo.nombre}
           </Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 14 }}>
+          <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
             {version
               ? t(version.clase === 'Formulario' ? 'expediente.documentos.versionFormulario' : 'expediente.documentos.version', {
                   n: String(version.n),
@@ -57,10 +58,10 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
       ))}
 
       {teToca && (Boolean(tipo.textoAyuda) || modo !== 'Formulario') && (
-        <Box sx={{ mt: 1.5 }}>
-          {tipo.textoAyuda && <Typography sx={{ fontSize: 15, lineHeight: '22px' }}>{tipo.textoAyuda}</Typography>}
+        <Box sx={{ mt: 0.75, pl: 3.25 }}>
+          {tipo.textoAyuda && <Typography sx={{ fontSize: 13, lineHeight: '18px' }}>{tipo.textoAyuda}</Typography>}
           {modo !== 'Formulario' && (
-            <Typography color="text.secondary" sx={{ fontSize: 14, mt: tipo.textoAyuda ? 0.5 : 0 }}>
+            <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px', mt: tipo.textoAyuda ? 0.25 : 0 }}>
               {textoReglas(reglasDe(tipo.archivo), t)}
             </Typography>
           )}
@@ -68,7 +69,7 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
       )}
 
       {teToca && tipo.tienePlantilla && (
-        <Box sx={{ mt: 1.5 }}>
+        <Box sx={{ mt: 1, pl: 3.25 }}>
           <Plantilla expedienteId={expediente.id} requisitoId={requisito.id} empresa={expediente.empresa.nombre} />
         </Box>
       )}
@@ -78,14 +79,13 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
           component={RouterLink}
           to={enlace}
           variant={accion === 'reemplazar' ? 'text' : 'contained'}
-          size={accion === 'reemplazar' ? 'medium' : 'large'}
-          startIcon={modo === 'Formulario' ? <PencilLine size={18} aria-hidden /> : <Upload size={18} aria-hidden />}
-          fullWidth={accion !== 'reemplazar'}
-          sx={{ mt: 1.5 }}
+          size="large"
+          startIcon={modo === 'Formulario' ? <PencilLine size={16} aria-hidden /> : <Upload size={16} aria-hidden />}
+          sx={{ mt: 1, ml: accion === 'reemplazar' ? 2.25 : 3.25 }}
         >
           {t(modo === 'Formulario' ? `expediente.documentos.accionesFormulario.${accion}` : `expediente.documentos.acciones.${accion}`)}
         </Button>
       )}
-    </Card>
+    </Box>
   );
 }

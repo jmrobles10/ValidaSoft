@@ -140,7 +140,7 @@ export const esCO = {
     vacioTexto: 'Sube tu RUT, tu Cámara de comercio u otros documentos. Los compartimos solo con las empresas que aceptaste.',
     cargadaEl: 'Versión {{n}} · cargada el {{fecha}}',
     sinVigente: 'Sin versión vigente',
-    nuevaVersion: 'Subir nueva versión',
+    nuevaVersion: 'Subir versión',
     descargar: 'Descargar',
     retirar: 'Retirar esta versión',
     versiones: 'Ver versiones ({{n}})',

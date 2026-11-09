@@ -53,11 +53,13 @@ describe('switch del tema', () => {
     expect(interruptor).toBeEnabled();
   });
 
-  it('size="small" no cambia el switch: mismas medidas que el normal (la perilla no se descentra)', () => {
+  it('size="small" y "medium" comparten la geometría: pista 36 × 20 y perilla 14 centrada con 3 px por lado', () => {
     const tema = createValidasoftTheme('light');
-    const raiz = tema.components?.MuiSwitch?.styleOverrides?.root as Record<string, unknown>;
-    expect(raiz['&.MuiSwitch-sizeSmall']).toEqual({ width: 36, height: 20, padding: 0 });
-    expect(raiz['&.MuiSwitch-sizeSmall .MuiSwitch-thumb']).toEqual({ width: 14, height: 14 });
-    expect(raiz['&.MuiSwitch-sizeSmall .MuiSwitch-switchBase']).toEqual({ padding: 3 });
+    const raiz = tema.components?.MuiSwitch?.styleOverrides?.root as Record<string, Record<string, unknown>>;
+    const geometria = raiz['&, &.MuiSwitch-sizeSmall, &.MuiSwitch-sizeMedium'];
+    expect(geometria).toMatchObject({ width: 36, height: 20, padding: 0 });
+    expect(geometria?.['& .MuiSwitch-thumb']).toEqual({ width: 14, height: 14 });
+    expect(geometria?.['& .MuiSwitch-switchBase']).toMatchObject({ top: 0, left: 0, padding: 3, '&.Mui-checked': { transform: 'translateX(16px)' } });
+    // 3 + 14 + 3 = 20 de alto; encendida queda a 3 px del borde derecho: 16 + 3 + 14 + 3 = 36.
   });
 });
