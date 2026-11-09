@@ -34,6 +34,10 @@ export const notificaciones = {
       titulo: 'El tercero respondió',
       explicacion: 'Cuando el tercero corrige lo observado y el expediente vuelve a tu área.',
     },
+    versionNueva: {
+      titulo: 'Versión nueva de un documento',
+      explicacion: 'Cuando el tercero sube una versión nueva de un documento que tu área está revisando: lo decidido sobre la anterior queda sin efecto.',
+    },
     aprobado: {
       titulo: 'Expediente aprobado',
       explicacion: 'Cuando se aprueba la validación de un expediente de tus áreas.',
