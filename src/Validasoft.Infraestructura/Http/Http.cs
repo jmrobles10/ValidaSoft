@@ -222,6 +222,8 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception excepcion, CancellationToken ct)
     {
+        // Una regla de negocio envuelta por una librería (p. ej. Marten al evaluar una expresión LINQ) responde como regla.
+        excepcion = ReglaEnvuelta(excepcion) ?? excepcion;
         var ruta = RutaSegura(http.Request.Path);
         if (excepcion is not ReglaDeNegocioException)
             logger.LogError(excepcion, "Error no controlado en {Ruta} (traceId {TraceId})", ruta, http.TraceIdentifier);
@@ -269,6 +271,14 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
             problema.Extensions["excepcion"] = excepcion.ToString();
 
         return await problemas.TryWriteAsync(new ProblemDetailsContext { HttpContext = http, ProblemDetails = problema, Exception = excepcion });
+    }
+
+    private static ReglaDeNegocioException? ReglaEnvuelta(Exception excepcion)
+    {
+        for (var actual = excepcion.InnerException; actual is not null; actual = actual.InnerException)
+            if (actual is ReglaDeNegocioException regla)
+                return regla;
+        return null;
     }
 
     /// <summary>Ruta sin secretos: el token de <c>/public/v1/enlaces/{token}/…</c> nunca llega a logs ni a respuestas de error.</summary>
