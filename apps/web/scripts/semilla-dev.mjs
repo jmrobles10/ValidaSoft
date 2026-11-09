@@ -289,6 +289,103 @@ await llamar('POST', '/api/v1/vinculos', {
   },
 });
 
+// Un proveedor con su expediente aprobado y su certificado (Aceros del Norte en Norte), por el mismo camino que en la
+// realidad: el tercero canjea el enlace de la invitación con el código que le llega a Mailpit, sube RUT y Cámara, acepta,
+// y Rubén (Compras) y Olga (Cumplimiento) aprueban sus áreas. Así se ven la lista de certificados, el Inicio con
+// indicadores, Vencimientos y la página pública de verificación.
+const MAILPIT = process.env.VALIDASOFT_MAILPIT_URL ?? 'http://localhost:8025';
+
+async function esperarCorreo(para, asunto) {
+  for (let intento = 0; intento < 60; intento++) {
+    const respuesta = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${para}"`)}&limit=50`);
+    if (respuesta.ok) {
+      const { messages } = await respuesta.json();
+      const ultimo = messages.filter((m) => asunto.test(m.Subject)).sort((a, b) => b.Created.localeCompare(a.Created))[0];
+      if (ultimo) return (await (await fetch(`${MAILPIT}/api/v1/message/${ultimo.ID}`)).json()).Text;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`No llegó a ${para} un correo con asunto ${String(asunto)} (¿está Mailpit en ${MAILPIT}?).`);
+}
+
+async function publico(metodo, ruta, { token, cuerpo } = {}) {
+  const cabeceras = { Accept: 'application/json' };
+  if (token) cabeceras.Authorization = `Bearer ${token}`;
+  if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json';
+  const respuesta = await fetch(`${API}${ruta}`, { method: metodo, headers: cabeceras, body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo) });
+  const texto = await respuesta.text();
+  if (!respuesta.ok) throw new Error(`${metodo} ${ruta} → ${respuesta.status}: ${texto}`);
+  return { status: respuesta.status, datos: texto ? JSON.parse(texto) : null };
+}
+
+function pdf(texto) {
+  return Buffer.from(
+    `%PDF-1.4\n% ${texto} ${randomUUID()}\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n` +
+      `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n`,
+    'latin1',
+  );
+}
+
+const aprobado = vinculos[0];
+const correoAprobado = `contacto1.${sufijo}@proveedor.co`;
+const enlace = /\/e\/([A-Za-z0-9_-]{43})/.exec(await esperarCorreo(correoAprobado, /./))?.[1];
+if (!enlace) throw new Error('La invitación de Aceros del Norte no trae el enlace /e/{token}.');
+let canje = await publico('POST', `/public/v1/enlaces/${enlace}/canjear`);
+if (canje.status === 202) {
+  const codigo = /\b(\d{6})\b/.exec(await esperarCorreo(correoAprobado, /código/i))?.[1];
+  canje = await publico('POST', `/public/v1/enlaces/${enlace}/otp`, { cuerpo: { codigo } });
+}
+const sesionTercero = canje.datos.accessToken;
+
+for (const [canonico, texto] of [
+  ['RUT', 'RUT Aceros del Norte'],
+  ['CAMARA_COMERCIO', 'Cámara de comercio Aceros del Norte'],
+]) {
+  const contenido = pdf(texto);
+  const carga = (
+    await publico('POST', '/public/v1/boveda/documentos', {
+      token: sesionTercero,
+      cuerpo: { nombreArchivo: `${canonico.toLowerCase()}.pdf`, tamanoBytes: contenido.length, tipoMime: 'application/pdf', tipoCanonico: canonico },
+    })
+  ).datos;
+  const put = await fetch(carga.carga.url, { method: 'PUT', headers: carga.carga.cabeceras, body: contenido });
+  if (!put.ok) throw new Error(`No se pudo subir ${canonico} a MinIO: ${put.status}`);
+  await publico('POST', `/public/v1/boveda/documentos/${carga.documentoId}/versiones/${carga.version}/confirmar`, { token: sesionTercero });
+}
+
+const invitacionPublica = (await publico('GET', `/public/v1/invitaciones/${aprobado.id}`, { token: sesionTercero })).datos;
+await publico('POST', `/public/v1/invitaciones/${aprobado.id}/aceptar`, {
+  token: sesionTercero,
+  cuerpo: { consentimientos: invitacionPublica.textosPorAceptar.map((t) => ({ tipo: t.tipo, textoVersion: t.textoVersion, aceptado: true })) },
+});
+
+// El expediente se abre al aceptar; los documentos le llegan por la cola de la bóveda.
+let expediente = null;
+for (let intento = 0; intento < 60 && expediente?.estado !== 'EnRevision'; intento++) {
+  const actual = await llamar('GET', `/api/v1/vinculos/${aprobado.id}`, { llave: admin, empresa: norte.id });
+  if (actual.expedienteAbiertoId)
+    expediente = await llamar('GET', `/api/v1/expedientes/${actual.expedienteAbiertoId}`, { llave: admin, empresa: norte.id });
+  if (expediente?.estado !== 'EnRevision') await new Promise((r) => setTimeout(r, 500));
+}
+if (expediente?.estado !== 'EnRevision') throw new Error(`El expediente de Aceros del Norte no pasó a revisión (está ${expediente?.estado ?? 'sin abrir'}).`);
+
+for (const [persona, codigoArea] of [
+  [usuarios[1], 'compras'],
+  [usuarios[2], 'cumplimiento'],
+]) {
+  const visto = await llamar('GET', `/api/v1/expedientes/${expediente.id}`, { llave: llaveSistema.valor, empresa: norte.id, delegado: asercion(privateKey, persona) });
+  const area = visto.etapas.flatMap((e) => e.areas).find((a) => a.codigo === codigoArea);
+  const versiones = Object.fromEntries((area.documentosPorDecidir ?? []).map((d) => [d.requisitoId, d.versionVigente]));
+  await llamar('POST', `/api/v1/expedientes/${expediente.id}/areas/${area.areaId}/veredicto`, {
+    llave: llaveSistema.valor,
+    empresa: norte.id,
+    delegado: asercion(privateKey, persona),
+    cuerpo: { veredicto: 'Aprobado', versiones },
+  });
+}
+const certificado = await llamar('GET', `/api/v1/vinculos/${aprobado.id}/certificado`, { llave: admin, empresa: norte.id });
+console.log(`Aceros del Norte quedó aprobado en Norte con el certificado ${certificado.actual?.folio ?? '(sin emitir)'}.`);
+
 const salida = {
   generadoEn: new Date().toISOString(),
   apiUrl: API,
