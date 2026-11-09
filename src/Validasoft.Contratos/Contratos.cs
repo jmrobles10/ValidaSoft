@@ -325,3 +325,22 @@ public sealed record CuentaDesignadaDto(Guid CuentaId, string Banco, string Tipo
 /// </summary>
 public sealed record CuentaDesignadaDelVinculoDto(CuentaDesignadaDto? Actual, CuentaDesignadaDto? Propuesta, CuentaDesignadaDto? Rechazada,
     int AprobadoresRequeridos, bool PuedesAprobar);
+
+// ---------- Vencimientos de la empresa (VE-1..VE-3) ----------
+
+/// <summary>
+/// Un documento compartido con un vínculo de la empresa y su vigencia para ella. <see cref="Estado"/>: Vigente,
+/// PorVencer, EnGracia o Vencida; <see cref="Base"/>: de dónde sale la fecha (expedición, carga, vencimiento propio,
+/// ratificación). <see cref="UltimoRecordatorio"/>: la última vez que la empresa se lo recordó al tercero.
+/// </summary>
+public sealed record VencimientoDto(Guid VinculoId, Guid DocumentoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, string Documento,
+    int Version, DateOnly VigenteHasta, int DiasRestantes, string Estado, string Base, DateOnly? FinDeGracia, bool PermiteRatificar,
+    DateTimeOffset? UltimoRecordatorio);
+
+public sealed record VencimientoARecordarDto(Guid VinculoId, Guid DocumentoId);
+
+/// <summary>Recordar al tercero los documentos elegidos (hasta 200); un correo por destinatario con todos los suyos.</summary>
+public sealed record RecordarVencimientosDto(IReadOnlyList<VencimientoARecordarDto> Vencimientos);
+
+/// <summary><see cref="Omitidos"/>: ya se recordaron hoy o el vínculo no tiene correo.</summary>
+public sealed record RecordatorioEnviadoDto(int Correos, int Documentos, int Omitidos);

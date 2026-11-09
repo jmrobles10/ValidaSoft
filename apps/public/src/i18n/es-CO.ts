@@ -155,6 +155,24 @@ export const esCO = {
     compartidaOtra: 'Tiene la versión {{n}}; recibirá la nueva cuando la exija.',
     noCompartida: 'No la recibe: no la exige o no has aceptado su invitación.',
     descargaLista: 'Descargando {{nombre}}…',
+    porRenovar: {
+      titulo: 'Por renovar',
+      sub: 'Empieza por lo que vence primero: la versión nueva les llega a todas las empresas que te la exigen.',
+      vencePara: 'vence para {{empresa}} el {{fecha}}',
+      venceProntoPara: 'vence pronto para {{empresa}}',
+      vencioPara: 'venció para {{empresa}} el {{fecha}}',
+      vencidoPara: 'está vencido para {{empresa}}',
+      enGracia: 'está en el periodo de gracia con {{empresa}} hasta el {{fecha}}',
+      // Continuación sin repetir el verbo: «vence para A el 31/10/2026 y para B el 30/12/2026».
+      paraEl: 'para {{empresa}} el {{fecha}}',
+      para: 'para {{empresa}}',
+      conHasta: 'con {{empresa}} hasta el {{fecha}}',
+      renuevaAntes: 'Renueva antes del {{fecha}} y quedas al día con {{empresas}}.',
+      renuevaYa: 'Renueva cuanto antes y quedas al día con {{empresas}}.',
+      // Español no distingue dos y tres en sus plurales (solo «one» y «other»): la cantidad elige la clave.
+      conLas: { dos: 'las dos', tres: 'las tres', todas: 'todas' },
+      subir: 'Subir versión nueva',
+    },
     retiro: {
       titulo: 'Retirar la versión {{n}} de {{tipo}}',
       ayuda: 'La versión deja de estar vigente. Si tenías una anterior, vuelve a ser la vigente y la reciben tus empresas. Lo que una empresa ya recibió queda en su registro.',

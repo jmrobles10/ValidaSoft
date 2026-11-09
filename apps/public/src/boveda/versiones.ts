@@ -1,4 +1,4 @@
-import type { ComparticionPublicaDto, VersionDocumentoDto } from '@validasoft/api-client';
+import type { ComparticionPublicaDto, DocumentoBovedaDto, VersionDocumentoDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { textoVigencia } from '../vigencia/vigencia';
@@ -41,4 +41,17 @@ export function sePuedeRetirar(version: Pick<VersionDocumentoDto, 'estado'>): bo
  */
 export function sePuedeDescargar(version: Pick<VersionDocumentoDto, 'estado'> & Partial<Pick<VersionDocumentoDto, 'clase'>>): boolean {
   return (version.estado === 'Actual' || version.estado === 'Superada') && version.clase !== 'Formulario';
+}
+
+/**
+ * Se sube una versión nueva desde la bóveda. Un formulario se actualiza desde la revisión de la empresa, que sabe qué
+ * campos pide. La API marca la clase en la versión (el documento llega como `Archivo`).
+ */
+export function sePuedeSubirVersion(documento: Pick<DocumentoBovedaDto, 'clase' | 'versionActual'>): boolean {
+  return documento.clase !== 'Formulario' && documento.versionActual?.clase !== 'Formulario';
+}
+
+/** Enlace para subir la versión nueva de un documento de la bóveda. */
+export function enlaceSubirVersion(documento: Pick<DocumentoBovedaDto, 'id' | 'tipo'>): string {
+  return `/boveda/subir?documento=${documento.id}&tipo=${encodeURIComponent(documento.tipo.codigo)}`;
 }

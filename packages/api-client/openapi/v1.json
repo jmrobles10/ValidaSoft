@@ -268,6 +268,136 @@
         }
       }
     },
+    "/api/v1/vencimientos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
+        ],
+        "summary": "GET_api_v1_vencimientos",
+        "description": "GET_api_v1_vencimientos",
+        "operationId": "GET_api_v1_vencimientos",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VencimientoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vencimientos/excel": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
+        ],
+        "summary": "GET_api_v1_vencimientos_excel",
+        "description": "GET_api_v1_vencimientos_excel",
+        "operationId": "GET_api_v1_vencimientos_excel",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vencimientos/recordar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
+        ],
+        "summary": "POST_api_v1_vencimientos_recordar",
+        "description": "POST_api_v1_vencimientos_recordar",
+        "operationId": "POST_api_v1_vencimientos_recordar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordarVencimientosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordatorioEnviadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/terceros": {
       "post": {
         "tags": [
@@ -10865,6 +10995,54 @@
           }
         }
       },
+      "RecordarVencimientosDto": {
+        "required": [
+          "vencimientos"
+        ],
+        "type": "object",
+        "properties": {
+          "vencimientos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VencimientoARecordarDto"
+            }
+          }
+        }
+      },
+      "RecordatorioEnviadoDto": {
+        "required": [
+          "correos",
+          "documentos",
+          "omitidos"
+        ],
+        "type": "object",
+        "properties": {
+          "correos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "documentos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "omitidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ReenviarExpedienteDto": {
         "type": "object",
         "properties": {
@@ -12447,6 +12625,103 @@
           }
         }
       },
+      "VencimientoARecordarDto": {
+        "required": [
+          "vinculoId",
+          "documentoId"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "VencimientoDto": {
+        "required": [
+          "vinculoId",
+          "documentoId",
+          "tercero",
+          "tipoVinculo",
+          "documento",
+          "version",
+          "vigenteHasta",
+          "diasRestantes",
+          "estado",
+          "base",
+          "finDeGracia",
+          "permiteRatificar",
+          "ultimoRecordatorio"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "documento": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vigenteHasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "diasRestantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string"
+          },
+          "finDeGracia": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "permiteRatificar": {
+            "type": "boolean"
+          },
+          "ultimoRecordatorio": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "VeredictoDto": {
         "required": [
           "veredicto"
@@ -13238,6 +13513,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.TercerosEndpoints"

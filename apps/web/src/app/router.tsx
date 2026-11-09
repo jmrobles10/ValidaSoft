@@ -29,6 +29,10 @@ export function crearRouter() {
               lazy: () => import('../features/revalidaciones/PaginaRevalidaciones').then((m) => ({ Component: m.PaginaRevalidaciones })),
             },
             {
+              path: 'vencimientos',
+              lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
+            },
+            {
               path: 'expedientes/:expedienteId',
               lazy: () => import('../features/expedientes/pages/DetalleExpediente').then((m) => ({ Component: m.DetalleExpediente })),
             },

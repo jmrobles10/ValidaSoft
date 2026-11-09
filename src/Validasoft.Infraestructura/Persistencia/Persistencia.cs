@@ -155,6 +155,8 @@ public static class ConfiguracionMarten
 
                 // Certificados (H5): uno por vínculo (id determinista); el folio raíz es único en el tenant y se busca entre
                 // tenants en la verificación pública (no es único entre tenants: lo desambigua la huella, CE-8).
+                // Último recordatorio de vencimiento por vínculo y documento (VE-3), aislado por empresa.
+                opts.Schema.For<Validasoft.Aplicacion.Vinculos.RecordatorioDeVencimiento>().MultiTenanted().Index(x => x.EmpresaId);
                 opts.Schema.For<Certificado>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_certificado_folio", TenancyScope.PerTenant, x => x.FolioRaiz)
                     .Index(x => x.EmpresaId)

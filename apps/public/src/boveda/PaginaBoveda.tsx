@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { useBoveda } from '../shared/api';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
+import { AvisoConsolidado } from './AvisoConsolidado';
 import { TarjetaDocumento } from './TarjetaDocumento';
 
 /** Mi bóveda: cada documento con su versión vigente y con qué empresas está compartido. */
@@ -27,12 +28,16 @@ export function PaginaBoveda() {
       ) : consulta.data.documentos.length === 0 ? (
         <EstadoVacio icono={FolderOpen} titulo={t('boveda.vacio')} texto={t('boveda.vacioTexto')} />
       ) : (
-        <Stack spacing={1.5}>
-          {/* Una tarjeta compacta por documento: la versión es una para todas las empresas y cada fila es una empresa. */}
-          {consulta.data.documentos.map((d) => (
-            <TarjetaDocumento key={d.id} documento={d} />
-          ))}
-        </Stack>
+        <>
+          {/* Lo que hay que renovar, primero lo que vence antes, consolidado entre todas las empresas. */}
+          <AvisoConsolidado documentos={consulta.data.documentos} />
+            <Stack spacing={1.5}>
+            {/* Una tarjeta compacta por documento: la versión es una para todas las empresas y cada fila es una empresa. */}
+            {consulta.data.documentos.map((d) => (
+              <TarjetaDocumento key={d.id} documento={d} />
+            ))}
+          </Stack>
+        </>
       )}
     </>
   );

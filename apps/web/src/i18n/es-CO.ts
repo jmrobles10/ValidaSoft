@@ -6,6 +6,7 @@ import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
+import { vencimientos } from './es-CO-vencimientos';
 
 export const esCO = {
   app: {
@@ -18,6 +19,7 @@ export const esCO = {
   nav: {
     bandeja: 'Bandeja',
     revalidaciones: 'Revalidaciones',
+    vencimientos: 'Vencimientos',
     vinculos: 'Vínculos',
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
@@ -225,6 +227,7 @@ export const esCO = {
   },
   bandeja,
   revalidaciones,
+  vencimientos,
   expedientes,
   documentos,
   notificaciones,
