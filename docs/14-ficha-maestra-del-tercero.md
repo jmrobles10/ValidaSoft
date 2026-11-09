@@ -4,7 +4,7 @@
 |---|---|---|
 | Propuesto (para revisión de Producto) | 2026-11-09 | Arquitectura |
 
-**Propósito.** Validasoft se vuelve el **dueño de la información del tercero**: la que hoy vive en las tablas del Portal de Proveedores y que el SRM usa para validar, aprobar y crear el proveedor en el ERP. Este documento cuenta lo que hay hoy (§1–§2), cómo lo modela Validasoft (§3–§6), cómo se migra (§7) y en qué orden se construye (§8). Las decisiones están en el [registro](decisiones/registro.md) (FM-1 a FM-12) y en [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
+**Propósito.** Validasoft se vuelve el **dueño de la información del tercero**: la que hoy vive en las tablas del Portal de Proveedores y que el SRM usa para validar, aprobar y crear el proveedor en el ERP. Este documento cuenta lo que hay hoy (§1–§2), cómo lo modela Validasoft (§3–§7), cómo se migra (§8) y en qué orden se construye (§9). Las decisiones están en el [registro](decisiones/registro.md) (FM-1 a FM-15) y en [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
 
 **Relacionados.** [01](01-analisis-legado-srm-portal.md) · [02](02-modelo-documental-compartido.md) · [03](03-dominio-y-eventos.md) · [08](08-integracion-y-migracion.md) · [ADR-0004](adr/0004-boveda-global-y-tenancy-conjoined.md) · [ADR-0005](adr/0005-version-unica-y-revalidacion.md) · [ADR-0010](adr/0010-personas-relacionadas-con-boveda-propia.md) · [ADR-0012](adr/0012-ia-openai-con-cupo-por-empresa.md).
 
@@ -68,7 +68,7 @@ Casi todo es **global del tercero**: una sola verdad compartida por todas las co
   - se comparte con las empresas cuyo flujo la pide;
   - cada empresa la **acepta u observa** con motivos tipificados, en su expediente y por sus áreas;
   - su aceptación es privada; una versión nueva **revalida** en todas las empresas (RV-x), con el aviso de NW-17.
-- **Respaldo documental** (FM-5). Cada sección declara qué tipos de documento la respaldan. La versión de la sección guarda `respaldadaPor: { documentoId, version }`, que el tercero elige o que se toma de la versión vigente.
+- **El documento como fuente de las secciones** (FM-5, FM-13). La relación es de muchos a muchos y está a nivel de campo (§5.1): un mismo RUT respalda General y Tributaria. La versión de la sección guarda `respaldadaPor[]: { documentoId, version, campos[] }`.
 - **Personas relacionadas** (FM-7):
   - **Fase 1:** la sección `LEGAL` guarda filas tipadas: rol `RepresentanteLegal` / `Suplente` / `Apoderado` / `Socio` / `JuntaDirectiva` / `RevisorFiscal` / `Contador`, identificación, porcentaje y PEP.
   - **Fase 2:** cada persona se vuelve un tercero persona natural con bóveda propia (ADR-0010) y su cédula se valida una sola vez.
@@ -95,7 +95,42 @@ Reglas de completitud (FM-6), configurables por flujo:
 - `FICHA_ESPECIALIDADES` con al menos una especialidad.
 - La cuenta designada (CB-2) cuando el flujo pide pagos.
 
-## 5. Cruce sección ↔ documento
+## 5. El documento como fuente de las secciones
+
+### 5.1 Qué respalda cada documento (mapa de plataforma, FM-13)
+El catálogo canónico declara, por tipo de documento, **qué campos de qué secciones respalda**. Son los mismos campos que la IA extrae del documento (ADR-0012):
+
+| Documento | Respalda |
+|---|---|
+| RUT | `FICHA_GENERAL`: identificación + DV, razón social / nombres, tipo de persona, dirección, ciudad, CIIU principal y secundarias, correo, teléfono. `FICHA_TRIBUTARIA`: responsabilidades (casilla 53). `FICHA_LEGAL`: representantes inscritos en el RUT |
+| Cámara de comercio | `FICHA_LEGAL`: representantes legales y suplentes, revisor fiscal, socios y junta cuando aparecen, estado de la matrícula. `FICHA_GENERAL`: razón social, NIT, domicilio |
+| Estados financieros | `FICHA_FINANCIERA` del periodo: las cifras |
+| Certificación bancaria | La cuenta (banco, tipo, número, titular), CB-1 |
+| Cédula | La identificación de la persona natural o del representante (`FICHA_GENERAL` o la persona de `FICHA_LEGAL`) |
+
+### 5.2 Requerido como documento **y** usado como soporte (FM-13)
+Hoy la constructora exige el RUT, pero el RUT no sirve para validar lo que el proveedor diligenció en el wizard. En Validasoft, cada requisito de documento del flujo tiene la opción **«Usar como soporte de las secciones»**, activa por omisión cuando el tipo canónico respalda alguna sección. Con la opción activa:
+- **Al revisar el requisito**, el revisor ve el documento junto con los campos de las secciones que respalda y el cruce campo por campo (§6). Aprobar el documento aprueba también su papel de soporte.
+- **Si hay discrepancias en campos críticos** (identificación, razón social, representante legal, cuenta), el requisito no se aprueba en lote ni automáticamente (H7). El revisor decide entre:
+  - observar el documento (el tercero sube otro);
+  - observar la sección (el tercero corrige el dato);
+  - aceptar con justificación.
+- **La empresa puede desactivar la opción** para un requisito: el documento se sigue pidiendo y revisando, pero no se cruza con las secciones.
+
+### 5.3 Actualizar desde el documento (FM-14)
+Simplifica lo que hoy es la feature de **Actualizaciones** del SRM (`ActualizacionProveedor`). Hoy son un detalle por sector, la comparación del valor anterior con el nuevo y un soporte genérico. Con Validasoft la actualización nace del documento:
+1. El tercero sube la versión nueva del RUT (o de la Cámara, los estados financieros o la certificación).
+2. La IA extrae los campos (ADR-0012) y la plataforma **propone** los cambios a las secciones que ese documento respalda, campo por campo: valor actual, valor del documento y si cambió. Por ejemplo: «dirección: Cra 10 # 20-30 → Cl 45 # 12-08» o «Gran contribuyente: No → Sí».
+3. El tercero **confirma** la propuesta, corrige lo que la IA leyó mal o deja algún campo como está. Sin IA, el tercero diligencia las secciones afectadas con el documento a la vista. Lo que confirma son versiones nuevas de esas secciones, respaldadas por el documento.
+4. Cada empresa recibe **una sola actualización**: el documento y las secciones que cambió (NW-17, RV-x). La revisión muestra tres columnas, anterior → nuevo → lo que dice el documento, solo con los campos que cambiaron.
+5. Cada **área responsable** aprueba u observa por sección, con motivos. Por ejemplo, Tesorería aprueba la bancaria y Contabilidad la tributaria: es el responsable por sector del SRM, configurado como áreas que revisan cada requisito.
+6. Al aceptar, se emite `seccion.aceptada` (FM-9) y el SRM aplica en AyF lo aceptado.
+
+Si el tercero cambia una sección **sin** documento nuevo (FM-15), la versión queda marcada **«sin respaldo»** frente a los campos que el documento vigente no confirma. La empresa configura qué pasa entonces:
+- se exige un documento nuevo para aceptarla (por omisión en los campos críticos);
+- o se permite aceptarla con justificación.
+
+## 6. Cruce sección ↔ documento
 Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma compara campo por campo (FM-8):
 
 | Sección | Campo | Contra | Regla |
@@ -110,14 +145,14 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
 - **Para el revisor:** es evidencia, no decide nada por sí mismo.
 - **En revisión automática (H7):** una sección con todos sus campos críticos en `Coincide` puede aprobarse sola según el nivel de la empresa; una `Discrepa` en un campo crítico va a humano.
 
-## 6. Eventos e integración
+## 7. Eventos e integración
 - **Eventos de dominio:** los del documento (versión cargada, compartida, aceptada…), más `CruceDeSeccionRegistrado(numero, resultados[])`.
 - **Evento público** `seccion.aceptada { terceroId, vinculoId, seccion, version, datos }`, emitido cuando una empresa acepta una versión (FM-9). El SRM lo aplica en AyF con el mapeo de hoy: General, Tributaria, el representante legal y la cuenta designada. Si AyF falla, el SRM lo reintenta y lo deja en su bandeja; la aceptación en Validasoft no se revierte, porque es una decisión de negocio, no una transacción distribuida.
 - **API para el Portal, el SRM y Marco:**
   - `GET /api/v1/vinculos/{id}/ficha`: lo **aceptado** por esa empresa, sección por sección.
   - `GET /api/v1/terceros/{id}/ficha`: se amplía Tercero 360 con las secciones.
 
-## 7. Migración y coexistencia
+## 8. Migración y coexistencia
 - **Importador (H10):** cada tabla `Ter*` del Portal se carga como la **versión 1** de su sección, con origen `Importada`. En cada empresa donde el tercero estaba `Completada` o en actualización, queda **aceptada** con su vigencia. Mientras se importa se aplican estas correcciones:
   - recalcular el DV;
   - traducir las 13 calidades tributarias a códigos DIAN (con `NoObligFacturar` normalizado);
@@ -128,7 +163,7 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
   Lo que no se pueda convertir va al CSV de rechazos.
 - **Coexistencia por empresa** (FM-11). Mientras una empresa no haya hecho el corte, el Portal sigue siendo su UI. Un sincronizador de un solo sentido, del Portal a Validasoft, lleva cada guardado de sección como una versión nueva, con origen `Portal`. Después del corte, el Portal lee la ficha de Validasoft o embebe su UI, y ya no escribe en `Ter*`.
 
-## 8. Orden de construcción (propuesto)
+## 9. Orden de construcción (propuesto)
 Cada entrega es un PR con pruebas y e2e.
 
 | Entrega | Contenido |
@@ -136,7 +171,7 @@ Cada entrega es un PR con pruebas y e2e.
 | F1 | Catálogos de plataforma (DANE, CIIU, bancos, responsabilidades DIAN, especialidades de 3 niveles) y esquemas canónicos de `FICHA_GENERAL`, `FICHA_TRIBUTARIA` y `FICHA_ESPECIALIDADES` como formularios globales; el tercero las diligencia en el portal; versiones en la bóveda |
 | F2 | Las secciones como requisitos del flujo: completitud, aceptación y observación por área con motivos, revalidación y aviso; la empresa ve la ficha en Tercero 360 y en el expediente |
 | F3 | `FICHA_LEGAL` (fase 1) y `FICHA_FINANCIERA` por periodo |
-| F4 | Cruce sección ↔ documento con los hechos de IA, visible para el revisor |
+| F4 | Mapa documento → secciones, opción «Usar como soporte» en los requisitos, cruce sección ↔ documento con los hechos de IA y **actualización desde el documento** (propuesta de cambios, confirmación del tercero, revisión de tres columnas) |
 | F5 | Evento `seccion.aceptada` y `GET /vinculos/{id}/ficha` para el SRM (H9) |
 | F6 | Importador desde las tablas del Portal y sincronizador de coexistencia (H10) |
 | F7 | `FICHA_SST`, cargo de contactos por empresa y personas relacionadas con bóveda propia (fase 2) |
