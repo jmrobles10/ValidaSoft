@@ -101,6 +101,13 @@ export function PaginaExpediente() {
         )}
       </Card>
 
+      {expediente.tipo === 'Renovacion' && expediente.estado === 'Abierto' && situacion === 'vigente' && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expediente.renovacion.titulo', { empresa })}</AlertTitle>
+          {t('expediente.renovacion.texto', { empresa })}
+        </Alert>
+      )}
+
       {situacion !== 'vigente' && (
         <Alert severity={situacion === 'suspendida' ? 'warning' : 'info'} sx={{ mb: 2 }}>
           <AlertTitle>{t(`vinculoSituacion.${situacion}.titulo`, { empresa })}</AlertTitle>

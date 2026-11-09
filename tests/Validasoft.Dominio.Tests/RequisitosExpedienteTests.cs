@@ -493,6 +493,37 @@ public partial class RequisitosExpedienteTests
         e.Estado.ShouldBe(EstadoExpediente.Aprobado);
         e.SincronizarVersiones(new Dictionary<Guid, VersionDeRequisito> { [_rut] = V(_docRut, 3) }, Ahora).ShouldBeEmpty();
     }
+
+    // ---------- renovación y ratificación (RN-1, RN-2) ----------
+
+    [Fact]
+    public void En_una_renovacion_el_tercero_ratifica_el_documento_vencido_y_las_areas_lo_aprueban_sin_revisarlo()
+    {
+        var eventos = Expediente.Abrir(Datos() with { Tipo = TipoExpediente.Renovacion }, Flujo(), Ahora, [Rut()]);
+        var renovacion = Expediente.Reproducir(null, eventos);
+        renovacion.Estado.ShouldBe(EstadoExpediente.Abierto);
+        renovacion.Requisitos.Single().Estado.ShouldBe(EstadoRequisito.Pendiente);
+
+        var ratificada = Aplicar(renovacion, renovacion.RatificarRequisito(_rut, V(_docRut, 1), "tercero:compras@aceros.co", Ahora));
+        ratificada.Estado.ShouldBe(EstadoExpediente.Aprobado);
+        var rut = ratificada.Requisitos.Single();
+        rut.Ratificado.ShouldBeTrue();
+        rut.Estado.ShouldBe(EstadoRequisito.Aprobado);
+        rut.Veredictos.Where(v => v.Vigente).ShouldAllBe(v => v.Origen == OrigenVeredicto.Sistema && v.Justificacion!.Contains("ratificó"));
+        Codigo(() => ratificada.RatificarRequisito(_rut, V(_docRut, 1), "tercero", Ahora)).ShouldBe("estado-invalido");
+    }
+
+    [Fact]
+    public void Solo_se_ratifica_en_una_renovacion_y_sobre_un_documento_sin_version()
+    {
+        var inicial = Abrir(Flujo(), Rut());
+        Codigo(() => inicial.RatificarRequisito(_rut, V(_docRut, 1), "tercero", Ahora)).ShouldBe("estado-invalido");
+
+        var conVersion = Expediente.Reproducir(null, Expediente.Abrir(Datos() with { Tipo = TipoExpediente.Renovacion }, Flujo(), Ahora, [Rut(V(_docRut, 2))]));
+        Codigo(() => conVersion.RatificarRequisito(_rut, V(_docRut, 1), "tercero", Ahora)).ShouldBe("estado-invalido");
+        Codigo(() => conVersion.RatificarRequisito(Guid.NewGuid(), V(_docRut, 1), "tercero", Ahora)).ShouldBe("requisito-no-encontrado");
+    }
+
 }
 
 /// <summary>Requisitos en la versión del flujo (RQ-1): se validan contra los tipos del tenant y las áreas del flujo.</summary>

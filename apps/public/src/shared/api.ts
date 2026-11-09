@@ -11,6 +11,7 @@ import {
   getObtenerDocumentoBovedaQueryOptions,
   getObtenerExpedientePublicoQueryOptions,
   getObtenerInvitacionPublicaQueryOptions,
+  ratificarRequisito,
   reenviarExpedientePublico,
   retirarVersionDocumento,
   type ConsentimientoDto,
@@ -128,6 +129,12 @@ export const useExpedientePublico = (id: string, habilitado = true) =>
 export function useReenviarExpediente(id: string) {
   const refrescar = useRefrescarTodo();
   return useMutation({ mutationFn: (respuesta: string) => reenviarExpedientePublico(id, { respuesta: respuesta.trim() || null }), onSettled: refrescar });
+}
+
+/** Ratifica en una renovación que el documento no cambió (RN-2): expediente, bóveda y vínculos cambian. */
+export function useRatificarRequisito(expedienteId: string) {
+  const refrescar = useRefrescarTodo();
+  return useMutation({ mutationFn: (requisitoId: string) => ratificarRequisito(expedienteId, requisitoId), onSettled: refrescar });
 }
 
 /** Tras subir una versión: bóveda, documento y vínculos cambian. */

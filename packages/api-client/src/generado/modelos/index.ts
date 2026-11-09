@@ -364,6 +364,7 @@ export * from './requisitoExpedienteDto';
 export * from './requisitoExpedienteDtoExencion';
 export * from './requisitoExpedienteDtoVersionActual';
 export * from './requisitoPublicoDto';
+export * from './requisitoPublicoDtoRatificadoEn';
 export * from './requisitoPublicoDtoVersionActual';
 export * from './resultadoDeLoteDto';
 export * from './resumirUsuariosParams';

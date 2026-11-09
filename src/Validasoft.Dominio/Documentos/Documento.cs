@@ -295,8 +295,8 @@ public sealed class Documento
                 continue;
 
             var tipo = destino.Tipo;
-            var calculo = CalculadoraDeVigencia.Calcular(tipo.ReglaFrescura, version.CargadaEn, version.Datos);
             var previa = version.VigenciaPara(destino.VinculoId);
+            var calculo = CalculadoraDeVigencia.Calcular(tipo.ReglaFrescura, version.CargadaEn, version.Datos, previa?.RatificadaEn);
             if (previa is not null && previa.VigenteHasta == calculo.VigenteHasta && previa.Base == calculo.Base &&
                 previa.DiasGracia == tipo.DiasGracia && previa.TipoDocumentoTenantId == tipo.Id && previa.DiasAviso.SequenceEqual(tipo.DiasAviso))
                 continue;
@@ -312,6 +312,25 @@ public sealed class Documento
     /// La versión vence para el vínculo si sigue siendo la actual, su vigencia allí tiene fecha y ya pasó
     /// <c>vigenteHasta + diasGracia</c>; si no (o ya venció), nulo. No toca el vínculo ni abre renovaciones (H6).
     /// </summary>
+    /// <summary>
+    /// El tercero ratifica la versión actual para un vínculo (RN-2, condición única I-14): el tipo lo permite, la versión es
+    /// la actual, está compartida con el vínculo y no trae una <c>fecha_vencimiento</c> ya cumplida. Si no, 409 o 422
+    /// <c>ratificacion-no-permitida</c>. La vigencia se recalcula después con <see cref="CalcularVigencias"/>.
+    /// </summary>
+    public VersionRatificada Ratificar(int numero, Guid vinculoId, bool permiteRatificacion, string por, DateTimeOffset ahora)
+    {
+        if (VersionActual != numero)
+            throw ReglaDeNegocioException.Conflicto("version-superada", $"La versión {numero} ya no es la actual del documento.");
+        if (!EstaCompartida(numero, vinculoId))
+            throw ReglaDeNegocioException.Conflicto("version-no-compartida", "Esa versión no está compartida con la empresa.");
+        if (!permiteRatificacion)
+            throw ReglaDeNegocioException.Validacion("ratificacion-no-permitida", "Este documento no se puede ratificar: sube una versión nueva.");
+        if (EsquemaDeFormulario.Fecha(VersionRequerida(numero).Datos, EsquemaDeFormulario.FechaVencimiento) is { } vence &&
+            vence <= CalculadoraDeVigencia.Fecha(ahora))
+            throw ReglaDeNegocioException.Validacion("ratificacion-no-permitida", "El documento ya venció: sube una versión nueva.");
+        return new VersionRatificada(numero, vinculoId, por, ahora);
+    }
+
     public VersionVencida? Vencer(int numero, Guid vinculoId, DateTimeOffset ahora)
     {
         if (VersionActual != numero || Buscar(numero)?.VigenciaPara(vinculoId) is not { VigenteHasta: { } hasta, VencidaEn: null } vigencia)
@@ -404,6 +423,7 @@ public sealed class Documento
             case DocumentoAccedido e: Apply(e); break;
             case VigenciaDeVersionCalculada e: Apply(e); break;
             case VersionVencida e: Apply(e); break;
+            case VersionRatificada e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento no aplicable a Documento: {evento.GetType().Name}.");
         }
     }
@@ -467,6 +487,7 @@ public sealed class Documento
             DiasAviso = [.. e.DiasAviso],
             DiasGracia = e.DiasGracia,
             CalculadaEn = e.Fecha,
+            RatificadaEn = previa?.RatificadaEn,
             // Una vigencia recalculada solo conserva el vencimiento si su fin de gracia no cambió.
             VencidaEn = previa?.VencidaEn is { } vencida && previa.FinDeGracia == CalculadoraDeVigencia.FinDeGracia(e.VigenteHasta, e.DiasGracia)
                 ? vencida
@@ -474,6 +495,13 @@ public sealed class Documento
         });
         if (version.Estado == EstadoVersion.Vencida && !TodasVencidas(version))
             version.Estado = EstadoVersion.Actual;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VersionRatificada e)
+    {
+        if (VersionRequerida(e.Numero).VigenciaPara(e.VinculoId) is { } vigencia)
+            vigencia.RatificadaEn = e.Fecha;
         ActualizadoEn = e.Fecha;
     }
 

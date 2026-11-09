@@ -244,7 +244,7 @@ public sealed record ObservacionPublicaDto(IReadOnlyList<MotivoPublicoDto> Motiv
 /// </summary>
 public sealed record RequisitoPublicoDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual,
-    IReadOnlyList<ObservacionPublicaDto> Observaciones);
+    IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeRatificar = false, DateTimeOffset? RatificadoEn = null);
 
 /// <summary>
 /// Lo que el tercero ve de su expediente: estado, observaciones vigentes y los documentos que le piden
@@ -253,4 +253,4 @@ public sealed record RequisitoPublicoDto(
 public sealed record ExpedientePublicoDto(
     Guid Id, string Folio, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado,
     IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeReenviar, int Reenvios, DateTimeOffset ActualizadoEn,
-    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0);
+    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0, string Tipo = "Inicial");

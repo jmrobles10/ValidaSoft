@@ -189,6 +189,7 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/sesion/cerrar': 'cerrarSesionTercero',
   'GET /public/v1/expedientes/{id}': 'obtenerExpedientePublico',
   'POST /public/v1/expedientes/{id}/reenviar': 'reenviarExpedientePublico',
+  'POST /public/v1/expedientes/{id}/requisitos/{requisitoId}/ratificar': 'ratificarRequisito',
   'GET /public/v1/boveda': 'obtenerBoveda',
   'GET /public/v1/boveda/documentos/{documentoId}': 'obtenerDocumentoBoveda',
   'POST /public/v1/boveda/documentos': 'iniciarCargaDocumento',

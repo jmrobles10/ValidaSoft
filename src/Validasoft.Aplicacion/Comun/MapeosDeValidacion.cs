@@ -151,9 +151,18 @@ public static class MapeosDeValidacion
                     r.Version(e, documentacion),
                     e.Estado == EstadoExpediente.Observado
                         ? [.. r.Veredictos.Where(v => v.Vigente && v.Veredicto == Veredicto.Observado).OrderBy(v => v.Fecha).Select(v => v.APublica(r.Codigo))]
-                        : []))
+                        : [],
+                    PuedeRatificar(e, r), r.Ratificado ? r.Ratificacion!.Fecha : null))
             ],
-            e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente));
+            e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente), e.Tipo.ToString());
+
+    /// <summary>
+    /// ¿Puede el tercero ratificar este documento (RN-2, I-14)? En una renovación abierta, sobre un documento global sin
+    /// versión en ella cuyo tipo canónico lo permite (RUT sí; Cámara y estados financieros, no).
+    /// </summary>
+    private static bool PuedeRatificar(Expediente e, RequisitoDeExpediente r) =>
+        e.EstaAbierto && e.Tipo == TipoExpediente.Renovacion && !r.Eximido && r.VersionActual is null && r.Ambito == AmbitoDocumento.Global &&
+        Dominio.Documentos.CatalogoCanonico.Buscar(r.TipoCanonico)?.PermiteRatificacion == true;
 
     private static ObservacionPublicaDto APublica(this VeredictoRegistrado v, string? requisito) =>
         new([.. v.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))], v.Observacion, v.Fecha, requisito);

@@ -39,6 +39,13 @@ public sealed class RequisitoDeExpediente
     /// <summary>Aprobación de esta empresa a esta misma versión en otro expediente del tercero (RQ-11); nula si no la hay.</summary>
     public AprobacionPrevia? AprobacionPrevia { get; set; }
 
+    /// <summary>Ratificación del tercero en una renovación (RN-2); nula si no ratificó.</summary>
+    public RatificacionDeRequisito? Ratificacion { get; set; }
+
+    /// <summary>¿La versión actual es la que el tercero ratificó? Una versión nueva posterior la deja sin efecto.</summary>
+    [JsonIgnore]
+    public bool Ratificado => Ratificacion is { } r && VersionActual is { } v && v.DocumentoId == r.Version.DocumentoId && v.Numero == r.Version.Numero;
+
     /// <summary>¿La versión actual es la que la empresa ya aprobó en otro expediente?</summary>
     public bool ReutilizaAprobacion => AprobacionPrevia is { } previa && VersionActual is { } version &&
                                        version.DocumentoId == previa.DocumentoId && version.Numero == previa.Version;
@@ -128,6 +135,21 @@ public sealed partial class Expediente
         var requisito = RequisitoDecidible(requisitoId, area, revisorId, sobreVersion, superadas: null);
         var evento = VeredictoHumano(requisito, area, veredicto, revisorId, Motivos(veredicto, motivos), Texto(observacion, "observacion"), ahora);
         return Simular(s => s.Emitir(evento), ahora);
+    }
+
+    /// <summary>
+    /// El tercero ratifica en una renovación que el documento no cambió (RN-2): solo en un expediente de
+    /// <c>Renovacion</c> abierto y sobre un requisito sin versión (el que venció). Las áreas lo aprueban solas.
+    /// </summary>
+    public IReadOnlyList<object> RatificarRequisito(Guid requisitoId, VersionDeRequisito version, string por, DateTimeOffset ahora)
+    {
+        if (!EstaAbierto || Tipo != TipoExpediente.Renovacion)
+            throw ReglaDeNegocioException.Conflicto("estado-invalido", "Solo se ratifica un documento en una renovación abierta.");
+        var requisito = BuscarRequisito(requisitoId)
+                        ?? throw ReglaDeNegocioException.NoEncontrado("requisito-no-encontrado", "Ese requisito no está en el expediente.");
+        if (requisito.Eximido || requisito.VersionActual is not null)
+            throw ReglaDeNegocioException.Conflicto("estado-invalido", $"{requisito.Nombre} ya tiene una versión en esta renovación.");
+        return Simular(s => s.Emitir(new RequisitoRatificado(requisitoId, version, por, ahora)), ahora);
     }
 
     /// <summary>
@@ -287,6 +309,15 @@ public sealed partial class Expediente
         ActualizadoEn = e.Fecha;
     }
 
+    public void Apply(RequisitoRatificado e)
+    {
+        var requisito = BuscarRequisito(e.RequisitoId)!;
+        requisito.VersionActual = e.Version;
+        requisito.Ratificacion = new RatificacionDeRequisito(e.Version, e.Por, e.Fecha);
+        RecalcularRequisitos(e.Fecha);
+        ActualizadoEn = e.Fecha;
+    }
+
     public void Apply(RequisitoEximido e)
     {
         var requisito = BuscarRequisito(e.RequisitoId)!;
@@ -394,11 +425,14 @@ public sealed partial class Expediente
                 if (requisito.Eximido || requisito.VersionActual is not { } version || requisito.DecididoPor(area))
                     continue;
                 var reutiliza = requisito.ReutilizaAprobacion;
-                if (!area.Automatica && !reutiliza)
+                var ratificado = requisito.Ratificado;
+                if (!area.Automatica && !reutiliza && !ratificado)
                     continue;
-                var nota = reutiliza && requisito.AprobacionPrevia is { } previa
-                    ? $"La empresa ya aprobó esta versión en el expediente {previa.Folio} ({previa.TipoVinculo})."
-                    : null;
+                var nota = ratificado && requisito.Ratificacion is { } ratificacion
+                    ? $"El tercero ratificó el {ratificacion.Fecha:dd/MM/yyyy} que el documento no cambió."
+                    : reutiliza && requisito.AprobacionPrevia is { } previa
+                        ? $"La empresa ya aprobó esta versión en el expediente {previa.Folio} ({previa.TipoVinculo})."
+                        : null;
                 simulacion.Emitir(new VeredictoDeRequisitoEmitido(Guid.CreateVersion7(), requisito.Id, area.AreaId, Veredicto.Aprobado,
                     OrigenVeredicto.Sistema, null, version.Numero, [], null, nota, ahora));
                 emitio = true;

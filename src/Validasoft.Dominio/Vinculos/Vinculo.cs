@@ -268,6 +268,13 @@ public sealed class Vinculo
         return new VinculoReintegrado(TuvoAprobacion ? EstadoVinculo.EnValidacion : EstadoVinculo.Invitado, justificacion.Trim(), ahora);
     }
 
+    /// <summary>
+    /// Vence por un documento obligatorio vencido (RN-1): solo un vínculo que ya fue aprobado y está <c>Activo</c> o
+    /// <c>PorVencer</c>; si ya está vencido, bloqueado o terminado, nada.
+    /// </summary>
+    public VinculoVencido? Vencer(string documento, DateTimeOffset ahora) =>
+        TuvoAprobacion && Estado is EstadoVinculo.Activo or EstadoVinculo.PorVencer ? new VinculoVencido(documento, ahora) : null;
+
     /// <summary>Terminal; desde cualquier estado no terminal, incluido Bloqueado.</summary>
     public VinculoAnulado Anular(string motivo, DateTimeOffset ahora)
     {
@@ -291,16 +298,14 @@ public sealed class Vinculo
         if (ExpedienteAbiertoId is { } abierto)
             throw ReglaDeNegocioException.Conflicto("expediente-abierto-existente", $"El vínculo ya tiene el expediente {abierto} abierto.");
 
-        if (tipo == TipoExpediente.Actualizacion)
+        if (tipo is TipoExpediente.Actualizacion or TipoExpediente.Renovacion)
         {
             if (!TuvoAprobacion || Estado is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer or EstadoVinculo.Vencido))
                 throw ReglaDeNegocioException.Conflicto("estado-invalido",
-                    $"Una actualización se abre sobre un vínculo que ya fue aprobado; este está {Estado}.");
+                    $"Una actualización o renovación se abre sobre un vínculo que ya fue aprobado; este está {Estado}.");
             return new ExpedienteVinculado(expedienteId, tipo, folio, ahora);
         }
 
-        if (tipo != TipoExpediente.Inicial)
-            throw ReglaDeNegocioException.Validacion("tipo-expediente-no-soportado", "Por ahora solo se abren expedientes iniciales y de actualización.");
 
         if (Estado != EstadoVinculo.Invitado || TuvoAprobacion)
             throw ReglaDeNegocioException.Conflicto("estado-invalido",
@@ -398,6 +403,12 @@ public sealed class Vinculo
     {
         Estado = EstadoVinculo.Activo;
         TuvoAprobacion = true;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VinculoVencido e)
+    {
+        Estado = EstadoVinculo.Vencido;
         ActualizadoEn = e.Fecha;
     }
 

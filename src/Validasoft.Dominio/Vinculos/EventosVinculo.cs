@@ -113,3 +113,9 @@ public sealed record ExpedienteCerrado(Guid ExpedienteId, ResultadoExpediente Re
 
 /// <summary>Expediente aprobado: el vínculo queda <c>Activo</c> y con aprobación previa (habilita renovaciones).</summary>
 public sealed record VinculoActivado(Guid ExpedienteId, DateTimeOffset Fecha);
+
+/// <summary>
+/// Venció para el vínculo un documento obligatorio (RN-1, docs/02 §8.2): el vínculo pasa a <c>Vencido</c> hasta que una
+/// renovación aprobada lo vuelva a activar (I-15). <see cref="Documento"/> es el nombre del tipo que venció.
+/// </summary>
+public sealed record VinculoVencido(string Documento, DateTimeOffset Fecha);
