@@ -203,6 +203,8 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   invitarVinculo: { '201': 'EnlaceInvitacionDto' },
   crearTenant: { '201': 'TenantCreadoDto' },
   crearSistema: { '201': 'SistemaIntegradoDto' },
+  crearWebhook: { '201': 'WebhookDto' },
+  reenviarEntregaWebhook: { '202': 'EntregaWebhookDto' },
   crearUsuario: { '201': 'UsuarioDto' },
   crearEmpresa: { '201': 'EmpresaDto' },
   crearApiKey: { '201': 'ApiKeyDto' },

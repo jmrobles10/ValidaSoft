@@ -27,7 +27,6 @@ import type {
   CrearWebhookDto,
   EditarWebhookDto,
   EntregaWebhookDto,
-  IResult,
   ListarEntregasWebhookParams,
   PaginaDtoOfEntregaWebhookDto,
   WebhookDto
@@ -137,7 +136,7 @@ export const crearWebhook = (
 ) => {
       
       
-      return clienteValidasoft<IResult>(
+      return clienteValidasoft<WebhookDto>(
       {url: `/api/v1/webhooks`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: crearWebhookDto, signal
@@ -147,7 +146,7 @@ export const crearWebhook = (
   
 
 
-export const getCrearWebhookMutationOptions = <TError = ErrorType<void>,
+export const getCrearWebhookMutationOptions = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crearWebhook>>, TError,{data: BodyType<CrearWebhookDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
 ): UseMutationOptions<Awaited<ReturnType<typeof crearWebhook>>, TError,{data: BodyType<CrearWebhookDto>}, TContext> => {
 
@@ -174,9 +173,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CrearWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof crearWebhook>>>
     export type CrearWebhookMutationBody = BodyType<CrearWebhookDto>
-    export type CrearWebhookMutationError = ErrorType<void>
+    export type CrearWebhookMutationError = ErrorType<unknown>
 
-    export const useCrearWebhook = <TError = ErrorType<void>,
+    export const useCrearWebhook = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crearWebhook>>, TError,{data: BodyType<CrearWebhookDto>}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof crearWebhook>>,
@@ -695,7 +694,7 @@ export const reenviarEntregaWebhook = (
 ) => {
       
       
-      return clienteValidasoft<IResult>(
+      return clienteValidasoft<EntregaWebhookDto>(
       {url: `/api/v1/webhooks/${id}/entregas/${entregaId}/reenviar`, method: 'POST', signal
     },
       options);
@@ -703,7 +702,7 @@ export const reenviarEntregaWebhook = (
   
 
 
-export const getReenviarEntregaWebhookMutationOptions = <TError = ErrorType<void>,
+export const getReenviarEntregaWebhookMutationOptions = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reenviarEntregaWebhook>>, TError,{id: string;entregaId: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
 ): UseMutationOptions<Awaited<ReturnType<typeof reenviarEntregaWebhook>>, TError,{id: string;entregaId: string}, TContext> => {
 
@@ -730,9 +729,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type ReenviarEntregaWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof reenviarEntregaWebhook>>>
     
-    export type ReenviarEntregaWebhookMutationError = ErrorType<void>
+    export type ReenviarEntregaWebhookMutationError = ErrorType<unknown>
 
-    export const useReenviarEntregaWebhook = <TError = ErrorType<void>,
+    export const useReenviarEntregaWebhook = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reenviarEntregaWebhook>>, TError,{id: string;entregaId: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof reenviarEntregaWebhook>>,
