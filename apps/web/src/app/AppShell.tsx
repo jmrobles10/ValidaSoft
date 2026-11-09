@@ -5,6 +5,7 @@ import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
+import { Campana } from '../features/notificaciones/Campana';
 import { useAlturaFija } from '../sesion/alturaFija';
 import { useSesion } from '../sesion/sesionStore';
 import { useYo } from '../sesion/useYo';
@@ -136,6 +137,7 @@ export function AppShell() {
             {persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}
           </Typography>
         )}
+        <Campana empresaId={empresa.id} />
         {!temaDelContenedor && (
           <Tooltip title={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')}>
             <IconButton aria-label={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')} onClick={() => fijarModo(modo === 'dark' ? 'light' : 'dark')}>
