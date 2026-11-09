@@ -14,7 +14,7 @@ function veredicto(origen: string): EventoHistorialDto {
     actorTipo: 'Tercero',
     actorId: 'tercero',
     sistema: null,
-    datos: { areaId: 'a1', veredicto: 'Aprobado', origen, justificacion: 'A este tercero no se le pidió ningún documento que revise esta área.' },
+    datos: { areaId: 'a1', veredicto: 'Aprobado', origen, justificacion: 'Esta área no tiene documentos que revisar en este expediente.' },
   };
 }
 
@@ -23,7 +23,7 @@ describe('historial del expediente', () => {
     const entrada = eventoExpedienteATimeline(veredicto('Sistema'), contexto, t);
     expect(entrada.titulo).toBe('Cumplimiento aprobó');
     expect(entrada.actor).toEqual({ nombre: 'Sistema', tipo: 'sistema' });
-    expect(entrada.motivo).toBe('A este tercero no se le pidió ningún documento que revise esta área.');
+    expect(entrada.motivo).toBe('Esta área no tiene documentos que revisar en este expediente.');
   });
 
   it('un veredicto humano conserva el actor de la petición', () => {

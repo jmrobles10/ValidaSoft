@@ -101,7 +101,7 @@ test('cargas que no se admiten: formato distinto al exigido y el mismo archivo o
   await esperarTarjeta(page, RUT, 'Versión 1');
 });
 
-test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: llega a Norte y a Sur y los vínculos siguen activos', async ({ page, browser }) => {
+test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: Norte lo revalida, el certificado queda con pendientes y se reemite', async ({ page, browser }) => {
   const e = await crearEscenario();
   const tercero = nuevoTercero('Aceros del Pacífico S.A.S.');
   const enNorte = await invitar(e, e.norte, tercero);
@@ -145,14 +145,26 @@ test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: lleg
     await expect(conEmpresas.getByRole('listitem').filter({ hasText: e.sur.nombre })).toContainText('v2', { timeout: 1500 });
   }).toPass({ timeout: 45_000 });
 
-  // En Norte el vínculo sigue activo con su certificado vigente y el RUT compartido ya es la versión 2.
+  // En Norte el vínculo sigue activo; el certificado sigue siendo válido pero queda «Con pendientes» (RV-3).
   const vinculo = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.olga, e.norte, `vinculos/${enNorte.vinculoId}`);
   await expect(vinculo.getByRole('heading', { level: 1, name: tercero.nombre })).toBeVisible();
   await expect(vinculo.getByText(/^Activo$/).first()).toBeVisible();
-  // El certificado sigue vigente; vence con el documento que vence primero (la Cámara, a los 30 días).
-  await expect(vinculo.getByRole('main')).toContainText(new RegExp(`Vigente\\s*${e.norte.prefijo}-C-\\d{4}-\\d{6}-1`));
+  await expect(vinculo.getByRole('main')).toContainText(new RegExp(`Con pendientes\\s*${e.norte.prefijo}-C-\\d{4}-\\d{6}-1`));
   await expect(vinculo.getByRole('link', { name: 'Página de verificación' })).toBeVisible();
   // «Documentos compartidos»: cada uno con su botón «Ver o descargar {documento}, versión n».
   await expect(vinculo.getByRole('button', { name: `Ver o descargar ${RUT}, versión 2` })).toBeVisible();
   await expect(vinculo.getByRole('button', { name: `Ver o descargar ${CAMARA}, versión 1` })).toBeVisible();
+
+  // Norte revalida solo el RUT v2 en un expediente de actualización (RV-1): la Cámara no vuelve a revisarse.
+  await abrirDesdeBandeja(ruben, tercero.nombre, 'Compras');
+  await expect(regionDeArea(ruben, 'Compras')).toContainText(`${RUT} · v2`);
+  await expect(regionDeArea(ruben, 'Compras')).not.toContainText(CAMARA);
+  await aprobarArea(ruben, 'Compras');
+  await abrirDesdeBandeja(olga, tercero.nombre, 'Cumplimiento');
+  await aprobarArea(olga, 'Cumplimiento');
+
+  // Aprobada la actualización, el certificado se reemite (emisión 2) y vuelve a estar vigente.
+  const despues = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.olga, e.norte, `vinculos/${enNorte.vinculoId}`);
+  await expect(despues.getByRole('main')).toContainText(new RegExp(`Vigente\\s*${e.norte.prefijo}-C-\\d{4}-\\d{6}-2`));
+  await expect(despues.getByText(/^Activo$/).first()).toBeVisible();
 });

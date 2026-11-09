@@ -16,6 +16,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
     [
         new("certificado.emitido", "Se emitió el certificado del vínculo (o una emisión nueva que reemplaza la anterior)."),
         new("certificado.reemplazado", "Una emisión quedó reemplazada por otra más reciente (sigue verificable)."),
+        new("certificado.con_pendientes", "Una versión nueva de un documento aceptado está en revalidación; el certificado sigue válido."),
         new("certificado.suspendido", "El certificado se suspendió porque el vínculo se bloqueó."),
         new("certificado.restablecido", "El certificado se restableció al desbloquearse el vínculo."),
         new("certificado.revocado", "El certificado se revocó."),
@@ -26,7 +27,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
 
     public async ValueTask<EventoPublicoMapeado?> MapearAsync(IEvent evento, IContextoDeEventos contexto, CancellationToken ct)
     {
-        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoSuspendido or CertificadoRestablecido
+        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoConPendientes or CertificadoSuspendido or CertificadoRestablecido
                 or CertificadoRevocado or CertificadoVencido))
             return null;
         if (!Guid.TryParse(evento.TenantId, out var tenantId))
@@ -62,6 +63,9 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
                     Motivo = r.Motivo,
                     FolioReemplazo = certificado?.Emisiones.FirstOrDefault(x => x.Numero == r.EmisionNueva)?.Folio
                 }
+                : null),
+            CertificadoConPendientes p => ("certificado.con_pendientes", Datos(Emision(p.Emision, EstadoCertificado.ConPendientes)) is { } d
+                ? d with { EstadoAnterior = nameof(EstadoCertificado.Vigente), Motivo = p.Motivo, ExpedienteId = p.ExpedienteId }
                 : null),
             CertificadoSuspendido s => ("certificado.suspendido", Datos(Emision(s.Emision, EstadoCertificado.Suspendido)) is { } d
                 ? d with { EstadoAnterior = s.EstadoPrevio.ToString(), Motivo = s.Motivo }

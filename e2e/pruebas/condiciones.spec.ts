@@ -65,7 +65,7 @@ test('A una persona natural no se le pide la Cámara: entrega su cédula y Cumpl
   await abrirDesdeBandeja(ruben, ana.nombre, 'Compras');
   // Rubén solo ve el panel de su área; el historial cuenta que Cumplimiento aprobó sola, como Sistema y con el porqué.
   await expect(ruben.getByRole('main')).toContainText(/Cumplimiento aprobó\s*Sistema/);
-  await expect(ruben.getByRole('main')).toContainText('A este tercero no se le pidió ningún documento que revise esta área.');
+  await expect(ruben.getByRole('main')).toContainText('Esta área no tiene documentos que revisar en este expediente.');
   await expect(regionDeArea(ruben, 'Compras')).toContainText(CEDULA);
   await expect(ruben.getByRole('main')).not.toContainText(CAMARA);
 

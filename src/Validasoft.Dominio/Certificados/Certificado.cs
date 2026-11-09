@@ -149,6 +149,12 @@ public sealed class Certificado
             : [new CertificadoReemplazado(EmisionActual, nueva, Requerido(motivo, "motivo-requerido", "La reemisión necesita un motivo."), ahora), emitido];
     }
 
+    /// <summary>Revalidación abierta (RV-3): un certificado vigente pasa a «Con pendientes»; en cualquier otro estado, nada.</summary>
+    public CertificadoConPendientes? MarcarConPendientes(string motivo, Guid expedienteId, DateTimeOffset ahora) =>
+        Estado == EstadoCertificado.Vigente
+            ? new CertificadoConPendientes(EmisionActual, Requerido(motivo, "motivo-requerido", "Los pendientes necesitan un motivo."), expedienteId, ahora)
+            : null;
+
     /// <summary>Bloqueo del vínculo (B-5): solo un certificado válido se suspende.</summary>
     public CertificadoSuspendido Suspender(string motivo, DateTimeOffset ahora)
     {
@@ -256,6 +262,8 @@ public sealed class Certificado
         anterior.EstadoDesde = e.Fecha;
         ActualizadoEn = e.Fecha;
     }
+
+    public void Apply(CertificadoConPendientes e) => Cambiar(e.Emision, EstadoCertificado.ConPendientes, e.Fecha);
 
     public void Apply(CertificadoSuspendido e)
     {
