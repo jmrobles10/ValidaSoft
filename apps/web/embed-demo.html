@@ -19,10 +19,13 @@
       }
       * { box-sizing: border-box; }
       body { margin: 0; }
+      /* Alto entero del encabezado: la app embebida calcula su alto fijo desde el borde superior del iframe
+         (alturaFija.ts, con Math.round) y un decimal sumaría un píxel de scroll a la ventana. */
       header {
         background: #263238;
         color: #fff;
-        padding: 12px 20px;
+        height: 48px;
+        padding: 0 20px;
         display: flex;
         align-items: center;
         gap: 12px;
@@ -31,8 +34,14 @@
       header span { color: #b0bec5; font-size: 13px; }
       .disposicion { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 16px; padding: 16px; align-items: start; }
       @media (max-width: 900px) { .disposicion { grid-template-columns: 1fr; } }
-      aside, .marco { background: var(--panel); border: 1px solid var(--borde); border-radius: 6px; }
-      aside { padding: 16px; display: grid; gap: 12px; position: sticky; top: 16px; min-width: 0; }
+      aside, .marco { background: var(--panel); border-radius: 6px; }
+      /* Un solo scroll: el panel nunca es más alto que la ventana (48 de encabezado + 2 × 16 de margen); si no cabe,
+         se desplaza la bitácora dentro de él. */
+      aside {
+        padding: 16px; display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; min-width: 0;
+        border: 1px solid var(--borde); max-height: calc(100vh - 80px); max-height: calc(100dvh - 80px); overflow-y: auto;
+      }
+      aside > * { flex-shrink: 0; }
       aside > * { min-width: 0; }
       code { overflow-wrap: anywhere; }
       aside h2 { font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; color: var(--suave); }
@@ -45,11 +54,12 @@
       .botones { display: flex; flex-wrap: wrap; gap: 8px; }
       .nota { font-size: 12px; color: var(--suave); background: #fff8e1; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 4px; line-height: 1.45; }
       .error { font-size: 13px; color: #b71c1c; background: #ffebee; border: 1px solid #ffcdd2; padding: 8px 10px; border-radius: 4px; }
-      #bitacora { list-style: none; margin: 0; padding: 0; font: 12px/1.4 'Cascadia Mono', ui-monospace, monospace; max-height: 260px; overflow: auto; border-top: 1px solid var(--borde); padding-top: 8px; }
+      #bitacora { list-style: none; margin: 0; padding: 0; font: 12px/1.4 'Cascadia Mono', ui-monospace, monospace; flex: 1 1 auto; flex-shrink: 1; min-height: 96px; overflow: auto; border-top: 1px solid var(--borde); padding-top: 8px; }
       #bitacora li { padding: 2px 0; color: var(--suave); overflow-wrap: anywhere; }
       #bitacora li.entrante::before { content: '← '; color: var(--acento); }
       #bitacora li.saliente::before { content: '→ '; color: #6a1b9a; }
-      .marco { overflow: hidden; min-height: 640px; }
+      /* Borde sin alto (box-shadow): el iframe con alto fijo llena justo lo que se ve de la ventana. */
+      .marco { overflow: hidden; box-shadow: 0 0 0 1px var(--borde); }
       .marco .vacio { padding: 48px; text-align: center; color: var(--suave); }
       iframe { display: block; width: 100%; height: 640px; border: 0; }
     </style>
