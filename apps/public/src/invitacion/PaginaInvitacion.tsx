@@ -8,6 +8,7 @@ import { Navigate, Link as RouterLink, useParams } from 'react-router';
 import { useAceptarInvitacion, useInvitacion } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
+import { MarcaDeEmpresa } from '../shared/MarcaDeEmpresa';
 import { mensajeDeError } from '../shared/errores';
 import { claveTexto, consentimientosDe, estadoInvitacion, falloDeAceptacion, marcadosVigentes, puedeAceptar, textosOrdenados } from './textos';
 
@@ -115,6 +116,7 @@ export function PaginaInvitacion() {
   };
 
   return (
+    <MarcaDeEmpresa empresa={invitacion.vinculo.empresa}>
     <Box component="form" onSubmit={enviar} noValidate>
       <CabeceraPagina titulo={t('invitacion.titulo', { empresa })} sub={t('invitacion.sub', { empresa, tipo: invitacion.vinculo.tipoVinculo.nombre.toLowerCase() })} />
 
@@ -161,5 +163,6 @@ export function PaginaInvitacion() {
         </Button>
       </Stack>
     </Box>
+    </MarcaDeEmpresa>
   );
 }

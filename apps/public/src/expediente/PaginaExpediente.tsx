@@ -8,6 +8,7 @@ import { Link as RouterLink, useParams } from 'react-router';
 import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
+import { MarcaDeEmpresa } from '../shared/MarcaDeEmpresa';
 import { mensajeDeError } from '../shared/errores';
 import { avanceDelTercero } from '../vinculos/avance';
 import { ChipAvance } from '../vinculos/ChipAvance';
@@ -66,7 +67,7 @@ export function PaginaExpediente() {
   };
 
   return (
-    <>
+    <MarcaDeEmpresa empresa={expediente.empresa}>
       <CabeceraPagina
         titulo={t('expediente.titulo', { empresa })}
         sub={
@@ -150,6 +151,6 @@ export function PaginaExpediente() {
           </Stack>
         </Card>
       )}
-    </>
+    </MarcaDeEmpresa>
   );
 }

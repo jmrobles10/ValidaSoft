@@ -1,5 +1,5 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
-import { apiKeys, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
+import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -25,6 +25,8 @@ export const esCO = {
     webhooks: 'Webhooks',
     empresas: 'Empresas del grupo',
     'api-keys': 'API keys',
+    'accesos-soporte': 'Accesos de soporte',
+    'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
     configuracion: 'Configuración',
     principal: 'Secciones',
@@ -225,6 +227,8 @@ export const esCO = {
   webhooks,
   empresasGrupo,
   apiKeys,
+  datosMarca,
+  accesosSoporte,
   tiposVinculo,
   certificados,
   motivos,

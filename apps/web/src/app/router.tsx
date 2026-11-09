@@ -80,6 +80,14 @@ export function crearRouter() {
                   lazy: () => import('../features/configuracion/apiKeys/PaginaApiKeys').then((m) => ({ Component: m.PaginaApiKeys })),
                 },
                 {
+                  path: 'accesos-soporte',
+                  lazy: () => import('../features/configuracion/accesosSoporte/PaginaAccesosSoporte').then((m) => ({ Component: m.PaginaAccesosSoporte })),
+                },
+                {
+                  path: 'datos-marca',
+                  lazy: () => import('../features/configuracion/datosMarca/PaginaDatosMarca').then((m) => ({ Component: m.PaginaDatosMarca })),
+                },
+                {
                   path: 'tipos-vinculo',
                   lazy: () => import('../features/configuracion/tiposVinculo/PaginaTiposVinculo').then((m) => ({ Component: m.PaginaTiposVinculo })),
                 },
