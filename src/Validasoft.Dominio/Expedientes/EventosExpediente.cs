@@ -203,6 +203,15 @@ public sealed record VeredictoDeRequisitoEmitido(
 /// <summary>Un administrador exime el requisito con justificación (visible en el certificado, P-5-4); sus veredictos dejan de contar.</summary>
 public sealed record RequisitoEximido(Guid RequisitoId, string Por, string Justificacion, DateTimeOffset Fecha);
 
+/// <summary>
+/// El tercero ratificó en una renovación que el documento no cambió (RN-2, I-14): el requisito queda cubierto con la
+/// versión actual y sus áreas lo aprueban sin revisarlo (A-7), con la ratificación como referencia.
+/// </summary>
+public sealed record RequisitoRatificado(Guid RequisitoId, VersionDeRequisito Version, string Por, DateTimeOffset Fecha);
+
+/// <summary>Ratificación del tercero sobre una versión del requisito.</summary>
+public sealed record RatificacionDeRequisito(VersionDeRequisito Version, string Por, DateTimeOffset Fecha);
+
 /// <summary>Todas las áreas de la etapa reciben el expediente al mismo tiempo.</summary>
 public sealed record EtapaActivada(int Orden, IReadOnlyList<Guid> Areas, DateTimeOffset Fecha);
 

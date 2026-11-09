@@ -8,6 +8,7 @@ import { modoDe, reglasDe, textoReglas } from '../tipoDocumento/reglas';
 import { Plantilla } from '../tipoDocumento/Plantilla';
 import { requiereAtencion } from '../vigencia/vigencia';
 import { AvisoVigencia, LineaVigencia } from '../vigencia/ChipVigencia';
+import { ConfirmarRatificacion } from './ConfirmarRatificacion';
 import { Observacion } from './Observacion';
 import { accionDeRequisito, observacionesDeRequisito } from './requisitos';
 
@@ -37,7 +38,9 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
             {tipo.nombre}
           </Typography>
           <Typography color="text.secondary" sx={{ fontSize: 12, lineHeight: '16px' }}>
-            {version
+            {requisito.ratificadoEn
+              ? t('expediente.ratificar.ratificado', { fecha: formatearFecha(requisito.ratificadoEn) })
+              : version
               ? t(version.clase === 'Formulario' ? 'expediente.documentos.versionFormulario' : 'expediente.documentos.version', {
                   n: String(version.n),
                   fecha: formatearFecha(version.cargadaEn),
@@ -85,6 +88,10 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
         >
           {t(modo === 'Formulario' ? `expediente.documentos.accionesFormulario.${accion}` : `expediente.documentos.acciones.${accion}`)}
         </Button>
+      )}
+
+      {requisito.puedeRatificar && enlace && (
+        <ConfirmarRatificacion expedienteId={expediente.id} requisitoId={requisito.id} documento={tipo.nombre} empresa={expediente.empresa.nombre} />
       )}
     </Box>
   );

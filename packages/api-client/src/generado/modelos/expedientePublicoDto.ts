@@ -22,4 +22,5 @@ export interface ExpedientePublicoDto {
   actualizadoEn: string;
   requisitos?: ExpedientePublicoDtoRequisitos;
   requisitosFaltantes?: number;
+  tipo?: string;
 }

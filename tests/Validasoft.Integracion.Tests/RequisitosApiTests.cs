@@ -593,6 +593,190 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
         (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId.ShouldBeNull();
     }
 
+    // ---------- renovación por vencimiento y ratificación (RN-1, RN-2) ----------
+
+    private sealed record Aprobado(Escenario E, VinculoDto Vinculo, SesionTerceroDto Sesion, Guid Expediente, int Emision);
+
+    /// <summary>Proveedor de Norte con RUT y Cámara aprobados por Compras y Cumplimiento.</summary>
+    private async Task<Aprobado> ProveedorAprobadoAsync()
+    {
+        var e = await PrepararAsync();
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT v1"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara v1"));
+        await AceptarAsync(sesion, vinculo.Id);
+        var inicial = await ExpedienteAbiertoAsync(e, vinculo.Id);
+        await AprobarAreasAsync(e, inicial);
+        (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{inicial}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Aprobado");
+        var certificado = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        return new Aprobado(e, vinculo, sesion, inicial, certificado.Emision);
+    }
+
+    private async Task<Guid> ExpedienteAbiertoAsync(Escenario e, Guid vinculoId)
+    {
+        var limite = DateTime.UtcNow.AddSeconds(20);
+        while (true)
+        {
+            if ((await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculoId}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId is { } id)
+                return id;
+            if (DateTime.UtcNow > limite)
+                throw new TimeoutException("No se abrió el expediente.");
+            await Task.Delay(200);
+        }
+    }
+
+    /// <summary>
+    /// Compras y Cumplimiento aprueban lo que les toca del expediente. Si el procesador de certificados escribe a la vez
+    /// (con el reloj adelantado vence el certificado), la decisión pierde la carrera (412) y se repite, como al recargar.
+    /// </summary>
+    private async Task AprobarAreasAsync(Escenario e, Guid expedienteId)
+    {
+        foreach (var (area, persona, codigo) in new[] { (e.Compras, e.Laura, "COMPRAS"), (e.Cumplimiento, e.Carlos, "CUMPLIMIENTO") })
+        {
+            for (var intento = 1; ; intento++)
+            {
+                var leido = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Delegado(e.Norte, persona), null, 200);
+                var porDecidir = Area(leido, codigo).DocumentosPorDecidir ?? [];
+                if (porDecidir.Count == 0)
+                    break;
+                try
+                {
+                    await AreaAsync<ExpedienteDto>(e, expedienteId, area, persona,
+                        new VeredictoDto("Aprobado", Versiones: porDecidir.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+                    break;
+                }
+                catch (Exception ex) when (intento < 5 && ex.Message.Contains("version-desactualizada"))
+                {
+                    await Task.Delay(200);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adelanta el reloj al día siguiente del fin de la gracia del documento para el vínculo y dispara su vencimiento (el
+    /// mensaje programado, aquí invocado). Devuelve la vigencia que tenía y la renovación que abrió Norte.
+    /// </summary>
+    private async Task<(VigenciaDeVersion Vigencia, Guid Renovacion)> VencerAsync(Aprobado a, string codigo)
+    {
+        var expediente = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{a.Expediente}", Admin(a.E.Norte), null, 200);
+        var documentoId = expediente.Requisitos!.Single(r => r.TipoDocumento.Codigo == codigo).VersionActual!.DocumentoId;
+        VigenciaDeVersion? vigencia = null;
+        var limite = DateTime.UtcNow.AddSeconds(20);
+        while (vigencia?.VigenteHasta is null)
+        {
+            await using (var boveda = Host.Services.GetRequiredService<IDocumentStore>().QuerySession(TenantsTecnicos.Boveda))
+                vigencia = (await boveda.LoadAsync<Documento>(documentoId))!.Buscar(1)!.VigenciaPara(a.Vinculo.Id);
+            if (vigencia?.VigenteHasta is not null)
+                break;
+            if (DateTime.UtcNow > limite)
+                throw new TimeoutException($"{codigo} no tiene vigencia para Norte.");
+            await Task.Delay(200);
+        }
+
+        var hoy = CalculadoraDeVigencia.Fecha(DateTimeOffset.UtcNow);
+        fixture.Reloj.Desfase = TimeSpan.FromDays(vigencia.FinDeGracia!.Value.AddDays(1).DayNumber - hoy.DayNumber);
+        using (var alcance = Host.Services.CreateScope())
+            await alcance.ServiceProvider.GetRequiredService<IMessageBus>().InvokeAsync(
+                new Validasoft.Aplicacion.Documentos.VencerVersionDeDocumento(documentoId, 1, a.Vinculo.Id, vigencia.VigenteHasta!.Value, vigencia.DiasGracia));
+        return (vigencia, await ExpedienteAbiertoAsync(a.E, a.Vinculo.Id));
+    }
+
+    [Fact]
+    public async Task Al_vencer_el_RUT_el_vinculo_vence_se_abre_la_renovacion_y_el_tercero_la_cierra_ratificando()
+    {
+        var a = await ProveedorAprobadoAsync();
+        try
+        {
+            var (vigencia, renovacionId) = await VencerAsync(a, "RUT");
+            renovacionId.ShouldNotBe(a.Expediente);
+            var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200);
+            renovacion.Tipo.ShouldBe("Renovacion");
+            renovacion.Estado.ShouldBe("Abierto"); // espera al tercero: el RUT vencido no cubre el requisito
+            var rut = renovacion.Requisitos!.ShouldHaveSingleItem();
+            rut.TipoDocumento.Codigo.ShouldBe("RUT");
+            rut.Estado.ShouldBe("Pendiente");
+            (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{a.Vinculo.Id}", Admin(a.E.Norte), null, 200)).Estado.ShouldBe("Vencido");
+            var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{renovacionId}", a.Sesion.AccessToken, null, 200);
+            vista.Tipo.ShouldBe("Renovacion");
+            vista.Requisitos!.Single().PuedeRatificar.ShouldBeTrue(); // el RUT es ratificable (I-14)
+
+            // El tercero ratifica que su RUT no cambió: la renovación se aprueba sin pasar por las áreas.
+            var ratificada = await TerceroAsync<ExpedientePublicoDto>("POST",
+                $"/public/v1/expedientes/{renovacionId}/requisitos/{rut.Id}/ratificar", a.Sesion.AccessToken, new { }, 200);
+            ratificada.Estado.ShouldBe("Aprobado");
+            (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200))
+                .Requisitos!.Single().Estado.ShouldBe("Aprobado");
+            (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{a.Vinculo.Id}", Admin(a.E.Norte), null, 200)).Estado.ShouldBe("Activo");
+
+            // La vigencia del RUT para Norte corre de nuevo desde hoy y el certificado se reemite.
+            await using (var boveda = Host.Services.GetRequiredService<IDocumentStore>().QuerySession(TenantsTecnicos.Boveda))
+            {
+                var documentoId = (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200))
+                    .Requisitos!.Single().VersionActual!.DocumentoId;
+                var nueva = (await boveda.LoadAsync<Documento>(documentoId))!.Buscar(1)!.VigenciaPara(a.Vinculo.Id)!;
+                nueva.Base.ShouldBe(BaseVigencia.Ratificacion);
+                nueva.VencidaEn.ShouldBeNull();
+                nueva.VigenteHasta.ShouldNotBeNull().ShouldBeGreaterThan(vigencia.VigenteHasta!.Value);
+            }
+
+            (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{a.Vinculo.Id}/certificado", Admin(a.E.Norte), null, 200)).Actual!
+                .Emision.ShouldBe(a.Emision + 1);
+
+            // Ya no hay nada que ratificar.
+            (await CodigoAsync(await TerceroAsync("POST", $"/public/v1/expedientes/{renovacionId}/requisitos/{rut.Id}/ratificar",
+                a.Sesion.AccessToken, new { }, 409))).ShouldBe("estado-invalido");
+        }
+        finally
+        {
+            fixture.Reloj.Desfase = TimeSpan.Zero;
+        }
+    }
+
+    [Fact]
+    public async Task La_camara_vencida_no_se_ratifica_se_renueva_con_una_version_nueva_que_revisan_las_areas()
+    {
+        var a = await ProveedorAprobadoAsync();
+        try
+        {
+            var (_, renovacionId) = await VencerAsync(a, "CAMARA_COMERCIO");
+            fixture.Reloj.Desfase = TimeSpan.Zero; // ya venció; las aserciones de los revisores se firman con la hora real
+            var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200);
+            var camara = renovacion.Requisitos!.ShouldHaveSingleItem();
+            camara.TipoDocumento.Codigo.ShouldBe("CAMARA_COMERCIO");
+            (await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{renovacionId}", a.Sesion.AccessToken, null, 200))
+                .Requisitos!.Single().PuedeRatificar.ShouldBeFalse(); // la Cámara no se ratifica
+
+            (await CodigoAsync(await TerceroAsync("POST", $"/public/v1/expedientes/{renovacionId}/requisitos/{camara.Id}/ratificar",
+                a.Sesion.AccessToken, new { }, 422))).ShouldBe("ratificacion-no-permitida");
+
+            // Sube la Cámara nueva: entra en la renovación abierta y la revisan las áreas.
+            await SubirAsync(a.Sesion, "CAMARA_COMERCIO", Pdf("Cámara v2"));
+            var limite = DateTime.UtcNow.AddSeconds(20);
+            ExpedienteDto enRevision;
+            while ((enRevision = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200)).Estado != "EnRevision")
+            {
+                if (DateTime.UtcNow > limite)
+                    throw new TimeoutException("La versión nueva no entró en la renovación.");
+                await Task.Delay(200);
+            }
+
+            enRevision.Requisitos!.Single().VersionActual!.N.ShouldBe(2);
+            await AprobarAreasAsync(a.E, renovacionId);
+            (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(a.E.Norte), null, 200)).Estado.ShouldBe("Aprobado");
+            (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{a.Vinculo.Id}", Admin(a.E.Norte), null, 200)).Estado.ShouldBe("Activo");
+            var reemitido = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{a.Vinculo.Id}/certificado", Admin(a.E.Norte), null, 200)).Actual!;
+            reemitido.Emision.ShouldBe(a.Emision + 1);
+            reemitido.Requisitos.ShouldContain(r => r.Codigo == "CAMARA_COMERCIO" && r.Version == 2);
+        }
+        finally
+        {
+            fixture.Reloj.Desfase = TimeSpan.Zero;
+        }
+    }
+
     [Fact]
     public async Task La_bandeja_de_revalidaciones_muestra_la_version_aceptada_y_la_nueva_y_solo_aprueba_en_lote_las_que_no_cambiaron()
     {

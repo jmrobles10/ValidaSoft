@@ -18,7 +18,10 @@ public enum BaseVigencia
     VencimientoPropio,
 
     /// <summary>Regla <c>PeriodoMinimo</c>: el fin del periodo aún no se calcula (H6); sin fecha.</summary>
-    PeriodoNoCalculado
+    PeriodoNoCalculado,
+
+    /// <summary>El tercero ratificó que el documento no cambió: los días de la regla corren desde la ratificación (I-14).</summary>
+    Ratificacion
 }
 
 /// <summary>
@@ -62,6 +65,9 @@ public sealed class VigenciaDeVersion
 
     public DateTimeOffset? VencidaEn { get; set; }
 
+    /// <summary>Última ratificación del tercero para este vínculo (RN-2): desde ella corre la frescura.</summary>
+    public DateTimeOffset? RatificadaEn { get; set; }
+
     [JsonIgnore]
     public DateOnly? FinDeGracia => CalculadoraDeVigencia.FinDeGracia(VigenteHasta, DiasGracia);
 }
@@ -81,10 +87,23 @@ public static class CalculadoraDeVigencia
 {
     public static DateOnly Fecha(DateTimeOffset instante) => DateOnly.FromDateTime(instante.UtcDateTime);
 
-    public static CalculoDeVigencia Calcular(ReglaFrescura regla, DateTimeOffset cargadaEn, IReadOnlyList<DatoDeclarado>? datos)
+    /// <summary>
+    /// Con <paramref name="ratificadaEn"/>, los días de la regla corren desde la ratificación (base <c>Ratificacion</c>,
+    /// I-14) en vez de la expedición o la carga; la <c>fecha_vencimiento</c> declarada sigue acotando.
+    /// </summary>
+    public static CalculoDeVigencia Calcular(ReglaFrescura regla, DateTimeOffset cargadaEn, IReadOnlyList<DatoDeclarado>? datos,
+        DateTimeOffset? ratificadaEn = null)
     {
         var vencimientoPropio = EsquemaDeFormulario.Fecha(datos, EsquemaDeFormulario.FechaVencimiento);
         var expedicion = EsquemaDeFormulario.Fecha(datos, EsquemaDeFormulario.FechaExpedicion);
+        if (ratificadaEn is { } ratificada && regla.Dias is { } diasRegla &&
+            regla.Tipo is TipoReglaFrescura.MaxDiasDesdeExpedicion or TipoReglaFrescura.MaxDiasDesdeAprobacion)
+        {
+            var desdeRatificacion = Fecha(ratificada).AddDays(diasRegla);
+            return vencimientoPropio is { } tope && tope <= desdeRatificacion
+                ? new CalculoDeVigencia(tope, BaseVigencia.VencimientoPropio)
+                : new CalculoDeVigencia(desdeRatificacion, BaseVigencia.Ratificacion);
+        }
 
         (DateOnly? Fecha, BaseVigencia Base) capa2 = regla.Tipo switch
         {

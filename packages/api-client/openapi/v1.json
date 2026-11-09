@@ -3503,6 +3503,51 @@
         }
       }
     },
+    "/public/v1/expedientes/{id}/requisitos/{requisitoId}/ratificar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RatificacionEndpoints"
+        ],
+        "summary": "POST_public_v1_expedientes_id_requisitos_requisitoId_ratificar",
+        "description": "POST_public_v1_expedientes_id_requisitos_requisitoId_ratificar",
+        "operationId": "POST_public_v1_expedientes_id_requisitos_requisitoId_ratificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "requisitoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedientePublicoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/revalidaciones": {
       "get": {
         "tags": [
@@ -8921,6 +8966,10 @@
             ],
             "format": "int32",
             "default": 0
+          },
+          "tipo": {
+            "type": "string",
+            "default": "Inicial"
           }
         }
       },
@@ -10610,6 +10659,17 @@
             "items": {
               "$ref": "#/components/schemas/ObservacionPublicaDto"
             }
+          },
+          "puedeRatificar": {
+            "type": "boolean",
+            "default": false
+          },
+          "ratificadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -12677,6 +12737,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ExpedientesPublicosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.RatificacionEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.RevalidacionesEndpoints"

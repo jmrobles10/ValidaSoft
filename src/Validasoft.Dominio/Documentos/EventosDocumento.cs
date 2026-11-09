@@ -116,6 +116,12 @@ public sealed record VigenciaDeVersionCalculada(
 public sealed record VersionVencida(int Numero, Guid VinculoId, DateOnly VigenteHasta, int DiasGracia, DateTimeOffset Fecha);
 
 /// <summary>
+/// El tercero declaró que la versión actual no cambió (RN-2, I-14) para ese vínculo: su frescura vuelve a correr desde
+/// hoy. No cambia la versión actual ni alerta a las otras empresas; la recalcula <c>CalcularVigencias</c>.
+/// </summary>
+public sealed record VersionRatificada(int Numero, Guid VinculoId, string Por, DateTimeOffset Fecha);
+
+/// <summary>
 /// Se avisó al tercero que la versión vence para ese vínculo (aviso consolidado del día, TD-7). Solo deja constancia del
 /// hecho para el evento público <c>documento.por_vencer</c> y las notificaciones (NW-1); no cambia el estado del documento.
 /// </summary>

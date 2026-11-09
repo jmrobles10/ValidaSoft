@@ -318,6 +318,51 @@ public class TiposDocumentoConfigurablesTests
         rut.Vencer(1, a.VinculoId, Ahora.AddDays(90)).ShouldBeNull();
     }
 
+    [Fact]
+    public void La_ratificacion_reinicia_la_frescura_desde_hoy_solo_para_ese_vinculo()
+    {
+        var rut = Documento.Create(Documento.CrearGlobal(Tercero, CatalogoCanonico.Requerido("RUT"), Ahora));
+        foreach (var evento in rut.RegistrarVersionArchivo(new ArchivoVerificado(1, "a1", "boveda", "t/a1", "application/pdf", "application/pdf", 10,
+                     "rut.pdf", 1, null, "t"), null, Antivirus.NoDisponible, false, Ahora))
+            rut.Aplicar(evento);
+        var a = new VinculoCandidato(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Tercero, true, EstadoVinculo.Activo, true);
+        var b = new VinculoCandidato(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Tercero, true, EstadoVinculo.Activo, true);
+        rut.Aplicar(rut.Compartir(a, OrigenComparticion.AlAceptarInvitacion, Ahora)!);
+        rut.Aplicar(rut.Compartir(b, OrigenComparticion.AlAceptarInvitacion, Ahora)!);
+        var tipo = TipoDocumentoTenant.Crear(a.TenantId, "RUT", null, "RUT", null, ReglaFrescura.DiasDesdeExpedicion(10), [5], 2, null, null, Ahora);
+        DestinoDeVigencia[] destinos = [new(a.TenantId, a.EmpresaId, a.VinculoId, tipo), new(b.TenantId, b.EmpresaId, b.VinculoId, tipo)];
+        foreach (var evento in rut.CalcularVigencias(destinos, Ahora))
+            rut.Aplicar(evento);
+        var vencio = new DateTimeOffset(2026, 11, 19, 5, 0, 0, TimeSpan.Zero);
+        rut.Aplicar(rut.Vencer(1, a.VinculoId, vencio).ShouldNotBeNull());
+
+        Should.Throw<ReglaDeNegocioException>(() => rut.Ratificar(1, a.VinculoId, permiteRatificacion: false, "t", vencio))
+            .Codigo.ShouldBe("ratificacion-no-permitida");
+        Should.Throw<ReglaDeNegocioException>(() => rut.Ratificar(1, Guid.NewGuid(), true, "t", vencio)).Codigo.ShouldBe("version-no-compartida");
+
+        rut.Aplicar(rut.Ratificar(1, a.VinculoId, true, "tercero:t", vencio));
+        var recalculada = rut.CalcularVigencias(destinos, vencio).ShouldHaveSingleItem(); // solo A
+        recalculada.VinculoId.ShouldBe(a.VinculoId);
+        recalculada.Base.ShouldBe(BaseVigencia.Ratificacion);
+        recalculada.VigenteHasta.ShouldBe(new DateOnly(2026, 11, 29)); // 19/11 + 10 días
+        rut.Aplicar(recalculada);
+        rut.VersionRequerida(1).VigenciaPara(a.VinculoId)!.VencidaEn.ShouldBeNull(); // vuelve a estar vigente
+        rut.VersionRequerida(1).VigenciaPara(a.VinculoId)!.RatificadaEn.ShouldBe(vencio);
+        rut.VersionActual.ShouldBe(1);
+    }
+
+    [Fact]
+    public void Una_fecha_de_vencimiento_propia_sigue_acotando_la_ratificacion()
+    {
+        var regla = ReglaFrescura.DiasDesdeExpedicion(365);
+        var ratificada = new DateTimeOffset(2026, 11, 9, 12, 0, 0, TimeSpan.Zero);
+        CalculadoraDeVigencia.Calcular(regla, Ahora, null, ratificada)
+            .ShouldBe(new CalculoDeVigencia(new DateOnly(2027, 11, 9), BaseVigencia.Ratificacion));
+        var conTope = new List<DatoDeclarado> { new(EsquemaDeFormulario.FechaVencimiento, "Fecha de vencimiento", TipoCampo.Fecha, "2027-03-01") };
+        CalculadoraDeVigencia.Calcular(regla, Ahora, conTope, ratificada)
+            .ShouldBe(new CalculoDeVigencia(new DateOnly(2027, 3, 1), BaseVigencia.VencimientoPropio));
+    }
+
     // ---------- plantilla (TD-5) ----------
 
     [Fact]

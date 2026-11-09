@@ -868,6 +868,63 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const ratificarRequisito = (
+    id: string,
+    requisitoId: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+      
+      
+      return clienteValidasoft<ExpedientePublicoDto>(
+      {url: `/public/v1/expedientes/${id}/requisitos/${requisitoId}/ratificar`, method: 'POST', signal
+    },
+      options);
+    }
+  
+
+
+export const getRatificarRequisitoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ratificarRequisito>>, TError,{id: string;requisitoId: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof ratificarRequisito>>, TError,{id: string;requisitoId: string}, TContext> => {
+
+const mutationKey = ['ratificarRequisito'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ratificarRequisito>>, {id: string;requisitoId: string}> = (props) => {
+          const {id,requisitoId} = props ?? {};
+
+          return  ratificarRequisito(id,requisitoId,requestOptions)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RatificarRequisitoMutationResult = NonNullable<Awaited<ReturnType<typeof ratificarRequisito>>>
+    
+    export type RatificarRequisitoMutationError = ErrorType<void>
+
+    export const useRatificarRequisito = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ratificarRequisito>>, TError,{id: string;requisitoId: string}, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof ratificarRequisito>>,
+        TError,
+        {id: string;requisitoId: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRatificarRequisitoMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
     export const obtenerBoveda = (
     
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal

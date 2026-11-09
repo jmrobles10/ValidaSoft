@@ -726,6 +726,7 @@ public sealed partial class Expediente
             case VeredictosInvalidadosPorNuevaVersion e: Apply(e); break;
             case VeredictoDeRequisitoEmitido e: Apply(e); break;
             case RequisitoEximido e: Apply(e); break;
+            case RequisitoRatificado e: Apply(e); break;
             case ExpedienteEnviadoARevision e: Apply(e); break;
             case EtapaActivada e: Apply(e); break;
             case VeredictoDeAreaEmitido e: Apply(e); break;

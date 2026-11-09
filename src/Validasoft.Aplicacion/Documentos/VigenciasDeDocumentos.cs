@@ -292,11 +292,12 @@ public static class VencerVersionDeDocumentoHandler
 {
     /// <summary>
     /// Marca la versión <c>Vencida</c> para el vínculo (<see cref="VersionVencida"/>) si sigue siendo la actual, su vigencia no
-    /// cambió desde que se programó y ya pasó la gracia. No toca el estado del vínculo ni abre renovaciones (H6).
+    /// cambió desde que se programó y ya pasó la gracia; en la misma transacción pide al tenant del vínculo que decida la
+    /// renovación (RN-1).
     /// </summary>
-    public static async Task Handle(VencerVersionDeDocumento mensaje, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
+    public static async Task Handle(VencerVersionDeDocumento mensaje, ISesiones sesiones, IMessageContext mensajes, TimeProvider reloj, CancellationToken ct)
     {
-        await using var sesion = sesiones.Boveda();
+        await using var sesion = CalendarioDeVigencias.SesionDeBoveda(sesiones, mensajes);
         var stream = await sesion.Events.FetchForWriting<Documento>(mensaje.DocumentoId, ct);
         var vigencia = stream.Aggregate?.Buscar(mensaje.Numero)?.VigenciaPara(mensaje.VinculoId);
         if (vigencia is null || vigencia.VigenteHasta != mensaje.VigenteHasta || vigencia.DiasGracia != mensaje.DiasGracia)
@@ -306,6 +307,7 @@ public static class VencerVersionDeDocumentoHandler
             return;
 
         stream.AppendOne(vencida);
+        await mensajes.PublishAsync(new Expedientes.RenovarPorVencimiento(vigencia.TenantId, mensaje.VinculoId, mensaje.DocumentoId));
         await sesion.SaveChangesAsync(ct);
     }
 }

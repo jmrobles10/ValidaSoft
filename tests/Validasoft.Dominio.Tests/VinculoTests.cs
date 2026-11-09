@@ -217,4 +217,34 @@ public class VinculoTests
                 new Dictionary<string, JsonElement> { ["color"] = JsonSerializer.SerializeToElement("azul") }))
             .Codigo.ShouldBe("atributo-no-permitido");
     }
+
+    [Fact]
+    public void Un_documento_obligatorio_vencido_vence_el_vinculo_y_la_renovacion_aprobada_lo_reactiva()
+    {
+        var vinculo = Nuevo();
+        vinculo.Vencer("RUT", Ahora).ShouldBeNull(); // sin aprobación previa no hay nada que vencer
+
+        void Cerrar(Guid expediente, DateTimeOffset cuando)
+        {
+            foreach (var evento in vinculo.CerrarExpediente(expediente, ResultadoExpediente.Aprobado, cuando))
+            {
+                if (evento is ExpedienteCerrado cerrado) vinculo.Apply(cerrado);
+                if (evento is VinculoActivado activado) vinculo.Apply(activado);
+            }
+        }
+
+        var inicial = Guid.NewGuid();
+        vinculo.Apply(vinculo.VincularExpediente(inicial, TipoExpediente.Inicial, "N-E-1", Ahora));
+        Cerrar(inicial, Ahora);
+
+        vinculo.Apply(vinculo.Vencer("RUT", Ahora.AddDays(400)).ShouldNotBeNull());
+        vinculo.Estado.ShouldBe(EstadoVinculo.Vencido);
+        vinculo.Vencer("RUT", Ahora.AddDays(401)).ShouldBeNull(); // ya vencido
+
+        var renovacion = Guid.NewGuid();
+        vinculo.Apply(vinculo.VincularExpediente(renovacion, TipoExpediente.Renovacion, "N-E-2", Ahora.AddDays(400)));
+        vinculo.Estado.ShouldBe(EstadoVinculo.Vencido); // mientras se renueva
+        Cerrar(renovacion, Ahora.AddDays(402));
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+    }
 }

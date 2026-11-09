@@ -98,7 +98,8 @@ public static class RequisitosDeExpediente
 
     /// <summary>
     /// Versión que cubre un requisito: la actual del documento global del canónico (o del <c>PorVinculo</c> del vínculo y
-    /// ese tipo), siempre que ya esté compartida con el vínculo; si no, nula.
+    /// ese tipo), siempre que ya esté compartida con el vínculo y no esté vencida para él (RN-1: lo vencido se renueva con
+    /// una versión nueva o se ratifica); si no, nula.
     /// </summary>
     public static VersionDeRequisito? Cubre(Guid tipoDocumentoTenantId, string? tipoCanonico, AmbitoDocumento ambito, IEnumerable<Documento> documentos,
         Guid vinculoId)
@@ -111,6 +112,8 @@ public static class RequisitosDeExpediente
             return null;
 
         var version = documento.VersionRequerida(numero);
+        if (version.VigenciaPara(vinculoId)?.VencidaEn is not null)
+            return null;
         return new VersionDeRequisito(documento.Id, numero, version.Sha256, version.CargadaEn);
     }
 

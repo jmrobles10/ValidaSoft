@@ -8,6 +8,7 @@ import type { TipoDocumentoRequisitoDto } from './tipoDocumentoRequisitoDto';
 import type { EstadoRequisito } from './estadoRequisito';
 import type { RequisitoPublicoDtoVersionActual } from './requisitoPublicoDtoVersionActual';
 import type { ObservacionPublicaDto } from './observacionPublicaDto';
+import type { RequisitoPublicoDtoRatificadoEn } from './requisitoPublicoDtoRatificadoEn';
 
 export interface RequisitoPublicoDto {
   id: string;
@@ -16,4 +17,6 @@ export interface RequisitoPublicoDto {
   estado: EstadoRequisito;
   versionActual: RequisitoPublicoDtoVersionActual;
   observaciones: ObservacionPublicaDto[];
+  puedeRatificar?: boolean;
+  ratificadoEn?: RequisitoPublicoDtoRatificadoEn;
 }
