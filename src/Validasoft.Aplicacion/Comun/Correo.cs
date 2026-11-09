@@ -143,6 +143,66 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     }
 
     /// <summary>
+    /// Resultado de la validación para el tercero (docs/05 §8, plantillas <c>rechazo</c> y <c>certificado</c>): aprobado (el
+    /// vínculo quedó activo y su certificado se puede compartir) o rechazado con los textos al tercero de los motivos. Nunca
+    /// lleva la justificación interna del rechazo ni nombres de revisores o áreas.
+    /// </summary>
+    public MensajeDeCorreo RedactarResultado(CorreoDeResultadoPendiente correo)
+    {
+        if (correo.Aprobado)
+        {
+            var asuntoAprobado = $"{correo.Empresa} aprobó tu validación {correo.Folio}";
+            var textoAprobado = $"{correo.Empresa} aprobó tu validación {correo.Folio}: tu vínculo está activo y ya tienes tu certificado.\n\n" +
+                                $"Entra a Validasoft ({UrlPublica}) con tu correo para verlo y compartirlo.";
+            var htmlAprobado = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} aprobó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b>: " +
+                               "tu vínculo está activo y ya tienes tu certificado.</p>" +
+                               $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con tu correo para verlo y compartirlo.</p>";
+            return new MensajeDeCorreo(correo.Para, asuntoAprobado, textoAprobado, htmlAprobado);
+        }
+
+        var motivos = UnirMotivos(correo.Motivos);
+        var asunto = $"{correo.Empresa} cerró tu validación {correo.Folio} sin aprobarla";
+        var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y la cerró sin aprobarla." +
+                    (motivos.Length == 0 ? string.Empty : $"\n\nMotivos: {motivos}") +
+                    "\n\nSi tienes dudas, escríbele directamente a la empresa.";
+        var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> y la cerró sin aprobarla.</p>" +
+                   (motivos.Length == 0 ? string.Empty : $"<p>Motivos: {WebUtility.HtmlEncode(motivos)}</p>") +
+                   "<p>Si tienes dudas, escríbele directamente a la empresa.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
+    /// El certificado dejó de valer (plantilla <c>certificado-revocado</c>, NW-16): revocado o suspendido, sin el motivo.
+    /// </summary>
+    public MensajeDeCorreo RedactarCertificado(Notificaciones.CorreoDeCertificadoPendiente correo)
+    {
+        var (asunto, que) = correo.Revocado
+            ? ($"{correo.Empresa} revocó tu certificado {correo.Folio}", "fue revocado: ya no es válido y no puede volver a usarse")
+            : ($"{correo.Empresa} suspendió tu certificado {correo.Folio}", "está suspendido mientras la empresa revisa tu vínculo");
+        var texto = $"Tu certificado {correo.Folio} con {correo.Empresa} {que}. Quien lo verifique verá este estado.\n\n" +
+                    "Si tienes dudas, escríbele directamente a la empresa.";
+        var html = $"<p>Tu certificado <b>{WebUtility.HtmlEncode(correo.Folio)}</b> con {WebUtility.HtmlEncode(correo.Empresa)} " +
+                   $"{WebUtility.HtmlEncode(que)}. Quien lo verifique verá este estado.</p><p>Si tienes dudas, escríbele directamente a la empresa.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
+    /// Un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): sin enlace de acceso, remite a pedir uno
+    /// con el correo para subir la versión nueva.
+    /// </summary>
+    public MensajeDeCorreo RedactarVencido(Notificaciones.CorreoDeVencidoPendiente correo)
+    {
+        var fecha = FechaLarga(correo.VigenteHasta);
+        var asunto = $"Tu {correo.Documento} venció para {correo.Empresa}";
+        var texto = $"Tu {correo.Documento} venció para {correo.Empresa} (vigente hasta el {fecha}) y ya pasó el plazo de gracia.\n\n" +
+                    $"Entra a Validasoft ({UrlPublica}) con tu correo y sube la versión nueva para seguir al día.";
+        var html = $"<p>Tu {WebUtility.HtmlEncode(correo.Documento)} venció para {WebUtility.HtmlEncode(correo.Empresa)} " +
+                   $"(vigente hasta el {WebUtility.HtmlEncode(fecha)}) y ya pasó el plazo de gracia.</p>" +
+                   $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con tu correo y sube la versión nueva para seguir al día.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
     /// Aviso consolidado de vencimiento (TD-6, docs/02 §8.3): un correo por tercero y fecha con cada documento y su fecha por
     /// empresa («vence para A el 31 de octubre de 2026 y para B el 30 de diciembre de 2026»). Sin enlace de acceso: remite a
     /// pedir uno con el correo.
@@ -212,6 +272,18 @@ public static class CorreoDeObservacionPendienteHandler
         RedactorDeCorreos redactor, CancellationToken ct) =>
         enviador.EnviarAsync(redactor.RedactarObservacion(correo,
             correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido)), ct);
+}
+
+/// <summary>
+/// Correo al tercero cuando su expediente se cierra aprobado o rechazado (outbox, cola <c>correo</c>): sale solo si la
+/// transacción de la decisión se confirma. <see cref="Motivos"/>: textos al tercero de los motivos del rechazo.
+/// </summary>
+public sealed record CorreoDeResultadoPendiente(string Para, string Empresa, string Folio, bool Aprobado, IReadOnlyList<string> Motivos);
+
+public static class CorreoDeResultadoPendienteHandler
+{
+    public static Task Handle(CorreoDeResultadoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarResultado(correo), ct);
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>

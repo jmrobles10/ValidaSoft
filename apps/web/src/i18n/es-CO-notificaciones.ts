@@ -46,6 +46,10 @@ export const notificaciones = {
       titulo: 'Documento por vencer',
       explicacion: 'Cuando un documento de un vínculo de tus áreas está cerca de vencer.',
     },
+    vencido: {
+      titulo: 'Documento vencido',
+      explicacion: 'Cuando un documento de un vínculo de tus áreas venció y ya pasó su plazo de gracia.',
+    },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',
       explicacion: 'A los administradores, cuando una suscripción de webhooks se deshabilita por entregas fallidas seguidas.',

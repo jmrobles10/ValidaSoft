@@ -339,10 +339,55 @@ public class NotificacionesTests
         correo.Para.ShouldBe(contexto.Laura.Correo);
         correo.Lineas.ShouldContain("Tus áreas: Aprobador inicial, Cumplimiento.");
         correo.Asunto.ShouldBe("Nuevo expediente en tu área: NORTE-E-2026-000001");
+        correo.Lineas.ShouldContain("Expediente NORTE-E-2026-000001 de Norte S.A.S."); // sin «S.A.S..»
 
         // Reprocesar el mismo evento produce los mismos ids (no duplica).
         var otraVez = await new PlanificadorDeNotificaciones().PlanearAsync(etapa, contexto, 1, CancellationToken.None);
         otraVez.Campana.Select(c => c.Notificacion.Id).ShouldBe(plan.Campana.Select(c => c.Notificacion.Id));
+    }
+
+    [Fact]
+    public async Task El_documento_vencido_avisa_al_tercero_por_correo_y_a_las_areas_en_la_campana()
+    {
+        var contexto = new ContextoFalso();
+        var vencida = Evento(new VersionVencida(2, VinculoId, new DateOnly(2026, 11, 1), 5, Ahora), DocumentoId, TenantsTecnicos());
+
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(vencida, contexto, 1, CancellationToken.None);
+
+        var alTercero = plan.Correos.OfType<CorreoDeVencidoPendiente>().ShouldHaveSingleItem();
+        alTercero.Para.ShouldBe(CorreoTercero);
+        alTercero.Empresa.ShouldBe("Norte S.A.S.");
+        alTercero.VigenteHasta.ShouldBe(new DateOnly(2026, 11, 1));
+        plan.Campana.ShouldNotBeEmpty();
+        plan.Campana.ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.Vencido && c.Notificacion.Titulo == "Documento vencido");
+
+        var mensaje = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarVencido(alTercero);
+        mensaje.Asunto.ShouldBe($"Tu {alTercero.Documento} venció para Norte S.A.S.");
+        mensaje.Texto.ShouldContain("vigente hasta el 1 de noviembre de 2026");
+    }
+
+    [Fact]
+    public async Task Revocar_o_suspender_el_certificado_avisa_al_tercero_sin_el_motivo()
+    {
+        var certificadoId = Guid.NewGuid();
+        var emitido = new CertificadoEmitido(certificadoId, Tenant, EmpresaId, VinculoId, TerceroId, ExpedienteId, "NORTE-E-2026-000001",
+            "NORTE-C-2026-000001", 1, "NORTE-C-2026-000001-1", "{}", "ab12", "sello", "vs-kid", null, "https://valida.test/verificar/x", Ahora);
+        var contexto = new ContextoFalso { Certificado = Certificado.Create(emitido) };
+        var planificador = new PlanificadorDeNotificaciones();
+
+        var revocado = await planificador.PlanearAsync(Evento(new CertificadoRevocado(1, "Documento adulterado.", OrigenRevocacion.Administrador,
+            Revisor, Ahora), certificadoId), contexto, 1, CancellationToken.None);
+        var correo = revocado.Correos.OfType<CorreoDeCertificadoPendiente>().ShouldHaveSingleItem();
+        correo.Para.ShouldBe(CorreoTercero);
+        correo.Folio.ShouldBe("NORTE-C-2026-000001-1");
+        correo.Revocado.ShouldBeTrue();
+        var mensaje = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarCertificado(correo);
+        mensaje.Asunto.ShouldBe("Norte S.A.S. revocó tu certificado NORTE-C-2026-000001-1");
+        mensaje.Texto.ShouldNotContain("adulterado");
+
+        var suspendido = await planificador.PlanearAsync(Evento(new CertificadoSuspendido(1, "Lista restrictiva.", EstadoCertificado.Vigente, Ahora),
+            certificadoId), contexto, 1, CancellationToken.None);
+        suspendido.Correos.OfType<CorreoDeCertificadoPendiente>().ShouldHaveSingleItem().Revocado.ShouldBeFalse();
     }
 
     [Fact]

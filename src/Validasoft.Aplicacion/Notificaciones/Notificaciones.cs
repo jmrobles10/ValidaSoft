@@ -1,5 +1,6 @@
 using JasperFx.Events;
 using Validasoft.Contratos;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
@@ -74,9 +75,10 @@ public static class TiposNotificacion
     public const string Aprobado = "expediente.aprobado";
     public const string Rechazado = "expediente.rechazado";
     public const string PorVencer = "documento.por_vencer";
+    public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
 
-    public static readonly IReadOnlyList<string> Todos = [NuevoEnArea, TerceroRespondio, Aprobado, Rechazado, PorVencer, WebhookDeshabilitado];
+    public static readonly IReadOnlyList<string> Todos = [NuevoEnArea, TerceroRespondio, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, WebhookDeshabilitado];
@@ -129,6 +131,12 @@ public sealed class PlanificadorDeNotificaciones
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Rechazado, null, orden, ct);
             case VencimientoAvisado aviso:
                 return await PorVencerAsync(evento, aviso, contexto, orden, ct);
+            case VersionVencida vencida:
+                return await VencidoAsync(evento, vencida, contexto, orden, ct);
+            case CertificadoRevocado revocado:
+                return await CertificadoAlTerceroAsync(evento, revocado.Emision, revocado.Fecha, revocado: true, contexto, ct);
+            case CertificadoSuspendido suspendido:
+                return await CertificadoAlTerceroAsync(evento, suspendido.Emision, suspendido.Fecha, revocado: false, contexto, ct);
             default:
                 return PlanDeNotificaciones.Vacio;
         }
@@ -178,6 +186,54 @@ public sealed class PlanificadorDeNotificaciones
     }
 
     /// <summary>
+    /// El certificado del tercero se revocó o se suspendió (plantilla <c>certificado-revocado</c>, docs/05 §8, NW-16): correo
+    /// al tercero con el folio y la empresa, sin el motivo (es interno, como en la verificación pública, CE-8).
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> CertificadoAlTerceroAsync(IEvent evento, int emision, DateTimeOffset fecha, bool revocado,
+        IContextoDeEventos contexto, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.CertificadoAsync(tenantId, evento.StreamId, ct) is not { } certificado)
+            return PlanDeNotificaciones.Vacio;
+        var vinculo = await contexto.VinculoAsync(tenantId, certificado.VinculoId, ct);
+        var folio = certificado.Emisiones.FirstOrDefault(e => e.Numero == emision)?.Folio;
+        if (vinculo is null || folio is null || string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = await contexto.EmpresaAsync(certificado.EmpresaId, ct);
+        return new PlanDeNotificaciones([], [new CorreoDeCertificadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", folio, revocado, fecha)]);
+    }
+
+    /// <summary>
+    /// Un documento venció para un vínculo (pasó la vigencia y la gracia, TD-7): correo al tercero y campana a las áreas del
+    /// expediente del vínculo (docs/05 §8). Antes no se avisaba a nadie: el documento solo aparecía «Vencido» en pantalla.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> VencidoAsync(IEvent evento, VersionVencida vencida, IContextoDeEventos contexto, long orden,
+        CancellationToken ct)
+    {
+        var documento = await contexto.DocumentoAsync(evento.StreamId, ct);
+        var destino = documento?.Comparticiones.LastOrDefault(c => c.VinculoId == vencida.VinculoId);
+        if (documento is null || destino is null || await contexto.VinculoAsync(destino.TenantId, vencida.VinculoId, ct) is not { } vinculo)
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = await contexto.EmpresaAsync(vinculo.EmpresaId, ct);
+        List<object> alTercero = string.IsNullOrWhiteSpace(vinculo.CorreoTercero)
+            ? []
+            : [new CorreoDeVencidoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", documento.NombreTipo, vencida.VigenteHasta)];
+
+        var expedienteId = vinculo.ExpedienteAbiertoId ?? vinculo.UltimoExpedienteId;
+        var expediente = expedienteId is { } id ? await contexto.ExpedienteAsync(destino.TenantId, id, ct) : null;
+        if (expediente is null)
+            return new PlanDeNotificaciones([], alTercero);
+
+        var areas = (await contexto.AreasAsync(destino.TenantId, expediente.AreaIds, ct)).Where(a => a.EmpresaId == vinculo.EmpresaId).ToList();
+        var mensaje = $"El documento {documento.NombreTipo} de {expediente.TerceroNombre} venció el {vencida.VigenteHasta:yyyy-MM-dd}.";
+        var plan = await APersonasAsync(evento, contexto, destino.TenantId, vinculo.EmpresaId, empresa?.Nombre, TiposNotificacion.Vencido,
+            "Documento vencido", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros)).ToList(),
+            orden, ct, $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}");
+        return plan with { Correos = [.. plan.Correos, .. alTercero] };
+    }
+
+    /// <summary>
     /// Una notificación por persona (aunque esté en varias áreas) y, si su tipo va por correo y no lo apagó, un solo correo
     /// por persona que nombra todas sus áreas (consolidado, NW-9).
     /// </summary>
@@ -216,7 +272,8 @@ public sealed class PlanificadorDeNotificaciones
                 correos.Add(new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, $"{titulo}: {folio}",
                 [
                     $"{mensaje}",
-                    $"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}.",
+                    // «de Constructora Sur S.A.S.» ya termina en punto: no se agrega otro («S.A.S..»).
+                    ConPunto($"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}"),
                     (areasDe.Count == 1 ? "Tu área: " : "Tus áreas: ") + string.Join(", ", areasDe) + "."
                 ], ruta));
             }
@@ -224,6 +281,8 @@ public sealed class PlanificadorDeNotificaciones
 
         return new PlanDeNotificaciones(campana, correos);
     }
+
+    private static string ConPunto(string frase) => frase.EndsWith('.') ? frase : frase + ".";
 
     private static async Task<PlanDeNotificaciones> ConstanciaAsync(IEvent evento, ConsentimientosRegistrados consentimientos, IContextoDeEventos contexto,
         CancellationToken ct)
@@ -279,6 +338,30 @@ public static class CorreoDeNotificacionPendienteHandler
 {
     public static Task Handle(CorreoDeNotificacionPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
         enviador.EnviarAsync(redactor.RedactarNotificacion(correo), ct);
+}
+
+/// <summary>
+/// Aviso al tercero de que un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): pasó su vigencia y
+/// la gracia. Cola <c>correo</c>.
+/// </summary>
+public sealed record CorreoDeVencidoPendiente(string Para, string Empresa, string Documento, DateOnly VigenteHasta);
+
+/// <summary>
+/// El certificado del tercero dejó de valer: revocado (definitivo) o suspendido (mientras la empresa lo revisa). Cola
+/// <c>correo</c>.
+/// </summary>
+public sealed record CorreoDeCertificadoPendiente(string Para, string Empresa, string Folio, bool Revocado, DateTimeOffset Fecha);
+
+public static class CorreoDeCertificadoPendienteHandler
+{
+    public static Task Handle(CorreoDeCertificadoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarCertificado(correo), ct);
+}
+
+public static class CorreoDeVencidoPendienteHandler
+{
+    public static Task Handle(CorreoDeVencidoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarVencido(correo), ct);
 }
 
 public static class CorreoDeConstanciaPendienteHandler

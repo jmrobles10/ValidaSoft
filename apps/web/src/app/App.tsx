@@ -2,7 +2,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { configurarCliente } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { PantallaSesion } from '../sesion/PantallaSesion';
 import { useSesion } from '../sesion/sesionStore';
@@ -27,10 +27,14 @@ export function App() {
   const { embebida } = usePuenteEmbed();
   const estado = useSesion((s) => s.estado);
   const usuarioId = useSesion((s) => s.sesion?.usuarioId ?? null);
+  const usuarioAnterior = useRef(usuarioId);
 
-  // Otra persona (o ninguna): nada de la caché anterior debe verse.
+  // Otra persona (o ninguna): nada de la caché anterior debe verse. Solo al cambiar de persona o salir: con la primera
+  // sesión (de nadie a alguien) la página ya lanzó sus consultas y vaciar la caché las cancelaba (se quedaba en
+  // «Cargando…» en el build de producción).
   useEffect(() => {
-    clienteConsultas.clear();
+    if (usuarioAnterior.current !== null && usuarioAnterior.current !== usuarioId) clienteConsultas.clear();
+    usuarioAnterior.current = usuarioId;
   }, [usuarioId, clienteConsultas]);
 
   return (

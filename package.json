@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "generar:api": "pnpm --filter @validasoft/api-client generar",
     "semilla:dev": "pnpm --filter @validasoft/web semilla",
-    "dev:public": "pnpm --filter @validasoft/public dev"
+    "dev:public": "pnpm --filter @validasoft/public dev",
+    "e2e": "pnpm --filter @validasoft/e2e test"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configurarCliente, getObtenerExpedienteQueryKey, reiniciarCliente, SCOPES, type ExpedienteDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
@@ -43,10 +43,17 @@ function Detalle({ dialogo, cerrarDesmonta, onCerrar }: { dialogo: Exclude<Dialo
  * `respuesta` contesta la decisión (POST); la recarga del expediente (GET) contesta `recarga`, o nunca si es `null`
  * (una red lenta: el diálogo no debe esperarla).
  */
-function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true }: { inicial: ExpedienteDto; dialogo: Exclude<DialogoExpediente, DialogoDeArea>; respuesta: () => Response; recarga: ExpedienteDto | null; cerrarDesmonta?: boolean }) {
+function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true, alAbrir = inicial }: { inicial: ExpedienteDto; dialogo: Exclude<DialogoExpediente, DialogoDeArea>; respuesta: () => Response; recarga: ExpedienteDto | null; cerrarDesmonta?: boolean; alAbrir?: ExpedienteDto }) {
+  // El detalle vuelve a pedir el expediente al abrirse: antes de decidir, el servidor devuelve `alAbrir` (lo mismo que
+  // había en caché, salvo que otra persona lo haya cambiado).
+  let decidido = false;
   configurarCliente({
     fetch: vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
-      if ((init?.method ?? 'GET') === 'GET') return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
+      if ((init?.method ?? 'GET') === 'GET') {
+        if (!decidido) return Promise.resolve(json(200, alAbrir));
+        return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
+      }
+      decidido = true;
       return Promise.resolve(respuesta());
     }),
   });
@@ -98,12 +105,9 @@ describe('DialogoDecision', () => {
   });
 
   it('si otra persona cambió el expediente antes de enviar, lo explica y no deja confirmar', async () => {
-    const { cliente } = preparar({ inicial: enRevision, dialogo: { tipo: 'veredicto', area: pendiente }, respuesta: () => json(200, aprobado), recarga: null });
+    // Otra área lo observó: el servidor ya lo tiene devuelto y el refresco al abrir lo trae.
+    preparar({ inicial: enRevision, alAbrir: expediente('Observado', [pendiente]), dialogo: { tipo: 'veredicto', area: pendiente }, respuesta: () => json(200, aprobado), recarga: null });
     expect(screen.queryByText(YA_NO_APLICA)).not.toBeInTheDocument();
-
-    act(() => {
-      cliente.setQueryData(CLAVE, expediente('Observado', [pendiente]));
-    });
 
     expect(await screen.findByText(YA_NO_APLICA)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aprobar' })).toBeDisabled();

@@ -146,6 +146,7 @@ public static class ServiciosInfraestructura
         opciones.Policies.AutoApplyTransactions();
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<CorreoDeResultadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CorreoDeVencimientoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CalcularVigenciasDelDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
@@ -155,6 +156,8 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Documentos.VencerVersionDeDocumento>().ToLocalQueue(ColaVigencias).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeNotificacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeConstanciaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeVencidoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeCertificadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>().ToLocalQueue(ColaWebhooks);
         opciones.LocalQueue(ColaWebhooks).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

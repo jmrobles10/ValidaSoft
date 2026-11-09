@@ -8,6 +8,7 @@ export const CLAVES_TIPO = {
   'expediente.aprobado': 'aprobado',
   'expediente.rechazado': 'rechazado',
   'documento.por_vencer': 'porVencer',
+  'documento.vencido': 'vencido',
   'webhook.deshabilitado': 'webhookDeshabilitado',
 } as const;
 
