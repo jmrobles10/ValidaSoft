@@ -160,6 +160,7 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/revalidaciones': 'listarRevalidaciones',
   'GET /api/v1/vencimientos': 'listarVencimientos',
   'GET /api/v1/mis-pendientes': 'obtenerMisPendientes',
+  'GET /api/v1/certificados': 'listarCertificados',
   'GET /api/v1/indicadores': 'obtenerIndicadores',
   'GET /api/v1/vencimientos/excel': 'exportarVencimientos',
   'POST /api/v1/vencimientos/recordar': 'recordarVencimientos',

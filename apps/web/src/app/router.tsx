@@ -37,6 +37,10 @@ export function crearRouter() {
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
             {
+              path: 'certificados',
+              lazy: () => import('../features/certificados/lista/PaginaCertificados').then((m) => ({ Component: m.PaginaCertificados })),
+            },
+            {
               path: 'expedientes/:expedienteId',
               lazy: () => import('../features/expedientes/pages/DetalleExpediente').then((m) => ({ Component: m.DetalleExpediente })),
             },

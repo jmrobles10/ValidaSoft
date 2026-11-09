@@ -270,3 +270,59 @@ internal static class MapeosCertificados
         return documento.RootElement.Clone();
     }
 }
+
+/// <summary>Lista de certificados de la empresa activa (CE-11, docs/06 P2 «Certificados»).</summary>
+public static class ListaDeCertificadosEndpoints
+{
+    /// <summary>
+    /// <paramref name="estado"/>: Vigente, ConPendientes, Suspendido, Vencido, Revocado o <c>Bloqueante</c> (los que la
+    /// consulta de certificación responde bloqueados). <paramref name="q"/>: parte del nombre o la identificación del
+    /// tercero, o del folio. Ordenados por la vigencia más próxima; cursor opaco.
+    /// </summary>
+    [WolverineGet("/api/v1/certificados")]
+    [Authorize(Policy = Permisos.CertificadosLeer)]
+    public static async Task<PaginaDto<FilaCertificadoDto>> Listar(SesionDeEmpresa empresa, string? estado, string? q, int? limite, string? cursor,
+        CancellationToken ct)
+    {
+        var tamano = Math.Clamp(limite ?? 50, 1, 200);
+        var desde = Peticiones.LeerDesplazamiento(cursor);
+        var bloqueantes = string.Equals(estado, "Bloqueante", StringComparison.OrdinalIgnoreCase);
+        EstadoCertificado? filtro = null;
+        if (!string.IsNullOrWhiteSpace(estado) && !bloqueantes)
+            filtro = Enum.TryParse<EstadoCertificado>(estado, true, out var e) && Enum.IsDefined(e)
+                ? e
+                : throw ReglaDeNegocioException.Validacion("estado-invalido",
+                    $"'{estado}' no es un estado de certificado ({string.Join(", ", Enum.GetNames<EstadoCertificado>())} o Bloqueante).");
+
+        var empresaId = empresa.EmpresaId;
+        var certificados = await empresa.Sesion.Query<Certificado>().Where(c => c.EmpresaId == empresaId).ToListAsync(ct);
+        var vinculos = (await empresa.Vinculos().ToListAsync(ct)).ToDictionary(v => v.Id);
+        var terceros = (await empresa.Sesion.LoadManyAsync<Dominio.Terceros.Tercero>(ct, certificados.Select(c => c.TerceroId).Distinct().ToArray()))
+            .ToDictionary(t => t.Id);
+        var tipos = (await empresa.Sesion.Query<Dominio.Configuracion.TipoVinculo>().ToListAsync(ct)).ToDictionary(t => t.Id);
+
+        var texto = q?.Trim();
+        var filas = certificados
+            .Where(c => c.Emisiones.Count > 0)
+            .Where(c => (filtro is null || c.Estado == filtro) && (!bloqueantes || c.Bloqueante))
+            .Select(c =>
+            {
+                var actual = c.Actual;
+                var tercero = terceros.GetValueOrDefault(c.TerceroId);
+                var tipo = vinculos.TryGetValue(c.VinculoId, out var vinculo) ? tipos.GetValueOrDefault(vinculo.TipoVinculoId) : null;
+                return new FilaCertificadoDto(c.Id, actual.Folio, actual.Numero, c.VinculoId,
+                    new TerceroResumenDto(c.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.ClaveIdentificacion ?? string.Empty),
+                    new TipoVinculoResumenDto(tipo?.Id ?? Guid.Empty, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
+                    c.Estado.ToString(), c.Bloqueante, actual.EmitidoEn, actual.VigenteHasta, actual.EstadoDesde);
+            })
+            .Where(f => string.IsNullOrEmpty(texto) ||
+                        f.Tercero.Nombre.Contains(texto, StringComparison.CurrentCultureIgnoreCase) ||
+                        f.Tercero.Identificacion.Contains(texto, StringComparison.OrdinalIgnoreCase) ||
+                        f.Folio.Contains(texto, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(f => f.VigenteHasta ?? DateOnly.MaxValue).ThenBy(f => f.Tercero.Nombre)
+            .ToList();
+
+        var siguiente = filas.Count > desde + tamano ? Peticiones.EscribirDesplazamiento(desde + tamano) : null;
+        return new PaginaDto<FilaCertificadoDto>([.. filas.Skip(desde).Take(tamano)], siguiente);
+    }
+}

@@ -6193,6 +6193,66 @@
         }
       }
     },
+    "/api/v1/certificados": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Certificados.ListaDeCertificadosEndpoints"
+        ],
+        "summary": "GET_api_v1_certificados",
+        "description": "GET_api_v1_certificados",
+        "operationId": "GET_api_v1_certificados",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfFilaCertificadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "tags": [
@@ -9809,6 +9869,70 @@
           }
         }
       },
+      "FilaCertificadoDto": {
+        "required": [
+          "id",
+          "folio",
+          "emision",
+          "vinculoId",
+          "tercero",
+          "tipoVinculo",
+          "estado",
+          "bloqueante",
+          "emitidoEn",
+          "vigenteHasta",
+          "estadoDesde"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "emision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          },
+          "emitidoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "estadoDesde": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "FirmaDelCertificadoDto": {
         "required": [
           "algoritmo",
@@ -10975,6 +11099,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FilaBandejaDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PaginaDtoOfFilaCertificadoDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaCertificadoDto"
             }
           },
           "siguienteCursor": {
@@ -13950,6 +14095,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Certificados.VerificacionPublicaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Certificados.ListaDeCertificadosEndpoints"
     },
     {
       "name": "Validasoft.Api"
