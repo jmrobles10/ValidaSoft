@@ -2,6 +2,7 @@ import {
   SCOPES,
   type AreaDeRequisitoDto,
   type ExpedienteDto,
+  type HechosDto,
   type RequisitoExpedienteDto,
   type VeredictoEmitidoDto,
 } from '@validasoft/api-client';
@@ -125,12 +126,15 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
 
 /**
  * Lo que el visor necesita de la versión vigente del requisito (`null` sin versión): sus datos declarados, su vigencia
- * para este vínculo y si trae archivo (una versión de solo formulario no se descarga: 409 `version-sin-archivo`).
+ * para este vínculo, si trae archivo (una versión de solo formulario no se descarga: 409 `version-sin-archivo`) y, si se
+ * conocen, sus hechos con la revisión automática y el tipo canónico esperado.
  */
-export function documentoEnVisor(requisito: RequisitoExpedienteDto): DocumentoEnVisor | null {
+export function documentoEnVisor(requisito: RequisitoExpedienteDto, hechos?: HechosDto | null): DocumentoEnVisor | null {
   const version = requisito.versionActual;
   if (!version) return null;
   return {
+    hechos: hechos ?? null,
+    tipoEsperado: { codigo: requisito.tipoDocumento.tipoCanonico, nombre: requisito.tipoDocumento.nombre },
     documentoId: version.documentoId,
     tipo: requisito.tipoDocumento.nombre,
     n: version.n,

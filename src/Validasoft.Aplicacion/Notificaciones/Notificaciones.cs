@@ -386,7 +386,7 @@ public sealed class PlanificadorDeNotificaciones
                 ? "Las siguientes se cobran como adicionales."
                 : "Los documentos nuevos quedan sin análisis automático, para revisión humana, hasta el próximo mes.";
         var mensaje = $"{empresa ?? "La empresa"} usó {consumidas} de {incluidas} validaciones con IA incluidas en {mes}. {siguiente}";
-        var ruta = $"/e/{empresaId}/configuracion/ia";
+        var ruta = $"/e/{empresaId}/uso-ia";
         var campana = administradores.Select(u => (tenantId, new Notificacion
         {
             Id = Deterministas.Guid($"notificacion:ia-cupo:{empresaId:N}:{mes}:{umbral}:{u.Id:N}"),

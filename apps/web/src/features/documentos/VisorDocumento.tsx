@@ -1,10 +1,12 @@
 import { Alert, Box, Button, CircularProgress, Dialog, IconButton, Stack, Typography } from '@mui/material';
-import type { DatoDeclaradoDto, VigenciaDto } from '@validasoft/api-client';
+import type { DatoDeclaradoDto, HechosDto, VigenciaDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
 import { Download, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../../shared/errores';
 import { tipoDeVisor } from './api';
+import { estadoRevision } from './revisionIa';
+import type { TipoEsperado } from './RevisionAutomatica';
 import { ResumenVersion } from './ResumenVersion';
 import { useArchivoDelVisor, type ContenidoDelVisor } from './useArchivoDelVisor';
 
@@ -20,6 +22,10 @@ export interface DocumentoEnVisor {
   vigencia?: VigenciaDto | null;
   /** Versión de solo formulario: el visor muestra solo los datos y no pide la descarga (409 `version-sin-archivo`). */
   sinArchivo?: boolean;
+  /** Hechos de la versión (revisión automática, IA-11), si la lista que abre el visor los trae. */
+  hechos?: HechosDto | null;
+  /** Tipo canónico que se esperaba, para avisar si la IA detectó otro. */
+  tipoEsperado?: TipoEsperado | null;
 }
 
 /**
@@ -33,9 +39,11 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
   const conArchivo = !documento.sinArchivo;
   const { descarga, contenido, errorAlPedir } = useArchivoDelVisor(empresaId, vinculoId, documento.documentoId, documento.n, conArchivo);
   const datos = documento.datosDeclarados ?? [];
-  const conPanel = datos.length > 0 || Boolean(documento.vigencia);
+  // La revisión automática es del archivo: una versión de solo formulario no la tiene.
+  const hechos = conArchivo ? documento.hechos : null;
+  const conPanel = datos.length > 0 || Boolean(documento.vigencia) || estadoRevision(hechos) !== 'nada';
   const titulo = `${documento.tipo} · ${t('documentos.version', { n: String(documento.n), fecha: formatearFecha(documento.cargadaEn) })}`;
-  const resumen = <ResumenVersion datos={datos} vigencia={documento.vigencia} conTitulo />;
+  const resumen = <ResumenVersion datos={datos} vigencia={documento.vigencia} conTitulo hechos={hechos} tipoEsperado={documento.tipoEsperado} />;
 
   return (
     <Dialog

@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { descargarDocumentoVinculo, getListarDocumentosVinculoQueryOptions, type DocumentoVistaEmpresaDto, type VersionDocumentoDto } from '@validasoft/api-client';
+import {
+  descargarDocumentoVinculo,
+  getListarDocumentosVinculoQueryOptions,
+  type DocumentoVistaEmpresaDto,
+  type HechosDto,
+  type VersionDocumentoDto,
+} from '@validasoft/api-client';
 import { conEmpresa } from '../../shared/consultas';
 
 /** Documentos compartidos con el vínculo (solo tras la aceptación del tercero, B-1; antes la lista es vacía). */
@@ -28,6 +34,22 @@ export function tipoDeVisor(mime: string): TipoVisor {
 export function versionVisible(documento: DocumentoVistaEmpresaDto): VersionDocumentoDto | null {
   const ordenadas = [...documento.versionesCompartidas].sort((a, b) => b.n - a.n);
   return ordenadas.find((v) => v.n === documento.versionActual) ?? ordenadas[0] ?? null;
+}
+
+/** Clave de una versión de un documento (`{documentoId}:{n}`). */
+export function claveVersion(documentoId: string, n: number): string {
+  return `${documentoId}:${String(n)}`;
+}
+
+/** Los hechos de cada versión compartida con el vínculo, por `claveVersion`: el expediente no los trae (IA-11). */
+export function hechosPorVersion(documentos: readonly DocumentoVistaEmpresaDto[]): ReadonlyMap<string, HechosDto> {
+  const mapa = new Map<string, HechosDto>();
+  for (const documento of documentos) {
+    for (const version of documento.versionesCompartidas) {
+      if (version.hechos) mapa.set(claveVersion(documento.documentoId, version.n), version.hechos);
+    }
+  }
+  return mapa;
 }
 
 /** Hash corto para la tabla (los 12 primeros caracteres); el completo va en el título y al copiar. */
