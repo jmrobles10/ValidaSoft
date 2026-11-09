@@ -172,6 +172,21 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     }
 
     /// <summary>
+    /// El certificado dejó de valer (plantilla <c>certificado-revocado</c>, NW-16): revocado o suspendido, sin el motivo.
+    /// </summary>
+    public MensajeDeCorreo RedactarCertificado(Notificaciones.CorreoDeCertificadoPendiente correo)
+    {
+        var (asunto, que) = correo.Revocado
+            ? ($"{correo.Empresa} revocó tu certificado {correo.Folio}", "fue revocado: ya no es válido y no puede volver a usarse")
+            : ($"{correo.Empresa} suspendió tu certificado {correo.Folio}", "está suspendido mientras la empresa revisa tu vínculo");
+        var texto = $"Tu certificado {correo.Folio} con {correo.Empresa} {que}. Quien lo verifique verá este estado.\n\n" +
+                    "Si tienes dudas, escríbele directamente a la empresa.";
+        var html = $"<p>Tu certificado <b>{WebUtility.HtmlEncode(correo.Folio)}</b> con {WebUtility.HtmlEncode(correo.Empresa)} " +
+                   $"{WebUtility.HtmlEncode(que)}. Quien lo verifique verá este estado.</p><p>Si tienes dudas, escríbele directamente a la empresa.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
     /// Un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): sin enlace de acceso, remite a pedir uno
     /// con el correo para subir la versión nueva.
     /// </summary>

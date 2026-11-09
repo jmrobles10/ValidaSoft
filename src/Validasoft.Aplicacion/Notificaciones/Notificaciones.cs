@@ -1,5 +1,6 @@
 using JasperFx.Events;
 using Validasoft.Contratos;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
@@ -132,6 +133,10 @@ public sealed class PlanificadorDeNotificaciones
                 return await PorVencerAsync(evento, aviso, contexto, orden, ct);
             case VersionVencida vencida:
                 return await VencidoAsync(evento, vencida, contexto, orden, ct);
+            case CertificadoRevocado revocado:
+                return await CertificadoAlTerceroAsync(evento, revocado.Emision, revocado.Fecha, revocado: true, contexto, ct);
+            case CertificadoSuspendido suspendido:
+                return await CertificadoAlTerceroAsync(evento, suspendido.Emision, suspendido.Fecha, revocado: false, contexto, ct);
             default:
                 return PlanDeNotificaciones.Vacio;
         }
@@ -178,6 +183,24 @@ public sealed class PlanificadorDeNotificaciones
         return await APersonasAsync(evento, contexto, destino.TenantId, vinculo.EmpresaId, empresa?.Nombre, TiposNotificacion.PorVencer,
             "Documento por vencer", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros)).ToList(),
             orden, ct, $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}");
+    }
+
+    /// <summary>
+    /// El certificado del tercero se revocó o se suspendió (plantilla <c>certificado-revocado</c>, docs/05 §8, NW-16): correo
+    /// al tercero con el folio y la empresa, sin el motivo (es interno, como en la verificación pública, CE-8).
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> CertificadoAlTerceroAsync(IEvent evento, int emision, DateTimeOffset fecha, bool revocado,
+        IContextoDeEventos contexto, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.CertificadoAsync(tenantId, evento.StreamId, ct) is not { } certificado)
+            return PlanDeNotificaciones.Vacio;
+        var vinculo = await contexto.VinculoAsync(tenantId, certificado.VinculoId, ct);
+        var folio = certificado.Emisiones.FirstOrDefault(e => e.Numero == emision)?.Folio;
+        if (vinculo is null || folio is null || string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = await contexto.EmpresaAsync(certificado.EmpresaId, ct);
+        return new PlanDeNotificaciones([], [new CorreoDeCertificadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", folio, revocado, fecha)]);
     }
 
     /// <summary>
@@ -319,6 +342,18 @@ public static class CorreoDeNotificacionPendienteHandler
 /// la gracia. Cola <c>correo</c>.
 /// </summary>
 public sealed record CorreoDeVencidoPendiente(string Para, string Empresa, string Documento, DateOnly VigenteHasta);
+
+/// <summary>
+/// El certificado del tercero dejó de valer: revocado (definitivo) o suspendido (mientras la empresa lo revisa). Cola
+/// <c>correo</c>.
+/// </summary>
+public sealed record CorreoDeCertificadoPendiente(string Para, string Empresa, string Folio, bool Revocado, DateTimeOffset Fecha);
+
+public static class CorreoDeCertificadoPendienteHandler
+{
+    public static Task Handle(CorreoDeCertificadoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
+        enviador.EnviarAsync(redactor.RedactarCertificado(correo), ct);
+}
 
 public static class CorreoDeVencidoPendienteHandler
 {

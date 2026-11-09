@@ -157,6 +157,7 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeNotificacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeConstanciaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeVencidoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeCertificadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>().ToLocalQueue(ColaWebhooks);
         opciones.LocalQueue(ColaWebhooks).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

@@ -366,6 +366,30 @@ public class NotificacionesTests
     }
 
     [Fact]
+    public async Task Revocar_o_suspender_el_certificado_avisa_al_tercero_sin_el_motivo()
+    {
+        var certificadoId = Guid.NewGuid();
+        var emitido = new CertificadoEmitido(certificadoId, Tenant, EmpresaId, VinculoId, TerceroId, ExpedienteId, "NORTE-E-2026-000001",
+            "NORTE-C-2026-000001", 1, "NORTE-C-2026-000001-1", "{}", "ab12", "sello", "vs-kid", null, "https://valida.test/verificar/x", Ahora);
+        var contexto = new ContextoFalso { Certificado = Certificado.Create(emitido) };
+        var planificador = new PlanificadorDeNotificaciones();
+
+        var revocado = await planificador.PlanearAsync(Evento(new CertificadoRevocado(1, "Documento adulterado.", OrigenRevocacion.Administrador,
+            Revisor, Ahora), certificadoId), contexto, 1, CancellationToken.None);
+        var correo = revocado.Correos.OfType<CorreoDeCertificadoPendiente>().ShouldHaveSingleItem();
+        correo.Para.ShouldBe(CorreoTercero);
+        correo.Folio.ShouldBe("NORTE-C-2026-000001-1");
+        correo.Revocado.ShouldBeTrue();
+        var mensaje = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarCertificado(correo);
+        mensaje.Asunto.ShouldBe("Norte S.A.S. revocó tu certificado NORTE-C-2026-000001-1");
+        mensaje.Texto.ShouldNotContain("adulterado");
+
+        var suspendido = await planificador.PlanearAsync(Evento(new CertificadoSuspendido(1, "Lista restrictiva.", EstadoCertificado.Vigente, Ahora),
+            certificadoId), contexto, 1, CancellationToken.None);
+        suspendido.Correos.OfType<CorreoDeCertificadoPendiente>().ShouldHaveSingleItem().Revocado.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task La_constancia_al_tercero_lista_los_textos_aceptados_sin_la_ip()
     {
         var contexto = new ContextoFalso();
