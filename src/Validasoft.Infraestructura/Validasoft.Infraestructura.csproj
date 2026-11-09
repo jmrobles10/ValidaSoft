@@ -3,7 +3,9 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="JasperFx.Events" />
     <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx.Http" />
     <PackageReference Include="WolverineFx.Marten" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
