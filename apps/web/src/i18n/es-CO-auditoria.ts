@@ -22,6 +22,7 @@ export const auditoria = {
     FlujoPorDefecto: 'Flujo por defecto',
     TipoDocumentoTenant: 'Tipo de documento',
     PlantillaTipoDocumento: 'Plantilla de tipo de documento',
+    PlantillaNotificacion: 'Plantilla de correo',
     Motivo: 'Motivo',
     TipoVinculo: 'Tipo de vínculo',
     Usuario: 'Usuario',

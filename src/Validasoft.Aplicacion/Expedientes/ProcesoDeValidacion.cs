@@ -208,7 +208,7 @@ public static class ProcesoDeValidacion
         var empresa = await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct);
         var rechazo = eventos.OfType<ExpedienteRechazado>().FirstOrDefault();
         await correo.Mensajes.PublishAsync(new CorreoDeResultadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
-            rechazo is null, rechazo is null ? [] : [.. rechazo.Motivos.Select(m => m.TextoAlTercero)]));
+            rechazo is null, rechazo is null ? [] : [.. rechazo.Motivos.Select(m => m.TextoAlTercero)], empresa?.TenantId, estado.EmpresaId));
     }
 
     /// <summary>
@@ -233,7 +233,7 @@ public static class ProcesoDeValidacion
             ahora + EnlaceDeAcceso.VigenciaObservacion, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
         sesion.Store(enlace);
         await correo.Mensajes.PublishAsync(new CorreoDeObservacionPendiente(enlace.CorreoDestino, empresa?.Nombre ?? "La empresa", estado.Folio,
-            observaciones, correo.Protector.Proteger(token), enlace.Expira));
+            observaciones, correo.Protector.Proteger(token), enlace.Expira, empresa?.TenantId, estado.EmpresaId));
     }
 
     /// <summary>

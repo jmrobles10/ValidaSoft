@@ -61,6 +61,7 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
         servicios.AddSingleton<IEnviadorDeCorreo, EnviadorSmtp>();
         servicios.AddSingleton<RedactorDeCorreos>();
+        servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();

@@ -135,6 +135,8 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_flujo_codigo", TenancyScope.PerTenant, x => x.EmpresaId, x => x.Codigo)
                     .Index(x => x.EmpresaId);
                 opts.Schema.For<FlujoPorDefecto>().MultiTenanted().Index(x => x.EmpresaId);
+                // Plantillas de notificación por empresa (PL-1): id determinista {empresa:N}:{evento}:{canal}.
+                opts.Schema.For<PlantillaNotificacion>().MultiTenanted().Index(x => x.EmpresaId);
 
                 // Tipos de documento del tenant (defaults del grupo); qué se pide a cada vínculo lo dicen los requisitos del flujo (RQ-3).
                 opts.Schema.For<TipoDocumentoTenant>().MultiTenanted()

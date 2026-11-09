@@ -7,6 +7,7 @@ import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { inicio } from './es-CO-inicio';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
+import { plantillas } from './es-CO-plantillas';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
 import { terceros } from './es-CO-terceros';
@@ -30,6 +31,7 @@ export const esCO = {
     auditoria: 'Auditoría',
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
+    plantillas: 'Plantillas de correo',
     'tipos-documento': 'Tipos de documento',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
@@ -249,6 +251,7 @@ export const esCO = {
   cuentas,
   terceros,
   auditoria,
+  plantillas,
   motivos,
   flujos,
   historial: {

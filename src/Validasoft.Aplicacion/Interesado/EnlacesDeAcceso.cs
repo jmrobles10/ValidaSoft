@@ -35,7 +35,7 @@ public static class EnlacesDeAcceso
 
         var empresa = await sesion.LoadAsync<Empresa>(vinculo.EmpresaId, ct);
         await mensajes.PublishAsync(new CorreoDeAccesoPendiente(PlantillaCorreo.Invitacion, enlace.CorreoDestino, protector.Proteger(token),
-            enlace.Expira, empresa?.Nombre ?? "Una empresa", tipo.Nombre));
+            enlace.Expira, empresa?.Nombre ?? "Una empresa", tipo.Nombre, tenantId, vinculo.EmpresaId));
     }
 
     /// <summary>Enlace sin vínculo tras el autorregistro (sin OTP: la posesión del correo es el factor).</summary>
