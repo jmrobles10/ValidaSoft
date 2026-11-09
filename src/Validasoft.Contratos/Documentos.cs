@@ -122,10 +122,23 @@ public sealed record CargaPrefirmadaDto(Guid DocumentoId, int Version, bool Dupl
 
 public sealed record TipoDocumentoResumenDto(string Codigo, string Nombre, Guid? TipoDocumentoTenantId);
 
-/// <summary>Hechos básicos de la versión, sin IA (docs/02 §5.1).</summary>
+/// <summary>
+/// Hechos de la versión (docs/02 §5.1). Con <see cref="ConIa"/> (la empresa consumió su validación de esta versión,
+/// ADR-0012) traen el análisis en <see cref="Ia"/>, la comparación de campos con la versión anterior y la revisión
+/// humana que pide el análisis; sin él, los básicos (hash, MIME, antivirus, comparación por hash) pendientes de revisión.
+/// </summary>
 public sealed record HechosDto(
     bool ConIa, bool HashVerificado, string Antivirus, string MimeReal, int? Paginas, string Comparacion, IReadOnlyList<string> CamposCambiados,
-    IReadOnlyList<string> CamposCriticosCambiados, bool PendienteRevisionHumana);
+    IReadOnlyList<string> CamposCriticosCambiados, bool PendienteRevisionHumana, HechosIaDto? Ia = null);
+
+/// <summary>
+/// Lo que extrajo el análisis con IA (ADR-0012): modelo (y si se escaló), confianza de 0 a 1, legibilidad, tipo que
+/// detectó (código canónico u <c>OTRO</c>), campos según el esquema del tipo, alertas de manipulación y páginas enviadas
+/// y omitidas (IA-5). No incluye costo ni quién pagó.
+/// </summary>
+public sealed record HechosIaDto(
+    string Modelo, bool Escalado, decimal Confianza, bool Legible, string TipoDetectado, IReadOnlyDictionary<string, JsonElement> Campos,
+    IReadOnlyList<string> Alertas, string? Observaciones, int? PaginasEnviadas, int? PaginasOmitidas, DateTimeOffset Fecha);
 
 /// <summary>Valor declarado por el tercero, normalizado (número invariante, fecha <c>aaaa-mm-dd</c>, <c>true</c>/<c>false</c>).</summary>
 public sealed record DatoDeclaradoDto(string Clave, string Etiqueta, string Tipo, string Valor);

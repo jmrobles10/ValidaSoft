@@ -51,6 +51,7 @@ public static class FichaTerceroEndpoints
         var veDocumentos = contexto.Scopes.Contains(Permisos.DocumentosLeer);
         var datosEmpresa = veCertificados ? await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct) : null;
         var documentos = veDocumentos ? await DocumentosDelTerceroAsync(sesiones, id, ct) : [];
+        var conIa = veDocumentos ? await DocumentosDeVinculoEndpoints.ValidacionesDeIaAsync(empresa, documentos, ct) : new HashSet<(Guid, int)>();
         var hoy = reloj.Hoy();
 
         var vinculos = new List<VinculoEnFichaDto>();
@@ -68,7 +69,7 @@ public static class FichaTerceroEndpoints
 
             var compartidos = veDocumentos
                 ? (IReadOnlyList<DocumentoVistaEmpresaDto>)(DocumentosDeVinculoEndpoints.Visible(vinculo)
-                    ? [.. documentos.Select(d => DocumentosDeVinculoEndpoints.Vista(d, vinculo.Id, hoy)).OfType<DocumentoVistaEmpresaDto>()]
+                    ? [.. documentos.Select(d => DocumentosDeVinculoEndpoints.Vista(d, vinculo.Id, hoy, conIa)).OfType<DocumentoVistaEmpresaDto>()]
                     : [])
                 : null;
 

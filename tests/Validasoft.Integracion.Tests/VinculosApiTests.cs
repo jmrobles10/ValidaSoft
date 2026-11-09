@@ -52,6 +52,9 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public RelojDePruebas Reloj { get; } = new();
 
+    /// <summary>Analizador de IA falso (ADR-0012): las pruebas nunca llaman a OpenAI.</summary>
+    public AnalizadorFalso Analizador { get; } = new();
+
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _minio.StartAsync());
@@ -88,6 +91,8 @@ public sealed class ApiFixture : IAsyncLifetime
                 s.AddSingleton<IEnviadorDeCorreo>(Correos);
                 s.RemoveAll<TimeProvider>();
                 s.AddSingleton<TimeProvider>(Reloj);
+                s.RemoveAll<Validasoft.Aplicacion.Ia.IAnalizadorDeDocumentos>();
+                s.AddSingleton<Validasoft.Aplicacion.Ia.IAnalizadorDeDocumentos>(Analizador);
             });
         });
     }

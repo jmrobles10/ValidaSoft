@@ -55,11 +55,72 @@ public sealed class VersionDocumento
     [System.Text.Json.Serialization.JsonIgnore]
     public bool TieneArchivo => ClaveObjeto.Length > 0;
 
+    /// <summary>Resultado del análisis con OpenAI (ADR-0012); nulo si no se analizó.</summary>
+    public AnalisisDeIaDeVersion? Ia { get; set; }
+
+    /// <summary>Motivo del análisis de IA fallido (fail-closed, IA-6): la versión no se vuelve a analizar.</summary>
+    public string? FalloIa { get; set; }
+
+    /// <summary>La versión ya tiene un resultado de IA (análisis o fallo): no se vuelve a llamar a OpenAI.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IaResuelta => Ia is not null || FalloIa is not null;
+
+    /// <summary>
+    /// Hechos como los ve quien consulta (IA-3): con <paramref name="conIa"/> (la empresa consumió su validación) los del
+    /// análisis; sin él los básicos de siempre (sin IA, pendiente de revisión humana y la comparación por hash).
+    /// </summary>
+    public HechosBasicos? HechosPara(bool conIa) =>
+        Hechos is not { } hechos
+            ? null
+            : conIa && Ia is not null
+                ? hechos
+                : hechos with { ConIa = false, PendienteRevisionHumana = true, Comparacion = Ia?.ComparacionSinIa ?? hechos.Comparacion };
+
     public VigenciaDeVersion? VigenciaPara(Guid vinculoId) => Vigencias.FirstOrDefault(v => v.VinculoId == vinculoId);
 
     /// <summary>El vencimiento más próximo entre los vínculos (lo que obliga primero al tercero, docs/02 §8.3).</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public VigenciaDeVersion? ProximaVigencia => Vigencias.Where(v => v.VigenteHasta is not null).MinBy(v => v.VigenteHasta);
+}
+
+/// <summary>
+/// Lo que el análisis con OpenAI dejó en la versión (proyección de <see cref="AnalisisDeIaRegistrado"/>). Solo lo ve una
+/// empresa que consumió su validación de esa versión; <see cref="ComparacionSinIa"/> conserva la comparación por hash
+/// para quien no la consumió.
+/// </summary>
+public sealed class AnalisisDeIaDeVersion
+{
+    public string Modelo { get; set; } = string.Empty;
+
+    public bool Escalado { get; set; }
+
+    public decimal Confianza { get; set; }
+
+    public bool Legible { get; set; }
+
+    public string TipoDetectado { get; set; } = string.Empty;
+
+    public Dictionary<string, JsonElement> Campos { get; set; } = [];
+
+    public List<string> Alertas { get; set; } = [];
+
+    public string? Observaciones { get; set; }
+
+    public int? PaginasEnviadas { get; set; }
+
+    public int? PaginasOmitidas { get; set; }
+
+    public bool PendienteRevisionHumana { get; set; }
+
+    public List<string> CamposCambiados { get; set; } = [];
+
+    public List<string> CamposCriticosCambiados { get; set; } = [];
+
+    public Comparacion ComparacionSinIa { get; set; }
+
+    public Guid EmpresaQuePago { get; set; }
+
+    public DateTimeOffset Fecha { get; set; }
 }
 
 /// <summary>Vínculo con el que la versión actual está compartida y el tipo del tenant cuya regla define su vigencia.</summary>
@@ -398,6 +459,29 @@ public sealed class Documento
             motivo, ahora);
     }
 
+    /// <summary>
+    /// La versión anterior a <paramref name="numero"/> con análisis de IA (la más reciente no devuelta): contra ella se
+    /// comparan los campos clave del análisis nuevo; nula si no hay.
+    /// </summary>
+    public VersionDocumento? AnteriorConIa(int numero) =>
+        Versiones.Where(v => v.Numero < numero && v.Ia is not null && v.Estado != EstadoVersion.Devuelta).MaxBy(v => v.Numero);
+
+    /// <summary>
+    /// Registra el análisis de IA de una versión de archivo: una sola vez por versión (si ya tiene análisis o fallo ⇒ nulo,
+    /// idempotente). La versión debe existir y tener archivo.
+    /// </summary>
+    public AnalisisDeIaRegistrado? RegistrarAnalisisDeIa(AnalisisDeIaRegistrado analisis)
+    {
+        var version = VersionRequerida(analisis.Numero);
+        if (!version.TieneArchivo)
+            throw new InvalidOperationException("Una versión sin archivo no se analiza con IA.");
+        return version.IaResuelta ? null : analisis;
+    }
+
+    /// <summary>El análisis falló (fail-closed, IA-6): una sola vez por versión; si ya tiene resultado ⇒ nulo.</summary>
+    public AnalisisDeIaFallido? RegistrarFalloDeIa(int numero, string motivo, Guid? empresaQuePago, DateTimeOffset ahora) =>
+        VersionRequerida(numero).IaResuelta ? null : new AnalisisDeIaFallido(numero, motivo, ahora, empresaQuePago);
+
     /// <summary>Copia del documento con los eventos aplicados (para decidir sin tocar el agregado que Marten proyecta).</summary>
     public Documento Proyectar(IEnumerable<object> eventos)
     {
@@ -424,6 +508,8 @@ public sealed class Documento
             case VigenciaDeVersionCalculada e: Apply(e); break;
             case VersionVencida e: Apply(e); break;
             case VersionRatificada e: Apply(e); break;
+            case AnalisisDeIaRegistrado e: Apply(e); break;
+            case AnalisisDeIaFallido e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento no aplicable a Documento: {evento.GetType().Name}.");
         }
     }
@@ -581,5 +667,45 @@ public sealed class Documento
     {
         if (e.EmpresaId is not null)
             VersionRequerida(e.Numero).AccedidaPorEmpresa = true;
+    }
+
+    /// <summary>Los hechos de la versión reflejan el análisis (<c>ConIa</c>, revisión humana y comparación); los básicos quedan para quien no lo consumió.</summary>
+    public void Apply(AnalisisDeIaRegistrado e)
+    {
+        var version = VersionRequerida(e.Numero);
+        var basica = version.Hechos?.Comparacion ?? Comparacion.SinAnterior;
+        version.Ia = new AnalisisDeIaDeVersion
+        {
+            Modelo = e.Modelo,
+            Escalado = e.Escalado,
+            Confianza = e.Confianza,
+            Legible = e.Legible,
+            TipoDetectado = e.TipoDetectado,
+            Campos = e.Campos.ToDictionary(c => c.Key, c => c.Value.Clone(), StringComparer.Ordinal),
+            Alertas = [.. e.Alertas],
+            Observaciones = e.Observaciones,
+            PaginasEnviadas = e.PaginasEnviadas,
+            PaginasOmitidas = e.PaginasOmitidas,
+            PendienteRevisionHumana = e.PendienteRevisionHumana,
+            CamposCambiados = [.. e.CamposCambiados ?? []],
+            CamposCriticosCambiados = [.. e.CamposCriticosCambiados ?? []],
+            ComparacionSinIa = basica,
+            EmpresaQuePago = e.EmpresaQuePago,
+            Fecha = e.Fecha
+        };
+        if (version.Hechos is { } hechos)
+            version.Hechos = hechos with
+            {
+                ConIa = true,
+                PendienteRevisionHumana = e.PendienteRevisionHumana,
+                Comparacion = e.ComparacionConAnterior ?? hechos.Comparacion
+            };
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(AnalisisDeIaFallido e)
+    {
+        VersionRequerida(e.Numero).FalloIa = e.Motivo;
+        ActualizadoEn = e.Fecha;
     }
 }

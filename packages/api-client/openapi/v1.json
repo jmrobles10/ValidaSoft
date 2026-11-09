@@ -2809,6 +2809,138 @@
         }
       }
     },
+    "/api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.PlanIaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "description": "GET_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "operationId": "GET_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanIaEmpresaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.PlanIaEndpoints"
+        ],
+        "summary": "PUT_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "description": "PUT_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "operationId": "PUT_api_v1_plataforma_tenants_tenantId_empresas_empresaId_plan_ia",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "empresaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPlanIaEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanIaEmpresaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/ia/uso": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.UsoIaEndpoints"
+        ],
+        "summary": "GET_api_v1_ia_uso",
+        "description": "GET_api_v1_ia_uso",
+        "operationId": "GET_api_v1_ia_uso",
+        "parameters": [
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsoIaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/flujos": {
       "post": {
         "tags": [
@@ -6859,6 +6991,66 @@
           }
         }
       },
+      "ActualizarPlanIaEmpresaDto": {
+        "required": [
+          "validacionesIncluidasMes",
+          "adicionalHabilitado"
+        ],
+        "type": "object",
+        "properties": {
+          "validacionesIncluidasMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalHabilitado": {
+            "type": "boolean"
+          },
+          "topeAdicionalMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "apiKeyOpenAi": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modeloPorDefecto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modeloEscalamiento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "umbralConfianza": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "ActualizarPlantillaNotificacionDto": {
         "required": [
           "asunto",
@@ -10633,6 +10825,91 @@
           },
           "pendienteRevisionHumana": {
             "type": "boolean"
+          },
+          "ia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HechosIaDto"
+              }
+            ]
+          }
+        }
+      },
+      "HechosIaDto": {
+        "required": [
+          "modelo",
+          "escalado",
+          "confianza",
+          "legible",
+          "tipoDetectado",
+          "campos",
+          "alertas",
+          "observaciones",
+          "paginasEnviadas",
+          "paginasOmitidas",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "modelo": {
+            "type": "string"
+          },
+          "escalado": {
+            "type": "boolean"
+          },
+          "confianza": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "legible": {
+            "type": "boolean"
+          },
+          "tipoDetectado": {
+            "type": "string"
+          },
+          "campos": {
+            "type": "object"
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "observaciones": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "paginasEnviadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "paginasOmitidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -11701,6 +11978,144 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "PlanIaEmpresaDto": {
+        "required": [
+          "empresaId",
+          "configurado",
+          "validacionesIncluidasMes",
+          "adicionalHabilitado",
+          "topeAdicionalMes",
+          "llaveConfigurada",
+          "ultimosCuatro",
+          "modeloPorDefecto",
+          "modeloEscalamiento",
+          "umbralConfianza",
+          "activo",
+          "actualizadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "configurado": {
+            "type": "boolean"
+          },
+          "validacionesIncluidasMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalHabilitado": {
+            "type": "boolean"
+          },
+          "topeAdicionalMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "llaveConfigurada": {
+            "type": "boolean"
+          },
+          "ultimosCuatro": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "modeloPorDefecto": {
+            "type": "string"
+          },
+          "modeloEscalamiento": {
+            "type": "string"
+          },
+          "umbralConfianza": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "actualizadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PlanIaResumenDto": {
+        "required": [
+          "configurado",
+          "validacionesIncluidasMes",
+          "adicionalHabilitado",
+          "topeAdicionalMes",
+          "llaveConfigurada",
+          "modeloPorDefecto",
+          "modeloEscalamiento",
+          "umbralConfianza",
+          "activo"
+        ],
+        "type": "object",
+        "properties": {
+          "configurado": {
+            "type": "boolean"
+          },
+          "validacionesIncluidasMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalHabilitado": {
+            "type": "boolean"
+          },
+          "topeAdicionalMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "llaveConfigurada": {
+            "type": "boolean"
+          },
+          "modeloPorDefecto": {
+            "type": "string"
+          },
+          "modeloEscalamiento": {
+            "type": "string"
+          },
+          "umbralConfianza": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activo": {
+            "type": "boolean"
           }
         }
       },
@@ -13616,6 +14031,176 @@
           }
         }
       },
+      "UsoIaDiaDto": {
+        "required": [
+          "fecha",
+          "incluidas",
+          "adicionales",
+          "analisisPagados",
+          "tokensEntrada",
+          "tokensSalida",
+          "costoUsd"
+        ],
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date"
+          },
+          "incluidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analisisPagados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "UsoIaDto": {
+        "required": [
+          "mes",
+          "plan",
+          "incluidasConsumidas",
+          "adicionalesConsumidas",
+          "incluidasRestantes",
+          "adicionalesRestantes",
+          "analisisPagados",
+          "tokensEntrada",
+          "tokensEntradaEnCache",
+          "tokensSalida",
+          "costoUsd",
+          "porDia"
+        ],
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanIaResumenDto"
+          },
+          "incluidasConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalesConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "incluidasRestantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalesRestantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analisisPagados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensEntradaEnCache": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "porDia": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsoIaDiaDto"
+            }
+          }
+        }
+      },
       "UsuarioDto": {
         "required": [
           "id",
@@ -14710,6 +15295,12 @@
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ia.PlanIaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ia.UsoIaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Flujos.FlujosEndpoints"

@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { HechosIaDto } from './hechosIaDto';
 
 export interface HechosDto {
   conIa: boolean;
@@ -16,4 +17,5 @@ export interface HechosDto {
   camposCambiados: string[];
   camposCriticosCambiados: string[];
   pendienteRevisionHumana: boolean;
+  ia?: null | HechosIaDto;
 }

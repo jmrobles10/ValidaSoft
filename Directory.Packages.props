@@ -21,6 +21,8 @@
     <!-- Certificados (CE-4, CE-6): sello Ed25519 (.NET 10 no lo trae; ya llegaba transitivo por MailKit/MimeKit, MIT) y QR (MIT). -->
     <PackageVersion Include="BouncyCastle.Cryptography" Version="2.7.0" />
     <PackageVersion Include="QRCoder" Version="1.8.1" />
+    <!-- Recorte de páginas de los PDF que se envían al análisis con IA (IA-5; Apache-2.0). -->
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Pruebas -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
