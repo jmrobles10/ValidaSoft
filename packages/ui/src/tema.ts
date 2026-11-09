@@ -332,10 +332,22 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
         styleOverrides: {
           root: ({ ownerState }) => {
             const t = estado[severidad[ownerState.severity ?? 'info']];
-            return { borderRadius: RADIO.md, backgroundColor: t.fondo, borderColor: t.borde, color: c.textoPrimario, padding: '6px 12px', '& .MuiAlert-icon': { color: t.texto, opacity: 1, padding: '2px 0', marginRight: 10, fontSize: 18 } };
+            // Con botón de cerrar o acción, la fila mide lo que el botón (32 px): ícono y primera línea del texto se
+            // centran en esa altura (antes quedaban arriba y el aviso se veía descentrado). En varias líneas, el ícono
+            // sigue alineado con la primera.
+            const conAccion = Boolean(ownerState.onClose ?? ownerState.action);
+            return {
+              borderRadius: RADIO.md,
+              backgroundColor: t.fondo,
+              borderColor: t.borde,
+              color: c.textoPrimario,
+              padding: '6px 12px',
+              '& .MuiAlert-icon': { color: t.texto, opacity: 1, padding: conAccion ? '7px 0' : '2px 0', marginRight: 10, fontSize: 18 },
+              ...(conAccion && { '& .MuiAlert-message': { padding: '6px 0' } }),
+            };
           },
           message: { fontSize: 14, lineHeight: '20px', padding: '1px 0' },
-          action: { padding: '0 0 0 12px', marginRight: 0, alignItems: 'center' },
+          action: { padding: '0 0 0 12px', marginRight: 0, alignItems: 'flex-start' },
         },
       },
       MuiAlertTitle: { styleOverrides: { root: { fontWeight: 600, fontSize: 14, marginBottom: 2 } } },
