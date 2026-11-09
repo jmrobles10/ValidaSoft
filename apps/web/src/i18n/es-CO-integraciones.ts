@@ -110,7 +110,7 @@ export const certificados = {
   revocarTitulo: 'Revocar el certificado {{folio}}',
   revocarAyuda: 'El certificado deja de ser válido de inmediato para quien lo verifique. No se puede deshacer; un expediente aprobado después emite uno nuevo.',
   justificacion: 'Justificación',
-  justificacionAyuda: 'Queda en el historial y la ve quien verifique el certificado.',
+  justificacionAyuda: 'Queda en el historial interno. Quien verifique el certificado solo ve que fue revocado y la fecha; para el motivo, te escribe.',
   faltaJustificacion: 'Falta llenar «Justificación».',
   revocado_ok: 'Certificado revocado.',
 } as const;
