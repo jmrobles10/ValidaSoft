@@ -57,6 +57,10 @@ export function crearRouter() {
               lazy: () => import('../features/terceros/PaginaFichaTercero').then((m) => ({ Component: m.PaginaFichaTercero })),
             },
             {
+              path: 'auditoria',
+              lazy: () => import('../features/auditoria/PaginaAuditoria').then((m) => ({ Component: m.PaginaAuditoria })),
+            },
+            {
               element: <LayoutConfiguracion />,
               children: [
                 {

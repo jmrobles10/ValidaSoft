@@ -1,6 +1,7 @@
 export * from './accesos-soporte/accesos-soporte';
 export * from './api-keys/api-keys';
 export * from './areas/areas';
+export * from './auditoria/auditoria';
 export * from './bandeja/bandeja';
 export * from './catalogo-documental/catalogo-documental';
 export * from './catalogos/catalogos';

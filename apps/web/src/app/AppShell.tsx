@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { SCOPES } from '@validasoft/api-client';
-import { Isotipo, SelectorEmpresa, VARIABLE_TOPE } from '@validasoft/ui';
+import { Isotipo, SelectorEmpresa, VARIABLE_TOPE, visualmenteOculto } from '@validasoft/ui';
 import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
@@ -14,7 +14,7 @@ import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
 interface Pestana {
-  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'certificados' | 'vinculos' | 'configuracion';
+  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'certificados' | 'vinculos' | 'auditoria' | 'configuracion';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
@@ -50,6 +50,7 @@ export function AppShell() {
   if (permisos.puede(SCOPES.documentosLeer)) pestanas.push({ clave: 'vencimientos', ruta: 'vencimientos', prefijos: ['vencimientos'] });
   if (permisos.puede(SCOPES.certificadosLeer)) pestanas.push({ clave: 'certificados', ruta: 'certificados', prefijos: ['certificados'] });
   if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros'] });
+  if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });
   const primera = configuracion[0];
   if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });
 
@@ -135,13 +136,19 @@ export function AppShell() {
         </Box>
         <Box sx={{ flex: 1 }} />
         {sistema && (
-          <Typography
-            component="span"
-            sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
-          >
-            <Link2 size={14} strokeWidth={1.75} aria-hidden />
-            {persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}
-          </Typography>
+          // El texto completo solo cabe en pantallas anchas: en las demás queda el ícono con el texto en un tooltip (y
+          // oculto solo a la vista, para los lectores de pantalla), así las pestañas no se cortan.
+          <Tooltip title={persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}>
+            <Typography
+              component="span"
+              sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
+            >
+              <Link2 size={14} strokeWidth={1.75} aria-hidden />
+              <Box component="span" sx={{ display: 'inline', '@media (max-width: 1535.95px)': visualmenteOculto }}>
+                {persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}
+              </Box>
+            </Typography>
+          </Tooltip>
         )}
         <Campana empresaId={empresa.id} />
         {!temaDelContenedor && (

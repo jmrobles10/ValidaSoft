@@ -5969,6 +5969,96 @@
         }
       }
     },
+    "/api/v1/auditoria": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Comun.AuditoriaEndpoints"
+        ],
+        "summary": "GET_api_v1_auditoria",
+        "description": "GET_api_v1_auditoria",
+        "operationId": "GET_api_v1_auditoria",
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidad",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidadId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfRegistroAuditoriaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/vinculos/{id}/certificado": {
       "get": {
         "tags": [
@@ -6515,6 +6605,38 @@
             }
           },
           "otpCodigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ActorAuditoriaDto": {
+        "required": [
+          "tipo",
+          "id",
+          "nombre",
+          "sistema"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "id": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sistema": {
             "type": [
               "null",
               "string"
@@ -8773,6 +8895,43 @@
           }
         }
       },
+      "DiffCampoDto": {
+        "required": [
+          "campo",
+          "antes",
+          "despues",
+          "tipoCambio"
+        ],
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "antes": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "despues": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "tipoCambio": {
+            "type": "string"
+          }
+        }
+      },
       "DocumentoBovedaDto": {
         "required": [
           "id",
@@ -9243,6 +9402,28 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "EntidadAuditadaDto": {
+        "required": [
+          "tipo",
+          "id",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11191,6 +11372,27 @@
           }
         }
       },
+      "PaginaDtoOfRegistroAuditoriaDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegistroAuditoriaDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfRevalidacionDto": {
         "required": [
           "datos",
@@ -11636,6 +11838,119 @@
             ]
           },
           "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RegistroAuditoriaDto": {
+        "required": [
+          "id",
+          "tipo",
+          "fecha",
+          "empresaId",
+          "actor",
+          "entidad",
+          "accion",
+          "antes",
+          "despues",
+          "diff",
+          "justificacion",
+          "detalle",
+          "vinculoId",
+          "ip",
+          "userAgent",
+          "correlationId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/ActorAuditoriaDto"
+          },
+          "entidad": {
+            "$ref": "#/components/schemas/EntidadAuditadaDto"
+          },
+          "accion": {
+            "type": "string"
+          },
+          "antes": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "despues": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "diff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiffCampoDto"
+            }
+          },
+          "justificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detalle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "ip": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userAgent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correlationId": {
             "type": [
               "null",
               "string"
@@ -14205,6 +14520,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.MotivosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Comun.AuditoriaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Certificados.CertificadosEndpoints"
