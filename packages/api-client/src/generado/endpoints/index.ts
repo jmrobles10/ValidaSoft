@@ -18,6 +18,7 @@ export * from './lista-de-certificados/lista-de-certificados';
 export * from './motivos/motivos';
 export * from './notificaciones/notificaciones';
 export * from './plantillas/plantillas';
+export * from './plantillas-notificacion/plantillas-notificacion';
 export * from './publico/publico';
 export * from './quien-soy/quien-soy';
 export * from './revalidaciones/revalidaciones';

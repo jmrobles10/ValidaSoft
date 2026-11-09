@@ -131,12 +131,17 @@ function CrearConClave() {
 describe('crear una API key', () => {
   it('pide nombre y permisos, manda el alcance elegido y muestra la clave completa una sola vez', async () => {
     const usuario = userEvent.setup();
+    // Los textos se pegan: teclear sobre los diálogos de MUI pasaba del tiempo en la suite completa.
+    const escribir = async (campo: HTMLElement, texto: string) => {
+      await usuario.click(campo);
+      await usuario.paste(texto);
+    };
     const peticiones = montar(<CrearConClave />, () => json(LLAVE, 201));
     const crear = screen.getByRole('button', { name: 'Crear API key' });
     expect(crear).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Escribe el nombre.');
 
-    await usuario.type(screen.getByRole('textbox', { name: /Nombre/ }), 'SRM producción');
+    await escribir(screen.getByRole('textbox', { name: /Nombre/ }), 'SRM producción');
     expect(screen.getByRole('status')).toHaveTextContent('Marca al menos un permiso.');
     await usuario.click(screen.getByRole('checkbox', { name: /Leer vínculos/ }));
     await usuario.click(screen.getByRole('checkbox', { name: /Crear vínculos, invitar/ }));

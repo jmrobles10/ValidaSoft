@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using Microsoft.Extensions.Configuration;
+using Validasoft.Dominio.Configuracion;
 
 namespace Validasoft.Aplicacion.Comun;
 
@@ -31,10 +32,13 @@ public enum PlantillaCorreo
 /// <summary>
 /// Mensaje del outbox (cola local durable <c>correo</c>): se guarda en la transacción que crea el enlace o el código y
 /// se despacha después de confirmarla. <see cref="SecretoProtegido"/> es el token o el código <b>cifrado</b>: el
-/// secreto nunca queda en claro en las tablas de Wolverine ni en los logs (IN-3).
+/// secreto nunca queda en claro en las tablas de Wolverine ni en los logs (IN-3). <see cref="TenantId"/> y
+/// <see cref="EmpresaId"/> (al final y opcionales: los mensajes ya encolados siguen deserializando) dicen de qué empresa es
+/// la invitación para aplicar su plantilla (PL-1).
 /// </summary>
 public sealed record CorreoDeAccesoPendiente(
-    PlantillaCorreo Plantilla, string Para, string SecretoProtegido, DateTimeOffset Expira, string? Empresa, string? TipoVinculo);
+    PlantillaCorreo Plantilla, string Para, string SecretoProtegido, DateTimeOffset Expira, string? Empresa, string? TipoVinculo,
+    Guid? TenantId = null, Guid? EmpresaId = null);
 
 /// <summary>Arma el correo a partir de la plantilla; la URL pública sale de <c>Validasoft:Correo:UrlPublica</c>.</summary>
 public sealed class RedactorDeCorreos(IConfiguration configuracion)
@@ -264,32 +268,45 @@ public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string
 /// </summary>
 public sealed record CorreoDeObservacionPendiente(
     string Para, string Empresa, string Folio, IReadOnlyList<ObservacionParaCorreo> Observaciones, string? EnlaceProtegido = null,
-    DateTimeOffset? EnlaceExpira = null);
+    DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null);
 
 public static class CorreoDeObservacionPendienteHandler
 {
-    public static Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
-        RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarObservacion(correo,
-            correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido)), ct);
+    public static async Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
+        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
+    {
+        var mensaje = redactor.RedactarObservacion(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
+        await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+    }
 }
 
 /// <summary>
 /// Correo al tercero cuando su expediente se cierra aprobado o rechazado (outbox, cola <c>correo</c>): sale solo si la
 /// transacción de la decisión se confirma. <see cref="Motivos"/>: textos al tercero de los motivos del rechazo.
 /// </summary>
-public sealed record CorreoDeResultadoPendiente(string Para, string Empresa, string Folio, bool Aprobado, IReadOnlyList<string> Motivos);
+public sealed record CorreoDeResultadoPendiente(string Para, string Empresa, string Folio, bool Aprobado, IReadOnlyList<string> Motivos,
+    Guid? TenantId = null, Guid? EmpresaId = null);
 
 public static class CorreoDeResultadoPendienteHandler
 {
-    public static Task Handle(CorreoDeResultadoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarResultado(correo), ct);
+    public static async Task Handle(CorreoDeResultadoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor,
+        PlantillasDeCorreo plantillas, CancellationToken ct) =>
+        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
+            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>
 public static class CorreoDeAccesoPendienteHandler
 {
-    public static Task Handle(CorreoDeAccesoPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
-        RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.Redactar(correo, protector.Desproteger(correo.SecretoProtegido)), ct);
+    /// <summary>Solo la invitación es de una empresa y lleva su plantilla (PL-1); OTP y enlaces de acceso no se personalizan.</summary>
+    public static async Task Handle(CorreoDeAccesoPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
+        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
+    {
+        var mensaje = redactor.Redactar(correo, protector.Desproteger(correo.SecretoProtegido));
+        if (correo.Plantilla == PlantillaCorreo.Invitacion)
+            mensaje = await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Invitacion, correo.TenantId, correo.EmpresaId,
+                EjemplosDeCorreo.VariablesDe(correo.Empresa, tipoVinculo: correo.TipoVinculo), ct);
+        await enviador.EnviarAsync(mensaje, ct);
+    }
 }

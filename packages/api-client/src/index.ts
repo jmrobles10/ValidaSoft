@@ -33,6 +33,7 @@ export * from './generado/endpoints/inicio/inicio';
 export * from './generado/endpoints/lista-de-certificados/lista-de-certificados';
 export * from './generado/endpoints/ficha-tercero/ficha-tercero';
 export * from './generado/endpoints/auditoria/auditoria';
+export * from './generado/endpoints/plantillas-notificacion/plantillas-notificacion';
 export * from './generado/endpoints/terceros/terceros';
 export * from './generado/endpoints/textos-legales/textos-legales';
 export * from './generado/endpoints/tipos-documento/tipos-documento';

@@ -5969,6 +5969,140 @@
         }
       }
     },
+    "/api/v1/plantillas-notificacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.PlantillasNotificacionEndpoints"
+        ],
+        "summary": "GET_api_v1_plantillas_notificacion",
+        "description": "GET_api_v1_plantillas_notificacion",
+        "operationId": "GET_api_v1_plantillas_notificacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlantillaNotificacionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plantillas-notificacion/{evento}/{canal}": {
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.PlantillasNotificacionEndpoints"
+        ],
+        "summary": "PUT_api_v1_plantillas_notificacion_evento_canal",
+        "description": "PUT_api_v1_plantillas_notificacion_evento_canal",
+        "operationId": "PUT_api_v1_plantillas_notificacion_evento_canal",
+        "parameters": [
+          {
+            "name": "evento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "canal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPlantillaNotificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlantillaNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plantillas-notificacion/{evento}/{canal}/vista-previa": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.PlantillasNotificacionEndpoints"
+        ],
+        "summary": "POST_api_v1_plantillas_notificacion_evento_canal_vista_previa",
+        "description": "POST_api_v1_plantillas_notificacion_evento_canal_vista_previa",
+        "operationId": "POST_api_v1_plantillas_notificacion_evento_canal_vista_previa",
+        "parameters": [
+          {
+            "name": "evento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "canal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPlantillaNotificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VistaPreviaCorreoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/auditoria": {
       "get": {
         "tags": [
@@ -6721,6 +6855,34 @@
             "type": [
               "null",
               "boolean"
+            ]
+          }
+        }
+      },
+      "ActualizarPlantillaNotificacionDto": {
+        "required": [
+          "asunto",
+          "cabecera",
+          "pie"
+        ],
+        "type": "object",
+        "properties": {
+          "asunto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cabecera": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pie": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -11542,6 +11704,78 @@
           }
         }
       },
+      "PlantillaNotificacionDto": {
+        "required": [
+          "evento",
+          "canal",
+          "nombre",
+          "descripcion",
+          "asuntoPorDefecto",
+          "asunto",
+          "cabecera",
+          "pie",
+          "variablesPermitidas",
+          "version",
+          "actualizadaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "evento": {
+            "type": "string"
+          },
+          "canal": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "asuntoPorDefecto": {
+            "type": "string"
+          },
+          "asunto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cabecera": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pie": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "variablesPermitidas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "actualizadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "PlantillaTipoDocumentoDto": {
         "required": [
           "tipoDocumentoId",
@@ -14212,6 +14446,25 @@
           }
         }
       },
+      "VistaPreviaCorreoDto": {
+        "required": [
+          "asunto",
+          "texto",
+          "html"
+        ],
+        "type": "object",
+        "properties": {
+          "asunto": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string"
+          }
+        }
+      },
       "WebhookDto": {
         "required": [
           "id",
@@ -14520,6 +14773,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.MotivosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Configuracion.PlantillasNotificacionEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Comun.AuditoriaEndpoints"

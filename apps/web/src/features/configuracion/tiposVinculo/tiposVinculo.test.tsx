@@ -116,25 +116,32 @@ describe('validación de un tipo de vínculo (misma regla que TipoVinculo.Crear)
 describe('editor de tipos de vínculo', () => {
   it('al crear, dice qué falta, exige opciones para un atributo de opción y manda el cuerpo con POST', async () => {
     const usuario = userEvent.setup();
+    // Los textos se pegan: teclear sobre los diálogos de MUI pasaba del tiempo en la suite completa.
+    const escribir = async (campo: HTMLElement, texto: string) => {
+      await usuario.click(campo);
+      await usuario.paste(texto);
+    };
     const peticiones = montar(<DrawerTipoVinculo tipo={null} claveIdempotencia="idem-1" onCerrar={() => undefined} />, (cuerpo) => json({ ...PROVEEDOR, ...(cuerpo as object), id: 't9', activo: true }, 201));
     const crear = screen.getByRole('button', { name: 'Crear tipo' });
     expect(crear).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent(/El código debe empezar con letra/);
 
-    await usuario.type(screen.getByRole('textbox', { name: /Código/ }), 'contratista');
+    await escribir(screen.getByRole('textbox', { name: /Código/ }), 'contratista');
     expect(screen.getByRole('textbox', { name: /Código/ })).toHaveValue('CONTRATISTA');
-    await usuario.type(screen.getByRole('textbox', { name: /Nombre/ }), 'Contratista');
+    await escribir(screen.getByRole('textbox', { name: /Nombre/ }), 'Contratista');
 
     await usuario.click(screen.getByRole('button', { name: 'Agregar atributo' }));
     const fila = within(screen.getByRole('list', { name: 'Atributos permitidos' })).getByRole('listitem');
-    await usuario.type(within(fila).getByRole('textbox', { name: /Clave/ }), 'nivel riesgo');
+    await escribir(within(fila).getByRole('textbox', { name: /Clave/ }), 'nivel riesgo');
     expect(within(fila).getByRole('textbox', { name: /Clave/ })).toHaveValue('nivelriesgo');
     await usuario.click(within(fila).getByRole('combobox', { name: /Tipo/ }));
     await usuario.click(await screen.findByRole('option', { name: 'Una opción' }));
     expect(screen.getByRole('status')).toHaveTextContent('Atributo «nivelriesgo»: Escribe al menos una opción.');
     expect(crear).toBeDisabled();
 
-    await usuario.type(within(fila).getByRole('textbox', { name: /Opciones/ }), 'Bajo{Enter}Alto');
+    await escribir(within(fila).getByRole('textbox', { name: /Opciones/ }), 'Bajo');
+    await usuario.keyboard('{Enter}');
+    await usuario.paste('Alto');
     await waitFor(() => expect(crear).toBeEnabled());
     await usuario.click(crear);
 

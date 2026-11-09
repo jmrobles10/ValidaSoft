@@ -149,3 +149,21 @@ public sealed record NotificacionesMarcadasDto(int Marcadas);
 public sealed record PreferenciasNotificacionDto(IReadOnlyDictionary<string, bool> Correo, IReadOnlyList<string> TiposConCorreo);
 
 public sealed record ActualizarPreferenciasNotificacionDto(IReadOnlyDictionary<string, bool> Correo);
+
+// ---------- Plantillas de notificación (docs/05 §2, PL-1) ----------
+
+/// <summary>
+/// Un correo que la empresa puede personalizar. <see cref="Evento"/>: <c>invitacion</c>, <c>observacion</c>, <c>resultado</c>,
+/// <c>consentimiento-empresa</c>, <c>vencido</c> o <c>certificado</c>; <see cref="Canal"/>: <c>correo</c>.
+/// <see cref="AsuntoPorDefecto"/>: el asunto que sale sin personalizar, con datos de ejemplo. <see cref="Asunto"/>,
+/// <see cref="Cabecera"/> y <see cref="Pie"/> nulos: sin personalizar. <see cref="Version"/> 0: nunca se ha cambiado.
+/// </summary>
+public sealed record PlantillaNotificacionDto(
+    string Evento, string Canal, string Nombre, string Descripcion, string AsuntoPorDefecto, string? Asunto, string? Cabecera, string? Pie,
+    IReadOnlyList<string> VariablesPermitidas, int Version, DateTimeOffset? ActualizadaEn);
+
+/// <summary>Textos vacíos o nulos vuelven al predeterminado; todo nulo = el correo predeterminado.</summary>
+public sealed record ActualizarPlantillaNotificacionDto(string? Asunto, string? Cabecera, string? Pie);
+
+/// <summary>El correo armado con datos de ejemplo: asunto, texto plano y HTML (sin scripts).</summary>
+public sealed record VistaPreviaCorreoDto(string Asunto, string Texto, string Html);

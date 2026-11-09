@@ -37,6 +37,6 @@ test('al aprobar, el certificado aparece en la lista de Sur y se encuentra por e
   await expect(sofia.getByRole('row').filter({ hasText: invitacion.nombre })).toBeVisible();
   await paginaSofia.screenshot({ path: 'test-results/certificados-web.png', fullPage: true });
 
-  await fila.click();
-  await expect(sofia.getByRole('heading', { level: 1, name: invitacion.nombre })).toBeVisible();
-});
+  // Se abre por el folio: el nombre del tercero en la fila es el enlace a su ficha (Tercero 360).
+  await fila.getByText(new RegExp(`${e.sur.prefijo}-C-\\d{4}-\\d{6}-1`)).click();
+  await expect(sofia.getByRole('heading', { level: 1, name: invitacion.nombre })).toBeVisible();});

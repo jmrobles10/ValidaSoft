@@ -1,11 +1,11 @@
 import { SCOPES, type Scope } from '@validasoft/api-client';
-import { Building2, FileText, KeyRound, Link2, ListChecks, LockKeyhole, Palette, Plug, Route, Users, Webhook, Workflow, type LucideIcon } from 'lucide-react';
+import { Building2, FileText, KeyRound, Link2, ListChecks, LockKeyhole, Mail, Palette, Plug, Route, Users, Webhook, Workflow, type LucideIcon } from 'lucide-react';
 
 export interface SeccionConfiguracion {
-  ruta: 'empresas' | 'usuarios' | 'areas' | 'sistemas' | 'api-keys' | 'webhooks' | 'motivos' | 'tipos-documento' | 'tipos-vinculo' | 'flujos' | 'datos-marca' | 'accesos-soporte';
+  ruta: 'empresas' | 'usuarios' | 'areas' | 'sistemas' | 'api-keys' | 'webhooks' | 'motivos' | 'tipos-documento' | 'tipos-vinculo' | 'flujos' | 'datos-marca' | 'plantillas' | 'accesos-soporte';
   scope: Scope;
   icono: LucideIcon;
-  /** Datos y marca, áreas y flujos son de la empresa activa; el resto (empresas, usuarios, sistemas, llaves, tipos, soporte…), del grupo. */
+  /** Datos y marca, plantillas de correo, áreas y flujos son de la empresa activa; el resto (empresas, usuarios, sistemas, llaves, tipos, soporte…), del grupo. */
   alcance: 'grupo' | 'empresa';
 }
 
@@ -21,6 +21,7 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'api-keys', scope: SCOPES.apiKeysAdministrar, icono: KeyRound, alcance: 'grupo' },
   { ruta: 'accesos-soporte', scope: SCOPES.empresasAdministrar, icono: LockKeyhole, alcance: 'grupo' },
   { ruta: 'datos-marca', scope: SCOPES.empresasAdministrar, icono: Palette, alcance: 'empresa' },
+  { ruta: 'plantillas', scope: SCOPES.configuracionLeer, icono: Mail, alcance: 'empresa' },
   { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },
   { ruta: 'flujos', scope: SCOPES.flujosLeer, icono: Route, alcance: 'empresa' },
 ];

@@ -1,6 +1,7 @@
 using JasperFx.Events;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Certificados;
+using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
@@ -100,7 +101,8 @@ public sealed record TextoAceptadoParaCorreo(string Titulo, int Version, string 
 /// Constancia al tercero de lo que aceptó (plantilla <c>consentimiento-empresa</c>, docs/05 §8, NW-10): textos, versión,
 /// huella y fecha. Cola <c>correo</c>.
 /// </summary>
-public sealed record CorreoDeConstanciaPendiente(string Para, string Empresa, IReadOnlyList<TextoAceptadoParaCorreo> Textos, DateTimeOffset AceptadaEn);
+public sealed record CorreoDeConstanciaPendiente(string Para, string Empresa, IReadOnlyList<TextoAceptadoParaCorreo> Textos, DateTimeOffset AceptadaEn,
+    Guid? TenantId = null, Guid? EmpresaId = null);
 
 /// <summary>Lo que un evento de dominio produce para las personas: notificaciones de la campana y correos.</summary>
 public sealed record PlanDeNotificaciones(IReadOnlyList<(Guid TenantId, Notificacion Notificacion)> Campana, IReadOnlyList<object> Correos)
@@ -200,7 +202,8 @@ public sealed class PlanificadorDeNotificaciones
             return PlanDeNotificaciones.Vacio;
 
         var empresa = await contexto.EmpresaAsync(certificado.EmpresaId, ct);
-        return new PlanDeNotificaciones([], [new CorreoDeCertificadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", folio, revocado, fecha)]);
+        return new PlanDeNotificaciones([], [new CorreoDeCertificadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", folio, revocado, fecha, tenantId,
+            certificado.EmpresaId)]);
     }
 
     /// <summary>
@@ -218,7 +221,8 @@ public sealed class PlanificadorDeNotificaciones
         var empresa = await contexto.EmpresaAsync(vinculo.EmpresaId, ct);
         List<object> alTercero = string.IsNullOrWhiteSpace(vinculo.CorreoTercero)
             ? []
-            : [new CorreoDeVencidoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", documento.NombreTipo, vencida.VigenteHasta)];
+            : [new CorreoDeVencidoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", documento.NombreTipo, vencida.VigenteHasta,
+                destino.TenantId, vinculo.EmpresaId)];
 
         var expedienteId = vinculo.ExpedienteAbiertoId ?? vinculo.UltimoExpedienteId;
         var expediente = expedienteId is { } id ? await contexto.ExpedienteAsync(destino.TenantId, id, ct) : null;
@@ -300,7 +304,8 @@ public sealed class PlanificadorDeNotificaciones
             .Select(c => new TextoAceptadoParaCorreo(Titulo(c.Tipo, empresa?.Nombre), c.Version,
                 textos.TryGetValue(c.TextoLegalId, out var texto) ? texto.Hash : c.Hash))
             .ToList();
-        return new PlanDeNotificaciones([], [new CorreoDeConstanciaPendiente(para, empresa?.Nombre ?? "La empresa", lista, consentimientos.Fecha)]);
+        return new PlanDeNotificaciones([], [new CorreoDeConstanciaPendiente(para, empresa?.Nombre ?? "La empresa", lista, consentimientos.Fecha, tenantId,
+            vinculo.EmpresaId)]);
     }
 
     private static string Titulo(TipoTextoLegal tipo, string? empresa) => tipo switch
@@ -344,28 +349,37 @@ public static class CorreoDeNotificacionPendienteHandler
 /// Aviso al tercero de que un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): pasó su vigencia y
 /// la gracia. Cola <c>correo</c>.
 /// </summary>
-public sealed record CorreoDeVencidoPendiente(string Para, string Empresa, string Documento, DateOnly VigenteHasta);
+public sealed record CorreoDeVencidoPendiente(string Para, string Empresa, string Documento, DateOnly VigenteHasta, Guid? TenantId = null,
+    Guid? EmpresaId = null);
 
 /// <summary>
 /// El certificado del tercero dejó de valer: revocado (definitivo) o suspendido (mientras la empresa lo revisa). Cola
 /// <c>correo</c>.
 /// </summary>
-public sealed record CorreoDeCertificadoPendiente(string Para, string Empresa, string Folio, bool Revocado, DateTimeOffset Fecha);
+public sealed record CorreoDeCertificadoPendiente(string Para, string Empresa, string Folio, bool Revocado, DateTimeOffset Fecha, Guid? TenantId = null,
+    Guid? EmpresaId = null);
 
+// Los correos al tercero de una empresa llevan la plantilla de esa empresa (PL-1) si la tiene.
 public static class CorreoDeCertificadoPendienteHandler
 {
-    public static Task Handle(CorreoDeCertificadoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarCertificado(correo), ct);
+    public static async Task Handle(CorreoDeCertificadoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
+        Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
+        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
 }
 
 public static class CorreoDeVencidoPendienteHandler
 {
-    public static Task Handle(CorreoDeVencidoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarVencido(correo), ct);
+    public static async Task Handle(CorreoDeVencidoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
+        Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
+        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct), ct);
 }
 
 public static class CorreoDeConstanciaPendienteHandler
 {
-    public static Task Handle(CorreoDeConstanciaPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarConstancia(correo), ct);
+    public static async Task Handle(CorreoDeConstanciaPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
+        Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
+        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct), ct);
 }
