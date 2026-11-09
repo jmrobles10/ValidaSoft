@@ -3891,6 +3891,70 @@
         }
       }
     },
+    "/api/v1/mis-pendientes": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.InicioEndpoints"
+        ],
+        "summary": "GET_api_v1_mis_pendientes",
+        "description": "GET_api_v1_mis_pendientes",
+        "operationId": "GET_api_v1_mis_pendientes",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MisPendientesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/indicadores": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.InicioEndpoints"
+        ],
+        "summary": "GET_api_v1_indicadores",
+        "description": "GET_api_v1_indicadores",
+        "operationId": "GET_api_v1_indicadores",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndicadoresDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/expedientes/{id}/requisitos/{requisitoId}/ratificar": {
       "post": {
         "tags": [
@@ -10085,6 +10149,150 @@
           }
         }
       },
+      "IndicadoresDto": {
+        "required": [
+          "dias",
+          "vinculosActivos",
+          "vinculosEnValidacion",
+          "vinculosInvitados",
+          "vinculosVencidos",
+          "vinculosBloqueados",
+          "expedientesEnCurso",
+          "expedientesObservados",
+          "expedientesAprobados",
+          "expedientesRechazados",
+          "tiempoPromedioDias",
+          "tiempoMedianaDias",
+          "certificadosVigentes",
+          "certificadosConPendientes",
+          "certificadosNoValidos"
+        ],
+        "type": "object",
+        "properties": {
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosActivos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosEnValidacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosInvitados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosVencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosBloqueados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "expedientesEnCurso": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "expedientesObservados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "expedientesAprobados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "expedientesRechazados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tiempoPromedioDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tiempoMedianaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "certificadosVigentes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "certificadosConPendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "certificadosNoValidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "IniciarCargaDto": {
         "required": [
           "nombreArchivo",
@@ -10393,6 +10601,74 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "MisPendientesDto": {
+        "required": [
+          "porArea",
+          "revalidaciones",
+          "revalidacionesBloqueantes",
+          "cuentasPorAprobar",
+          "aperturasPendientes",
+          "documentosPorVencer",
+          "documentosVencidos"
+        ],
+        "type": "object",
+        "properties": {
+          "porArea": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendientesDeAreaDto"
+            }
+          },
+          "revalidaciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revalidacionesBloqueantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cuentasPorAprobar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aperturasPendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "documentosPorVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "documentosVencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -10817,6 +11093,44 @@
           "generadoEn": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "PendientesDeAreaDto": {
+        "required": [
+          "areaId",
+          "codigo",
+          "nombre",
+          "cantidad",
+          "masAntiguoDias"
+        ],
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "masAntiguoDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -13579,6 +13893,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ExpedientesPublicosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.InicioEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.RatificacionEndpoints"

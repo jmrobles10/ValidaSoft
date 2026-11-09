@@ -14,7 +14,7 @@ import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
 interface Pestana {
-  clave: 'bandeja' | 'revalidaciones' | 'vencimientos' | 'vinculos' | 'configuracion';
+  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'vinculos' | 'configuracion';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
@@ -43,6 +43,7 @@ export function AppShell() {
   const configuracion = SECCIONES_CONFIGURACION.filter((s) => permisos.puede(s.scope));
   const pestanas: Pestana[] = [];
   if (permisos.puede(SCOPES.expedientesLeer)) {
+    pestanas.push({ clave: 'inicio', ruta: 'inicio', prefijos: ['inicio'] });
     pestanas.push({ clave: 'bandeja', ruta: 'bandeja', prefijos: ['bandeja', 'expedientes'] });
     pestanas.push({ clave: 'revalidaciones', ruta: 'revalidaciones', prefijos: ['revalidaciones'] });
   }

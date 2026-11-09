@@ -2,6 +2,7 @@
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
+import { inicio } from './es-CO-inicio';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
@@ -17,6 +18,7 @@ export const esCO = {
     venceEn: 'La sesión vence en {{minutos}} min',
   },
   nav: {
+    inicio: 'Inicio',
     bandeja: 'Bandeja',
     revalidaciones: 'Revalidaciones',
     vencimientos: 'Vencimientos',
@@ -225,6 +227,7 @@ export const esCO = {
       recargar: 'Recargar',
     },
   },
+  inicio,
   bandeja,
   revalidaciones,
   vencimientos,
