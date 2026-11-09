@@ -6,7 +6,8 @@
 # 1. Frontend: apps/web (embebible, en /app/) y apps/public (tercero, en /) con pnpm.
 FROM node:22-bookworm-slim AS frontend
 WORKDIR /repo
-RUN corepack enable
+# Node 25+ ya no trae corepack: se instala explícito (con Node 22 también funciona) y usa la versión de pnpm de packageManager.
+RUN npm install -g corepack@0.36.0 && corepack enable
 # Primero los manifiestos: la capa de `pnpm install` se reutiliza mientras no cambien las dependencias.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/

@@ -140,6 +140,14 @@ function AreaDelRequisito({
   const explicar = decidirPorDocumento && seExplica(bloqueo) && ctx.scopes.has(SCOPES.expedientesRevisar) ? bloqueo : null;
   const nombre = (id: string | null | undefined) =>
     id && id === ctx.usuarioId ? t('expedientes.veredictos.tu') : ((id && nombres.get(id)) ?? t('expedientes.requisitos.persona'));
+  // Quién decidió: el sistema (área automática o aprobación que la empresa ya dio en otro expediente, RQ-11), el
+  // administrador en nombre del área o la persona. Antes un veredicto del sistema aparecía como «Persona del área».
+  const autor = (v: { origen: string; usuario?: string | null }) =>
+    v.origen === 'Sistema'
+      ? t('expedientes.veredictos.sistema')
+      : !v.usuario && v.origen === 'Administrador'
+        ? t('expedientes.veredictos.administrador')
+        : nombre(v.usuario);
 
   return (
     <Box component="li" sx={{ listStyle: 'none', pl: 1.5, borderLeft: 2, borderColor: 'divider' }}>
@@ -166,13 +174,14 @@ function AreaDelRequisito({
       </Stack>
       {veredictosVigentesDeRequisito(areaRequisito).map((v) => (
         <Typography key={v.id} sx={{ fontSize: 13, mt: 0.5 }}>
-          {nombre(v.usuario)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.sobreVersion', { n: String(v.sobreVersion ?? '—') })}
+          {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.sobreVersion', { n: String(v.sobreVersion ?? '—') })}
           {v.observacion ? ` · “${v.observacion}”` : ''}
+          {v.justificacion ? ` · ${v.justificacion}` : ''}
         </Typography>
       ))}
       {veredictosInvalidados(areaRequisito).map((v) => (
         <Typography key={v.id} color="text.secondary" sx={{ fontSize: 12, mt: 0.5, textDecoration: 'line-through' }}>
-          {nombre(v.usuario)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.invalidado', { n: String(v.sobreVersion ?? '—') })}
+          {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.invalidado', { n: String(v.sobreVersion ?? '—') })}
         </Typography>
       ))}
       {explicar && (

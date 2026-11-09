@@ -10211,6 +10211,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "vinculoOrigen": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

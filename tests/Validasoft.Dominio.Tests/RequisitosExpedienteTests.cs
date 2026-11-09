@@ -80,6 +80,52 @@ public partial class RequisitosExpedienteTests
     // ---------- apertura y fase de carga ----------
 
     [Fact]
+    public void Lo_que_la_empresa_ya_aprobo_en_esa_misma_version_se_aprueba_solo_y_lo_adicional_sigue_pendiente()
+    {
+        // RQ-11: la empresa ya aprobó el RUT v1 como proveedor; ahora es cliente y se le pide además la Cámara.
+        var previa = new AprobacionPrevia(Guid.NewGuid(), "NORTE-E-2026-000007", "Proveedor", _docRut, 1);
+        var e = Abrir(Flujo(), out var eventos, Rut(V(_docRut, 1)) with { Previa = previa }, Camara(V(_docCamara, 1)));
+
+        var reutilizados = eventos.OfType<VeredictoDeRequisitoEmitido>().Where(v => v.RequisitoId == _rut).ToList();
+        reutilizados.Select(v => v.AreaId).ShouldBe([_compras, _cumplimiento], ignoreOrder: true);
+        reutilizados.ShouldAllBe(v => v.Origen == OrigenVeredicto.Sistema && v.Veredicto == Veredicto.Aprobado && v.SobreVersion == 1);
+        reutilizados[0].Justificacion.ShouldBe("La empresa ya aprobó esta versión en el expediente NORTE-E-2026-000007 (Proveedor).");
+        e.BuscarRequisito(_rut)!.Estado.ShouldBe(EstadoRequisito.Aprobado);
+        // Compras solo revisaba el RUT: queda aprobada; la Cámara es nueva y la decide Cumplimiento.
+        e.BuscarArea(_compras)!.Estado.ShouldBe(EstadoAreaExpediente.Aprobada);
+        e.BuscarRequisito(_camara)!.Estado.ShouldBe(EstadoRequisito.EnRevision);
+        e.Estado.ShouldBe(EstadoExpediente.EnRevision);
+
+        // Al aprobar Cumplimiento la Cámara (el RUT ya lo tiene), el expediente se aprueba.
+        Aprobar(e, _camara, _cumplimiento, _ana).Estado.ShouldBe(EstadoExpediente.Aprobado);
+    }
+
+    [Fact]
+    public void Si_todo_lo_que_pide_ya_lo_aprobo_la_empresa_el_expediente_queda_aprobado_al_abrir()
+    {
+        var previa = new AprobacionPrevia(Guid.NewGuid(), "NORTE-E-2026-000007", "Proveedor", _docRut, 1);
+        var e = Abrir(Flujo(), Rut(V(_docRut, 1)) with { Previa = previa });
+
+        e.Estado.ShouldBe(EstadoExpediente.Aprobado);
+    }
+
+    [Fact]
+    public void Una_aprobacion_previa_de_otra_version_no_cuenta_y_una_version_nueva_la_anula()
+    {
+        // La empresa aprobó la v1; el tercero ya tiene la v2: se revisa.
+        var previa = new AprobacionPrevia(Guid.NewGuid(), "NORTE-E-2026-000007", "Proveedor", _docRut, 1);
+        var otra = Abrir(Flujo(), Rut(V(_docRut, 2)) with { Previa = previa }, Camara(V(_docCamara, 1)));
+        otra.BuscarRequisito(_rut)!.Estado.ShouldBe(EstadoRequisito.EnRevision);
+
+        // Abierto con la v1 aprobada antes, el tercero sube la v2: la aprobación heredada deja de valer y se revisa la v2.
+        var e = Abrir(Flujo(), Rut(V(_docRut, 1)) with { Previa = previa }, Camara(V(_docCamara, 1)));
+        e.BuscarRequisito(_rut)!.Estado.ShouldBe(EstadoRequisito.Aprobado);
+        var conV2 = Adjuntar(e, _rut, V(_docRut, 2));
+        conV2.BuscarRequisito(_rut)!.Estado.ShouldBe(EstadoRequisito.EnRevision);
+        conV2.BuscarArea(_compras)!.Estado.ShouldNotBe(EstadoAreaExpediente.Aprobada);
+    }
+
+    [Fact]
     public void Un_requisito_nace_cargado_si_ya_esta_compartido_y_pendiente_si_no_y_el_expediente_espera_en_carga()
     {
         var e = Abrir(Flujo(), out var eventos, Rut(V(_docRut, 1)), Camara());

@@ -6,6 +6,7 @@
  */
 import type { VinculoDeSesionDto } from './vinculoDeSesionDto';
 import type { SesionTerceroDtoExpedienteOrigen } from './sesionTerceroDtoExpedienteOrigen';
+import type { SesionTerceroDtoVinculoOrigen } from './sesionTerceroDtoVinculoOrigen';
 
 export interface SesionTerceroDto {
   accessToken: string;
@@ -14,4 +15,5 @@ export interface SesionTerceroDto {
   otpVerificado: boolean;
   vinculos: VinculoDeSesionDto[];
   expedienteOrigen?: SesionTerceroDtoExpedienteOrigen;
+  vinculoOrigen?: SesionTerceroDtoVinculoOrigen;
 }

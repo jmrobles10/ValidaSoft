@@ -36,6 +36,13 @@ public sealed class RequisitoDeExpediente
 
     public VersionDeRequisito? VersionActual { get; set; }
 
+    /// <summary>Aprobación de esta empresa a esta misma versión en otro expediente del tercero (RQ-11); nula si no la hay.</summary>
+    public AprobacionPrevia? AprobacionPrevia { get; set; }
+
+    /// <summary>¿La versión actual es la que la empresa ya aprobó en otro expediente?</summary>
+    public bool ReutilizaAprobacion => AprobacionPrevia is { } previa && VersionActual is { } version &&
+                                       version.DocumentoId == previa.DocumentoId && version.Numero == previa.Version;
+
     /// <summary>Versiones que lo cubrieron antes (la más reciente al final).</summary>
     public List<VersionDeRequisito> Historial { get; set; } = [];
 
@@ -225,7 +232,8 @@ public sealed partial class Expediente
             Obligatorio = r.Obligatorio,
             AreasQueRevisan = [.. r.AreasQueRevisan],
             AprobadoresRequeridos = r.AprobadoresRequeridos,
-            VersionActual = r.Version
+            VersionActual = r.Version,
+            AprobacionPrevia = r.Previa
         })];
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
@@ -371,8 +379,9 @@ public sealed partial class Expediente
 
     /// <summary>
     /// Con requisitos, en la etapa activa: las áreas automáticas aprueban (origen <c>Sistema</c>) lo que les falte de
-    /// su alcance, y el área que quedó aprobada recibe su <c>VeredictoDeAreaEmitido</c> derivado. Devuelve si emitió algo
-    /// (la cascada vuelve a evaluar).
+    /// su alcance; cualquier área aprueba igual, con la referencia, lo que la empresa ya aprobó en esa misma versión en
+    /// otro expediente del tercero (RQ-11); y el área que quedó aprobada recibe su <c>VeredictoDeAreaEmitido</c>
+    /// derivado. Devuelve si emitió algo (la cascada vuelve a evaluar).
     /// </summary>
     private static bool AprobarAutomaticasYDerivadas(Simulacion simulacion, EtapaDeExpediente etapa, DateTimeOffset ahora)
     {
@@ -380,16 +389,19 @@ public sealed partial class Expediente
         var emitio = false;
         foreach (var area in etapa.Areas.ToList())
         {
-            if (area.Automatica)
+            foreach (var requisito in expediente.RequisitosDelArea(area.AreaId).ToList())
             {
-                foreach (var requisito in expediente.RequisitosDelArea(area.AreaId).ToList())
-                {
-                    if (requisito.Eximido || requisito.VersionActual is not { } version || requisito.DecididoPor(area))
-                        continue;
-                    simulacion.Emitir(new VeredictoDeRequisitoEmitido(Guid.CreateVersion7(), requisito.Id, area.AreaId, Veredicto.Aprobado,
-                        OrigenVeredicto.Sistema, null, version.Numero, [], null, null, ahora));
-                    emitio = true;
-                }
+                if (requisito.Eximido || requisito.VersionActual is not { } version || requisito.DecididoPor(area))
+                    continue;
+                var reutiliza = requisito.ReutilizaAprobacion;
+                if (!area.Automatica && !reutiliza)
+                    continue;
+                var nota = reutiliza && requisito.AprobacionPrevia is { } previa
+                    ? $"La empresa ya aprobó esta versión en el expediente {previa.Folio} ({previa.TipoVinculo})."
+                    : null;
+                simulacion.Emitir(new VeredictoDeRequisitoEmitido(Guid.CreateVersion7(), requisito.Id, area.AreaId, Veredicto.Aprobado,
+                    OrigenVeredicto.Sistema, null, version.Numero, [], null, nota, ahora));
+                emitio = true;
             }
 
             if (area.Estado == EstadoAreaExpediente.Aprobada && !area.Veredictos.Any(v => v.Vigente && v.Derivado))

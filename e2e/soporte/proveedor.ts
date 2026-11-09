@@ -21,12 +21,9 @@ export async function entrarPorInvitacion(page: Page, invitacion: Invitacion): P
   await page.goto(enlace(correo, '/e/'));
   const pideCodigo = page.getByRole('heading', { name: 'Escribe el código' });
   const invita = page.getByRole('heading', { level: 1, name: `${invitacion.empresa.nombre} te invita a validar tu información` });
-  const misEmpresas = page.getByRole('heading', { level: 1, name: 'Mis empresas' });
-  await expect(pideCodigo.or(invita).or(misEmpresas)).toBeVisible();
+  await expect(pideCodigo.or(invita)).toBeVisible();
   if (await pideCodigo.isVisible()) await escribirCodigo(page, invitacion.correo);
-  // Con varias invitaciones pendientes, el enlace lleva a «Mis empresas»: se entra por la de esta empresa.
-  await expect(invita.or(misEmpresas)).toBeVisible();
-  if (await misEmpresas.isVisible()) await abrirEmpresa(page, invitacion.empresa.nombre, invitacion.tipo);
+  // El enlace abre la invitación de esta empresa aunque el tercero tenga otras pendientes (no pasa por «Mis empresas»).
   await expect(invita).toBeVisible();
 }
 
