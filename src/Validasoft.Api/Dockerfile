@@ -4,7 +4,7 @@
 # encendidas en esta imagen; vacías = la API no las sirve).
 
 # 1. Frontend: apps/web (embebible, en /app/) y apps/public (tercero, en /) con pnpm.
-FROM node:22-bookworm-slim AS frontend
+FROM node:26-bookworm-slim AS frontend
 WORKDIR /repo
 # Node 25+ ya no trae corepack: se instala explícito (con Node 22 también funciona) y usa la versión de pnpm de packageManager.
 RUN npm install -g corepack@0.36.0 && corepack enable
