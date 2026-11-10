@@ -65,7 +65,9 @@ export function BarraDeAcciones({ prevista, errorPrevista, sinRevision, pendient
           mt: { md: 2.5 },
           insetInline: { xs: 0, md: 'auto' },
           zIndex: 3,
-          px: { xs: 1.5, sm: 3, md: 0 },
+          // En escritorio, un poco más ancha que la columna para tapar la orilla de los radios.
+          mx: { md: -2 },
+          px: { xs: 1.5, sm: 3, md: 2 },
           py: 1.5,
           bgcolor: 'background.default',
           borderTop: 1,

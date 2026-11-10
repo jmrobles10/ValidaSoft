@@ -86,6 +86,9 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
             zIndex: 3,
             bgcolor: 'background.default',
             pt: { md: `${String(MARGEN_SUPERIOR.sm)}px` },
+            // Un poco más ancho que la columna: tapa la orilla de los radios, que MUI corre hacia afuera.
+            mx: { md: -2 },
+            px: { md: 2 },
             mt: { md: `-${String(MARGEN_SUPERIOR.sm)}px` },
           }}
         >

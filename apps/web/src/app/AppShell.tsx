@@ -69,8 +69,9 @@ export function AppShell() {
         bgcolor: 'background.default',
         ...(alturaFija === null ? { minHeight: '100vh' } : { height: alturaFija, overflow: 'hidden' }),
         // Con scroll de ventana, bajo esta barra; con scroll propio de `main`, el sticky se mide desde el borde del
-        // contenido, así que se resta el relleno de `main` para que la franja quede pegada a la barra.
-        [VARIABLE_TOPE]: (t) => (alturaFija === null ? `${String(t.densidad.cabeceraEmbebida)}px` : `-${t.spacing(3)}`),
+        // contenido, así que se resta el relleno de `main` (`py: 2`) para que la franja quede pegada a la barra. Si cambia
+        // ese relleno, debe cambiar aquí y en `relleno` de `EncabezadoFijo`.
+        [VARIABLE_TOPE]: (t) => (alturaFija === null ? `${String(t.densidad.cabeceraEmbebida)}px` : `-${t.spacing(2)}`),
       }}
     >
       <Box

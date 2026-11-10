@@ -22,6 +22,11 @@ export interface EncabezadoFijoProps {
   tituloCompleto?: string;
   /** Sangría lateral del contenedor (unidades del tema): la franja la cubre para ir de borde a borde. */
   sangria?: number;
+  /**
+   * Relleno superior del contenedor (unidades del tema). La franja sube exactamente eso para empezar pegada a la barra:
+   * así se fija desde el primer píxel de desplazamiento, sin correrse antes de quedarse quieta.
+   */
+  relleno?: number;
 }
 
 /**
@@ -30,7 +35,7 @@ export interface EncabezadoFijoProps {
  * inferior, y el contenido pasa por debajo. En pantallas angostas las acciones bajan a una segunda línea en vez de
  * tapar el título, que se corta con puntos suspensivos; en el celular el subtítulo ocupa una sola línea.
  */
-export function EncabezadoFijo({ titulo, subtitulo, acciones, antes, etiquetaAcciones, tituloCompleto, sangria = 3 }: EncabezadoFijoProps) {
+export function EncabezadoFijo({ titulo, subtitulo, acciones, antes, etiquetaAcciones, tituloCompleto, sangria = 3, relleno = 2 }: EncabezadoFijoProps) {
   return (
     <Box
       data-encabezado-fijo=""
@@ -41,8 +46,8 @@ export function EncabezadoFijo({ titulo, subtitulo, acciones, antes, etiquetaAcc
         bgcolor: 'background.default',
         mx: -sangria,
         px: sangria,
-        mt: -1.5,
-        pt: 1.5,
+        mt: -relleno,
+        pt: relleno,
         pb: 1.5,
         mb: 2,
         borderBottom: 1,

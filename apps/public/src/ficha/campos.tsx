@@ -79,15 +79,23 @@ interface PropsCampoSiNo {
   onCambiar: (valor: boolean) => void;
   mensaje?: string | null;
   deshabilitado?: boolean;
+  /** Pregunta y opciones en la misma fila (desde tableta), para listas de preguntas como SST. */
+  enLinea?: boolean;
 }
 
 /** Pregunta sí/no con dos opciones grandes; sin responder es `null` (un «No» sí es respuesta). */
-export function CampoSiNo({ etiqueta, valor, onCambiar, mensaje, deshabilitado = false }: PropsCampoSiNo) {
+export function CampoSiNo({ etiqueta, valor, onCambiar, mensaje, deshabilitado = false, enLinea = false }: PropsCampoSiNo) {
   const { t } = useTranslation();
   const id = useId();
   return (
-    <FormControl error={Boolean(mensaje)} disabled={deshabilitado}>
-      <FormLabel id={`${id}-etiqueta`}>{etiqueta}</FormLabel>
+    <FormControl
+      error={Boolean(mensaje)}
+      disabled={deshabilitado}
+      sx={enLinea ? { display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(0, 1fr) auto' }, columnGap: 3, alignItems: 'center' } : undefined}
+    >
+      <FormLabel id={`${id}-etiqueta`} sx={enLinea ? { fontSize: 15, lineHeight: '22px', color: 'text.primary' } : undefined}>
+        {etiqueta}
+      </FormLabel>
       <RadioGroup
         row
         aria-labelledby={`${id}-etiqueta`}
@@ -97,7 +105,7 @@ export function CampoSiNo({ etiqueta, valor, onCambiar, mensaje, deshabilitado =
         <FormControlLabel value="true" control={<Radio />} label={t('ficha.si')} sx={{ minHeight: 44, mr: 3 }} />
         <FormControlLabel value="false" control={<Radio />} label={t('ficha.no')} sx={{ minHeight: 44 }} />
       </RadioGroup>
-      {mensaje && <FormHelperText>{mensaje}</FormHelperText>}
+      {mensaje && <FormHelperText sx={enLinea ? { gridColumn: '1 / -1', mx: 0 } : undefined}>{mensaje}</FormHelperText>}
     </FormControl>
   );
 }
