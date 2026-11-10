@@ -27,6 +27,15 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Correo de las pruebas e2e locales (perfil e2e, lo levanta e2e/soporte/api.mjs): bandeja en http://localhost:8026, para
+  # que los correos de las pruebas no lleguen al Mailpit de desarrollo.
+  mailpit-e2e:
+    image: axllent/mailpit:v1.33
+    profiles: ["e2e"]
+    ports:
+      - "1026:1025"
+      - "8026:8025"
+
   # Binarios de la bóveda (S3 compatible, docs/04 §6): API S3 en 9000 y consola web en http://localhost:9001
   # (usuario validasoft / validasoft-minio-solo-local). Los buckets los crea la API al arrancar en desarrollo.
   # Imagen: fork comunitario pgsty/minio (misma línea de comandos que minio/minio, que ya no se publica en Docker Hub).
