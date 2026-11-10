@@ -9,6 +9,13 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Requiere `docker compose -f infra/compose/compose.yaml up -d` (PostgreSQL, Mailpit y MinIO).
  */
+// En local las pruebas van aisladas del entorno de desarrollo: base `validasoft_e2e` y Mailpit propio en :8026 (si
+// compartieran la base, la API de desarrollo tomaría sus mensajes de la cola y mandaría sus correos al Mailpit de
+// desarrollo). En CI el entorno ya es limpio. E2E_COMPARTIDO=1 usa la base y el Mailpit de desarrollo.
+const aislado = !process.env.CI && process.env.E2E_COMPARTIDO !== '1' && !process.env.E2E_BASE_URL;
+process.env.E2E_AISLADO = aislado ? '1' : '0';
+if (aislado) process.env.E2E_MAILPIT ??= 'http://localhost:8026';
+
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_PUERTO ?? '5090'}`;
 
 export default defineConfig({
