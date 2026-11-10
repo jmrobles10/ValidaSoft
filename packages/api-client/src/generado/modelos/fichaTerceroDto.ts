@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { SeccionFichaDto } from './seccionFichaDto';
 import type { TerceroDto } from './terceroDto';
 import type { VinculoEnFichaDto } from './vinculoEnFichaDto';
 import type { VinculoEnOtraEmpresaDto } from './vinculoEnOtraEmpresaDto';
@@ -12,4 +13,6 @@ export interface FichaTerceroDto {
   tercero: TerceroDto;
   vinculos: VinculoEnFichaDto[];
   otrasEmpresasDelGrupo: VinculoEnOtraEmpresaDto[];
+  /** @nullable */
+  secciones?: SeccionFichaDto[] | null;
 }

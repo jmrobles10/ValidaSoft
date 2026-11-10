@@ -156,6 +156,10 @@ public static class CatalogoCanonico
         Archivo("PAZ_Y_SALVO", "Paz y salvo", AmbitoDocumento.PorVinculo, Sensibilidad.Ninguna, AplicaA.Ambas,
             vencimiento: false, expedicion: true, ratificable: false, persona: false, ["emisor", "fecha", "concepto"], [],
             ReglaFrescura.DiasDesdeExpedicion(30)),
+        // Soporte ad hoc de una sección de la ficha maestra (FM-5): el tercero lo sube por la carga de siempre y lo refiere
+        // desde la versión de la sección. Global (es del tercero) y sin campos clave: no se pide en flujos.
+        Archivo("SOPORTE_FICHA", "Soporte de la ficha", AmbitoDocumento.Global, Sensibilidad.Personal, AplicaA.Ambas,
+            vencimiento: false, expedicion: false, ratificable: false, persona: false, [], [], ReglaFrescura.Ninguna),
         Archivo("FORMATO_VINCULACION", "Formato de vinculación", AmbitoDocumento.PorVinculo, Sensibilidad.Ninguna, AplicaA.Ambas,
             vencimiento: false, expedicion: false, ratificable: false, persona: false, ["versionPlantilla", "firma"], ["versionPlantilla"],
             ReglaFrescura.Ninguna)

@@ -220,6 +220,14 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/confirmar': 'confirmarCargaDocumento',
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/descarga': 'descargarDocumentoBoveda',
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retirar': 'retirarVersionDocumento',
+  // Ficha maestra del tercero (F1, docs/14): catálogos de plataforma, secciones del wizard y recálculo de completitud.
+  'POST /api/v1/plataforma/catalogos/{catalogo}/importar': 'importarCatalogo',
+  'GET /api/v1/catalogos/{catalogo}': 'buscarEnCatalogo',
+  'POST /api/v1/plataforma/fichas/recalcular': 'recalcularFichas',
+  'GET /public/v1/catalogos/{catalogo}': 'buscarEnCatalogoPublico',
+  'GET /public/v1/ficha': 'obtenerFicha',
+  'GET /public/v1/ficha/{seccion}': 'obtenerSeccionFicha',
+  'PUT /public/v1/ficha/{seccion}': 'guardarSeccionFicha',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */

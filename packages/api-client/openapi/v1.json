@@ -3276,6 +3276,339 @@
         }
       }
     },
+    "/api/v1/plataforma/catalogos/{catalogo}/importar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_catalogos_catalogo_importar",
+        "description": "POST_api_v1_plataforma_catalogos_catalogo_importar",
+        "operationId": "POST_api_v1_plataforma_catalogos_catalogo_importar",
+        "parameters": [
+          {
+            "name": "catalogo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportarCatalogoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoImportacionCatalogoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/catalogos/{catalogo}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+        ],
+        "summary": "GET_api_v1_catalogos_catalogo",
+        "description": "GET_api_v1_catalogos_catalogo",
+        "operationId": "GET_api_v1_catalogos_catalogo",
+        "parameters": [
+          {
+            "name": "catalogo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "padre",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfEntradaCatalogoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/catalogos/{catalogo}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+        ],
+        "summary": "GET_public_v1_catalogos_catalogo",
+        "description": "GET_public_v1_catalogos_catalogo",
+        "operationId": "GET_public_v1_catalogos_catalogo",
+        "parameters": [
+          {
+            "name": "catalogo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "padre",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfEntradaCatalogoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/ficha": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+        ],
+        "summary": "GET_public_v1_ficha",
+        "description": "GET_public_v1_ficha",
+        "operationId": "GET_public_v1_ficha",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoFichaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/ficha/{seccion}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+        ],
+        "summary": "GET_public_v1_ficha_seccion",
+        "description": "GET_public_v1_ficha_seccion",
+        "operationId": "GET_public_v1_ficha_seccion",
+        "parameters": [
+          {
+            "name": "seccion",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeccionFichaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+        ],
+        "summary": "PUT_public_v1_ficha_seccion",
+        "description": "PUT_public_v1_ficha_seccion",
+        "operationId": "PUT_public_v1_ficha_seccion",
+        "parameters": [
+          {
+            "name": "seccion",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarSeccionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeccionGuardadaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/fichas/recalcular": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.RecalculoDeFichasEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_fichas_recalcular",
+        "description": "POST_api_v1_plataforma_fichas_recalcular",
+        "operationId": "POST_api_v1_plataforma_fichas_recalcular",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecalculoFichasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/vinculos/{id}/expedientes": {
       "post": {
         "tags": [
@@ -8252,6 +8585,33 @@
           }
         }
       },
+      "CompletitudSeccionDto": {
+        "required": [
+          "completa",
+          "faltantes",
+          "reglaVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "completa": {
+            "type": "boolean"
+          },
+          "faltantes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaltanteSeccionDto"
+            }
+          },
+          "reglaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ConcederAccesoSoporteDto": {
         "required": [
           "empresaId",
@@ -9781,6 +10141,52 @@
           }
         }
       },
+      "EntradaCatalogoDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "padre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nivel": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "departamento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "activo": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "EntregaWebhookDto": {
         "required": [
           "id",
@@ -9889,6 +10295,115 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "EstadoFichaDto": {
+        "required": [
+          "terceroId",
+          "tipoPersona",
+          "orden",
+          "siguienteSeccion",
+          "completa",
+          "secciones"
+        ],
+        "type": "object",
+        "properties": {
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoPersona": {
+            "type": "string"
+          },
+          "orden": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "siguienteSeccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "completa": {
+            "type": "boolean"
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstadoSeccionFichaDto"
+            }
+          }
+        }
+      },
+      "EstadoSeccionFichaDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo",
+          "obligatoria",
+          "version",
+          "completa",
+          "faltantes",
+          "reglaVersion",
+          "actualizada"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "obligatoria": {
+            "type": "boolean"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "completa": {
+            "type": "boolean"
+          },
+          "faltantes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FaltanteSeccionDto"
+            }
+          },
+          "reglaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "actualizada": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -10327,6 +10842,31 @@
           }
         }
       },
+      "FaltanteSeccionDto": {
+        "required": [
+          "campo",
+          "regla",
+          "mensaje"
+        ],
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "regla": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        }
+      },
       "FichaTerceroDto": {
         "required": [
           "tercero",
@@ -10348,6 +10888,15 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/VinculoEnOtraEmpresaDto"
+            }
+          },
+          "secciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SeccionFichaDto"
             }
           }
         }
@@ -10465,6 +11014,60 @@
           }
         }
       },
+      "FilaCatalogoDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "departamento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "padre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nivel": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "FilaCertificadoDto": {
         "required": [
           "id",
@@ -10526,6 +11129,33 @@
           "estadoDesde": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "FilaRechazadaDto": {
+        "required": [
+          "fila",
+          "codigo",
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "fila": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "codigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "motivo": {
+            "type": "string"
           }
         }
       },
@@ -10773,6 +11403,33 @@
           }
         }
       },
+      "GuardarSeccionDto": {
+        "required": [
+          "datos"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "soportes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
+          }
+        }
+      },
       "HechosDto": {
         "required": [
           "conIa",
@@ -10951,6 +11608,23 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ImportarCatalogoDto": {
+        "required": [
+          "filas"
+        ],
+        "type": "object",
+        "properties": {
+          "filas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FilaCatalogoDto"
+            }
           }
         }
       },
@@ -11727,6 +12401,27 @@
           }
         }
       },
+      "PaginaDtoOfEntradaCatalogoDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntradaCatalogoDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfEntregaWebhookDto": {
         "required": [
           "datos",
@@ -12311,6 +13006,47 @@
           }
         }
       },
+      "RecalculoFichasDto": {
+        "required": [
+          "secciones",
+          "recalculadas",
+          "terceros",
+          "reglas"
+        ],
+        "type": "object",
+        "properties": {
+          "secciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recalculadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "terceros": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "reglas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReglaSeccionDto"
+            }
+          }
+        }
+      },
       "RechazarExpedienteDto": {
         "required": [
           "areaId",
@@ -12669,6 +13405,35 @@
           }
         }
       },
+      "ReglaSeccionDto": {
+        "required": [
+          "seccion",
+          "reglaVersion",
+          "esquemaVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "reglaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "esquemaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RequisitoDelCertificadoDto": {
         "required": [
           "codigo",
@@ -12916,6 +13681,51 @@
           }
         }
       },
+      "ResultadoImportacionCatalogoDto": {
+        "required": [
+          "catalogo",
+          "creados",
+          "actualizados",
+          "sinCambios",
+          "rechazados"
+        ],
+        "type": "object",
+        "properties": {
+          "catalogo": {
+            "type": "string"
+          },
+          "creados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "actualizados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sinCambios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rechazados": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaRechazadaDto"
+            }
+          }
+        }
+      },
       "RetirarVersionDto": {
         "required": [
           "motivo"
@@ -13136,6 +13946,145 @@
           }
         }
       },
+      "SeccionFichaDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo",
+          "version",
+          "datos",
+          "soportes",
+          "completitud",
+          "huella",
+          "origen",
+          "fecha",
+          "versiones",
+          "esquemaVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "datos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "soportes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
+          },
+          "completitud": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CompletitudSeccionDto"
+              }
+            ]
+          },
+          "huella": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "origen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "versiones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "esquemaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeccionGuardadaDto": {
+        "required": [
+          "version",
+          "creada",
+          "completitud",
+          "siguienteSeccion",
+          "seccion"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "creada": {
+            "type": "boolean"
+          },
+          "completitud": {
+            "$ref": "#/components/schemas/CompletitudSeccionDto"
+          },
+          "siguienteSeccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "seccion": {
+            "$ref": "#/components/schemas/SeccionFichaDto"
+          }
+        }
+      },
       "SesionTerceroDto": {
         "required": [
           "accessToken",
@@ -13245,6 +14194,33 @@
         "type": "object",
         "properties": {
           "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SoporteSeccionDto": {
+        "required": [
+          "documentoId",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tipoDocumento": {
             "type": [
               "null",
               "string"
@@ -15304,6 +16280,15 @@
     },
     {
       "name": "Validasoft.Aplicacion.Flujos.FlujosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.RecalculoDeFichasEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
