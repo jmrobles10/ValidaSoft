@@ -150,10 +150,21 @@ las fusiones de las demás. **No tiene PR.**
 - El informe SAGRILAFT está en H7 (`/informes/cumplimiento`); unificar la pantalla de «Informes» con él.
 
 ### 4.5 F5 — IA sección ↔ documento (a medias, en `feature/ficha-f5`)
-Al retomarlo: rebasar `feature/ficha-f5` sobre `main` (chocará en `MapeosDeValidacion.cs`, `ServiciosInfraestructura.cs`,
-`AnalizadorOpenAi.cs` —el analizador simulado debe quedar como clase parcial junto a la prueba de llave de PT-6— y el
-cliente generado). Su prueba `Un_RUT_nuevo_propone_al_tercero…` es **intermitente**: a veces el cruce de la versión 2
-no llega en 20 s; hay que encontrar la causa antes de fusionar.
+**Dónde está:** rama `feature/ficha-f5-cierre`, que sale de `main` (con #48) y restaura F5 ya integrado con H7, H8 y H9.
+
+**Causa de la prueba intermitente** (`Un_RUT_nuevo_propone_al_tercero…`): no es la prueba, es un hueco que viene de H6/F2.
+Con una actualización **ya abierta** en el vínculo, un cambio en otro requisito no se revalida:
+`SincronizarRequisitosDelVinculo` solo pone al día los requisitos que el expediente abierto ya tiene, y
+`Revalidacion.AbrirSiCorrespondeAsync` no hace nada si hay un expediente abierto. Tampoco se vuelve a sincronizar al
+cerrarlo. En el flujo de F5 pasa siempre: el RUT nuevo abre la actualización (solo con el RUT) y, cuando el tercero
+confirma la propuesta, la sección General cambiada queda fuera. La prueba pasaba solo cuando la sección se guardaba
+antes de que se abriera la actualización del RUT. Afecta igual a los documentos (RUT nuevo y luego Cámara nueva).
+
+**Decisión pendiente de Producto** (hay que tomarla antes de seguir):
+- *Ampliar la actualización abierta:* el requisito nuevo entra al expediente abierto y el revisor ve todo junto. Pide un
+  evento nuevo en el expediente (`RequisitosAgregados`) y reabrir las áreas que ya habían decidido.
+- *Encadenar:* al cerrar el expediente se vuelve a sincronizar y lo que cambió mientras tanto abre otra actualización.
+  Es más simple, pero el revisor ve dos expedientes seguidos.
 
 **Objetivo** (pedido del usuario, [14 §5.2, §5.3, §6](14-ficha-maestra-del-tercero.md)): que un documento exigido, por
 ejemplo el RUT obligatorio, sirva además como soporte verificado de las secciones de la ficha que respalda:
