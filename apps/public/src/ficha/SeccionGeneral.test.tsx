@@ -64,11 +64,17 @@ describe('Mi información: Información general', () => {
     expect(guardados[0]?.cuerpo).toMatchObject({ datos: { telefono: '601 555 1234', direccion: 'Calle 45 # 12-08' } });
   });
 
-  it('«Guardar» deja el borrador y se queda aunque esté completa', async () => {
+  it('«Guardar» se habilita con cambios, deja el borrador y se queda aunque esté completa', async () => {
     const usuario = userEvent.setup();
     montarFicha('/ficha/general', { estado: estadoFicha(), secciones: { FICHA_GENERAL: GENERAL }, alGuardar: () => json(200, guardada('FICHA_GENERAL', [], 'FICHA_TRIBUTARIA')) });
-    await usuario.click(await screen.findByRole('button', { name: 'Guardar' }));
-    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled());
+    const guardar = await screen.findByRole('button', { name: 'Guardar' });
+    // Sin cambios no hay nada que guardar.
+    expect(guardar).toBeDisabled();
+    await escribir(usuario, screen.getByRole('textbox', { name: 'Teléfono' }), '601 555 9999');
+    expect(screen.getByText('Tienes cambios sin guardar')).toBeInTheDocument();
+    await usuario.click(guardar);
+    await vi.waitFor(() => expect(screen.queryByText('Tienes cambios sin guardar')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
     expect(ubicacion()).toBe('/ficha/general');
   });
 
@@ -117,7 +123,8 @@ describe('Mi información: Información general', () => {
     const rut = await within(selector).findByRole('checkbox', { name: 'RUT · versión 2 · cargada el 01/10/2026' });
     expect(within(selector).getAllByRole('checkbox')).toHaveLength(1);
 
-    // Sin soporte: el servidor responde el faltante y se muestra junto al selector.
+    // Un cambio sin soporte: el servidor responde el faltante y se muestra junto al selector.
+    await escribir(usuario, screen.getByRole('textbox', { name: 'Teléfono' }), '601 555 9999');
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
     expect(await within(selector).findByText('Falta el soporte del cambio')).toBeInTheDocument();
 

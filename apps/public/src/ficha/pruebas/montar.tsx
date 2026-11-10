@@ -15,7 +15,7 @@ import {
   type VinculoPublicoDto,
 } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { vi } from 'vitest';
 import { PaginaFicha } from '../PaginaFicha';
 import { PaginaSeccion } from '../PaginaSeccion';
@@ -100,6 +100,8 @@ interface Escenario {
   /** Vínculos del tercero y sus expedientes (las observaciones de las empresas, F2). */
   vinculos?: VinculoPublicoDto[];
   expedientes?: Record<string, ExpedientePublicoDto>;
+  /** Respuesta de la evaluación sin guardar (FM-46); por omisión, completa. */
+  alEvaluar?: (peticion: Peticion) => Response;
 }
 
 /** Monta el wizard en `ruta` con una API falsa; devuelve los PUT que recibió. */
@@ -113,6 +115,9 @@ export function montarFicha(ruta: string, escenario: Escenario) {
       if (metodo === 'PUT') {
         guardados.push(peticion);
         return Promise.resolve(escenario.alGuardar?.(peticion) ?? json(500, {}));
+      }
+      if (metodo === 'POST' && url.pathname.endsWith('/evaluacion')) {
+        return Promise.resolve(escenario.alEvaluar?.(peticion) ?? json(200, { completa: true, faltantes: [], reglaVersion: 1 }));
       }
       if (url.pathname === '/public/v1/ficha') return Promise.resolve(json(200, escenario.estado));
       if (url.pathname.startsWith('/public/v1/ficha/')) {
@@ -132,17 +137,29 @@ export function montarFicha(ruta: string, escenario: Escenario) {
       return Promise.resolve(json(404, { status: 404, codigo: 'no-encontrado', detail: url.pathname }));
     }),
   });
+  // Router de datos, como en la app: el aviso de salida sin guardar (`useBlocker`) lo necesita.
+  const router = createMemoryRouter(
+    [
+      {
+        element: (
+          <>
+            <Outlet />
+            <Ubicacion />
+          </>
+        ),
+        children: [
+          { path: '/ficha', element: <PaginaFicha /> },
+          { path: '/ficha/:seccion', element: <PaginaSeccion /> },
+          { path: '*', element: null },
+        ],
+      },
+    ],
+    { initialEntries: [ruta] },
+  );
   render(
     <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-        <MemoryRouter initialEntries={[ruta]}>
-          <Routes>
-            <Route path="/ficha" element={<PaginaFicha />} />
-            <Route path="/ficha/:seccion" element={<PaginaSeccion />} />
-            <Route path="*" element={null} />
-          </Routes>
-          <Ubicacion />
-        </MemoryRouter>
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </ThemeProvider>,
   );

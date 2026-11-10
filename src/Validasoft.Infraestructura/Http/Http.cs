@@ -288,7 +288,8 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
 
 /// <summary>
 /// Límite de peticiones por IP en <c>/public/v1</c> (ventana fija; <c>Validasoft:LimitePublico:{Peticiones, VentanaSegundos}</c>,
-/// por defecto 60 por minuto). <c>/api/v1</c> aún no tiene límite (llegará por credencial). Excedido ⇒ 429 ProblemDetails
+/// por defecto 60 por minuto). La evaluación de la ficha (<c>…/evaluacion</c>, FM-46) va en otro cupo, cuatro veces mayor: el
+/// wizard la pide mientras el tercero escribe y no debe agotar el de las demás. <c>/api/v1</c> aún no tiene límite (llegará por credencial). Excedido ⇒ 429 ProblemDetails
 /// <c>demasiadas-peticiones</c> con <c>Retry-After</c>.
 /// </summary>
 public static class LimiteDePeticionesPublicas
@@ -301,10 +302,14 @@ public static class LimiteDePeticionesPublicas
         return servicios.AddRateLimiter(opciones =>
         {
             opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
-                http.Request.Path.StartsWithSegments(ServiciosInfraestructura.RutaPublica, StringComparison.OrdinalIgnoreCase)
-                    ? RateLimitPartition.GetFixedWindowLimiter("ip:" + (http.Connection.RemoteIpAddress?.ToString() ?? "desconocida"),
-                        _ => new FixedWindowRateLimiterOptions { PermitLimit = peticiones, Window = ventana, QueueLimit = 0 })
-                    : RateLimitPartition.GetNoLimiter("sin-limite"));
+            {
+                if (!http.Request.Path.StartsWithSegments(ServiciosInfraestructura.RutaPublica, StringComparison.OrdinalIgnoreCase))
+                    return RateLimitPartition.GetNoLimiter("sin-limite");
+                var ip = http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
+                var evaluacion = http.Request.Path.Value?.EndsWith("/evaluacion", StringComparison.OrdinalIgnoreCase) == true;
+                return RateLimitPartition.GetFixedWindowLimiter((evaluacion ? "evaluacion:" : "ip:") + ip,
+                    _ => new FixedWindowRateLimiterOptions { PermitLimit = evaluacion ? peticiones * 4 : peticiones, Window = ventana, QueueLimit = 0 });
+            });
 
             opciones.OnRejected = async (contexto, ct) =>
             {

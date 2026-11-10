@@ -3620,6 +3620,63 @@
         }
       }
     },
+    "/public/v1/ficha/{seccion}/evaluacion": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+        ],
+        "summary": "POST_public_v1_ficha_seccion_evaluacion",
+        "description": "POST_public_v1_ficha_seccion_evaluacion",
+        "operationId": "POST_public_v1_ficha_seccion_evaluacion",
+        "parameters": [
+          {
+            "name": "seccion",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodo",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardarSeccionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletitudSeccionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/fichas/recalcular": {
       "post": {
         "tags": [

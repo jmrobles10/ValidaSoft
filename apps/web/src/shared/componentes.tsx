@@ -4,6 +4,7 @@ import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
+import { RELLENO_CONTENIDO } from '../app/rellenoContenido';
 
 /** Página 403 propia: dice de quién es la sección y a quién pedir acceso (nunca "Forbidden"). */
 export function SinPermiso({ seccion }: { seccion: string }) {
@@ -38,7 +39,8 @@ export function EnlaceVolver({ a, children }: { a: string; children: ReactNode }
  */
 export function EncabezadoPagina(props: EncabezadoFijoProps) {
   const { t } = useTranslation();
-  return <EncabezadoFijo etiquetaAcciones={t('comun.accionesPagina')} {...props} />;
+  // La franja cubre justo el relleno del contenido: ni se corre al desplazar ni desborda la página.
+  return <EncabezadoFijo etiquetaAcciones={t('comun.accionesPagina')} sangria={RELLENO_CONTENIDO.x} relleno={RELLENO_CONTENIDO.y} {...props} />;
 }
 
 /** Tarjeta de sección: borde sutil, radio 12, sin sombra. `nivel`: el encabezado del título (h3 si va dentro de otra sección). */
