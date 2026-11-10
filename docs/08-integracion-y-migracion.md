@@ -10,6 +10,8 @@
 
 > Actualizado el 2026-10-28 con las decisiones del registro: tenant = grupo con **empresas internas** (P-11-2, ADR-0008: una instancia del SRM = una empresa; `empresaId` en todos los eventos), identidad multipaís (P-1-1), reconciliación de identidad por clave única (P-12-1), webhooks + pull desde el MVP (P-12-2), SDK .NET y TS (P-12-3), revisión solo en Validasoft durante la coexistencia (P-12-4), sandbox por API key (P-11-4), cuenta designada por el tercero (P-3-3), alcance de la migración (P-13-x), modo de respaldo en Marco (adición 9).
 
+> Actualizado el 2026-11-10 (H9, CN-1…CN-7 del registro): §2 y la guía paso a paso de §2.1 describen lo implementado (SDK .NET y TypeScript, consulta de certificación, pull, rotación de API keys); §5 precisa la consulta.
+
 ---
 
 ## 1. Principios de integración
@@ -44,22 +46,109 @@ flowchart LR
 
 | | `Validasoft.Sdk` (.NET) | `@validasoft/sdk` (TypeScript) |
 |---|---|---|
-| Target | Multi-target **`net7.0;net8.0;net10.0`** (T-16; `net7.0` mientras exista el SRM) | ESM + CJS, Node 20+ y navegador |
-| Generación | Kiota desde `/openapi/v1.json` + capa manual `IValidasoftClient` | `openapi-typescript` + `openapi-fetch` |
-| Incluye | DTOs de `Validasoft.Contratos`, `Idempotency-Key` automático (UUID v5 de la operación), Polly solo en idempotentes (GET, PUT, `confirmar`), `WebhookVerifier.Validar(headers, body, secreto)` con tolerancia de reloj 5 min, deserializador de eventos tipados | Tipos de eventos, `verificarWebhook()` (HMAC-SHA256 Web Crypto/Node), helper de paginación por cursor |
-| Versionado | SemVer alineado con la API (`1.x`); `Contratos` publicado como NuGet en GitHub Packages en cada release | npm interno (GitHub Packages) |
-| Publicación | Workflow `imagenes.yml` (GitHub Actions, doc 04 §11) | igual |
-| Sandbox | Una API key de prueba (`vsk_test_…`, P-11-4) dentro del mismo tenant: mismos endpoints, datos aislados, webhooks a URL de prueba, sin correos reales (van a un buzón de sandbox) | igual |
+| Dónde | `src/Validasoft.Sdk` (pruebas en `tests/Validasoft.Sdk.Tests`) | `packages/sdk` (pruebas Vitest en `src/*.test.ts`) |
+| Target | Multi-target **`net7.0;net8.0;net10.0`** (T-16; `net7.0` mientras exista el SRM); `Validasoft.Contratos` también (CN-5) | ESM (`tsc`), Node 20+ y navegador; sin dependencias (fetch + Web Crypto) (CN-6) |
+| Generación | Escrito a mano sobre los DTO de `Validasoft.Contratos` (sin Kiota, Refit ni Polly: el SRM .NET 7 no arrastra dependencias) | Tipos escritos a mano con los nombres de `Validasoft.Contratos` (sin `openapi-typescript`/`openapi-fetch`) |
+| Incluye | `ClienteValidasoft` (`IClienteValidasoft`): `Vinculos`, `Invitaciones`, `Expedientes`, `Certificados`, `Consultas`, `Eventos` (con `RecorrerAsync`), `Sesiones`; `ParaEmpresa(id)` y `ComoUsuario(usuario)`; `Idempotency-Key` automática en todo POST (la misma en los reintentos); reintentos solo de lo idempotente (GET, PUT y POST con clave explícita); errores como `ExcepcionValidasoft { Estado, Codigo, Detalle, Correlacion }`; `FirmanteDeAsercionesDelegadas` (RS256/ES256); `VerificadorDeWebhooks` (tolerancia 5 min, varios secretos durante la rotación) | `ClienteValidasoft` con los mismos grupos (`vinculos.crear`, `consultas.certificacion`, `eventos.recorrer`…), `crearFirmanteDeAserciones()` (PKCS#8), `verificarWebhook()` / `validarWebhook()` / `leerCabecera()` (cabeceras de `fetch` o de Node), `ErrorValidasoft` |
+| Versionado | SemVer alineado con la API (`1.x`); `dotnet pack` produce `Validasoft.Contratos` y `Validasoft.Sdk` (la documentación XML solo se genera al empaquetar) | `pnpm --filter @validasoft/sdk build` deja `dist/`; `publishConfig` publica `dist` (en el workspace se consume `src`) |
+| Publicación | Workflow `imagenes.yml` (GitHub Actions, doc 04 §11) — pendiente | igual — pendiente |
+| Sandbox | Una API key de prueba (`vsk_test_…`, P-11-4) dentro del mismo tenant: mismos endpoints, datos aislados, webhooks a URL de prueba, sin correos reales (van a un buzón de sandbox) — **pendiente**: hoy `sandbox` solo cambia el prefijo de la llave | igual |
 | Idiomas oficiales | Solo .NET y TypeScript (P-12-3); otros lenguajes consumen OpenAPI directamente | — |
 | Prohibido | Lógica de negocio en el SDK; reintento de POST creadores sin clave de idempotencia | igual |
 
-Toda llamada del SDK opera en el contexto `tenant + empresa`: el `IValidasoftClient` se construye con la API key (que fija el tenant) y, si la key tiene alcance a varias empresas, con `empresaId` explícito por llamada.
+Toda llamada del SDK opera en el contexto `tenant + empresa`: el cliente se construye con la API key (que fija el tenant) y la empresa por defecto (`X-Empresa`); con una llave de varias empresas, `ParaEmpresa(id)` cambia la empresa.
 
-Ejemplo de uso (firma, sin implementación):
+### 2.1 Guía de integración paso a paso (H9, implementado)
+
+Lo mismo para el SRM, el Portal, Marco u otro ERP. Ejemplo compilable completo: [`docs/ejemplos/IntegradorSrm`](ejemplos/IntegradorSrm/Program.cs) (minimal API en `net7.0`, la versión del SRM; se compila con la solución). Las pruebas que lo ejercitan de punta a punta: `tests/Validasoft.Integracion.Tests/IntegracionSdkApiTests.cs` (SDK .NET contra la API en memoria) y `e2e/pruebas/integracion.spec.ts` (SDK TypeScript contra la API real).
+
+**1. Registrar el sistema.** Un administrador del grupo crea el sistema con su **clave pública** (RSA ≥ 2048 o EC P-256; la privada nunca sale del sistema) y, si va a embeber pantallas, los orígenes desde los que lo hará (Configuración › Sistemas, o `POST /api/v1/sistemas { codigo: "SRM", nombre, clavePublicaPem, origenesPermitidos: ["https://srm.cliente.co"] }`).
+
+**2. Crear su API key.** Configuración › API keys › «Nueva API key» con el sistema, **solo** las empresas de esa instancia y los permisos mínimos:
+
+| Sistema | Permisos (scopes) |
+|---|---|
+| SRM (una instancia = una empresa) | `vinculos:leer`, `vinculos:escribir`, `vinculos:bloquear`, `expedientes:leer`, `expedientes:administrar`, `certificados:leer`, `eventos:leer` (pull) o `webhooks:administrar` (si él mismo administra su suscripción), y los de lectura que use su embebido (`configuracion:leer`, `flujos:leer`) |
+| Marco / ERP | `consultas:leer` (+ `eventos:leer` si alimenta su copia local por pull) |
+| Portal | `vinculos:leer`, `documentos:leer`, `terceros:leer` (constructoras aún en legado, §4) |
+
+La clave completa se muestra **una sola vez**; va al gestor de secretos del sistema (en el SRM, cifrada con `IDataProtector`), nunca en claro ni en el repositorio.
+
+**3. Configurar el SDK.**
+
+```csharp
+// .NET (SRM): un cliente tipado por IHttpClientFactory.
+services.AddSingleton(new OpcionesValidasoft
+{
+    UrlBase = new Uri(config["Validasoft:UrlBase"]!), ApiKey = config["Validasoft:ApiKey"]!,
+    EmpresaId = Guid.Parse(config["Validasoft:EmpresaId"]!),
+    Firmante = new FirmanteDeAsercionesDelegadas("SRM", File.ReadAllText(config["Validasoft:ClavePrivadaPemArchivo"]!))
+});
+services.AddHttpClient<IClienteValidasoft, ClienteValidasoft>(http => http.Timeout = TimeSpan.FromSeconds(5));
 ```
-var expediente = await cliente.Expedientes.CrearAsync(new CrearExpedienteRequest { … }, idempotencyKey: "srm-adp-00123-inv-7");
-var evento = WebhookVerifier.Validar(request.Headers, bodyBytes, secreto); // lanza si la firma no coincide
+
+```ts
+// TypeScript (backend Node 20+; nunca en el navegador: la API key es secreta).
+const validasoft = new ClienteValidasoft({ urlBase: process.env.VALIDASOFT_URL!, apiKey: process.env.VALIDASOFT_API_KEY!, empresaId,
+  firmante: crearFirmanteDeAserciones('SRM', clavePrivadaPkcs8) });
 ```
+
+**4. Invitar al tercero.** El SRM crea el vínculo con su referencia y una clave de idempotencia estable (un reintento no duplica); Validasoft reconcilia el tercero por identificación (P-12-1) y envía la invitación:
+
+```csharp
+var vinculo = await validasoft.Vinculos.CrearAsync(new CrearVinculoDto(null,
+    new CrearTerceroDto(new IdentificacionDto("CO", "NIT", "900123456"), "Juridica", "Aceros S.A.S.", null, [contacto]),
+    "PROVEEDOR", null, correoProveedor, new ReferenciaExternaDto("SRM", "ADP-00123")), claveIdempotencia: "srm-sol-00123");
+// Reenviar: validasoft.Invitaciones.EnviarAsync(vinculo.Id, new InvitacionDto(null));
+// Buscar después por la referencia: validasoft.Vinculos.PorReferenciaAsync("SRM", "ADP-00123");
+```
+
+**5. Actuar en nombre de una persona y embeber pantallas.** Cada petición en nombre de un usuario lleva una aserción `X-Usuario-Delegado` nueva (JWT de ≤ 5 min con `jti` de un solo uso; el SDK la firma en cada intento). El permiso efectivo es la intersección de la llave y los roles de la persona (ADR-0011). Para la pantalla embebida, el **backend** del sistema canjea la identidad por una sesión de 30 minutos y la pasa al iframe por `postMessage` (contrato de [05 §2.9.4](05-api-contratos-y-webhooks.md) y docs/06 §3.2):
+
+```csharp
+var laura = validasoft.ComoUsuario(new UsuarioDelegado(usuarioSrm.Id, usuarioSrm.Nombre, usuarioSrm.Correo));
+var sesion = await laura.Sesiones.CrearAsync();   // { token, expira } → iframe {UrlBase}/app/#/e/{empresa}/bandeja
+```
+
+**6. Recibir webhooks.** Suscripción en Configuración › Webhooks (o `POST /api/v1/webhooks { url, tipos, empresas, sistemaId }`); el secreto `whsec_…` se ve una vez. El receptor (en el SRM, `POST /api/integracion/validasoft/webhook`, §3.2): lee el cuerpo **tal cual**, lo valida, deduplica por id del evento, responde 200 en menos de 5 s y procesa en cola:
+
+```csharp
+var verificador = new VerificadorDeWebhooks(new[] { secretoActual, secretoAnterior }); // el anterior solo durante una rotación
+var evento = verificador.Validar(n => request.Headers[n].FirstOrDefault(), cuerpo);      // 401 si lanza WebhookInvalidoException
+if (await entregas.RegistrarAsync(evento.Id)) cola.Encolar(evento);                    // dedupe por Validasoft-Event-Id (T-6)
+```
+
+```ts
+const evento = await validarWebhook({ secretos: [secreto], firma: leerCabecera(req.headers, 'validasoft-signature'), cuerpo: cuerpoCrudo });
+```
+
+**7. Pull en lugar de webhooks** (redes que no aceptan conexiones entrantes): los mismos sobres, en orden de cursor. Se guarda el `cursor` del último evento procesado y se retoma desde ahí cada minuto:
+
+```csharp
+await foreach (var evento in validasoft.Eventos.RecorrerAsync(desde: cursorGuardado, tipos: ["certificado.emitido", "vinculo.bloqueado"]))
+{
+    Procesar(evento);              // mismo mapa evento → acción que el webhook; dedupe por evento.Id
+    cursorGuardado = evento.Cursor; // persistirlo
+}
+```
+
+**8. Consulta de certificación (Marco).** Antes de pagar o contratar: `GET /api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900123456&tipoVinculo=PROVEEDOR` (o `?vinculoId=`) con `X-Empresa`; scope `consultas:leer`. La respuesta (`ConsultaCertificacionDto`, 05 §5.6) trae `ETag` y `Cache-Control: private, max-age=300`: dentro de los 5 minutos se usa la copia; después se pregunta con `If-None-Match` y un **304** confirma que sigue igual.
+
+```csharp
+var r = await validasoft.Consultas.CertificacionAsync(new ConsultaDeCertificacion("NIT", nit, "PROVEEDOR"), etag: copia?.ETag);
+var datos = r.NoModificado ? copia!.Datos : r.Datos!;   // datos.Bloqueado ⇒ no pagar; datos.MotivoBloqueo dice por qué
+```
+
+| `motivoBloqueo` | Cuándo (`bloqueado: true`) |
+|---|---|
+| `Bloqueo` | Vínculo bloqueado (lista restrictiva, fraude…) o certificado suspendido |
+| `Revocado` | Certificado revocado, o vínculo anulado o desvinculado |
+| `Vencido` | Vínculo o certificado vencido |
+| `PlazoRevalidacion` | Certificado «con pendientes» cuyo plazo de revalidación venció (A-2) |
+
+Sin vínculo con la empresa (o tercero desconocido): `200 { certificado: false, estadoVinculo: "SinVinculo" }`. Si Validasoft no responde en 2 s o devuelve 5xx, Marco responde el mismo contrato desde su copia con `fuenteRespaldo: true` y `antiguedadSegundos` (§5; el ejemplo lo hace).
+
+**9. Rotar la API key sin cortar el servicio.** Configuración › API keys › «Rotar» (o `POST /api/v1/api-keys/{id}/rotar { anteriorValidaHasta }`): sale una clave nueva con los mismos permisos, alcance y sistema, y la actual sigue valiendo el tiempo elegido (24 h por defecto, hasta 30 días; «ahora» corta de inmediato). Procedimiento: rotar → poner la nueva en el gestor de secretos y desplegar → verificar que el sistema la usa → la anterior deja de valer sola a su hora (401). Revocar sigue siendo inmediato.
 
 ---
 
@@ -134,7 +223,7 @@ Autorregistro: el formulario del Portal (`MapLoginRoutes.cs:296`) deja de llamar
 
 ## 5. Marco (SincoERP)
 
-- **Consulta rápida:** `GET /api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900123456&tipoVinculo=proveedor` con cabecera `X-Empresa` (número **normalizado sin DV**, P-1-1) → `ConsultaCertificacionDto` **exactamente como lo define [05 §4](05-api-contratos-y-webhooks.md)**: `certificado`, `folio` (`-C-`), `estado: EstadoCertificado`, `estadoVinculo: EstadoVinculo | "SinVinculo"`, `vinculoId`, `terceroId`, `vigenteHasta`, `revalidacionPendiente[]{tipo, plazo, bloqueante}`, `documentosVencidos[]`, `bloqueado`, `motivoBloqueo: Bloqueo | PlazoRevalidacion | Vencido`, `cuentaDesignada{numeroEnmascarado, banco}`, `urlVerificacion`, `legacy.estadoTercero`, `fuenteRespaldo`, `antiguedadSegundos`; desde la proyección `EstadoCertificacionTercero`, `ETag` + `Cache-Control: max-age=300`, objetivo p99 < 100 ms en H9 y < 50 ms en H11.
+- **Consulta rápida:** `GET /api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900123456&tipoVinculo=proveedor` con cabecera `X-Empresa` (número **normalizado sin DV**, P-1-1) → `ConsultaCertificacionDto` **exactamente como lo define [05 §4](05-api-contratos-y-webhooks.md)**: `certificado`, `folio` (`-C-`), `estado: EstadoCertificado`, `estadoVinculo: EstadoVinculo | "SinVinculo"`, `vinculoId`, `terceroId`, `vigenteHasta`, `revalidacionPendiente[]{tipo, plazo, bloqueante}`, `documentosVencidos[]`, `bloqueado`, `motivoBloqueo: Bloqueo | PlazoRevalidacion | Vencido | Revocado` (CN-2), `cuentaDesignada{numeroEnmascarado, banco}`, `urlVerificacion`, `legacy.estadoTercero`, `fuenteRespaldo`, `antiguedadSegundos`; `ETag` + `Cache-Control: private, max-age=300`, `If-None-Match` ⇒ 304; objetivo p99 < 100 ms en H9 y < 50 ms en H11. **Implementado (CN-1)** sin la proyección `EstadoCertificacionTercero`: tres viajes por índice único o llave primaria (tercero + tipo de vínculo, vínculo, certificado + expediente de actualización); la proyección queda para H11 si la medición con k6 no alcanza.
 - **Tabla de respaldo y modo solo lectura de emergencia (adición 9):** Marco se suscribe a `certificado.emitido`, `certificado.con_pendientes`, `certificado.suspendido`, `certificado.restablecido`, `certificado.reemplazado`, `certificado.revocado`, `certificado.vencido`, `vinculo.estado_cambiado`, `vinculo.revalidacion_pendiente`, `vinculo.revalidado`, `vinculo.cuenta_designada`, `vinculo.bloqueado`, `vinculo.desbloqueado`, `documento.vencido` y mantiene la tabla local `adp_cs.validasoft_certificacion_local`:
 
   | Columna | Tipo | Origen |

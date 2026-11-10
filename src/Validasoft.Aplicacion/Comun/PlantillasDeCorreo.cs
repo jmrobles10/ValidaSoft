@@ -82,6 +82,10 @@ public static class EjemplosDeCorreo
             CatalogoDePlantillas.Certificado => new(
                 redactor.RedactarCertificado(new CorreoDeCertificadoPendiente(Para, empresa, $"{prefijo}-C-{ahora.Year}-000001", true, ahora)),
                 VariablesDe(empresa, $"{prefijo}-C-{ahora.Year}-000001")),
+            CatalogoDePlantillas.Caducidad => new(
+                redactor.RedactarPlazoDeCargue(new Expedientes.CorreoDePlazoDeCarguePendiente(Para, empresa, folio, Expedientes.AvisoDePlazo.Recordatorio,
+                    ahora.AddDays(7), 7)),
+                VariablesDe(empresa, folio)),
             _ => throw new ArgumentOutOfRangeException(nameof(evento), evento, "Evento sin plantilla.")
         };
     }

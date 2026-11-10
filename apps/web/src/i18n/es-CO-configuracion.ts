@@ -74,7 +74,7 @@ export const apiKeys = {
   columnas: { nombre: 'Nombre', clave: 'Clave', permisos: 'Permisos', alcance: 'Alcance', sistema: 'Sistema', expira: 'Expira', estado: 'Estado' },
   noExpira: 'No expira',
   sandbox: 'Sandbox',
-  estados: { vigente: 'Vigente', vencida: 'Vencida' },
+  estados: { vigente: 'Vigente', vencida: 'Vencida', reemplazada: 'Reemplazada' },
   todosLosPermisos: 'Todos los permisos',
   sinPermisos: 'Sin permisos',
   revocar: 'Revocar',
@@ -82,6 +82,13 @@ export const apiKeys = {
   confirmarRevocar:
     'Las llamadas con esta clave dejan de autenticar (como mucho 5 minutos después). Si un sistema la usa, deja de funcionar hasta que le pongas otra. No se puede deshacer.',
   revocada: '{{nombre}} quedó revocada.',
+  rotar: 'Rotar',
+  rotarA: 'Rotar {{nombre}}',
+  rotarAyuda:
+    'Se emite una clave nueva con los mismos permisos, alcance y sistema. Cambia la clave en el sistema que la usa antes de que la actual deje de valer.',
+  rotarSolapamiento: 'La clave actual sigue valiendo',
+  solapamientos: { inmediato: 'No: deja de valer ahora', '1h': 'Una hora más', '24h': '24 horas más', '7d': 'Siete días más' },
+  rotarConfirmar: 'Rotar clave',
   creadaSinValor: 'La API key quedó creada, pero la respuesta no trajo la clave. Revócala y crea otra.',
   campos: {
     nombre: 'Nombre',
@@ -108,7 +115,8 @@ export const apiKeys = {
     configuracion: 'Configuración y flujos',
     vinculos: 'Terceros y vínculos',
     revision: 'Expedientes, documentos y certificados',
-    integracion: 'Eventos y webhooks',
+    integracion: 'Eventos, webhooks y consultas',
+    cumplimiento: 'Cumplimiento (SAGRILAFT)',
     auditoria: 'Auditoría',
   },
   permisos: {
@@ -129,12 +137,17 @@ export const apiKeys = {
     expedientesLeer: 'Leer expedientes',
     expedientesRevisar: 'Revisar expedientes (veredictos)',
     expedientesAdministrar: 'Abrir, anular y reenviar expedientes',
+    expedientesExportar: 'Exportar el expediente completo (ZIP)',
     documentosLeer: 'Ver documentos compartidos',
     documentosDescargar: 'Descargar documentos',
     certificadosLeer: 'Ver y descargar certificados',
     eventosLeer: 'Leer eventos (consulta y SSE)',
     webhooksAdministrar: 'Administrar webhooks',
+    consultasLeer: 'Consultar la certificación (Marco y ERP)',
+    verificacionesEscribir: 'Consultar listas restrictivas',
+    cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',
     auditoriaLeer: 'Leer la auditoría',
+    auditoriaExportar: 'Exportar la auditoría a Excel',
   },
   claveCreada: {
     titulo: 'API key «{{nombre}}» creada',
@@ -143,6 +156,9 @@ export const apiKeys = {
     copiada: 'Copiada',
     listo: 'Listo, ya la guardé',
     uso: 'El sistema la envía en la cabecera X-Api-Key de cada llamada.',
+    tituloRotada: 'Clave nueva de «{{nombre}}»',
+    anteriorHasta: 'La clave anterior vale hasta {{fecha}}: cambia la clave en el sistema antes de esa hora.',
+    anteriorYaNo: 'La clave anterior ya no vale: cambia la clave en el sistema ahora.',
   },
 } as const;
 
@@ -208,6 +224,9 @@ export const erroresConfiguracion = {
   'logo-demasiado-grande': 'El logo pesa más de 200 KB.',
   'duracion-invalida': 'El acceso de soporte dura entre 1 y 72 horas.',
   'acceso-no-vigente': 'Ese acceso ya expiró o fue revocado.',
+  'api-key-ya-rotada': 'Esa clave ya se rotó: rota la nueva.',
+  'api-key-vencida': 'Esa clave está vencida: crea una nueva.',
+  'solapamiento-invalido': 'La clave anterior puede seguir valiendo como mucho 30 días.',
 } as const;
 
 /** Datos y marca de la empresa activa (CF-1). */

@@ -17,16 +17,21 @@ export const SCOPES = {
   vinculosBloquear: 'vinculos:bloquear',
   cuentasAprobar: 'cuentas:aprobar',
   auditoriaLeer: 'auditoria:leer',
+  auditoriaExportar: 'auditoria:exportar',
   flujosLeer: 'flujos:leer',
   flujosEscribir: 'flujos:escribir',
   expedientesLeer: 'expedientes:leer',
   expedientesRevisar: 'expedientes:revisar',
   expedientesAdministrar: 'expedientes:administrar',
+  expedientesExportar: 'expedientes:exportar',
   documentosLeer: 'documentos:leer',
   documentosDescargar: 'documentos:descargar',
   certificadosLeer: 'certificados:leer',
   eventosLeer: 'eventos:leer',
   webhooksAdministrar: 'webhooks:administrar',
+  consultasLeer: 'consultas:leer',
+  verificacionesEscribir: 'verificaciones:escribir',
+  cumplimientoDecidir: 'cumplimiento:decidir',
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];

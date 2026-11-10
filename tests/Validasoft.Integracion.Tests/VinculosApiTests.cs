@@ -83,12 +83,17 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
             b.UseSetting("Validasoft:Importacion:Portal:Archivo", ArchivoPortal); // sincronizador del Portal sin red (F4)
             b.UseSetting("Validasoft:Certificados:SegundosProceso", "1"); // PDF de los certificados casi al instante
+            b.UseSetting("Validasoft:Verificadores:SegundosProceso", "1"); // consultas automáticas de listas casi al instante
             // Webhooks (NW): receptor local por http, reintentos de segundos y deshabilitación tras 3 fallos seguidos.
             b.UseSetting("Validasoft:Webhooks:PermitirHttpLocal", "true");
             b.UseSetting("Validasoft:Webhooks:Reintentos:0", "00:00:01");
             b.UseSetting("Validasoft:Webhooks:Reintentos:1", "00:00:01");
             b.UseSetting("Validasoft:Webhooks:FallosParaDeshabilitar", FallosParaDeshabilitarWebhook.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:Webhooks:TimeoutSegundos", "3");
+            // Plazos de cargue (LT-4): sin barrido periódico; las pruebas lo disparan con el reloj o la fecha que necesitan.
+            b.UseSetting("Validasoft:PlazosDeCargue:Intervalo", "00:00:00");
+            // Invitación masiva (LT-8): tandas pequeñas para ver el avance, la pausa y la reanudación.
+            b.UseSetting("Validasoft:Lotes:TamanoTanda", "5");
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();

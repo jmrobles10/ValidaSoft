@@ -1,0 +1,31 @@
+{
+  "name": "@validasoft/sdk",
+  "version": "1.0.0",
+  "description": "Cliente de la API v1 de Validasoft para sistemas integradores (SRM, Marco, Portal u otro ERP) y verificador de webhooks. Sin dependencias; fetch y Web Crypto (Node 20+ o navegador).",
+  "type": "module",
+  "license": "UNLICENSED",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

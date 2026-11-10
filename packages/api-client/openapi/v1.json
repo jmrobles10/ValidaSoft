@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5104/"
+      "url": "http://localhost:5107/"
     }
   ],
   "paths": {
@@ -1128,6 +1128,518 @@
         }
       }
     },
+    "/api/v1/configuracion/listas-restrictivas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.ListasRestrictivasEndpoints"
+        ],
+        "summary": "GET_api_v1_configuracion_listas_restrictivas",
+        "description": "GET_api_v1_configuracion_listas_restrictivas",
+        "operationId": "GET_api_v1_configuracion_listas_restrictivas",
+        "parameters": [
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListasRestrictivasConfigDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.ListasRestrictivasEndpoints"
+        ],
+        "summary": "PUT_api_v1_configuracion_listas_restrictivas",
+        "description": "PUT_api_v1_configuracion_listas_restrictivas",
+        "operationId": "PUT_api_v1_configuracion_listas_restrictivas",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarListasRestrictivasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListasRestrictivasConfigDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/cumplimiento": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.InformeCumplimientoEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_cumplimiento",
+        "description": "GET_api_v1_informes_cumplimiento",
+        "operationId": "GET_api_v1_informes_cumplimiento",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeCumplimientoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/cumplimiento/excel": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.InformeCumplimientoEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_cumplimiento_excel",
+        "description": "GET_api_v1_informes_cumplimiento_excel",
+        "operationId": "GET_api_v1_informes_cumplimiento_excel",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/verificaciones/{tipo}/consultar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_verificaciones_tipo_consultar",
+        "description": "POST_api_v1_expedientes_id_verificaciones_tipo_consultar",
+        "operationId": "POST_api_v1_expedientes_id_verificaciones_tipo_consultar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/verificaciones/{tipo}/coincidencias/{coincidenciaId}/resolver": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_verificaciones_tipo_coincidencias_coincidenciaId_resolver",
+        "description": "POST_api_v1_expedientes_id_verificaciones_tipo_coincidencias_coincidenciaId_resolver",
+        "operationId": "POST_api_v1_expedientes_id_verificaciones_tipo_coincidencias_coincidenciaId_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "coincidenciaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverCoincidenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/verificaciones/estudio-cumplimiento": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_verificaciones_estudio_cumplimiento",
+        "description": "POST_api_v1_expedientes_id_verificaciones_estudio_cumplimiento",
+        "operationId": "POST_api_v1_expedientes_id_verificaciones_estudio_cumplimiento",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrarEstudioCumplimientoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/verificaciones/{tipo}/evidencia/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_verificaciones_tipo_evidencia_descarga",
+        "description": "POST_api_v1_expedientes_id_verificaciones_tipo_evidencia_descarga",
+        "operationId": "POST_api_v1_expedientes_id_verificaciones_tipo_evidencia_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referencia",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaEvidenciaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/cumplimiento/bandeja": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_cumplimiento_bandeja",
+        "description": "GET_api_v1_cumplimiento_bandeja",
+        "operationId": "GET_api_v1_cumplimiento_bandeja",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FilaCumplimientoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/monitoreo-listas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_monitoreo_listas",
+        "description": "GET_api_v1_vinculos_id_monitoreo_listas",
+        "operationId": "GET_api_v1_vinculos_id_monitoreo_listas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoreoListasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/monitoreo-listas/coincidencias/{coincidenciaId}/resolver": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_monitoreo_listas_coincidencias_coincidenciaId_resolver",
+        "description": "POST_api_v1_vinculos_id_monitoreo_listas_coincidencias_coincidenciaId_resolver",
+        "operationId": "POST_api_v1_vinculos_id_monitoreo_listas_coincidencias_coincidenciaId_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "coincidenciaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverCoincidenciaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoreoListasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/monitoreo-listas/evidencia/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_monitoreo_listas_evidencia_descarga",
+        "description": "POST_api_v1_vinculos_id_monitoreo_listas_evidencia_descarga",
+        "operationId": "POST_api_v1_vinculos_id_monitoreo_listas_evidencia_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaEvidenciaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/sistemas/{codigo}": {
       "put": {
         "tags": [
@@ -1487,6 +1999,14 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "empresaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           {
@@ -2186,6 +2706,432 @@
         }
       }
     },
+    "/api/v1/invitaciones/lotes/plantilla": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_lotes_plantilla",
+        "description": "GET_api_v1_invitaciones_lotes_plantilla",
+        "operationId": "GET_api_v1_invitaciones_lotes_plantilla",
+        "parameters": [
+          {
+            "name": "formato",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/vista-previa": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_vista_previa",
+        "description": "POST_api_v1_invitaciones_lotes_vista_previa",
+        "operationId": "POST_api_v1_invitaciones_lotes_vista_previa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLoteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VistaPreviaLoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes",
+        "description": "POST_api_v1_invitaciones_lotes",
+        "operationId": "POST_api_v1_invitaciones_lotes",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearLoteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_lotes",
+        "description": "GET_api_v1_invitaciones_lotes",
+        "operationId": "GET_api_v1_invitaciones_lotes",
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfLoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_lotes_id",
+        "description": "GET_api_v1_invitaciones_lotes_id",
+        "operationId": "GET_api_v1_invitaciones_lotes_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/filas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_lotes_id_filas",
+        "description": "GET_api_v1_invitaciones_lotes_id_filas",
+        "operationId": "GET_api_v1_invitaciones_lotes_id_filas",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfFilaLoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/pausar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_pausar",
+        "description": "POST_api_v1_invitaciones_lotes_id_pausar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_pausar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/reanudar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_reanudar",
+        "description": "POST_api_v1_invitaciones_lotes_id_reanudar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_reanudar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/cancelar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_cancelar",
+        "description": "POST_api_v1_invitaciones_lotes_id_cancelar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_cancelar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/reintentar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_reintentar",
+        "description": "POST_api_v1_invitaciones_lotes_id_reintentar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_reintentar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/informe": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_lotes_id_informe",
+        "description": "GET_api_v1_invitaciones_lotes_id_informe",
+        "operationId": "GET_api_v1_invitaciones_lotes_id_informe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/enlaces/{token}/canjear": {
       "post": {
         "tags": [
@@ -2479,6 +3425,534 @@
           },
           "required": true
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/consultas/certificacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Integracion.ConsultaCertificacionEndpoints"
+        ],
+        "summary": "GET_api_v1_consultas_certificacion",
+        "description": "GET_api_v1_consultas_certificacion",
+        "operationId": "GET_api_v1_consultas_certificacion",
+        "parameters": [
+          {
+            "name": "pais",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipoIdentificacion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipoVinculo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsultaCertificacionDto"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/exportar": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.ExportacionDeExpedienteEndpoints"
+        ],
+        "summary": "GET_api_v1_expedientes_id_exportar",
+        "description": "GET_api_v1_expedientes_id_exportar",
+        "operationId": "GET_api_v1_expedientes_id_exportar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/estado-expedientes": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.InformeEstadoExpedientesEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_estado_expedientes",
+        "description": "GET_api_v1_informes_estado_expedientes",
+        "operationId": "GET_api_v1_informes_estado_expedientes",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fecha",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "flujoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipoVinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "terceroId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeEstadoExpedientesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/estado-expedientes/excel": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.InformeEstadoExpedientesEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_estado_expedientes_excel",
+        "description": "GET_api_v1_informes_estado_expedientes_excel",
+        "operationId": "GET_api_v1_informes_estado_expedientes_excel",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fecha",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "flujoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipoVinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "terceroId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/estado-expedientes/pdf": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.InformeEstadoExpedientesEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_estado_expedientes_pdf",
+        "description": "GET_api_v1_informes_estado_expedientes_pdf",
+        "operationId": "GET_api_v1_informes_estado_expedientes_pdf",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "fecha",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "areaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "flujoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tipoVinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "terceroId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/vinculos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.InformeVinculosEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_vinculos",
+        "description": "GET_api_v1_informes_vinculos",
+        "operationId": "GET_api_v1_informes_vinculos",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipoVinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "terceroId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformeVinculosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/informes/vinculos/excel": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Informes.InformeVinculosEndpoints"
+        ],
+        "summary": "GET_api_v1_informes_vinculos_excel",
+        "description": "GET_api_v1_informes_vinculos_excel",
+        "operationId": "GET_api_v1_informes_vinculos_excel",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipoVinculoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "terceroId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -4963,6 +6437,87 @@
         }
       }
     },
+    "/api/v1/expedientes/{id}/reabrir": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.PlazosDeCargueEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_reabrir",
+        "description": "POST_api_v1_expedientes_id_reabrir",
+        "operationId": "POST_api_v1_expedientes_id_reabrir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReabrirExpedienteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/plazos-de-cargue/revisar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.PlazosDeCargueEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_plazos_de_cargue_revisar",
+        "description": "POST_api_v1_plataforma_plazos_de_cargue_revisar",
+        "operationId": "POST_api_v1_plataforma_plazos_de_cargue_revisar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarPlazosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoRevisionPlazosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/expedientes/{id}/requisitos/{requisitoId}/ratificar": {
       "post": {
         "tags": [
@@ -6499,6 +8054,52 @@
         }
       }
     },
+    "/api/v1/api-keys/{id}/rotar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.ApiKeysEndpoints"
+        ],
+        "summary": "POST_api_v1_api_keys_id_rotar",
+        "description": "POST_api_v1_api_keys_id_rotar",
+        "operationId": "POST_api_v1_api_keys_id_rotar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RotarApiKeyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/tipos-vinculo": {
       "post": {
         "tags": [
@@ -7155,6 +8756,77 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PaginaDtoOfRegistroAuditoriaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/auditoria/excel": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Comun.AuditoriaEndpoints"
+        ],
+        "summary": "GET_api_v1_auditoria_excel",
+        "description": "GET_api_v1_auditoria_excel",
+        "operationId": "GET_api_v1_auditoria_excel",
+        "parameters": [
+          {
+            "name": "tipo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidad",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entidadId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
                 }
               }
             }
@@ -7868,6 +9540,27 @@
           }
         }
       },
+      "ActualizarListasRestrictivasDto": {
+        "type": "object",
+        "properties": {
+          "proveedor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "credenciales": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CredencialesListasDto"
+              }
+            ]
+          }
+        }
+      },
       "ActualizarMotivoDto": {
         "required": [
           "nombre",
@@ -8213,6 +9906,20 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "rotadaDe": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reemplazadaPor": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -8250,6 +9957,21 @@
             "items": {
               "$ref": "#/components/schemas/RevalidacionAAprobarDto"
             }
+          }
+        }
+      },
+      "ArchivoDeLoteDto": {
+        "required": [
+          "nombre",
+          "contenidoBase64"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "contenidoBase64": {
+            "type": "string"
           }
         }
       },
@@ -8946,6 +10668,33 @@
           }
         }
       },
+      "CertificadoDelInformeDto": {
+        "required": [
+          "folio",
+          "estado",
+          "bloqueante",
+          "vigenteHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "folio": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
       "CertificadoDelVinculoDto": {
         "required": [
           "vinculoId",
@@ -9362,6 +11111,96 @@
           }
         }
       },
+      "CoincidenciaDto": {
+        "required": [
+          "id",
+          "persona",
+          "rol",
+          "identificacion",
+          "lista",
+          "nombreEncontrado",
+          "detalle",
+          "puntaje",
+          "decision",
+          "justificacion",
+          "resueltaPor",
+          "resueltaEn",
+          "vigenteHasta",
+          "heredada"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "persona": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          },
+          "identificacion": {
+            "type": "string"
+          },
+          "lista": {
+            "type": "string"
+          },
+          "nombreEncontrado": {
+            "type": "string"
+          },
+          "detalle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "puntaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "decision": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "justificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resueltaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resueltaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "heredada": {
+            "type": "boolean"
+          }
+        }
+      },
       "ComparticionPublicaDto": {
         "required": [
           "vinculoId",
@@ -9621,6 +11460,163 @@
           "empresaId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "ConsultaAnteriorDto": {
+        "required": [
+          "proveedor",
+          "referenciaExterna",
+          "resultado",
+          "fecha",
+          "coincidencias",
+          "conEvidencia"
+        ],
+        "type": "object",
+        "properties": {
+          "proveedor": {
+            "type": "string"
+          },
+          "referenciaExterna": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "coincidencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conEvidencia": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ConsultaCertificacionDto": {
+        "required": [
+          "certificado",
+          "folio",
+          "estado",
+          "estadoVinculo",
+          "vinculoId",
+          "terceroId",
+          "vigenteHasta",
+          "revalidacionPendiente",
+          "documentosVencidos",
+          "bloqueado",
+          "motivoBloqueo",
+          "cuentaDesignada",
+          "urlVerificacion",
+          "legacy"
+        ],
+        "type": "object",
+        "properties": {
+          "certificado": {
+            "type": "boolean"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoVinculo": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "revalidacionPendiente": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevalidacionPendienteDto"
+            }
+          },
+          "documentosVencidos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bloqueado": {
+            "type": "boolean"
+          },
+          "motivoBloqueo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cuentaDesignada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CuentaDesignadaResumenDto"
+              }
+            ]
+          },
+          "urlVerificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "legacy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LegadoDto"
+              }
+            ]
+          },
+          "fuenteRespaldo": {
+            "type": "boolean",
+            "default": false
+          },
+          "antiguedadSegundos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -10178,6 +12174,26 @@
           }
         }
       },
+      "ConteoDto": {
+        "required": [
+          "clave",
+          "cantidad"
+        ],
+        "type": "object",
+        "properties": {
+          "clave": {
+            "type": "string"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "CorridaImportacionPortalDto": {
         "required": [
           "id",
@@ -10409,6 +12425,64 @@
             "items": {
               "$ref": "#/components/schemas/RequisitoDelFlujoDto"
             }
+          },
+          "verificaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VerificacionRequeridaDto"
+            }
+          },
+          "plazoCargue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
+          }
+        }
+      },
+      "CrearLoteDto": {
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "archivo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArchivoDeLoteDto"
+              }
+            ]
+          },
+          "filas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FilaDeLoteEntradaDto"
+            }
+          },
+          "vigenciaHoras": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 168
           }
         }
       },
@@ -10874,6 +12948,56 @@
           }
         }
       },
+      "CredencialesListasDto": {
+        "required": [
+          "proveedor"
+        ],
+        "type": "object",
+        "properties": {
+          "proveedor": {
+            "type": "string"
+          },
+          "usuario": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urlBase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cuotaMensual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modoBusqueda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CuentaBancariaPublicaDto": {
         "required": [
           "id",
@@ -11053,6 +13177,21 @@
           }
         }
       },
+      "CuentaDesignadaResumenDto": {
+        "required": [
+          "numeroEnmascarado",
+          "banco"
+        ],
+        "type": "object",
+        "properties": {
+          "numeroEnmascarado": {
+            "type": "string"
+          },
+          "banco": {
+            "type": "string"
+          }
+        }
+      },
       "DatoDeclaradoDto": {
         "required": [
           "clave",
@@ -11096,6 +13235,26 @@
             "type": "string"
           },
           "mime": {
+            "type": "string"
+          }
+        }
+      },
+      "DescargaEvidenciaDto": {
+        "required": [
+          "url",
+          "expira",
+          "nombreArchivo"
+        ],
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expira": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nombreArchivo": {
             "type": "string"
           }
         }
@@ -11411,6 +13570,66 @@
           }
         }
       },
+      "DocumentosDelInformeDto": {
+        "required": [
+          "conVencimiento",
+          "vigentes",
+          "porVencer",
+          "enGracia",
+          "vencidos",
+          "proximoVencimiento"
+        ],
+        "type": "object",
+        "properties": {
+          "conVencimiento": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vigentes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "proximoVencimiento": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
       "DocumentoVistaEmpresaDto": {
         "required": [
           "documentoId",
@@ -11486,6 +13705,25 @@
             "items": {
               "$ref": "#/components/schemas/RequisitoDelFlujoDto"
             }
+          },
+          "verificaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VerificacionRequeridaDto"
+            }
+          },
+          "plazoCargue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
           }
         }
       },
@@ -11969,6 +14207,28 @@
           }
         }
       },
+      "ErrorDeFilaDto": {
+        "required": [
+          "campo",
+          "codigo",
+          "mensaje"
+        ],
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          }
+        }
+      },
       "EstadoDeSecretosDto": {
         "required": [
           "claveVigente",
@@ -12103,6 +14363,66 @@
               "null",
               "string"
             ],
+            "format": "date-time"
+          }
+        }
+      },
+      "EstudioCumplimientoDto": {
+        "required": [
+          "verificadoEnListas",
+          "conflictoDeInteres",
+          "debidaDiligencia",
+          "nivelRiesgo",
+          "observaciones",
+          "evidencias",
+          "concepto",
+          "oficial",
+          "fecha",
+          "vigenteHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "verificadoEnListas": {
+            "type": "boolean"
+          },
+          "conflictoDeInteres": {
+            "type": "boolean"
+          },
+          "debidaDiligencia": {
+            "type": "string"
+          },
+          "nivelRiesgo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "observaciones": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evidencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EvidenciaEstudioDto"
+            }
+          },
+          "concepto": {
+            "type": "string"
+          },
+          "oficial": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "vigenteHasta": {
+            "type": "string",
             "format": "date-time"
           }
         }
@@ -12274,6 +14594,72 @@
           }
         }
       },
+      "EvidenciaEstudioDto": {
+        "required": [
+          "documentoId",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EvidenciaVerificacionDto": {
+        "required": [
+          "nombreArchivo",
+          "tipoContenido",
+          "tamano",
+          "sha256",
+          "delProveedor",
+          "sha256Respuesta"
+        ],
+        "type": "object",
+        "properties": {
+          "nombreArchivo": {
+            "type": "string"
+          },
+          "tipoContenido": {
+            "type": "string"
+          },
+          "tamano": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "delProveedor": {
+            "type": "boolean"
+          },
+          "sha256Respuesta": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ExencionDto": {
         "required": [
           "por",
@@ -12291,6 +14677,30 @@
           "fecha": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ExpedienteDelInformeDto": {
+        "required": [
+          "id",
+          "folio",
+          "tipo",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
           }
         }
       },
@@ -12439,6 +14849,29 @@
             "items": {
               "$ref": "#/components/schemas/RequisitoExpedienteDto"
             }
+          },
+          "verificaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VerificacionDto"
+            }
+          },
+          "esperandoVerificaciones": {
+            "type": "boolean",
+            "default": false
+          },
+          "plazoCargue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlazoCargueExpedienteDto"
+              }
+            ]
           }
         }
       },
@@ -12514,6 +14947,13 @@
           "tipo": {
             "type": "string",
             "default": "Inicial"
+          },
+          "plazoCargueHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -12918,6 +15358,622 @@
           }
         }
       },
+      "FilaCumplimientoDto": {
+        "required": [
+          "origen",
+          "expedienteId",
+          "folio",
+          "vinculoId",
+          "tercero",
+          "tipoVinculo",
+          "estadoExpediente",
+          "pendientes",
+          "coincidenciasPorAnalizar",
+          "esperandoSoloVerificaciones",
+          "desde"
+        ],
+        "type": "object",
+        "properties": {
+          "origen": {
+            "type": "string"
+          },
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estadoExpediente": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pendientes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VerificacionPendienteDto"
+            }
+          },
+          "coincidenciasPorAnalizar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "esperandoSoloVerificaciones": {
+            "type": "boolean"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FilaDeLoteEntradaDto": {
+        "type": "object",
+        "properties": {
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numeroIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "digitoVerificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoPersona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombreComercial": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoVinculo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flujo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contacto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FilaEstadoExpedienteDto": {
+        "required": [
+          "id",
+          "folio",
+          "tipo",
+          "estado",
+          "vinculoId",
+          "tercero",
+          "tipoVinculo",
+          "flujo",
+          "abiertoEn",
+          "cerradoEn",
+          "requisitos",
+          "requisitosAprobados",
+          "devoluciones",
+          "diasTotales",
+          "diasEnCarga",
+          "diasConTercero",
+          "diasEnRevision",
+          "diasHastaAprobacion",
+          "slaIncumplido",
+          "areas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "flujo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FlujoDeExpedienteDto"
+              }
+            ]
+          },
+          "abiertoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cerradoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "requisitos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "requisitosAprobados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "devoluciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasTotales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diasEnCarga": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diasConTercero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diasEnRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "diasHastaAprobacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "slaIncumplido": {
+            "type": "boolean"
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TiempoDeAreaDto"
+            }
+          }
+        }
+      },
+      "FilaInformeCumplimientoDto": {
+        "required": [
+          "expedienteId",
+          "folio",
+          "tercero",
+          "identificacion",
+          "tipoVinculo",
+          "estadoExpediente",
+          "verificacion",
+          "proveedor",
+          "estado",
+          "resultado",
+          "fecha",
+          "personas",
+          "coincidencias",
+          "confirmadas",
+          "descartadas",
+          "nivelRiesgo",
+          "conflictoDeInteres",
+          "debidaDiligencia",
+          "concepto",
+          "vigenteHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "tercero": {
+            "type": "string"
+          },
+          "identificacion": {
+            "type": "string"
+          },
+          "tipoVinculo": {
+            "type": "string"
+          },
+          "estadoExpediente": {
+            "type": "string"
+          },
+          "verificacion": {
+            "type": "string"
+          },
+          "proveedor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "personas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "coincidencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "confirmadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "descartadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nivelRiesgo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conflictoDeInteres": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "debidaDiligencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "concepto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "FilaInformeVinculoDto": {
+        "required": [
+          "vinculoId",
+          "tercero",
+          "tipoVinculo",
+          "estado",
+          "creadoEn",
+          "invitacionAceptada",
+          "certificado",
+          "expedienteEnCurso",
+          "documentos",
+          "seccionesPendientes"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "$ref": "#/components/schemas/TerceroResumenDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "invitacionAceptada": {
+            "type": "boolean"
+          },
+          "certificado": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CertificadoDelInformeDto"
+              }
+            ]
+          },
+          "expedienteEnCurso": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExpedienteDelInformeDto"
+              }
+            ]
+          },
+          "documentos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DocumentosDelInformeDto"
+              }
+            ]
+          },
+          "seccionesPendientes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FilaLoteDto": {
+        "required": [
+          "n",
+          "identificacion",
+          "nombre",
+          "correo",
+          "tipoVinculo",
+          "estado",
+          "accion",
+          "detalle",
+          "errores",
+          "duplicadaDe",
+          "terceroId",
+          "vinculoId",
+          "terceroCreado",
+          "intentos",
+          "procesadaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "n": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "identificacion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoVinculo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "accion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "detalle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDeFilaDto"
+            }
+          },
+          "duplicadaDe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "terceroId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "terceroCreado": {
+            "type": "boolean"
+          },
+          "intentos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "procesadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "FilaRechazadaDto": {
         "required": [
           "fila",
@@ -12942,6 +15998,54 @@
           },
           "motivo": {
             "type": "string"
+          }
+        }
+      },
+      "FilaVistaPreviaDto": {
+        "required": [
+          "n",
+          "datos",
+          "estado",
+          "errores",
+          "duplicadaDe",
+          "accionPrevista"
+        ],
+        "type": "object",
+        "properties": {
+          "n": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "datos": {
+            "$ref": "#/components/schemas/FilaDeLoteEntradaDto"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "errores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDeFilaDto"
+            }
+          },
+          "duplicadaDe": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "accionPrevista": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13207,6 +16311,25 @@
             "items": {
               "$ref": "#/components/schemas/RequisitoDelFlujoDto"
             }
+          },
+          "verificaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/VerificacionRequeridaDto"
+            }
+          },
+          "plazoCargue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
           }
         }
       },
@@ -13678,6 +16801,112 @@
           }
         }
       },
+      "InformeCumplimientoDto": {
+        "required": [
+          "desde",
+          "hasta",
+          "verificaciones",
+          "riesgo",
+          "estudiosVencidos",
+          "pendientesReconsulta",
+          "filas"
+        ],
+        "type": "object",
+        "properties": {
+          "desde": {
+            "type": "string",
+            "format": "date"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date"
+          },
+          "verificaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenVerificacionesDto"
+            }
+          },
+          "riesgo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RiesgoDto"
+            }
+          },
+          "estudiosVencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendientesReconsulta": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaInformeCumplimientoDto"
+            }
+          }
+        }
+      },
+      "InformeEstadoExpedientesDto": {
+        "required": [
+          "resumen",
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "resumen": {
+            "$ref": "#/components/schemas/ResumenEstadoExpedientesDto"
+          },
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaEstadoExpedienteDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "InformeVinculosDto": {
+        "required": [
+          "resumen",
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "resumen": {
+            "$ref": "#/components/schemas/ResumenVinculosDto"
+          },
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaInformeVinculoDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "IniciarCargaDto": {
         "required": [
           "nombreArchivo",
@@ -13974,6 +17203,155 @@
           }
         }
       },
+      "LegadoDto": {
+        "required": [
+          "estadoTercero"
+        ],
+        "type": "object",
+        "properties": {
+          "estadoTercero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ListasRestrictivasConfigDto": {
+        "required": [
+          "proveedor",
+          "proveedorEfectivo",
+          "proveedores",
+          "uso",
+          "diasMonitoreo",
+          "vigenciaEstudioDias"
+        ],
+        "type": "object",
+        "properties": {
+          "proveedor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proveedorEfectivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "proveedores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProveedorListasDto"
+            }
+          },
+          "uso": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsoListasDto"
+            }
+          },
+          "diasMonitoreo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vigenciaEstudioDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "LoteDto": {
+        "required": [
+          "id",
+          "nombre",
+          "archivo",
+          "estado",
+          "totales",
+          "vigenciaHoras",
+          "creadoPor",
+          "creadoEn",
+          "actualizadoEn",
+          "terminadoEn",
+          "reintentos",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "archivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "totales": {
+            "$ref": "#/components/schemas/TotalesLoteDto"
+          },
+          "vigenciaHoras": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "creadoPor": {
+            "type": "string"
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "terminadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reintentos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "MiembrosAreaDto": {
         "required": [
           "usuarios"
@@ -14082,6 +17460,48 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "MonitoreoListasDto": {
+        "required": [
+          "vinculoId",
+          "expedienteId",
+          "folio",
+          "frecuenciaDias",
+          "proximaConsulta",
+          "listas"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "frecuenciaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "proximaConsulta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "listas": {
+            "$ref": "#/components/schemas/VerificacionDto"
           }
         }
       },
@@ -14458,6 +17878,48 @@
           }
         }
       },
+      "PaginaDtoOfFilaLoteDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaLoteDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PaginaDtoOfLoteDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LoteDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfRegistroAuditoriaDto": {
         "required": [
           "datos",
@@ -14625,6 +18087,25 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "PersonaConsultadaDto": {
+        "required": [
+          "rol",
+          "nombre",
+          "identificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "identificacion": {
+            "type": "string"
           }
         }
       },
@@ -15057,6 +18538,108 @@
           }
         }
       },
+      "PlazoCargueDto": {
+        "required": [
+          "dias"
+        ],
+        "type": "object",
+        "properties": {
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recordatorios": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "PlazoCargueExpedienteDto": {
+        "required": [
+          "dias",
+          "recordatorios",
+          "hasta",
+          "recordatoriosEnviados",
+          "caducadoEn",
+          "estadoAlReabrir",
+          "reaperturas"
+        ],
+        "type": "object",
+        "properties": {
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recordatorios": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "hasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "recordatoriosEnviados": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "caducadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "estadoAlReabrir": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reaperturas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "PreferenciasNotificacionDto": {
         "required": [
           "correo",
@@ -15082,6 +18665,78 @@
         "type": "object",
         "properties": {
           "apiKeyOpenAi": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ProveedorListasDto": {
+        "required": [
+          "nombre",
+          "real",
+          "principal",
+          "habilitadoEnInstalacion",
+          "configurado",
+          "usuario",
+          "ultimosCuatroClave",
+          "urlBase",
+          "plan",
+          "cuotaMensual",
+          "modoBusqueda"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "real": {
+            "type": "boolean"
+          },
+          "principal": {
+            "type": "boolean"
+          },
+          "habilitadoEnInstalacion": {
+            "type": "boolean"
+          },
+          "configurado": {
+            "type": "boolean"
+          },
+          "usuario": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ultimosCuatroClave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urlBase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cuotaMensual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modoBusqueda": {
             "type": [
               "null",
               "string"
@@ -15124,6 +18779,17 @@
         "properties": {
           "contenido": {
             "type": "string"
+          }
+        }
+      },
+      "ReabrirExpedienteDto": {
+        "type": "object",
+        "properties": {
+          "justificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15348,6 +19014,49 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "RegistrarEstudioCumplimientoDto": {
+        "required": [
+          "nivelRiesgo",
+          "conflictoDeInteres",
+          "debidaDiligencia",
+          "concepto"
+        ],
+        "type": "object",
+        "properties": {
+          "nivelRiesgo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conflictoDeInteres": {
+            "type": "boolean"
+          },
+          "debidaDiligencia": {
+            "type": "string"
+          },
+          "concepto": {
+            "type": "string"
+          },
+          "observaciones": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "evidencias": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EvidenciaEstudioDto"
+            }
           }
         }
       },
@@ -15944,6 +19653,21 @@
           }
         }
       },
+      "ResolverCoincidenciaDto": {
+        "required": [
+          "decision",
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "justificacion": {
+            "type": "string"
+          }
+        }
+      },
       "ResultadoDeLoteDto": {
         "required": [
           "aprobadas",
@@ -16008,6 +19732,231 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FilaRechazadaDto"
+            }
+          }
+        }
+      },
+      "ResultadoRevisionPlazosDto": {
+        "required": [
+          "revisados",
+          "recordatorios",
+          "caducados"
+        ],
+        "type": "object",
+        "properties": {
+          "revisados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "recordatorios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "caducados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResumenDeAreaDto": {
+        "required": [
+          "areaId",
+          "codigo",
+          "nombre",
+          "expedientes",
+          "pendientes",
+          "promedioDias",
+          "medianaDias",
+          "maximoDias",
+          "slaIncumplidos"
+        ],
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "expedientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "promedioDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "medianaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "maximoDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "slaIncumplidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResumenEstadoExpedientesDto": {
+        "required": [
+          "total",
+          "porEstado",
+          "porTipo",
+          "aprobados",
+          "tiempoPromedioDias",
+          "tiempoMedianaDias",
+          "promedioEnCargaDias",
+          "promedioConTerceroDias",
+          "promedioEnRevisionDias",
+          "devoluciones",
+          "conSlaIncumplido",
+          "porArea"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porEstado": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConteoDto"
+            }
+          },
+          "porTipo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConteoDto"
+            }
+          },
+          "aprobados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tiempoPromedioDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "tiempoMedianaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "promedioEnCargaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "promedioConTerceroDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "promedioEnRevisionDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "devoluciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conSlaIncumplido": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porArea": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenDeAreaDto"
             }
           }
         }
@@ -16157,6 +20106,119 @@
             "format": "int32"
           },
           "rechazadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResumenVerificacionesDto": {
+        "required": [
+          "tipo",
+          "proveedor",
+          "total",
+          "conCoincidencias",
+          "confirmadas",
+          "pendientes"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "proveedor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conCoincidencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "confirmadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResumenVinculosDto": {
+        "required": [
+          "total",
+          "porEstado",
+          "conCertificadoVigente",
+          "conDocumentosPorVencer",
+          "conDocumentosVencidos",
+          "conSeccionesPendientes"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porEstado": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConteoDto"
+            }
+          },
+          "conCertificadoVigente": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conDocumentosPorVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conDocumentosVencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conSeccionesPendientes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -16360,6 +20422,48 @@
           }
         }
       },
+      "RevalidacionPendienteDto": {
+        "required": [
+          "tipo",
+          "plazo",
+          "bloqueante"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "plazo": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RevisarPlazosDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "RevocacionDelCertificadoDto": {
         "required": [
           "motivo",
@@ -16391,6 +20495,31 @@
           }
         }
       },
+      "RiesgoDto": {
+        "required": [
+          "nivel",
+          "cantidad"
+        ],
+        "type": "object",
+        "properties": {
+          "nivel": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RolAsignadoDto": {
         "required": [
           "rol",
@@ -16407,6 +20536,18 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "RotarApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "anteriorValidaHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -17293,6 +21434,71 @@
           }
         }
       },
+      "TiempoDeAreaDto": {
+        "required": [
+          "areaId",
+          "codigo",
+          "nombre",
+          "etapa",
+          "estado",
+          "dias",
+          "rondas",
+          "slaHoras",
+          "slaIncumplido"
+        ],
+        "type": "object",
+        "properties": {
+          "areaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "etapa": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+-]?\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "rondas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "slaHoras": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "slaIncumplido": {
+            "type": "boolean"
+          }
+        }
+      },
       "TipoDocumentoCanonicoDto": {
         "required": [
           "codigo",
@@ -17831,6 +22037,76 @@
           }
         }
       },
+      "TotalesLoteDto": {
+        "required": [
+          "filas",
+          "procesadas",
+          "pendientes",
+          "exitosas",
+          "fallidas",
+          "duplicadas",
+          "invalidas"
+        ],
+        "type": "object",
+        "properties": {
+          "filas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "procesadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "pendientes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "exitosas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fallidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UsoIaDiaDto": {
         "required": [
           "fecha",
@@ -17998,6 +22274,58 @@
             "items": {
               "$ref": "#/components/schemas/UsoIaDiaDto"
             }
+          }
+        }
+      },
+      "UsoListasDto": {
+        "required": [
+          "mes",
+          "proveedor",
+          "consultas",
+          "busquedas",
+          "conCoincidencias",
+          "cuotaMensual"
+        ],
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string"
+          },
+          "proveedor": {
+            "type": "string"
+          },
+          "consultas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "busquedas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "conCoincidencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cuotaMensual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -18338,6 +22666,203 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "VerificacionDto": {
+        "required": [
+          "tipo",
+          "estado",
+          "bloqueante",
+          "requeridaPorElFlujo",
+          "proveedor",
+          "resultado",
+          "referenciaExterna",
+          "registradaEn",
+          "registradaPor",
+          "vigenteHasta",
+          "evidencia",
+          "personas",
+          "coincidencias",
+          "estudio",
+          "anteriores",
+          "ultimoError",
+          "reintentarDesde",
+          "vigenciaDias",
+          "frecuenciaReconsultaMeses"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          },
+          "requeridaPorElFlujo": {
+            "type": "boolean"
+          },
+          "proveedor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resultado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "referenciaExterna": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "registradaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "registradaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "evidencia": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EvidenciaVerificacionDto"
+              }
+            ]
+          },
+          "personas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonaConsultadaDto"
+            }
+          },
+          "coincidencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CoincidenciaDto"
+            }
+          },
+          "estudio": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EstudioCumplimientoDto"
+              }
+            ]
+          },
+          "anteriores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsultaAnteriorDto"
+            }
+          },
+          "ultimoError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reintentarDesde": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "vigenciaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "frecuenciaReconsultaMeses": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "VerificacionPendienteDto": {
+        "required": [
+          "tipo",
+          "estado",
+          "bloqueante"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VerificacionRequeridaDto": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "bloqueante": {
+            "type": "boolean",
+            "default": true
+          },
+          "vigenciaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "frecuenciaReconsultaMeses": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -18868,6 +23393,63 @@
           }
         }
       },
+      "VistaPreviaLoteDto": {
+        "required": [
+          "archivo",
+          "total",
+          "validas",
+          "invalidas",
+          "duplicadas",
+          "filas"
+        ],
+        "type": "object",
+        "properties": {
+          "archivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "validas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "invalidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "duplicadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaVistaPreviaDto"
+            }
+          }
+        }
+      },
       "WebhookDto": {
         "required": [
           "id",
@@ -19073,6 +23655,15 @@
       "name": "Validasoft.Aplicacion.Vinculos.VinculosEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Verificaciones.ListasRestrictivasEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Verificaciones.InformeCumplimientoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Plataforma.OperadoresDePlataformaEndpoints"
     },
     {
@@ -19094,6 +23685,9 @@
       "name": "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Interesado.EnlacesPublicosEndpoints"
     },
     {
@@ -19107,6 +23701,18 @@
     },
     {
       "name": "Validasoft.Aplicacion.Interesado.AccesoPorCorreoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Integracion.ConsultaCertificacionEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Informes.ExportacionDeExpedienteEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Informes.InformeEstadoExpedientesEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Informes.InformeVinculosEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.SistemasEndpoints"
@@ -19155,6 +23761,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.InicioEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.PlazosDeCargueEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.RatificacionEndpoints"

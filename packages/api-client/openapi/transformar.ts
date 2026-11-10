@@ -133,6 +133,9 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/api-keys': 'crearApiKey',
   'GET /api/v1/api-keys': 'listarApiKeys',
   'DELETE /api/v1/api-keys/{id}': 'revocarApiKey',
+  // Integración con SRM y Marco (H9, CN-1…CN-3).
+  'POST /api/v1/api-keys/{id}/rotar': 'rotarApiKey',
+  'GET /api/v1/consultas/certificacion': 'consultarCertificacion',
   'POST /api/v1/tipos-vinculo': 'crearTipoVinculo',
   'GET /api/v1/tipos-vinculo': 'listarTiposVinculo',
   'GET /api/v1/tipos-vinculo/{id}': 'obtenerTipoVinculo',
@@ -181,6 +184,14 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/indicadores': 'obtenerIndicadores',
   'GET /api/v1/vencimientos/excel': 'exportarVencimientos',
   'POST /api/v1/vencimientos/recordar': 'recordarVencimientos',
+  // Informes y exportaciones (IF-1…IF-6): JSON para la pantalla; Excel, PDF y ZIP como descarga binaria.
+  'GET /api/v1/informes/estado-expedientes': 'obtenerInformeEstadoExpedientes',
+  'GET /api/v1/informes/estado-expedientes/excel': 'exportarInformeEstadoExpedientes',
+  'GET /api/v1/informes/estado-expedientes/pdf': 'exportarInformeEstadoExpedientesPdf',
+  'GET /api/v1/informes/vinculos': 'obtenerInformeVinculos',
+  'GET /api/v1/informes/vinculos/excel': 'exportarInformeVinculos',
+  'GET /api/v1/auditoria/excel': 'exportarAuditoria',
+  'GET /api/v1/expedientes/{id}/exportar': 'exportarExpediente',
   'POST /api/v1/revalidaciones/aprobar': 'aprobarRevalidaciones',
   'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/areas/{areaId}/veredicto': 'emitirVeredictoRequisito',
   'POST /api/v1/expedientes/{id}/requisitos/{requisitoId}/eximir': 'eximirRequisito',
@@ -244,6 +255,34 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plataforma/importacion/portal/{id}/rechazos': 'descargarRechazosImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/{id}/reanudar': 'reanudarImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar': 'sincronizarTerceroPortal',
+  // Verificaciones externas y cumplimiento (H7, VE-5…VE-16).
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/consultar': 'consultarVerificacion',
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/coincidencias/{coincidenciaId}/resolver': 'resolverCoincidencia',
+  'POST /api/v1/expedientes/{id}/verificaciones/estudio-cumplimiento': 'registrarEstudioCumplimiento',
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/evidencia/descarga': 'descargarEvidenciaVerificacion',
+  'GET /api/v1/cumplimiento/bandeja': 'listarBandejaCumplimiento',
+  'GET /api/v1/vinculos/{id}/monitoreo-listas': 'obtenerMonitoreoListas',
+  'POST /api/v1/vinculos/{id}/monitoreo-listas/coincidencias/{coincidenciaId}/resolver': 'resolverCoincidenciaMonitoreo',
+  'POST /api/v1/vinculos/{id}/monitoreo-listas/evidencia/descarga': 'descargarEvidenciaMonitoreo',
+  'GET /api/v1/configuracion/listas-restrictivas': 'obtenerListasRestrictivas',
+  'PUT /api/v1/configuracion/listas-restrictivas': 'actualizarListasRestrictivas',
+  'GET /api/v1/informes/cumplimiento': 'obtenerInformeCumplimiento',
+  'GET /api/v1/informes/cumplimiento/excel': 'exportarInformeCumplimiento',
+  // Plazo de cargue del expediente inicial: reapertura del caducado y job de Plataforma (P-4-2, LT-1…LT-4).
+  'POST /api/v1/expedientes/{id}/reabrir': 'reabrirExpediente',
+  'POST /api/v1/plataforma/plazos-de-cargue/revisar': 'revisarPlazosDeCargue',
+  // Invitación masiva por lote (H8, LT-5…LT-10).
+  'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
+  'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',
+  'POST /api/v1/invitaciones/lotes': 'crearLote',
+  'GET /api/v1/invitaciones/lotes': 'listarLotes',
+  'GET /api/v1/invitaciones/lotes/{id}': 'obtenerLote',
+  'GET /api/v1/invitaciones/lotes/{id}/filas': 'listarFilasLote',
+  'POST /api/v1/invitaciones/lotes/{id}/pausar': 'pausarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/reanudar': 'reanudarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/cancelar': 'cancelarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/reintentar': 'reintentarLote',
+  'GET /api/v1/invitaciones/lotes/{id}/informe': 'descargarInformeLote',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -263,6 +302,10 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearEmpresa: { '201': 'EmpresaDto' },
   crearApiKey: { '201': 'ApiKeyDto' },
   revocarApiKey: { '204': null },
+  // La nueva llave con su `valor` (una sola vez); la anterior sigue valiendo hasta la fecha pedida (CN-3).
+  rotarApiKey: { '201': 'ApiKeyDto' },
+  // 304 sin cuerpo con `If-None-Match` igual al ETag (CN-1).
+  consultarCertificacion: { '200': 'ConsultaCertificacionDto', '304': null },
   crearTipoVinculo: { '201': 'TipoVinculoDto' },
   crearArea: { '201': 'AreaDto' },
   crearMotivo: { '201': 'MotivoTipificadoDto' },
@@ -279,12 +322,16 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   iniciarCargaDocumento: { '200': 'CargaPrefirmadaDto', '201': 'CargaPrefirmadaDto' },
   // 202: la corrida queda encolada; su estado se consulta con obtenerImportacionPortal.
   importarPortal: { '202': 'CorridaImportacionPortalDto' },
+  // 202: el lote queda en proceso; su avance se consulta con obtenerLote.
+  crearLote: { '202': 'LoteDto' },
   reanudarImportacionPortal: { '202': 'CorridaImportacionPortalDto' },
 };
 
 /** Enums textuales del dominio (docs/03 §3.1, docs/07 §3.1). */
 const ENUMS: Record<string, string[]> = {
   EstadoCorridaPortal: ['Encolada', 'EnCurso', 'Completada', 'Fallida'],
+  EstadoLote: ['Procesando', 'Pausado', 'Completado', 'CompletadoConErrores', 'Cancelado'],
+  EstadoFilaLote: ['Pendiente', 'Exitosa', 'Fallida', 'Duplicada', 'Invalida', 'Cancelada'],
   OrigenDeAceptacion: ['Expediente', 'Importacion'],
   EstadoVinculo: ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'],
   OrigenVinculo: ['Invitacion', 'Autorregistro', 'Migracion', 'Api'],
@@ -309,14 +356,42 @@ const ENUMS: Record<string, string[]> = {
   // Ficha maestra por empresa (F2): qué pide un requisito y cómo cambió un campo entre la versión aceptada y la nueva.
   TipoRequisito: ['Documento', 'Seccion'],
   TipoCambio: ['Agregado', 'Quitado', 'Modificado'],
+  // Verificaciones externas (H7).
+  TipoVerificacion: ['ListasRestrictivas', 'EstudioDeCumplimiento'],
+  EstadoVerificacion: ['Pendiente', 'CoincidenciaPorAnalizar', 'Satisfecha', 'Fallida', 'Expirada'],
+  ResultadoVerificacion: ['SinCoincidencias', 'Coincidencias', 'Aprobado', 'Rechazado'],
+  DecisionCoincidencia: ['Descartada', 'Confirmada'],
+  DebidaDiligencia: ['Simple', 'Ampliada'],
+  ConceptoCumplimiento: ['Favorable', 'Desfavorable'],
+  ModoBusquedaListas: ['PorNombre', 'PorDocumento'],
+  OrigenFilaCumplimiento: ['Expediente', 'Monitoreo'],
 };
 
 /** `Esquema.propiedad` → enum. */
 const PROPIEDADES_ENUM: Record<string, string> = {
   'VinculoDto.estado': 'EstadoVinculo',
+  'VerificacionDto.tipo': 'TipoVerificacion',
+  'VerificacionDto.estado': 'EstadoVerificacion',
+  'VerificacionRequeridaDto.tipo': 'TipoVerificacion',
+  'VerificacionPendienteDto.tipo': 'TipoVerificacion',
+  'VerificacionPendienteDto.estado': 'EstadoVerificacion',
+  'ResolverCoincidenciaDto.decision': 'DecisionCoincidencia',
+  'EstudioCumplimientoDto.debidaDiligencia': 'DebidaDiligencia',
+  'EstudioCumplimientoDto.concepto': 'ConceptoCumplimiento',
+  'RegistrarEstudioCumplimientoDto.debidaDiligencia': 'DebidaDiligencia',
+  'RegistrarEstudioCumplimientoDto.concepto': 'ConceptoCumplimiento',
+  'FilaCumplimientoDto.origen': 'OrigenFilaCumplimiento',
   'VinculoDto.origen': 'OrigenVinculo',
+  'FilaEstadoExpedienteDto.estado': 'EstadoExpediente',
+  'FilaEstadoExpedienteDto.tipo': 'TipoExpediente',
+  'TiempoDeAreaDto.estado': 'EstadoAreaExpediente',
+  'FilaInformeVinculoDto.estado': 'EstadoVinculo',
+  'ExpedienteDelInformeDto.estado': 'EstadoExpediente',
+  'ExpedienteDelInformeDto.tipo': 'TipoExpediente',
   'RolAsignadoDto.rol': 'Rol',
   'ExpedienteDto.estado': 'EstadoExpediente',
+  'LoteDto.estado': 'EstadoLote',
+  'FilaLoteDto.estado': 'EstadoFilaLote',
   'ExpedienteDto.tipo': 'TipoExpediente',
   'ExpedienteDto.politicaDevolucion': 'PoliticaDevolucion',
   'EtapaExpedienteDto.estado': 'EstadoEtapa',

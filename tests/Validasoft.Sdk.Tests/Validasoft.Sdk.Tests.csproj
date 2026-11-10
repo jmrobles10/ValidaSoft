@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pruebas unitarias del SDK .NET (sin red ni base de datos): firma de webhooks contra la del servidor, aserciones delegadas y cliente HTTP. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Validasoft.Sdk\Validasoft.Sdk.csproj" />
+    <!--
+      La firma de referencia del servidor (FirmaDeWebhook, dominio) sobre el cuerpo exacto que envía (JsonEventos, aplicación):
+      el verificador del SDK debe aceptar exactamente lo que firma Notificaciones/Webhooks.cs.
+    -->
+    <ProjectReference Include="..\..\src\Validasoft.Dominio\Validasoft.Dominio.csproj" />
+    <ProjectReference Include="..\..\src\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
+  </ItemGroup>
+</Project>

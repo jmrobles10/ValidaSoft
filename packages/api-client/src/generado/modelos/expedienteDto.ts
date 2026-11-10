@@ -7,12 +7,14 @@
 import type { EstadoExpediente } from './estadoExpediente';
 import type { EtapaExpedienteDto } from './etapaExpedienteDto';
 import type { FlujoDeExpedienteDto } from './flujoDeExpedienteDto';
+import type { PlazoCargueExpedienteDto } from './plazoCargueExpedienteDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RechazoDto } from './rechazoDto';
 import type { RequisitoExpedienteDto } from './requisitoExpedienteDto';
 import type { TerceroResumenDto } from './terceroResumenDto';
 import type { TipoExpediente } from './tipoExpediente';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
+import type { VerificacionDto } from './verificacionDto';
 
 export interface ExpedienteDto {
   id: string;
@@ -42,4 +44,8 @@ export interface ExpedienteDto {
   version: number;
   /** @nullable */
   requisitos?: RequisitoExpedienteDto[] | null;
+  /** @nullable */
+  verificaciones?: VerificacionDto[] | null;
+  esperandoVerificaciones?: boolean;
+  plazoCargue?: null | PlazoCargueExpedienteDto;
 }

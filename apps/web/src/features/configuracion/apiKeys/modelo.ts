@@ -69,9 +69,28 @@ export function textoAlcance(llave: Pick<ApiKeyDto, 'empresas'>, empresas: reado
   return llave.empresas.map((id) => empresas.find((e) => e.id === id)?.nombre ?? id).join(', ');
 }
 
-/** El listado no trae las revocadas; una llave listada está vigente o ya venció. */
-export function estadoApiKey(llave: Pick<ApiKeyDto, 'expiraEn'>, ahora: Date): 'vigente' | 'vencida' {
-  return llave.expiraEn && new Date(llave.expiraEn) <= ahora ? 'vencida' : 'vigente';
+/**
+ * El listado no trae las revocadas; una llave listada está vigente, ya venció o se rotó y vale hasta su `expiraEn`
+ * (`reemplazadaPor`, CN-3).
+ */
+export function estadoApiKey(llave: Pick<ApiKeyDto, 'expiraEn' | 'reemplazadaPor'>, ahora: Date): 'vigente' | 'vencida' | 'reemplazada' {
+  if (llave.expiraEn && new Date(llave.expiraEn) <= ahora) return 'vencida';
+  return llave.reemplazadaPor ? 'reemplazada' : 'vigente';
+}
+
+/** Cuánto más vale la clave actual al rotarla (la API admite hasta 30 días; por defecto, 24 horas). */
+export const SOLAPAMIENTOS = { inmediato: 0, '1h': 1, '24h': 24, '7d': 168 } as const;
+
+export type Solapamiento = keyof typeof SOLAPAMIENTOS;
+
+/** Fecha hasta la que vale la clave anterior, en ISO (`RotarApiKeyDto.anteriorValidaHasta`). */
+export function anteriorValidaHasta(solapamiento: Solapamiento, ahora: Date): string {
+  return new Date(ahora.getTime() + SOLAPAMIENTOS[solapamiento] * 3_600_000).toISOString();
+}
+
+/** Se puede rotar una llave vigente que aún no se rotó. */
+export function sePuedeRotar(llave: Pick<ApiKeyDto, 'expiraEn' | 'reemplazadaPor'>, ahora: Date): boolean {
+  return estadoApiKey(llave, ahora) === 'vigente';
 }
 
 /** Lo que se ve de la clave sin el secreto: su prefijo («vsk_live_3f9a…»). */

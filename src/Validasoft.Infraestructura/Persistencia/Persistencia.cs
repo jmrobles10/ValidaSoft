@@ -165,7 +165,16 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_expediente_folio", TenancyScope.PerTenant, x => x.Folio)
                     .Index(x => x.EmpresaId)
                     .Index(x => x.VinculoId)
-                    .Index(x => x.AbiertoEn);
+                    .Index(x => x.AbiertoEn)
+                    .Index(x => x.ProximaConsultaDeListas)
+                    .Index(x => x.ProximoVencimientoDeVerificacion)
+                    // Barrido del job de plazos de cargue (LT-4): solo los que tienen algo pendiente llevan valor.
+                    .Index(x => x.ProximaRevisionDePlazo);
+                // Verificaciones externas (H7): listas por empresa (id = empresa, credenciales cifradas), consumo mensual con
+                // concurrencia optimista y monitoreo de listas por vínculo activo (id = vínculo).
+                opts.Schema.For<ListasRestrictivasEmpresa>().MultiTenanted();
+                opts.Schema.For<UsoMensualListas>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
+                opts.Schema.For<MonitoreoDeListas>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.ProximaConsulta);
                 // Lo aceptado de cada sección de la ficha por vínculo (F2, FM-29): privado de la empresa, en su tenant.
                 opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()
                     .Index(x => x.VinculoId)
@@ -179,6 +188,8 @@ public static class ConfiguracionMarten
                 // tenants en la verificación pública (no es único entre tenants: lo desambigua la huella, CE-8).
                 // Último recordatorio de vencimiento por vínculo y documento (VE-3), aislado por empresa.
                 opts.Schema.For<Validasoft.Aplicacion.Vinculos.RecordatorioDeVencimiento>().MultiTenanted().Index(x => x.EmpresaId);
+                // Exportaciones de informes, auditoría y expedientes (IF-6), aisladas por empresa; las lee la auditoría de accesos.
+                opts.Schema.For<Validasoft.Aplicacion.Informes.ExportacionRegistrada>().MultiTenanted().Index(x => x.EmpresaId);
                 opts.Schema.For<Certificado>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_certificado_folio", TenancyScope.PerTenant, x => x.FolioRaiz)
                     .Index(x => x.EmpresaId)
@@ -201,6 +212,16 @@ public static class ConfiguracionMarten
                     .Index(x => x.Orden);
                 opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
 
+                // Invitación masiva (H8, LT-5): el lote es un stream con snapshot inline; sus filas, documentos aparte que se
+                // leen por lote, estado y número (la tanda toma las pendientes en orden).
+                opts.Schema.For<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>().MultiTenanted()
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.CreadoEn);
+                opts.Schema.For<Validasoft.Dominio.Invitaciones.FilaDeLote>().MultiTenanted()
+                    .Index(x => x.LoteId)
+                    .Index(x => x.Estado)
+                    .Index(x => x.N);
+
                 // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
                 // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
                 opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
@@ -215,6 +236,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Validasoft.Dominio.Ficha.SeccionDeFicha>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos

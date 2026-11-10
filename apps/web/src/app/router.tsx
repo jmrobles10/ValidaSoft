@@ -65,6 +65,19 @@ export function crearRouter() {
               path: 'vencimientos',
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
+            { path: 'informes', element: <Navigate to="estado-expedientes" replace /> },
+            {
+              path: 'informes/estado-expedientes',
+              lazy: () => import('../features/informes/PaginaEstadoExpedientes').then((m) => ({ Component: m.PaginaEstadoExpedientes })),
+            },
+            {
+              path: 'informes/vinculos',
+              lazy: () => import('../features/informes/PaginaInformeVinculos').then((m) => ({ Component: m.PaginaInformeVinculos })),
+            },
+            {
+              path: 'cumplimiento',
+              lazy: () => import('../features/cumplimiento/PaginaCumplimiento').then((m) => ({ Component: m.PaginaCumplimiento })),
+            },
             {
               path: 'certificados',
               lazy: () => import('../features/certificados/lista/PaginaCertificados').then((m) => ({ Component: m.PaginaCertificados })),
@@ -80,6 +93,18 @@ export function crearRouter() {
             {
               path: 'vinculos/:vinculoId',
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
+            },
+            {
+              path: 'invitaciones/lotes',
+              lazy: () => import('../features/lotes/PaginaLotes').then((m) => ({ Component: m.PaginaLotes })),
+            },
+            {
+              path: 'invitaciones/lotes/nuevo',
+              lazy: () => import('../features/lotes/PaginaNuevoLote').then((m) => ({ Component: m.PaginaNuevoLote })),
+            },
+            {
+              path: 'invitaciones/lotes/:loteId',
+              lazy: () => import('../features/lotes/DetalleLote').then((m) => ({ Component: m.DetalleLote })),
             },
             {
               path: 'terceros/:terceroId',
@@ -107,6 +132,11 @@ export function crearRouter() {
                 {
                   path: 'uso-ia',
                   lazy: () => import('../features/configuracion/usoIa/PaginaUsoIa').then((m) => ({ Component: m.PaginaUsoIa })),
+                },
+                {
+                  path: 'listas-restrictivas',
+                  lazy: () =>
+                    import('../features/configuracion/listasRestrictivas/PaginaListasRestrictivas').then((m) => ({ Component: m.PaginaListasRestrictivas })),
                 },
                 {
                   path: 'motivos',

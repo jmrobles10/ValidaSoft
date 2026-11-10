@@ -46,6 +46,14 @@ export const notificaciones = {
       titulo: 'Expediente rechazado',
       explicacion: 'Cuando se rechaza la validación de un expediente de tus áreas.',
     },
+    caducado: {
+      titulo: 'Expediente caducado',
+      explicacion: 'Cuando un tercero no completa su expediente de tus áreas en el plazo y caduca.',
+    },
+    loteTerminado: {
+      titulo: 'Lote de invitaciones terminado',
+      explicacion: 'Cuando termina un lote de invitación masiva que creaste, con cuántas filas se invitaron y cuántas fallaron.',
+    },
     porVencer: {
       titulo: 'Documento por vencer',
       explicacion: 'Cuando un documento de un vínculo de tus áreas está cerca de vencer.',
@@ -53,6 +61,18 @@ export const notificaciones = {
     vencido: {
       titulo: 'Documento vencido',
       explicacion: 'Cuando un documento de un vínculo de tus áreas venció y ya pasó su plazo de gracia.',
+    },
+    coincidenciaListas: {
+      titulo: 'Coincidencia en listas restrictivas',
+      explicacion: 'A los oficiales de cumplimiento, cuando una consulta de listas (o el monitoreo de un vínculo activo) encuentra coincidencias por analizar.',
+    },
+    estudioPendiente: {
+      titulo: 'Estudio de cumplimiento pendiente',
+      explicacion: 'A los oficiales de cumplimiento, cuando entra a revisión un expediente que necesita su estudio.',
+    },
+    verificacionExpirada: {
+      titulo: 'Verificación vencida',
+      explicacion: 'A los oficiales de cumplimiento, cuando vence una consulta de listas o un estudio con el expediente abierto.',
     },
     cupoIa: {
       titulo: 'Cupo de revisión automática',

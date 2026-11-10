@@ -23,6 +23,7 @@ public static class CatalogoDePlantillas
     public const string ConsentimientoEmpresa = "consentimiento-empresa";
     public const string Vencido = "vencido";
     public const string Certificado = "certificado";
+    public const string Caducidad = "caducidad";
 
     public static readonly IReadOnlyList<EventoDePlantilla> Eventos =
     [
@@ -31,7 +32,8 @@ public static class CatalogoDePlantillas
         new(Resultado, "Resultado de la validación", "La validación se aprobó (con certificado) o se cerró sin aprobarla.", ["empresa", "folio"]),
         new(ConsentimientoEmpresa, "Constancia de aceptación", "Constancia de los textos legales que el tercero aceptó.", ["empresa"]),
         new(Vencido, "Documento vencido", "Un documento venció para la empresa y pasó el plazo de gracia.", ["empresa", "documento"]),
-        new(Certificado, "Certificado revocado o suspendido", "El certificado del tercero dejó de valer.", ["empresa", "folio"])
+        new(Certificado, "Certificado revocado o suspendido", "El certificado del tercero dejó de valer.", ["empresa", "folio"]),
+        new(Caducidad, "Plazo de cargue", "Recordatorio del plazo para completar el expediente, su caducidad y su reapertura.", ["empresa", "folio"])
     ];
 
     public static EventoDePlantilla? Buscar(string? evento) =>

@@ -131,9 +131,7 @@ public static class ApiKeysEndpoints
                 throw ReglaDeNegocioException.Validacion("empresas-invalidas", "Alguna empresa no pertenece al tenant.");
         }
 
-        // Una credencial no puede emitir más alcance del que tiene (anti-escalada).
-        if (!contexto.Empresas.Contains("*") && (empresas.Contains("*") || empresas.Any(e => !contexto.Empresas.Contains(e))))
-            throw new ReglaDeNegocioException(TipoFalla.Prohibido, "alcance-insuficiente", "No puedes emitir una llave con más empresas que la tuya.");
+        ExigirAlcance(contexto, empresas);
 
         await using var sesion = sesiones.DelTenant();
         var tenant = await sesion.LoadAsync<Tenant>(tenantId, ct)
@@ -162,7 +160,8 @@ public static class ApiKeysEndpoints
 
     [WolverineDelete("/api/v1/api-keys/{id}")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
-    public static async Task<IResult> Revocar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Revocar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeCredenciales cache, TimeProvider reloj,
+        CancellationToken ct)
     {
         await using var sesion = sesiones.DelTenant();
         var llave = await sesion.LoadAsync<ApiKey>(id, ct);
@@ -174,7 +173,54 @@ public static class ApiKeysEndpoints
         sesion.Store(llave);
         Auditoria.Registrar(sesion, contexto, "ApiKey", llave.Id.ToString(), AccionConfiguracion.Revocado, null, llave.ADto(), ahora);
         await sesion.SaveChangesAsync(ct);
+        cache.Olvidar(llave.Id);
         return Results.NoContent();
+    }
+
+    /// <summary>
+    /// Rotación con solapamiento (CN-3): emite una llave nueva con los mismos permisos, alcance, sistema y expiración, y deja
+    /// la anterior válida hasta <see cref="RotarApiKeyDto.AnteriorValidaHasta"/> (24 h por defecto) para que el sistema
+    /// cambie la clave sin cortar el servicio. Devuelve la nueva con su <c>valor</c> (una sola vez; la respuesta no se guarda
+    /// para idempotencia: rotar dos veces la misma responde 409 <c>api-key-ya-rotada</c>).
+    /// </summary>
+    [WolverinePost("/api/v1/api-keys/{id}/rotar")]
+    [Authorize(Policy = Permisos.ApiKeysAdministrar)]
+    public static async Task<IResult> Rotar(Guid id, RotarApiKeyDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves, IContextoSolicitud contexto,
+        ICacheDeCredenciales cache, TimeProvider reloj, CancellationToken ct)
+    {
+        var tenantId = contexto.TenantRequerido();
+        await using var sesion = sesiones.DelTenant();
+        var anterior = await sesion.LoadAsync<ApiKey>(id, ct);
+        if (anterior is null || anterior.RevocadaEn is not null)
+            throw ReglaDeNegocioException.NoEncontrado("api-key-no-encontrada", "No existe esa API key.");
+
+        ExigirAlcance(contexto, anterior.Empresas);
+        var tenant = await sesion.LoadAsync<Tenant>(tenantId, ct)
+            ?? throw ReglaDeNegocioException.NoEncontrado("tenant-no-encontrado", "El tenant de la credencial no existe.");
+
+        var ahora = reloj.GetUtcNow();
+        var antes = anterior.ADto();
+        var expiraOriginal = anterior.ExpiraEn;
+        var (nueva, valor) = llaves.Generar(tenant.Slug, anterior.Nombre, anterior.Scopes, anterior.Empresas, expiraOriginal, anterior.Sandbox, ahora);
+        nueva.SistemaId = anterior.SistemaId;
+        nueva.RotadaDe = anterior.Id;
+        anterior.RotarHacia(nueva.Id, dto.AnteriorValidaHasta, ahora);
+
+        sesion.Store(anterior);
+        sesion.Store(nueva);
+        Auditoria.Registrar(sesion, contexto, "ApiKey", anterior.Id.ToString(), AccionConfiguracion.Rotado, antes, anterior.ADto(), ahora);
+        Auditoria.Registrar(sesion, contexto, "ApiKey", nueva.Id.ToString(), AccionConfiguracion.Creado, null, nueva.ADto(), ahora);
+        await sesion.SaveChangesAsync(ct);
+        cache.Olvidar(anterior.Id);
+
+        return Results.Created($"/api/v1/api-keys/{nueva.Id}", nueva.ADto(valor));
+    }
+
+    /// <summary>Una credencial no puede emitir (ni rotar) una llave con más empresas que las suyas (anti-escalada).</summary>
+    private static void ExigirAlcance(IContextoSolicitud contexto, IReadOnlyCollection<string> empresas)
+    {
+        if (!contexto.Empresas.Contains("*") && (empresas.Contains("*") || empresas.Any(e => !contexto.Empresas.Contains(e))))
+            throw new ReglaDeNegocioException(TipoFalla.Prohibido, "alcance-insuficiente", "No puedes emitir una llave con más empresas que la tuya.");
     }
 }
 

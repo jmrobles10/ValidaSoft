@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!--
+    Ejemplo mínimo y compilable de un sistema integrador (como el SRM) con Validasoft.Sdk (docs/08 §2.1). Apunta a net7.0
+    a propósito: es la versión del SRM (T-16) y así la CI prueba que el SDK compila ahí. Se compila con la solución; no se
+    publica. Correr: dotnet run (requiere el runtime de .NET 7, o cambia el TargetFramework a net8.0/net10.0).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Validasoft.Sdk\Validasoft.Sdk.csproj" />
+  </ItemGroup>
+</Project>

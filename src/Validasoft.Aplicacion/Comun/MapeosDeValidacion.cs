@@ -1,4 +1,5 @@
 using Validasoft.Aplicacion.Expedientes;
+using Validasoft.Aplicacion.Verificaciones;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -28,7 +29,21 @@ public static class MapeosDeValidacion
                 ? new RequisitoDelFlujoDto(r.Id, null, null, r.Obligatorio, r.AreasQueRevisan, r.AprobadoresRequeridos, r.Condicion?.ADto(), r.Seccion,
                     r.Periodos, r.ExigeSoporte)
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
-                    r.AprobadoresRequeridos, r.Condicion?.ADto()))]);
+                    r.AprobadoresRequeridos, r.Condicion?.ADto()))],
+            [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
+            v.PlazoEfectivo().ADto());
+
+    /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
+    public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
+        new(Enum.TryParse<TipoVerificacion>(v.Tipo, true, out var tipo) && Enum.IsDefined(tipo)
+                ? tipo
+                : throw ReglaDeNegocioException.Validacion("verificacion-invalida",
+                    $"«{v.Tipo}» no es una verificación ({string.Join(", ", Enum.GetNames<TipoVerificacion>())})."),
+            v.Bloqueante, v.VigenciaDias, v.FrecuenciaReconsultaMeses);
+
+    public static PlazoCargueDto ADto(this PlazoDeCargue p) => new(p.Dias, [.. p.Recordatorios]);
+
+    public static PlazoDeCargue ADominio(this PlazoCargueDto p) => new(p.Dias, p.Recordatorios ?? (p.Dias > 0 ? PlazoDeCargue.PorDefecto.Recordatorios.Where(r => r < p.Dias).ToList() : []));
 
     public static CondicionDto ADto(this CondicionDeExigencia c) =>
         new(c.Tipo.ToString(), c.Nodos?.Select(ADto).ToList(), c.Atributo, c.Operador?.ToString(), c.Valores);
@@ -100,7 +115,17 @@ public static class MapeosDeValidacion
             e.Rechazo is null ? null : new RechazoDto(e.Rechazo.AreaId, e.Rechazo.RevisorId, [.. e.Rechazo.Motivos.Select(m => m.Codigo)],
                 e.Rechazo.Justificacion, e.Rechazo.Fecha),
             e.MotivoAnulacion, e.AbiertoEn, e.CerradoEn, e.ActualizadoEn, e.Version,
-            [.. e.Requisitos.Select(r => r.ADto(e, documentacion))]);
+            [.. e.Requisitos.Select(r => r.ADto(e, documentacion))],
+            [.. e.Verificaciones.Select(v => v.ADto())],
+            e.EsperandoVerificaciones,
+            e.PlazoDto());
+
+    /// <summary>Plazo de cargue del expediente inicial (LT-2); nulo si no tiene (otros tipos, o un flujo sin plazo).</summary>
+    public static PlazoCargueExpedienteDto? PlazoDto(this Expediente e) =>
+        e.PlazoCargue is not { Activo: true } p
+            ? null
+            : new(p.Dias, [.. p.Recordatorios], e.PlazoCargueHasta, [.. e.RecordatoriosEnviados.Order()], e.CaducadoEn, e.EstadoAlCaducar?.ToString(),
+                e.Reaperturas);
 
     /// <summary>Requisito con la decisión de cada área que lo revisa (estado, aprobaciones y veredictos de esa área).</summary>
     private static RequisitoExpedienteDto ADto(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>
@@ -182,7 +207,7 @@ public static class MapeosDeValidacion
                         : [],
                     PuedeRatificar(e, r), r.Ratificado ? r.Ratificacion!.Fecha : null, r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion)))
             ],
-            e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente), e.Tipo.ToString());
+            e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente), e.Tipo.ToString(), e.PlazoCargueHasta);
 
     /// <summary>
     /// ¿Puede el tercero ratificar este documento (RN-2, I-14)? En una renovación abierta, sobre un documento global sin

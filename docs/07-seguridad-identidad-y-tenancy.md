@@ -137,7 +137,8 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `consultas:leer` · `eventos:leer` · `sesiones-tercero:crear` | — | ✓ | ✓ | ✓ | ✓ | scope | — |
 | `vencimientos:leer` / `escribir` | — | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / — | scope | — |
 | `auditoria:leer` (dominio, configuración, identidad y accesos; alcance por empresa o tenant) | — | ✓ | — | ✓ | ✓ | scope (solo referencias) | — |
-| `auditoria:exportar` (ZIP firmado) | — | ✓ | — | — | ✓ | — | — |
+| `auditoria:exportar` (Excel con los filtros de la pantalla, IF-4; ZIP firmado pendiente) | — | ✓ | — | — | ✓ | — | — |
+| `expedientes:exportar` (expediente completo en ZIP con sus documentos; pide además `documentos:descargar`, IF-5) | — | ✓ | — | ✓ | ✓ | scope | — |
 | `supresiones:resolver` (habeas data lado empresa: retenciones dudosas que la saga `SupresionDatos` escala) | — | ✓ | — | ✓ | — | — | — |
 | `plataforma:operacion` (dead letters, rebuild de proyecciones) | ✓ | — | — | — | — | — | — |
 | `plataforma:soporte` (solo dentro de un acceso temporal vigente; lectura de documentos/decisiones del alcance concedido; nunca escritura) | ✓ (con concesión) | concede/revoca (`empresas:administrar`) | — | — | ve las concesiones | — | — |
@@ -159,7 +160,7 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | **Sistema integrado** | `sistemaId` opcional (ADR-0011): fija el sistema de las referencias externas y permite `X-Usuario-Delegado`; la llave del alta del tenant no tiene sistema |
 | **Alcance por empresa** | `empresas[]` o `*`; una llave con `[A1]` no ve nada de `A2` aunque sea del mismo tenant: la API responde **`404 no-encontrado`** (T-4), nunca un 403 que revele existencia |
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
-| Rotación / revocación | Solapamiento 24 h (0–72); revocación inmediata; cache 60 s invalidado por evento |
+| Rotación / revocación | `POST /api-keys/{id}/rotar`: la anterior vale 24 h por defecto (de 0 a 30 días, CN-3); revocación inmediata; la caché de verificaciones (5 min) vence con el reloj de Validasoft y se olvida en el nodo al rotar o revocar (otros nodos, ≤ 5 min) |
 | Registro | `ultimoUsoEn`, `ultimaIp`, contador; alerta por uso de llave inactiva 90 días |
 | Restricción | IPs/CIDR, `expiraEn`; **sandbox** por llave de prueba (`vsk_test_…`) en H9 (P-11-4) |
 | Prohibido | API keys en navegadores; el embed usa `POST /sesiones-usuario` servidor a servidor. El CORS opcional (SE-5) no admite `X-Api-Key` ni `X-Usuario-Delegado` |

@@ -106,6 +106,8 @@ public static class CatalogoEventosPublicos
         new("expediente.reenviado", "El tercero (o el integrador) respondió las observaciones."),
         new("expediente.aprobado", "El expediente se aprobó."),
         new("expediente.rechazado", "El expediente se rechazó."),
+        new("expediente.caducado", "Venció el plazo de cargue con el expediente en manos del tercero."),
+        new("expediente.reabierto", "La empresa reabrió un expediente caducado con un plazo nuevo."),
         new("documento.compartido", "Una versión de un documento quedó compartida con el vínculo."),
         new("documento.por_vencer", "Un documento compartido está por vencer para el vínculo."),
         new("documento.vencido", "Un documento compartido venció para el vínculo.")
@@ -128,7 +130,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
                 or VinculoDesvinculado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
                 or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
-                or ExpedienteAprobado or ExpedienteRechazado => await DeExpedienteAsync(evento, contexto, ct),
+                or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto => await DeExpedienteAsync(evento, contexto, ct),
             VersionCompartida or VencimientoAvisado or VersionVencida => await DeDocumentoAsync(evento, contexto, ct),
             _ => null
         };
@@ -243,6 +245,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
                 Requisitos = Requisitos(r.RequisitosReabiertos)
             }),
             ExpedienteAprobado => ("expediente.aprobado", Datos(EstadoExpediente.Aprobado)),
+            ExpedienteCaducado c => ("expediente.caducado", Datos(EstadoExpediente.Caducado) with { Causa = "PlazoDeCargue", PlazoHasta = c.PlazoHasta }),
+            ExpedienteReabierto r => ("expediente.reabierto", Datos(r.EstadoRestituido) with { PlazoHasta = r.PlazoHasta }),
             ExpedienteRechazado r => ("expediente.rechazado", Datos(EstadoExpediente.Rechazado) with
             {
                 Motivos = [.. r.Motivos.Select(m => new MotivoEnEventoDto(m.Codigo, m.TextoAlTercero))],

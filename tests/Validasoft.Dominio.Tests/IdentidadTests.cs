@@ -212,7 +212,7 @@ public class PermisosTests
     private static readonly string[] Lecturas =
     [
         Permisos.ConfiguracionLeer, Permisos.TercerosLeer, Permisos.VinculosLeer, Permisos.FlujosLeer, Permisos.ExpedientesLeer,
-        Permisos.DocumentosLeer, Permisos.DocumentosDescargar, Permisos.CertificadosLeer
+        Permisos.DocumentosLeer, Permisos.DocumentosDescargar, Permisos.CertificadosLeer, Permisos.ConsultasLeer
     ];
 
     [Fact]
@@ -221,8 +221,11 @@ public class PermisosTests
         Permisos.DeRol(Rol.Administrador).ShouldBe(Permisos.DelTenant);
         Permisos.DeRol(Rol.Revisor).ShouldBe([.. Lecturas, Permisos.VinculosEscribir, Permisos.ExpedientesRevisar], ignoreOrder: true);
         Permisos.DeRol(Rol.OficialCumplimiento).ShouldBe(
-            [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.CuentasAprobar, Permisos.ExpedientesRevisar], ignoreOrder: true);
-        Permisos.DeRol(Rol.Auditor).ShouldBe([.. Lecturas, Permisos.AuditoriaLeer], ignoreOrder: true);
+            [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.CuentasAprobar, Permisos.ExpedientesRevisar,
+                Permisos.ExpedientesExportar, Permisos.VerificacionesEscribir, Permisos.CumplimientoDecidir, Permisos.AuditoriaLeer], ignoreOrder: true);
+        Permisos.DeRol(Rol.Auditor).ShouldBe([.. Lecturas, Permisos.AuditoriaLeer, Permisos.AuditoriaExportar, Permisos.ExpedientesExportar], ignoreOrder: true);
+        Permisos.DeRol(Rol.Revisor).ShouldNotContain(Permisos.ExpedientesExportar);
+        Permisos.DeSoporte.ShouldNotContain(Permisos.ExpedientesExportar);
     }
 
     [Fact]
@@ -243,7 +246,7 @@ public class PermisosTests
     [Fact]
     public void El_permiso_efectivo_es_la_interseccion_de_la_llave_y_los_roles()
     {
-        var efectivos = Permisos.ParaUsuario([new(Rol.OficialCumplimiento, null)], [Permisos.VinculosLeer, Permisos.VinculosEscribir, Permisos.AuditoriaLeer], ["*"]);
+        var efectivos = Permisos.ParaUsuario([new(Rol.OficialCumplimiento, null)], [Permisos.VinculosLeer, Permisos.VinculosEscribir, Permisos.FlujosEscribir], ["*"]);
 
         efectivos.DeTenant.ShouldBe([Permisos.VinculosLeer, Permisos.VinculosEscribir], ignoreOrder: true);
         efectivos.Empresas.ShouldBe(["*"]);

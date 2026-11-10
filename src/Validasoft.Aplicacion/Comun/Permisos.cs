@@ -21,6 +21,9 @@ public static class Permisos
     /// <summary>Aprobar o rechazar la cuenta bancaria que designa el tercero (cuatro ojos, CB-2).</summary>
     public const string CuentasAprobar = "cuentas:aprobar";
     public const string AuditoriaLeer = "auditoria:leer";
+
+    /// <summary>Exportar la auditoría a Excel con los filtros de la pantalla (IF-4; docs/07 §3.2: Administrador y Auditor).</summary>
+    public const string AuditoriaExportar = "auditoria:exportar";
     public const string FlujosLeer = "flujos:leer";
     public const string FlujosEscribir = "flujos:escribir";
     public const string ExpedientesLeer = "expedientes:leer";
@@ -30,6 +33,12 @@ public static class Permisos
 
     /// <summary>Abrir, anular, reenviar como integrador, aprobar en nombre de un área y anular veredictos.</summary>
     public const string ExpedientesAdministrar = "expedientes:administrar";
+
+    /// <summary>
+    /// Descargar el expediente completo en ZIP (documentos aceptados, resumen PDF y línea de tiempo, IF-5). Además pide
+    /// <c>documentos:descargar</c>; cada documento incluido queda como <c>DocumentoAccedido</c> y la exportación, en la auditoría.
+    /// </summary>
+    public const string ExpedientesExportar = "expedientes:exportar";
 
     /// <summary>Ver los documentos compartidos con un vínculo de la empresa (versiones, hechos).</summary>
     public const string DocumentosLeer = "documentos:leer";
@@ -46,13 +55,24 @@ public static class Permisos
     /// <summary>Crear y gestionar suscripciones de webhooks y sus entregas (NW-4).</summary>
     public const string WebhooksAdministrar = "webhooks:administrar";
 
+    /// <summary>
+    /// Consulta rápida del estado de certificación de un tercero (<c>GET /consultas/certificacion</c>, H9): la usa Marco al
+    /// pagar o contratar. Solo devuelve el resumen (sin documentos ni datos personales); por eso va aparte de los demás.
+    /// </summary>
+    public const string ConsultasLeer = "consultas:leer";
+    /// <summary>Consultar o reconsultar las listas restrictivas de un expediente (VE-15).</summary>
+    public const string VerificacionesEscribir = "verificaciones:escribir";
+
+    /// <summary>Decidir como Cumplimiento: resolver coincidencias en listas y registrar el estudio SAGRILAFT (VE-15).</summary>
+    public const string CumplimientoDecidir = "cumplimiento:decidir";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
-        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
-        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar
+        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
+        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -71,17 +91,22 @@ public static class Permisos
     public static readonly IReadOnlySet<string> SoloDeTenant =
         new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
 
-    /// <summary>Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol (docs/07 §3.2).</summary>
+    /// <summary>
+    /// Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol, y la consulta
+    /// de certificación la hace cualquiera (docs/07 §3.2, CN-1).
+    /// </summary>
     private static readonly string[] Lecturas =
-        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar, CertificadosLeer];
+        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar, CertificadosLeer, ConsultasLeer];
 
     /// <summary>Mapeo rol → scopes (docs/07 §3.1).</summary>
     public static IReadOnlyList<string> DeRol(Rol rol) => rol switch
     {
         Rol.Administrador => DelTenant,
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
-        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar],
-        Rol.Auditor => [.. Lecturas, AuditoriaLeer],
+        Rol.OficialCumplimiento =>
+            [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, ExpedientesExportar, VerificacionesEscribir,
+                CumplimientoDecidir, AuditoriaLeer],
+        Rol.Auditor => [.. Lecturas, AuditoriaLeer, AuditoriaExportar, ExpedientesExportar],
         _ => []
     };
 

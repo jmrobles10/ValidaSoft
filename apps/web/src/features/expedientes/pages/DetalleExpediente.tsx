@@ -12,7 +12,9 @@ import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAreas } from '../../configuracion/areas/api';
 import { useNombresUsuarios } from '../../configuracion/usuarios/api';
+import { PanelVerificaciones } from '../../cumplimiento/components/PanelVerificaciones';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { BotonExportarExpediente } from '../../informes/BotonExportarExpediente';
 import { useVinculo } from '../../vinculos/api';
 import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
@@ -21,6 +23,7 @@ import { EtapasExpediente } from '../components/EtapasExpediente';
 import { DialogoDecisionArea } from '../components/DialogoDecisionArea';
 import { PanelDecisionArea } from '../components/PanelDecisionArea';
 import { PanelRequisitos } from '../components/PanelRequisitos';
+import { AvisoPlazoCargue } from '../components/PlazoCargue';
 import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
 import { usuariosDelExpediente } from '../requisitos';
 import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
@@ -116,6 +119,7 @@ export function DetalleExpediente() {
             <Button component={RouterLink} to={`/e/${empresa.id}/vinculos/${expediente.vinculoId}`} variant="outlined" startIcon={<Link2 size={16} aria-hidden />}>
               {t('expedientes.verVinculo')}
             </Button>
+            <BotonExportarExpediente empresaId={empresa.id} expedienteId={expediente.id} />
             {acciones.includes('reenviar') && (
               <Button variant="contained" startIcon={<Send size={16} aria-hidden />} onClick={() => setDialogo({ tipo: 'reenviar' })}>
                 {t('expedientes.acciones.reenviar')}
@@ -159,6 +163,17 @@ export function DetalleExpediente() {
           {frenadas.length > 0 && ` ${t('expedientes.avisos.frenadas', { areas: frenadas.map((a) => a.nombre).join(', ') })}`}
         </Alert>
       )}
+      {expediente.esperandoVerificaciones && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.esperandoVerificacionesTitulo')}</AlertTitle>
+          {t('expedientes.avisos.esperandoVerificaciones', {
+            verificaciones: (expediente.verificaciones ?? [])
+              .filter((v) => v.bloqueante && v.estado !== 'Satisfecha')
+              .map((v) => `${t(`cumplimiento.tipos.${v.tipo}`)} (${t(`cumplimiento.estados.${v.estado}`).toLowerCase()})`)
+              .join(', '),
+          })}
+        </Alert>
+      )}
       {expediente.estado === 'Aprobado' && (
         <Alert severity="success" sx={{ mb: 2 }}>
           <AlertTitle>{t('expedientes.avisos.aprobadoTitulo')}</AlertTitle>
@@ -180,10 +195,13 @@ export function DetalleExpediente() {
         </Alert>
       )}
 
+      <AvisoPlazoCargue expediente={expediente} empresaId={empresa.id} scopes={permisos.scopes} />
+
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <PanelDecisionArea expediente={expediente} contexto={contexto} onAccion={setDialogo} />
           <PanelRequisitos expediente={expediente} contexto={contexto} nombres={nombres} onAccion={setDialogo} />
+          <PanelVerificaciones expediente={expediente} empresaId={empresa.id} scopes={permisos.scopes} nombres={nombres} />
           <EtapasExpediente expediente={expediente} contexto={contexto} nombres={nombres} motivos={nombresMotivos} onAccion={setDialogo} />
           <UltimaRespuesta expediente={expediente} />
           <DatosExpediente expediente={expediente} />

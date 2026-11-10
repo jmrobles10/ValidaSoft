@@ -99,7 +99,10 @@ public enum ResultadoExpediente
 {
     Aprobado,
     Rechazado,
-    Anulado
+    Anulado,
+
+    /// <summary>Venció el plazo de cargue (LT-2); el vínculo vuelve a <c>Invitado</c> y la empresa puede reabrir el expediente.</summary>
+    Caducado
 }
 
 /// <summary>
@@ -108,7 +111,7 @@ public enum ResultadoExpediente
 /// </summary>
 public sealed record ExpedienteVinculado(Guid ExpedienteId, TipoExpediente Tipo, string Folio, DateTimeOffset Fecha);
 
-/// <summary>El expediente abierto terminó; con <c>Rechazado</c> o <c>Anulado</c> un vínculo en validación vuelve a <c>Invitado</c>.</summary>
+/// <summary>El expediente abierto terminó; con <c>Rechazado</c>, <c>Anulado</c> o <c>Caducado</c> un vínculo en validación vuelve a <c>Invitado</c>.</summary>
 public sealed record ExpedienteCerrado(Guid ExpedienteId, ResultadoExpediente Resultado, DateTimeOffset Fecha);
 
 /// <summary>Expediente aprobado: el vínculo queda <c>Activo</c> y con aprobación previa (habilita renovaciones).</summary>

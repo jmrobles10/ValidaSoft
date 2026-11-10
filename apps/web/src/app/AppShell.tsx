@@ -15,7 +15,7 @@ import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
 interface Pestana {
-  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'certificados' | 'vinculos' | 'auditoria' | 'configuracion';
+  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'cumplimiento' | 'certificados' | 'vinculos' | 'informes' | 'auditoria' | 'configuracion';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
@@ -49,8 +49,14 @@ export function AppShell() {
     pestanas.push({ clave: 'revalidaciones', ruta: 'revalidaciones', prefijos: ['revalidaciones'] });
   }
   if (permisos.puede(SCOPES.documentosLeer)) pestanas.push({ clave: 'vencimientos', ruta: 'vencimientos', prefijos: ['vencimientos'] });
+  // La pantalla del oficial: quien consulta listas o decide como Cumplimiento (H7).
+  if (permisos.puede(SCOPES.cumplimientoDecidir) || permisos.puede(SCOPES.verificacionesEscribir)) {
+    pestanas.push({ clave: 'cumplimiento', ruta: 'cumplimiento', prefijos: ['cumplimiento'] });
+  }
   if (permisos.puede(SCOPES.certificadosLeer)) pestanas.push({ clave: 'certificados', ruta: 'certificados', prefijos: ['certificados'] });
-  if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros'] });
+  if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros', 'invitaciones'] });
+  if (permisos.puede(SCOPES.expedientesLeer) || permisos.puede(SCOPES.vinculosLeer))
+    pestanas.push({ clave: 'informes', ruta: permisos.puede(SCOPES.expedientesLeer) ? 'informes/estado-expedientes' : 'informes/vinculos', prefijos: ['informes'] });
   if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });
   const primera = configuracion[0];
   if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });
@@ -60,7 +66,8 @@ export function AppShell() {
   // Al cambiar de empresa se conserva la sección, no el recurso (el expediente o flujo es de la otra empresa).
   const primerSegmento = relativa.split('/')[0] ?? '';
   // La ficha del tercero cuelga de Vínculos (no hay lista de terceros).
-  const seccionActual = primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento || 'vinculos';
+  const seccionActual =
+    primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento === 'invitaciones' ? 'invitaciones/lotes' : primerSegmento || 'vinculos';
 
   return (
     <Box

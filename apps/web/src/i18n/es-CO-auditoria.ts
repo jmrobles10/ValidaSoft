@@ -34,6 +34,8 @@ export const auditoria = {
     AccesoSoporte: 'Acceso de soporte',
     Documento: 'Documento',
     Certificado: 'Certificado',
+    Expediente: 'Expediente',
+    Exportacion: 'Informe exportado',
   },
   acciones: {
     Creado: 'Creado',
@@ -44,6 +46,7 @@ export const auditoria = {
     Rotado: 'Rotado',
     Revocado: 'Revocado',
     Descargado: 'Descargado',
+    Exportado: 'Exportado',
   },
   actores: {
     Usuario: 'Usuario',

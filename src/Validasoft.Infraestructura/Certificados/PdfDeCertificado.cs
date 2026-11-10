@@ -51,12 +51,23 @@ public sealed class GeneradorPdfDeCertificados : IGeneradorDePdfDeCertificados
         foreach (var a in c.Areas)
             y = Fila(pdf, y, false, (a.Area, 250), (Origen(a.Origen), 130), (a.Fecha.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Invariante), 119));
 
+        if (c.Verificaciones.Count > 0)
+        {
+            y = Seccion(pdf, y - 6, "Verificaciones de cumplimiento");
+            y = Fila(pdf, y, true, ("Verificación", 200), ("Proveedor", 130), ("Resultado", 90), ("Fecha (UTC)", 79));
+            foreach (var v in c.Verificaciones)
+                y = Fila(pdf, y, false, (v.Tipo == "EstudioDeCumplimiento" ? "Estudio de cumplimiento" : "Listas restrictivas", 200), (v.Proveedor, 130),
+                    (v.Resultado switch { "SinCoincidencias" => "Sin coincidencias", "Coincidencias" => "Coincidencias descartadas", "Aprobado" => "Favorable", _ => v.Resultado }, 90),
+                    (v.Fecha.UtcDateTime.ToString("yyyy-MM-dd", Invariante), 79));
+        }
+
         y -= 10;
         y = Nota(pdf, y, "La validez de este certificado se consulta en línea: su estado puede cambiar después de emitido (suspensión, " +
                          "revocación, vencimiento o reemplazo por una emisión nueva). No incluye contactos ni la identidad de quienes revisaron.");
         _ = y;
 
-        return pdf.Construir(datos, (lienzo, numeracion) => Pie(lienzo, numeracion, datos));
+        return pdf.Construir($"Certificado {datos.Folio}", $"SHA-256 {datos.HashContenido}", datos.Contenido.EmitidoEn,
+            (lienzo, numeracion) => Pie(lienzo, numeracion, datos));
     }
 
     private static double Encabezado(LienzoPdf pdf, ContenidoDeCertificado c, DatosDelPdf datos)
@@ -289,7 +300,16 @@ internal sealed class LienzoPdf
     private readonly List<StringBuilder> _paginas = [];
     private int _actual;
 
-    public LienzoPdf() => NuevaPagina();
+    private readonly double _ancho;
+    private readonly double _alto;
+
+    /// <summary>A4 vertical por defecto; con las medidas al revés, horizontal (los informes anchos, IF-1).</summary>
+    public LienzoPdf(double ancho = 595.28, double alto = 841.89)
+    {
+        _ancho = ancho;
+        _alto = alto;
+        NuevaPagina();
+    }
 
     private StringBuilder Actual => _paginas[_actual];
 
@@ -345,8 +365,12 @@ internal sealed class LienzoPdf
         Actual.Append("f Q\n");
     }
 
+    /// <summary>Arma el archivo del certificado (título con el folio, asunto con el hash).</summary>
+    public byte[] Construir(DatosDelPdf datos, Action<LienzoPdf, (int, int)> pie) =>
+        Construir($"Certificado {datos.Folio}", $"SHA-256 {datos.HashContenido}", datos.Contenido.EmitidoEn, pie);
+
     /// <summary>Arma el archivo: catálogo, páginas, fuentes, información y tabla de referencias cruzadas.</summary>
-    public byte[] Construir(DatosDelPdf datos, Action<LienzoPdf, (int, int)> pie)
+    public byte[] Construir(string titulo, string asunto, DateTimeOffset fecha, Action<LienzoPdf, (int, int)> pie)
     {
         // El pie (con «página n de m») se escribe al final, cuando ya se sabe cuántas páginas hay.
         var total = _paginas.Count;
@@ -361,8 +385,8 @@ internal sealed class LienzoPdf
             Fuente1("Helvetica-Bold"),
             Fuente1("Courier"),
             Fuente1("Courier-Bold"),
-            $"<< /Title ({Cadena($"Certificado {datos.Folio}")}) /Subject ({Cadena($"SHA-256 {datos.HashContenido}")}) " +
-            $"/Creator (Validasoft) /Producer (Validasoft) /CreationDate ({Fecha(datos.Contenido.EmitidoEn)}) >>"
+            $"<< /Title ({Cadena(titulo)}) /Subject ({Cadena(asunto)}) " +
+            $"/Creator (Validasoft) /Producer (Validasoft) /CreationDate ({Fecha(fecha)}) >>"
         };
 
         var hijos = new List<string>();
@@ -371,7 +395,7 @@ internal sealed class LienzoPdf
             var contenido = pagina.ToString();
             objetos.Add($"<< /Length {Encoding.ASCII.GetByteCount(contenido)} >>\nstream\n{contenido}endstream");
             var contenidoId = objetos.Count;
-            objetos.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents {contenidoId} 0 R " +
+            objetos.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {N(_ancho)} {N(_alto)}] /Contents {contenidoId} 0 R " +
                         "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> >>");
             hijos.Add($"{objetos.Count} 0 R");
         }

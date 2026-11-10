@@ -735,6 +735,23 @@ Hacia atrás: `RequisitoDto.sugerenciaAutomatica` (H4) y `RevalidacionDto.sugere
 | DTO | `EstudioCumplimientoDto`, `InformeCumplimientoDto`, `KpisDto` ampliado | 05 §4 |
 | Evento / regla | `CambioDeRelacionDetectado` → `RelacionConfirmada` → `VerificacionesDeRepresentanteExpiradas` (I-10); UBO/PEP como personas relacionadas (I-20); reglas 2 y 4 del motor (#29); `accionAlAgotar` en `PlanDto` (I-23); H9 depende de H7 (B-8) | 03 §4.5, 04 §7.5, 05 §4, 09 |
 
+#### H7 — Estado de implementación: verificaciones externas y cumplimiento (2026-11-10, VE-5…VE-18)
+
+Implementado lo que da la paridad con el SRM (listas restrictivas con evidencia y estudio del Oficial de Cumplimiento); la revisión automática con IA (motor de decisión, `ColaDeExcepciones`, `PresupuestoIa`, revisión humana) sigue pendiente. Diferencias con las tablas de arriba:
+
+| Tipo | Implementado | Decisión |
+|---|---|---|
+| Eventos (`Expediente`) | `VerificacionesRequeridas`, `VerificacionExternaRegistrada` (listas), `CoincidenciaResuelta(VigenteHasta = +12 m)`, `EstudioDeCumplimientoRegistrado`, `VerificacionExpirada`, `ConsultaDeVerificacionFallida`, `EvidenciaDeVerificacionDescargada`; cierre bloqueado por verificaciones bloqueantes (`esperandoVerificaciones`) | VE-5, VE-9, VE-10, VE-16 |
+| Documentos | `ListasRestrictivasEmpresa` (proveedor y credenciales cifradas por empresa), `UsoMensualListas` (consumo por empresa, proveedor y mes), `MonitoreoDeListas` (vínculo activo) | VE-7, VE-11, VE-12 |
+| Adaptadores | `IVerificadorDeListas`: Infolaft (principal de Sinco), Stradata, Compliance (apagados por omisión) y Simulado (desarrollo y pruebas); `ControlDeProveedores` (concurrencia, timeout, cortacircuito) | VE-7, VE-8 |
+| Endpoints | `POST /expedientes/{id}/verificaciones/{tipo}/consultar` (`verificaciones:escribir`), `POST …/{tipo}/coincidencias/{cid}/resolver` y `POST …/verificaciones/estudio-cumplimiento` (`cumplimiento:decidir`), `POST …/{tipo}/evidencia/descarga`, `GET /cumplimiento/bandeja`, `GET /vinculos/{id}/monitoreo-listas` (+ resolver y evidencia), `GET/PUT /configuracion/listas-restrictivas`, `GET /informes/cumplimiento` y `/excel` | VE-6…VE-15 |
+| Eventos públicos | `expediente.verificacion_registrada`, `expediente.coincidencia_resuelta`, `expediente.verificacion_expirada` (nuevo) | VE-13 |
+| Avisos | `verificacion.coincidencia`, `verificacion.estudio_pendiente` (campana y correo), `verificacion.expirada` (campana), a los oficiales de cumplimiento | VE-13 |
+| Pantallas | Panel «Verificaciones» en `web:/expedientes/:id`; `web:/cumplimiento` (bandeja e informe SAGRILAFT) en vez de `/informes/cumplimiento`; `web:/listas-restrictivas` en Configuración; verificaciones en el editor de flujos | VE-18 |
+| Configuración | `Validasoft:Verificadores:{SegundosProceso, ListasRestrictivas:{PermitirSimulado, ProveedorPorDefecto, DiasMonitoreo, MinutosReintento, Proveedores:{Nombre}:{Habilitado, UrlBase, TimeoutSegundos, MaximoConcurrencia, FallosParaAbrir, SegundosAbierto}}, EstudioCumplimiento:VigenciaDias}` | VE-7, VE-8, VE-16 |
+| Pruebas | Dominio: `VerificacionesTests` (bloqueo, coincidencias, herencia, estudio, vigencias, monitoreo, credenciales, consumo, lector de Infolaft). Integración: `ExpedientesApiTests.Verificaciones` (bloqueo del cierre con estudio pendiente, coincidencia de un representante de la ficha descartada, estudio vencido que vuelve a pedirse, configuración de Infolaft con clave de solo escritura, consumo e informe). E2E: `pruebas/verificaciones.spec.ts` (con coincidencia y sin ella) | — |
+| Pendiente | `ExpirarVerificacionesDeRepresentante` (cambio de representante, ADR-0010), `EvidenciaManual` (subir el PDF de una consulta hecha fuera), evidencias del estudio como archivos propios, `MatrizRiesgoDto` (H8), credenciales por tenant cifradas con la clave por tenant de docs/07 §5 (hoy la de la instalación), correo de resultado al tercero cuando el cierre lo provoca el procesador, rechazo directo por el oficial (hoy lo hace un área con `puedeRechazarExpediente`) | — |
+
 ### H8 — Operación masiva, informes y administración
 
 #### 2.8.1 Entidades y eventos
@@ -828,7 +845,33 @@ Hacia atrás: `RequisitoDto.sugerenciaAutomatica` (H4) y `RevalidacionDto.sugere
 #### 2.8.11 Efectos
 Hacia atrás: H5 plantillas pasan de cabecera/pie a Liquid; H1 `UsoTenant` recibe límites; H6 `VencimientoProgramado` recibe campañas. Hacia adelante: H10 reutiliza la mecánica de lotes para la importación.
 
+#### 2.8.12 Implementado (2026-11-10): invitación masiva y caducidad por plazo de cargue (LT-1…LT-10)
+Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. Lo demás de H8 sigue planificado.
+
+| Tipo | Elemento |
+|---|---|
+| Endpoints | `GET /invitaciones/lotes/plantilla?formato=`, `POST /invitaciones/lotes/vista-previa`, `POST /invitaciones/lotes` (202), `GET /invitaciones/lotes`, `GET /invitaciones/lotes/{id}`, `GET /invitaciones/lotes/{id}/filas?estado=&cursor=`, `POST /invitaciones/lotes/{id}/pausar` · `/reanudar` · `/cancelar` · `/reintentar`, `GET /invitaciones/lotes/{id}/informe` (Excel); `POST /expedientes/{id}/reabrir`; `POST /plataforma/plazos-de-cargue/revisar`. Permisos: `vinculos:escribir`/`vinculos:leer`, `expedientes:administrar`, Plataforma (LT-10) |
+| DTOs | `ArchivoDeLoteDto`, `FilaDeLoteEntradaDto`, `CrearLoteDto` (archivo **o** filas, `vigenciaHoras`), `VistaPreviaLoteDto`/`FilaVistaPreviaDto`, `LoteDto` (`estado: Procesando\|Pausado\|Completado\|CompletadoConErrores\|Cancelado`), `TotalesLoteDto`, `FilaLoteDto` (`estado: Pendiente\|Exitosa\|Fallida\|Duplicada\|Invalida\|Cancelada`), `ErrorDeFilaDto`, `DatosLoteTerminadoDto`; `PlazoCargueDto` en flujos, `PlazoCargueExpedienteDto` en `ExpedienteDto.plazoCargue`, `ExpedientePublicoDto.plazoCargueHasta`, `ReabrirExpedienteDto`, `RevisarPlazosDto`/`ResultadoRevisionPlazosDto` |
+| Eventos de dominio | Lote: `LoteDeInvitacionCreado`, `AvanceDeLoteRegistrado`, `LotePausado`, `LoteReanudado`, `LoteCancelado`, `FilasFallidasReintentadas`, `LoteTerminado`. Expediente: `RecordatorioDeCargueEnviado`, `ExpedienteCaducado`, `ExpedienteReabierto`; `FlujoSeleccionado.PlazoCargue`; vínculo: `ExpedienteCerrado(Caducado)` |
+| Eventos públicos | `invitaciones.lote_terminado`, `expediente.caducado`, `expediente.reabierto` (con `plazoHasta`) |
+| Notificaciones | Campana a las áreas: `expediente.caducado`; campana y correo a quien creó el lote: `invitaciones.lote_terminado`; correos al tercero con la plantilla nueva `caducidad` (recordatorio, caducado, reabierto con enlace) |
+| Jobs y colas | Cola durable secuencial `lotes` (`ProcesarTandaDeLote`); cola durable `plazos` (`RevisarPlazosDeCargue`, `RevisarPlazoDeCargue`) disparada por `ProgramadorDePlazosDeCargue` |
+| Configuración | `Validasoft:Lotes:MaxFilas` (10 000), `Validasoft:Lotes:TamanoTanda` (100), `Validasoft:PlazosDeCargue:Intervalo` (01:00:00; 00:00:00 lo apaga) |
+| Pantallas | `web:/e/{empresa}/invitaciones/lotes`, `…/nuevo`, `…/{id}` (desde «Invitar por lote» en Vínculos); aviso de plazo y «Reabrir expediente» en el detalle del expediente; plazo de cargue en el editor de flujos; `public:` «Tienes hasta el …» en la revisión |
+| Pruebas | Dominio (`PlazoDeCargueTests`, `LoteDeInvitacionTests`), integración (`RequisitosApiTests.Lotes`, `RequisitosApiTests.Caducidad`), web (`features/lotes`), e2e (`e2e/pruebas/lotes.spec.ts`) |
+| Pendiente | Atributos del vínculo por columna en el archivo; lote programado (`programarPara`); `Lotes:ConcurrenciaCorreos`; caducidad de renovaciones; proyección `VencimientoProgramado` (el barrido usa el índice del expediente) |
+
 ---
+
+#### H8 — Implementado: informes y exportaciones (IF, 2026-11-10)
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint | `GET /informes/estado-expedientes` (+ `/excel`, `/pdf`), `GET /informes/vinculos` (+ `/excel`), `GET /auditoria/excel`, `GET /expedientes/{id}/exportar` (ZIP). Exportes síncronos (IF-3): el `POST …/exportar` 202 de la tabla 2.8.2 queda para volúmenes mayores | 05 §2.7; registro IF-1…IF-6 |
+| Dominio | `Expediente.MedirTiempos`: días en carga, con el tercero, en revisión y por área (rondas, SLA) sobre los eventos; sin evento `ExpedienteExportado` (la exportación se registra en `ExportacionRegistrada`, IF-5/IF-6) | registro IF-2, IF-5 |
+| DTO | `InformeEstadoExpedientesDto`, `ResumenEstadoExpedientesDto`, `FilaEstadoExpedienteDto`, `TiempoDeAreaDto`, `ResumenDeAreaDto`, `InformeVinculosDto`, `FilaInformeVinculoDto`, `CertificadoDelInformeDto`, `ExpedienteDelInformeDto`, `DocumentosDelInformeDto`, `ConteoDto` | `Validasoft.Contratos/Informes.cs` |
+| Permiso | `auditoria:exportar` (Administrador, Auditor), `expedientes:exportar` (Administrador, Oficial de cumplimiento, Auditor) | 07 §3.2 |
+| Pantalla | `web:/informes/estado-expedientes` y `/informes/vinculos` (pestaña Informes); «Exportar a Excel» en `/auditoria`; «Exportar expediente» en `/expedientes/:id`; Inicio enlaza al informe con la misma ventana (IF-7) | 06 §3.1 |
+| Pendiente | Exportación asíncrona con `exportacion.lista`, ZIP firmado de auditoría, índice firmado del expediente, proyección `InformeEstadoExpedientes` | registro IF-8 |
 
 #### H8 — Cierre de huecos (2026-10-28)
 | Tipo | Elemento | Definido en |
@@ -912,6 +955,18 @@ Hacia atrás: política de deprecación de 12 meses sobre v1 (H5). Hacia adelant
 | Tabla | `adp_cs.validasoft_certificacion_local` en Marco (columnas, eventos que la alimentan, dedupe por `ocurridoEn`, reconciliador nocturno del 5 %, degradación con `fuenteRespaldo: true` y `antiguedadSegundos`; > 24 h exige confirmación humana para pagos) | 08 §5 |
 | Endpoint | `POST /documentos` habilitado para integraciones con `documentos:escribir` (decisión abierta 3 de este documento, cerrada) | 05 §2.5 |
 | Dependencia / paquete | H9 depende de H6 **y de H7** (B-8); `Validasoft.Sdk` multi-target `net7.0;net8.0;net10.0` (T-16); flag y corte por empresa (T-18); nombres de eventos de 08 alineados con 05 §7 (#3) | 09, 08 §3–§5 |
+
+#### H9 — Estado de implementación (2026-11-10, CN-1…CN-7)
+| Elemento | Estado | Dónde |
+|---|---|---|
+| `GET /consultas/certificacion` (`consultas:leer`, ETag/304, `private, max-age=300`) | Hecho, sin proyección: consulta indexada (CN-1); `motivoBloqueo` con `Revocado` (CN-2) | `Aplicacion/Integracion/ConsultaCertificacionEndpoints.cs`; 05 §2.6.2 |
+| `GET /eventos` (pull) | Ya existía (NW-1); se agrega `empresaId` (CN-4) | `Notificaciones/EventosEndpoints.cs` |
+| Rotación de API keys con solapamiento | Hecho: `POST /api-keys/{id}/rotar` y botón «Rotar» en Configuración › API keys (CN-3) | `ConfiguracionEndpoints.cs`, `apps/web/.../apiKeys/DialogoRotarApiKey.tsx` |
+| `Validasoft.Sdk` + `Validasoft.Contratos` multi-target `net7.0;net8.0;net10.0` | Hecho, sin dependencias (CN-5) | `src/Validasoft.Sdk`, `tests/Validasoft.Sdk.Tests` |
+| `@validasoft/sdk` | Hecho, fetch + Web Crypto (CN-6) | `packages/sdk` |
+| Guía de integración y ejemplo ejecutable | Hecho (CN-7) | 08 §2.1, `docs/ejemplos/IntegradorSrm` (`net7.0`) |
+| Pruebas | Unitarias del SDK (.NET y TS), integración con el SDK contra la API en memoria y e2e de consulta, pull + webhook y rotación | `IntegracionSdkApiTests.cs`, `e2e/pruebas/integracion.spec.ts` |
+| Pendiente | Sandbox con datos aislados, `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección `EstadoCertificacionTercero` + k6 (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), publicación de paquetes | — |
 
 ### H10 — Importador y piloto de migración
 
@@ -1014,7 +1069,7 @@ Cierra la coexistencia; `legacy.estadoTercero` desaparece del catálogo cuando n
 | Vínculos y expedientes | `/vinculos*` (sin cuenta designada), `/expedientes*` (sin `ratificar`, `verificaciones`, `exportar`), `/expedientes/{id}/areas/{areaId}/rechazar` (B-7), `/expedientes/{id}/cambiar-flujo`, `/flujos/{id}/versiones/{n}/aplicar-a-abiertos`, `/mis-pendientes`, `/terceros/{id}/ficha`, `/novedades*`, `/public/v1/expedientes/{id}`, `/public/v1/invitaciones/{expedienteId}/aceptar` (ADR-0009), `/public/v1/autorregistro` (T-13), `/public/v1/vinculos`, SSE | H4 | Planificado |
 | Certificados, webhooks, notificaciones | `/certificados*`, `/public/v1/verificar/{folio}`, `/public/v1/certificados/{folio}`, `/consultas/certificacion` (MVP), `/webhooks*`, `/eventos`, `/notificaciones*`, `/plantillas-notificacion*` (cabecera/pie), `/usuarios/me/preferencias-notificacion`, `/sesiones-tercero` | H5 | Planificado |
 | Vigencias y revalidación | `/revalidaciones`, `/expedientes/{id}/requisitos/{rid}/ratificar`, `/vencimientos*`, `/vencimientos/proximos`, `/terceros/{id}/frescura`, `/public/v1/frescura`, `/vinculos/{id}/cuenta-designada*`, `/public/v1/vinculos/{id}/cuenta-designada`, `/public/v1/boveda/cuentas-bancarias` POST | H6 | Planificado |
-| Verificaciones y revisión automática | `/expedientes/{id}/verificaciones*`, `/excepciones*`, `/public/v1/expedientes/{id}/requisitos/{rid}/revision-humana`, `/tenant/revision-automatica`, `/kpis` (completo), `/informes/cumplimiento*` | H7 | Planificado |
+| Verificaciones y revisión automática | `/expedientes/{id}/verificaciones*`, `/excepciones*`, `/public/v1/expedientes/{id}/requisitos/{rid}/revision-humana`, `/tenant/revision-automatica`, `/kpis` (completo), `/informes/cumplimiento*` | H7 | Parcial: verificaciones, `/cumplimiento/bandeja`, `/configuracion/listas-restrictivas` e `/informes/cumplimiento*` implementados (VE-5…VE-18); excepciones, revisión humana, revisión automática y KPIs planificados |
 | Operación masiva y administración | `/invitaciones/lotes*`, `/campanias*`, `/usuarios/{id}/delegaciones*`, `/expedientes/{id}/exportar`, `/exportaciones/{id}`, `/public/v1/boveda/exportar`, `/public/v1/exportaciones/{id}`, `/public/v1/solicitudes-supresion*`, `/solicitudes-supresion*`, `/auditoria/exportar`, `/auditoria/exportaciones/{id}`, `/plantillas-notificacion*` (Liquid), `/tenant/plan`, `/tenant/uso`, `/empresas/{id}/dominio-correo*`, `/informes/estado-expedientes*`, `/tenant/matriz-riesgo` | H8 | Planificado |
 | Integración | `/api-keys` (sandbox), `POST /documentos` (integraciones con `documentos:escribir`), receptor SRM, tabla `validasoft_certificacion_local` en Marco | H9 | Planificado |
 | Importación | `/importacion/*` (incl. `/importacion/relaciones`), `/importacion/lotes/{id}*`, `/importacion/binarios` (registro, no carga) | H10 | Planificado |

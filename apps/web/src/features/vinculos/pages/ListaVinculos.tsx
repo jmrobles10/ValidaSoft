@@ -13,7 +13,7 @@ import {
   usePaginacionCursor,
   type ColumnaTabla,
 } from '@validasoft/ui';
-import { Search } from 'lucide-react';
+import { FileUp, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -134,7 +134,17 @@ export function ListaVinculos() {
 
   return (
     <>
-      <EncabezadoPagina titulo={t('vinculos.titulo')} subtitulo={t('vinculos.subtitulo', { empresa: empresa.nombre })} />
+      <EncabezadoPagina
+        titulo={t('vinculos.titulo')}
+        subtitulo={t('vinculos.subtitulo', { empresa: empresa.nombre })}
+        acciones={
+          permisos.puede(SCOPES.vinculosEscribir) && (
+            <Button variant="outlined" startIcon={<FileUp size={16} aria-hidden />} onClick={() => void navegar(`/e/${empresa.id}/invitaciones/lotes`)}>
+              {t('lotes.irALotes')}
+            </Button>
+          )
+        }
+      />
 
       <BarraFiltros>
         <CampoBusqueda

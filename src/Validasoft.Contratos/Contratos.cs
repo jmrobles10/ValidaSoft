@@ -76,9 +76,21 @@ public sealed record CrearApiKeyDto(
     string Nombre, IReadOnlyList<string> Scopes, IReadOnlyList<string>? Empresas, DateTimeOffset? ExpiraEn, bool Sandbox = false,
     Guid? SistemaId = null);
 
+/// <summary>
+/// <see cref="Valor"/>: la clave completa, solo en la respuesta de crear o rotar. <see cref="RotadaDe"/>: la llave que esta
+/// reemplazó; <see cref="ReemplazadaPor"/>: la que la reemplaza (la rotada sigue valiendo hasta <see cref="ExpiraEn"/>, CN-3).
+/// </summary>
 public sealed record ApiKeyDto(
     Guid Id, string Prefijo, string Nombre, IReadOnlyList<string> Scopes, IReadOnlyList<string> Empresas,
-    DateTimeOffset? ExpiraEn, DateTimeOffset CreadaEn, bool Sandbox, string? Valor, Guid? SistemaId = null);
+    DateTimeOffset? ExpiraEn, DateTimeOffset CreadaEn, bool Sandbox, string? Valor, Guid? SistemaId = null,
+    Guid? RotadaDe = null, Guid? ReemplazadaPor = null);
+
+/// <summary>
+/// Rotación con solapamiento (<c>POST /api-keys/{id}/rotar</c>, CN-3): la llave nueva copia nombre, permisos, alcance,
+/// sistema, sandbox y expiración; la anterior sigue valiendo hasta <see cref="AnteriorValidaHasta"/> (nulo = 24 horas;
+/// ahora = corte inmediato; como mucho 30 días y nunca más allá de su propia expiración).
+/// </summary>
+public sealed record RotarApiKeyDto(DateTimeOffset? AnteriorValidaHasta = null);
 
 // ---------- Sistemas integrados, usuarios y sesiones (ADR-0011) ----------
 

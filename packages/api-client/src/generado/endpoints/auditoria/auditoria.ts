@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ExportarAuditoriaParams,
+  IResult,
   ListarAuditoriaParams,
   PaginaDtoOfRegistroAuditoriaDto
 } from '../../modelos';
@@ -126,6 +128,92 @@ export function useListarAuditoria<TData = Awaited<ReturnType<typeof listarAudit
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListarAuditoriaQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const exportarAuditoria = (
+    params?: ExportarAuditoriaParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<IResult>(
+      {url: `/api/v1/auditoria/excel`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getExportarAuditoriaQueryKey = (params?: ExportarAuditoriaParams,) => {
+    return [
+    `/api/v1/auditoria/excel`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportarAuditoriaQueryOptions = <TData = Awaited<ReturnType<typeof exportarAuditoria>>, TError = ErrorType<void>>(params?: ExportarAuditoriaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportarAuditoriaQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportarAuditoria>>> = ({ signal }) => exportarAuditoria(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportarAuditoriaQueryResult = NonNullable<Awaited<ReturnType<typeof exportarAuditoria>>>
+export type ExportarAuditoriaQueryError = ErrorType<void>
+
+
+export function useExportarAuditoria<TData = Awaited<ReturnType<typeof exportarAuditoria>>, TError = ErrorType<void>>(
+ params: undefined |  ExportarAuditoriaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportarAuditoria>>,
+          TError,
+          Awaited<ReturnType<typeof exportarAuditoria>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportarAuditoria<TData = Awaited<ReturnType<typeof exportarAuditoria>>, TError = ErrorType<void>>(
+ params?: ExportarAuditoriaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportarAuditoria>>,
+          TError,
+          Awaited<ReturnType<typeof exportarAuditoria>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportarAuditoria<TData = Awaited<ReturnType<typeof exportarAuditoria>>, TError = ErrorType<void>>(
+ params?: ExportarAuditoriaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportarAuditoria<TData = Awaited<ReturnType<typeof exportarAuditoria>>, TError = ErrorType<void>>(
+ params?: ExportarAuditoriaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportarAuditoria>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportarAuditoriaQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -1,7 +1,7 @@
 import { Box, Button, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { SCOPES, type ApiKeyDto } from '@validasoft/api-client';
-import { EstadoVacio, FilasEsqueleto, formatearFecha, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
-import { Ban, CalendarX, KeyRound, Plus } from 'lucide-react';
+import { EstadoVacio, FilasEsqueleto, formatearFecha, formatearFechaHora, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
+import { Ban, CalendarX, KeyRound, Plus, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DialogoConfirmacion, EncabezadoPagina, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
@@ -13,7 +13,8 @@ import { EstadoActivo } from '../EstadoActivo';
 import { useApiKeys, useRevocarApiKey, useSistemas } from './api';
 import { DialogoApiKey } from './DialogoApiKey';
 import { DialogoClaveCreada } from './DialogoClaveCreada';
-import { claveVisible, estadoApiKey, textoAlcance } from './modelo';
+import { DialogoRotarApiKey } from './DialogoRotarApiKey';
+import { claveVisible, estadoApiKey, sePuedeRotar, textoAlcance } from './modelo';
 import { ResumenPermisos } from './ResumenApiKey';
 
 const COLUMNAS = 8;
@@ -30,8 +31,9 @@ export function PaginaApiKeys() {
   const revocar = useRevocarApiKey();
   const mostrar = useAvisos((s) => s.mostrar);
   const [creando, setCreando] = useState<string | null>(null);
-  const [creada, setCreada] = useState<{ llave: ApiKeyDto; valor: string } | null>(null);
+  const [creada, setCreada] = useState<{ llave: ApiKeyDto; valor: string; anteriorHasta?: string } | null>(null);
   const [porRevocar, setPorRevocar] = useState<ApiKeyDto | null>(null);
+  const [porRotar, setPorRotar] = useState<ApiKeyDto | null>(null);
 
   if (!puede) return <SinPermiso seccion={t('nav.api-keys')} />;
 
@@ -74,7 +76,7 @@ export function PaginaApiKeys() {
                 <TableCell sx={{ width: 90 }}>{t('apiKeys.columnas.sistema')}</TableCell>
                 <TableCell sx={{ width: 110 }}>{t('apiKeys.columnas.expira')}</TableCell>
                 <TableCell sx={{ width: 100 }}>{t('apiKeys.columnas.estado')}</TableCell>
-                <TableCell sx={{ width: 96 }}>
+                <TableCell sx={{ width: 160 }}>
                   <Box component="span" sx={visualmenteOculto}>
                     {t('comun.acciones')}
                   </Box>
@@ -115,12 +117,28 @@ export function PaginaApiKeys() {
                       <Typography variant="monoTabla">{nombreSistema(k.sistemaId)}</Typography>
                     </TableCell>
                     <TableCell>
-                      {k.expiraEn ? <Typography variant="monoTabla">{formatearFecha(k.expiraEn)}</Typography> : <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('apiKeys.noExpira')}</Typography>}
+                      {/* Una llave rotada vale hasta una hora concreta (fin del solapamiento): se muestra con la hora. */}
+                      {k.expiraEn ? (
+                        <Typography variant="monoTabla">{k.reemplazadaPor ? formatearFechaHora(k.expiraEn) : formatearFecha(k.expiraEn)}</Typography>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          {t('apiKeys.noExpira')}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <EstadoActivo activo={estado === 'vigente'} texto={t(`apiKeys.estados.${estado}`)} icono={estado === 'vencida' ? CalendarX : undefined} />
+                      <EstadoActivo
+                        activo={estado !== 'vencida'}
+                        texto={t(`apiKeys.estados.${estado}`)}
+                        icono={estado === 'vencida' ? CalendarX : estado === 'reemplazada' ? RefreshCw : undefined}
+                      />
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                      {sePuedeRotar(k, ahora) && (
+                        <Button variant="text" size="small" onClick={() => setPorRotar(k)} aria-label={t('apiKeys.rotarA', { nombre: k.nombre })}>
+                          {t('apiKeys.rotar')}
+                        </Button>
+                      )}
                       <Button variant="text" size="small" onClick={() => setPorRevocar(k)} aria-label={t('apiKeys.revocarA', { nombre: k.nombre })} sx={{ color: 'estado.error.texto' }}>
                         {t('apiKeys.revocar')}
                       </Button>
@@ -146,7 +164,20 @@ export function PaginaApiKeys() {
           }}
         />
       )}
-      {creada && <DialogoClaveCreada llave={creada.llave} valor={creada.valor} empresas={empresas} onCerrar={() => setCreada(null)} />}
+      {porRotar && (
+        <DialogoRotarApiKey
+          llave={porRotar}
+          onCerrar={() => setPorRotar(null)}
+          onRotada={(nueva, anteriorHasta) => {
+            setPorRotar(null);
+            if (nueva.valor) setCreada({ llave: nueva, valor: nueva.valor, anteriorHasta });
+            else mostrar(t('apiKeys.creadaSinValor'), 'warning');
+          }}
+        />
+      )}
+      {creada && (
+        <DialogoClaveCreada llave={creada.llave} valor={creada.valor} empresas={empresas} anteriorHasta={creada.anteriorHasta} onCerrar={() => setCreada(null)} />
+      )}
       {porRevocar && (
         <DialogoConfirmacion
           titulo={t('apiKeys.revocarA', { nombre: porRevocar.nombre })}

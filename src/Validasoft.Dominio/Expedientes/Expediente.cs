@@ -33,7 +33,9 @@ public sealed record FlujoParaExpediente(
     OrigenFlujo Origen,
     IReadOnlyList<EtapaDelFlujo> Etapas,
     PoliticaDevolucion PoliticaDevolucion,
-    bool SeparacionDeFunciones);
+    bool SeparacionDeFunciones,
+    IReadOnlyList<VerificacionRequeridaDelFlujo>? Verificaciones = null,
+    PlazoDeCargue? PlazoCargue = null);
 
 /// <summary>Copia del flujo que gobierna el expediente.</summary>
 public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
@@ -232,6 +234,25 @@ public sealed partial class Expediente
 
     public DateTimeOffset ActualizadoEn { get; set; }
 
+    /// <summary>Plazo de cargue copiado del flujo (solo expedientes <c>Inicial</c>, LT-1); nulo = sin plazo.</summary>
+    public PlazoDeCargue? PlazoCargue { get; set; }
+
+    /// <summary>Hasta cuándo tiene el tercero para completar lo que está en sus manos (<c>Abierto</c> u <c>Observado</c>).</summary>
+    public DateTimeOffset? PlazoCargueHasta { get; set; }
+
+    /// <summary>Recordatorios (días antes) ya cumplidos en el plazo en curso.</summary>
+    public List<int> RecordatoriosEnviados { get; set; } = [];
+
+    /// <summary>Próximo momento en que el job de plazos debe mirar este expediente (recordatorio o caducidad); índice del barrido.</summary>
+    public DateTimeOffset? ProximaRevisionDePlazo { get; set; }
+
+    /// <summary>Estado en que caducó (<c>Abierto</c> u <c>Observado</c>): al reabrir vuelve a él.</summary>
+    public EstadoExpediente? EstadoAlCaducar { get; set; }
+
+    public DateTimeOffset? CaducadoEn { get; set; }
+
+    public int Reaperturas { get; set; }
+
     [JsonIgnore]
     public EtapaDeExpediente? EtapaActiva => Etapas.FirstOrDefault(e => e.Estado == EstadoEtapa.Activa);
 
@@ -276,10 +297,14 @@ public sealed partial class Expediente
         simulacion.Emitir(new ExpedienteAbierto(Guid.CreateVersion7(), datos.EmpresaId, datos.VinculoId, datos.Tipo, datos.Folio,
             datos.TerceroId, datos.TerceroNombre, datos.TerceroIdentificacion, datos.TipoVinculoId, datos.TipoVinculoCodigo,
             datos.TipoVinculoNombre, datos.AbiertoPor, [.. datos.InvitadoPor.Distinct()], ahora));
+        // El plazo de cargue solo corre en el expediente inicial (LT-1): renovaciones y actualizaciones tienen los suyos.
+        var plazo = datos.Tipo == TipoExpediente.Inicial && flujo.PlazoCargue is { Activo: true } activo ? activo : null;
         simulacion.Emitir(new FlujoSeleccionado(flujo.FlujoId, flujo.FlujoVersionId, flujo.Codigo, flujo.Nombre, flujo.Version, flujo.Origen,
-            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora));
+            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo));
         if (requisitos is { Count: > 0 })
             simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
+        if (flujo.Verificaciones is { Count: > 0 } verificaciones)
+            simulacion.Emitir(new VerificacionesRequeridas([.. verificaciones], ahora));
         Evaluar(simulacion, ahora);
         return simulacion.Eventos;
     }
@@ -320,7 +345,11 @@ public sealed partial class Expediente
         // También mientras está devuelto al tercero (FL-14): un hallazgo grave no espera la corrección.
         if (Estado is not (EstadoExpediente.EnRevision or EstadoExpediente.Observado))
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"El expediente está {Estado}.");
-        var area = AreaActiva(areaId);
+        // Con todas las áreas aprobadas y una verificación sin satisfacer (p. ej. una coincidencia confirmada, f-4), el
+        // expediente espera: un área que puede rechazar lo cierra aunque su etapa ya no esté activa.
+        var area = EsperandoVerificaciones
+            ? BuscarArea(areaId) ?? throw ReglaDeNegocioException.NoEncontrado("area-no-encontrada", "Esa área no participa en el flujo del expediente.")
+            : AreaActiva(areaId);
         if (!area.PuedeRechazarExpediente)
             throw ReglaDeNegocioException.Prohibido("area-no-puede-rechazar", $"El área {area.Codigo} no puede rechazar expedientes.");
         AsegurarRevisorHabilitado(revisor);
@@ -463,14 +492,19 @@ public sealed partial class Expediente
             })]
         })];
         AreaIds = [.. Etapas.SelectMany(x => x.Areas).Select(a => a.AreaId)];
+        PlazoCargue = e.PlazoCargue;
+        if (Estado == EstadoExpediente.Abierto)
+            IniciarPlazo(AbiertoEn);
         ActualizadoEn = e.Fecha;
     }
 
     public void Apply(ExpedienteEnviadoARevision e)
     {
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
+        RecalcularVerificaciones(); // las listas se consultan al pasar a revisión (con la ficha ya diligenciada)
     }
 
     public void Apply(EtapaActivada e)
@@ -511,6 +545,7 @@ public sealed partial class Expediente
     public void Apply(ExpedienteObservado e)
     {
         Estado = EstadoExpediente.Observado;
+        IniciarPlazo(e.Fecha);
         RequisitosObservados = [.. e.RequisitosObservados ?? []];
         RecalcularRequisitos(e.Fecha);
         ObservadoEn = e.Fecha;
@@ -541,6 +576,7 @@ public sealed partial class Expediente
         }
 
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RequisitosObservados = [];
         Reenvios++;
         UltimaRespuesta = e.Respuesta;
@@ -551,6 +587,7 @@ public sealed partial class Expediente
     public void Apply(RevisionReanudada e)
     {
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RequisitosObservados = [];
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
@@ -567,24 +604,30 @@ public sealed partial class Expediente
     public void Apply(ExpedienteAprobado e)
     {
         Estado = EstadoExpediente.Aprobado;
+        TerminarPlazo();
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
+        RecalcularVerificaciones();
     }
 
     public void Apply(ExpedienteRechazado e)
     {
         Estado = EstadoExpediente.Rechazado;
+        TerminarPlazo();
         Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha);
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
+        RecalcularVerificaciones();
     }
 
     public void Apply(ExpedienteAnulado e)
     {
         Estado = EstadoExpediente.Anulado;
+        TerminarPlazo();
         MotivoAnulacion = e.Motivo;
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
+        RecalcularVerificaciones();
     }
 
     public void Apply(VeredictoAnuladoPorAdministrador e)
@@ -675,6 +718,13 @@ public sealed partial class Expediente
             Activar(simulacion, simulacion.Estado!.Etapas.OrderBy(e => e.Orden).First(), ahora);
         }
 
+        // Todas las áreas ya aprobaron y solo faltaba una verificación (VE-5): se cierra en cuanto se satisface.
+        if (simulacion.Estado is { EsperandoVerificaciones: true })
+        {
+            Cerrar(simulacion, ahora);
+            return;
+        }
+
         while (simulacion.Estado is { Estado: EstadoExpediente.EnRevision, EtapaActiva: { } etapa } expediente)
         {
             if (expediente.ConRequisitos && AprobarAutomaticasYDerivadas(simulacion, etapa, ahora))
@@ -698,13 +748,24 @@ public sealed partial class Expediente
             var siguiente = expediente.Etapas.Where(e => e.Orden > etapa.Orden).MinBy(e => e.Orden);
             if (siguiente is null)
             {
-                simulacion.Emitir(new ExpedienteAprobado(ahora));
-                AceptarSecciones(simulacion, ahora);
+                Cerrar(simulacion, ahora);
                 return;
             }
 
             Activar(simulacion, siguiente, ahora);
         }
+    }
+
+    /// <summary>
+    /// Aprueba el expediente si todas las verificaciones bloqueantes están satisfechas y vigentes (docs/03 §6.3
+    /// <c>EvaluarCierre</c>); si no, queda <c>EnRevision</c> con todas sus etapas aprobadas esperándolas.
+    /// </summary>
+    private static void Cerrar(Simulacion simulacion, DateTimeOffset ahora)
+    {
+        if (!simulacion.Estado!.VerificacionesSatisfechas(ahora))
+            return;
+        simulacion.Emitir(new ExpedienteAprobado(ahora));
+        AceptarSecciones(simulacion, ahora);
     }
 
     /// <summary>
@@ -744,6 +805,16 @@ public sealed partial class Expediente
             case ExpedienteRechazado e: Apply(e); break;
             case ExpedienteAnulado e: Apply(e); break;
             case VeredictoAnuladoPorAdministrador e: Apply(e); break;
+            case VerificacionesRequeridas e: Apply(e); break;
+            case VerificacionExternaRegistrada e: Apply(e); break;
+            case CoincidenciaResuelta e: Apply(e); break;
+            case EstudioDeCumplimientoRegistrado e: Apply(e); break;
+            case VerificacionExpirada e: Apply(e); break;
+            case ConsultaDeVerificacionFallida e: Apply(e); break;
+            case EvidenciaDeVerificacionDescargada e: Apply(e); break;
+            case RecordatorioDeCargueEnviado e: Apply(e); break;
+            case ExpedienteCaducado e: Apply(e); break;
+            case ExpedienteReabierto e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento desconocido para el expediente: {evento.GetType().Name}.");
         }
     }

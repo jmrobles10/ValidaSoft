@@ -243,6 +243,7 @@ flowchart LR
 | Qué se decidió, cuándo y por qué | decisiones/registro.md, adr/ |
 | Qué se corrigió en la relectura | decisiones/relectura-2026-10-28.md |
 | Cómo aprovechar la suscripción de Infolaft (listas restrictivas) | 15 |
+| Qué se quiere lograr, qué está hecho y qué falta (corte 2026-11-10) | 16 |
 
 ## Decisiones abiertas
 Ninguna propia; ver `decisiones/relectura-2026-10-28.md` para la lista consolidada.

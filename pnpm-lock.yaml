@@ -173,6 +173,9 @@ importers:
       '@playwright/test':
         specifier: 1.65.0
         version: 1.65.0
+      '@validasoft/sdk':
+        specifier: workspace:*
+        version: link:../packages/sdk
 
   packages/api-client:
     devDependencies:
@@ -185,6 +188,8 @@ importers:
       react:
         specifier: ^19.3.1
         version: 19.3.1
+
+  packages/sdk: {}
 
   packages/ui:
     dependencies:

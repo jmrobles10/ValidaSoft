@@ -55,9 +55,16 @@ public sealed record DefinicionDeFlujo(
     IReadOnlyList<EtapaDeFlujo> Etapas,
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
-    IReadOnlyList<RequisitoDelFlujo>? Requisitos = null)
+    IReadOnlyList<RequisitoDelFlujo>? Requisitos = null,
+    IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null,
+    PlazoDeCargue? PlazoCargue = null)
 {
     public const int MaximoAprobadores = 10;
+
+    /// <summary>Vigencia máxima configurable de una verificación (10 años).</summary>
+    public const int MaximoVigenciaDias = 3650;
+
+    public const int MaximoMesesReconsulta = 60;
 
     /// <summary>Por defecto (P-4-4): una sola etapa con todas las áreas activas en paralelo, un aprobador cada una.</summary>
     public static DefinicionDeFlujo TodasEnParalelo(IEnumerable<Area> areas, PoliticaDevolucion politica = PoliticaDevolucion.Inmediata,
@@ -120,7 +127,45 @@ public sealed record DefinicionDeFlujo(
             etapas.Add(new EtapaDeFlujo(indice + 1, areas));
         }
 
-        return this with { Etapas = etapas, Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo) };
+        // Sin plazo indicado, el de P-4-2 (30 días, recordatorios a 15/7/1); 0 días es «sin plazo» (LT-1).
+        return this with
+        {
+            Etapas = etapas,
+            Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo),
+            Verificaciones = ValidarVerificaciones(),
+            PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar()
+        };
+    }
+
+    /// <summary>
+    /// Verificaciones externas que pide el flujo (VE-6): una por tipo (422 <c>verificacion-duplicada</c>), vigencia de 1 a
+    /// <see cref="MaximoVigenciaDias"/> días y reconsulta de 1 a <see cref="MaximoMesesReconsulta"/> meses
+    /// (<c>vigencia-invalida</c>, <c>reconsulta-invalida</c>; la reconsulta solo aplica a listas: <c>reconsulta-no-aplica</c>).
+    /// </summary>
+    private IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo> ValidarVerificaciones()
+    {
+        if (Verificaciones is null || Verificaciones.Count == 0)
+            return [];
+
+        var resultado = new List<Expedientes.VerificacionRequeridaDelFlujo>();
+        foreach (var verificacion in Verificaciones)
+        {
+            if (!Enum.IsDefined(verificacion.Tipo))
+                throw ReglaDeNegocioException.Validacion("verificacion-invalida", "Tipo de verificación desconocido.");
+            if (resultado.Any(v => v.Tipo == verificacion.Tipo))
+                throw ReglaDeNegocioException.Validacion("verificacion-duplicada", $"El flujo ya pide {verificacion.Tipo}.");
+            if (verificacion.VigenciaDias is < 1 or > MaximoVigenciaDias)
+                throw ReglaDeNegocioException.Validacion("vigencia-invalida",
+                    $"La vigencia de {verificacion.Tipo} va de 1 a {MaximoVigenciaDias} días (vacía = la de la configuración).");
+            if (verificacion.FrecuenciaReconsultaMeses is not null && verificacion.Tipo != Expedientes.TipoVerificacion.ListasRestrictivas)
+                throw ReglaDeNegocioException.Validacion("reconsulta-no-aplica", "La frecuencia de reconsulta solo aplica a las listas restrictivas.");
+            if (verificacion.FrecuenciaReconsultaMeses is < 1 or > MaximoMesesReconsulta)
+                throw ReglaDeNegocioException.Validacion("reconsulta-invalida",
+                    $"La reconsulta de listas va de 1 a {MaximoMesesReconsulta} meses (vacía = 12).");
+            resultado.Add(verificacion);
+        }
+
+        return resultado;
     }
 
     /// <summary>
@@ -261,13 +306,24 @@ public sealed class FlujoVersion
     /// <summary>Documentos que pide esta versión (RQ-1); vacío ⇒ cada área decide sobre el expediente completo (FL-1).</summary>
     public List<RequisitoDelFlujo> Requisitos { get; set; } = [];
 
+    /// <summary>Verificaciones externas que pide esta versión (VE-6): listas restrictivas y estudio de cumplimiento.</summary>
+    public List<Expedientes.VerificacionRequeridaDelFlujo> Verificaciones { get; set; } = [];
+    /// <summary>
+    /// Plazo del tercero para completar el expediente inicial (LT-1). Nulo en las versiones guardadas antes: vale el de
+    /// P-4-2 (<see cref="PlazoDeCargue.PorDefecto"/>).
+    /// </summary>
+    public PlazoDeCargue? PlazoCargue { get; set; }
+
+    /// <summary>El plazo que rige (el guardado o el de P-4-2).</summary>
+    public PlazoDeCargue PlazoEfectivo() => PlazoCargue ?? PlazoDeCargue.PorDefecto;
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
 
     public DateTimeOffset? RetiradaEn { get; set; }
 
-    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos);
+    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo());
 }
 
 /// <summary>
@@ -350,6 +406,8 @@ public sealed class Flujo
             borrador.PoliticaDevolucion = validada.PoliticaDevolucion;
             borrador.SeparacionDeFunciones = validada.SeparacionDeFunciones;
             borrador.Requisitos = [.. validada.Requisitos ?? []];
+            borrador.Verificaciones = [.. validada.Verificaciones ?? []];
+            borrador.PlazoCargue = validada.PlazoCargue;
         }
 
         ActualizadoEn = ahora;
@@ -375,6 +433,8 @@ public sealed class Flujo
 
         borrador.Etapas = [.. validada.Etapas];
         borrador.Requisitos = [.. validada.Requisitos ?? []];
+        borrador.Verificaciones = [.. validada.Verificaciones ?? []];
+        borrador.PlazoCargue = validada.PlazoCargue;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -390,6 +450,8 @@ public sealed class Flujo
         PoliticaDevolucion = definicion.PoliticaDevolucion,
         SeparacionDeFunciones = definicion.SeparacionDeFunciones,
         Requisitos = [.. definicion.Requisitos ?? []],
+        Verificaciones = [.. definicion.Verificaciones ?? []],
+        PlazoCargue = definicion.PlazoCargue,
         CreadaEn = ahora
     };
 

@@ -36,6 +36,12 @@ public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFluj
 public static class ProcesoDeValidacion
 {
     /// <summary>
+    /// Días entre reconsultas del monitoreo de listas de un vínculo activo (VE-12; <c>Validasoft:Verificadores:ListasRestrictivas:DiasMonitoreo</c>,
+    /// 30; 0 lo apaga). Se fija al arrancar, como la zona del negocio (FE-1).
+    /// </summary>
+    public static int DiasMonitoreoDeListas { get; set; } = 30;
+
+    /// <summary>
     /// Flujo explícito (el indicado o el del vínculo) o el por defecto de <c>(empresa, tipo)</c>; nulo si no hay ninguno
     /// publicado. Un flujo indicado por el llamador que no sirve es un error; el del vínculo sin publicar cae al por defecto.
     /// </summary>
@@ -139,7 +145,9 @@ public static class ProcesoDeValidacion
             tercero.ClaveIdentificacion, vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty,
             abiertoPor, await QuienesInvitaronAsync(sesion, vinculo.Id, ct));
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
-            flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones), ahora, requisitos);
+            flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones,
+            // Una actualización (un documento cambió) no repite las listas ni el estudio (VE-6).
+            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo()), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
         var vinculado = vinculo.VincularExpediente(expedienteId, tipoExpediente, folio, ahora);
@@ -207,6 +215,7 @@ public static class ProcesoDeValidacion
         ResultadoExpediente? resultado = eventos.OfType<ExpedienteAprobado>().Any() ? ResultadoExpediente.Aprobado
             : eventos.OfType<ExpedienteRechazado>().Any() ? ResultadoExpediente.Rechazado
             : eventos.OfType<ExpedienteAnulado>().Any() ? ResultadoExpediente.Anulado
+            : eventos.OfType<ExpedienteCaducado>().Any() ? ResultadoExpediente.Caducado
             : null;
 
         if (resultado is { } cierre)
@@ -220,6 +229,11 @@ public static class ProcesoDeValidacion
                 if (cerrado.OfType<VinculoActivado>().Any())
                     await certificados.EmitirAsync(sesion, estado, vinculo, ahora, ct);
             }
+
+            // Aprobado con listas consultadas ⇒ el vínculo queda en monitoreo periódico (VE-12), heredando las decisiones.
+            if (cierre == ResultadoExpediente.Aprobado &&
+                MonitoreoDeListas.Iniciar(estado, await sesion.LoadAsync<MonitoreoDeListas>(estado.VinculoId, ct), DiasMonitoreoDeListas, ahora) is { } monitoreo)
+                sesion.Store(monitoreo);
         }
 
         if (correo is not null && eventos.OfType<ExpedienteObservado>().Any())

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    SDK .NET para los sistemas que se integran con Validasoft (SRM, Marco, Portal u otro ERP): cliente tipado de la API v1,
+    firma de aserciones de identidad delegada y verificación de webhooks (H9, docs/08 §2; CN-5). Sin dependencias fuera de la
+    BCL. net7.0 porque el SRM corre .NET 7 (T-16).
+  -->
+  <PropertyGroup>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks>net7.0;net8.0;net10.0</TargetFrameworks>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>Validasoft.Sdk</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Validasoft</Authors>
+    <Description>Cliente .NET de la API v1 de Validasoft: vínculos, invitaciones, expedientes, certificados, consulta de certificación, eventos (pull), identidad delegada y verificación de webhooks.</Description>
+    <PackageTags>validasoft;sdk;webhooks</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Contratos\Validasoft.Contratos.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Validasoft.Sdk.Tests" />
+  </ItemGroup>
+</Project>

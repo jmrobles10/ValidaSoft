@@ -230,6 +230,43 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     private static string FechaLarga(DateOnly fecha) => fecha.ToString("d 'de' MMMM 'de' yyyy", Cultura);
 
     /// <summary>
+    /// Plazo de cargue del expediente inicial (plantilla <c>caducidad</c>, LT-2, LT-3): recordatorio con los días que quedan,
+    /// aviso de caducidad (la empresa puede reabrirlo) o reapertura con el plazo nuevo y un enlace de acceso.
+    /// </summary>
+    public MensajeDeCorreo RedactarPlazoDeCargue(Expedientes.CorreoDePlazoDeCarguePendiente correo, string? token = null)
+    {
+        var hasta = FechaLarga(Dominio.Documentos.CalculadoraDeVigencia.Fecha(correo.PlazoHasta));
+        var (asunto, parrafo) = correo.Aviso switch
+        {
+            Expedientes.AvisoDePlazo.Recordatorio => (
+                correo.DiasRestantes == 1
+                    ? $"Mañana vence tu plazo para completar la validación {correo.Folio} con {correo.Empresa}"
+                    : $"Te quedan {correo.DiasRestantes} días para completar la validación {correo.Folio} con {correo.Empresa}",
+                $"{correo.Empresa} está esperando los documentos de tu validación {correo.Folio}. Tienes hasta el {hasta} para completarla; " +
+                "si vence el plazo, la validación caduca y la empresa tendrá que reabrirla."),
+            Expedientes.AvisoDePlazo.Caducado => (
+                $"Tu validación {correo.Folio} con {correo.Empresa} caducó",
+                $"El plazo para completar tu validación {correo.Folio} con {correo.Empresa} venció el {hasta} y la validación caducó. " +
+                "Si todavía quieres continuar, escríbele a la empresa para que la reabra."),
+            _ => (
+                $"{correo.Empresa} reabrió tu validación {correo.Folio}",
+                $"{correo.Empresa} reabrió tu validación {correo.Folio}. Tienes hasta el {hasta} para completarla.")
+        };
+
+        var entrar = token is null
+            ? $"Entra a Validasoft ({UrlPublica}) y pide un enlace con tu correo."
+            : $"Abre este enlace (es personal, de un solo uso y vence el {Fecha(correo.EnlaceExpira)}):\n{UrlPublica}/e/{token}";
+        var entrarHtml = token is null
+            ? $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> y pide un enlace con tu correo.</p>"
+            : $"<p><a href=\"{WebUtility.HtmlEncode($"{UrlPublica}/e/{token}")}\">Completar en Validasoft</a></p>" +
+              $"<p>El enlace es personal, de un solo uso y vence el {WebUtility.HtmlEncode(Fecha(correo.EnlaceExpira))}.</p>";
+        var caducado = correo.Aviso == Expedientes.AvisoDePlazo.Caducado;
+        return new MensajeDeCorreo(correo.Para, asunto,
+            parrafo + (caducado ? string.Empty : "\n\n" + entrar),
+            $"<p>{WebUtility.HtmlEncode(parrafo)}</p>" + (caducado ? string.Empty : entrarHtml));
+    }
+
+    /// <summary>
     /// Los textos al tercero de los motivos son oraciones completas («Falta la firma requerida.»): se unen como un
     /// párrafo, con su punto final, en lugar de separarlas con «; » (quedaba «…soportes.; Falta…»).
     /// </summary>

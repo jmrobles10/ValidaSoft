@@ -1,13 +1,18 @@
 import { Alert, Button } from '@mui/material';
 import { SCOPES, type RegistroAuditoriaDto } from '@validasoft/api-client';
 import { EstadoVacio, TablaConCursor, usePaginacionCursor } from '@validasoft/ui';
+import { Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { EncabezadoPagina, SinPermiso } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
+import { useAvisos } from '../../shared/useAvisos';
 import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
+import { useDescarga } from '../informes/api';
+import { RUTAS, sinPaginacion } from '../informes/modelo';
+import { guardarArchivo } from '../vencimientos/api';
 import { useAuditoria } from './api';
 import { useColumnasAuditoria } from './columnas';
 import { DetalleAuditoria } from './DetalleAuditoria';
@@ -23,7 +28,11 @@ const TAMANO_PAGINA = 50;
 export function PaginaAuditoria() {
   const { t } = useTranslation();
   const { empresa } = useEmpresaActiva();
-  const puede = usePermisos(empresa.id).puede(SCOPES.auditoriaLeer);
+  const permisos = usePermisos(empresa.id);
+  const puede = permisos.puede(SCOPES.auditoriaLeer);
+  const puedeExportar = permisos.puede(SCOPES.auditoriaExportar);
+  const mostrar = useAvisos((s) => s.mostrar);
+  const descarga = useDescarga(empresa.id);
   const [parametros, setParametros] = useSearchParams();
   const filtros = leerFiltros(parametros);
   const { tipo, entidad, entidadId, actor, desde, hasta } = filtros;
@@ -45,10 +54,29 @@ export function PaginaAuditoria() {
   const conFiltros = hayFiltros(filtros);
   const limpiar = () => setParametros(tipo === TIPO_POR_DEFECTO ? new URLSearchParams() : new URLSearchParams({ tipo }), { replace: true });
   const ayudaVacio = tipo === 'Acceso' ? t('auditoria.vacioAyudaAcceso', { empresa: empresa.nombre }) : t('auditoria.vacioAyudaConfiguracion', { empresa: empresa.nombre });
+  // La exportación lleva los filtros de la pantalla, sin la paginación (IF-4).
+  const exportar = () =>
+    descarga.mutate(
+      { url: RUTAS.auditoriaExcel, params: sinPaginacion(parametrosConsulta(filtros, TAMANO_PAGINA, null)) },
+      {
+        onSuccess: (archivo) => guardarArchivo(archivo, t('informes.auditoria.excelNombre')),
+        onError: (error) => mostrar(`${t('informes.descargaError')} ${mensajeDeError(error, t)}`, 'error'),
+      },
+    );
 
   return (
     <>
-      <EncabezadoPagina titulo={t('auditoria.titulo')} subtitulo={t('auditoria.subtitulo', { empresa: empresa.nombre })} />
+      <EncabezadoPagina
+        titulo={t('auditoria.titulo')}
+        subtitulo={t('auditoria.subtitulo', { empresa: empresa.nombre })}
+        acciones={
+          puedeExportar ? (
+            <Button variant="outlined" startIcon={<Download size={16} aria-hidden />} disabled={descarga.isPending || errorRango} onClick={exportar}>
+              {t('informes.auditoria.excel')}
+            </Button>
+          ) : undefined
+        }
+      />
 
       <FiltrosAuditoria filtros={filtros} />
 

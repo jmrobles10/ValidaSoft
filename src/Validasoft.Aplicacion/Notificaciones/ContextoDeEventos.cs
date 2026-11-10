@@ -24,6 +24,10 @@ public interface IContextoDeEventos
 
     Task<Expediente?> ExpedienteAsync(Guid tenantId, Guid id, CancellationToken ct);
 
+    /// <summary>Lote de invitación masiva (LT-9); por omisión ninguno (los contextos de prueba no lo necesitan).</summary>
+    Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        Task.FromResult<Dominio.Invitaciones.LoteDeInvitacion?>(null);
+
     Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct);
 
     Task<TipoDocumentoTenant?> TipoDocumentoAsync(Guid tenantId, Guid id, CancellationToken ct);
@@ -47,6 +51,9 @@ public interface IContextoDeEventos
     Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
     Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct);
+
+    /// <summary>Usuarios activos del tenant (los avisos de cumplimiento van por rol, VE-13).</summary>
+    Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Usuario>>([]);
 
     Task<IReadOnlyList<TextoLegal>> TextosLegalesAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
@@ -87,6 +94,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public Task<Expediente?> ExpedienteAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<Expediente>(Tenant(tenantId), id, ct);
 
+    public Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        CargarAsync<Dominio.Invitaciones.LoteDeInvitacion>(Tenant(tenantId), id, ct);
+
     public Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<TipoVinculo>(Tenant(tenantId), id, ct);
 
     public Task<TipoDocumentoTenant?> TipoDocumentoAsync(Guid tenantId, Guid id, CancellationToken ct) =>
@@ -111,6 +121,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public async Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         ids.Count == 0 ? [] : [.. await Sesion(Tenant(tenantId)).LoadManyAsync<Usuario>(ct, ids.Distinct().ToArray())];
+
+    public async Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) =>
+        [.. await Sesion(Tenant(tenantId)).Query<Usuario>().Where(u => u.Activo).ToListAsync(ct)];
 
     public Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct) =>
         CargarAsync<PreferenciasNotificacion>(Tenant(tenantId), usuarioId, ct);

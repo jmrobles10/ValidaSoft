@@ -29,5 +29,7 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 | `vencimientos.spec.ts` | Vigente, por vencer, en gracia y vencido (con avisos); fecha futura; recálculo al cambiar la regla |
 | `certificado.spec.ts` | Verificación pública auténtica y PDF; huella o folio inválidos; bloqueo y desbloqueo; revocación |
 | `eventos.spec.ts` | Webhooks firmados en orden; entrega fallida y reenvío; campana y correo a la revisora |
+| `lotes.spec.ts` | Invitación masiva: plantilla subida desde la pantalla, vista previa con errores por fila, lote procesado y terceros invitados; caducidad por plazo de cargue (job con fecha simulada para el tenant de la prueba) y reapertura |
+| `informes.spec.ts` | Informe de estado de expedientes con tiempos por área, filtro y descarga en Excel; exportación del expediente en ZIP; las exportaciones en la auditoría de accesos |
 
 Los vencimientos se prueban sin mover el reloj: el proveedor declara una fecha de expedición vieja y los avisos o vencimientos que caen en el pasado se ejecutan enseguida.

@@ -24,4 +24,6 @@ export interface ExpedientePublicoDto {
   requisitos?: RequisitoPublicoDto[] | null;
   requisitosFaltantes?: number;
   tipo?: string;
+  /** @nullable */
+  plazoCargueHasta?: string | null;
 }

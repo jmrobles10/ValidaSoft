@@ -1,3 +1,5 @@
+using Validasoft.Dominio.Comun;
+
 namespace Validasoft.Dominio.Identidad;
 
 /// <summary>
@@ -33,6 +35,46 @@ public sealed class ApiKey
     public DateTimeOffset? ExpiraEn { get; set; }
 
     public DateTimeOffset? RevocadaEn { get; set; }
+
+    /// <summary>Llave que esta reemplazó al rotarse (CN-3).</summary>
+    public Guid? RotadaDe { get; set; }
+
+    /// <summary>Llave nueva que reemplaza a esta; desde la rotación esta solo vale hasta <see cref="ExpiraEn"/>.</summary>
+    public Guid? ReemplazadaPor { get; set; }
+
+    /// <summary>Lo más lejos que puede seguir valiendo la llave anterior tras una rotación.</summary>
+    public static readonly TimeSpan SolapamientoMaximo = TimeSpan.FromDays(30);
+
+    /// <summary>Solapamiento cuando no se indica fecha.</summary>
+    public static readonly TimeSpan SolapamientoPorDefecto = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Rotación con solapamiento (CN-3): la llave queda reemplazada por <paramref name="nueva"/> y vale hasta
+    /// <paramref name="validaHasta"/> (nulo = 24 h; ahora = corte inmediato), sin pasar de 30 días ni de su propia expiración.
+    /// Devuelve la fecha efectiva. 409 si ya estaba rotada, revocada o vencida; 422 si la fecha es pasada o excede el máximo.
+    /// </summary>
+    public DateTimeOffset RotarHacia(Guid nueva, DateTimeOffset? validaHasta, DateTimeOffset ahora)
+    {
+        if (ReemplazadaPor is not null)
+            throw ReglaDeNegocioException.Conflicto("api-key-ya-rotada", "Esta API key ya se rotó: rota la nueva.");
+        if (!VigenteEn(ahora))
+            throw ReglaDeNegocioException.Conflicto("api-key-vencida", "La API key está vencida o revocada: crea una nueva.");
+
+        var hasta = validaHasta ?? ahora + SolapamientoPorDefecto;
+        if (hasta < ahora - TimeSpan.FromMinutes(1))
+            throw ReglaDeNegocioException.Validacion("solapamiento-invalido", "La llave anterior no puede vencer en el pasado.");
+        if (hasta > ahora + SolapamientoMaximo)
+            throw ReglaDeNegocioException.Validacion("solapamiento-invalido", "La llave anterior puede seguir valiendo como mucho 30 días.");
+
+        if (hasta < ahora)
+            hasta = ahora;
+        if (ExpiraEn is { } expira && expira < hasta)
+            hasta = expira;
+
+        ReemplazadaPor = nueva;
+        ExpiraEn = hasta;
+        return hasta;
+    }
 
     public bool PermiteEmpresa(Guid empresaId) =>
         Empresas.Contains("*") || Empresas.Contains(empresaId.ToString());
