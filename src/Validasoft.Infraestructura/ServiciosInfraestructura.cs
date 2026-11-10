@@ -59,6 +59,8 @@ public static class ServiciosInfraestructura
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
+        // Fechas de calendario del negocio (vencimientos, «hoy») en la zona configurada, no en UTC (FE-1).
+        Dominio.Documentos.CalculadoraDeVigencia.ZonaDeNegocio = Dominio.Documentos.CalculadoraDeVigencia.Zona(configuracion["Validasoft:ZonaHoraria"] ?? "America/Bogota");
         servicios.AddMemoryCache();
         // Registro por tipo (sin fábricas lambda): Wolverine genera el código de los endpoints y no admite service location.
         servicios.AddHttpContextAccessor();
