@@ -242,6 +242,7 @@ flowchart LR
 | Qué significa una palabra | 10 |
 | Qué se decidió, cuándo y por qué | decisiones/registro.md, adr/ |
 | Qué se corrigió en la relectura | decisiones/relectura-2026-10-28.md |
+| Cómo aprovechar la suscripción de Infolaft (listas restrictivas) | 15 |
 
 ## Decisiones abiertas
 Ninguna propia; ver `decisiones/relectura-2026-10-28.md` para la lista consolidada.
