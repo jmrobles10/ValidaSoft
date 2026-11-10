@@ -50,7 +50,7 @@ export function AppShell() {
   }
   if (permisos.puede(SCOPES.documentosLeer)) pestanas.push({ clave: 'vencimientos', ruta: 'vencimientos', prefijos: ['vencimientos'] });
   if (permisos.puede(SCOPES.certificadosLeer)) pestanas.push({ clave: 'certificados', ruta: 'certificados', prefijos: ['certificados'] });
-  if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros'] });
+  if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros', 'invitaciones'] });
   if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });
   const primera = configuracion[0];
   if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });
@@ -60,7 +60,8 @@ export function AppShell() {
   // Al cambiar de empresa se conserva la sección, no el recurso (el expediente o flujo es de la otra empresa).
   const primerSegmento = relativa.split('/')[0] ?? '';
   // La ficha del tercero cuelga de Vínculos (no hay lista de terceros).
-  const seccionActual = primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento || 'vinculos';
+  const seccionActual =
+    primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento === 'invitaciones' ? 'invitaciones/lotes' : primerSegmento || 'vinculos';
 
   return (
     <Box

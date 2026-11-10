@@ -94,6 +94,9 @@ export function PaginaExpediente() {
               ? t('expediente.faltan', { count: faltantes, empresa })
               : t(`expediente.estadoTexto.${expediente.estado}`, { empresa })}
         </Typography>
+        {expediente.plazoCargueHasta && (expediente.estado === 'Abierto' || expediente.estado === 'Observado') && (
+          <Typography sx={{ color: 'text.secondary', fontSize: 14, mt: 1 }}>{t('expediente.plazo', { fecha: formatearFecha(expediente.plazoCargueHasta) })}</Typography>
+        )}
         {expediente.reenvios > 0 && (
           <Typography sx={{ color: 'text.secondary', fontSize: 14, mt: 1 }}>
             {t('expediente.reenvios', { count: expediente.reenvios })}

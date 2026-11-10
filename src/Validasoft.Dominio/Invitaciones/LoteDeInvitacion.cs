@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Validasoft.Dominio.Comun;
 
 namespace Validasoft.Dominio.Invitaciones;
@@ -110,6 +111,7 @@ public sealed class LoteDeInvitacion
 
     public DateTimeOffset? TerminadoEn { get; set; }
 
+    [JsonIgnore]
     public bool EsTerminal => Terminales.Contains(Estado);
 
     // ---------- Decisiones ----------

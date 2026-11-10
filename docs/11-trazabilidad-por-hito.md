@@ -827,6 +827,22 @@ Hacia atrás: `RequisitoDto.sugerenciaAutomatica` (H4) y `RevalidacionDto.sugere
 #### 2.8.11 Efectos
 Hacia atrás: H5 plantillas pasan de cabecera/pie a Liquid; H1 `UsoTenant` recibe límites; H6 `VencimientoProgramado` recibe campañas. Hacia adelante: H10 reutiliza la mecánica de lotes para la importación.
 
+#### 2.8.12 Implementado (2026-11-10): invitación masiva y caducidad por plazo de cargue (LT-1…LT-10)
+Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. Lo demás de H8 sigue planificado.
+
+| Tipo | Elemento |
+|---|---|
+| Endpoints | `GET /invitaciones/lotes/plantilla?formato=`, `POST /invitaciones/lotes/vista-previa`, `POST /invitaciones/lotes` (202), `GET /invitaciones/lotes`, `GET /invitaciones/lotes/{id}`, `GET /invitaciones/lotes/{id}/filas?estado=&cursor=`, `POST /invitaciones/lotes/{id}/pausar` · `/reanudar` · `/cancelar` · `/reintentar`, `GET /invitaciones/lotes/{id}/informe` (Excel); `POST /expedientes/{id}/reabrir`; `POST /plataforma/plazos-de-cargue/revisar`. Permisos: `vinculos:escribir`/`vinculos:leer`, `expedientes:administrar`, Plataforma (LT-10) |
+| DTOs | `ArchivoDeLoteDto`, `FilaDeLoteEntradaDto`, `CrearLoteDto` (archivo **o** filas, `vigenciaHoras`), `VistaPreviaLoteDto`/`FilaVistaPreviaDto`, `LoteDto` (`estado: Procesando\|Pausado\|Completado\|CompletadoConErrores\|Cancelado`), `TotalesLoteDto`, `FilaLoteDto` (`estado: Pendiente\|Exitosa\|Fallida\|Duplicada\|Invalida\|Cancelada`), `ErrorDeFilaDto`, `DatosLoteTerminadoDto`; `PlazoCargueDto` en flujos, `PlazoCargueExpedienteDto` en `ExpedienteDto.plazoCargue`, `ExpedientePublicoDto.plazoCargueHasta`, `ReabrirExpedienteDto`, `RevisarPlazosDto`/`ResultadoRevisionPlazosDto` |
+| Eventos de dominio | Lote: `LoteDeInvitacionCreado`, `AvanceDeLoteRegistrado`, `LotePausado`, `LoteReanudado`, `LoteCancelado`, `FilasFallidasReintentadas`, `LoteTerminado`. Expediente: `RecordatorioDeCargueEnviado`, `ExpedienteCaducado`, `ExpedienteReabierto`; `FlujoSeleccionado.PlazoCargue`; vínculo: `ExpedienteCerrado(Caducado)` |
+| Eventos públicos | `invitaciones.lote_terminado`, `expediente.caducado`, `expediente.reabierto` (con `plazoHasta`) |
+| Notificaciones | Campana a las áreas: `expediente.caducado`; campana y correo a quien creó el lote: `invitaciones.lote_terminado`; correos al tercero con la plantilla nueva `caducidad` (recordatorio, caducado, reabierto con enlace) |
+| Jobs y colas | Cola durable secuencial `lotes` (`ProcesarTandaDeLote`); cola durable `plazos` (`RevisarPlazosDeCargue`, `RevisarPlazoDeCargue`) disparada por `ProgramadorDePlazosDeCargue` |
+| Configuración | `Validasoft:Lotes:MaxFilas` (10 000), `Validasoft:Lotes:TamanoTanda` (100), `Validasoft:PlazosDeCargue:Intervalo` (01:00:00; 00:00:00 lo apaga) |
+| Pantallas | `web:/e/{empresa}/invitaciones/lotes`, `…/nuevo`, `…/{id}` (desde «Invitar por lote» en Vínculos); aviso de plazo y «Reabrir expediente» en el detalle del expediente; plazo de cargue en el editor de flujos; `public:` «Tienes hasta el …» en la revisión |
+| Pruebas | Dominio (`PlazoDeCargueTests`, `LoteDeInvitacionTests`), integración (`RequisitosApiTests.Lotes`, `RequisitosApiTests.Caducidad`), web (`features/lotes`), e2e (`e2e/pruebas/lotes.spec.ts`) |
+| Pendiente | Atributos del vínculo por columna en el archivo; lote programado (`programarPara`); `Lotes:ConcurrenciaCorreos`; caducidad de renovaciones; proyección `VencimientoProgramado` (el barrido usa el índice del expediente) |
+
 ---
 
 #### H8 — Cierre de huecos (2026-10-28)

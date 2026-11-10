@@ -21,6 +21,7 @@ import { EtapasExpediente } from '../components/EtapasExpediente';
 import { DialogoDecisionArea } from '../components/DialogoDecisionArea';
 import { PanelDecisionArea } from '../components/PanelDecisionArea';
 import { PanelRequisitos } from '../components/PanelRequisitos';
+import { AvisoPlazoCargue } from '../components/PlazoCargue';
 import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
 import { usuariosDelExpediente } from '../requisitos';
 import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
@@ -179,6 +180,8 @@ export function DetalleExpediente() {
           {expediente.motivoAnulacion ? ` “${expediente.motivoAnulacion}”` : ''}
         </Alert>
       )}
+
+      <AvisoPlazoCargue expediente={expediente} empresaId={empresa.id} scopes={permisos.scopes} />
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
