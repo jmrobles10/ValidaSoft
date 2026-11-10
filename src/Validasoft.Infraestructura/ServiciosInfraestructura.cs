@@ -89,6 +89,7 @@ public static class ServiciosInfraestructura
         // Eventos públicos, webhooks y notificaciones (NW-1…NW-13). Cada catálogo es un IMapeadorDeEventos.
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDelProcesoDeValidacion>();
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeCertificados>(); // certificado.* (NW-13)
+        servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeLaFicha>(); // seccion.aceptada (FM-32)
         servicios.AddSingleton<CatalogoDeEventos>();
         servicios.AddSingleton<PlanificadorDeNotificaciones>();
         servicios.AddSingleton<ProcesadorDeEventos>();

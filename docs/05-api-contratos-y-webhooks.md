@@ -107,6 +107,7 @@ Columnas: **Permiso/scope** (ver [07 §3](07-seguridad-identidad-y-tenancy.md)),
 | `POST /vinculos/{id}/desvincular` · `/reintegrar` · `/anular` · `/bloquear` · `/desbloquear` | Ciclo de vida y bloqueo privado. **Bloquear suspende** el certificado y congela la compartición futura; **desbloquear restituye** certificado y compartición si siguen vigentes, o abre `Renovacion` si algo venció (B-5) | `vinculos:escribir` / `vinculos:bloquear` | 200; 409 `estado-invalido` | `vinculo.estado_cambiado`, `vinculo.bloqueado` + `certificado.suspendido`, `vinculo.desbloqueado` + `certificado.restablecido` |
 | `GET /vinculos/{id}/versiones-aceptadas` | `VersionAceptadaDto[]` | `vinculos:leer` | 200 | — |
 | `GET /vinculos/{id}/cuenta-designada` · `POST /vinculos/{id}/cuenta-designada/aprobar` · `POST /vinculos/{id}/cuenta-designada/rechazar` | La propone el tercero (public); la empresa aprueba (2 aprobadores por defecto) | `cuentas:aprobar` | 200; 409 `aprobador-repetido` | `vinculo.cuenta_designada_propuesta`, `vinculo.cuenta_designada` |
+| `GET /vinculos/{id}/ficha` | **Ficha aceptada por la empresa** en el vínculo (F3, FM-35), para crear o actualizar el proveedor en el ERP (`FichaDelVinculoDto`): `secciones[]` solo con lo que la empresa **aceptó** (`seccion`, `nombre`, `periodo`, `version`, `aceptadaEn`, `expedienteId`, `folio`, `huella`, `contenido` — el mismo `ContenidoDeSeccionDto` del evento `seccion.aceptada`, §6.6 —, `versionVigente` y `versionNuevaPendiente`), `tipoPersona`, `referencias[]`, `representanteLegal` (el que recibe AyF, de la General y la Legal aceptadas) y `cuentaDesignada` (la aprobada; `numero` completo solo con `cuentas:aprobar`, CB-2) | `vinculos:leer` **y** `terceros:leer` | 200; 404 `vinculo-no-encontrado` (vínculo de otra empresa) | — |
 | `GET /vinculos/{id}/historial` | `TimelineVinculo` | `vinculos:leer` | 200 | — |
 
 ### 2.4 Expedientes y requisitos
@@ -796,6 +797,7 @@ Decisiones NW-1…NW-12 del [registro](decisiones/registro.md). Lo que sigue es 
 | `expediente.abierto` · `expediente.en_revision` · `expediente.observado` · `expediente.reenviado` · `expediente.aprobado` · `expediente.rechazado` | `ExpedienteAbierto`; `ExpedienteEnviadoARevision` (`causa: CargaCompleta`) o `RevisionReanudada` (`causa: RevisionReanudada`); `ExpedienteObservado`; `ExpedienteReenviado` (`causa: Tercero\|Integrador`); `ExpedienteAprobado`; `ExpedienteRechazado` | `DatosExpedienteDto { expedienteId, folio, vinculoId, referencias, tipoExpediente, estado (tras el evento), causa?, requisitos? [{ requisitoId, codigo }] (observados o reabiertos), motivos? [{ codigo, texto }] (rechazo, texto tal como se comunicó al tercero), justificacion? (rechazo), terceroId? y tipoVinculo? (abierto) }` |
 | `documento.compartido` · `documento.por_vencer` · `documento.vencido` | `VersionCompartida`; `VencimientoAvisado` (nuevo evento del stream del documento, uno por documento y vínculo en el aviso consolidado del día, TD-7); `VersionVencida` | `DatosDocumentoDto { documentoId, terceroId, tipo (canónico o código del tipo del tenant), version, vinculoId, referencias, causa? (compartido: InvitacionAceptada\|VersionNueva\|Importada), vigenteHasta?, diasRestantes? (por vencer), diasGracia? (vencido) }` |
 | `certificado.emitido` · `certificado.reemplazado` · `certificado.suspendido` · `certificado.restablecido` · `certificado.revocado` · `certificado.vencido` | `CertificadoEmitido`; `CertificadoReemplazado` (emisión anterior); `CertificadoSuspendido`/`Restablecido` (bloqueo y desbloqueo, B-5); `CertificadoRevocado`; `CertificadoVencido` (NW-13) | `DatosCertificadoDto { certificadoId, vinculoId, referencias, terceroId, certificado { folio, emision, estado (tras el evento), hash (SHA-256 hex), vigenteHasta?, urlVerificacion }, estadoAnterior?, motivo? (suspendido, restablecido, revocado, reemplazado), expedienteId? y expedienteFolio? (emitido), folioReemplazo? (reemplazado) }`. Versión reducida de §6.3: `versionesAceptadas`, `cuentaDesignada`, `cambios` y `verificaciones` llegan con H6–H7 |
+| `seccion.aceptada` | `SeccionAceptadaPorEmpresa` (stream del expediente, al aprobarse; uno por sección no eximida) | `DatosSeccionAceptadaDto { vinculoId, referencias, terceroId, empresaId, seccion, periodo? (financiera), version, aceptadaEn, expedienteId, folio, huella, contenido }` (§6.6) |
 
 Agregar tipos es registrar otro `IMapeadorDeEventos` en DI (NW-2); su catálogo se suma solo a la validación de suscripciones y a `GET /eventos/tipos`.
 
@@ -862,6 +864,63 @@ Todas las altas y cambios quedan en la auditoría de configuración (entidad `We
 
 ---
 
+### 6.6 `seccion.aceptada` (F3, FM-32…FM-36)
+
+Sale cuando una empresa **acepta** una versión de una sección de la ficha del tercero: al aprobarse el expediente (inicial, renovación o la actualización de esa sección), uno por sección no eximida, después de `expediente.aprobado`. Lo publica `MapeadorDeLaFicha` desde el evento de dominio `SeccionAceptadaPorEmpresa`. La versión es inmutable, así que un reproceso publica lo mismo; solo los nombres de los catálogos se leen al mapear. Lo que la empresa observa no lo emite (FM-3).
+
+```json
+{ "id": "0196…", "tipo": "seccion.aceptada", "version": 1, "ocurridoEn": "2026-11-09T21:10:03.120000+00:00",
+  "tenantId": "0196…", "empresaId": "0196…", "cursor": "5120",
+  "datos": { "vinculoId": "0196…", "referencias": [ { "sistema": "SRM", "id": "ADP-00123" } ], "terceroId": "0196…", "empresaId": "0196…",
+             "seccion": "FICHA_TRIBUTARIA", "periodo": null, "version": 3, "aceptadaEn": "2026-11-09T21:10:03+00:00",
+             "expedienteId": "0196…", "folio": "NORTE-E-2026-000014", "huella": "9f2c…",
+             "contenido": { "general": null, "legal": null, "financiera": null, "sst": null, "especialidades": null,
+               "tributaria": {
+                 "responsabilidades": [ { "codigo": "05", "nombre": "Impuesto sobre la renta y complementarios régimen ordinario" },
+                                        { "codigo": "07", "nombre": "Retención en la fuente a título de renta" },
+                                        { "codigo": "48", "nombre": "Impuesto sobre las ventas (IVA)" }, { "codigo": "52", "nombre": "Facturador electrónico" } ],
+                 "calidades": { "responsableIva": true, "autorretenedor": false, "declaranteRenta": true, "granContribuyente": false,
+                                "autorretenedorIca": false, "regimenSimple": false, "granContribuyenteBogota": null, "regimenEspecial": false,
+                                "autorretenedorRft": null, "descuentoSenaFic": null, "profesionalIndependiente": null, "exentoRetencion": null,
+                                "agenteRetenedorIva": false, "obligadoAFacturar": true },
+                 "calidadesSinDerivar": [ { "calidad": "granContribuyenteBogota", "nota": "Calidad distrital (Secretaría de Hacienda de Bogotá)…" } ],
+                 "resolucionGranContribuyente": null, "resolucionAutorretenedor": null, "responsableIca": true, "autorretenedorIca": false,
+                 "ica": [ { "municipio": { "codigo": "11001", "nombre": "Bogotá, D.C.", "codigoDepartamento": "11", "departamento": "Bogotá, D.C.", "pais": "CO" },
+                            "ciiu": { "codigo": "4663", "nombre": "Comercio al por mayor de materiales de construcción…" }, "tarifaPorMil": null } ] } } } }
+```
+
+**`contenido`** (`ContenidoDeSeccionDto`): solo viene la propiedad de la sección; las demás van en `null`. Es **lo aceptado**, normalizado para el ERP. Los códigos de catálogo llevan su nombre (`null` si el código ya no está activo).
+
+| Sección | Propiedad | Contenido |
+|---|---|---|
+| `FICHA_GENERAL` | `general` | `tipoPersona`, `tipoIdentificacion`, `numeroIdentificacion`, `dv`, `nombre` (razón social o nombres y apellidos), `razonSocial`, `nombres`, `apellidos`, `direccion` (texto) y `direccionEstructurada` (formato AyF, si la hay), `ciudad { codigo DANE, nombre, codigoDepartamento, departamento, pais }`, `pais`, `telefono`, `correo`, `ciiuPrincipal { codigo, nombre }`, `ciiuSecundarias[]`, `paginaWeb`, `certificadoIso`, `anioInicio` y, **solo en persona natural**, `representanteLegal` (el propio tercero) |
+| `FICHA_TRIBUTARIA` | `tributaria` | `responsabilidades[] { codigo, nombre }` (casilla 53); `calidades` (las 13 del PUT de AyF más `autorretenedorRft`, derivadas según FM-33); `calidadesSinDerivar[] { calidad, nota }` (las que van en `null`); `resolucionGranContribuyente` y `resolucionAutorretenedor { numero, fecha }`; `responsableIca`, `autorretenedorIca` e `ica[] { municipio, ciiu, tarifaPorMil }` |
+| `FICHA_LEGAL` | `legal` | `representanteLegal`: el principal que usa AyF (FM-34), con `origen`, `indice` en `personas`, `nombre`, identificación, `tipoRepresentacion`, `cargo`, `fechaExpedicion`, `correo` y `telefono`. Además `personas[]` (todas, con rol, identificación, porcentaje y PEP) y `revisorFiscalFirma` |
+| `FICHA_FINANCIERA` | `financiera` | Tal cual, del periodo (`periodo` también va en `datos`): cifras, fecha de corte y moneda extranjera |
+| `FICHA_SST` | `sst` | Las ocho preguntas sí/no |
+| `FICHA_ESPECIALIDADES` | `especialidades` | `especialidades[] { codigo, nombre }` |
+
+**Calidades tributarias (FM-33).** Cada calidad derivable es `true` si las responsabilidades traen alguno de sus códigos y `false` si no. Va en `null` si no se puede derivar de la ficha; en ese caso el SRM conserva lo que AyF ya tiene. AyF recibe `NoObligadoFacturar` como la negación de `obligadoAFacturar`.
+
+| Calidad | Campo de AyF | Códigos DIAN (casilla 53) |
+|---|---|---|
+| `responsableIva` | `RegimenIva` | 48 (y el histórico 11); con 49 o 53 es `false` |
+| `autorretenedor` | `AutoRetenedor` | 15 |
+| `declaranteRenta` | `DeclaranteRenta` | 05, 04 |
+| `granContribuyente` | `GranContribuyente` | 13 |
+| `autorretenedorIca` | `AutoRetenedorICA` | Ninguno: sale del dato `autorretenedor_ica` de la sección, porque ICA es municipal |
+| `regimenSimple` | `RegimenSimple` | 47 |
+| `granContribuyenteBogota` | `GranContribuyenteBta` | `null`: calidad distrital que no está en la casilla 53 |
+| `regimenEspecial` | `RegimenEspecial` | 04 |
+| `autorretenedorRft` | Ninguno (AyF no la recibe) | `null`: la autorretención especial de renta no tiene código propio |
+| `descuentoSenaFic` | `DescuentoSenaFic` | `null` |
+| `profesionalIndependiente` | `ProfesionalIndependiente` | `null` |
+| `exentoRetencion` | `ExentoRetefuente` | `null` |
+| `agenteRetenedorIva` | `AgenteRetenedorIVA` | 09, 23 (el 07 es retención a título de renta y **no** cuenta) |
+| `obligadoAFacturar` | `NoObligadoFacturar` (negado) | 52, 16 y el histórico 37 |
+
+**Cuenta designada.** No viaja en `seccion.aceptada`: tiene su propio evento, `vinculo.cuenta_designada` (CB-3), con el número **enmascarado**. El número completo se lee en `GET /vinculos/{id}/cuenta-designada` o en `cuentaDesignada` de `GET /vinculos/{id}/ficha`, solo con `cuentas:aprobar` (FM-36).
+
 ## 7. Catálogo de eventos públicos
 
 > **Implementado (NW, 2026-11-08)**: 18 tipos de vínculo, expediente y documento con sus `datos` exactos en §6.5 (algunos nombres difieren de esta tabla; ver allí). El resto de la tabla es el objetivo.
@@ -879,6 +938,7 @@ Todas las altas y cambios quedan en la auditoría de configuración (entidad `We
 | `vinculo.estado_cambiado` | Cualquier cambio de `EstadoVinculo` (una revalidación vencida **no** cambia el estado del vínculo, T-8: su alerta es `certificado.con_pendientes { bloqueante: true }`) | `vinculoId, estadoAnterior, estadoNuevo, causa: enum(Vigencia\|Expediente\|Bloqueo\|Desvinculacion\|Reintegro\|Anulacion), vigenteHasta` |
 | `vinculo.revalidacion_pendiente` · `vinculo.revalidado` · `vinculo.cambio_menor` | `AceptacionDesactualizada`, `VersionAceptadaRegistrada` (revalidación), `CambioMenorRegistrado` | `vinculoId, tipo, versionNueva, plazoRevalidacion, expedienteRevalidacionId` |
 | `vinculo.cuenta_designada_propuesta` · `vinculo.cuenta_designada` · `vinculo.cuenta_designada_rechazada` | `CuentaDesignada*` | `vinculoId, cuenta (enmascarada), aprobadaPor[]` |
+| `seccion.aceptada` | `SeccionAceptadaPorEmpresa` (F3, FM-32) | `vinculoId, terceroId, empresaId, seccion, periodo?, version, aceptadaEn, contenido` (lo aceptado normalizado para el ERP, §6.6) |
 | `vinculo.bloqueado` · `vinculo.desbloqueado` · `vinculo.desvinculado` · `vinculo.reintegrado` · `vinculo.anulado` | — | `vinculoId, motivo` |
 | `expediente.abierto` · `expediente.reabierto` · `expediente.invitacion_enviada` · `expediente.invitacion_aceptada` | `ExpedienteAbierto`, `ExpedienteReabierto`, `InvitacionEnviada`, `InvitacionAceptada` | `expedienteId, vinculoId, tipo, flujo, requisitos[]` |
 | `expediente.recordatorio_cargue` | Scheduled message `RecordatorioCargue` (15/7/1 días antes de `plazoCargueHasta`, P-4-2) | `expedienteId, vinculoId, empresaId, diasRestantes, requisitosPendientes[], plazoCargueHasta` |

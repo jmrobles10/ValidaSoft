@@ -95,6 +95,15 @@ public sealed record DatosCertificadoDto(
     string? EstadoAnterior = null, string? Motivo = null, Guid? ExpedienteId = null, string? ExpedienteFolio = null, string? FolioReemplazo = null,
     bool? Bloqueante = null);
 
+/// <summary>
+/// <c>seccion.aceptada</c> (FM-32): la empresa aceptó, al aprobarse el expediente, una versión de una sección de la ficha del
+/// tercero. <see cref="Contenido"/> es <b>lo aceptado</b> normalizado para el ERP (el mismo de <c>GET /vinculos/{id}/ficha</c>);
+/// <see cref="Periodo"/> solo en la financiera. Nunca lleva revisores ni soportes.
+/// </summary>
+public sealed record DatosSeccionAceptadaDto(
+    Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, Guid TerceroId, Guid EmpresaId, string Seccion, int? Periodo, int Version,
+    DateTimeOffset AceptadaEn, Guid ExpedienteId, string Folio, string Huella, ContenidoDeSeccionDto Contenido);
+
 // ---------- Webhooks ----------
 
 /// <summary>

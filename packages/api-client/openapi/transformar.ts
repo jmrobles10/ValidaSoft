@@ -210,6 +210,7 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/boveda/cuentas-bancarias/{id}/retirar': 'retirarCuentaBancaria',
   'POST /public/v1/vinculos/{id}/cuenta-designada': 'designarCuenta',
   'GET /api/v1/vinculos/{id}/cuenta-designada': 'obtenerCuentaDesignada',
+  'GET /api/v1/vinculos/{id}/ficha': 'obtenerFichaDelVinculo',
   'POST /api/v1/vinculos/{id}/cuenta-designada/aprobar': 'aprobarCuentaDesignada',
   'POST /api/v1/vinculos/{id}/cuenta-designada/rechazar': 'rechazarCuentaDesignada',
   'GET /public/v1/boveda': 'obtenerBoveda',

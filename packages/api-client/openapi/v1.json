@@ -268,6 +268,42 @@
         }
       }
     },
+    "/api/v1/vinculos/{id}/ficha": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.FichaDelVinculoEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_ficha",
+        "description": "GET_api_v1_vinculos_id_ficha",
+        "operationId": "GET_api_v1_vinculos_id_ficha",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/terceros/{id}/ficha": {
       "get": {
         "tags": [
@@ -8133,6 +8169,126 @@
           }
         }
       },
+      "CalidadesTributariasDto": {
+        "required": [
+          "responsableIva",
+          "autorretenedor",
+          "declaranteRenta",
+          "granContribuyente",
+          "autorretenedorIca",
+          "regimenSimple",
+          "granContribuyenteBogota",
+          "regimenEspecial",
+          "autorretenedorRft",
+          "descuentoSenaFic",
+          "profesionalIndependiente",
+          "exentoRetencion",
+          "agenteRetenedorIva",
+          "obligadoAFacturar"
+        ],
+        "type": "object",
+        "properties": {
+          "responsableIva": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "autorretenedor": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "declaranteRenta": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "granContribuyente": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "autorretenedorIca": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "regimenSimple": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "granContribuyenteBogota": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "regimenEspecial": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "autorretenedorRft": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "descuentoSenaFic": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "profesionalIndependiente": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "exentoRetencion": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "agenteRetenedorIva": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "obligadoAFacturar": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "CalidadSinDerivarDto": {
+        "required": [
+          "calidad",
+          "nota"
+        ],
+        "type": "object",
+        "properties": {
+          "calidad": {
+            "type": "string"
+          },
+          "nota": {
+            "type": "string"
+          }
+        }
+      },
       "CambioDeCampoDto": {
         "required": [
           "campo",
@@ -8531,6 +8687,42 @@
           }
         }
       },
+      "CiudadErpDto": {
+        "required": [
+          "codigo",
+          "nombre",
+          "codigoDepartamento",
+          "departamento",
+          "pais"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigoDepartamento": {
+            "type": "string"
+          },
+          "departamento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ClavePublicaDeCertificadosDto": {
         "required": [
           "kid",
@@ -8588,6 +8780,24 @@
             "items": {
               "$ref": "#/components/schemas/ClavePublicaDeCertificadosDto"
             }
+          }
+        }
+      },
+      "CodigoNombreDto": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8855,6 +9065,534 @@
           },
           "rol": {
             "type": "string"
+          }
+        }
+      },
+      "ContenidoDeSeccionDto": {
+        "type": "object",
+        "properties": {
+          "general": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoGeneralDto"
+              }
+            ]
+          },
+          "tributaria": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoTributarioDto"
+              }
+            ]
+          },
+          "legal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoLegalDto"
+              }
+            ]
+          },
+          "financiera": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoFinancieroDto"
+              }
+            ]
+          },
+          "sst": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoSstDto"
+              }
+            ]
+          },
+          "especialidades": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContenidoEspecialidadesDto"
+              }
+            ]
+          }
+        }
+      },
+      "ContenidoEspecialidadesDto": {
+        "required": [
+          "especialidades"
+        ],
+        "type": "object",
+        "properties": {
+          "especialidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodigoNombreDto"
+            }
+          }
+        }
+      },
+      "ContenidoFinancieroDto": {
+        "required": [
+          "periodo",
+          "fechaCorte",
+          "activos",
+          "pasivos",
+          "patrimonio",
+          "ingresosBrutos",
+          "ingresosNetos",
+          "gastosOperacionales",
+          "gastosNoOperacionales",
+          "otrosIngresos",
+          "monedaExtranjera"
+        ],
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fechaCorte": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "activos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pasivos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "patrimonio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ingresosBrutos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "ingresosNetos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "gastosOperacionales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "gastosNoOperacionales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "otrosIngresos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "monedaExtranjera": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MonedaExtranjeraDto"
+              }
+            ]
+          }
+        }
+      },
+      "ContenidoGeneralDto": {
+        "required": [
+          "tipoPersona",
+          "tipoIdentificacion",
+          "numeroIdentificacion",
+          "dv",
+          "nombre",
+          "razonSocial",
+          "nombres",
+          "apellidos",
+          "direccion",
+          "direccionEstructurada",
+          "ciudad",
+          "pais",
+          "telefono",
+          "correo",
+          "ciiuPrincipal",
+          "ciiuSecundarias",
+          "paginaWeb",
+          "certificadoIso",
+          "anioInicio",
+          "representanteLegal"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoPersona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numeroIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dv": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "razonSocial": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombres": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apellidos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "direccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "direccionEstructurada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DireccionEstructuradaDto"
+              }
+            ]
+          },
+          "ciudad": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CiudadErpDto"
+              }
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ciiuPrincipal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodigoNombreDto"
+              }
+            ]
+          },
+          "ciiuSecundarias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodigoNombreDto"
+            }
+          },
+          "paginaWeb": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificadoIso": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "anioInicio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "representanteLegal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepresentanteLegalErpDto"
+              }
+            ]
+          }
+        }
+      },
+      "ContenidoLegalDto": {
+        "required": [
+          "representanteLegal",
+          "personas",
+          "revisorFiscalFirma"
+        ],
+        "type": "object",
+        "properties": {
+          "representanteLegal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepresentanteLegalErpDto"
+              }
+            ]
+          },
+          "personas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonaRelacionadaDto"
+            }
+          },
+          "revisorFiscalFirma": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FirmaRevisoraDto"
+              }
+            ]
+          }
+        }
+      },
+      "ContenidoSstDto": {
+        "required": [
+          "programaSaludOcupacional",
+          "identificaFactoresDeRiesgo",
+          "comiteParitario",
+          "programaHigieneYSeguridad",
+          "gestionAmbiental",
+          "reglamentoInterno",
+          "politicaHseq",
+          "licenciasYPermisos"
+        ],
+        "type": "object",
+        "properties": {
+          "programaSaludOcupacional": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "identificaFactoresDeRiesgo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "comiteParitario": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "programaHigieneYSeguridad": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "gestionAmbiental": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "reglamentoInterno": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "politicaHseq": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "licenciasYPermisos": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "ContenidoTributarioDto": {
+        "required": [
+          "responsabilidades",
+          "calidades",
+          "calidadesSinDerivar",
+          "resolucionGranContribuyente",
+          "resolucionAutorretenedor",
+          "responsableIca",
+          "autorretenedorIca",
+          "ica"
+        ],
+        "type": "object",
+        "properties": {
+          "responsabilidades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CodigoNombreDto"
+            }
+          },
+          "calidades": {
+            "$ref": "#/components/schemas/CalidadesTributariasDto"
+          },
+          "calidadesSinDerivar": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalidadSinDerivarDto"
+            }
+          },
+          "resolucionGranContribuyente": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResolucionDto"
+              }
+            ]
+          },
+          "resolucionAutorretenedor": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ResolucionDto"
+              }
+            ]
+          },
+          "responsableIca": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "autorretenedorIca": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "ica": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IcaErpDto"
+            }
           }
         }
       },
@@ -9736,6 +10474,76 @@
           },
           "tipoCambio": {
             "type": "string"
+          }
+        }
+      },
+      "DireccionEstructuradaDto": {
+        "required": [
+          "tipoVia",
+          "numeroVia",
+          "letraVia",
+          "bis",
+          "cuadrante",
+          "numeroCruce",
+          "letraCruce",
+          "placa",
+          "complemento"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoVia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numeroVia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "letraVia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bis": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "cuadrante": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numeroCruce": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "letraCruce": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "placa": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "complemento": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -10979,6 +11787,68 @@
           }
         }
       },
+      "FichaDelVinculoDto": {
+        "required": [
+          "vinculoId",
+          "empresaId",
+          "terceroId",
+          "referencias",
+          "tipoPersona",
+          "secciones",
+          "representanteLegal",
+          "cuentaDesignada"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "referencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaExternaDto"
+            }
+          },
+          "tipoPersona": {
+            "type": "string"
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionAceptadaDto"
+            }
+          },
+          "representanteLegal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepresentanteLegalErpDto"
+              }
+            ]
+          },
+          "cuentaDesignada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CuentaDesignadaDto"
+              }
+            ]
+          }
+        }
+      },
       "FichaTerceroDto": {
         "required": [
           "tercero",
@@ -11291,6 +12161,27 @@
           },
           "valor": {
             "type": "string"
+          }
+        }
+      },
+      "FirmaRevisoraDto": {
+        "required": [
+          "nit",
+          "razonSocial"
+        ],
+        "type": "object",
+        "properties": {
+          "nit": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "razonSocial": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11679,6 +12570,45 @@
           "fecha": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "IcaErpDto": {
+        "required": [
+          "municipio",
+          "ciiu",
+          "tarifaPorMil"
+        ],
+        "type": "object",
+        "properties": {
+          "municipio": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CiudadErpDto"
+              }
+            ]
+          },
+          "ciiu": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CodigoNombreDto"
+              }
+            ]
+          },
+          "tarifaPorMil": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -12263,6 +13193,34 @@
           }
         }
       },
+      "MonedaExtranjeraDto": {
+        "required": [
+          "realiza",
+          "tipos",
+          "paises"
+        ],
+        "type": "object",
+        "properties": {
+          "realiza": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "tipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "paises": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "MotivoDto": {
         "required": [
           "motivo"
@@ -12803,6 +13761,137 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "PersonaRelacionadaDto": {
+        "required": [
+          "rol",
+          "tipoRepresentacion",
+          "tipoIdentificacion",
+          "numero",
+          "dv",
+          "nombres",
+          "apellidos",
+          "cargo",
+          "porcentaje",
+          "pep",
+          "vinculoPep",
+          "fechaExpedicion",
+          "fechaNacimiento",
+          "nacionalidad",
+          "residencia",
+          "correo",
+          "telefono"
+        ],
+        "type": "object",
+        "properties": {
+          "rol": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoRepresentacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dv": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombres": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apellidos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cargo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "porcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "pep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "vinculoPep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "fechaExpedicion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "fechaNacimiento": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "nacionalidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "residencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13564,6 +14653,102 @@
           }
         }
       },
+      "RepresentanteLegalErpDto": {
+        "required": [
+          "origen",
+          "indice",
+          "nombre",
+          "nombres",
+          "apellidos",
+          "tipoIdentificacion",
+          "numero",
+          "dv",
+          "tipoRepresentacion",
+          "cargo",
+          "fechaExpedicion",
+          "correo",
+          "telefono"
+        ],
+        "type": "object",
+        "properties": {
+          "origen": {
+            "type": "string"
+          },
+          "indice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "nombres": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apellidos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dv": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoRepresentacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cargo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fechaExpedicion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RequisitoDelCertificadoDto": {
         "required": [
           "codigo",
@@ -13832,6 +15017,28 @@
                 "$ref": "#/components/schemas/SeccionDeRequisitoDto"
               }
             ]
+          }
+        }
+      },
+      "ResolucionDto": {
+        "required": [
+          "numero",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -14155,6 +15362,76 @@
         "properties": {
           "clavePublicaPem": {
             "type": "string"
+          }
+        }
+      },
+      "SeccionAceptadaDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo",
+          "version",
+          "aceptadaEn",
+          "expedienteId",
+          "folio",
+          "huella",
+          "contenido",
+          "versionVigente",
+          "versionNuevaPendiente"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aceptadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "huella": {
+            "type": "string"
+          },
+          "contenido": {
+            "$ref": "#/components/schemas/ContenidoDeSeccionDto"
+          },
+          "versionVigente": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "versionNuevaPendiente": {
+            "type": "boolean"
           }
         }
       },
@@ -16538,6 +17815,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.FichaDelVinculoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.FichaTerceroEndpoints"

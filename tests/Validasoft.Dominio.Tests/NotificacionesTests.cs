@@ -8,6 +8,7 @@ using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Identificaciones;
 using Validasoft.Dominio.Integraciones;
@@ -125,6 +126,44 @@ public class NotificacionesTests
         datosVencer.Tipo.ShouldBe("RUT");
         datosVencer.DiasRestantes.ShouldBe(30);
         datosVencer.VigenteHasta.ShouldBe(new DateOnly(2026, 12, 8));
+    }
+
+    [Fact]
+    public async Task La_seccion_aceptada_es_publica_con_lo_aceptado_normalizado_para_el_erp_y_sin_soportes_ni_revisores()
+    {
+        // La tributaria del tercero: versión 1 (la aceptada) y una 2 posterior que no debe colarse en el evento.
+        var definicion = CatalogoDeSecciones.Requerida(CodigosDeSeccion.Tributaria);
+        var iniciada = SeccionDeFicha.Iniciar(TerceroId, definicion, null, Ahora);
+        var seccion = SeccionDeFicha.Create(iniciada);
+        VersionDeSeccionRegistrada Version(int numero, string[] codigos) => new(numero,
+            definicion.Esquema.Canonico(new DatosTributarios { Responsabilidades = codigos, ResponsableIca = false }), $"h{numero}", $"huella-{numero}",
+            [new SoporteDeSeccion(DocumentoId, 1, "RUT")], new CompletitudDeSeccion(true, [], 1), 1, null, OrigenDeSeccion.Tercero, Revisor, Ahora);
+        seccion.Apply(Version(1, ["05", "13", "48"]));
+        seccion.Apply(Version(2, ["49"]));
+        var contexto = new ContextoFalso { Seccion = seccion, Catalogos = FichaIntegracionErpTests.Catalogos };
+
+        var aceptada = new SeccionAceptadaPorEmpresa(RequisitoId, CodigosDeSeccion.Tributaria, null, seccion.Id, 1, "huella-1", Ahora);
+        var mapeado = (await new MapeadorDeLaFicha().MapearAsync(Evento(aceptada, ExpedienteId), contexto, CancellationToken.None)).ShouldNotBeNull();
+
+        (mapeado.Tipo, mapeado.TenantId, mapeado.EmpresaId).ShouldBe(("seccion.aceptada", Tenant, (Guid?)EmpresaId));
+        MapeadorDeLaFicha.Tipos.ShouldHaveSingleItem().Tipo.ShouldBe("seccion.aceptada");
+        var datos = (Contratos.DatosSeccionAceptadaDto)mapeado.Datos;
+        (datos.VinculoId, datos.TerceroId, datos.EmpresaId, datos.Seccion, datos.Periodo, datos.Version, datos.AceptadaEn, datos.ExpedienteId, datos.Folio,
+            datos.Huella).ShouldBe((VinculoId, TerceroId, EmpresaId, "FICHA_TRIBUTARIA", (int?)null, 1, Ahora, ExpedienteId, "NORTE-E-2026-000001", "huella-1"));
+        var tributaria = datos.Contenido.Tributaria.ShouldNotBeNull();
+        tributaria.Responsabilidades.Select(r => r.Codigo).ShouldBe(["05", "13", "48"]);
+        (tributaria.Calidades.ResponsableIva, tributaria.Calidades.GranContribuyente, tributaria.Calidades.DeclaranteRenta).ShouldBe(((bool?)true, (bool?)true, (bool?)true));
+        datos.Contenido.General.ShouldBeNull();
+
+        var json = JsonEventos.Cuerpo(EventoPublico.Desde(Evento(aceptada, ExpedienteId), mapeado, Ahora).ADto());
+        json.ShouldContain("\"referencias\":[{\"sistema\":\"SRM\",\"id\":\"ADP-1\"}");
+        json.ShouldContain("\"granContribuyente\":true");
+        foreach (var prohibido in new[] { Revisor, DocumentoId.ToString(), "soportes", CorreoTercero })
+            json.ShouldNotContain(prohibido, Case.Insensitive);
+
+        // Una sección que no existe en la bóveda (o una versión que no tiene) no publica nada.
+        (await new MapeadorDeLaFicha().MapearAsync(Evento(aceptada with { Version = 9 }, ExpedienteId), contexto, CancellationToken.None)).ShouldBeNull();
+        (await new MapeadorDelProcesoDeValidacion().MapearAsync(Evento(aceptada, ExpedienteId), contexto, CancellationToken.None)).ShouldBeNull();
     }
 
     [Fact]
@@ -490,6 +529,14 @@ public class NotificacionesTests
             Task.FromResult<Tercero?>(new Tercero { Id = id, Identificacion = new Identificacion("CO", "NIT", "900123456", "7"), Nombre = "Aceros del Norte" });
 
         public Task<Documento?> DocumentoAsync(Guid id, CancellationToken ct) => Task.FromResult(id == DocumentoId ? _documento : null);
+
+        public SeccionDeFicha? Seccion { get; set; }
+
+        public ICatalogosDeFicha Catalogos { get; set; } = CatalogosEnMemoria.Vacios;
+
+        public Task<SeccionDeFicha?> SeccionDeFichaAsync(Guid id, CancellationToken ct) => Task.FromResult(Seccion?.Id == id ? Seccion : null);
+
+        public Task<ICatalogosDeFicha> CatalogosDeFichaAsync(IEnumerable<ReferenciaACatalogo> referencias, CancellationToken ct) => Task.FromResult(Catalogos);
 
         public Certificado? Certificado { get; set; }
 
