@@ -1,0 +1,90 @@
+{
+  "catalogos": {
+    "ciudades": [
+      { "ciudID": 1, "ciuNombre": "Bogotá", "ciuCodDepartamento": "11", "ciuCodMunicipio": "001" },
+      { "ciudID": 2, "ciuNombre": "Medellín", "ciuCodDepartamento": "5", "ciuCodMunicipio": "1" },
+      { "ciudID": 3, "ciuNombre": "Ciudad sin código", "ciuCodDepartamento": null, "ciuCodMunicipio": null }
+    ],
+    "actividadesEconomicas": [
+      { "actEcId": 10, "actEcCodigo": "4663", "actECtexto": "Comercio al por mayor de materiales de construcción" },
+      { "actEcId": 11, "actEcCodigo": "4290", "actECtexto": "Construcción de otras obras de ingeniería civil" }
+    ],
+    "bancos": [
+      { "id": "1", "codigo": "1007", "texto": "Bancolombia", "estado": true },
+      { "id": "2", "codigo": "1051", "texto": "Davivienda", "estado": true }
+    ],
+    "grupos": [ { "gruId": 9101, "gruTexto": "Obra gris (Portal)" } ],
+    "categorias": [ { "catId": 9201, "catIdGrupo": 9101, "catTexto": "Concretos (Portal)" } ],
+    "especialidades": [
+      { "espId": 9301, "espIdCategoria": 9201, "espIdGrupo": 9101, "espTexto": "Concreto premezclado (Portal)" },
+      { "espId": 9302, "espIdCategoria": 9201, "espIdGrupo": 9101, "espTexto": "Bombeo de concreto (Portal)" }
+    ],
+    "paises": [ { "id": 1, "sigla": "CO", "nombre": "Colombia" }, { "id": 2, "sigla": "US", "nombre": "Estados Unidos" } ]
+  },
+  "terceros": [
+    {
+      "tercero": { "terid": {{TERID_J}}, "terEstado": 3 },
+      "informacionGeneral": {
+        "tigId": 1, "tigNombre": "Aceros del Norte S.A.S.", "tigTipoPersona": "J", "tigTipoDocumento": "NIT", "tigNumeroIdentificacion": "{{NIT_J}}",
+        "terDigitoVerificacion": 0, "tigCorreo": "compras@aceros.co", "tigCiudad": 1, "tigDireccion": "{{DIRECCION_J}}", "tigActEconomicaPri": 10,
+        "tigTelefono": "{{TELEFONO_J}}", "tigPaginaWeb": "aceros.co", "tigCertificadoISO": true, "tigPais": "Colombia", "tigAnioInicioActividades": 2005
+      },
+      "direccionEstructurada": { "viaCodigo": "CL", "viaNumero": "45", "secNumero": "12", "secNumero2": "08" },
+      "infoTributaria": {
+        "responsableIVA": true, "declarante": true, "granContribuyente": true, "autoRetenedorICA": false, "noObligFacturar": true,
+        "resolucionGC": 9061, "fechaGC": "2020-12-10T00:00:00"
+      },
+      "retencionesIca": [ { "idTerIca": 1, "idCiudad": 1, "idActividadEconomica": 10 } ],
+      "infoFinanciera": [
+        { "id": 1, "anio": 2024, "activosTotales": 1000000, "pasivosTotales": 600000, "patrimonio": 400000, "ingresosBrutos": 900000,
+          "ingresosNetos": 800000, "gastosOperaciones": 100000, "gastosNoOperaciones": 10000, "otrosIngresos": 5000 },
+        { "id": 2, "anio": 2025, "activosTotales": 1200000, "pasivosTotales": 700000, "patrimonio": 500000, "ingresosBrutos": 950000,
+          "ingresosNetos": 850000, "gastosOperaciones": 110000, "gastosNoOperaciones": 12000, "otrosIngresos": 6000 }
+      ],
+      "monedaExtranjera": { "realizaTransacciones": false },
+      "camaraComercio": [
+        { "terCamId": 1, "terTipoRegistro": 1, "terCamTipoDoc": "CC", "terCamDocumento": "79123456", "terCapNombre": "Juan", "terCapApellido": "Pérez",
+          "terCamCargo": "Gerente", "terCamEsPep": false, "terCamVinculoPep": false, "terTipoRepresentacion": 1, "terFechaExpedicion": "10/05/2001",
+          "terNacionalidad": "Colombia" },
+        { "terCamId": 2, "terTipoRegistro": 2, "terCamTipoDoc": "CC", "terCamDocumento": "79123456", "terCapNombre": "Juan", "terCapApellido": "Pérez",
+          "terCamPorParticipa": "60", "terCamEsPep": false, "terCamVinculoPep": false },
+        { "terCamId": 3, "terTipoRegistro": 2, "terCamTipoDoc": "CC", "terCamDocumento": "79.123.456", "terCapNombre": "Juan", "terCapApellido": "Pérez",
+          "terCamPorParticipa": "60", "terCamEsPep": false, "terCamVinculoPep": false },
+        { "terCamId": 4, "terTipoRegistro": 2, "terCamTipoDoc": "NIT", "terCamDocumento": "860034313-7", "terCapNombre": "Inversiones S.A.",
+          "terCamPorParticipa": "40,0", "terCamEsPep": false, "terCamVinculoPep": false }
+      ],
+      "siso": { "programaSaludOcupacional": true, "programaFactoresRiesgo": true, "tieneComiteSO": true, "programaSeguridadEhigiene": true,
+        "programaAmbiental": true, "reglaIntVigente": true, "politicaHSEQ": true, "licPermAutorizaciones": true },
+      "especialidades": [ 9301, 9302 ],
+      "constructoras": [ { "idConstructora": 7, "estado": 3 }, { "idConstructora": 8, "estado": -3 } ]
+    },
+    {
+      "tercero": { "terid": {{TERID_N}}, "terEstado": 3 },
+      "informacionGeneral": {
+        "tigId": 2, "tigNombre": "María", "terApellido": "López Díaz", "tigTipoPersona": "N", "tigTipoDocumento": "CC",
+        "tigNumeroIdentificacion": "{{CC_N}}", "tigCorreo": "maria@correo.co", "tigCiudad": 2, "tigDireccion": "Carrera 7 # 1-2",
+        "tigActEconomicaPri": 11, "tigTelefono": "3001234567", "tigPaginaWeb": "", "tigCertificadoISO": false, "tigPais": "Colombia"
+      },
+      "infoTributaria": { "responsableIVA": false },
+      "retencionesIca": [ { "idTerIca": 2, "idCiudad": 2, "idActividadEconomica": 11 } ],
+      "siso": { "programaSaludOcupacional": false },
+      "especialidades": [ 9302 ],
+      "constructoras": [ { "idConstructora": 7, "estado": 3 } ]
+    },
+    {
+      "tercero": { "terid": {{TERID_E}}, "terEstado": -3 },
+      "informacionGeneral": {
+        "tigId": 3, "tigNombre": "Obras con Errores Ltda.", "tigTipoPersona": "J", "tigTipoDocumento": "NIT", "tigNumeroIdentificacion": "{{NIT_E}}",
+        "tigCorreo": "obras@errores", "tigCiudad": 3, "tigDireccion": "Calle 1", "tigActEconomicaPri": 11, "tigTelefono": "123",
+        "tigPaginaWeb": "", "tigCertificadoISO": false, "tigPais": "Colombia"
+      },
+      "camaraComercio": [
+        { "terCamId": 5, "terTipoRegistro": 1, "terCamTipoDoc": "CC", "terCamDocumento": "80111222", "terCapNombre": "Pedro", "terCapApellido": "Ruiz",
+          "terCamEsPep": false, "terCamVinculoPep": false, "terTipoRepresentacion": 1, "terFechaExpedicion": "ayer" },
+        { "terCamId": 6, "terTipoRegistro": 2, "terCamTipoDoc": "CC", "terCamDocumento": "80111222", "terCapNombre": "Pedro", "terCapApellido": "Ruiz",
+          "terCamPorParticipa": "cuarenta", "terCamEsPep": false, "terCamVinculoPep": false }
+      ],
+      "constructoras": [ { "idConstructora": 7, "estado": -3 } ]
+    }
+  ]
+}

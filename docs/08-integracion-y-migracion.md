@@ -206,6 +206,43 @@ Las versiones importadas no tienen hechos IA. La re-verificación masiva con la 
 ### 6.5 Informe de rechazos
 CSV por fila: `ClaveLegado, tenant, empresa, paso, motivo, dato, accionSugerida` (tercero duplicado o fusionado, identificación inválida para su país, archivo ausente, estado no mapeable, tipo de adjunto sin canónico, formulario que no valida contra el esquema). Cero rechazos críticos (pasos 5–8) es condición para el corte.
 
+### 6.6 Importador de la ficha maestra y sincronizador de coexistencia (F4, FM-39…FM-45)
+La ficha (docs/14) se importa **dentro de la API**, no por la CLI de §6.1: necesita la misma regla única de las secciones, el outbox de Wolverine (para la revalidación de F2) y la bóveda. Rol Plataforma (`plataforma:tenants`).
+
+| Entrada | Qué hace |
+|---|---|
+| `POST /api/v1/plataforma/importacion/portal` | Encola una corrida (202): `dryRun`, `origen` (`Archivo` con el JSON en `archivo`, o `SqlServer`), `constructoras[] { constructora, empresaId }` (aceptación importada), `tamanoLote` (1–500, 100) e `importarCatalogos` (sí). |
+| `GET /api/v1/plataforma/importacion/portal/{id}` | Estado (`Encolada`, `EnCurso`, `Completada`, `Fallida`), cursor, lotes y resumen: terceros creados/encontrados/rechazados, versiones creadas/sin cambios/rechazadas por sección, aceptaciones (creadas, existentes, sin vínculo), catálogos y hasta 500 avisos. |
+| `GET …/{id}/rechazos` | CSV (UTF-8 con BOM): `claveLegado, terid, seccion, periodo, campo, codigo, motivo, dato, accionSugerida`. |
+| `POST …/{id}/reanudar` | Vuelve a encolar una corrida fallida; sigue desde su cursor (409 `corrida-completada`). |
+| `POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar` | Sincronizador: reimporta un tercero desde el origen configurado con origen `Portal`. |
+
+**Origen.** `IOrigenPortal` lee los catálogos y, por lotes de `Terid`, cada tercero con sus filas (`Terceros`, `TerInformacionGeneral`, `TerDireccionEstructurada`, `TerInfoTributaria`, `TerRetencionICA`, `TerInfoFinanciera`, `TerTransaccionMonedaExtranjera*`, `TerCamaraComercio`, `TerSISO`, `TerEspecialidad`, `TercerosConstructora`; catálogos `Ciudades`, `ActividadEconomica`, `Bancos`, `GruposTercero` → `CategoriasTercero` → `EspecialidadesTercero`, `Paises`). `OrigenPortalSqlServer` hace solo `SELECT` parametrizados con `Microsoft.Data.SqlClient` (cadena en `Validasoft:Importacion:Portal:CadenaDeConexion`, sin valor por omisión; se recomienda usuario de solo lectura y `ApplicationIntent=ReadOnly`). `OrigenPortalArchivo` lee un JSON con la misma forma (`{ catalogos, terceros[] }`, nombres de tabla y columna del Portal): lo usan las pruebas, un dry-run sin red y, con `Validasoft:Importacion:Portal:Archivo`, el sincronizador en desarrollo.
+
+**Traductor (puro, `TraductorDelPortal`).** Correcciones de FM-10/FM-11; detalle en FM-40:
+
+| Dato del Portal | En la ficha |
+|---|---|
+| `TigNumeroIdentificacion` + `TerDigitoVerificacion` | Identificación normalizada; DV **recalculado** (módulo 11); si el Portal traía otro, advertencia `dv-recalculado` |
+| `TigTipoPersona` N/J, `TigTipoDocumento` (CC, NIT, CE, TI, PA, PT ⇒ PPT, EXT ⇒ `ID_FISCAL` del país) | Tipo de persona e identificación; inválidos ⇒ el tercero entero se rechaza |
+| `TigCiudad`, `TerRetencionICA.IdCiudad` | DANE = `CiuCodDepartamento` (2) + `CiuCodMunicipio` (3); sin código ⇒ rechazo `ciudad-sin-dane` |
+| `TigActEconomicaPri`, `IdActividadEconomica` | CIIU de 4 dígitos |
+| `TigPais`, `TerNacionalidad`, `TerPaisResidencia`, países de moneda extranjera | ISO 3166-1 por `Paises.Sigla`/nombre; si no, rechazo |
+| `TerDireccionEstructurada` | Formato AyF (CL ⇒ Calle, CR ⇒ Carrera, AK ⇒ AvenidaCarrera…); si no cabe entera, solo la dirección en texto (advertencia) |
+| Las 14 S/N de `TerInfoTributaria` | Códigos de la casilla 53 (tabla en FM-40); `NoObligFacturar` = «obligado a facturar» ⇒ 52 |
+| `ResolucionGC`/`FechaGC`, `ResolucionAutoRete`/`FechaAutoRete` | Resoluciones (0 y fechas por omisión del legado = vacío) |
+| `TerInfoFinanciera` (una fila por año) | Una versión por año presente; filas todas en cero (las creaba el GET del Portal) no se importan; fecha de corte = 31-dic del año (advertencia) |
+| `TerCamaraComercio` | Personas: rol por `TerTipoRegistro`/`TerTipoRepresentacion`; fechas y porcentajes de texto tipados; deduplicadas por rol + identificación; firma de revisoría fiscal |
+| `TerSISO`, `TerEspecialidad` | Las 8 preguntas; especialidades `PE{EspId}` |
+
+Después, cada sección pasa por la regla única de la ficha (FM-16): un error de formato quita ese dato (rechazo con su acción sugerida) y la versión se importa con sus faltantes. Nada se inventa.
+
+**Idempotencia.** Tercero con id UUID v5 de `ClaveLegado = portal:{Terid}` (o el ya registrado con la misma identificación, al que se le anota la clave); la versión de cada sección se registra con el mismo guardado del wizard, así que la misma huella no crea nada y un cambio crea solo la versión siguiente de esa sección. Una corrida repetida no duplica ni versiona; el dry-run no escribe datos (solo su propio informe).
+
+**Aceptación importada.** Con el mapa de constructoras, si el tercero estaba `Completada` (3) o `Actualizacion` (4) en una constructora mapeada, cada vínculo suyo con esa empresa recibe `SeccionAceptada` con origen `Importacion` (sin expediente ni folio) para la versión vigente de cada sección. No publica `seccion.aceptada` y no se mueve en corridas posteriores. Si el vínculo aún no existe se cuenta en `sinVinculo` y se acepta al volver a correr.
+
+**Sincronizador (coexistencia, un solo sentido).** Mientras la empresa no haga el corte, **el Portal** llama `POST …/terceros/{terid}/sincronizar` después de cada guardado de una sección `Ter*` (o un job lo llama por lotes de terceros modificados), con una API key de Plataforma. Un cambio crea una versión con origen `Portal` y, en la misma transacción, pide `SincronizarRequisitosDelVinculo` a cada vínculo aceptado: la empresa que ya la tenía aceptada abre su revalidación de F2. El Portal no necesita leer la respuesta (idempotente: repetir la llamada no crea nada). Qué tiene que hacer el Portal: (1) guardar la URL y la API key cifradas; (2) llamar al endpoint tras `SaveChanges` de cualquier `Ter*` del tercero, sin bloquear al usuario (cola con reintentos); (3) dejar de hacerlo cuando la empresa haga el corte (§7). Validasoft nunca escribe en las tablas del Portal.
+
 ---
 
 ## 7. Corte por empresa (dentro del tenant)

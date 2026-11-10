@@ -56,6 +56,12 @@ public static class ServiciosInfraestructura
     /// </summary>
     public const string ColaIa = "ia";
 
+    /// <summary>
+    /// Cola local durable y <b>secuencial</b> del importador del Portal (F4): una corrida a la vez, que se reanuda desde su cursor si
+    /// el proceso cae.
+    /// </summary>
+    public const string ColaImportacion = "importacion";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -66,6 +72,8 @@ public static class ServiciosInfraestructura
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IContextoSolicitud, ContextoDesdeHttp>();
         servicios.AddSingleton<IGeneradorDeApiKeys, GeneradorDeApiKeys>();
+        // Origen del importador y del sincronizador del Portal (F4, FM-39): configuración Validasoft:Importacion:Portal.
+        servicios.AddSingleton<Aplicacion.Ficha.IFabricaDeOrigenesPortal, Portal.FabricaDeOrigenesPortal>();
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
@@ -185,6 +193,8 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Ia.AnalizarVersionConIa>().ToLocalQueue(ColaIa);
         opciones.PublishMessage<Aplicacion.Ia.AnalizarIaDelVinculo>().ToLocalQueue(ColaIa);
         opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
+        opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))
             .Then.MoveToErrorQueue();

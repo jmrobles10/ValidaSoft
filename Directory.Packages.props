@@ -23,6 +23,8 @@
     <PackageVersion Include="QRCoder" Version="1.8.1" />
     <!-- Recorte de páginas de los PDF que se envían al análisis con IA (IA-5; Apache-2.0). -->
     <PackageVersion Include="PdfPig" Version="0.1.16" />
+    <!-- Lectura de la BD del Portal de Proveedores en el importador de la ficha (F4, FM-39; MIT). -->
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
     <!-- Pruebas -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

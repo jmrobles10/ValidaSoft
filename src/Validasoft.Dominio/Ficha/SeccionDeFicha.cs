@@ -139,7 +139,7 @@ public sealed class SeccionDeFicha
         // Referencia del cambio: la última versión que quedó completa. Mientras la sección es un borrador que nunca estuvo
         // completo, diligenciarla no es «cambiarla»; y una versión incompleta por falta de soporte no se vuelve referencia.
         var referencia = Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero)?.HuellaDatos;
-        var cambio = referencia is not null && referencia != huellaDatos;
+        var cambio = ExigeSoporteDelCambio(origen) && referencia is not null && referencia != huellaDatos;
         var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, cambio, soportes.Count);
         ReglasDeFicha.AsegurarFormato(resultado);
 
@@ -179,10 +179,17 @@ public sealed class SeccionDeFicha
             return null;
 
         var datos = seccion.Esquema.Deserializar(vigente.Datos);
-        var cambio = vigente.HuellaDatosAnterior is not null && vigente.HuellaDatosAnterior != vigente.HuellaDatos;
+        var cambio = ExigeSoporteDelCambio(vigente.Origen) && vigente.HuellaDatosAnterior is not null && vigente.HuellaDatosAnterior != vigente.HuellaDatos;
         var completitud = ReglasDeFicha.ParaRecalculo(ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, cambio, vigente.Soportes.Count));
         return completitud.Igual(vigente.Completitud) ? null : new CompletitudDeSeccionRecalculada(vigente.Numero, completitud, ahora);
     }
+
+    /// <summary>
+    /// Solo el cambio que hace el tercero exige soporte (FM-20). Las versiones que llegan del legado (<c>Importada</c>, <c>Portal</c>)
+    /// no: su respaldo es el Portal, que no guarda el soporte de cada cambio, y exigirlo dejaría incompleta toda versión migrada
+    /// (F4, FM-41). La empresa las revisa igual en la revalidación (F2).
+    /// </summary>
+    public static bool ExigeSoporteDelCambio(OrigenDeSeccion origen) => origen == OrigenDeSeccion.Tercero;
 
     /// <summary>Datos tipados de la versión vigente (para las referencias a catálogos al recalcular).</summary>
     public object? DatosVigentes(DefinicionDeSeccion seccion) => Vigente is { } v ? seccion.Esquema.Deserializar(v.Datos) : null;
