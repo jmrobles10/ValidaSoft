@@ -105,15 +105,11 @@ public sealed class AnalizadorOpenAi(IHttpClientFactory fabrica, OpcionesDeIa op
 }
 
 /// <summary>
-/// Analizador sin red (<c>Validasoft:IA:Proveedor = Simulado</c>, PT-6), para pruebas de punta a punta y demos: el análisis
-/// falla de forma controlada (<c>analizador-simulado</c>, como cuando OpenAI no responde: la versión sigue sin IA) y la
-/// prueba de la llave la acepta salvo que contenga «rechazada» (inválida) o «limite» (sin cuota).
+/// Prueba de la llave del analizador sin red (<c>Validasoft:IA:Proveedor = Simulado</c>, PT-6): la acepta salvo que contenga
+/// «rechazada» (inválida) o «limite» (sin cuota). El análisis simulado (F5) está en AnalizadorSimulado.cs.
 /// </summary>
-public sealed class AnalizadorSimulado : IAnalizadorDeDocumentos
+public sealed partial class AnalizadorSimulado
 {
-    public Task<ResultadoDeAnalisis> AnalizarAsync(SolicitudDeAnalisis solicitud, string apiKey, CancellationToken ct) =>
-        throw new AnalisisDeIaException("analizador-simulado", "El analizador de IA está en modo simulado (Validasoft:IA:Proveedor).");
-
     public Task<ResultadoDePruebaDeLlave> ProbarLlaveAsync(string apiKey, CancellationToken ct) =>
         Task.FromResult(apiKey.Contains("rechazada", StringComparison.OrdinalIgnoreCase)
             ? new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Invalida, "La llave fue rechazada (analizador simulado).")

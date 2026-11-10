@@ -17,7 +17,10 @@ public enum TipoDeCampoIa
     Personas,
 
     /// <summary>Lista de pares clave/valor (tipos sin esquema propio).</summary>
-    Datos
+    Datos,
+
+    /// <summary>Lista de textos (códigos de responsabilidades, actividades secundarias); vacía si no aparece ninguno.</summary>
+    Lista
 }
 
 public sealed record CampoDeEsquema(string Nombre, TipoDeCampoIa Tipo, string Descripcion);
@@ -169,6 +172,7 @@ public sealed record EsquemaDeAnalisis(
         TipoDeCampoIa.Personas => valor.ValueKind == JsonValueKind.Array && valor.EnumerateArray().All(p =>
             EsObjetoCon(p, ["nombre", "identificacion", "cargo"]) &&
             p.EnumerateObject().All(x => x.Value.ValueKind is JsonValueKind.String or JsonValueKind.Null)),
+        TipoDeCampoIa.Lista => valor.ValueKind == JsonValueKind.Array && valor.EnumerateArray().All(p => p.ValueKind == JsonValueKind.String),
         TipoDeCampoIa.Datos => valor.ValueKind == JsonValueKind.Array && valor.EnumerateArray().All(p =>
             EsObjetoCon(p, ["clave", "valor"]) && p.GetProperty("clave").ValueKind == JsonValueKind.String &&
             p.GetProperty("valor").ValueKind is JsonValueKind.String or JsonValueKind.Null),
@@ -202,6 +206,12 @@ public sealed record EsquemaDeAnalisis(
                 ["identificacion"] = Tipado(["string", "null"], "Número de identificación, solo dígitos."),
                 ["cargo"] = Tipado(["string", "null"], "Cargo (principal, suplente, gerente…).")
             })
+        },
+        TipoDeCampoIa.Lista => new JsonObject
+        {
+            ["type"] = "array",
+            ["description"] = campo.Descripcion,
+            ["items"] = new JsonObject { ["type"] = "string" }
         },
         TipoDeCampoIa.Datos => new JsonObject
         {
@@ -251,10 +261,15 @@ public static class EsquemasDeAnalisis
             Texto("representanteLegalIdentificacion", "Identificación del representante legal principal."),
             Texto("direccion", "Dirección principal."),
             Texto("municipio", "Municipio o ciudad de la dirección principal."),
+            Texto("codigoMunicipio", "Código DANE de 5 dígitos del municipio de la dirección principal (2 del departamento y 3 del municipio)."),
+            Texto("correo", "Correo electrónico de la sección de ubicación."),
+            Texto("telefono", "Teléfono 1 de la sección de ubicación, solo dígitos."),
             Fecha("fechaExpedicion", "Fecha de generación o expedición del documento."),
-            Texto("actividadEconomicaPrincipal", "Código CIIU de la actividad económica principal.")
+            Texto("actividadEconomicaPrincipal", "Código CIIU de la actividad económica principal."),
+            Lista("actividadesSecundarias", "Códigos CIIU de las actividades secundarias y otras actividades, de 4 dígitos."),
+            Lista("responsabilidades", "Códigos de dos dígitos de las responsabilidades, calidades y atributos (casilla 53), por ejemplo 05, 07, 48.")
         ], ["nit", "dv", "razonSocial", "tipoContribuyente", "representanteLegalNombre", "representanteLegalIdentificacion", "direccion", "municipio",
-            "actividadEconomicaPrincipal"], ["nit", "razonSocial", "representanteLegalNombre", "representanteLegalIdentificacion"]),
+            "codigoMunicipio", "actividadEconomicaPrincipal", "responsabilidades"], ["nit", "razonSocial", "representanteLegalNombre", "representanteLegalIdentificacion"]),
         ["CAMARA_COMERCIO"] = new("CAMARA_COMERCIO", "Certificado de existencia y representación legal",
         [
             Texto("razonSocial", "Razón social de la sociedad."),
@@ -295,6 +310,7 @@ public static class EsquemasDeAnalisis
             Numero("pasivoTotal", "Pasivo total."),
             Numero("patrimonio", "Patrimonio total."),
             Numero("ingresos", "Ingresos operacionales del periodo."),
+            Numero("ingresosBrutos", "Ingresos brutos (totales) del periodo."),
             Numero("utilidadNeta", "Utilidad (o pérdida, negativa) neta del periodo."),
             new("firmadoPorContador", TipoDeCampoIa.Booleano, "Si los firma un contador público (con tarjeta profesional); null si no se puede saber.")
         ], ["razonSocial", "nit", "periodo", "activoTotal", "pasivoTotal", "patrimonio", "ingresos", "utilidadNeta"], ["periodo"]),
@@ -331,4 +347,6 @@ public static class EsquemasDeAnalisis
     private static CampoDeEsquema Fecha(string nombre, string descripcion) => new(nombre, TipoDeCampoIa.Fecha, descripcion);
 
     private static CampoDeEsquema Numero(string nombre, string descripcion) => new(nombre, TipoDeCampoIa.Numero, descripcion);
+
+    private static CampoDeEsquema Lista(string nombre, string descripcion) => new(nombre, TipoDeCampoIa.Lista, descripcion);
 }
