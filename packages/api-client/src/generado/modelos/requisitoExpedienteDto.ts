@@ -8,6 +8,7 @@ import type { AreaDeRequisitoDto } from './areaDeRequisitoDto';
 import type { EstadoRequisito } from './estadoRequisito';
 import type { ExencionDto } from './exencionDto';
 import type { SeccionDeRequisitoDto } from './seccionDeRequisitoDto';
+import type { SoporteDeSeccionesDto } from './soporteDeSeccionesDto';
 import type { TipoDocumentoRequisitoDto } from './tipoDocumentoRequisitoDto';
 import type { TipoRequisito } from './tipoRequisito';
 import type { VersionRequisitoDto } from './versionRequisitoDto';
@@ -23,4 +24,5 @@ export interface RequisitoExpedienteDto {
   areas: AreaDeRequisitoDto[];
   tipoRequisito?: TipoRequisito;
   seccion?: null | SeccionDeRequisitoDto;
+  soporteDeSecciones?: null | SoporteDeSeccionesDto;
 }

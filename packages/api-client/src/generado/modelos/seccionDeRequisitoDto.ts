@@ -6,6 +6,7 @@
  */
 import type { CambioDeCampoDto } from './cambioDeCampoDto';
 import type { CompletitudSeccionDto } from './completitudSeccionDto';
+import type { CruceDeRequisitoDto } from './cruceDeRequisitoDto';
 import type { JsonElement } from './jsonElement';
 import type { SoporteSeccionDto } from './soporteSeccionDto';
 
@@ -23,4 +24,5 @@ export interface SeccionDeRequisitoDto {
   /** @nullable */
   versionAceptada: number | null;
   cambios: CambioDeCampoDto[];
+  cruce?: null | CruceDeRequisitoDto;
 }

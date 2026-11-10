@@ -22,4 +22,6 @@ export interface VeredictoDto {
   requisitos?: ObservacionDeRequisitoDto[] | null;
   /** @nullable */
   campos?: string[] | null;
+  /** @nullable */
+  justificacion?: string | null;
 }

@@ -148,6 +148,10 @@ public static class RevalidacionesEndpoints
         if (!Revalidacion.AprobableEnLote(documento?.Buscar(actual.Numero)?.Hechos?.Comparacion))
             throw ReglaDeNegocioException.Validacion("revalidacion-con-cambios",
                 $"La versión {actual.Numero} de {requisito.Nombre} no se puede aprobar en lote: revísala en su expediente.");
+        // FM-13: con discrepancias críticas en el cruce con las secciones, nunca en lote.
+        if ((await ExpedientesEndpoints.DiscrepanciasAsync(empresa, expediente, ct)).Contains(requisito.Id))
+            throw ReglaDeNegocioException.Validacion("cruce-con-discrepancias",
+                $"{requisito.Nombre} discrepa con la información de la ficha en campos críticos: revísalo en su expediente.");
 
         var areas = requisito.AreasQueRevisan.Where(mias.Contains).ToList();
         if (areas.Count == 0)

@@ -133,7 +133,7 @@ public static class ExpedientesEndpoints
             }
             else if (veredicto == Dominio.Expedientes.Veredicto.Aprobado)
             {
-                eventos = expediente.AprobarArea(areaId, revisor, dto.Versiones, ahora);
+                eventos = expediente.AprobarArea(areaId, revisor, dto.Versiones, ahora, await DiscrepanciasAsync(empresa, expediente, ct), dto.Justificacion);
             }
             else
             {
@@ -167,8 +167,10 @@ public static class ExpedientesEndpoints
             await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
             var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
             var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
+            var discrepancia = veredicto == Dominio.Expedientes.Veredicto.Aprobado &&
+                               (await DiscrepanciasAsync(empresa, stream.Aggregate!, ct)).Contains(requisitoId);
             var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
-                reloj.GetUtcNow(), dto.Campos);
+                reloj.GetUtcNow(), dto.Campos, discrepancia, dto.Justificacion);
             return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
         });
     }
@@ -319,13 +321,23 @@ public static class ExpedientesEndpoints
         await empresa.Sesion.SaveChangesAsync(ct);
     }
 
+    /// <summary>Requisitos del expediente cuyo cruce con el documento discrepa en un campo crítico, según lo que ve la empresa (F5, FM-13).</summary>
+    internal static async Task<IReadOnlySet<Guid>> DiscrepanciasAsync(SesionDeEmpresa empresa, Expediente expediente, CancellationToken ct)
+    {
+        await using var boveda = empresa.ConsultaBoveda();
+        return (await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, ct)).ConDiscrepanciaCritica;
+    }
+
     /// <summary>Detalle con las áreas y, por requisito, el tipo (campos, reglas, plantilla) y la versión con sus datos y vigencia.</summary>
     internal static async Task<ExpedienteDto> DetalleAsync(SesionDeEmpresa empresa, Guid id, CancellationToken ct)
     {
         var expediente = await empresa.CargarExpedienteAsync(id, ct);
         var areas = expediente.AreaIds.Count == 0 ? [] : await empresa.Sesion.LoadManyAsync<Area>(ct, expediente.AreaIds.ToArray());
         await using var boveda = empresa.ConsultaBoveda();
-        var documentacion = await DocumentacionDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.Reglas, empresa.Hoy, ct);
+        var documentacion = await DocumentacionDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.Reglas, empresa.Hoy, ct) with
+        {
+            Cruces = await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, ct)
+        };
         return expediente.ADto(areas.ToDictionary(a => a.Id, a => a.Miembros), empresa.UsuarioConsultante, documentacion);
     }
 }
