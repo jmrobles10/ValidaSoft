@@ -13,4 +13,6 @@ export interface ObservacionPublicaDto {
   fecha: string;
   /** @nullable */
   requisito?: string | null;
+  /** @nullable */
+  campos?: string[] | null;
 }

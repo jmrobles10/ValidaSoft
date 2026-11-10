@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AceptacionDeSeccionDto } from './aceptacionDeSeccionDto';
 import type { CompletitudSeccionDto } from './completitudSeccionDto';
 import type { JsonElement } from './jsonElement';
 import type { SoporteSeccionDto } from './soporteSeccionDto';
@@ -26,4 +27,6 @@ export interface SeccionFichaDto {
   fecha: string | null;
   versiones: number;
   esquemaVersion: number;
+  /** @nullable */
+  aceptaciones?: AceptacionDeSeccionDto[] | null;
 }

@@ -6,7 +6,9 @@ namespace Validasoft.Dominio.Expedientes;
 public sealed record DocumentoPorDecidir(Guid RequisitoId, int VersionVigente);
 
 /// <summary>Un documento que el área observa en su decisión: la versión que vio el revisor, los motivos y la observación.</summary>
-public sealed record ObservacionDeRequisito(Guid RequisitoId, int? SobreVersion, IReadOnlyList<MotivoAplicado> Motivos, string? Observacion);
+/// <remarks>En una sección de la ficha, <see cref="Campos"/> señala (opcional) los campos que el tercero debe corregir.</remarks>
+public sealed record ObservacionDeRequisito(Guid RequisitoId, int? SobreVersion, IReadOnlyList<MotivoAplicado> Motivos, string? Observacion,
+    IReadOnlyList<string>? Campos = null);
 
 /// <summary>
 /// Decisión por área con requisitos (DA-1…DA-4): en pantalla, como en el SRM, el área «aprueba» u «observa marcando
@@ -102,7 +104,7 @@ public sealed partial class Expediente
         {
             var requisito = RequisitoDecidible(observacion.RequisitoId, area, revisorId, observacion.SobreVersion, superadas);
             eventos.Add(VeredictoHumano(requisito, area, Veredicto.Observado, revisorId, Motivos(Veredicto.Observado, observacion.Motivos),
-                Texto(observacion.Observacion, "observacion"), ahora));
+                Texto(observacion.Observacion, "observacion"), ahora, Campos(requisito, Veredicto.Observado, observacion.Campos)));
         }
 
         if (superadas.Count > 0)
@@ -168,9 +170,9 @@ public sealed partial class Expediente
 
     /// <summary>Veredicto humano sobre la versión vigente del requisito (ya validada).</summary>
     private static VeredictoDeRequisitoEmitido VeredictoHumano(RequisitoDeExpediente requisito, AreaDeExpediente area, Veredicto veredicto,
-        string revisorId, IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora) =>
+        string revisorId, IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null) =>
         new(Guid.CreateVersion7(), requisito.Id, area.AreaId, veredicto, OrigenVeredicto.Humano, revisorId, requisito.VersionActual!.Numero,
-            [.. motivos.DistinctBy(m => m.Codigo)], observacion, null, ahora);
+            [.. motivos.DistinctBy(m => m.Codigo)], observacion, null, ahora, campos is { Count: > 0 } ? campos : null);
 
     private ReglaDeNegocioException VersionSuperada(IReadOnlyList<DocumentoPorDecidir> superadas) =>
         new(TipoFalla.Conflicto, "version-superada",

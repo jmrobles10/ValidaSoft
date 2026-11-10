@@ -222,8 +222,15 @@ public static class AtributosDeExigencia
 /// </summary>
 public static class EvaluadorDeExigencia
 {
+    /// <summary>
+    /// Los requisitos que se le piden a este tercero en este vínculo: los que cumplen su condición y, si piden una sección de
+    /// la ficha, que la sección le aplique a su tipo de persona (la natural no tiene Legal ni Financiera: <c>NoAplica</c>, FM-17).
+    /// </summary>
     public static IReadOnlyList<RequisitoDelFlujo> Filtrar(IEnumerable<RequisitoDelFlujo> requisitos, ContextoDeExigencia contexto) =>
-        [.. requisitos.Where(r => Aplica(r.Condicion, contexto))];
+        [.. requisitos.Where(r => Aplica(r.Condicion, contexto) && SeccionAplica(r, contexto))];
+
+    private static bool SeccionAplica(RequisitoDelFlujo requisito, ContextoDeExigencia contexto) =>
+        requisito.Seccion is null || Ficha.CatalogoDeSecciones.Buscar(requisito.Seccion)?.Obligatoria(contexto.TipoPersona) != false;
 
     public static bool Aplica(CondicionDeExigencia? condicion, ContextoDeExigencia contexto) => condicion is null || Evaluar(condicion, contexto);
 

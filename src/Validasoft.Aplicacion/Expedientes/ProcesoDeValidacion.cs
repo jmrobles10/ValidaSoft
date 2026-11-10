@@ -7,6 +7,7 @@ using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
@@ -107,15 +108,30 @@ public static class ProcesoDeValidacion
             areas.TryGetValue(a.AreaId, out var conNombre) ? conNombre.Nombre : "Área", a.AprobadoresRequeridos, a.PuedeRechazarExpediente,
             a.Automatica, a.SlaHoras))])).ToList();
 
-        var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version,
-                ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos), ct))
+        var exigencia = ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
+        var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, exigencia, ct))
             .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
             .ToList();
+        var secciones = RequisitosDeExpediente.SeccionesDelFlujo(flujo.Version, exigencia, CalculadoraDeVigencia.Fecha(ahora))
+            .Where(s => soloRequisitos is null || soloRequisitos.Contains(s.RequisitoId))
+            .ToList();
+        // La ficha queda disponible para la empresa desde la aceptación (la de esta transacción trae los documentos ya compartidos).
+        var aceptado = documentos is not null || vinculo.InvitacionAceptada;
         if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
             documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
                 RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
+        var ficha = secciones.Count > 0 && aceptado ? await RequisitosDeExpediente.FichaAsync(sesion, tercero.Id, ct) : null;
+        var aceptadas = secciones.Count > 0
+            ? await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct)
+            : new Dictionary<string, SeccionAceptada>();
+        var calculados = pedidos.Select(p => (p.Requisito.Id, Calculado: RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)))
+            .Concat(secciones.Select(s => (s.Requisito.Id, Calculado: RequisitosDeExpediente.CalcularSeccion(s, tercero.Id, ficha,
+                RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, s)))))
+            .ToList();
+        // En el orden del flujo (los periodos de la financiera, del más reciente al más antiguo).
+        var orden = flujo.Version.Requisitos.Select(r => r.Id).ToList();
         var requisitos = await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
-            [.. pedidos.Select(p => RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id))], ct);
+            [.. calculados.OrderBy(c => orden.IndexOf(c.Id)).Select(c => c.Calculado)], ct);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
@@ -169,6 +185,24 @@ public static class ProcesoDeValidacion
     {
         foreach (var fila in ProyeccionBandejaRevision.Filas(estado))
             sesion.Store(fila);
+
+        // Lo aceptado de cada sección por el vínculo (FM-3): misma transacción que la aprobación.
+        foreach (var aceptada in eventos.OfType<SeccionAceptadaPorEmpresa>())
+            sesion.Store(new SeccionAceptada
+            {
+                Id = SeccionAceptada.Clave(estado.VinculoId, aceptada.Seccion, aceptada.Periodo),
+                EmpresaId = estado.EmpresaId,
+                VinculoId = estado.VinculoId,
+                TerceroId = estado.TerceroId,
+                Seccion = aceptada.Seccion,
+                Periodo = aceptada.Periodo,
+                SeccionId = aceptada.SeccionId,
+                Version = aceptada.Version,
+                Huella = aceptada.Huella,
+                AceptadaEn = aceptada.Fecha,
+                ExpedienteId = estado.Id,
+                Folio = estado.Folio
+            });
 
         ResultadoExpediente? resultado = eventos.OfType<ExpedienteAprobado>().Any() ? ResultadoExpediente.Aprobado
             : eventos.OfType<ExpedienteRechazado>().Any() ? ResultadoExpediente.Rechazado

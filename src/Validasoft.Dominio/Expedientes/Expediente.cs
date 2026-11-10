@@ -72,6 +72,9 @@ public sealed class VeredictoRegistrado
 
     public List<MotivoAplicado> Motivos { get; set; } = [];
 
+    /// <summary>Campos de la sección señalados al observarla (F2); vacío en documentos.</summary>
+    public List<string> Campos { get; set; } = [];
+
     public string? Observacion { get; set; }
 
     public string? Justificacion { get; set; }
@@ -696,6 +699,7 @@ public sealed partial class Expediente
             if (siguiente is null)
             {
                 simulacion.Emitir(new ExpedienteAprobado(ahora));
+                AceptarSecciones(simulacion, ahora);
                 return;
             }
 
@@ -727,6 +731,8 @@ public sealed partial class Expediente
             case VeredictoDeRequisitoEmitido e: Apply(e); break;
             case RequisitoEximido e: Apply(e); break;
             case RequisitoRatificado e: Apply(e); break;
+            case CompletitudDeSeccionEvaluada e: Apply(e); break;
+            case SeccionAceptadaPorEmpresa e: Apply(e); break;
             case ExpedienteEnviadoARevision e: Apply(e); break;
             case EtapaActivada e: Apply(e); break;
             case VeredictoDeAreaEmitido e: Apply(e); break;

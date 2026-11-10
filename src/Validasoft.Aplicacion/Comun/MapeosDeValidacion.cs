@@ -24,8 +24,11 @@ public static class MapeosDeValidacion
     public static FlujoVersionDto ADto(this FlujoVersion v) =>
         new(v.Id, v.Version, v.Estado.ToString(), [.. v.Etapas.Select(ADto)], v.PoliticaDevolucion.ToString(), v.SeparacionDeFunciones,
             v.CreadaEn, v.PublicadaEn, v.RetiradaEn,
-            [.. v.Requisitos.Select(r => new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
-                r.AprobadoresRequeridos, r.Condicion?.ADto()))]);
+            [.. v.Requisitos.Select(r => r.EsSeccion
+                ? new RequisitoDelFlujoDto(r.Id, null, null, r.Obligatorio, r.AreasQueRevisan, r.AprobadoresRequeridos, r.Condicion?.ADto(), r.Seccion,
+                    r.Periodos, r.ExigeSoporte)
+                : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
+                    r.AprobadoresRequeridos, r.Condicion?.ADto()))]);
 
     public static CondicionDto ADto(this CondicionDeExigencia c) =>
         new(c.Tipo.ToString(), c.Nodos?.Select(ADto).ToList(), c.Atributo, c.Operador?.ToString(), c.Valores);
@@ -47,6 +50,18 @@ public static class MapeosDeValidacion
     /// </summary>
     public static RequisitoDelFlujo ADominio(this RequisitoDelFlujoDto r, IReadOnlyCollection<TipoDocumentoTenant> tipos)
     {
+        if (!string.IsNullOrWhiteSpace(r.Seccion))
+        {
+            // Sección de la ficha (F2): el dominio valida el código, los periodos y el resto (422 seccion-invalida…).
+            if (r.TipoDocumentoTenantId is not null || !string.IsNullOrWhiteSpace(r.TipoDocumento))
+                throw ReglaDeNegocioException.Validacion("requisito-invalido", "Un requisito pide un documento o una sección de la ficha, no ambos.");
+            var seccion = r.Seccion.Trim().ToUpperInvariant();
+            return new RequisitoDelFlujo(r.Id ?? Guid.Empty, Guid.Empty, seccion, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
+                r.Condicion?.ADominio(), seccion, r.Periodos, r.ExigeSoporte);
+        }
+
+        if (r.Periodos is not null || r.ExigeSoporte)
+            throw ReglaDeNegocioException.Validacion("requisito-invalido", "Periodos y soporte exigido solo aplican a un requisito de sección.");
         var codigo = (r.TipoDocumento ?? string.Empty).Trim().ToUpperInvariant();
         var tipoId = r.TipoDocumentoTenantId ?? tipos.FirstOrDefault(t => t.Codigo == codigo)?.Id ?? Guid.Empty;
         if (tipoId == Guid.Empty && codigo.Length == 0)
@@ -62,7 +77,8 @@ public static class MapeosDeValidacion
 
     public static VeredictoEmitidoDto ADto(this VeredictoRegistrado v) =>
         new(v.Id, v.Veredicto.ToString(), v.Origen.ToString(), v.RevisorId, v.Fecha, [.. v.Motivos.Select(m => m.Codigo)], v.Observacion,
-            v.Justificacion, v.Vigente, v.Superado, v.Anulado, v.AnuladoPor, v.SobreVersion, v.Invalidado, v.Derivado);
+            v.Justificacion, v.Vigente, v.Superado, v.Anulado, v.AnuladoPor, v.SobreVersion, v.Invalidado, v.Derivado,
+            v.Campos.Count > 0 ? [.. v.Campos] : null);
 
     /// <summary>
     /// <paramref name="miembros"/>: miembros actuales de cada área (para listar quién falta por pronunciarse).
@@ -94,7 +110,11 @@ public static class MapeosDeValidacion
                 .. r.AreasQueRevisan.Select(id => (Id: id, Area: e.BuscarArea(id))).Where(x => x.Area is not null).Select(x =>
                     new AreaDeRequisitoDto(x.Id, x.Area!.Codigo, EstadoEnArea(r, x.Area, e), r.AprobadoresPara(x.Area), r.AprobacionesDe(x.Area),
                         [.. r.Veredictos.Where(v => v.AreaId == x.Id).Select(ADto)]))
-            ]);
+            ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion));
+
+    /// <summary>Detalle de la sección (F2): con la documentación, datos, soportes y cambios; sin ella, la completitud guardada.</summary>
+    private static SeccionDeRequisitoDto? DetalleDeSeccion(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>
+        !r.EsSeccion ? null : documentacion?.Seccion(r) ?? DocumentacionDelExpediente.SeccionSinDatos(r);
 
     private static string EstadoEnArea(RequisitoDeExpediente r, AreaDeExpediente area, Expediente e) =>
         r.Eximido ? "Eximido"
@@ -104,19 +124,27 @@ public static class MapeosDeValidacion
         : "Pendiente";
 
     private static TipoDocumentoRequisitoDto Tipo(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>
-        documentacion?.Tipo(r) ?? new(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString());
+        r.EsSeccion
+            ? new(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString(), "Formulario")
+            : documentacion?.Tipo(r) ?? new(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString());
 
     /// <summary>Versión que cubre el requisito; con la documentación, además sus datos declarados y su vigencia para el vínculo (TD-4, TD-6).</summary>
     private static VersionRequisitoDto? Version(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>
         r.VersionActual is not { } v
             ? null
-            : documentacion?.Version(v, r, e.VinculoId) ?? new VersionRequisitoDto(v.DocumentoId, v.Numero, v.Sha256, v.CargadaEn);
+            : documentacion?.Version(v, r, e.VinculoId) ??
+              new VersionRequisitoDto(v.DocumentoId, v.Numero, v.Sha256, v.CargadaEn, Clase: r.EsSeccion ? "Formulario" : null);
 
     /// <summary>Solo en revisión, en la etapa activa y en áreas no automáticas: lo que «Aprobar área» aprobaría (DA-3).</summary>
     private static IReadOnlyList<DocumentoPorDecidirDto> PorDecidir(Expediente e, EtapaDeExpediente etapa, AreaDeExpediente area, string? consultante) =>
         e.Estado != EstadoExpediente.EnRevision || etapa.Estado != EstadoEtapa.Activa || area.Automatica
             ? []
-            : [.. e.DocumentosPorDecidir(area.AreaId, consultante).Select(d => new DocumentoPorDecidirDto(d.RequisitoId, d.VersionVigente))];
+            :
+            [
+                .. e.DocumentosPorDecidir(area.AreaId, consultante).Select(d => e.BuscarRequisito(d.RequisitoId) is { EsSeccion: true } s
+                    ? new DocumentoPorDecidirDto(d.RequisitoId, d.VersionVigente, nameof(TipoDeRequisito.Seccion), s.Seccion, s.Periodo)
+                    : new DocumentoPorDecidirDto(d.RequisitoId, d.VersionVigente))
+            ];
 
     private static AreaExpedienteDto ADto(this AreaDeExpediente a, IReadOnlyList<Guid> miembros, IReadOnlyList<DocumentoPorDecidirDto> porDecidir)
     {
@@ -152,7 +180,7 @@ public static class MapeosDeValidacion
                     e.Estado == EstadoExpediente.Observado
                         ? [.. r.Veredictos.Where(v => v.Vigente && v.Veredicto == Veredicto.Observado).OrderBy(v => v.Fecha).Select(v => v.APublica(r.Codigo))]
                         : [],
-                    PuedeRatificar(e, r), r.Ratificado ? r.Ratificacion!.Fecha : null))
+                    PuedeRatificar(e, r), r.Ratificado ? r.Ratificacion!.Fecha : null, r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion)))
             ],
             e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente), e.Tipo.ToString());
 
@@ -165,5 +193,6 @@ public static class MapeosDeValidacion
         Dominio.Documentos.CatalogoCanonico.Buscar(r.TipoCanonico)?.PermiteRatificacion == true;
 
     private static ObservacionPublicaDto APublica(this VeredictoRegistrado v, string? requisito) =>
-        new([.. v.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))], v.Observacion, v.Fecha, requisito);
+        new([.. v.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))], v.Observacion, v.Fecha, requisito,
+            v.Campos.Count > 0 ? [.. v.Campos] : null);
 }

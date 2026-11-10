@@ -19,4 +19,9 @@ export interface RequisitoDelFlujoDto {
   /** @nullable */
   aprobadoresRequeridos?: number | null;
   condicion?: null | CondicionDto;
+  /** @nullable */
+  seccion?: string | null;
+  /** @nullable */
+  periodos?: number | null;
+  exigeSoporte?: boolean;
 }

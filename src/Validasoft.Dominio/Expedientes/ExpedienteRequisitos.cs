@@ -13,6 +13,9 @@ public sealed class RequisitoDeExpediente
 {
     public Guid Id { get; set; }
 
+    /// <summary>Documento de la bóveda o sección de la ficha maestra (F2).</summary>
+    public TipoDeRequisito TipoRequisito { get; set; }
+
     public Guid TipoDocumentoTenantId { get; set; }
 
     public string Codigo { get; set; } = string.Empty;
@@ -59,6 +62,29 @@ public sealed class RequisitoDeExpediente
     public List<VeredictoRegistrado> Veredictos { get; set; } = [];
 
     public bool Eximido { get; set; }
+
+    // ---------- Requisito de sección (F2) ----------
+
+    /// <summary>Código de la sección de la ficha (<c>FICHA_*</c>); nulo en un documento.</summary>
+    public string? Seccion { get; set; }
+
+    /// <summary>Periodo (año) en la financiera.</summary>
+    public int? Periodo { get; set; }
+
+    /// <summary>La versión de la sección debe traer soporte para estar completa para la empresa.</summary>
+    public bool ExigeSoporte { get; set; }
+
+    /// <summary>Completitud para la empresa de la última versión vigente evaluada (guardada, FM-16).</summary>
+    public CompletitudParaEmpresa? Completitud { get; set; }
+
+    /// <summary>Versión que la empresa ya había aceptado en el vínculo al abrir el expediente (base de la comparación).</summary>
+    public VersionDeRequisito? VersionAceptadaPrevia { get; set; }
+
+    /// <summary>Cuándo la empresa aceptó la versión actual (al aprobarse el expediente).</summary>
+    public DateTimeOffset? AceptadaEn { get; set; }
+
+    [JsonIgnore]
+    public bool EsSeccion => TipoRequisito == TipoDeRequisito.Seccion;
 
     public string? EximidoPor { get; set; }
 
@@ -128,12 +154,13 @@ public sealed partial class Expediente
     /// área (<see cref="AprobarArea"/>, <see cref="ObservarArea"/>).
     /// </summary>
     public IReadOnlyList<object> EmitirVeredictoDeRequisito(Guid requisitoId, Guid areaId, Revisor revisor, Veredicto veredicto, int? sobreVersion,
-        IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora)
+        IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null)
     {
         var area = AreaParaDecidirPorRequisitos(areaId, revisor);
         var revisorId = revisor.UsuarioId.ToString();
         var requisito = RequisitoDecidible(requisitoId, area, revisorId, sobreVersion, superadas: null);
-        var evento = VeredictoHumano(requisito, area, veredicto, revisorId, Motivos(veredicto, motivos), Texto(observacion, "observacion"), ahora);
+        var evento = VeredictoHumano(requisito, area, veredicto, revisorId, Motivos(veredicto, motivos), Texto(observacion, "observacion"), ahora,
+            Campos(requisito, veredicto, campos));
         return Simular(s => s.Emitir(evento), ahora);
     }
 
@@ -187,15 +214,35 @@ public sealed partial class Expediente
     /// veredictos de esas áreas; lo aprobado por etapas cerradas queda como aprobado sobre la versión anterior (RQ-10).
     /// Solo en expedientes abiertos.
     /// </summary>
-    public IReadOnlyList<object> SincronizarVersiones(IReadOnlyDictionary<Guid, VersionDeRequisito> disponibles, DateTimeOffset ahora)
+    /// <remarks>
+    /// Con requisitos de sección (F2), <paramref name="secciones"/> trae la evaluación de la versión vigente de cada una: si su
+    /// completitud para la empresa cambió se guarda (<see cref="CompletitudDeSeccionEvaluada"/>), y solo una versión completa
+    /// para la empresa se adjunta (las incompletas no las revisa nadie: el requisito sigue con su motivo legible).
+    /// </remarks>
+    public IReadOnlyList<object> SincronizarVersiones(IReadOnlyDictionary<Guid, VersionDeRequisito> disponibles, DateTimeOffset ahora,
+        IReadOnlyDictionary<Guid, EvaluacionDeSeccion>? secciones = null)
     {
         if (!EstaAbierto || !ConRequisitos)
             return [];
 
+        var evaluadas = new List<CompletitudDeSeccionEvaluada>();
+        var todas = new Dictionary<Guid, VersionDeRequisito>(disponibles);
+        foreach (var (requisitoId, evaluacion) in secciones ?? new Dictionary<Guid, EvaluacionDeSeccion>())
+        {
+            if (BuscarRequisito(requisitoId) is not { EsSeccion: true, Eximido: false } requisito)
+                continue;
+            if (!evaluacion.Completitud.Igual(requisito.Completitud))
+                evaluadas.Add(new CompletitudDeSeccionEvaluada(requisitoId, evaluacion.Completitud, ahora));
+            if (evaluacion.Disponible is { } disponible)
+                todas[requisitoId] = disponible;
+            else
+                todas.Remove(requisitoId);
+        }
+
         var cambios = new List<(RequisitoDeExpediente Requisito, VersionDeRequisito Version)>();
         foreach (var requisito in Requisitos)
         {
-            if (requisito.Eximido || !disponibles.TryGetValue(requisito.Id, out var version))
+            if (requisito.Eximido || !todas.TryGetValue(requisito.Id, out var version))
                 continue;
             if (requisito.VersionActual is { } actual && actual.DocumentoId == version.DocumentoId && actual.Numero == version.Numero)
                 continue;
@@ -204,11 +251,13 @@ public sealed partial class Expediente
             cambios.Add((requisito, version));
         }
 
-        if (cambios.Count == 0)
+        if (cambios.Count == 0 && evaluadas.Count == 0)
             return [];
 
         return Simular(s =>
         {
+            foreach (var evaluada in evaluadas)
+                s.Emitir(evaluada);
             foreach (var (requisito, version) in cambios)
             {
                 var afectadas = requisito.Veredictos.Where(v => v.Vigente).Select(v => v.AreaId).OfType<Guid>()
@@ -246,6 +295,12 @@ public sealed partial class Expediente
         Requisitos = [.. e.Requisitos.Select(r => new RequisitoDeExpediente
         {
             Id = r.RequisitoId,
+            TipoRequisito = r.TipoRequisito,
+            Seccion = r.Seccion,
+            Periodo = r.Periodo,
+            ExigeSoporte = r.ExigeSoporte,
+            Completitud = r.Completitud,
+            VersionAceptadaPrevia = r.Aceptada,
             TipoDocumentoTenantId = r.TipoDocumentoTenantId,
             Codigo = r.Codigo,
             Nombre = r.Nombre,
@@ -301,11 +356,24 @@ public sealed partial class Expediente
             Origen = e.Origen,
             RevisorId = e.RevisorId,
             Motivos = [.. e.Motivos],
+            Campos = [.. e.Campos ?? []],
             Observacion = e.Observacion,
             Justificacion = e.Justificacion,
             Fecha = e.Fecha
         });
         RecalcularRequisitos(e.Fecha);
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(CompletitudDeSeccionEvaluada e)
+    {
+        BuscarRequisito(e.RequisitoId)!.Completitud = e.Completitud;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(SeccionAceptadaPorEmpresa e)
+    {
+        BuscarRequisito(e.RequisitoId)!.AceptadaEn = e.Fecha;
         ActualizadoEn = e.Fecha;
     }
 
@@ -454,6 +522,40 @@ public sealed partial class Expediente
     }
 
     public const string SinDocumentosQueRevisar = "Esta área no tiene documentos que revisar en este expediente.";
+
+    public const int MaximoCamposSenalados = 50;
+
+    /// <summary>
+    /// Al aprobarse el expediente, la empresa acepta la versión de cada sección que pide (no eximida): queda como lo aceptado
+    /// por el vínculo (FM-3) y es el punto de F3 para <c>seccion.aceptada</c>.
+    /// </summary>
+    private static void AceptarSecciones(Simulacion simulacion, DateTimeOffset ahora)
+    {
+        foreach (var requisito in simulacion.Estado!.Requisitos.Where(r => r is { EsSeccion: true, Eximido: false, VersionActual: not null }).ToList())
+        {
+            var version = requisito.VersionActual!;
+            simulacion.Emitir(new SeccionAceptadaPorEmpresa(requisito.Id, requisito.Seccion!, requisito.Periodo, version.DocumentoId, version.Numero,
+                version.Sha256, ahora));
+        }
+    }
+
+    /// <summary>
+    /// Campos señalados al observar una sección (F2): solo en secciones (422 <c>campos-solo-en-secciones</c>) y al observar
+    /// (<c>campos-solo-al-observar</c>); rutas sin espacios a los lados, sin repetir, hasta <see cref="MaximoCamposSenalados"/>.
+    /// </summary>
+    private static IReadOnlyList<string> Campos(RequisitoDeExpediente requisito, Veredicto veredicto, IReadOnlyList<string>? campos)
+    {
+        var lista = (campos ?? []).Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => c.Trim()).Distinct(StringComparer.Ordinal).ToList();
+        if (lista.Count == 0)
+            return [];
+        if (!requisito.EsSeccion)
+            throw ReglaDeNegocioException.Validacion("campos-solo-en-secciones", "Los campos se señalan al observar una sección de la ficha, no un documento.");
+        if (veredicto != Veredicto.Observado)
+            throw ReglaDeNegocioException.Validacion("campos-solo-al-observar", "Los campos señalados solo acompañan una observación.");
+        if (lista.Count > MaximoCamposSenalados || lista.Any(c => c.Length > 200))
+            throw ReglaDeNegocioException.Validacion("campos-invalidos", $"Señala hasta {MaximoCamposSenalados} campos (rutas de hasta 200 caracteres).");
+        return lista;
+    }
 
     /// <summary>Quién aprobó los requisitos del área: <c>Administrador</c> si intervino (o solo hubo exenciones), si no <c>Humano</c>, si no <c>Sistema</c>.</summary>
     private static OrigenVeredicto OrigenDerivado(Expediente expediente, AreaDeExpediente area)

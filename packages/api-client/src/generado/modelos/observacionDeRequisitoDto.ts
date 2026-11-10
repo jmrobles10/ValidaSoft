@@ -13,4 +13,6 @@ export interface ObservacionDeRequisitoDto {
   motivos: string[] | null;
   /** @nullable */
   observacion?: string | null;
+  /** @nullable */
+  campos?: string[] | null;
 }

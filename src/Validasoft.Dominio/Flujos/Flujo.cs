@@ -38,10 +38,17 @@ public sealed record EtapaDeFlujo(int Orden, IReadOnlyList<AreaDeEtapa> Areas);
 /// <see cref="AprobadoresRequeridos"/> nulo ⇒ los del área. <see cref="CodigoTipo"/> es copia del código del tipo
 /// (inmutable) para leer el flujo sin cruzarlo con el catálogo. Lo que el flujo pide decide qué se comparte (RQ-3).
 /// <see cref="Condicion"/> nula ⇒ se pide siempre; si no, solo al tercero y vínculo que la cumplen (RQ-12).
+/// Con <see cref="Seccion"/> el requisito pide una sección de la ficha maestra (F2, FM-25) en vez de un documento:
+/// <see cref="TipoDocumentoTenantId"/> va vacío y <see cref="CodigoTipo"/> es el código de la sección; <see cref="Periodos"/>
+/// (solo la financiera, 1 por omisión = el último cierre) y <see cref="ExigeSoporte"/> (la versión debe traer soporte).
 /// </summary>
 public sealed record RequisitoDelFlujo(
     Guid Id, Guid TipoDocumentoTenantId, string CodigoTipo, bool Obligatorio, IReadOnlyList<Guid> AreasQueRevisan, int? AprobadoresRequeridos,
-    CondicionDeExigencia? Condicion = null);
+    CondicionDeExigencia? Condicion = null, string? Seccion = null, int? Periodos = null, bool ExigeSoporte = false)
+{
+    [JsonIgnore]
+    public bool EsSeccion => Seccion is not null;
+}
 
 /// <summary>Contenido versionado de un flujo (lo que se congela al publicar). Sin requisitos, cada área decide sobre el expediente (FL-1).</summary>
 public sealed record DefinicionDeFlujo(
@@ -132,10 +139,17 @@ public sealed record DefinicionDeFlujo(
 
         var areasDelFlujo = etapas.SelectMany(e => e.Areas).Select(a => a.AreaId).ToHashSet();
         var tiposVistos = new HashSet<Guid>();
+        var seccionesVistas = new HashSet<string>(StringComparer.Ordinal);
         var idsVistos = new HashSet<Guid>();
         var resultado = new List<RequisitoDelFlujo>();
         foreach (var requisito in Requisitos)
         {
+            if (requisito.EsSeccion)
+            {
+                resultado.Add(ValidarSeccion(requisito, areasDelFlujo, seccionesVistas, idsVistos, tipoVinculo));
+                continue;
+            }
+
             var tipo = tipos.FirstOrDefault(t => t.Id == requisito.TipoDocumentoTenantId);
             if (tipo is not { Activo: true })
                 throw ReglaDeNegocioException.Validacion("requisito-invalido",
@@ -171,6 +185,45 @@ public sealed record DefinicionDeFlujo(
                 $"El área {sinRequisitos} no revisa ningún requisito: con requisitos, cada área aprueba los de su alcance.");
 
         return resultado;
+    }
+
+    /// <summary>
+    /// Requisito de sección (F2, FM-25): una sección canónica de la ficha (422 <c>seccion-invalida</c>), sin repetir
+    /// (<c>requisito-duplicado</c>), periodos solo en la financiera (<c>periodos-no-aplica</c>) y entre 1 y
+    /// <see cref="Expedientes.RequisitosDeSeccion.MaximoPeriodos"/> (<c>periodos-invalidos</c>); áreas, aprobadores y condición
+    /// como en un documento.
+    /// </summary>
+    private static RequisitoDelFlujo ValidarSeccion(RequisitoDelFlujo requisito, IReadOnlySet<Guid> areasDelFlujo, HashSet<string> vistas,
+        HashSet<Guid> idsVistos, TipoVinculo? tipoVinculo)
+    {
+        var definicion = Ficha.CatalogoDeSecciones.Buscar(requisito.Seccion)
+                         ?? throw ReglaDeNegocioException.Validacion("seccion-invalida",
+                             $"La sección «{requisito.Seccion}» no existe. Secciones: {string.Join(", ", Ficha.CatalogoDeSecciones.Todas.Select(s => s.Codigo))}.");
+        if (!vistas.Add(definicion.Codigo))
+            throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {definicion.Codigo}.");
+        if (requisito.Periodos is not null && !definicion.PorPeriodo)
+            throw ReglaDeNegocioException.Validacion("periodos-no-aplica", $"{definicion.Nombre} no va por periodo.");
+        if (requisito.Periodos is < 1 or > Expedientes.RequisitosDeSeccion.MaximoPeriodos)
+            throw ReglaDeNegocioException.Validacion("periodos-invalidos",
+                $"Se piden entre 1 y {Expedientes.RequisitosDeSeccion.MaximoPeriodos} periodos de {definicion.Nombre}.");
+
+        var id = requisito.Id == Guid.Empty ? Guid.CreateVersion7() : requisito.Id;
+        if (!idsVistos.Add(id))
+            throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"Hay dos requisitos con el id {id}.");
+
+        var areas = (requisito.AreasQueRevisan ?? []).Distinct().ToList();
+        if (areas.Any(a => !areasDelFlujo.Contains(a)))
+            throw ReglaDeNegocioException.Validacion("requisito-area-invalida", $"Un área que revisa {definicion.Codigo} no participa en el flujo.");
+        if (requisito.AprobadoresRequeridos is < 1 or > MaximoAprobadores)
+            throw ReglaDeNegocioException.Validacion("aprobadores-invalidos",
+                $"El requisito {definicion.Codigo} necesita entre 1 y {MaximoAprobadores} aprobadores.");
+
+        var condicion = AtributosDeExigencia.Validar(requisito.Condicion, tipoVinculo, definicion.Nombre);
+        return requisito with
+        {
+            Id = id, TipoDocumentoTenantId = Guid.Empty, CodigoTipo = definicion.Codigo, Seccion = definicion.Codigo,
+            Periodos = definicion.PorPeriodo ? requisito.Periodos ?? 1 : null, AreasQueRevisan = areas, Condicion = condicion
+        };
     }
 }
 

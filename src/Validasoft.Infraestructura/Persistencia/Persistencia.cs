@@ -159,6 +159,10 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId)
                     .Index(x => x.VinculoId)
                     .Index(x => x.AbiertoEn);
+                // Lo aceptado de cada sección de la ficha por vínculo (F2, FM-29): privado de la empresa, en su tenant.
+                opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()
+                    .Index(x => x.VinculoId)
+                    .Index(x => x.TerceroId);
                 opts.Schema.For<FilaBandeja>().MultiTenanted()
                     .Index(x => x.EmpresaId)
                     .Index(x => x.ExpedienteId)

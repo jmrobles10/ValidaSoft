@@ -151,7 +151,11 @@ public sealed record VersionDeRequisito(Guid DocumentoId, int Numero, string Sha
 /// <summary>
 /// Foto de un requisito al abrir el expediente: el tipo del tenant (con su canónico y ámbito, para casar documentos de la
 /// bóveda), si es obligatorio, las áreas que lo revisan (ya resueltas: vacío en el flujo ⇒ todas) y la versión que lo
-/// cubre si el tercero ya la tenía compartida con el vínculo.
+/// cubre si el tercero ya la tenía compartida con el vínculo. Un requisito de <see cref="TipoDeRequisito.Seccion"/> (F2)
+/// pide una sección de la ficha (<see cref="Seccion"/>, <see cref="Periodo"/>): la versión es la de la sección
+/// (<c>DocumentoId</c> = id del stream, <c>Sha256</c> = huella) y solo la cubre si es completa para la empresa
+/// (<see cref="Completitud"/>, que se guarda); <see cref="Aceptada"/> es la que la empresa ya había aceptado en el vínculo (base
+/// de la comparación anterior → nuevo de una actualización).
 /// </summary>
 public sealed record RequisitoCalculado(
     Guid RequisitoId,
@@ -164,7 +168,13 @@ public sealed record RequisitoCalculado(
     IReadOnlyList<Guid> AreasQueRevisan,
     int? AprobadoresRequeridos,
     VersionDeRequisito? Version,
-    AprobacionPrevia? Previa = null);
+    AprobacionPrevia? Previa = null,
+    TipoDeRequisito TipoRequisito = TipoDeRequisito.Documento,
+    string? Seccion = null,
+    int? Periodo = null,
+    bool ExigeSoporte = false,
+    VersionDeRequisito? Aceptada = null,
+    CompletitudParaEmpresa? Completitud = null);
 
 /// <summary>
 /// La misma empresa ya aprobó esa misma versión del documento en otro expediente del mismo tercero (otro tipo de vínculo,
@@ -185,7 +195,8 @@ public sealed record VeredictosInvalidadosPorNuevaVersion(Guid RequisitoId, int 
 
 /// <summary>
 /// Veredicto de un área sobre un requisito y una versión concreta (<see cref="SobreVersion"/>). Origen <c>Humano</c>
-/// (miembro del área), <c>Sistema</c> (área automática) o <c>Administrador</c> (aprobación en nombre del área).
+/// (miembro del área), <c>Sistema</c> (área automática) o <c>Administrador</c> (aprobación en nombre del área). Al observar una
+/// sección de la ficha, <see cref="Campos"/> señala (opcional) los campos que el tercero debe corregir (rutas snake_case).
 /// </summary>
 public sealed record VeredictoDeRequisitoEmitido(
     Guid VeredictoId,
@@ -198,6 +209,21 @@ public sealed record VeredictoDeRequisitoEmitido(
     IReadOnlyList<MotivoAplicado> Motivos,
     string? Observacion,
     string? Justificacion,
+    DateTimeOffset Fecha,
+    IReadOnlyList<string>? Campos = null);
+
+/// <summary>
+/// Completitud para la empresa de la versión vigente de la sección que pide el requisito (FM-16, F2), guardada cada vez que
+/// cambia: el motivo legible de lo que falta («Falta el soporte de la información general») no se deduce en pantalla.
+/// </summary>
+public sealed record CompletitudDeSeccionEvaluada(Guid RequisitoId, CompletitudParaEmpresa Completitud, DateTimeOffset Fecha);
+
+/// <summary>
+/// La empresa aceptó, al aprobarse el expediente, la versión de la sección que cubre el requisito (FM-3, FM-29). Es el punto
+/// de dominio del que F3 sacará el evento público <c>seccion.aceptada</c>; hoy alimenta la aceptación por vínculo
+/// (<c>SeccionAceptada</c>).
+/// </summary>
+public sealed record SeccionAceptadaPorEmpresa(Guid RequisitoId, string Seccion, int? Periodo, Guid SeccionId, int Version, string Huella,
     DateTimeOffset Fecha);
 
 /// <summary>Un administrador exime el requisito con justificación (visible en el certificado, P-5-4); sus veredictos dejan de contar.</summary>

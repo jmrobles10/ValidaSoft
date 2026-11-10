@@ -4,6 +4,7 @@ using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -27,7 +28,7 @@ public static class RequisitosDeExpediente
     public static async Task<IReadOnlyList<RequisitoPedido>> DelFlujoAsync(IQuerySession sesionDelTenant, FlujoVersion version,
         ContextoDeExigencia contexto, CancellationToken ct)
     {
-        var aplican = EvaluadorDeExigencia.Filtrar(version.Requisitos, contexto);
+        var aplican = EvaluadorDeExigencia.Filtrar(version.Requisitos.Where(r => !r.EsSeccion), contexto);
         if (aplican.Count == 0)
             return [];
 
@@ -35,6 +36,39 @@ public static class RequisitosDeExpediente
         var tipos = (await sesionDelTenant.LoadManyAsync<TipoDocumentoTenant>(ct, ids)).ToDictionary(t => t.Id);
         return [.. aplican.Where(r => tipos.ContainsKey(r.TipoDocumentoTenantId)).Select(r => new RequisitoPedido(r, tipos[r.TipoDocumentoTenantId]))];
     }
+
+    /// <summary>
+    /// Requisitos de sección de la versión del flujo que se le piden a este tercero en este vínculo (condición y tipo de
+    /// persona: la natural no tiene Legal ni Financiera), uno por sección y, en la financiera, uno por periodo exigido (F2).
+    /// </summary>
+    public static IReadOnlyList<RequisitoDeSeccionPedido> SeccionesDelFlujo(FlujoVersion version, ContextoDeExigencia contexto, DateOnly hoy) =>
+        RequisitosDeSeccion.Expandir(EvaluadorDeExigencia.Filtrar(version.Requisitos.Where(r => r.EsSeccion), contexto), hoy);
+
+    /// <summary>Las secciones de la ficha del tercero, por id de stream (tenant técnico <c>boveda</c> en la misma sesión).</summary>
+    public static async Task<IReadOnlyDictionary<Guid, SeccionDeFicha>> FichaAsync(IDocumentSession sesionDelTenant, Guid terceroId,
+        CancellationToken ct) =>
+        (await sesionDelTenant.ForTenant(TenantsTecnicos.Boveda).Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct))
+        .ToDictionary(s => s.Id);
+
+    /// <summary>Lo aceptado por la empresa de cada sección en el vínculo, por clave (vínculo, sección, periodo).</summary>
+    public static async Task<IReadOnlyDictionary<string, SeccionAceptada>> AceptadasAsync(IQuerySession sesionDelTenant, Guid vinculoId,
+        CancellationToken ct) =>
+        (await sesionDelTenant.Query<SeccionAceptada>().Where(a => a.VinculoId == vinculoId).ToListAsync(ct)).ToDictionary(a => a.Id);
+
+    /// <summary>Versión aceptada de la sección como versión de requisito (base de la comparación de una actualización).</summary>
+    public static VersionDeRequisito? Aceptada(IReadOnlyDictionary<string, SeccionAceptada> aceptadas, Guid vinculoId, RequisitoDeSeccionPedido pedido) =>
+        aceptadas.TryGetValue(SeccionAceptada.Clave(vinculoId, pedido.Definicion.Codigo, pedido.Periodo), out var a)
+            ? new VersionDeRequisito(a.SeccionId, a.Version, a.Huella, a.AceptadaEn)
+            : null;
+
+    /// <summary>
+    /// Foto del requisito de sección para <c>RequisitosCalculados</c>: con <paramref name="ficha"/> (el tercero ya aceptó la
+    /// invitación: la ficha está disponible para la empresa) se evalúa la versión vigente con la regla de «completa para la
+    /// empresa» y solo la cubre si lo es; sin ella, nace pendiente sin evaluar.
+    /// </summary>
+    public static RequisitoCalculado CalcularSeccion(RequisitoDeSeccionPedido pedido, Guid terceroId, IReadOnlyDictionary<Guid, SeccionDeFicha>? ficha,
+        VersionDeRequisito? aceptada) =>
+        pedido.Calcular(ficha is null ? null : RequisitosDeSeccion.Evaluar(pedido, ficha.GetValueOrDefault(pedido.SeccionId(terceroId))), aceptada);
 
     /// <summary>Tercero, tipo de vínculo y atributos del vínculo: con qué se evalúan las condiciones de sus requisitos.</summary>
     public static async Task<ContextoDeExigencia> ContextoAsync(IQuerySession sesionDelTenant, Vinculo vinculo, CancellationToken ct)
@@ -131,13 +165,37 @@ public static class RequisitosDeExpediente
         var terceroId = expediente.TerceroId;
         var documentos = await sesionDelTenant.ForTenant(TenantsTecnicos.Boveda).Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
         var disponibles = new Dictionary<Guid, VersionDeRequisito>();
-        foreach (var requisito in expediente.Requisitos)
+        foreach (var requisito in expediente.Requisitos.Where(r => !r.EsSeccion))
         {
             if (Cubre(requisito.TipoDocumentoTenantId, requisito.TipoCanonico, requisito.Ambito, documentos, expediente.VinculoId) is { } version)
                 disponibles[requisito.Id] = version;
         }
 
-        return expediente.SincronizarVersiones(disponibles, ahora);
+        return expediente.SincronizarVersiones(disponibles, ahora, await EvaluarSeccionesAsync(sesionDelTenant, expediente, ct));
+    }
+
+    /// <summary>
+    /// Evaluación de la versión vigente de cada sección que pide el expediente (F2), solo si el tercero ya aceptó la invitación
+    /// (antes, nada de su ficha está disponible para la empresa, B-1). La regla es la única de «completa para la empresa».
+    /// </summary>
+    private static async Task<IReadOnlyDictionary<Guid, EvaluacionDeSeccion>> EvaluarSeccionesAsync(IDocumentSession sesionDelTenant,
+        Expediente expediente, CancellationToken ct)
+    {
+        var secciones = expediente.Requisitos.Where(r => r.EsSeccion && !r.Eximido).ToList();
+        if (secciones.Count == 0 || await sesionDelTenant.LoadAsync<Vinculo>(expediente.VinculoId, ct) is not { InvitacionAceptada: true })
+            return new Dictionary<Guid, EvaluacionDeSeccion>();
+
+        var ficha = await FichaAsync(sesionDelTenant, expediente.TerceroId, ct);
+        var evaluaciones = new Dictionary<Guid, EvaluacionDeSeccion>();
+        foreach (var requisito in secciones)
+        {
+            if (CatalogoDeSecciones.Buscar(requisito.Seccion) is not { } definicion)
+                continue;
+            var seccion = ficha.GetValueOrDefault(SeccionDeFicha.IdPara(expediente.TerceroId, definicion.Codigo, requisito.Periodo));
+            evaluaciones[requisito.Id] = RequisitosDeSeccion.Evaluar(definicion, requisito.Periodo, requisito.ExigeSoporte, seccion);
+        }
+
+        return evaluaciones;
     }
 
     /// <summary>

@@ -41,7 +41,9 @@ public sealed record SoporteSeccionDto(Guid DocumentoId, int Version, string? Ti
 
 /// <summary>
 /// Versión vigente de una sección (o vacía: <see cref="Version"/> y <see cref="Datos"/> nulos). <see cref="Datos"/> es el
-/// JSON normalizado en snake_case; <see cref="Huella"/> el SHA-256 de datos + soportes.
+/// JSON normalizado en snake_case; <see cref="Huella"/> el SHA-256 de datos + soportes. En Tercero 360 (F2),
+/// <see cref="Aceptaciones"/> dice, por cada vínculo de la empresa activa, qué versión aceptó, si hay una nueva pendiente y
+/// el estado de su revalidación.
 /// </summary>
 public sealed record SeccionFichaDto(
     string Seccion,
@@ -55,7 +57,23 @@ public sealed record SeccionFichaDto(
     string? Origen,
     DateTimeOffset? Fecha,
     int Versiones,
-    int EsquemaVersion);
+    int EsquemaVersion,
+    IReadOnlyList<AceptacionDeSeccionDto>? Aceptaciones = null);
+
+/// <summary>
+/// Lo que un vínculo de la empresa activa tiene aceptado de la sección (F2, FM-29): versión, fecha y expediente en que se aceptó
+/// (nulos si nunca), si la versión vigente del tercero es otra (<see cref="VersionNuevaPendiente"/>) y la revalidación abierta
+/// que la revisa, si la hay.
+/// </summary>
+public sealed record AceptacionDeSeccionDto(
+    Guid VinculoId, int? VersionAceptada, DateTimeOffset? AceptadaEn, Guid? ExpedienteId, string? Folio, bool VersionNuevaPendiente,
+    RevalidacionDeSeccionDto? Revalidacion);
+
+/// <summary>
+/// Revalidación (expediente de actualización abierto) de la sección: su folio, el estado del requisito
+/// (<c>Pendiente|Cargado|EnRevision|Observado|Aprobado</c>), la versión en revisión y el plazo antes de que bloquee (RV-4).
+/// </summary>
+public sealed record RevalidacionDeSeccionDto(Guid ExpedienteId, string Folio, string Estado, int? Version, DateTimeOffset PlazoHasta);
 
 /// <summary>Datos de la sección (objeto en snake_case; null = vacía) y los soportes de esta versión (se envían completos cada vez).</summary>
 public sealed record GuardarSeccionDto(JsonElement? Datos, IReadOnlyList<SoporteSeccionDto>? Soportes = null);

@@ -71,7 +71,7 @@ public static class RevalidacionesEndpoints
         {
             var (e, r) = x;
             var actual = r.VersionActual!;
-            var previa = aprobados.TryGetValue(e.VinculoId, out var aprobado) ? Revalidacion.AprobadoEn(aprobado, r.TipoDocumentoTenantId, r.TipoCanonico, r.Ambito) : null;
+            var previa = aprobados.TryGetValue(e.VinculoId, out var aprobado) ? Revalidacion.AprobadoEn(aprobado, r) : r.VersionAceptadaPrevia;
             var comparacion = documentos.GetValueOrDefault(actual.DocumentoId)?.Buscar(actual.Numero)?.Hechos?.Comparacion;
             var plazo = Revalidacion.PlazoHasta(e);
             var certificado = certificados.GetValueOrDefault(e.VinculoId);

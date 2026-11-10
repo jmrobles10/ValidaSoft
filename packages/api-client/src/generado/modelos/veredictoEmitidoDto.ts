@@ -28,4 +28,6 @@ export interface VeredictoEmitidoDto {
   sobreVersion?: number | null;
   invalidado?: boolean;
   derivado?: boolean;
+  /** @nullable */
+  campos?: string[] | null;
 }
