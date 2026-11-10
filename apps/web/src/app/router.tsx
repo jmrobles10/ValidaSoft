@@ -65,6 +65,15 @@ export function crearRouter() {
               path: 'vencimientos',
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
+            { path: 'informes', element: <Navigate to="estado-expedientes" replace /> },
+            {
+              path: 'informes/estado-expedientes',
+              lazy: () => import('../features/informes/PaginaEstadoExpedientes').then((m) => ({ Component: m.PaginaEstadoExpedientes })),
+            },
+            {
+              path: 'informes/vinculos',
+              lazy: () => import('../features/informes/PaginaInformeVinculos').then((m) => ({ Component: m.PaginaInformeVinculos })),
+            },
             {
               path: 'cumplimiento',
               lazy: () => import('../features/cumplimiento/PaginaCumplimiento').then((m) => ({ Component: m.PaginaCumplimiento })),

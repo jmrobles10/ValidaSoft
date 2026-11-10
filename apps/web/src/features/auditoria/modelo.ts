@@ -24,10 +24,10 @@ export const ENTIDADES_CONFIGURACION = [
   'TextoLegal',
   'AccesoSoporte',
 ] as const;
-export const ENTIDADES_ACCESO = ['Documento', 'Certificado'] as const;
+export const ENTIDADES_ACCESO = ['Documento', 'Certificado', 'Expediente', 'Exportacion'] as const;
 export type EntidadAuditada = (typeof ENTIDADES_CONFIGURACION)[number] | (typeof ENTIDADES_ACCESO)[number];
 
-export const ACCIONES = ['Creado', 'Modificado', 'Publicado', 'Archivado', 'Desactivado', 'Rotado', 'Revocado', 'Descargado'] as const;
+export const ACCIONES = ['Creado', 'Modificado', 'Publicado', 'Archivado', 'Desactivado', 'Rotado', 'Revocado', 'Descargado', 'Exportado'] as const;
 export const ACTORES = ['Usuario', 'Tercero', 'Integracion', 'Sistema', 'Plataforma', 'Migracion'] as const;
 export const TIPOS_CAMBIO = ['Agregado', 'Modificado', 'Eliminado'] as const;
 export type TipoCambio = (typeof TIPOS_CAMBIO)[number];

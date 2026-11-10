@@ -3,12 +3,14 @@ using JasperFx.Events;
 using Marten;
 using Marten.Events;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Identidad;
+using Validasoft.Dominio.Plataforma;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Comun;
@@ -24,6 +26,9 @@ public static class AuditoriaEndpoints
     private const string Configuracion = "Configuracion";
     private const string Acceso = "Acceso";
 
+    /// <summary>Filas que admite la exportación a Excel (IF-4); más ⇒ 422 <c>exportacion-demasiado-grande</c>.</summary>
+    public const int MaximoExportacion = 50_000;
+
     [WolverineGet("/api/v1/auditoria")]
     [Authorize(Policy = Permisos.AuditoriaLeer)]
     public static async Task<PaginaDto<RegistroAuditoriaDto>> Listar(SesionDeEmpresa empresa, ISesiones sesiones, string? tipo, string? entidad,
@@ -31,24 +36,73 @@ public static class AuditoriaEndpoints
     {
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
         var salto = Peticiones.LeerDesplazamiento(cursor);
+        var registros = await RegistrosAsync(empresa, sesiones, tipo, entidad, entidadId, actor, desde, hasta, ct);
+        var pagina = await ConNombresAsync(empresa, [.. registros.Skip(salto).Take(tamano)], ct);
+        var siguiente = registros.Count > salto + tamano ? Peticiones.EscribirDesplazamiento(salto + tamano) : null;
+        return new PaginaDto<RegistroAuditoriaDto>(pagina, siguiente);
+    }
+
+    /// <summary>
+    /// La auditoría con los mismos filtros de la pantalla en Excel (IF-4), de lo más reciente a lo más antiguo, con el
+    /// detalle de cada cambio en una celda. Pide <c>auditoria:exportar</c> y la exportación misma queda en la auditoría.
+    /// </summary>
+    [WolverineGet("/api/v1/auditoria/excel")]
+    [Authorize(Policy = Permisos.AuditoriaLeer)]
+    [Authorize(Policy = Permisos.AuditoriaExportar)]
+    public static async Task<IResult> Excel(SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http, TimeProvider reloj,
+        string? tipo, string? entidad, string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
+    {
+        var registros = await RegistrosAsync(empresa, sesiones, tipo, entidad, entidadId, actor, desde, hasta, ct);
+        if (registros.Count > MaximoExportacion)
+            throw ReglaDeNegocioException.Validacion("exportacion-demasiado-grande",
+                $"La exportación admite hasta {MaximoExportacion} registros: acota el rango de fechas o agrega filtros.");
+        var conNombres = await ConNombresAsync(empresa, registros, ct);
+        var bytes = HojaDeCalculo.Crear(TipoDe(tipo) == Configuracion ? "Configuración" : "Accesos",
+            ["Fecha", "Tipo", "Acción", "Entidad", "Id de la entidad", "Nombre", "Tipo de actor", "Actor", "Id del actor", "Sistema", "Cambios",
+                "Justificación", "Detalle", "Vínculo", "IP", "Navegador", "Correlación"],
+            conNombres.Select(r => (IReadOnlyList<object?>)
+            [
+                Informes.Exportaciones.Local(r.Fecha), r.Tipo == Configuracion ? "Configuración" : "Acceso", r.Accion, r.Entidad.Tipo, r.Entidad.Id,
+                r.Entidad.Nombre, r.Actor.Tipo, r.Actor.Nombre, r.Actor.Id, r.Actor.Sistema, Cambios(r.Diff), r.Justificacion, r.Detalle,
+                r.VinculoId?.ToString(), r.Ip, r.UserAgent, r.CorrelationId
+            ]));
+        var nombreEmpresa = (await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct))?.Nombre ?? "empresa";
+        var archivo = $"auditoria-{Informes.Exportaciones.Slug(nombreEmpresa)}-{CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()):yyyy-MM-dd}.xlsx";
+        return await Informes.Exportaciones.EntregarAsync(empresa, contexto, http, reloj,
+            new Informes.ArchivoExportado("Auditoria", "Excel", bytes, HojaDeCalculo.TipoContenido, archivo, conNombres.Count), ct);
+    }
+
+    private static async Task<List<RegistroAuditoriaDto>> RegistrosAsync(SesionDeEmpresa empresa, ISesiones sesiones, string? tipo, string? entidad,
+        string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
+    {
         if (desde is not null && hasta is not null && desde > hasta)
             throw ReglaDeNegocioException.Validacion("rango-invalido", "La fecha inicial es posterior a la final.");
-
-        var registros = TipoDe(tipo) switch
+        return TipoDe(tipo) switch
         {
             Configuracion => await ConfiguracionAsync(empresa, entidad, entidadId, actor, desde, hasta, ct),
             _ => await AccesosAsync(empresa, sesiones, entidad, entidadId, actor, desde, hasta, ct)
         };
-
-        var nombres = await NombresDeUsuariosAsync(empresa, registros, ct);
-        var pagina = registros.Skip(salto).Take(tamano)
-            .Select(r => r.Actor.Tipo == nameof(ActorTipo.Usuario) && r.Actor.Id is { } id && nombres.TryGetValue(id, out var nombre)
-                ? r with { Actor = r.Actor with { Nombre = nombre } }
-                : r)
-            .ToList();
-        var siguiente = registros.Count > salto + tamano ? Peticiones.EscribirDesplazamiento(salto + tamano) : null;
-        return new PaginaDto<RegistroAuditoriaDto>(pagina, siguiente);
     }
+
+    private static async Task<List<RegistroAuditoriaDto>> ConNombresAsync(SesionDeEmpresa empresa, IReadOnlyList<RegistroAuditoriaDto> registros,
+        CancellationToken ct)
+    {
+        var nombres = await NombresDeUsuariosAsync(empresa, registros, ct);
+        return [.. registros.Select(r => r.Actor.Tipo == nameof(ActorTipo.Usuario) && r.Actor.Id is { } id && nombres.TryGetValue(id, out var nombre)
+            ? r with { Actor = r.Actor with { Nombre = nombre } }
+            : r)];
+    }
+
+    /// <summary><c>campo: antes → después</c> por cambio, uno por línea.</summary>
+    private static string? Cambios(IReadOnlyList<DiffCampoDto> diff) =>
+        diff.Count == 0 ? null : string.Join('\n', diff.Select(d => $"{d.Campo}: {Valor(d.Antes)} → {Valor(d.Despues)}"));
+
+    private static string Valor(JsonElement? valor) => valor switch
+    {
+        null => "—",
+        { ValueKind: JsonValueKind.String } texto => texto.GetString() ?? string.Empty,
+        { } otro => otro.GetRawText()
+    };
 
     private static string TipoDe(string? tipo)
     {
@@ -152,12 +206,37 @@ public static class AuditoriaEndpoints
             }
         }
 
+        // Exportaciones de la empresa (informes, auditoría y expedientes, IF-6).
+        var verExportaciones = string.IsNullOrWhiteSpace(entidad) || entidad.Equals("Exportacion", StringComparison.OrdinalIgnoreCase) ||
+                               entidad.Equals("Expediente", StringComparison.OrdinalIgnoreCase);
+        if (verExportaciones)
+        {
+            var exportaciones = await empresa.Sesion.Query<Informes.ExportacionRegistrada>().Where(x => x.EmpresaId == empresaId).ToListAsync(ct);
+            registros.AddRange(exportaciones
+                .Where(x => string.IsNullOrWhiteSpace(entidad) || (x.EntidadId is null) == entidad.Equals("Exportacion", StringComparison.OrdinalIgnoreCase))
+                .Select(x => new RegistroAuditoriaDto(x.Id, Acceso, x.Fecha, x.EmpresaId, new ActorAuditoriaDto(x.ActorTipo, x.ActorId, null, null),
+                    x.EntidadId is null
+                        ? new EntidadAuditadaDto("Exportacion", x.Id.ToString(), NombreDeExportacion(x.Tipo))
+                        : new EntidadAuditadaDto("Expediente", x.EntidadId, x.EntidadNombre),
+                    "Exportado", null, null, [], null,
+                    $"{x.Formato} · {x.Filas} {(x.Tipo == "Expediente" ? "archivos" : "filas")} · SHA-256 {x.Sha256}{(x.Filtros.Length > 0 ? $" · {x.Filtros}" : string.Empty)}",
+                    x.VinculoId, x.Ip, x.UserAgent, null)));
+        }
+
         return [.. registros
             .Where(r => string.IsNullOrWhiteSpace(entidadId) || r.Entidad.Id == entidadId || r.VinculoId?.ToString() == entidadId)
             .Where(r => string.IsNullOrWhiteSpace(actor) || r.Actor.Id == actor)
             .Where(r => (desde is null || r.Fecha >= desde) && (hasta is null || r.Fecha <= hasta))
             .OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id)];
     }
+
+    private static string NombreDeExportacion(string tipo) => tipo switch
+    {
+        "InformeEstadoExpedientes" => "Informe de estado de expedientes",
+        "InformeVinculos" => "Informe de terceros y vínculos",
+        "Auditoria" => "Auditoría",
+        _ => tipo
+    };
 
     private static async Task<Dictionary<string, string>> NombresDeUsuariosAsync(SesionDeEmpresa empresa, IEnumerable<RegistroAuditoriaDto> registros,
         CancellationToken ct)

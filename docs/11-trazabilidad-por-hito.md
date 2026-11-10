@@ -863,6 +863,16 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 
 ---
 
+#### H8 — Implementado: informes y exportaciones (IF, 2026-11-10)
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint | `GET /informes/estado-expedientes` (+ `/excel`, `/pdf`), `GET /informes/vinculos` (+ `/excel`), `GET /auditoria/excel`, `GET /expedientes/{id}/exportar` (ZIP). Exportes síncronos (IF-3): el `POST …/exportar` 202 de la tabla 2.8.2 queda para volúmenes mayores | 05 §2.7; registro IF-1…IF-6 |
+| Dominio | `Expediente.MedirTiempos`: días en carga, con el tercero, en revisión y por área (rondas, SLA) sobre los eventos; sin evento `ExpedienteExportado` (la exportación se registra en `ExportacionRegistrada`, IF-5/IF-6) | registro IF-2, IF-5 |
+| DTO | `InformeEstadoExpedientesDto`, `ResumenEstadoExpedientesDto`, `FilaEstadoExpedienteDto`, `TiempoDeAreaDto`, `ResumenDeAreaDto`, `InformeVinculosDto`, `FilaInformeVinculoDto`, `CertificadoDelInformeDto`, `ExpedienteDelInformeDto`, `DocumentosDelInformeDto`, `ConteoDto` | `Validasoft.Contratos/Informes.cs` |
+| Permiso | `auditoria:exportar` (Administrador, Auditor), `expedientes:exportar` (Administrador, Oficial de cumplimiento, Auditor) | 07 §3.2 |
+| Pantalla | `web:/informes/estado-expedientes` y `/informes/vinculos` (pestaña Informes); «Exportar a Excel» en `/auditoria`; «Exportar expediente» en `/expedientes/:id`; Inicio enlaza al informe con la misma ventana (IF-7) | 06 §3.1 |
+| Pendiente | Exportación asíncrona con `exportacion.lista`, ZIP firmado de auditoría, índice firmado del expediente, proyección `InformeEstadoExpedientes` | registro IF-8 |
+
 #### H8 — Cierre de huecos (2026-10-28)
 | Tipo | Elemento | Definido en |
 |---|---|---|

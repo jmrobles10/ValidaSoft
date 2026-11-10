@@ -2,6 +2,7 @@ import { Box, Skeleton, Stack, ToggleButton, ToggleButtonGroup, Typography } fro
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { ErrorRecuperable } from '../../shared/componentes';
+import { rutaInformeDeVentana } from '../informes/modelo';
 import { mensajeDeError } from '../../shared/errores';
 import { useIndicadores } from './api';
 import { Cifra, GrupoCifras } from './Cifras';
@@ -31,6 +32,8 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
       { replace: true },
     );
   const aVinculos = (estado: string) => (puedeVerVinculos ? `/e/${empresaId}/vinculos?estado=${estado}` : null);
+  // Los aprobados y su tiempo llevan al informe de estado con la misma ventana y medida (IF-7).
+  const aInforme = rutaInformeDeVentana(empresaId, dias);
 
   return (
     <Box component="section" aria-labelledby="titulo-indicadores" sx={{ mt: 3 }}>
@@ -76,10 +79,11 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
           <GrupoCifras titulo={t('inicio.indicadores.expedientes')} nota={t('inicio.indicadores.enLaVentana', { count: datos.dias })}>
             <Cifra etiqueta={t('inicio.indicadores.enCurso')} valor={formatearConteo(datos.expedientesEnCurso)} />
             <Cifra etiqueta={t('inicio.indicadores.observados')} valor={formatearConteo(datos.expedientesObservados)} />
-            <Cifra etiqueta={t('inicio.indicadores.aprobados')} valor={formatearConteo(datos.expedientesAprobados)} />
+            <Cifra etiqueta={t('inicio.indicadores.aprobados')} valor={formatearConteo(datos.expedientesAprobados)} a={aInforme} />
             <Cifra etiqueta={t('inicio.indicadores.rechazados')} valor={formatearConteo(datos.expedientesRechazados)} />
             <Cifra
               etiqueta={t('inicio.indicadores.tiempoPromedio')}
+              a={aInforme}
               valor={formatearDias(datos.tiempoPromedioDias, sinDato)}
               nota={aNumero(datos.tiempoPromedioDias) === null ? t('inicio.indicadores.sinDatoAyuda') : undefined}
             />

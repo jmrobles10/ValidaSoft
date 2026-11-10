@@ -7,6 +7,7 @@ import { cumplimiento, erroresCumplimiento } from './es-CO-cumplimiento';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
+import { informes } from './es-CO-informes';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, lotes, plazoCargue } from './es-CO-lotes';
 import { ia } from './es-CO-ia';
@@ -36,6 +37,7 @@ export const esCO = {
     certificados: 'Certificados',
     vinculos: 'Vínculos',
     auditoria: 'Auditoría',
+    informes: 'Informes',
     flujos: 'Flujos aprobatorios',
     motivos: 'Motivos',
     plantillas: 'Plantillas de correo',
@@ -254,6 +256,7 @@ export const esCO = {
   lotes,
   plazoCargue,
   flujoPlazo,
+  informes,
   expedientes,
   documentos,
   notificaciones,

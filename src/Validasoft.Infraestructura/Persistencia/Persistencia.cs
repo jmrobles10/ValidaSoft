@@ -188,6 +188,8 @@ public static class ConfiguracionMarten
                 // tenants en la verificación pública (no es único entre tenants: lo desambigua la huella, CE-8).
                 // Último recordatorio de vencimiento por vínculo y documento (VE-3), aislado por empresa.
                 opts.Schema.For<Validasoft.Aplicacion.Vinculos.RecordatorioDeVencimiento>().MultiTenanted().Index(x => x.EmpresaId);
+                // Exportaciones de informes, auditoría y expedientes (IF-6), aisladas por empresa; las lee la auditoría de accesos.
+                opts.Schema.For<Validasoft.Aplicacion.Informes.ExportacionRegistrada>().MultiTenanted().Index(x => x.EmpresaId);
                 opts.Schema.For<Certificado>().MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_certificado_folio", TenancyScope.PerTenant, x => x.FolioRaiz)
                     .Index(x => x.EmpresaId)

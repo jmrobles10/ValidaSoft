@@ -21,6 +21,9 @@ public static class Permisos
     /// <summary>Aprobar o rechazar la cuenta bancaria que designa el tercero (cuatro ojos, CB-2).</summary>
     public const string CuentasAprobar = "cuentas:aprobar";
     public const string AuditoriaLeer = "auditoria:leer";
+
+    /// <summary>Exportar la auditoría a Excel con los filtros de la pantalla (IF-4; docs/07 §3.2: Administrador y Auditor).</summary>
+    public const string AuditoriaExportar = "auditoria:exportar";
     public const string FlujosLeer = "flujos:leer";
     public const string FlujosEscribir = "flujos:escribir";
     public const string ExpedientesLeer = "expedientes:leer";
@@ -30,6 +33,12 @@ public static class Permisos
 
     /// <summary>Abrir, anular, reenviar como integrador, aprobar en nombre de un área y anular veredictos.</summary>
     public const string ExpedientesAdministrar = "expedientes:administrar";
+
+    /// <summary>
+    /// Descargar el expediente completo en ZIP (documentos aceptados, resumen PDF y línea de tiempo, IF-5). Además pide
+    /// <c>documentos:descargar</c>; cada documento incluido queda como <c>DocumentoAccedido</c> y la exportación, en la auditoría.
+    /// </summary>
+    public const string ExpedientesExportar = "expedientes:exportar";
 
     /// <summary>Ver los documentos compartidos con un vínculo de la empresa (versiones, hechos).</summary>
     public const string DocumentosLeer = "documentos:leer";
@@ -61,8 +70,8 @@ public static class Permisos
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
-        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
-        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
+        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
+        FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
         CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir
     ];
 
@@ -95,8 +104,9 @@ public static class Permisos
         Rol.Administrador => DelTenant,
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
         Rol.OficialCumplimiento =>
-            [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, VerificacionesEscribir, CumplimientoDecidir, AuditoriaLeer],
-        Rol.Auditor => [.. Lecturas, AuditoriaLeer],
+            [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, ExpedientesExportar, VerificacionesEscribir,
+                CumplimientoDecidir, AuditoriaLeer],
+        Rol.Auditor => [.. Lecturas, AuditoriaLeer, AuditoriaExportar, ExpedientesExportar],
         _ => []
     };
 

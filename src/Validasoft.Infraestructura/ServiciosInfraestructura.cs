@@ -127,6 +127,7 @@ public static class ServiciosInfraestructura
         servicios.AddHostedService<VerificacionDeClavesDeCertificados>(); // sin clave de sellado la API no arranca (CE-11)
         servicios.AddSingleton<EmisorDeCertificados>();
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
+        servicios.AddSingleton<Validasoft.Aplicacion.Informes.IGeneradorDePdfDeInformes, GeneradorPdfDeInformes>();
         servicios.AddSingleton<ArchivoDeCertificados>();
         servicios.AddHostedService<ProcesadorDeCertificados>();
         // Verificaciones externas (H7, VE-5…VE-16): listas restrictivas con Infolaft como principal entre los reales (apagados

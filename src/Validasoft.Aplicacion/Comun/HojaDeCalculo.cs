@@ -1,33 +1,54 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Security;
 using System.Text;
 
 namespace Validasoft.Aplicacion.Comun;
 
+/// <summary>Una hoja del libro: nombre (hasta 31 caracteres), encabezado y filas.</summary>
+public sealed record Hoja(string Nombre, IReadOnlyList<string> Encabezado, IEnumerable<IReadOnlyList<object?>> Filas);
+
 /// <summary>
-/// Libro de Excel (.xlsx, Office Open XML) de una sola hoja con encabezado y filas de texto, número o fecha, sin
-/// dependencias: lo justo para exportar informes (VE-2). La primera fila queda en negrita y fija al desplazarse.
+/// Libro de Excel (.xlsx, Office Open XML) con una o varias hojas de encabezado y filas de texto, número o fecha, sin
+/// dependencias: lo justo para exportar informes (VE-2, IF-1). La primera fila de cada hoja queda en negrita y fija al
+/// desplazarse.
 /// </summary>
 public static class HojaDeCalculo
 {
     public const string TipoContenido = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
+    private static readonly DateOnly Origen = new(1899, 12, 30);
+
     /// <summary>
     /// Celdas: <see cref="string"/> (texto), números (<see cref="int"/>, <see cref="long"/>, <see cref="decimal"/>,
-    /// <see cref="double"/>), <see cref="DateOnly"/> (fecha con formato dd/mm/aaaa) o <c>null</c> (vacía).
+    /// <see cref="double"/>), <see cref="DateOnly"/> (fecha con formato dd/mm/aaaa), <see cref="DateTime"/> (fecha y hora
+    /// dd/mm/aaaa hh:mm, ya en la zona del negocio) o <c>null</c> (vacía).
     /// </summary>
-    public static byte[] Crear(string nombreHoja, IReadOnlyList<string> encabezado, IEnumerable<IReadOnlyList<object?>> filas)
+    public static byte[] Crear(string nombreHoja, IReadOnlyList<string> encabezado, IEnumerable<IReadOnlyList<object?>> filas) =>
+        CrearLibro(new Hoja(nombreHoja, encabezado, filas));
+
+    /// <summary>Libro con las hojas en el orden dado (con nombres distintos).</summary>
+    public static byte[] CrearLibro(params IReadOnlyList<Hoja> hojas)
     {
+        if (hojas.Count == 0)
+            throw new ArgumentException("El libro necesita al menos una hoja.", nameof(hojas));
+
+        var tiposDeHoja = string.Concat(hojas.Select((_, i) =>
+            $"<Override PartName=\"/xl/worksheets/sheet{i + 1}.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"));
+        var listaDeHojas = string.Concat(hojas.Select((h, i) => $"<sheet name=\"{Xml(Recortar(h.Nombre))}\" sheetId=\"{i + 1}\" r:id=\"rId{i + 1}\"/>"));
+        var relaciones = string.Concat(hojas.Select((_, i) =>
+            $"<Relationship Id=\"rId{i + 1}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet{i + 1}.xml\"/>"));
+
         using var memoria = new MemoryStream();
         using (var zip = new ZipArchive(memoria, ZipArchiveMode.Create, leaveOpen: true))
         {
-            Escribir(zip, "[Content_Types].xml", """
+            Escribir(zip, "[Content_Types].xml", $"""
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
                 <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
                 <Default Extension="xml" ContentType="application/xml"/>
                 <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-                <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+                {tiposDeHoja}
                 <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
                 </Types>
                 """);
@@ -40,41 +61,45 @@ public static class HojaDeCalculo
             Escribir(zip, "xl/workbook.xml", $"""
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                <sheets><sheet name="{Xml(Recortar(nombreHoja))}" sheetId="1" r:id="rId1"/></sheets>
+                <sheets>{listaDeHojas}</sheets>
                 </workbook>
                 """);
-            Escribir(zip, "xl/_rels/workbook.xml.rels", """
+            Escribir(zip, "xl/_rels/workbook.xml.rels", $"""
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-                <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                {relaciones}
+                <Relationship Id="rId{hojas.Count + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
                 </Relationships>
                 """);
-            // Estilos: 0 normal, 1 encabezado en negrita, 2 fecha dd/mm/yyyy.
+            // Estilos: 0 normal, 1 encabezado en negrita, 2 fecha dd/mm/yyyy, 3 fecha y hora dd/mm/yyyy hh:mm.
             Escribir(zip, "xl/styles.xml", """
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-                <numFmts count="1"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts>
+                <numFmts count="2"><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy hh:mm"/></numFmts>
                 <fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>
                 <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
                 <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
                 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-                <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>
+                <cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>
                 <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
                 </styleSheet>
                 """);
 
-            var hoja = new StringBuilder();
-            hoja.Append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
-                .Append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""")
-                .Append("""<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""")
-                .Append("<sheetData>");
-            Fila(hoja, 1, encabezado.Cast<object?>().ToList(), encabezado: true);
-            var numero = 2;
-            foreach (var fila in filas)
-                Fila(hoja, numero++, fila, encabezado: false);
-            hoja.Append("</sheetData></worksheet>");
-            Escribir(zip, "xl/worksheets/sheet1.xml", hoja.ToString());
+            for (var i = 0; i < hojas.Count; i++)
+            {
+                var hoja = new StringBuilder();
+                hoja.Append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
+                    .Append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""")
+                    .Append($"<sheetViews><sheetView workbookViewId=\"0\"{(i == 0 ? " tabSelected=\"1\"" : string.Empty)}>")
+                    .Append("""<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""")
+                    .Append("<sheetData>");
+                Fila(hoja, 1, hojas[i].Encabezado.Cast<object?>().ToList(), encabezado: true);
+                var numero = 2;
+                foreach (var fila in hojas[i].Filas)
+                    Fila(hoja, numero++, fila, encabezado: false);
+                hoja.Append("</sheetData></worksheet>");
+                Escribir(zip, $"xl/worksheets/sheet{i + 1}.xml", hoja.ToString());
+            }
         }
 
         return memoria.ToArray();
@@ -92,10 +117,14 @@ public static class HojaDeCalculo
                     break;
                 case DateOnly fecha:
                     // Serial de Excel: días desde el 30/12/1899.
-                    hoja.Append($"<c r=\"{referencia}\" s=\"2\"><v>{fecha.DayNumber - new DateOnly(1899, 12, 30).DayNumber}</v></c>");
+                    hoja.Append($"<c r=\"{referencia}\" s=\"2\"><v>{fecha.DayNumber - Origen.DayNumber}</v></c>");
+                    break;
+                case DateTime momento:
+                    var serial = (momento - Origen.ToDateTime(TimeOnly.MinValue)).TotalDays;
+                    hoja.Append($"<c r=\"{referencia}\" s=\"3\"><v>{serial.ToString("0.########", CultureInfo.InvariantCulture)}</v></c>");
                     break;
                 case int or long or decimal or double:
-                    hoja.Append($"<c r=\"{referencia}\"><v>{Convert.ToString(celdas[i], System.Globalization.CultureInfo.InvariantCulture)}</v></c>");
+                    hoja.Append($"<c r=\"{referencia}\"><v>{Convert.ToString(celdas[i], CultureInfo.InvariantCulture)}</v></c>");
                     break;
                 default:
                     hoja.Append($"<c r=\"{referencia}\" t=\"inlineStr\"{(encabezado ? " s=\"1\"" : string.Empty)}><is><t xml:space=\"preserve\">{Xml(celdas[i]!.ToString() ?? string.Empty)}</t></is></c>");

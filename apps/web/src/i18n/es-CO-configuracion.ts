@@ -137,6 +137,7 @@ export const apiKeys = {
     expedientesLeer: 'Leer expedientes',
     expedientesRevisar: 'Revisar expedientes (veredictos)',
     expedientesAdministrar: 'Abrir, anular y reenviar expedientes',
+    expedientesExportar: 'Exportar el expediente completo (ZIP)',
     documentosLeer: 'Ver documentos compartidos',
     documentosDescargar: 'Descargar documentos',
     certificadosLeer: 'Ver y descargar certificados',
@@ -146,6 +147,7 @@ export const apiKeys = {
     verificacionesEscribir: 'Consultar listas restrictivas',
     cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',
     auditoriaLeer: 'Leer la auditoría',
+    auditoriaExportar: 'Exportar la auditoría a Excel',
   },
   claveCreada: {
     titulo: 'API key «{{nombre}}» creada',

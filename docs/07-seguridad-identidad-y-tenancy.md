@@ -137,7 +137,8 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `consultas:leer` · `eventos:leer` · `sesiones-tercero:crear` | — | ✓ | ✓ | ✓ | ✓ | scope | — |
 | `vencimientos:leer` / `escribir` | — | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / — | scope | — |
 | `auditoria:leer` (dominio, configuración, identidad y accesos; alcance por empresa o tenant) | — | ✓ | — | ✓ | ✓ | scope (solo referencias) | — |
-| `auditoria:exportar` (ZIP firmado) | — | ✓ | — | — | ✓ | — | — |
+| `auditoria:exportar` (Excel con los filtros de la pantalla, IF-4; ZIP firmado pendiente) | — | ✓ | — | — | ✓ | — | — |
+| `expedientes:exportar` (expediente completo en ZIP con sus documentos; pide además `documentos:descargar`, IF-5) | — | ✓ | — | ✓ | ✓ | scope | — |
 | `supresiones:resolver` (habeas data lado empresa: retenciones dudosas que la saga `SupresionDatos` escala) | — | ✓ | — | ✓ | — | — | — |
 | `plataforma:operacion` (dead letters, rebuild de proyecciones) | ✓ | — | — | — | — | — | — |
 | `plataforma:soporte` (solo dentro de un acceso temporal vigente; lectura de documentos/decisiones del alcance concedido; nunca escritura) | ✓ (con concesión) | concede/revoca (`empresas:administrar`) | — | — | ve las concesiones | — | — |

@@ -11,10 +11,10 @@ export const GRUPOS_PERMISOS = [
   { grupo: 'administracion', claves: ['empresasAdministrar', 'apiKeysAdministrar', 'sistemasAdministrar', 'usuariosAdministrar'] },
   { grupo: 'configuracion', claves: ['configuracionLeer', 'configuracionEscribir', 'flujosLeer', 'flujosEscribir'] },
   { grupo: 'vinculos', claves: ['tercerosLeer', 'tercerosEscribir', 'vinculosLeer', 'vinculosEscribir', 'vinculosBloquear', 'cuentasAprobar'] },
-  { grupo: 'revision', claves: ['expedientesLeer', 'expedientesRevisar', 'expedientesAdministrar', 'documentosLeer', 'documentosDescargar', 'certificadosLeer'] },
+  { grupo: 'revision', claves: ['expedientesLeer', 'expedientesRevisar', 'expedientesAdministrar', 'expedientesExportar', 'documentosLeer', 'documentosDescargar', 'certificadosLeer'] },
   { grupo: 'integracion', claves: ['eventosLeer', 'webhooksAdministrar', 'consultasLeer'] },
   { grupo: 'cumplimiento', claves: ['verificacionesEscribir', 'cumplimientoDecidir'] },
-  { grupo: 'auditoria', claves: ['auditoriaLeer'] },
+  { grupo: 'auditoria', claves: ['auditoriaLeer', 'auditoriaExportar'] },
 ] as const satisfies readonly { grupo: string; claves: readonly ClavePermiso[] }[];
 
 export type GrupoPermisos = (typeof GRUPOS_PERMISOS)[number]['grupo'];
