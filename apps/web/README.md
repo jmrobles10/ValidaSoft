@@ -35,6 +35,8 @@ pnpm dev                                                                  # Vite
 - `http://localhost:5173/embed-demo.html`: página que hace de sistema integrado y aloja el iframe. Elige la persona (administradora, revisor, oficial de cumplimiento, auditor), la empresa sugerida y el tema; muestra los mensajes `postMessage`.
 - `http://localhost:5173/`: fuera de un iframe y solo en desarrollo, un formulario abre la sesión (firma la aserción con la clave del sistema y la canjea). Se prellena con la semilla.
 
+**Consola de Plataforma (`#/plataforma`, PT-7).** En el formulario de sesión de desarrollo, «Entrar como operador de Plataforma» firma la aserción de la operadora de la semilla con la clave del sistema de Plataforma `CONSOLA_DEV` y la canjea con la clave de arranque en `POST /api/v1/plataforma/sesiones` (lo que en producción hace el backoffice). Ahí se dan de alta grupos (empresa, administrador y sistema integrado), se configura el plan de IA de cada empresa con su API key de OpenAI (de solo escritura, con «Probar llave») y se re-cifran los secretos tras rotar la clave maestra (docs/07 §6.3).
+
 La semilla crea un tenant nuevo en cada ejecución y escribe las credenciales en `apps/web/.semilla.local.json` (ignorado por git); Vite lo sirve en `/__dev/semilla.json` solo en `vite dev`. La API no publica CORS: en desarrollo Vite hace de proxy de `/api` (`VALIDASOFT_API_URL`, por defecto `http://localhost:5080`).
 
 ## Sesión embebida (contrato `postMessage`, `src/sesion/puenteEmbed.ts`)

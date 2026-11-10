@@ -82,6 +82,9 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         var llaveSistema = alta.ApiKeySistema.ShouldNotBeNull();
         llaveSistema.SistemaId.ShouldBe(alta.Sistema.Id);
         llaveSistema.Valor.ShouldNotBeNullOrEmpty();
+        // Las llaves no quedan en claro en el registro de idempotencia.
+        await using (var global = Store.QuerySession())
+            (await global.Query<Validasoft.Infraestructura.Http.RegistroIdempotencia>().AnyAsync(r => r.Cuerpo.Contains(llaveSistema.Valor!))).ShouldBeFalse();
 
         // El sistema del grupo actúa en nombre de su administradora: invita a un proveedor en la empresa nueva.
         var camila = new Credencial(llaveSistema.Valor, alta.Empresa.Id, () => Asercion("ERP", claveErp, "camila", "Camila Admin", correoAdmin));
