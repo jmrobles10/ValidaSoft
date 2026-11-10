@@ -137,7 +137,8 @@ public sealed record FlujoSeleccionado(
     IReadOnlyList<EtapaDelFlujo> Etapas,
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha,
+    PlazoDeCargue? PlazoCargue = null);
 
 /// <summary>
 /// Fin de la fase de carga: sin requisitos al abrirse (FL-1); con requisitos, cuando todos los obligatorios están
@@ -290,3 +291,20 @@ public sealed record ExpedienteAnulado(EstadoExpediente EstadoPrevio, string Mot
 /// <summary>Un administrador deja sin efecto un veredicto vigente; el área recalcula su estado.</summary>
 public sealed record VeredictoAnuladoPorAdministrador(Guid VeredictoId, Guid AreaId, string AdministradorId, string Justificacion,
     DateTimeOffset Fecha);
+
+/// <summary>
+/// Se le recordó al tercero que su plazo de cargue vence (LT-2): <see cref="DiasAntes"/> es el recordatorio del flujo que se
+/// cumplió (los mayores que aún no habían salido quedan cubiertos por este).
+/// </summary>
+public sealed record RecordatorioDeCargueEnviado(int DiasAntes, DateTimeOffset PlazoHasta, DateTimeOffset Fecha);
+
+/// <summary>
+/// Venció el plazo de cargue con el expediente en manos del tercero (<c>Abierto</c> u <c>Observado</c>, LT-2): queda
+/// <c>Caducado</c> y el vínculo vuelve a <c>Invitado</c>. La empresa lo puede reabrir.
+/// </summary>
+public sealed record ExpedienteCaducado(EstadoExpediente EstadoPrevio, DateTimeOffset PlazoHasta, DateTimeOffset Fecha);
+
+/// <summary>
+/// La empresa reabrió el expediente caducado (P-4-2, LT-3): vuelve al estado en que caducó con un plazo nuevo completo.
+/// </summary>
+public sealed record ExpedienteReabierto(EstadoExpediente EstadoRestituido, DateTimeOffset PlazoHasta, string? Justificacion, DateTimeOffset Fecha);

@@ -61,7 +61,8 @@ public sealed record CondicionDto(
 /// </summary>
 public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
-    bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
+    PlazoCargueDto? PlazoCargue = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
@@ -69,11 +70,12 @@ public sealed record CrearFlujoDto(
 /// </summary>
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
-    IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, PlazoCargueDto? PlazoCargue = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
-    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
+    PlazoCargueDto? PlazoCargue = null);
 
 /// <summary>Flujo con su versión publicada y su borrador (si existen) y si es el flujo por defecto de su tipo de vínculo.</summary>
 public sealed record FlujoDto(
@@ -204,7 +206,8 @@ public sealed record ExpedienteDto(
     DateTimeOffset? CerradoEn,
     DateTimeOffset ActualizadoEn,
     long Version,
-    IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null);
+    IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null,
+    PlazoCargueExpedienteDto? PlazoCargue = null);
 
 /// <summary>
 /// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c>. El área (y el requisito) van en la ruta.
@@ -300,4 +303,29 @@ public sealed record RequisitoPublicoDto(
 public sealed record ExpedientePublicoDto(
     Guid Id, string Folio, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado,
     IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeReenviar, int Reenvios, DateTimeOffset ActualizadoEn,
-    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0, string Tipo = "Inicial");
+    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0, string Tipo = "Inicial", DateTimeOffset? PlazoCargueHasta = null);
+
+/// <summary>
+/// Plazo del tercero para completar el expediente inicial (P-4-2, LT-1): <see cref="Dias"/> (0 = sin plazo; por defecto 30) y
+/// los recordatorios en días antes de vencer (por defecto 15, 7 y 1; cada uno menor que <see cref="Dias"/>, hasta 5).
+/// </summary>
+public sealed record PlazoCargueDto(int Dias, IReadOnlyList<int>? Recordatorios = null);
+
+/// <summary>
+/// Plazo de cargue del expediente (LT-2): <see cref="Hasta"/> mientras está en manos del tercero (<c>Abierto</c> u
+/// <c>Observado</c>) o la fecha en que venció si caducó; los
+/// recordatorios ya enviados; <see cref="CaducadoEn"/> y el estado al que vuelve si se reabre.
+/// </summary>
+public sealed record PlazoCargueExpedienteDto(int Dias, IReadOnlyList<int> Recordatorios, DateTimeOffset? Hasta,
+    IReadOnlyList<int> RecordatoriosEnviados, DateTimeOffset? CaducadoEn, string? EstadoAlReabrir, int Reaperturas);
+
+/// <summary>Reabre un expediente caducado con un plazo nuevo (P-4-2); la justificación es opcional y queda en el historial.</summary>
+public sealed record ReabrirExpedienteDto(string? Justificacion = null);
+
+/// <summary>
+/// Corre ya el job de plazos de cargue (Plataforma). <see cref="TenantId"/> lo limita a un tenant; <see cref="Fecha"/> simula
+/// «ahora» (solo en Development, para pruebas de punta a punta).
+/// </summary>
+public sealed record RevisarPlazosDto(Guid? TenantId = null, DateTimeOffset? Fecha = null);
+
+public sealed record ResultadoRevisionPlazosDto(int Revisados, int Recordatorios, int Caducados);

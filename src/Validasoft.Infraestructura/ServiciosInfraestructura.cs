@@ -62,6 +62,15 @@ public static class ServiciosInfraestructura
     /// </summary>
     public const string ColaImportacion = "importacion";
 
+    /// <summary>Cola local durable del job de plazos de cargue: barrido y revisión de cada expediente (LT-4).</summary>
+    public const string ColaPlazos = "plazos";
+
+    /// <summary>
+    /// Cola local durable y <b>secuencial</b> de la invitación masiva (LT-8): una tanda a la vez, en orden; cada tanda encola la
+    /// siguiente, así varios lotes avanzan intercalados y un lote no corre dos tandas a la vez.
+    /// </summary>
+    public const string ColaLotes = "lotes";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -98,6 +107,7 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDelProcesoDeValidacion>();
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeCertificados>(); // certificado.* (NW-13)
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeLaFicha>(); // seccion.aceptada (FM-32)
+        servicios.AddSingleton<IMapeadorDeEventos, Aplicacion.Invitaciones.MapeadorDeLotes>(); // invitaciones.lote_terminado (LT-9)
         servicios.AddSingleton<CatalogoDeEventos>();
         servicios.AddSingleton<PlanificadorDeNotificaciones>();
         servicios.AddSingleton<ProcesadorDeEventos>();
@@ -114,6 +124,8 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
         servicios.AddSingleton<ArchivoDeCertificados>();
         servicios.AddHostedService<ProcesadorDeCertificados>();
+        // Plazos de cargue del expediente inicial (P-4-2, LT-4): barrido periódico (Validasoft:PlazosDeCargue:Intervalo).
+        servicios.AddHostedService<ProgramadorDePlazosDeCargue>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
         servicios.AddScoped<CupoDeIa>();
@@ -193,6 +205,11 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Ia.AnalizarVersionConIa>().ToLocalQueue(ColaIa);
         opciones.PublishMessage<Aplicacion.Ia.AnalizarIaDelVinculo>().ToLocalQueue(ColaIa);
         opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Invitaciones.ProcesarTandaDeLote>().ToLocalQueue(ColaLotes);
+        opciones.LocalQueue(ColaLotes).Sequential().UseDurableInbox();
+        opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

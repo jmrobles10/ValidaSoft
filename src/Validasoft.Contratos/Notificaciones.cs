@@ -63,14 +63,15 @@ public sealed record DatosReferenciaAgregadaDto(Guid VinculoId, IReadOnlyList<Re
 
 /// <summary>
 /// <c>expediente.abierto</c> · <c>expediente.en_revision</c> · <c>expediente.observado</c> · <c>expediente.reenviado</c> ·
-/// <c>expediente.aprobado</c> · <c>expediente.rechazado</c>. <see cref="Estado"/> es el del expediente tras el evento.
+/// <c>expediente.aprobado</c> · <c>expediente.rechazado</c> · <c>expediente.caducado</c> · <c>expediente.reabierto</c>. <see cref="Estado"/>
+/// es el del expediente tras el evento; <see cref="PlazoHasta"/> (caducado, reabierto): el plazo de cargue que venció o el nuevo.
 /// <see cref="Causa"/> (en_revision): <c>CargaCompleta</c> o <c>RevisionReanudada</c>; (reenviado): <c>Tercero</c> o
 /// <c>Integrador</c>. <see cref="Requisitos"/>: observados (observado) o reabiertos (reenviado).
 /// </summary>
 public sealed record DatosExpedienteDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string TipoExpediente, string Estado,
     string? Causa = null, IReadOnlyList<RequisitoEnEventoDto>? Requisitos = null, IReadOnlyList<MotivoEnEventoDto>? Motivos = null,
-    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null);
+    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null, DateTimeOffset? PlazoHasta = null);
 
 /// <summary>
 /// <c>documento.compartido</c> · <c>documento.por_vencer</c> · <c>documento.vencido</c>. <see cref="Tipo"/>: código del

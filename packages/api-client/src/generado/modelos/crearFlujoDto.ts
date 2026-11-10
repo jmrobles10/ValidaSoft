@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EtapaDto } from './etapaDto';
+import type { PlazoCargueDto } from './plazoCargueDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 
 export interface CrearFlujoDto {
@@ -18,4 +19,5 @@ export interface CrearFlujoDto {
   separacionDeFunciones?: boolean;
   /** @nullable */
   requisitos?: RequisitoDelFlujoDto[] | null;
+  plazoCargue?: null | PlazoCargueDto;
 }

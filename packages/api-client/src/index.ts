@@ -47,3 +47,5 @@ export * from './generado/endpoints/tipos-vinculo/tipos-vinculo';
 export * from './generado/endpoints/usuarios/usuarios';
 export * from './generado/endpoints/vinculos/vinculos';
 export * from './generado/endpoints/webhooks/webhooks';
+export * from './generado/endpoints/lotes/lotes';
+export * from './generado/endpoints/plazos-de-cargue/plazos-de-cargue';

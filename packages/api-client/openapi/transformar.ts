@@ -236,6 +236,21 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plataforma/importacion/portal/{id}/rechazos': 'descargarRechazosImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/{id}/reanudar': 'reanudarImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar': 'sincronizarTerceroPortal',
+  // Plazo de cargue del expediente inicial: reapertura del caducado y job de Plataforma (P-4-2, LT-1…LT-4).
+  'POST /api/v1/expedientes/{id}/reabrir': 'reabrirExpediente',
+  'POST /api/v1/plataforma/plazos-de-cargue/revisar': 'revisarPlazosDeCargue',
+  // Invitación masiva por lote (H8, LT-5…LT-10).
+  'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
+  'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',
+  'POST /api/v1/invitaciones/lotes': 'crearLote',
+  'GET /api/v1/invitaciones/lotes': 'listarLotes',
+  'GET /api/v1/invitaciones/lotes/{id}': 'obtenerLote',
+  'GET /api/v1/invitaciones/lotes/{id}/filas': 'listarFilasLote',
+  'POST /api/v1/invitaciones/lotes/{id}/pausar': 'pausarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/reanudar': 'reanudarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/cancelar': 'cancelarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/reintentar': 'reintentarLote',
+  'GET /api/v1/invitaciones/lotes/{id}/informe': 'descargarInformeLote',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -271,12 +286,16 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   iniciarCargaDocumento: { '200': 'CargaPrefirmadaDto', '201': 'CargaPrefirmadaDto' },
   // 202: la corrida queda encolada; su estado se consulta con obtenerImportacionPortal.
   importarPortal: { '202': 'CorridaImportacionPortalDto' },
+  // 202: el lote queda en proceso; su avance se consulta con obtenerLote.
+  crearLote: { '202': 'LoteDto' },
   reanudarImportacionPortal: { '202': 'CorridaImportacionPortalDto' },
 };
 
 /** Enums textuales del dominio (docs/03 §3.1, docs/07 §3.1). */
 const ENUMS: Record<string, string[]> = {
   EstadoCorridaPortal: ['Encolada', 'EnCurso', 'Completada', 'Fallida'],
+  EstadoLote: ['Procesando', 'Pausado', 'Completado', 'CompletadoConErrores', 'Cancelado'],
+  EstadoFilaLote: ['Pendiente', 'Exitosa', 'Fallida', 'Duplicada', 'Invalida', 'Cancelada'],
   OrigenDeAceptacion: ['Expediente', 'Importacion'],
   EstadoVinculo: ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'],
   OrigenVinculo: ['Invitacion', 'Autorregistro', 'Migracion', 'Api'],
@@ -309,6 +328,8 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'VinculoDto.origen': 'OrigenVinculo',
   'RolAsignadoDto.rol': 'Rol',
   'ExpedienteDto.estado': 'EstadoExpediente',
+  'LoteDto.estado': 'EstadoLote',
+  'FilaLoteDto.estado': 'EstadoFilaLote',
   'ExpedienteDto.tipo': 'TipoExpediente',
   'ExpedienteDto.politicaDevolucion': 'PoliticaDevolucion',
   'EtapaExpedienteDto.estado': 'EstadoEtapa',
