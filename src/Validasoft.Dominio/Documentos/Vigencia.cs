@@ -85,7 +85,18 @@ public sealed class VigenciaDeVersion
 /// </summary>
 public static class CalculadoraDeVigencia
 {
-    public static DateOnly Fecha(DateTimeOffset instante) => DateOnly.FromDateTime(instante.UtcDateTime);
+    /// <summary>
+    /// Zona horaria del calendario del negocio (hoy, vencimientos, «expedición no futura»). Por omisión Bogotá; se fija al
+    /// arrancar con <c>Validasoft:ZonaHoraria</c> (FE-1). En UTC, entre las 7 p. m. y la medianoche de Bogotá ya era «mañana».
+    /// </summary>
+    public static TimeZoneInfo ZonaDeNegocio { get; set; } = Zona("America/Bogota");
+
+    /// <summary>La fecha de calendario del instante en la zona del negocio.</summary>
+    public static DateOnly Fecha(DateTimeOffset instante) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(instante, ZonaDeNegocio).DateTime);
+
+    /// <summary>La zona IANA indicada, o UTC si el sistema no la conoce.</summary>
+    public static TimeZoneInfo Zona(string? id) =>
+        !string.IsNullOrWhiteSpace(id) && TimeZoneInfo.TryFindSystemTimeZoneById(id, out var zona) ? zona : TimeZoneInfo.Utc;
 
     /// <summary>
     /// Con <paramref name="ratificadaEn"/>, los días de la regla corren desde la ratificación (base <c>Ratificacion</c>,

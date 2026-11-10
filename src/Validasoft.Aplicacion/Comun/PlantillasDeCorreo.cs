@@ -77,7 +77,7 @@ public static class EjemplosDeCorreo
                     [new TextoAceptadoParaCorreo($"Autorización de tratamiento de datos de {empresa}", 1, "3f2a9c41d07e8b65a1c4f0e2d9b87a13")], ahora)),
                 VariablesDe(empresa)),
             CatalogoDePlantillas.Vencido => new(
-                redactor.RedactarVencido(new CorreoDeVencidoPendiente(Para, empresa, Documento, DateOnly.FromDateTime(ahora.UtcDateTime))),
+                redactor.RedactarVencido(new CorreoDeVencidoPendiente(Para, empresa, Documento, Dominio.Documentos.CalculadoraDeVigencia.Fecha(ahora))),
                 VariablesDe(empresa, documento: Documento)),
             CatalogoDePlantillas.Certificado => new(
                 redactor.RedactarCertificado(new CorreoDeCertificadoPendiente(Para, empresa, $"{prefijo}-C-{ahora.Year}-000001", true, ahora)),
