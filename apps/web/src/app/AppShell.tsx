@@ -7,6 +7,7 @@ import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-rout
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
 import { Campana } from '../features/notificaciones/Campana';
 import { useAlturaFija } from '../sesion/alturaFija';
+import { RELLENO_CONTENIDO } from './rellenoContenido';
 import { useSesion } from '../sesion/sesionStore';
 import { useYo } from '../sesion/useYo';
 import { usePreferencias } from '../shared/preferencias';
@@ -69,9 +70,8 @@ export function AppShell() {
         bgcolor: 'background.default',
         ...(alturaFija === null ? { minHeight: '100vh' } : { height: alturaFija, overflow: 'hidden' }),
         // Con scroll de ventana, bajo esta barra; con scroll propio de `main`, el sticky se mide desde el borde del
-        // contenido, así que se resta el relleno de `main` (`py: 2`) para que la franja quede pegada a la barra. Si cambia
-        // ese relleno, debe cambiar aquí y en `relleno` de `EncabezadoFijo`.
-        [VARIABLE_TOPE]: (t) => (alturaFija === null ? `${String(t.densidad.cabeceraEmbebida)}px` : `-${t.spacing(2)}`),
+        // contenido, así que se resta el relleno de `main` (`RELLENO_CONTENIDO`) para que la franja quede pegada a la barra.
+        [VARIABLE_TOPE]: (t) => (alturaFija === null ? `${String(t.densidad.cabeceraEmbebida)}px` : `-${t.spacing(RELLENO_CONTENIDO.y)}`),
       }}
     >
       <Box
@@ -160,7 +160,7 @@ export function AppShell() {
           </Tooltip>
         )}
       </Box>
-      <Box component="main" sx={{ flex: 1, py: 2, px: 2.5, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto' }) }}>
+      <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto' }) }}>
         <Outlet context={contexto satisfies ContextoEmpresa} />
       </Box>
     </Box>
