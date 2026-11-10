@@ -249,9 +249,6 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/ficha/{seccion}': 'obtenerSeccionFicha',
   'PUT /public/v1/ficha/{seccion}': 'guardarSeccionFicha',
   'POST /public/v1/ficha/{seccion}/evaluacion': 'evaluarSeccionFicha',
-  // Actualizar desde el documento (F5, FM-14).
-  'GET /public/v1/ficha/propuestas': 'listarPropuestasFicha',
-  'GET /public/v1/ficha/{seccion}/propuestas': 'obtenerPropuestasSeccion',
   // Importador de la ficha desde el Portal y sincronizador de coexistencia (F4, docs/08 §6.6).
   'POST /api/v1/plataforma/importacion/portal': 'importarPortal',
   'GET /api/v1/plataforma/importacion/portal/{id}': 'obtenerImportacionPortal',

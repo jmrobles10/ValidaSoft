@@ -66,9 +66,6 @@ public sealed class VersionDeSeccion
     public string Autor { get; set; } = string.Empty;
 
     public DateTimeOffset Fecha { get; set; }
-
-    /// <summary>Cruces con las versiones de los documentos que la respaldan (F5, FM-8): hechos compartidos, uno por versión de documento.</summary>
-    public List<CruceDeSeccion> Cruces { get; set; } = [];
 }
 
 /// <summary>
@@ -194,15 +191,6 @@ public sealed class SeccionDeFicha
     /// </summary>
     public static bool ExigeSoporteDelCambio(OrigenDeSeccion origen) => origen == OrigenDeSeccion.Tercero;
 
-    /// <summary>
-    /// Registra el cruce de la versión <paramref name="numero"/> con una versión de documento (F5, FM-8). Una sola vez por par
-    /// (versión de la sección, versión del documento): si ya está, o la versión no existe, nulo (idempotente).
-    /// </summary>
-    public CruceDeSeccionRegistrado? RegistrarCruce(int numero, CruceDeSeccion cruce) =>
-        Versiones.FirstOrDefault(v => v.Numero == numero) is { } version && !version.Cruces.Any(c => c.Es(cruce.DocumentoId, cruce.VersionDocumento))
-            ? new CruceDeSeccionRegistrado(numero, cruce)
-            : null;
-
     /// <summary>Datos tipados de la versión vigente (para las referencias a catálogos al recalcular).</summary>
     public object? DatosVigentes(DefinicionDeSeccion seccion) => Vigente is { } v ? seccion.Esquema.Deserializar(v.Datos) : null;
 
@@ -238,12 +226,6 @@ public sealed class SeccionDeFicha
         ActualizadaEn = e.Fecha;
     }
 
-    public void Apply(CruceDeSeccionRegistrado e)
-    {
-        if (Versiones.FirstOrDefault(v => v.Numero == e.Numero) is { } version && !version.Cruces.Any(c => c.Es(e.Cruce.DocumentoId, e.Cruce.VersionDocumento)))
-            version.Cruces.Add(e.Cruce);
-    }
-
     public void Apply(CompletitudDeSeccionRecalculada e)
     {
         if (Versiones.FirstOrDefault(v => v.Numero == e.Numero) is { } version)
@@ -261,7 +243,6 @@ public sealed class SeccionDeFicha
             {
                 case VersionDeSeccionRegistrada e: copia.Apply(e); break;
                 case CompletitudDeSeccionRecalculada e: copia.Apply(e); break;
-                case CruceDeSeccionRegistrado e: copia.Apply(e); break;
                 default: throw new InvalidOperationException($"Evento no aplicable a SeccionDeFicha: {evento.GetType().Name}.");
             }
         }

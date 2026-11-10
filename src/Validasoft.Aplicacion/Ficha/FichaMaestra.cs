@@ -134,9 +134,6 @@ public static class GuardadoDeSecciones
             sesion.Store(estado);
             if (mensajes is not null && actorSincronizacion is { } actor)
                 await PedirSincronizacionAsync(sesion, terceroId, mensajes, actor.Tipo, actor.Id, ct);
-            // F5: la versión nueva se cruza con los documentos que la respaldan (si ya tienen análisis de IA).
-            if (mensajes is not null && definicion.Codigo is not (CodigosDeSeccion.Sst or CodigosDeSeccion.Especialidades))
-                await mensajes.PublishAsync(new CruzarFichaConDocumentos(terceroId));
             await sesion.SaveChangesAsync(ct);
             return new Resultado(proyectada, true, estado, tercero.TipoPersona);
         }, mensajes);

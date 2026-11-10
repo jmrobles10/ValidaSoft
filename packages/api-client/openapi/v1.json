@@ -5565,84 +5565,6 @@
         }
       }
     },
-    "/public/v1/ficha/propuestas": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.PropuestasDeFichaEndpoints"
-        ],
-        "summary": "GET_public_v1_ficha_propuestas",
-        "description": "GET_public_v1_ficha_propuestas",
-        "operationId": "GET_public_v1_ficha_propuestas",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PropuestaDeSeccionDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/public/v1/ficha/{seccion}/propuestas": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.PropuestasDeFichaEndpoints"
-        ],
-        "summary": "GET_public_v1_ficha_seccion_propuestas",
-        "description": "GET_public_v1_ficha_seccion_propuestas",
-        "operationId": "GET_public_v1_ficha_seccion_propuestas",
-        "parameters": [
-          {
-            "name": "seccion",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "periodo",
-            "in": "query",
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PropuestaDeSeccionDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
     "/api/v1/plataforma/fichas/recalcular": {
       "post": {
         "tags": [
@@ -10683,50 +10605,6 @@
           }
         }
       },
-      "CampoCruzadoDto": {
-        "required": [
-          "campo",
-          "etiqueta",
-          "declarado",
-          "extraido",
-          "resultado",
-          "critico",
-          "detalle"
-        ],
-        "type": "object",
-        "properties": {
-          "campo": {
-            "type": "string"
-          },
-          "etiqueta": {
-            "type": "string"
-          },
-          "declarado": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "extraido": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "resultado": {
-            "type": "string"
-          },
-          "critico": {
-            "type": "boolean"
-          },
-          "detalle": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
       "CampoFormularioDto": {
         "required": [
           "clave",
@@ -10758,35 +10636,6 @@
             }
           },
           "ayuda": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "CampoPropuestoDto": {
-        "required": [
-          "campo",
-          "etiqueta",
-          "actual",
-          "propuesto"
-        ],
-        "type": "object",
-        "properties": {
-          "campo": {
-            "type": "string"
-          },
-          "etiqueta": {
-            "type": "string"
-          },
-          "actual": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "propuesto": {
             "type": [
               "null",
               "string"
@@ -13149,120 +12998,6 @@
           }
         }
       },
-      "CruceDeRequisitoDto": {
-        "required": [
-          "estado",
-          "discrepanciaCritica",
-          "cruces",
-          "sinCruce"
-        ],
-        "type": "object",
-        "properties": {
-          "estado": {
-            "type": "string"
-          },
-          "discrepanciaCritica": {
-            "type": "boolean"
-          },
-          "cruces": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CruceDeSeccionDto"
-            }
-          },
-          "sinCruce": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DocumentoSinCruceDto"
-            }
-          }
-        }
-      },
-      "CruceDeSeccionDto": {
-        "required": [
-          "documentoId",
-          "versionDocumento",
-          "tipoDocumento",
-          "nombreDocumento",
-          "confianza",
-          "legible",
-          "fecha",
-          "coincidencias",
-          "discrepancias",
-          "noVerificables",
-          "discrepanciaCritica",
-          "campos"
-        ],
-        "type": "object",
-        "properties": {
-          "documentoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "versionDocumento": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "tipoDocumento": {
-            "type": "string"
-          },
-          "nombreDocumento": {
-            "type": "string"
-          },
-          "confianza": {
-            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
-            "type": [
-              "number",
-              "string"
-            ],
-            "format": "double"
-          },
-          "legible": {
-            "type": "boolean"
-          },
-          "fecha": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "coincidencias": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "discrepancias": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "noVerificables": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "discrepanciaCritica": {
-            "type": "boolean"
-          },
-          "campos": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CampoCruzadoDto"
-            }
-          }
-        }
-      },
       "CuentaBancariaPublicaDto": {
         "required": [
           "id",
@@ -13734,40 +13469,6 @@
           }
         }
       },
-      "DocumentoDePropuestaDto": {
-        "required": [
-          "documentoId",
-          "version",
-          "tipoDocumento",
-          "nombreDocumento",
-          "cargadaEn"
-        ],
-        "type": "object",
-        "properties": {
-          "documentoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "tipoDocumento": {
-            "type": "string"
-          },
-          "nombreDocumento": {
-            "type": "string"
-          },
-          "cargadaEn": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
       "DocumentoDto": {
         "required": [
           "id",
@@ -13926,39 +13627,6 @@
               "string"
             ],
             "format": "date"
-          }
-        }
-      },
-      "DocumentoSinCruceDto": {
-        "required": [
-          "documentoId",
-          "version",
-          "tipoDocumento",
-          "nombreDocumento",
-          "motivo"
-        ],
-        "type": "object",
-        "properties": {
-          "documentoId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "tipoDocumento": {
-            "type": "string"
-          },
-          "nombreDocumento": {
-            "type": "string"
-          },
-          "motivo": {
-            "type": "string"
           }
         }
       },
@@ -19004,54 +18672,6 @@
           }
         }
       },
-      "PropuestaDeSeccionDto": {
-        "required": [
-          "seccion",
-          "nombreSeccion",
-          "periodo",
-          "documento",
-          "disponible",
-          "motivo",
-          "campos"
-        ],
-        "type": "object",
-        "properties": {
-          "seccion": {
-            "type": "string"
-          },
-          "nombreSeccion": {
-            "type": "string"
-          },
-          "periodo": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "documento": {
-            "$ref": "#/components/schemas/DocumentoDePropuestaDto"
-          },
-          "disponible": {
-            "type": "boolean"
-          },
-          "motivo": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "campos": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CampoPropuestoDto"
-            }
-          },
-          "datos": {}
-        }
-      },
       "ProveedorListasDto": {
         "required": [
           "nombre",
@@ -19865,12 +19485,6 @@
           "exigeSoporte": {
             "type": "boolean",
             "default": false
-          },
-          "usarComoSoporte": {
-            "type": [
-              "null",
-              "boolean"
-            ]
           }
         }
       },
@@ -19945,16 +19559,6 @@
               },
               {
                 "$ref": "#/components/schemas/SeccionDeRequisitoDto"
-              }
-            ]
-          },
-          "soporteDeSecciones": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/SoporteDeSeccionesDto"
               }
             ]
           }
@@ -21116,16 +20720,6 @@
             "items": {
               "$ref": "#/components/schemas/CambioDeCampoDto"
             }
-          },
-          "cruce": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/CruceDeRequisitoDto"
-              }
-            ]
           }
         }
       },
@@ -21274,52 +20868,6 @@
           },
           "seccion": {
             "$ref": "#/components/schemas/SeccionFichaDto"
-          }
-        }
-      },
-      "SeccionRespaldadaDto": {
-        "required": [
-          "seccion",
-          "nombre",
-          "periodo",
-          "version",
-          "cruce"
-        ],
-        "type": "object",
-        "properties": {
-          "seccion": {
-            "type": "string"
-          },
-          "nombre": {
-            "type": "string"
-          },
-          "periodo": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "version": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "cruce": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/CruceDeSeccionDto"
-              }
-            ]
           }
         }
       },
@@ -21615,28 +21163,6 @@
               "null",
               "string"
             ]
-          }
-        }
-      },
-      "SoporteDeSeccionesDto": {
-        "required": [
-          "sinAnalisis",
-          "discrepanciaCritica",
-          "secciones"
-        ],
-        "type": "object",
-        "properties": {
-          "sinAnalisis": {
-            "type": "boolean"
-          },
-          "discrepanciaCritica": {
-            "type": "boolean"
-          },
-          "secciones": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SeccionRespaldadaDto"
-            }
           }
         }
       },
@@ -23042,12 +22568,6 @@
             "items": {
               "type": "string"
             }
-          },
-          "justificacion": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       },
@@ -24226,9 +23746,6 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-    },
-    {
-      "name": "Validasoft.Aplicacion.Ficha.PropuestasDeFichaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.RecalculoDeFichasEndpoints"

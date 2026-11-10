@@ -249,15 +249,12 @@ public class IaTests
     public void Los_campos_de_cada_tipo_son_los_acordados_y_los_opcionales_admiten_null()
     {
         Campos("RUT").ShouldBe(["nit", "dv", "razonSocial", "tipoContribuyente", "representanteLegalNombre", "representanteLegalIdentificacion",
-            "direccion", "municipio", "codigoMunicipio", "correo", "telefono", "fechaExpedicion", "actividadEconomicaPrincipal", "actividadesSecundarias",
-            "responsabilidades"]);
+            "direccion", "municipio", "fechaExpedicion", "actividadEconomicaPrincipal"]);
         Campos("CAMARA_COMERCIO").ShouldBe(["razonSocial", "nit", "matricula", "estadoMatricula", "domicilio", "fechaExpedicion", "representantesLegales"]);
         Campos("CEDULA").ShouldBe(["numero", "nombres", "apellidos", "fechaNacimiento", "fechaExpedicion"]);
         Campos("CERTIFICACION_BANCARIA").ShouldBe(["banco", "tipoCuenta", "numeroCuenta", "titular", "identificacionTitular", "estadoCuenta", "fechaExpedicion"]);
         Campos("ESTADOS_FINANCIEROS").ShouldBe(["razonSocial", "nit", "periodo", "fechaCorte", "activoTotal", "pasivoTotal", "patrimonio", "ingresos",
-            "ingresosBrutos", "utilidadNeta", "firmadoPorContador"]);
-        var listas = EsquemasDeAnalisis.Para("RUT")!.Json()["properties"]!["campos"]!["properties"]!["responsabilidades"]!;
-        (listas["type"]!.GetValue<string>(), listas["items"]!["type"]!.GetValue<string>()).ShouldBe(("array", "string"));
+            "utilidadNeta", "firmadoPorContador"]);
         Campos("POLIZA").ShouldBe(["aseguradora", "numeroPoliza", "tomador", "asegurado", "beneficiario", "vigenciaDesde", "vigenciaHasta", "valorAsegurado"]);
 
         var financieros = EsquemasDeAnalisis.Para("ESTADOS_FINANCIEROS")!.Json()["properties"]!["campos"]!["properties"]!;
@@ -461,8 +458,7 @@ public class IaTests
         {
             ["nit"] = "900123456", ["dv"] = null, ["razonSocial"] = "Aceros del Norte S.A.S.", ["tipoContribuyente"] = "Persona jurídica",
             ["representanteLegalNombre"] = "Ana Gómez", ["representanteLegalIdentificacion"] = "52123456", ["direccion"] = "Calle 1 # 2-3",
-            ["municipio"] = "Bogotá", ["codigoMunicipio"] = "11001", ["correo"] = null, ["telefono"] = null, ["fechaExpedicion"] = "2026-10-01",
-            ["actividadEconomicaPrincipal"] = "2410", ["actividadesSecundarias"] = new JsonArray(), ["responsabilidades"] = new JsonArray("05", "48")
+            ["municipio"] = "Bogotá", ["fechaExpedicion"] = "2026-10-01", ["actividadEconomicaPrincipal"] = "2410"
         }
     };
 

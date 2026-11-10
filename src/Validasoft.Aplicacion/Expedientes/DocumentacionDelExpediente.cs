@@ -20,9 +20,6 @@ public sealed record DocumentacionDelExpediente(
     IReadOnlyDictionary<Guid, TipoDocumentoTenant> Tipos, IReadOnlyDictionary<Guid, Documento> Documentos, ReglasDeCarga Reglas, DateOnly Hoy,
     IReadOnlyDictionary<Guid, SeccionDeFicha>? Secciones = null)
 {
-    /// <summary>Cruces sección ↔ documento que ve la empresa (F5); solo en la vista de la empresa, nunca en la del tercero.</summary>
-    public CrucesDelExpediente? Cruces { get; init; }
-
     /// <summary><paramref name="tipos"/>: cualquier sesión (los tipos se buscan con <c>AnyTenant</c>); <paramref name="boveda"/>: el tenant técnico <c>boveda</c>.</summary>
     public static async Task<DocumentacionDelExpediente> CargarAsync(IQuerySession tipos, IQuerySession boveda, Expediente expediente,
         ReglasDeCarga reglas, DateOnly hoy, CancellationToken ct)
@@ -96,8 +93,7 @@ public sealed record DocumentacionDelExpediente(
         {
             Datos = actual?.Datos,
             Soportes = actual is null ? [] : [.. actual.Soportes.Select(s => s.ADto())],
-            Cambios = [.. cambios.Select(c => new CambioDeCampoDto(c.Campo, c.Etiqueta, c.Anterior, c.Nuevo, c.TipoCambio.ToString()))],
-            Cruce = Cruces?.DeSeccion(r.Id)
+            Cambios = [.. cambios.Select(c => new CambioDeCampoDto(c.Campo, c.Etiqueta, c.Anterior, c.Nuevo, c.TipoCambio.ToString()))]
         };
     }
 

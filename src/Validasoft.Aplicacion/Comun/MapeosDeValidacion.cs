@@ -29,7 +29,7 @@ public static class MapeosDeValidacion
                 ? new RequisitoDelFlujoDto(r.Id, null, null, r.Obligatorio, r.AreasQueRevisan, r.AprobadoresRequeridos, r.Condicion?.ADto(), r.Seccion,
                     r.Periodos, r.ExigeSoporte)
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
-                    r.AprobadoresRequeridos, r.Condicion?.ADto(), UsarComoSoporte: r.UsarComoSoporte))],
+                    r.AprobadoresRequeridos, r.Condicion?.ADto()))],
             [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
             v.PlazoEfectivo().ADto());
 
@@ -70,8 +70,6 @@ public static class MapeosDeValidacion
             // Sección de la ficha (F2): el dominio valida el código, los periodos y el resto (422 seccion-invalida…).
             if (r.TipoDocumentoTenantId is not null || !string.IsNullOrWhiteSpace(r.TipoDocumento))
                 throw ReglaDeNegocioException.Validacion("requisito-invalido", "Un requisito pide un documento o una sección de la ficha, no ambos.");
-            if (r.UsarComoSoporte is not null)
-                throw ReglaDeNegocioException.Validacion("soporte-no-aplica", "«Usar como soporte» es de los requisitos de documento, no de las secciones.");
             var seccion = r.Seccion.Trim().ToUpperInvariant();
             return new RequisitoDelFlujo(r.Id ?? Guid.Empty, Guid.Empty, seccion, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
                 r.Condicion?.ADominio(), seccion, r.Periodos, r.ExigeSoporte);
@@ -84,7 +82,7 @@ public static class MapeosDeValidacion
         if (tipoId == Guid.Empty && codigo.Length == 0)
             throw ReglaDeNegocioException.Validacion("requisito-invalido", "Cada requisito necesita el tipo de documento (id o código).");
         return new RequisitoDelFlujo(r.Id ?? Guid.Empty, tipoId, codigo, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
-            r.Condicion?.ADominio(), UsarComoSoporte: r.UsarComoSoporte);
+            r.Condicion?.ADominio());
     }
 
     public static FlujoDto ADto(this Flujo f, TipoVinculo? tipo, bool esPorDefecto) =>
@@ -137,7 +135,7 @@ public static class MapeosDeValidacion
                 .. r.AreasQueRevisan.Select(id => (Id: id, Area: e.BuscarArea(id))).Where(x => x.Area is not null).Select(x =>
                     new AreaDeRequisitoDto(x.Id, x.Area!.Codigo, EstadoEnArea(r, x.Area, e), r.AprobadoresPara(x.Area), r.AprobacionesDe(x.Area),
                         [.. r.Veredictos.Where(v => v.AreaId == x.Id).Select(ADto)]))
-            ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion), documentacion?.Cruces?.DeDocumento(r.Id));
+            ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion));
 
     /// <summary>Detalle de la sección (F2): con la documentación, datos, soportes y cambios; sin ella, la completitud guardada.</summary>
     private static SeccionDeRequisitoDto? DetalleDeSeccion(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>

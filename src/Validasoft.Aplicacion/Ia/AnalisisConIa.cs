@@ -194,9 +194,6 @@ public static class AnalizarVersionConIaHandler
         }
 
         var registrado = await RegistrarAsync(sesiones, documento.Id, version.Numero, analisis, motivo ?? string.Empty, pagadora, reloj, ct);
-        // F5: con los hechos nuevos, se cruzan las secciones que el documento respalda (hecho compartido, sin otra llamada).
-        if (analisis is not null && registrado && Dominio.Ficha.MapaDeRespaldo.RespaldaAlguna(documento.TipoCanonico))
-            await mensajes.PublishAsync(new Validasoft.Aplicacion.Ficha.CruzarFichaConDocumentos(documento.TerceroId));
         if (analisis is null || !registrado)
         {
             if (motivo is not null)

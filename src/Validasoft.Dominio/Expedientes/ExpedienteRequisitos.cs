@@ -154,15 +154,13 @@ public sealed partial class Expediente
     /// área (<see cref="AprobarArea"/>, <see cref="ObservarArea"/>).
     /// </summary>
     public IReadOnlyList<object> EmitirVeredictoDeRequisito(Guid requisitoId, Guid areaId, Revisor revisor, Veredicto veredicto, int? sobreVersion,
-        IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null,
-        bool discrepanciaCritica = false, string? justificacion = null)
+        IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null)
     {
         var area = AreaParaDecidirPorRequisitos(areaId, revisor);
         var revisorId = revisor.UsuarioId.ToString();
         var requisito = RequisitoDecidible(requisitoId, area, revisorId, sobreVersion, superadas: null);
-        var texto = veredicto == Veredicto.Aprobado && discrepanciaCritica ? JustificacionPorDiscrepancias([requisito], justificacion) : null;
         var evento = VeredictoHumano(requisito, area, veredicto, revisorId, Motivos(veredicto, motivos), Texto(observacion, "observacion"), ahora,
-            Campos(requisito, veredicto, campos), texto);
+            Campos(requisito, veredicto, campos));
         return Simular(s => s.Emitir(evento), ahora);
     }
 

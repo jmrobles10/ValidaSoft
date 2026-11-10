@@ -207,9 +207,7 @@ public sealed class AnalizadorOpenAiTests
             {
                 ["nit"] = "900123456", ["dv"] = "7", ["razonSocial"] = "Aceros del Norte S.A.S.", ["tipoContribuyente"] = "Persona jurídica",
                 ["representanteLegalNombre"] = "Ana Gómez", ["representanteLegalIdentificacion"] = "52123456", ["direccion"] = "Calle 1 # 2-3",
-                ["municipio"] = "Bogotá", ["codigoMunicipio"] = "11001", ["correo"] = "contabilidad@aceros.co", ["telefono"] = "6015550101",
-                ["fechaExpedicion"] = "2026-10-01", ["actividadEconomicaPrincipal"] = "2410", ["actividadesSecundarias"] = new JsonArray("4663"),
-                ["responsabilidades"] = new JsonArray("05", "48")
+                ["municipio"] = "Bogotá", ["fechaExpedicion"] = "2026-10-01", ["actividadEconomicaPrincipal"] = "2410"
             }
         };
         return new JsonObject

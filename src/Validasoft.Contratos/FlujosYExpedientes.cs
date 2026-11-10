@@ -37,13 +37,11 @@ public sealed record EtapaDto(int Orden, IReadOnlyList<AreaDeEtapaDto> Areas);
 /// (sin tipo de documento), con <see cref="Periodos"/> (solo la financiera: cuántos cierres, 1 por omisión) y
 /// <see cref="ExigeSoporte"/> (la versión debe traer soporte para estar completa para la empresa). Las áreas que revisan son
 /// el «responsable por sector» del SRM. A la persona natural no se le piden Legal ni Financiera.
-/// <see cref="UsarComoSoporte"/> (F5, FM-13): en un documento que respalda secciones (RUT, Cámara, estados financieros, cédula),
-/// <c>false</c> lo deja de cruzar con ellas; nulo = por omisión (activo).
 /// </summary>
 public sealed record RequisitoDelFlujoDto(
     Guid? Id = null, Guid? TipoDocumentoTenantId = null, string? TipoDocumento = null, bool Obligatorio = true,
     IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null, CondicionDto? Condicion = null, string? Seccion = null,
-    int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null);
+    int? Periodos = null, bool ExigeSoporte = false);
 
 /// <summary>
 /// «Se pide cuando» (docs/03 §12, RQ-12). <see cref="Tipo"/>: <c>Y</c>|<c>O</c>|<c>No</c> combinan <see cref="Nodos"/>
@@ -162,8 +160,7 @@ public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffse
 /// </summary>
 public sealed record RequisitoExpedienteDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual, int Reenvios,
-    ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas, string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null,
-    SoporteDeSeccionesDto? SoporteDeSecciones = null);
+    ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas, string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null);
 
 /// <summary>
 /// Cambio de un campo o fila entre la versión que la empresa aceptó y la nueva (las Actualizaciones del SRM, F2):
@@ -181,7 +178,7 @@ public sealed record CambioDeCampoDto(string Campo, string Etiqueta, string? Ant
 /// </summary>
 public sealed record SeccionDeRequisitoDto(
     string Seccion, string Nombre, int? Periodo, bool ExigeSoporte, CompletitudSeccionDto? Completitud, int? VersionEvaluada, JsonElement? Datos,
-    IReadOnlyList<SoporteSeccionDto> Soportes, int? VersionAceptada, IReadOnlyList<CambioDeCampoDto> Cambios, CruceDeRequisitoDto? Cruce = null);
+    IReadOnlyList<SoporteSeccionDto> Soportes, int? VersionAceptada, IReadOnlyList<CambioDeCampoDto> Cambios);
 
 public sealed record EtapaExpedienteDto(int Orden, string Estado, DateTimeOffset? ActivadaEn, DateTimeOffset? AprobadaEn,
     IReadOnlyList<AreaExpedienteDto> Areas);
@@ -225,13 +222,11 @@ public sealed record ExpedienteDto(
 /// marcados). <see cref="Motivos"/> y <see cref="Observacion"/> de primer nivel no se usan.</item>
 /// <item>Al observar una sección de la ficha (F2), <see cref="Campos"/> (u <c>ObservacionDeRequisitoDto.Campos</c>) señala,
 /// opcional, los campos que el tercero debe corregir (rutas snake_case).</item>
-/// <item>Al aprobar un requisito cuyo cruce con el documento discrepa en un campo crítico (F5, FM-13), <see cref="Justificacion"/>
-/// es obligatoria (422 <c>justificacion-por-discrepancias</c>).</item>
 /// </list>
 /// </summary>
 public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null, int? SobreVersion = null,
     IReadOnlyDictionary<Guid, int>? Versiones = null, IReadOnlyList<ObservacionDeRequisitoDto>? Requisitos = null,
-    IReadOnlyList<string>? Campos = null, string? Justificacion = null);
+    IReadOnlyList<string>? Campos = null);
 
 /// <summary>
 /// Documento (o sección) marcado al observar el área: la versión que se revisó, al menos un motivo, la observación y, en una

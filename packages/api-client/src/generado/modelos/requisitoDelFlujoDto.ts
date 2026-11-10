@@ -24,6 +24,4 @@ export interface RequisitoDelFlujoDto {
   /** @nullable */
   periodos?: number | null;
   exigeSoporte?: boolean;
-  /** @nullable */
-  usarComoSoporte?: boolean | null;
 }
