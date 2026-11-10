@@ -38,7 +38,8 @@ public static class FlujosEndpoints
             : DefinicionDeFlujo.TodasEnParalelo(areas, politica, dto.SeparacionDeFunciones)) with
         {
             Requisitos = [.. (dto.Requisitos ?? []).Select(r => r.ADominio(tipos))],
-            Verificaciones = [.. (dto.Verificaciones ?? []).Select(v => v.ADominio())]
+            Verificaciones = [.. (dto.Verificaciones ?? []).Select(v => v.ADominio())],
+            PlazoCargue = dto.PlazoCargue?.ADominio()
         };
         var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos, tipo);
 
@@ -125,7 +126,8 @@ public static class FlujosEndpoints
             Politica(dto.PoliticaDevolucion) ?? ultima.PoliticaDevolucion,
             dto.SeparacionDeFunciones ?? ultima.SeparacionDeFunciones,
             dto.Requisitos is null ? ultima.Requisitos : [.. dto.Requisitos.Select(r => r.ADominio(tipos))],
-            dto.Verificaciones is null ? ultima.Verificaciones : [.. dto.Verificaciones.Select(v => v.ADominio())]);
+            dto.Verificaciones is null ? ultima.Verificaciones : [.. dto.Verificaciones.Select(v => v.ADominio())],
+            dto.PlazoCargue?.ADominio() ?? ultima.PlazoEfectivo());
 
         var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos,
             await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));

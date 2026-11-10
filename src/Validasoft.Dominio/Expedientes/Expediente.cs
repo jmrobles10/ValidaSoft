@@ -34,7 +34,8 @@ public sealed record FlujoParaExpediente(
     IReadOnlyList<EtapaDelFlujo> Etapas,
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
-    IReadOnlyList<VerificacionRequeridaDelFlujo>? Verificaciones = null);
+    IReadOnlyList<VerificacionRequeridaDelFlujo>? Verificaciones = null,
+    PlazoDeCargue? PlazoCargue = null);
 
 /// <summary>Copia del flujo que gobierna el expediente.</summary>
 public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
@@ -233,6 +234,25 @@ public sealed partial class Expediente
 
     public DateTimeOffset ActualizadoEn { get; set; }
 
+    /// <summary>Plazo de cargue copiado del flujo (solo expedientes <c>Inicial</c>, LT-1); nulo = sin plazo.</summary>
+    public PlazoDeCargue? PlazoCargue { get; set; }
+
+    /// <summary>Hasta cuándo tiene el tercero para completar lo que está en sus manos (<c>Abierto</c> u <c>Observado</c>).</summary>
+    public DateTimeOffset? PlazoCargueHasta { get; set; }
+
+    /// <summary>Recordatorios (días antes) ya cumplidos en el plazo en curso.</summary>
+    public List<int> RecordatoriosEnviados { get; set; } = [];
+
+    /// <summary>Próximo momento en que el job de plazos debe mirar este expediente (recordatorio o caducidad); índice del barrido.</summary>
+    public DateTimeOffset? ProximaRevisionDePlazo { get; set; }
+
+    /// <summary>Estado en que caducó (<c>Abierto</c> u <c>Observado</c>): al reabrir vuelve a él.</summary>
+    public EstadoExpediente? EstadoAlCaducar { get; set; }
+
+    public DateTimeOffset? CaducadoEn { get; set; }
+
+    public int Reaperturas { get; set; }
+
     [JsonIgnore]
     public EtapaDeExpediente? EtapaActiva => Etapas.FirstOrDefault(e => e.Estado == EstadoEtapa.Activa);
 
@@ -277,8 +297,10 @@ public sealed partial class Expediente
         simulacion.Emitir(new ExpedienteAbierto(Guid.CreateVersion7(), datos.EmpresaId, datos.VinculoId, datos.Tipo, datos.Folio,
             datos.TerceroId, datos.TerceroNombre, datos.TerceroIdentificacion, datos.TipoVinculoId, datos.TipoVinculoCodigo,
             datos.TipoVinculoNombre, datos.AbiertoPor, [.. datos.InvitadoPor.Distinct()], ahora));
+        // El plazo de cargue solo corre en el expediente inicial (LT-1): renovaciones y actualizaciones tienen los suyos.
+        var plazo = datos.Tipo == TipoExpediente.Inicial && flujo.PlazoCargue is { Activo: true } activo ? activo : null;
         simulacion.Emitir(new FlujoSeleccionado(flujo.FlujoId, flujo.FlujoVersionId, flujo.Codigo, flujo.Nombre, flujo.Version, flujo.Origen,
-            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora));
+            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo));
         if (requisitos is { Count: > 0 })
             simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
         if (flujo.Verificaciones is { Count: > 0 } verificaciones)
@@ -470,12 +492,16 @@ public sealed partial class Expediente
             })]
         })];
         AreaIds = [.. Etapas.SelectMany(x => x.Areas).Select(a => a.AreaId)];
+        PlazoCargue = e.PlazoCargue;
+        if (Estado == EstadoExpediente.Abierto)
+            IniciarPlazo(AbiertoEn);
         ActualizadoEn = e.Fecha;
     }
 
     public void Apply(ExpedienteEnviadoARevision e)
     {
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones(); // las listas se consultan al pasar a revisión (con la ficha ya diligenciada)
@@ -519,6 +545,7 @@ public sealed partial class Expediente
     public void Apply(ExpedienteObservado e)
     {
         Estado = EstadoExpediente.Observado;
+        IniciarPlazo(e.Fecha);
         RequisitosObservados = [.. e.RequisitosObservados ?? []];
         RecalcularRequisitos(e.Fecha);
         ObservadoEn = e.Fecha;
@@ -549,6 +576,7 @@ public sealed partial class Expediente
         }
 
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RequisitosObservados = [];
         Reenvios++;
         UltimaRespuesta = e.Respuesta;
@@ -559,6 +587,7 @@ public sealed partial class Expediente
     public void Apply(RevisionReanudada e)
     {
         Estado = EstadoExpediente.EnRevision;
+        TerminarPlazo();
         RequisitosObservados = [];
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
@@ -575,6 +604,7 @@ public sealed partial class Expediente
     public void Apply(ExpedienteAprobado e)
     {
         Estado = EstadoExpediente.Aprobado;
+        TerminarPlazo();
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
@@ -583,6 +613,7 @@ public sealed partial class Expediente
     public void Apply(ExpedienteRechazado e)
     {
         Estado = EstadoExpediente.Rechazado;
+        TerminarPlazo();
         Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha);
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
@@ -592,6 +623,7 @@ public sealed partial class Expediente
     public void Apply(ExpedienteAnulado e)
     {
         Estado = EstadoExpediente.Anulado;
+        TerminarPlazo();
         MotivoAnulacion = e.Motivo;
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
@@ -780,6 +812,9 @@ public sealed partial class Expediente
             case VerificacionExpirada e: Apply(e); break;
             case ConsultaDeVerificacionFallida e: Apply(e); break;
             case EvidenciaDeVerificacionDescargada e: Apply(e); break;
+            case RecordatorioDeCargueEnviado e: Apply(e); break;
+            case ExpedienteCaducado e: Apply(e); break;
+            case ExpedienteReabierto e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento desconocido para el expediente: {evento.GetType().Name}.");
         }
     }

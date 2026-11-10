@@ -167,7 +167,9 @@ public static class ConfiguracionMarten
                     .Index(x => x.VinculoId)
                     .Index(x => x.AbiertoEn)
                     .Index(x => x.ProximaConsultaDeListas)
-                    .Index(x => x.ProximoVencimientoDeVerificacion);
+                    .Index(x => x.ProximoVencimientoDeVerificacion)
+                    // Barrido del job de plazos de cargue (LT-4): solo los que tienen algo pendiente llevan valor.
+                    .Index(x => x.ProximaRevisionDePlazo);
                 // Verificaciones externas (H7): listas por empresa (id = empresa, credenciales cifradas), consumo mensual con
                 // concurrencia optimista y monitoreo de listas por vínculo activo (id = vínculo).
                 opts.Schema.For<ListasRestrictivasEmpresa>().MultiTenanted();
@@ -208,6 +210,16 @@ public static class ConfiguracionMarten
                     .Index(x => x.Orden);
                 opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
 
+                // Invitación masiva (H8, LT-5): el lote es un stream con snapshot inline; sus filas, documentos aparte que se
+                // leen por lote, estado y número (la tanda toma las pendientes en orden).
+                opts.Schema.For<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>().MultiTenanted()
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.CreadoEn);
+                opts.Schema.For<Validasoft.Dominio.Invitaciones.FilaDeLote>().MultiTenanted()
+                    .Index(x => x.LoteId)
+                    .Index(x => x.Estado)
+                    .Index(x => x.N);
+
                 // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
                 // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
                 opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
@@ -222,6 +234,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Validasoft.Dominio.Ficha.SeccionDeFicha>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos

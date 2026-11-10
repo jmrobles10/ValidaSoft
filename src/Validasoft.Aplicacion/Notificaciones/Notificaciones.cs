@@ -76,6 +76,10 @@ public static class TiposNotificacion
     public const string VersionNueva = "expediente.version_nueva";
     public const string Aprobado = "expediente.aprobado";
     public const string Rechazado = "expediente.rechazado";
+    public const string Caducado = "expediente.caducado";
+
+    /// <summary>Terminó un lote de invitación masiva (a quien lo creó, LT-9).</summary>
+    public const string LoteTerminado = "invitaciones.lote_terminado";
     public const string PorVencer = "documento.por_vencer";
     public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
@@ -93,12 +97,12 @@ public static class TiposNotificacion
     public const string VerificacionExpirada = "verificacion.expirada";
 
     public static readonly IReadOnlyList<string> Todos =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, CoincidenciaListas,
-            EstudioPendiente, VerificacionExpirada];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
+            CoincidenciaListas, EstudioPendiente, VerificacionExpirada];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa, CoincidenciaListas, EstudioPendiente];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -147,8 +151,12 @@ public sealed class PlanificadorDeNotificaciones
                 return await VersionNuevaAsync(evento, adjuntada, contexto, orden, ct);
             case ExpedienteAprobado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Aprobado, null, orden, ct);
+            case ExpedienteCaducado:
+                return await AAreasAsync(evento, contexto, TiposNotificacion.Caducado, null, orden, ct);
             case ExpedienteRechazado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Rechazado, null, orden, ct);
+            case Dominio.Invitaciones.LoteTerminado terminado:
+                return await LoteTerminadoAsync(evento, terminado, contexto, orden, ct);
             case VencimientoAvisado aviso:
                 return await PorVencerAsync(evento, aviso, contexto, orden, ct);
             case VersionVencida vencida:
@@ -212,6 +220,8 @@ public sealed class PlanificadorDeNotificaciones
             TiposNotificacion.NuevoEnArea => ("Nuevo expediente en tu área", $"{expediente.TerceroNombre} ({expediente.TipoVinculoNombre}) espera tu revisión."),
             TiposNotificacion.TerceroRespondio => ("El tercero respondió", $"{expediente.TerceroNombre} respondió las observaciones; el expediente vuelve a tu área."),
             TiposNotificacion.Aprobado => ("Expediente aprobado", $"Se aprobó la validación de {expediente.TerceroNombre}."),
+            TiposNotificacion.Caducado => ("Expediente caducado",
+                $"{expediente.TerceroNombre} no completó su validación en el plazo; el expediente caducó y se puede reabrir."),
             _ => ("Expediente rechazado", $"Se rechazó la validación de {expediente.TerceroNombre}.")
         };
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, tipo, titulo, mensaje, expediente.Id,
@@ -363,6 +373,48 @@ public sealed class PlanificadorDeNotificaciones
     }
 
     private static string ConPunto(string frase) => frase.EndsWith('.') ? frase : frase + ".";
+
+    /// <summary>
+    /// Terminó un lote de invitación masiva (docs/05 §8, plantilla <c>lote</c>, LT-9): campana y correo a quien lo creó, si es
+    /// una persona del tenant, con los totales y el enlace al detalle del lote.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> LoteTerminadoAsync(IEvent evento, Dominio.Invitaciones.LoteTerminado terminado,
+        IContextoDeEventos contexto, long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.LoteAsync(tenantId, evento.StreamId, ct) is not { } lote ||
+            lote.CreadoPor.Tipo != Dominio.Comun.ActorTipo.Usuario || !Guid.TryParse(lote.CreadoPor.Id, out var usuarioId))
+            return PlanDeNotificaciones.Vacio;
+        if ((await contexto.UsuariosAsync(tenantId, [usuarioId], ct)).FirstOrDefault(u => u.Activo && u.TieneRolEn(lote.EmpresaId)) is not { } usuario)
+            return PlanDeNotificaciones.Vacio;
+
+        var t = terminado.Totales;
+        var titulo = t.Fallidas > 0 ? "Lote de invitaciones terminado con errores" : "Lote de invitaciones terminado";
+        var partes = new List<string> { $"{t.Exitosas} de {t.Filas} filas invitadas" };
+        if (t.Fallidas > 0)
+            partes.Add($"{t.Fallidas} fallidas");
+        if (t.Invalidas > 0)
+            partes.Add($"{t.Invalidas} inválidas");
+        if (t.Duplicadas > 0)
+            partes.Add($"{t.Duplicadas} duplicadas");
+        var mensaje = $"«{lote.Nombre}»: {string.Join(", ", partes)}.";
+        var ruta = $"/e/{lote.EmpresaId}/invitaciones/lotes/{lote.Id}";
+        var notificacion = new Notificacion
+        {
+            Id = Deterministas.Guid($"notificacion:{evento.Id:N}:{usuario.Id:N}:{TiposNotificacion.LoteTerminado}"),
+            UsuarioId = usuario.Id,
+            EmpresaId = lote.EmpresaId,
+            Tipo = TiposNotificacion.LoteTerminado,
+            Titulo = titulo,
+            Mensaje = mensaje,
+            Enlace = ruta,
+            CreadaEn = evento.Timestamp,
+            Orden = orden
+        };
+        List<object> correos = TiposNotificacion.QuiereCorreo(await contexto.PreferenciasAsync(tenantId, usuario.Id, ct), TiposNotificacion.LoteTerminado)
+            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta)]
+            : [];
+        return new PlanDeNotificaciones([(tenantId, notificacion)], correos);
+    }
 
     private static async Task<PlanDeNotificaciones> ConstanciaAsync(IEvent evento, ConsentimientosRegistrados consentimientos, IContextoDeEventos contexto,
         CancellationToken ct)

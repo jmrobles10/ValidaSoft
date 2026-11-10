@@ -8,6 +8,7 @@ import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { inicio } from './es-CO-inicio';
+import { erroresLotes, flujoPlazo, lotes, plazoCargue } from './es-CO-lotes';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -250,6 +251,9 @@ export const esCO = {
   revalidaciones,
   vencimientos,
   cumplimiento,
+  lotes,
+  plazoCargue,
+  flujoPlazo,
   expedientes,
   documentos,
   notificaciones,
@@ -596,6 +600,7 @@ export const esCO = {
     ...erroresCuentas,
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
+    ...erroresLotes,
   },
 } as const;
 

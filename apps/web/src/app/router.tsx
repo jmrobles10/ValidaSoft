@@ -86,6 +86,18 @@ export function crearRouter() {
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
             },
             {
+              path: 'invitaciones/lotes',
+              lazy: () => import('../features/lotes/PaginaLotes').then((m) => ({ Component: m.PaginaLotes })),
+            },
+            {
+              path: 'invitaciones/lotes/nuevo',
+              lazy: () => import('../features/lotes/PaginaNuevoLote').then((m) => ({ Component: m.PaginaNuevoLote })),
+            },
+            {
+              path: 'invitaciones/lotes/:loteId',
+              lazy: () => import('../features/lotes/DetalleLote').then((m) => ({ Component: m.DetalleLote })),
+            },
+            {
               path: 'terceros/:terceroId',
               lazy: () => import('../features/terceros/PaginaFichaTercero').then((m) => ({ Component: m.PaginaFichaTercero })),
             },

@@ -336,7 +336,7 @@ stateDiagram-v2
   Observado --> Anulado: ExpedienteAnulado
 ```
 
-Para `Actualizacion` (revalidación) el expediente nace directamente en `EnRevision` con el requisito ya `Cargado`: no hay fase de carga. `Rechazado` es **terminal** (P-5-5): el administrador abre un expediente nuevo. `Caducado` (plazo 30 días por defecto, recordatorios 15/7/1) se **reabre** en un clic (P-4-2).
+Para `Actualizacion` (revalidación) el expediente nace directamente en `EnRevision` con el requisito ya `Cargado`: no hay fase de carga. `Rechazado` es **terminal** (P-5-5): el administrador abre un expediente nuevo. `Caducado` (plazo 30 días por defecto, recordatorios 15/7/1) se **reabre** en un clic (P-4-2). Implementado (LT-1…LT-4): el plazo es de la versión del flujo y solo del `Inicial`; corre en `Abierto` y, completo, en cada `Observado`; `ExpedienteReabierto` vuelve al estado en que caducó (`Abierto` u `Observado`) y el vínculo, que con `ExpedienteCerrado(Caducado)` había vuelto a `Invitado`, vuelve a `EnValidacion`.
 
 ### 6.2 Estado interno
 

@@ -117,7 +117,6 @@ export const apiKeys = {
     revision: 'Expedientes, documentos y certificados',
     integracion: 'Eventos, webhooks y consultas',
     cumplimiento: 'Cumplimiento (SAGRILAFT)',
-    integracion: 'Eventos y webhooks',
     auditoria: 'Auditoría',
   },
   permisos: {

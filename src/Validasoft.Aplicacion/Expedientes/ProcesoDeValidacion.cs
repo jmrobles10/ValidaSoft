@@ -147,7 +147,7 @@ public static class ProcesoDeValidacion
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
             flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones,
             // Una actualización (un documento cambió) no repite las listas ni el estudio (VE-6).
-            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones), ahora, requisitos);
+            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo()), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
         var vinculado = vinculo.VincularExpediente(expedienteId, tipoExpediente, folio, ahora);
@@ -215,6 +215,7 @@ public static class ProcesoDeValidacion
         ResultadoExpediente? resultado = eventos.OfType<ExpedienteAprobado>().Any() ? ResultadoExpediente.Aprobado
             : eventos.OfType<ExpedienteRechazado>().Any() ? ResultadoExpediente.Rechazado
             : eventos.OfType<ExpedienteAnulado>().Any() ? ResultadoExpediente.Anulado
+            : eventos.OfType<ExpedienteCaducado>().Any() ? ResultadoExpediente.Caducado
             : null;
 
         if (resultado is { } cierre)

@@ -6,6 +6,7 @@
  */
 import type { EstadoFlujoVersion } from './estadoFlujoVersion';
 import type { EtapaDto } from './etapaDto';
+import type { PlazoCargueDto } from './plazoCargueDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
@@ -26,4 +27,5 @@ export interface FlujoVersionDto {
   requisitos?: RequisitoDelFlujoDto[] | null;
   /** @nullable */
   verificaciones?: VerificacionRequeridaDto[] | null;
+  plazoCargue?: null | PlazoCargueDto;
 }

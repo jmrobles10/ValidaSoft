@@ -8,6 +8,8 @@ export const CLAVES_TIPO = {
   'expediente.version_nueva': 'versionNueva',
   'expediente.aprobado': 'aprobado',
   'expediente.rechazado': 'rechazado',
+  'expediente.caducado': 'caducado',
+  'invitaciones.lote_terminado': 'loteTerminado',
   'documento.por_vencer': 'porVencer',
   'documento.vencido': 'vencido',
   'webhook.deshabilitado': 'webhookDeshabilitado',

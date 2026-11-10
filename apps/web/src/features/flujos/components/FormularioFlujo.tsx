@@ -116,6 +116,30 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
               </Box>
             }
           />
+
+          <Box component="fieldset" disabled={soloLectura} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+            <Typography component="legend" sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>
+              {t('flujoPlazo.titulo')}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 1.5 }}>{t('flujoPlazo.ayuda')}</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '160px minmax(0,320px)' }, gap: 2 }}>
+              <TextField
+                size="small"
+                type="number"
+                label={t('flujoPlazo.dias')}
+                value={borrador.plazoDias}
+                onChange={(e) => onCambiar({ ...borrador, plazoDias: e.target.value })}
+                slotProps={{ htmlInput: { min: 0, max: 365 } }}
+              />
+              <TextField
+                size="small"
+                label={t('flujoPlazo.recordatorios')}
+                value={borrador.plazoRecordatorios}
+                disabled={soloLectura || borrador.plazoDias.trim() === '0'}
+                onChange={(e) => onCambiar({ ...borrador, plazoRecordatorios: e.target.value })}
+              />
+            </Box>
+          </Box>
         </Stack>
       </Tarjeta>
 

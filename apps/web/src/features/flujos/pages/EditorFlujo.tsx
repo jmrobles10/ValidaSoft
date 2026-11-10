@@ -16,7 +16,19 @@ import { useCrearFlujo, useTiposDocumento, useDefinirPorDefecto, useEditarFlujo,
 import { FormularioFlujo } from '../components/FormularioFlujo';
 import { VersionesFlujo } from '../components/VersionesFlujo';
 import { errorDeApiEnRequisitos } from '../requisitosDeSeccion';
-import { borradorDesdeVersion, borradorVacio, erroresBloqueantes, etapasADto, firmaBorrador, normalizarCodigo, requisitosADto, validarFlujo, verificacionesADto, type BorradorFlujo } from '../editor';
+import {
+  borradorDesdeVersion,
+  borradorVacio,
+  erroresBloqueantes,
+  etapasADto,
+  firmaBorrador,
+  normalizarCodigo,
+  plazoADto,
+  requisitosADto,
+  validarFlujo,
+  verificacionesADto,
+  type BorradorFlujo,
+} from '../editor';
 
 /**
  * Crear (`flujos/nuevo`) o editar un flujo. Con borrador, se edita el borrador; con solo versión publicada, "Editar"
@@ -101,6 +113,7 @@ export function EditorFlujo() {
       etapas: etapasADto(borrador.etapas),
       politicaDevolucion: borrador.politicaDevolucion,
       separacionDeFunciones: borrador.separacionDeFunciones,
+      plazoCargue: plazoADto(borrador),
       requisitos: requisitosADto(borrador.requisitos),
       verificaciones: verificacionesADto(borrador.verificaciones),
     };

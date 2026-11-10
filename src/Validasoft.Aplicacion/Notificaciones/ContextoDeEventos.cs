@@ -24,6 +24,10 @@ public interface IContextoDeEventos
 
     Task<Expediente?> ExpedienteAsync(Guid tenantId, Guid id, CancellationToken ct);
 
+    /// <summary>Lote de invitación masiva (LT-9); por omisión ninguno (los contextos de prueba no lo necesitan).</summary>
+    Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        Task.FromResult<Dominio.Invitaciones.LoteDeInvitacion?>(null);
+
     Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct);
 
     Task<TipoDocumentoTenant?> TipoDocumentoAsync(Guid tenantId, Guid id, CancellationToken ct);
@@ -89,6 +93,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
     public Task<Vinculo?> VinculoAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<Vinculo>(Tenant(tenantId), id, ct);
 
     public Task<Expediente?> ExpedienteAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<Expediente>(Tenant(tenantId), id, ct);
+
+    public Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        CargarAsync<Dominio.Invitaciones.LoteDeInvitacion>(Tenant(tenantId), id, ct);
 
     public Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<TipoVinculo>(Tenant(tenantId), id, ct);
 

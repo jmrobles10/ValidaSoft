@@ -125,7 +125,7 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       return { ...base, antes: 'EnValidacion', despues: 'Activo' };
     case 'expediente_cerrado': {
       const resultado = texto(campo(datos, 'resultado'));
-      return resultado === 'Aprobado' || resultado === 'Rechazado' || resultado === 'Anulado' ? { ...base, despues: resultado } : base;
+      return resultado === 'Aprobado' || resultado === 'Rechazado' || resultado === 'Anulado' || resultado === 'Caducado' ? { ...base, despues: resultado } : base;
     }
     default:
       return { ...base, motivo: motivo ?? justificacion };

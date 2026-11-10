@@ -46,6 +46,14 @@ export const notificaciones = {
       titulo: 'Expediente rechazado',
       explicacion: 'Cuando se rechaza la validación de un expediente de tus áreas.',
     },
+    caducado: {
+      titulo: 'Expediente caducado',
+      explicacion: 'Cuando un tercero no completa su expediente de tus áreas en el plazo y caduca.',
+    },
+    loteTerminado: {
+      titulo: 'Lote de invitaciones terminado',
+      explicacion: 'Cuando termina un lote de invitación masiva que creaste, con cuántas filas se invitaron y cuántas fallaron.',
+    },
     porVencer: {
       titulo: 'Documento por vencer',
       explicacion: 'Cuando un documento de un vínculo de tus áreas está cerca de vencer.',

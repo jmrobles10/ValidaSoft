@@ -7,6 +7,7 @@
 import type { EstadoExpediente } from './estadoExpediente';
 import type { EtapaExpedienteDto } from './etapaExpedienteDto';
 import type { FlujoDeExpedienteDto } from './flujoDeExpedienteDto';
+import type { PlazoCargueExpedienteDto } from './plazoCargueExpedienteDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RechazoDto } from './rechazoDto';
 import type { RequisitoExpedienteDto } from './requisitoExpedienteDto';
@@ -46,4 +47,5 @@ export interface ExpedienteDto {
   /** @nullable */
   verificaciones?: VerificacionDto[] | null;
   esperandoVerificaciones?: boolean;
+  plazoCargue?: null | PlazoCargueExpedienteDto;
 }

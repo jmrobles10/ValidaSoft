@@ -81,6 +81,9 @@ export interface BorradorFlujo {
   tipoVinculo: string;
   politicaDevolucion: PoliticaDevolucion;
   separacionDeFunciones: boolean;
+  /** Plazo de cargue del expediente inicial (LT-1), como lo escribe la persona: días (0 = sin plazo) y recordatorios «15, 7, 1». */
+  plazoDias: string;
+  plazoRecordatorios: string;
   etapas: EtapaEnEditor[];
   requisitos: RequisitoEnEditor[];
   verificaciones: VerificacionEnEditor[];
@@ -157,6 +160,8 @@ export function borradorVacio(): BorradorFlujo {
     tipoVinculo: '',
     politicaDevolucion: 'Inmediata',
     separacionDeFunciones: false,
+    plazoDias: String(PLAZO_POR_DEFECTO.dias),
+    plazoRecordatorios: PLAZO_POR_DEFECTO.recordatorios.join(', '),
     etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }],
     requisitos: [],
     verificaciones: [],
@@ -169,6 +174,8 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
     ...base,
     politicaDevolucion: version.politicaDevolucion,
     separacionDeFunciones: version.separacionDeFunciones,
+    plazoDias: String((version.plazoCargue ?? PLAZO_POR_DEFECTO).dias),
+    plazoRecordatorios: (version.plazoCargue?.recordatorios ?? PLAZO_POR_DEFECTO.recordatorios).join(', '),
     etapas: [...version.etapas]
       .sort((a, b) => a.orden - b.orden)
       .map((e) => ({
@@ -395,8 +402,25 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     nombre: borrador.nombre.trim(),
     politica: borrador.politicaDevolucion,
     separacion: borrador.separacionDeFunciones,
+    plazo: plazoADto(borrador),
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos),
     verificaciones: verificacionesADto(borrador.verificaciones),
   });
+}
+
+/** Plazo de cargue por omisión (P-4-2): 30 días con recordatorios a 15, 7 y 1 día de vencer. */
+export const PLAZO_POR_DEFECTO = { dias: 30, recordatorios: [15, 7, 1] } as const;
+
+/**
+ * El plazo del editor como lo recibe la API: días enteros y recordatorios (números separados por coma o espacio, sin
+ * repetir); lo que no sea número se descarta y la API valida los rangos (`plazo-cargue-invalido`, `recordatorio-invalido`).
+ */
+export function plazoADto(borrador: Pick<BorradorFlujo, 'plazoDias' | 'plazoRecordatorios'>): { dias: number; recordatorios: number[] } {
+  const dias = Number.parseInt(borrador.plazoDias.trim(), 10);
+  const recordatorios = borrador.plazoRecordatorios
+    .split(/[\s,;]+/)
+    .map((r) => Number.parseInt(r, 10))
+    .filter((r) => Number.isFinite(r));
+  return { dias: Number.isFinite(dias) ? dias : PLAZO_POR_DEFECTO.dias, recordatorios: [...new Set(recordatorios)].sort((a, b) => b - a) };
 }

@@ -56,7 +56,8 @@ public sealed record DefinicionDeFlujo(
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
     IReadOnlyList<RequisitoDelFlujo>? Requisitos = null,
-    IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null)
+    IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null,
+    PlazoDeCargue? PlazoCargue = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -126,9 +127,13 @@ public sealed record DefinicionDeFlujo(
             etapas.Add(new EtapaDeFlujo(indice + 1, areas));
         }
 
+        // Sin plazo indicado, el de P-4-2 (30 días, recordatorios a 15/7/1); 0 días es «sin plazo» (LT-1).
         return this with
         {
-            Etapas = etapas, Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo), Verificaciones = ValidarVerificaciones()
+            Etapas = etapas,
+            Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo),
+            Verificaciones = ValidarVerificaciones(),
+            PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar()
         };
     }
 
@@ -303,6 +308,14 @@ public sealed class FlujoVersion
 
     /// <summary>Verificaciones externas que pide esta versión (VE-6): listas restrictivas y estudio de cumplimiento.</summary>
     public List<Expedientes.VerificacionRequeridaDelFlujo> Verificaciones { get; set; } = [];
+    /// <summary>
+    /// Plazo del tercero para completar el expediente inicial (LT-1). Nulo en las versiones guardadas antes: vale el de
+    /// P-4-2 (<see cref="PlazoDeCargue.PorDefecto"/>).
+    /// </summary>
+    public PlazoDeCargue? PlazoCargue { get; set; }
+
+    /// <summary>El plazo que rige (el guardado o el de P-4-2).</summary>
+    public PlazoDeCargue PlazoEfectivo() => PlazoCargue ?? PlazoDeCargue.PorDefecto;
 
     public DateTimeOffset CreadaEn { get; set; }
 
@@ -310,7 +323,7 @@ public sealed class FlujoVersion
 
     public DateTimeOffset? RetiradaEn { get; set; }
 
-    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones);
+    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo());
 }
 
 /// <summary>
@@ -394,6 +407,7 @@ public sealed class Flujo
             borrador.SeparacionDeFunciones = validada.SeparacionDeFunciones;
             borrador.Requisitos = [.. validada.Requisitos ?? []];
             borrador.Verificaciones = [.. validada.Verificaciones ?? []];
+            borrador.PlazoCargue = validada.PlazoCargue;
         }
 
         ActualizadoEn = ahora;
@@ -420,6 +434,7 @@ public sealed class Flujo
         borrador.Etapas = [.. validada.Etapas];
         borrador.Requisitos = [.. validada.Requisitos ?? []];
         borrador.Verificaciones = [.. validada.Verificaciones ?? []];
+        borrador.PlazoCargue = validada.PlazoCargue;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -436,6 +451,7 @@ public sealed class Flujo
         SeparacionDeFunciones = definicion.SeparacionDeFunciones,
         Requisitos = [.. definicion.Requisitos ?? []],
         Verificaciones = [.. definicion.Verificaciones ?? []],
+        PlazoCargue = definicion.PlazoCargue,
         CreadaEn = ahora
     };
 

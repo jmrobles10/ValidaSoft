@@ -90,6 +90,10 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Webhooks:Reintentos:1", "00:00:01");
             b.UseSetting("Validasoft:Webhooks:FallosParaDeshabilitar", FallosParaDeshabilitarWebhook.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:Webhooks:TimeoutSegundos", "3");
+            // Plazos de cargue (LT-4): sin barrido periódico; las pruebas lo disparan con el reloj o la fecha que necesitan.
+            b.UseSetting("Validasoft:PlazosDeCargue:Intervalo", "00:00:00");
+            // Invitación masiva (LT-8): tandas pequeñas para ver el avance, la pausa y la reanudación.
+            b.UseSetting("Validasoft:Lotes:TamanoTanda", "5");
             b.ConfigureTestServices(s =>
             {
                 s.RemoveAll<IEnviadorDeCorreo>();

@@ -52,3 +52,5 @@ export * from './generado/endpoints/webhooks/webhooks';
 export * from './generado/endpoints/verificaciones/verificaciones';
 export * from './generado/endpoints/listas-restrictivas/listas-restrictivas';
 export * from './generado/endpoints/informe-cumplimiento/informe-cumplimiento';
+export * from './generado/endpoints/lotes/lotes';
+export * from './generado/endpoints/plazos-de-cargue/plazos-de-cargue';
