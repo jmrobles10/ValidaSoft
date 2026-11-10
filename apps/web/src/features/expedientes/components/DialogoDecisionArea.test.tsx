@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { configurarCliente, reiniciarCliente, type ExpedienteDto, type MotivoTipificadoDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { area, expediente, requisito } from '../datosPrueba';
+import { area, expediente, requisito, requisitoSeccion } from '../datosPrueba';
 import type { DialogoDeArea } from '../reglas';
 import { DialogoDecisionArea } from './DialogoDecisionArea';
 
@@ -25,10 +25,10 @@ const CAMARA = requisito({
   tipoDocumento: { id: 'td-cc', codigo: 'CAMARA', nombre: 'Cámara de comercio', tipoCanonico: 'CamaraComercio', ambito: 'Global' },
 });
 
-function abrir(dialogo: DialogoDeArea) {
-  const fetch = vi.fn(() => new Promise<Response>(() => undefined));
+function abrir(dialogo: DialogoDeArea, requisitos = [requisito(), CAMARA]) {
+  const fetch = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>(() => undefined));
   configurarCliente({ fetch });
-  const datos: ExpedienteDto = { ...expediente('EnRevision'), requisitos: [requisito(), CAMARA] };
+  const datos: ExpedienteDto = { ...expediente('EnRevision'), requisitos };
   render(
     <ThemeProvider theme={createValidasoftTheme('light')}>
       <QueryClientProvider client={new QueryClient()}>
@@ -81,5 +81,61 @@ describe('DialogoDecisionArea: nada se envía con el formulario incompleto', () 
   it('«Aprobar área» con documentos por decidir se puede enviar', () => {
     abrir({ tipo: 'aprobarArea', area: area(), documentos: [{ requisitoId: 'r-rut', versionVigente: 1 }] });
     expect(screen.getByRole('button', { name: 'Aprobar área (1 documento)' })).toBeEnabled();
+  });
+});
+
+describe('DialogoDecisionArea: aprobar con una discrepancia crítica en el cruce (F5)', () => {
+  const cruce = (discrepanciaCritica: boolean) => ({ estado: 'Cruzado', discrepanciaCritica, cruces: [], sinCruce: [] });
+  const GENERAL = (discrepanciaCritica: boolean) => requisitoSeccion({ id: 'r-general' }, { cruce: cruce(discrepanciaCritica) });
+  const POR_DECIDIR = [{ requisitoId: 'r-general', versionVigente: 3 }, { requisitoId: 'r-rut', versionVigente: 1 }];
+
+  it('pide la justificación, no deja enviar sin ella y la manda junto con las versiones', async () => {
+    const usuario = userEvent.setup();
+    const fetch = abrir({ tipo: 'aprobarArea', area: area(), documentos: POR_DECIDIR }, [GENERAL(true), requisito()]);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('difiere en campos críticos de Información general');
+    const boton = screen.getByRole('button', { name: 'Aprobar área (2 documentos)' });
+    expect(boton).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Escribe la justificación de la aprobación');
+
+    const campo = screen.getByRole('textbox', { name: /Justificación de la aprobación/ });
+    await usuario.type(campo, 'corto');
+    expect(boton).toBeDisabled();
+
+    await usuario.clear(campo);
+    await usuario.type(campo, 'La razón social cambió por fusión.');
+    expect(boton).toBeEnabled();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await usuario.click(boton);
+    const [, init] = fetch.mock.calls[0] ?? [];
+    expect(JSON.parse(typeof init?.body === 'string' ? init.body : '{}')).toEqual({
+      veredicto: 'Aprobado',
+      versiones: { 'r-general': 3, 'r-rut': 1 },
+      justificacion: 'La razón social cambió por fusión.',
+    });
+  });
+
+  it('sin diferencias críticas no pide justificación ni la envía', async () => {
+    const usuario = userEvent.setup();
+    const fetch = abrir({ tipo: 'aprobarArea', area: area(), documentos: POR_DECIDIR }, [GENERAL(false), requisito()]);
+
+    expect(screen.queryByRole('textbox', { name: /Justificación/ })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole('button', { name: 'Aprobar área (2 documentos)' }));
+    const [, init] = fetch.mock.calls[0] ?? [];
+    expect(JSON.parse(typeof init?.body === 'string' ? init.body : '{}')).toEqual({ veredicto: 'Aprobado', versiones: { 'r-general': 3, 'r-rut': 1 } });
+  });
+
+  it('un documento que respalda secciones con una diferencia crítica también la pide', () => {
+    abrir({ tipo: 'aprobarArea', area: area(), documentos: [{ requisitoId: 'r-rut', versionVigente: 1 }] }, [
+      requisito({ soporteDeSecciones: { sinAnalisis: false, discrepanciaCritica: true, secciones: [] } }),
+    ]);
+    expect(screen.getByRole('textbox', { name: /Justificación de la aprobación/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aprobar área (1 documento)' })).toBeDisabled();
+  });
+
+  it('al observar no se pide justificación: el cruce solo manda al aprobar', () => {
+    abrir({ tipo: 'observarArea', area: area() }, [GENERAL(true)]);
+    expect(screen.queryByRole('textbox', { name: /Justificación de la aprobación/ })).not.toBeInTheDocument();
   });
 });

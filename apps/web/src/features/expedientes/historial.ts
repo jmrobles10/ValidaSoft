@@ -127,6 +127,13 @@ export function eventoExpedienteATimeline(
         .filter((n): n is string => n !== null);
       return { ...base, detalle: nombres.join(' · ') };
     }
+    case 'requisitos_agregados': {
+      // Una actualización abierta suma lo que cambió después de abrirse; las áreas que lo revisan vuelven a tenerlo pendiente.
+      const nombres = lista(campo(datos, 'requisitos'))
+        .map((r) => (r && typeof r === 'object' ? texto(campo(r as Record<string, unknown>, 'nombre')) : null))
+        .filter((n): n is string => n !== null);
+      return { ...base, titulo: t('expedientes.historial.agregados', { documentos: nombres.join(', ') }) };
+    }
     case 'version_adjuntada_a_requisito': {
       const version = campo(datos, 'version');
       const n = version && typeof version === 'object' ? numero(campo(version as Record<string, unknown>, 'numero')) : '';

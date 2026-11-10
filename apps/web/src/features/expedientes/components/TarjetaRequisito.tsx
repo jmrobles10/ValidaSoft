@@ -11,6 +11,7 @@ import type { ContextoRevisor, DialogoExpediente } from '../reglas';
 import { bloqueoRequisito, documentoEnVisor, puedeEximir, veredictosInvalidados, veredictosVigentesDeRequisito, type BloqueoRequisito } from '../requisitos';
 import { BotonVerVersion } from './BotonVerVersion';
 import { DetalleSeccionRequisito } from './DetalleSeccionRequisito';
+import { SoporteDeSecciones } from './SoporteDeSecciones';
 
 /** Bloqueos que se explican a quien revisa (los demás no dicen nada útil: sin permiso, cerrado). */
 const BLOQUEOS_EXPLICADOS = ['expediente-en-carga', 'expediente-observado', 'vinculo-bloqueado', 'sin-version', 'area-esperando', 'no-es-miembro', 'ya-voto'] as const;
@@ -91,6 +92,12 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
         </Box>
       )}
       {seccion && <DetalleSeccionRequisito requisito={requisito} seccion={seccion} documentos={documentos} puedeVer={puedeVer} onVer={onVer} />}
+      {/* Un documento que respalda secciones de la ficha («Usar como soporte», F5): qué respalda y el resultado de su cruce. */}
+      {!seccion && requisito.soporteDeSecciones && (
+        <Box sx={{ mt: 1 }}>
+          <SoporteDeSecciones soporte={requisito.soporteDeSecciones} />
+        </Box>
+      )}
       {!seccion && !version && requisito.estado === 'Pendiente' && (
         <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 1 }}>
           {t('expedientes.requisitos.sinVersion')}

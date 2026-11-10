@@ -6,7 +6,7 @@ import { configurarCliente, reiniciarCliente, SCOPES, type ExpedienteDto, type R
 import { createValidasoftTheme } from '@validasoft/ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DOCUMENTO } from '../../terceros/pruebas/datos';
-import { expediente, requisitoSeccion } from '../datosPrueba';
+import { expediente, requisito, requisitoSeccion } from '../datosPrueba';
 import type { ContextoRevisor } from '../reglas';
 import { PanelRequisitos } from './PanelRequisitos';
 
@@ -114,5 +114,92 @@ describe('Requisito de sección en el expediente (F2)', () => {
     expect(within(filas[2]!).getByText('Sí')).toHaveStyle({ textDecoration: 'line-through' });
     expect(filas[3]).toHaveTextContent('Se agregó Persona relacionada—Socio: Juan Pérez (CC 79123456)');
     expect(filas[4]).toHaveTextContent('Se modificó Socio: Ana Gómez (CC 1020) · Porcentaje de participación40 %35,5 %');
+  });
+});
+
+/** Cruce de la versión de la sección con el RUT v2: la dirección coincide y la razón social difiere (crítica). */
+const CRUCE_CON_RUT = {
+  documentoId: 'doc-rut',
+  versionDocumento: 2,
+  tipoDocumento: 'RUT',
+  nombreDocumento: 'Registro Único Tributario',
+  confianza: 0.97,
+  legible: true,
+  fecha: '2026-11-09T12:00:00Z',
+  coincidencias: 1,
+  discrepancias: 1,
+  noVerificables: 0,
+  discrepanciaCritica: true,
+  campos: [
+    { campo: 'direccion', etiqueta: 'Dirección', declarado: 'Cl 80 # 10-20', extraido: 'Cl 80 # 10-20', resultado: 'Coincide', critico: false, detalle: null },
+    { campo: 'razon_social', etiqueta: 'Razón social', declarado: 'Aceros del Norte S.A.S.', extraido: 'FERRETERIA OTRA LTDA', resultado: 'Discrepa', critico: true, detalle: null },
+  ],
+};
+
+describe('Cruce con el documento en el requisito (F5)', () => {
+  it('una sección cruzada muestra, campo por campo, lo declarado contra lo que dice el documento y avisa de lo crítico', () => {
+    const tarjeta = montar(requisitoSeccion({}, { cruce: { estado: 'Cruzado', discrepanciaCritica: true, cruces: [CRUCE_CON_RUT], sinCruce: [] } }));
+
+    const cruce = tarjeta.getByRole('region', { name: 'Cruce con el documento' });
+    expect(within(cruce).getByRole('alert')).toHaveTextContent('Hay diferencias en campos críticos');
+    expect(within(cruce).getByText(/Confianza de la lectura: 97/)).toBeInTheDocument();
+    const tabla = within(cruce).getByRole('table', { name: 'Cruce con Registro Único Tributario · versión 2' });
+    const filas = within(tabla).getAllByRole('row').slice(1);
+    expect(filas.map((f) => f.getAttribute('data-resultado'))).toEqual(['Coincide', 'Discrepa']);
+    expect(filas[1]).toHaveTextContent('Razón socialCríticoAceros del Norte S.A.S.FERRETERIA OTRA LTDADifiere');
+    expect(within(cruce).getByText('Es evidencia para la revisión: el cruce no aprueba ni observa nada por sí mismo.')).toBeInTheDocument();
+  });
+
+  it('sin la lectura automática para la empresa dice que se revise a mano, sin tabla', () => {
+    const tarjeta = montar(
+      requisitoSeccion(
+        {},
+        { cruce: { estado: 'Manual', discrepanciaCritica: false, cruces: [], sinCruce: [{ documentoId: 'doc-rut', version: 2, tipoDocumento: 'RUT', nombreDocumento: 'RUT', motivo: 'sin-analisis' }] } },
+      ),
+    );
+    const cruce = tarjeta.getByRole('region', { name: 'Cruce con el documento' });
+    expect(cruce).toHaveTextContent('Sin cruce automático: tu empresa no recibió la lectura de');
+    expect(cruce).toHaveTextContent('versión 2');
+    expect(within(cruce).queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('un documento exigido muestra qué secciones respalda y el resultado del cruce de cada una', () => {
+    const tarjeta = montar(
+      requisito({
+        soporteDeSecciones: {
+          sinAnalisis: false,
+          discrepanciaCritica: true,
+          secciones: [
+            { seccion: 'FICHA_GENERAL', nombre: 'Información general', periodo: null, version: 3, cruce: CRUCE_CON_RUT },
+            { seccion: 'FICHA_TRIBUTARIA', nombre: 'Información tributaria', periodo: null, version: 1, cruce: null },
+            { seccion: 'FICHA_LEGAL', nombre: 'Información legal', periodo: null, version: null, cruce: null },
+          ],
+        },
+      }),
+    );
+
+    const soporte = tarjeta.getByRole('region', { name: 'Respaldo de la información' });
+    expect(within(soporte).getByRole('alert')).toHaveTextContent('Hay diferencias en campos críticos');
+    const filas = within(soporte).getAllByRole('listitem');
+    expect(filas[0]).toHaveTextContent('Información general (versión 3)');
+    expect(filas[0]).toHaveTextContent('Difiere en campos críticos');
+    expect(within(filas[0]!).getByRole('table', { name: 'Cruce con Registro Único Tributario · versión 2' })).toBeInTheDocument();
+    expect(filas[1]).toHaveTextContent('Información tributaria (versión 1)Sin cruce con esta versión.');
+    expect(filas[2]).toHaveTextContent('Información legal: sin diligenciar.');
+  });
+
+  it('un documento sin la lectura automática para la empresa lo avisa y compara a mano', () => {
+    const tarjeta = montar(
+      requisito({
+        soporteDeSecciones: {
+          sinAnalisis: true,
+          discrepanciaCritica: false,
+          secciones: [{ seccion: 'FICHA_GENERAL', nombre: 'Información general', periodo: null, version: 3, cruce: null }],
+        },
+      }),
+    );
+    const soporte = tarjeta.getByRole('region', { name: 'Respaldo de la información' });
+    expect(soporte).toHaveTextContent('Tu empresa no recibió la lectura automática de esta versión: compara a mano con las secciones.');
+    expect(within(soporte).queryByText(/Hay diferencias en campos críticos/)).not.toBeInTheDocument();
   });
 });

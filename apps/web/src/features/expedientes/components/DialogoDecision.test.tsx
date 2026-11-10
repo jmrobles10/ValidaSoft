@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { conEmpresa } from '../../../shared/consultas';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useExpediente } from '../api';
-import { area, expediente, requisito, veredicto } from '../datosPrueba';
+import { area, areaDeRequisito, expediente, requisito, requisitoSeccion, veredicto } from '../datosPrueba';
 import { dialogoAplica, type ContextoRevisor, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { DialogoDecision } from './DialogoDecision';
 
@@ -47,16 +47,15 @@ function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true,
   // El detalle vuelve a pedir el expediente al abrirse: antes de decidir, el servidor devuelve `alAbrir` (lo mismo que
   // había en caché, salvo que otra persona lo haya cambiado).
   let decidido = false;
-  configurarCliente({
-    fetch: vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
-      if ((init?.method ?? 'GET') === 'GET') {
-        if (!decidido) return Promise.resolve(json(200, alAbrir));
-        return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
-      }
-      decidido = true;
-      return Promise.resolve(respuesta());
-    }),
+  const fetch = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+    if ((init?.method ?? 'GET') === 'GET') {
+      if (!decidido) return Promise.resolve(json(200, alAbrir));
+      return recarga ? Promise.resolve(json(200, recarga)) : new Promise<Response>(() => undefined);
+    }
+    decidido = true;
+    return Promise.resolve(respuesta());
   });
+  configurarCliente({ fetch });
   const cliente = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
   cliente.setQueryData(CLAVE, inicial);
   const onCerrar = vi.fn();
@@ -67,7 +66,7 @@ function preparar({ inicial, dialogo, respuesta, recarga, cerrarDesmonta = true,
       </QueryClientProvider>
     </ThemeProvider>,
   );
-  return { cliente, onCerrar };
+  return { cliente, onCerrar, fetch };
 }
 
 const YA_NO_APLICA = /El expediente cambió y esta decisión ya no aplica/;
@@ -162,5 +161,59 @@ describe('DialogoDecision: nada se envía con el formulario incompleto', () => {
     await usuario.click(screen.getByRole('radio', { name: /Observar/ }));
     expect(screen.getByRole('button', { name: /Observar/ })).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Elige al menos un motivo.');
+  });
+});
+
+describe('DialogoDecision: aprobar un requisito con una discrepancia crítica en el cruce (F5)', () => {
+  const critico = { estado: 'Cruzado', discrepanciaCritica: true, cruces: [], sinCruce: [] };
+  const general = requisitoSeccion({ id: 'r-general', areas: [areaDeRequisito()] }, { cruce: critico });
+  const decision = { tipo: 'veredictoRequisito' as const, requisito: general, areaRequisito: general.areas[0]!, nombreArea: 'Jurídica' };
+
+  function abrirConDecision(dialogo: typeof decision, requisitoDelExpediente = general) {
+    return preparar({
+      inicial: { ...expediente('EnRevision'), requisitos: [requisitoDelExpediente] },
+      dialogo,
+      respuesta: () => json(200, expediente('EnRevision')),
+      recarga: null,
+    });
+  }
+
+  it('«Aprobado» pide la justificación (al menos 10 caracteres) y la envía', async () => {
+    const usuario = userEvent.setup();
+    const { fetch: peticiones } = abrirConDecision(decision);
+
+    const confirmar = await screen.findByRole('button', { name: 'Aprobar' });
+    expect(confirmar).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('difiere en campos críticos de Información general');
+    expect(screen.getByRole('status')).toHaveTextContent('Escribe la justificación de la aprobación');
+
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación de la aprobación/ }), 'corto');
+    expect(confirmar).toBeDisabled();
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación de la aprobación/ }), ' pero verificado con la Cámara.');
+    expect(confirmar).toBeEnabled();
+
+    await usuario.click(confirmar);
+    await waitFor(() => {
+      const envio = peticiones.mock.calls.map(([, init]) => init).find((init) => init?.method === 'POST');
+      expect(JSON.parse(typeof envio?.body === 'string' ? envio.body : '{}')).toMatchObject({ veredicto: 'Aprobado', sobreVersion: 3, justificacion: 'corto pero verificado con la Cámara.' });
+    });
+  });
+
+  it('al observar no se pide la justificación: el cruce solo manda al aprobar', async () => {
+    const usuario = userEvent.setup();
+    abrirConDecision(decision);
+
+    expect(await screen.findByRole('textbox', { name: /Justificación de la aprobación/ })).toBeInTheDocument();
+    await usuario.click(screen.getByRole('radio', { name: /Observar/ }));
+    expect(screen.queryByRole('textbox', { name: /Justificación de la aprobación/ })).not.toBeInTheDocument();
+  });
+
+  it('sin diferencias críticas «Aprobado» se envía sin justificación', async () => {
+    abrirConDecision({ ...decision, requisito: { ...general, seccion: { ...general.seccion!, cruce: { ...critico, discrepanciaCritica: false } } } }, {
+      ...general,
+      seccion: { ...general.seccion!, cruce: { ...critico, discrepanciaCritica: false } },
+    });
+    expect(await screen.findByRole('button', { name: 'Aprobar' })).toBeEnabled();
+    expect(screen.queryByRole('textbox', { name: /Justificación de la aprobación/ })).not.toBeInTheDocument();
   });
 });

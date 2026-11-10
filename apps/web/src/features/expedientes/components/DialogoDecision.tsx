@@ -8,6 +8,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { ResumenVersion } from '../../documentos/ResumenVersion';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
+import { justificacionSuficiente, tieneDiscrepanciaCritica } from '../cruce';
 import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { documentoEnVisor, versionVigente } from '../requisitos';
 import { SelectorCamposSeccion } from './SelectorCamposSeccion';
@@ -39,6 +40,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [texto, setTexto] = useState('');
   const [campos, setCampos] = useState<string[]>([]);
+  const [justificacionCruce, setJustificacionCruce] = useState('');
   // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, el botón de enviar está deshabilitado.
   const [motivosTocados, setMotivosTocados] = useState(false);
   const [textoTocado, setTextoTocado] = useState(false);
@@ -60,8 +62,11 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const versionNueva = dialogo.tipo === 'veredictoRequisito' && !aplica ? versionVigente(expediente, dialogo.requisito.id) : null;
   const faltanMotivos = conMotivos && elegidos.length === 0;
   const faltaTexto = !textoOpcional && !texto.trim();
+  // Aprobar un documento o una sección cuyo cruce difiere en campos críticos exige dejar escrito por qué (F5, FM-13).
+  const pideJustificacion = dialogo.tipo === 'veredictoRequisito' && !observando && requisito !== null && tieneDiscrepanciaCritica(requisito);
+  const faltaJustificacion = pideJustificacion && !justificacionSuficiente(justificacionCruce);
   const disponibles = motivosPara(motivos, dialogo.tipo === 'rechazar' ? 'Rechazo' : 'Observacion');
-  const incompleto = faltanMotivos || faltaTexto;
+  const incompleto = faltanMotivos || faltaTexto || faltaJustificacion;
   const ocupado = mutacion.isPending;
 
   const textos = (() => {
@@ -139,6 +144,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
           observacion: observando ? texto : '',
           sobreVersion: versionRevisada ?? 0,
           campos: observando && seccion ? campos : [],
+          ...(pideJustificacion ? { justificacion: justificacionCruce } : {}),
         };
       case 'eximir':
         return { tipo: 'eximir', requisitoId: dialogo.requisito.id, justificacion: texto };
@@ -173,7 +179,9 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
       ? t('expedientes.veredicto.motivosRequeridos')
       : faltaTexto
         ? t('expedientes.faltaCampo', { campo: textos.campo })
-        : null;
+        : faltaJustificacion
+          ? t('cruce.justificacion.falta')
+          : null;
 
   return (
     <Dialog open onClose={ocupado ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-decision">
@@ -245,6 +253,21 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
               ))}
 
             {observando && seccion && <SelectorCamposSeccion seccion={seccion.seccion} elegidos={campos} onCambiar={setCampos} deshabilitado={!aplica} />}
+
+            {pideJustificacion && (
+              <>
+                <Alert severity="error">{t('cruce.justificacion.ayuda', { requisitos: documento })}</Alert>
+                <TextField
+                  required
+                  label={t('cruce.justificacion.etiqueta')}
+                  value={justificacionCruce}
+                  onChange={(e) => setJustificacionCruce(e.target.value.slice(0, MAXIMO_TEXTO_EXPEDIENTE))}
+                  multiline
+                  minRows={2}
+                  disabled={!aplica}
+                />
+              </>
+            )}
 
             {mostrarCampo && (
               <TextField

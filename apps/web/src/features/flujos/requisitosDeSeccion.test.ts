@@ -1,7 +1,7 @@
 import { ErrorApi, type AreaDto, type FlujoVersionDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
 import { areaNueva, borradorDesdeVersion, borradorVacio, requisitoDeSeccionNuevo, requisitoNuevo, requisitosADto, validarFlujo, type BorradorFlujo } from './editor';
-import { errorDeApiEnRequisitos } from './requisitosDeSeccion';
+import { errorDeApiEnRequisitos, seccionesQueRespalda } from './requisitosDeSeccion';
 
 const AREAS: AreaDto[] = [{ id: 'juridica', empresaId: 'emp', codigo: 'JURIDICA', nombre: 'Jurídica', miembros: ['u1'], activa: true }];
 const borrador = (requisitos: BorradorFlujo['requisitos']): BorradorFlujo => ({
@@ -67,5 +67,30 @@ describe('requisitos de sección en el editor de flujos (FM-25)', () => {
     expect(errorDeApiEnRequisitos(error('flujo-duplicado', 0), requisitos)).toBeNull();
     expect(errorDeApiEnRequisitos(error('requisito-invalido'), requisitos)).toBeNull();
     expect(errorDeApiEnRequisitos(error('requisito-duplicado', 9), requisitos)).toBeNull();
+  });
+
+  it('«Usar como soporte» de un documento va a la API tal como estaba (null = activo por omisión) y vuelve igual', () => {
+    const dto = requisitosADto([
+      requisitoNuevo('rut'),
+      { ...requisitoNuevo('camara'), usarComoSoporte: false },
+      { ...requisitoNuevo('cedula'), usarComoSoporte: true },
+      requisitoDeSeccionNuevo('FICHA_GENERAL'),
+    ]);
+    expect(dto[0]).not.toHaveProperty('usarComoSoporte');
+    expect(dto[1]).toMatchObject({ usarComoSoporte: false });
+    expect(dto[2]).toMatchObject({ usarComoSoporte: true });
+    expect(dto[3]).not.toHaveProperty('usarComoSoporte');
+
+    const version = { requisitos: dto.map((r, i) => ({ ...r, id: `r${String(i)}` })), etapas: [], politicaDevolucion: 'Inmediata', separacionDeFunciones: false } as unknown as FlujoVersionDto;
+    const vuelta = borradorDesdeVersion({ codigo: 'P', nombre: 'P', tipoVinculo: 'PROVEEDOR' }, version).requisitos;
+    expect(vuelta.map((r) => r.usarComoSoporte)).toEqual([null, false, true, null]);
+  });
+
+  it('cada tipo respalda las secciones del mapa de la plataforma', () => {
+    expect(seccionesQueRespalda('RUT')).toEqual(['FICHA_GENERAL', 'FICHA_TRIBUTARIA', 'FICHA_LEGAL']);
+    expect(seccionesQueRespalda('camara_comercio')).toEqual(['FICHA_GENERAL', 'FICHA_LEGAL']);
+    expect(seccionesQueRespalda('ESTADOS_FINANCIEROS')).toEqual(['FICHA_FINANCIERA']);
+    expect(seccionesQueRespalda(null)).toEqual([]);
+    expect(seccionesQueRespalda('SARLAFT')).toEqual([]);
   });
 });

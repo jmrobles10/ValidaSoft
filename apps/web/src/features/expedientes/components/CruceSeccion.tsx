@@ -1,24 +1,8 @@
 import { Alert, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
-import type { CampoCruzadoDto, CruceDeRequisitoDto, CruceDeSeccionDto } from '@validasoft/api-client';
+import type { CruceDeRequisitoDto, CruceDeSeccionDto } from '@validasoft/api-client';
 import { useTranslation } from 'react-i18next';
 import { SeccionFicha } from '../../terceros/SeccionesVinculo';
-
-/** Tono de cada resultado del cruce: coincide en verde, difiere en ámbar (rojo si es crítico), sin verificar en gris. */
-function tono(campo: CampoCruzadoDto): 'exito' | 'advertencia' | 'error' | 'neutro' {
-  if (campo.resultado === 'Coincide') return 'exito';
-  if (campo.resultado === 'Discrepa') return campo.critico ? 'error' : 'advertencia';
-  return 'neutro';
-}
-
-const RESULTADOS = ['Coincide', 'Discrepa', 'NoVerificable'] as const;
-type Resultado = (typeof RESULTADOS)[number];
-const esResultado = (valor: string): valor is Resultado => (RESULTADOS as readonly string[]).includes(valor);
-
-/** Confianza de la lectura en porcentaje es-CO («97 %»). */
-// eslint-disable-next-line react-refresh/only-export-components -- F5 en progreso: mover esta función a su propio archivo.
-export function porcentaje(valor: number): string {
-  return new Intl.NumberFormat('es-CO', { style: 'percent', maximumFractionDigits: 0 }).format(valor);
-}
+import { esResultadoCruce, porcentaje, tonoDeCampo } from '../cruce';
 
 /**
  * Cruce de la sección con los documentos que la respaldan (F5, FM-8): por documento, la tabla campo por campo con lo
@@ -83,8 +67,8 @@ export function TablaCruce({ cruce }: { cruce: CruceDeSeccionDto }) {
           </TableHead>
           <TableBody>
             {cruce.campos.map((campo, i) => {
-              const color = tono(campo);
-              const resultado = esResultado(campo.resultado) ? t(`cruce.resultados.${campo.resultado}`) : campo.resultado;
+              const color = tonoDeCampo(campo);
+              const resultado = esResultadoCruce(campo.resultado) ? t(`cruce.resultados.${campo.resultado}`) : campo.resultado;
               return (
                 <TableRow key={`${campo.campo}-${String(i)}`} data-resultado={campo.resultado} aria-label={`${campo.etiqueta}: ${resultado}`}>
                   <TableCell sx={{ borderLeft: 3, borderLeftColor: `estado.${color}.borde`, fontWeight: 500 }}>

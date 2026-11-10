@@ -27,10 +27,16 @@ export const cruce = {
     seccionSinDiligenciar: '{{seccion}}: sin diligenciar.',
     seccionSinCruce: '{{seccion}} (versión {{n}}): sin cruce.',
     seccion: '{{seccion}} (versión {{n}})',
+    sinCruce: 'Sin cruce con esta versión.',
+    coincide: 'Coincide',
+    criticas: 'Difiere en campos críticos',
+    difiere_one: 'Difiere en {{count}} campo',
+    difiere_other: 'Difiere en {{count}} campos',
   },
   justificacion: {
     etiqueta: 'Justificación de la aprobación',
     ayuda: 'El cruce con el documento difiere en campos críticos de {{requisitos}}. Explica por qué apruebas (al menos 10 caracteres).',
+    falta: 'Escribe la justificación de la aprobación (al menos 10 caracteres).',
   },
   editor: {
     usarComoSoporte: 'Usar como soporte de las secciones',

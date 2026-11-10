@@ -1,19 +1,45 @@
-import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient, type Query } from '@tanstack/react-query';
 import {
   buscarEnCatalogoPublico,
   evaluarSeccionFicha,
   getBuscarEnCatalogoPublicoQueryOptions,
   getObtenerFichaQueryKey,
+  getListarPropuestasFichaQueryOptions,
   getObtenerFichaQueryOptions,
+  getObtenerPropuestasSeccionQueryOptions,
   getObtenerSeccionFichaQueryKey,
   getObtenerSeccionFichaQueryOptions,
   guardarSeccionFicha,
   type CompletitudSeccionDto,
   type EntradaCatalogoDto,
+  type ErrorApi,
   type GuardarSeccionDto,
+  type PropuestaDeSeccionDto,
   type SeccionGuardadaDto,
 } from '@validasoft/api-client';
 import { useDiferido } from '../shared/useDiferido';
+
+/** Cada cuánto se vuelve a preguntar mientras la IA lee el documento nuevo, y cuántas veces como máximo (≈ 30 s). */
+const ESPERA_DE_LECTURA_MS = 3000;
+const MAXIMO_ESPERAS_DE_LECTURA = 10;
+
+/**
+ * Una propuesta «sin lectura automática» puede ser solo que el análisis del documento aún no termina (corre en segundo plano al
+ * subirlo): se vuelve a consultar unas veces y se deja de insistir (sin plan de IA nunca llegará).
+ */
+function esperarLectura(consulta: Query<PropuestaDeSeccionDto[], ErrorApi>): number | false {
+  return consulta.state.data?.some((p) => !p.disponible) && consulta.state.dataUpdateCount < MAXIMO_ESPERAS_DE_LECTURA ? ESPERA_DE_LECTURA_MS : false;
+}
+
+/**
+ * Actualizar desde el documento (F5, FM-14): lo que cada documento nuevo (RUT, Cámara…) propone para las secciones. Solo
+ * lectura: el tercero confirma o corrige en el formulario y guarda como siempre; nada se guarda solo.
+ */
+export const usePropuestasDeFicha = () => useQuery({ ...getListarPropuestasFichaQueryOptions(), staleTime: 0, refetchInterval: esperarLectura });
+
+/** Las propuestas para una sección (y periodo), con los datos de la sección ya cambiados para prellenar el formulario. */
+export const usePropuestasDeSeccion = (codigo: string, periodo: number | null) =>
+  useQuery({ ...getObtenerPropuestasSeccionQueryOptions(codigo, parametrosPeriodo(periodo)), staleTime: 0, refetchInterval: esperarLectura });
 
 export type Catalogo = 'ciudades' | 'actividades-economicas' | 'responsabilidades-dian' | 'especialidades';
 
@@ -37,6 +63,8 @@ export function useGuardarSeccion(codigo: string, periodo: number | null) {
     onSuccess: (respuesta: SeccionGuardadaDto) => {
       cliente.setQueryData(getObtenerSeccionFichaQueryKey(codigo, parametrosPeriodo(periodo)), respuesta.seccion);
       void cliente.invalidateQueries({ queryKey: getObtenerFichaQueryKey() });
+      // Con la versión nueva guardada (y su soporte) las propuestas ya no son las mismas.
+      void cliente.invalidateQueries({ predicate: (consulta) => typeof consulta.queryKey[0] === 'string' && consulta.queryKey[0].endsWith('/propuestas') });
     },
   });
 }
