@@ -3,13 +3,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Ficha;
+using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
+using Validasoft.Dominio.Vinculos;
+using Wolverine;
 using Wolverine.Http;
+using Wolverine.Runtime;
 
 namespace Validasoft.Aplicacion.Ficha;
 
@@ -51,7 +56,9 @@ public static class MapeosFicha
 /// <summary>
 /// Guardado de una sección (FM-16, FM-18): lee y normaliza los datos (422 de formato), verifica los soportes contra la bóveda
 /// (FM-5), aplica la regla única y, si la huella cambió, agrega la versión al stream y refleja el <see cref="EstadoDeFicha"/>
-/// en la misma transacción. Las carreras (dos guardados a la vez) se reintentan.
+/// en la misma transacción. Las carreras (dos guardados a la vez) se reintentan. Con <c>mensajes</c> (F2) la versión nueva
+/// queda disponible para las empresas: por el outbox, cada vínculo aceptado del tercero pone al día su expediente abierto
+/// o abre la actualización de la sección que ya tenía aceptada (<see cref="SincronizarRequisitosDelVinculo"/>).
 /// </summary>
 public static class GuardadoDeSecciones
 {
@@ -63,7 +70,7 @@ public static class GuardadoDeSecciones
     public sealed record Resultado(SeccionDeFicha Seccion, bool Creada, EstadoDeFicha Estado, TipoPersona TipoPersona);
 
     public static async Task<Resultado> GuardarAsync(ISesiones sesiones, Guid terceroId, DefinicionDeSeccion definicion, int? periodo, GuardarSeccionDto dto,
-        OrigenDeSeccion origen, string autor, TimeProvider reloj, CancellationToken ct)
+        OrigenDeSeccion origen, string autor, TimeProvider reloj, CancellationToken ct, IMessageBus? mensajes = null, IContextoSolicitud? solicitud = null)
     {
         var hoy = reloj.Hoy();
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, hoy);
@@ -82,7 +89,7 @@ public static class GuardadoDeSecciones
         return await ConReintentosAsync(async () =>
         {
             var ahora = reloj.GetUtcNow();
-            await using var sesion = sesiones.Boveda();
+            await using var sesion = sesiones.Boveda(mensajes);
             var id = SeccionDeFicha.IdPara(terceroId, definicion.Codigo, periodoValido);
             var existente = await sesion.Events.FetchStreamStateAsync(id, ct) is not null;
             var stream = existente ? await sesion.Events.FetchForExclusiveWriting<SeccionDeFicha>(id, ct) : null;
@@ -109,9 +116,26 @@ public static class GuardadoDeSecciones
             var proyectada = actual.Proyectar(eventos);
             estado.Reflejar(proyectada);
             sesion.Store(estado);
+            if (mensajes is not null && solicitud is not null)
+                await PedirSincronizacionAsync(sesion, terceroId, mensajes, solicitud, ct);
             await sesion.SaveChangesAsync(ct);
             return new Resultado(proyectada, true, estado, tercero.TipoPersona);
-        });
+        }, mensajes);
+    }
+
+    /// <summary>
+    /// Una versión nueva de la sección: cada vínculo aceptado del tercero (de cualquier tenant) pide poner al día su expediente
+    /// (RQ-2) o abrir la actualización (RV-1). El manejador es idempotente y solo actúa si el flujo pide la sección.
+    /// </summary>
+    private static async Task PedirSincronizacionAsync(IDocumentSession sesion, Guid terceroId, IMessageBus mensajes, IContextoSolicitud contexto,
+        CancellationToken ct)
+    {
+        var vinculos = await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.InvitacionAceptada).ToListAsync(ct);
+        if (vinculos.Count == 0)
+            return;
+        var empresas = (await sesion.LoadManyAsync<Empresa>(ct, vinculos.Select(v => v.EmpresaId).Distinct().ToArray())).ToDictionary(e => e.Id);
+        await ComparticionDeDocumentos.PedirSincronizacionAsync(mensajes,
+            vinculos.Where(v => empresas.ContainsKey(v.EmpresaId)).Select(v => (empresas[v.EmpresaId].TenantId, v.Id)), contexto);
     }
 
     /// <summary>
@@ -159,8 +183,11 @@ public static class GuardadoDeSecciones
                ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
     }
 
-    /// <summary>Como <see cref="Peticiones.ConReintentosAsync{T}"/>, también cuando dos guardados inician el mismo stream a la vez.</summary>
-    internal static async Task<T> ConReintentosAsync<T>(Func<Task<T>> accion, int intentos = 10)
+    /// <summary>
+    /// Como <see cref="Peticiones.ConReintentosAsync{T}"/>, también cuando dos guardados inician el mismo stream a la vez. Con
+    /// <paramref name="mensajes"/>, antes de reintentar descarta lo que el intento fallido dejó en el outbox.
+    /// </summary>
+    internal static async Task<T> ConReintentosAsync<T>(Func<Task<T>> accion, IMessageBus? mensajes = null, int intentos = 10)
     {
         for (var intento = 1; ; intento++)
         {
@@ -171,6 +198,8 @@ public static class GuardadoDeSecciones
             catch (Exception e) when (intento < intentos && (Peticiones.EsCarrera(e) || e is CarreraDeFicha ||
                                                          e.GetType().Name == "ExistingStreamIdCollisionException"))
             {
+                if (mensajes is MessageContext pendientes)
+                    await pendientes.ClearAllAsync();
                 await Task.Delay(Random.Shared.Next(5, 25 * intento));
             }
         }
@@ -223,12 +252,12 @@ public static class FichaMaestraEndpoints
     [WolverinePut("/public/v1/ficha/{seccion}")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<SeccionGuardadaDto> Guardar(string seccion, int? periodo, GuardarSeccionDto dto, HttpContext http, ISesiones sesiones,
-        TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
     {
         var terceroId = SesionDeTercero.De(http.User).TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         var resultado = await GuardadoDeSecciones.GuardarAsync(sesiones, terceroId, definicion, periodo, dto, OrigenDeSeccion.Tercero, terceroId.ToString(),
-            reloj, ct);
+            reloj, ct, mensajes, contexto);
         var vigente = resultado.Seccion.Vigente!;
         return new SeccionGuardadaDto(vigente.Numero, resultado.Creada, vigente.Completitud.ADto(),
             resultado.Estado.SiguienteSeccion(resultado.TipoPersona, definicion.Codigo), resultado.Seccion.ADto(definicion, resultado.Seccion.Periodo));

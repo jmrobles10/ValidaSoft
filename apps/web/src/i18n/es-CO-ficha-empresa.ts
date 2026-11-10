@@ -1,0 +1,91 @@
+/**
+ * Textos es-CO de las secciones de la ficha como requisitos del flujo (F2, FM-25..FM-31): editor de flujos, expediente,
+ * decisión, revalidaciones y Tercero 360. Se integran en `es-CO.ts` como `fichaEmpresa`.
+ */
+export const fichaEmpresa = {
+  secciones: {
+    FICHA_GENERAL: 'Información general',
+    FICHA_TRIBUTARIA: 'Información tributaria',
+    FICHA_FINANCIERA: 'Información financiera',
+    FICHA_LEGAL: 'Información legal',
+    FICHA_SST: 'Seguridad y salud en el trabajo',
+    FICHA_ESPECIALIDADES: 'Especialidades',
+  },
+  campos: { soporte: 'Soporte' },
+  editor: {
+    agregarSeccion: 'Agregar sección de la información',
+    nueva: 'Sección nueva',
+    seccion: 'Sección de la información del tercero',
+    periodos: 'Periodos',
+    periodosAyuda: '1 = el último cierre; hasta 5.',
+    exigeSoporte: 'Exige soporte',
+    quitar: 'Quitar sección',
+    ayuda: 'El tercero la diligencia una sola vez en «Mi información»; la empresa la revisa con las áreas elegidas.',
+    noAplicaNatural: 'Legal y Financiera no aplican a persona natural: a ella no se le piden.',
+    errores: {
+      'seccion-invalida': 'Elige la sección.',
+      'requisito-duplicado': 'Esa sección ya está en la lista.',
+      'periodos-no-aplica': 'Solo la información financiera va por periodos.',
+      'periodos-invalidos': 'Entre 1 y 5 periodos.',
+      'requisito-invalido': 'Un requisito pide un documento o una sección, no ambos.',
+    },
+  },
+  requisito: {
+    sinEvaluar: 'Se evalúa cuando el tercero acepte la invitación.',
+    completa: 'Completa para la empresa',
+    incompleta_one: 'Le falta {{count}} dato para la empresa',
+    incompleta_other: 'Le faltan {{count}} datos para la empresa',
+    evaluada: 'Evaluada sobre la versión {{n}}.',
+    otraIncompleta: 'La versión {{n}} del tercero está incompleta para la empresa; sigue vigente la versión {{actual}}.',
+    exigeSoporte: 'Exige soporte',
+    datos: 'Datos de la versión {{n}}',
+    soportes: 'Soportes',
+    sinSoportes: 'Sin soporte.',
+    soporte: '{{tipo}} · versión {{n}}',
+    soporteNoCompartido: 'Soporte del tercero · versión {{n}} (no compartido con este vínculo)',
+    verSoporte: 'Ver',
+    verSoporteAccesible: 'Ver el soporte {{tipo}}, versión {{n}}',
+    campos: 'Campos señalados: {{campos}}',
+  },
+  comparacion: {
+    titulo: 'Qué cambió frente a la versión {{n}} aceptada',
+    sinCambios: 'Los datos son iguales a los de la versión {{n}} aceptada.',
+    campo: 'Campo',
+    antes: 'Antes',
+    ahora: 'Ahora',
+    agregada: 'Se agregó {{etiqueta}}',
+    quitada: 'Se quitó {{etiqueta}}',
+    modificada: 'Se modificó {{etiqueta}}',
+    tipos: { Agregado: 'agregado', Quitado: 'quitado', Modificado: 'modificado' },
+    vacio: '—',
+  },
+  observar: {
+    campos: 'Campos por corregir (opcional)',
+    camposAyuda: 'El tercero los ve señalados al corregir la sección en «Mi información».',
+  },
+  aceptaciones: {
+    titulo: 'Validación de la empresa',
+    aceptada: '{{vinculo}}: aceptada la versión {{n}} el {{fecha}}',
+    sinAceptar: '{{vinculo}}: aún no la acepta',
+    expediente: 'Expediente {{folio}}',
+    verExpediente: 'Ver el expediente {{folio}}',
+    pendiente: 'Versión nueva pendiente de revisión',
+    revalidacion: 'Revalidación {{folio}}: versión {{n}}, plazo hasta el {{fecha}}',
+    verRevalidacion: 'Ver la revalidación {{folio}}',
+  },
+  revalidacion: {
+    seccion: 'Sección de la información',
+    cambios: 'Cambios en la sección',
+    cambiosAyuda: 'En su expediente ves qué cambió frente a la versión aceptada.',
+  },
+} as const;
+
+/** Códigos de ProblemDetails de las secciones como requisitos (FM-25, FM-28). */
+export const erroresFichaEmpresa = {
+  'seccion-invalida': 'Esa sección de la información no existe. Elige una de la lista.',
+  'periodos-no-aplica': 'Solo la información financiera va por periodos.',
+  'periodos-invalidos': 'Se piden entre 1 y 5 periodos de la información financiera.',
+  'campos-solo-en-secciones': 'Los campos se señalan al observar una sección de la información, no un documento.',
+  'campos-solo-al-observar': 'Los campos señalados solo acompañan una observación.',
+  'campos-invalidos': 'Señala hasta 50 campos.',
+} as const;

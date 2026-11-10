@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { Tarjeta } from '../../../shared/componentes';
 import { SeccionFicha } from '../SeccionesVinculo';
+import { AceptacionesSeccion } from './AceptacionesSeccion';
 import { DatosDeSeccion } from './DatosDeSeccion';
 import { esObjeto } from './formato';
 
@@ -17,8 +18,8 @@ interface Props {
 
 /**
  * «Información del tercero» en Tercero 360 (docs/14 §7): una tarjeta por sección vigente de la ficha maestra con su
- * estado (completa o lo que falta), versión y fecha, los datos en solo lectura y sus soportes. Sin acciones: aceptar u
- * observar llega con F2.
+ * estado (completa o lo que falta), versión y fecha, lo que la empresa activa tiene aceptado (F2, FM-29), los datos en
+ * solo lectura y sus soportes. Sin acciones: la sección se acepta u observa en el expediente.
  */
 export function InformacionTercero({ empresaId, secciones, vinculos }: Props) {
   const { t } = useTranslation();
@@ -73,6 +74,7 @@ function TarjetaSeccion({ empresaId, seccion, vinculos }: { empresaId: string; s
             {t('fichaMaestra.version', { n: String(seccion.version), fecha: seccion.fecha ? formatearFecha(seccion.fecha) : '—' })}
           </Typography>
         )}
+        {seccion.aceptaciones && seccion.aceptaciones.length > 0 && <AceptacionesSeccion empresaId={empresaId} aceptaciones={seccion.aceptaciones} vinculos={vinculos} />}
         {completitud && completitud.faltantes.length > 0 && (
           <SeccionFicha titulo={t('fichaMaestra.faltantes')}>
             <Box component="ul" sx={{ m: 0, pl: 2.5 }}>

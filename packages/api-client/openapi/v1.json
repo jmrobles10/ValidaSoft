@@ -7114,6 +7114,66 @@
           }
         }
       },
+      "AceptacionDeSeccionDto": {
+        "required": [
+          "vinculoId",
+          "versionAceptada",
+          "aceptadaEn",
+          "expedienteId",
+          "folio",
+          "versionNuevaPendiente",
+          "revalidacion"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionAceptada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aceptadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "versionNuevaPendiente": {
+            "type": "boolean"
+          },
+          "revalidacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RevalidacionDeSeccionDto"
+              }
+            ]
+          }
+        }
+      },
       "AceptacionDto": {
         "required": [
           "tipo",
@@ -8070,6 +8130,39 @@
             "items": {
               "$ref": "#/components/schemas/DocumentoBovedaDto"
             }
+          }
+        }
+      },
+      "CambioDeCampoDto": {
+        "required": [
+          "campo",
+          "etiqueta",
+          "anterior",
+          "nuevo",
+          "tipoCambio"
+        ],
+        "type": "object",
+        "properties": {
+          "campo": {
+            "type": "string"
+          },
+          "etiqueta": {
+            "type": "string"
+          },
+          "anterior": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nuevo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoCambio": {
+            "type": "string"
           }
         }
       },
@@ -9780,6 +9873,25 @@
           "versionVigente": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tipoRequisito": {
+            "type": "string",
+            "default": "Documento"
+          },
+          "seccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
               "integer",
               "string"
             ],
@@ -12343,6 +12455,15 @@
               "null",
               "string"
             ]
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -12375,6 +12496,15 @@
               "null",
               "string"
             ]
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -13540,6 +13670,25 @@
                 "$ref": "#/components/schemas/CondicionDto"
               }
             ]
+          },
+          "seccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "exigeSoporte": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13602,6 +13751,20 @@
             "items": {
               "$ref": "#/components/schemas/AreaDeRequisitoDto"
             }
+          },
+          "tipoRequisito": {
+            "type": "string",
+            "default": "Documento"
+          },
+          "seccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeccionDeRequisitoDto"
+              }
+            ]
           }
         }
       },
@@ -13655,6 +13818,20 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "tipoRequisito": {
+            "type": "string",
+            "default": "Documento"
+          },
+          "seccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeccionDeRequisitoDto"
+              }
+            ]
           }
         }
       },
@@ -13782,6 +13959,41 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "RevalidacionDeSeccionDto": {
+        "required": [
+          "expedienteId",
+          "folio",
+          "estado",
+          "version",
+          "plazoHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plazoHasta": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -13946,6 +14158,91 @@
           }
         }
       },
+      "SeccionDeRequisitoDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo",
+          "exigeSoporte",
+          "completitud",
+          "versionEvaluada",
+          "datos",
+          "soportes",
+          "versionAceptada",
+          "cambios"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "exigeSoporte": {
+            "type": "boolean"
+          },
+          "completitud": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CompletitudSeccionDto"
+              }
+            ]
+          },
+          "versionEvaluada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "datos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "soportes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
+          },
+          "versionAceptada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CambioDeCampoDto"
+            }
+          }
+        }
+      },
       "SeccionFichaDto": {
         "required": [
           "seccion",
@@ -14047,6 +14344,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "aceptaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AceptacionDeSeccionDto"
+            }
           }
         }
       },
@@ -15407,6 +15713,15 @@
             "items": {
               "$ref": "#/components/schemas/ObservacionDeRequisitoDto"
             }
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -15496,6 +15811,15 @@
           "derivado": {
             "type": "boolean",
             "default": false
+          },
+          "campos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },

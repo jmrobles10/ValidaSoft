@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Validasoft.Contratos;
 
 // DTOs de motivos, flujos aprobatorios, expedientes y bandeja (docs/05 §2.2, §2.4 y §4). Enums como texto.
@@ -30,10 +32,16 @@ public sealed record EtapaDto(int Orden, IReadOnlyList<AreaDeEtapaDto> Areas);
 /// (<see cref="TipoDocumento"/>); <see cref="Id"/> opcional (se conserva entre versiones si se reenvía).
 /// <see cref="AreasQueRevisan"/> vacío o nulo ⇒ todas las áreas del flujo; <see cref="AprobadoresRequeridos"/> nulo ⇒ los
 /// del área. Al leer vienen los tres identificadores. <see cref="Condicion"/> nula ⇒ se pide siempre (RQ-12).
+/// En vez de un documento, el requisito puede pedir una <see cref="Seccion"/> de la ficha maestra (F2): <c>FICHA_GENERAL</c>,
+/// <c>FICHA_TRIBUTARIA</c>, <c>FICHA_FINANCIERA</c>, <c>FICHA_LEGAL</c>, <c>FICHA_SST</c> o <c>FICHA_ESPECIALIDADES</c>
+/// (sin tipo de documento), con <see cref="Periodos"/> (solo la financiera: cuántos cierres, 1 por omisión) y
+/// <see cref="ExigeSoporte"/> (la versión debe traer soporte para estar completa para la empresa). Las áreas que revisan son
+/// el «responsable por sector» del SRM. A la persona natural no se le piden Legal ni Financiera.
 /// </summary>
 public sealed record RequisitoDelFlujoDto(
     Guid? Id = null, Guid? TipoDocumentoTenantId = null, string? TipoDocumento = null, bool Obligatorio = true,
-    IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null, CondicionDto? Condicion = null);
+    IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null, CondicionDto? Condicion = null, string? Seccion = null,
+    int? Periodos = null, bool ExigeSoporte = false);
 
 /// <summary>
 /// «Se pide cuando» (docs/03 §12, RQ-12). <see cref="Tipo"/>: <c>Y</c>|<c>O</c>|<c>No</c> combinan <see cref="Nodos"/>
@@ -88,15 +96,20 @@ public sealed record TerceroResumenDto(Guid Id, string Nombre, string Identifica
 /// Veredicto de un área. <see cref="Usuario"/>: id del revisor (o del administrador); nulo si lo emitió el sistema.
 /// <see cref="Superado"/>: dejó de contar porque el tercero reenvió tras la observación (o se eximió el requisito).
 /// En un requisito: <see cref="SobreVersion"/> (número de la versión decidida) e <see cref="Invalidado"/> (llegó una
-/// versión nueva). <see cref="Derivado"/>: aprobación del área que el sistema dedujo de sus requisitos.
+/// versión nueva). <see cref="Derivado"/>: aprobación del área que el sistema dedujo de sus requisitos. <see cref="Campos"/>:
+/// campos de la sección señalados al observarla (F2).
 /// </summary>
 public sealed record VeredictoEmitidoDto(
     Guid Id, string Veredicto, string Origen, string? Usuario, DateTimeOffset Fecha, IReadOnlyList<string> Motivos, string? Observacion,
     string? Justificacion, bool Vigente, bool Superado, bool Anulado, string? AnuladoPor, int? SobreVersion = null, bool Invalidado = false,
-    bool Derivado = false);
+    bool Derivado = false, IReadOnlyList<string>? Campos = null);
 
-/// <summary>Documento que «Aprobar área» decidiría y la versión vigente que debe acompañarlo en <c>versiones</c>.</summary>
-public sealed record DocumentoPorDecidirDto(Guid RequisitoId, int VersionVigente);
+/// <summary>
+/// Documento (o sección de la ficha, F2) que «Aprobar área» decidiría y la versión vigente que debe acompañarlo en
+/// <c>versiones</c>. <see cref="TipoRequisito"/>: <c>Documento|Seccion</c>; en una sección, su código y periodo.
+/// </summary>
+public sealed record DocumentoPorDecidirDto(Guid RequisitoId, int VersionVigente, string TipoRequisito = "Documento", string? Seccion = null,
+    int? Periodo = null);
 
 /// <summary>
 /// Área del expediente con sus aprobaciones (<see cref="Aprobaciones"/> de <see cref="AprobadoresRequeridos"/>) y los
@@ -137,11 +150,32 @@ public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffse
 
 /// <summary>
 /// Requisito del expediente (<c>RequisitoDto</c> de docs/05 §4, reducido). <see cref="Estado"/>:
-/// <c>Pendiente|Cargado|EnRevision|Observado|Aprobado|Eximido</c>.
+/// <c>Pendiente|Cargado|EnRevision|Observado|Aprobado|Eximido</c>. <see cref="TipoRequisito"/>: <c>Documento|Seccion</c>; en una
+/// sección de la ficha (F2) <see cref="TipoDocumento"/> lleva el código y nombre de la sección (modo <c>Formulario</c>),
+/// <see cref="VersionActual"/> la versión de la sección (<c>documentoId</c> = id de la sección, <c>sha256</c> = huella) y
+/// <see cref="Seccion"/> el detalle: completitud para la empresa, datos, soportes y cambios frente a lo aceptado.
 /// </summary>
 public sealed record RequisitoExpedienteDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual, int Reenvios,
-    ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas);
+    ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas, string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null);
+
+/// <summary>
+/// Cambio de un campo o fila entre la versión que la empresa aceptó y la nueva (las Actualizaciones del SRM, F2):
+/// <see cref="Campo"/> ruta snake_case (<c>direccion</c>, <c>personas[1].porcentaje</c>, <c>ica[0]</c>), etiqueta legible,
+/// valores como texto (nulos si no había o ya no hay) y <see cref="TipoCambio"/> <c>Agregado|Quitado|Modificado</c>.
+/// </summary>
+public sealed record CambioDeCampoDto(string Campo, string Etiqueta, string? Anterior, string? Nuevo, string TipoCambio);
+
+/// <summary>
+/// Detalle del requisito de sección (F2). <see cref="Completitud"/>: completitud <b>para la empresa</b> de la última versión
+/// evaluada (<see cref="VersionEvaluada"/>), guardada en el expediente, con el motivo legible de cada faltante (p. ej. «Falta el
+/// soporte de la información general»); nula si el tercero aún no aceptó la invitación. <see cref="Datos"/> y
+/// <see cref="Soportes"/> son los de la versión que cubre el requisito. <see cref="VersionAceptada"/>: la que la empresa tenía
+/// aceptada en el vínculo; si la versión actual es otra, <see cref="Cambios"/> trae solo lo que cambió (anterior → nuevo).
+/// </summary>
+public sealed record SeccionDeRequisitoDto(
+    string Seccion, string Nombre, int? Periodo, bool ExigeSoporte, CompletitudSeccionDto? Completitud, int? VersionEvaluada, JsonElement? Datos,
+    IReadOnlyList<SoporteSeccionDto> Soportes, int? VersionAceptada, IReadOnlyList<CambioDeCampoDto> Cambios);
 
 public sealed record EtapaExpedienteDto(int Orden, string Estado, DateTimeOffset? ActivadaEn, DateTimeOffset? AprobadaEn,
     IReadOnlyList<AreaExpedienteDto> Areas);
@@ -180,13 +214,20 @@ public sealed record ExpedienteDto(
 /// <item>Decisión de área con requisitos (DA-1): <c>Aprobado</c> lleva <see cref="Versiones"/> (requisitoId → versión que
 /// vio el revisor de cada documento que decide); <c>Observado</c> lleva <see cref="Requisitos"/> (los documentos
 /// marcados). <see cref="Motivos"/> y <see cref="Observacion"/> de primer nivel no se usan.</item>
+/// <item>Al observar una sección de la ficha (F2), <see cref="Campos"/> (u <c>ObservacionDeRequisitoDto.Campos</c>) señala,
+/// opcional, los campos que el tercero debe corregir (rutas snake_case).</item>
 /// </list>
 /// </summary>
 public sealed record VeredictoDto(string Veredicto, IReadOnlyList<string>? Motivos = null, string? Observacion = null, int? SobreVersion = null,
-    IReadOnlyDictionary<Guid, int>? Versiones = null, IReadOnlyList<ObservacionDeRequisitoDto>? Requisitos = null);
+    IReadOnlyDictionary<Guid, int>? Versiones = null, IReadOnlyList<ObservacionDeRequisitoDto>? Requisitos = null,
+    IReadOnlyList<string>? Campos = null);
 
-/// <summary>Documento marcado al observar el área: la versión que se revisó, al menos un motivo y la observación.</summary>
-public sealed record ObservacionDeRequisitoDto(Guid RequisitoId, int? SobreVersion, IReadOnlyList<string>? Motivos, string? Observacion = null);
+/// <summary>
+/// Documento (o sección) marcado al observar el área: la versión que se revisó, al menos un motivo, la observación y, en una
+/// sección, los campos señalados.
+/// </summary>
+public sealed record ObservacionDeRequisitoDto(Guid RequisitoId, int? SobreVersion, IReadOnlyList<string>? Motivos, string? Observacion = null,
+    IReadOnlyList<string>? Campos = null);
 
 /// <summary>Rechazo terminal: solo un área con <c>puedeRechazarExpediente</c>; motivos y justificación obligatorios.</summary>
 public sealed record RechazarExpedienteDto(Guid AreaId, IReadOnlyList<string> Motivos, string Justificacion);
@@ -235,16 +276,22 @@ public sealed record ResultadoDeLoteDto(int Aprobadas, IReadOnlyList<FalloDeLote
 
 public sealed record MotivoPublicoDto(string Codigo, string Texto);
 
-/// <summary><see cref="Requisito"/>: código del documento observado (nulo si la observación es sobre el expediente).</summary>
-public sealed record ObservacionPublicaDto(IReadOnlyList<MotivoPublicoDto> Motivos, string? Observacion, DateTimeOffset Fecha, string? Requisito = null);
+/// <summary>
+/// <see cref="Requisito"/>: código del documento (o sección) observado (nulo si la observación es sobre el expediente);
+/// <see cref="Campos"/>: campos de la sección que hay que corregir (F2).
+/// </summary>
+public sealed record ObservacionPublicaDto(IReadOnlyList<MotivoPublicoDto> Motivos, string? Observacion, DateTimeOffset Fecha, string? Requisito = null,
+    IReadOnlyList<string>? Campos = null);
 
 /// <summary>
 /// Requisito visto por el tercero, sin áreas ni revisores: si falta (<c>Pendiente</c>), si está observado y con qué
-/// motivo (<see cref="Observaciones"/> vigentes), y la versión que lo cubre.
+/// motivo (<see cref="Observaciones"/> vigentes), y la versión que lo cubre. En una sección de la ficha (F2,
+/// <see cref="TipoRequisito"/> <c>Seccion</c>) <see cref="Seccion"/> dice qué le falta para la empresa (se corrige en el wizard).
 /// </summary>
 public sealed record RequisitoPublicoDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual,
-    IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeRatificar = false, DateTimeOffset? RatificadoEn = null);
+    IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeRatificar = false, DateTimeOffset? RatificadoEn = null,
+    string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null);
 
 /// <summary>
 /// Lo que el tercero ve de su expediente: estado, observaciones vigentes y los documentos que le piden

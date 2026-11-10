@@ -1,14 +1,16 @@
 import { Box, Stack, Typography } from '@mui/material';
 import type { ExpedientePublicoDto } from '@validasoft/api-client';
 import { useTranslation } from 'react-i18next';
-import { enlaceDeSubida, requisitosPorGrupo, type GrupoRequisito } from './requisitos';
+import { enlaceDeSubida, esRequisitoDeSeccion, requisitosPorGrupo, type GrupoRequisito } from './requisitos';
 import { TarjetaRequisito } from './TarjetaRequisito';
+import { TarjetaRequisitoSeccion } from './TarjetaRequisitoSeccion';
 
 const GRUPOS: readonly GrupoRequisito[] = ['te-toca', 'en-revision', 'listo'];
 
 /**
  * Los documentos que pide la empresa, agrupados en «Te toca», «Lo revisa la empresa» y «Listo»: cada grupo es una lista
- * con divisores dentro de un solo marco (nunca una tarjeta por documento).
+ * con divisores dentro de un solo marco (nunca una tarjeta por documento). Una sección de «Mi información» (F2) se
+ * completa o corrige en el wizard, no se sube aquí.
  */
 export function RequisitosDelExpediente({ expediente, vinculoId, soloLectura = false }: { expediente: ExpedientePublicoDto; vinculoId: string | null; soloLectura?: boolean }) {
   const { t } = useTranslation();
@@ -40,9 +42,13 @@ export function RequisitosDelExpediente({ expediente, vinculoId, soloLectura = f
                 '& > li + li': { borderTop: 1, borderColor: 'divider' },
               })}
             >
-              {grupos[grupo].map((r) => (
-                <TarjetaRequisito key={r.id} requisito={r} expediente={expediente} enlace={soloLectura ? null : enlaceDeSubida(r, vinculoId, expediente.id)} />
-              ))}
+              {grupos[grupo].map((r) =>
+                esRequisitoDeSeccion(r) ? (
+                  <TarjetaRequisitoSeccion key={r.id} requisito={r} expediente={expediente} conAccion={!soloLectura} />
+                ) : (
+                  <TarjetaRequisito key={r.id} requisito={r} expediente={expediente} enlace={soloLectura ? null : enlaceDeSubida(r, vinculoId, expediente.id)} />
+                ),
+              )}
             </Box>
           </Box>
         ))}

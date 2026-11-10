@@ -8,9 +8,11 @@ import {
   type EntradaCatalogoDto,
   type EstadoFichaDto,
   type EstadoSeccionFichaDto,
+  type ExpedientePublicoDto,
   type FaltanteSeccionDto,
   type SeccionFichaDto,
   type SeccionGuardadaDto,
+  type VinculoPublicoDto,
 } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -95,6 +97,9 @@ interface Escenario {
   catalogos?: Record<string, EntradaCatalogoDto[]>;
   /** Respuesta del PUT de la sección. */
   alGuardar?: (p: Peticion) => Response;
+  /** Vínculos del tercero y sus expedientes (las observaciones de las empresas, F2). */
+  vinculos?: VinculoPublicoDto[];
+  expedientes?: Record<string, ExpedientePublicoDto>;
 }
 
 /** Monta el wizard en `ruta` con una API falsa; devuelve los PUT que recibió. */
@@ -114,6 +119,9 @@ export function montarFicha(ruta: string, escenario: Escenario) {
         const codigo = url.pathname.split('/').pop() ?? '';
         return Promise.resolve(json(200, escenario.secciones?.[codigo] ?? seccion(codigo)));
       }
+      if (url.pathname === '/public/v1/vinculos' && escenario.vinculos) return Promise.resolve(json(200, escenario.vinculos));
+      const expediente = url.pathname.startsWith('/public/v1/expedientes/') ? escenario.expedientes?.[url.pathname.split('/').pop() ?? ''] : undefined;
+      if (expediente) return Promise.resolve(json(200, expediente));
       if (url.pathname === '/public/v1/boveda') return Promise.resolve(json(200, { terceroId: 't1', documentos: escenario.documentos ?? [] }));
       if (url.pathname.startsWith('/public/v1/catalogos/')) {
         const catalogo = url.pathname.split('/').pop() ?? '';

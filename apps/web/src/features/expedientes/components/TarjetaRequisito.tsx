@@ -1,14 +1,16 @@
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
-import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type ExpedienteDto, type HechosDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
+import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type DocumentoVistaEmpresaDto, type ExpedienteDto, type HechosDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha } from '@validasoft/ui';
-import { Clock, FileText } from 'lucide-react';
+import { ClipboardList, Clock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hashCorto } from '../../documentos/api';
+import { etiquetaDeRuta } from '../../terceros/ficha/secciones';
 import { ResumenVersion } from '../../documentos/ResumenVersion';
 import type { DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import type { ContextoRevisor, DialogoExpediente } from '../reglas';
 import { bloqueoRequisito, documentoEnVisor, puedeEximir, veredictosInvalidados, veredictosVigentesDeRequisito, type BloqueoRequisito } from '../requisitos';
 import { BotonVerVersion } from './BotonVerVersion';
+import { DetalleSeccionRequisito } from './DetalleSeccionRequisito';
 
 /** Bloqueos que se explican a quien revisa (los demás no dicen nada útil: sin permiso, cerrado). */
 const BLOQUEOS_EXPLICADOS = ['expediente-en-carga', 'expediente-observado', 'vinculo-bloqueado', 'sin-version', 'area-esperando', 'no-es-miembro', 'ya-voto'] as const;
@@ -31,24 +33,29 @@ export interface TarjetaRequisitoProps {
   decidirPorDocumento?: boolean;
   /** Hechos de la versión vigente (de los documentos del vínculo): la revisión automática (IA-11). */
   hechos?: HechosDto | null;
+  /** Documentos compartidos con el vínculo: abren en el visor los soportes de una sección. */
+  documentos?: readonly DocumentoVistaEmpresaDto[];
 }
 
 /**
- * Un documento que pide el flujo: estado, versión vigente (con «Ver» en el visor si trae archivo), su vigencia, los
+ * Un documento (o sección de la información del tercero, F2) que pide el flujo: estado, versión vigente (con «Ver» en el visor si trae archivo), su vigencia, los
  * datos que declaró el tercero, la revisión automática y, por cada área que lo revisa, su
- * estado, sus veredictos sobre la versión y «Aprobar u observar» cuando le toca a quien mira (RQ-4).
+ * estado, sus veredictos sobre la versión y «Aprobar u observar» cuando le toca a quien mira (RQ-4). Una sección muestra
+ * en su lugar la completitud para la empresa, los cambios, sus datos y sus soportes (DetalleSeccionRequisito).
  */
-export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false, hechos }: TarjetaRequisitoProps) {
+export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombres, puedeVer, onVer, onAccion, decidirPorDocumento = false, hechos, documentos = [] }: TarjetaRequisitoProps) {
   const { t } = useTranslation();
   const version = requisito.versionActual;
-  const visor = documentoEnVisor(requisito, hechos);
+  const seccion = requisito.seccion ?? null;
+  const visor = seccion ? null : documentoEnVisor(requisito, hechos);
+  const Icono = seccion ? ClipboardList : FileText;
   const documento = requisito.tipoDocumento.nombre;
   const eximir = puedeEximir(expediente, requisito, contexto(null).scopes);
 
   return (
     <Box component="li" sx={{ listStyle: 'none', border: 1, borderColor: requisito.estado === 'Observado' ? 'estado.advertencia.borde' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}>
       <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <FileText size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', marginTop: 2, opacity: 0.7 }} />
+        <Icono size={18} strokeWidth={1.75} aria-hidden style={{ flex: 'none', marginTop: 2, opacity: 0.7 }} />
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography component="h4" sx={{ fontWeight: 600, fontSize: 14, lineHeight: '20px' }}>
             {documento}
@@ -83,7 +90,8 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
           <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} hechos={visor.sinArchivo ? null : visor.hechos} tipoEsperado={visor.tipoEsperado} />
         </Box>
       )}
-      {!version && requisito.estado === 'Pendiente' && (
+      {seccion && <DetalleSeccionRequisito requisito={requisito} seccion={seccion} documentos={documentos} puedeVer={puedeVer} onVer={onVer} />}
+      {!seccion && !version && requisito.estado === 'Pendiente' && (
         <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 1 }}>
           {t('expedientes.requisitos.sinVersion')}
         </Typography>
@@ -179,6 +187,7 @@ function AreaDelRequisito({
           {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.sobreVersion', { n: String(v.sobreVersion ?? '—') })}
           {v.observacion ? ` · “${v.observacion}”` : ''}
           {v.justificacion ? ` · ${v.justificacion}` : ''}
+          {v.campos?.length ? ` · ${t('fichaEmpresa.requisito.campos', { campos: v.campos.map((c) => etiquetaDeRuta(c, t)).join(', ') })}` : ''}
         </Typography>
       ))}
       {veredictosInvalidados(areaRequisito).map((v) => (

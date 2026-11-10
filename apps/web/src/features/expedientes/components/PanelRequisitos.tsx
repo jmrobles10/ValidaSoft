@@ -10,7 +10,7 @@ import { enFaseDeCarga, requisitosDe, requisitosFaltantes } from '../requisitos'
 import { TarjetaRequisito } from './TarjetaRequisito';
 
 /**
- * Documentos que pide el flujo (docs/05 §2.4.2): la fase de carga mientras falten obligatorios y, por documento, su
+ * Documentos (y secciones de la información del tercero, F2) que pide el flujo (docs/05 §2.4.2): la fase de carga mientras falten obligatorios y, por documento, su
  * versión vigente, el visor, la revisión automática y las decisiones de cada área. No se muestra en un flujo sin
  * requisitos (FL-1). Los hechos de cada versión (IA-11) vienen de los documentos del vínculo (`documentos:leer`).
  */
@@ -68,6 +68,7 @@ export function PanelRequisitos({
             onAccion={onAccion}
             decidirPorDocumento={porDocumento}
             hechos={requisito.versionActual ? hechos.get(claveVersion(requisito.versionActual.documentoId, requisito.versionActual.n)) : null}
+            documentos={documentos.data}
           />
         ))}
       </Stack>

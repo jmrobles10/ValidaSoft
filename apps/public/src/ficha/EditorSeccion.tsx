@@ -9,9 +9,11 @@ import { mensajeDeError } from '../shared/errores';
 import { useAvisos } from '../shared/useAvisos';
 import { Faltantes } from './Faltantes';
 import { FormularioDeSeccion } from './FormularioDeSeccion';
+import { ObservacionesDeEmpresas } from './ObservacionesDeEmpresas';
 import { enlaceSeccion, esFaltanteDeSoporte, periodosElegibles, type DefinicionSeccion } from './secciones';
 import { SelectorSoporte } from './SelectorSoporte';
 import { useEditorSeccion } from './useEditorSeccion';
+import { useObservacionesDeSeccion } from './useObservacionesDeSeccion';
 
 interface Props {
   definicion: DefinicionSeccion;
@@ -21,14 +23,17 @@ interface Props {
 }
 
 /**
- * Una sección del wizard: faltantes del servidor arriba, el formulario, el soporte y «Guardar» (borrador) o «Guardar y
+ * Una sección del wizard: lo que observó alguna empresa y los faltantes del servidor arriba, el formulario, el soporte y «Guardar» (borrador) o «Guardar y
  * continuar», que avanza solo si el servidor dice que quedó completa (FM-16, FM-17). Nunca calcula la completitud.
  */
 export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
   const { t } = useTranslation();
   const navegar = useNavigate();
   const mostrar = useAvisos((s) => s.mostrar);
-  const editor = useEditorSeccion(definicion.codigo, periodo, inicial);
+  // Lo que alguna empresa observó de esta sección (F2): arriba del formulario, con sus campos marcados.
+  const observaciones = useObservacionesDeSeccion(definicion.codigo, periodo);
+  const senalados = observaciones.flatMap((o) => o.observacion.campos ?? []);
+  const editor = useEditorSeccion(definicion.codigo, periodo, inicial, senalados.length > 0 ? { campos: senalados, mensaje: t('ficha.observada.campoSenalado') } : null);
   // Cada guardado incompleto lleva el foco (y la vista) a la lista de faltantes.
   const [senalFaltantes, setSenalFaltantes] = useState(0);
   const nombre = periodo ? t('ficha.nombreConPeriodo', { nombre: inicial.nombre, periodo: String(periodo) }) : inicial.nombre;
@@ -81,6 +86,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
             ))}
           </TextField>
         )}
+        <ObservacionesDeEmpresas observaciones={observaciones} />
         {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
         <Faltantes faltantes={editor.faltantes} senal={senalFaltantes} />
         <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} />

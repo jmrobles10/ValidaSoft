@@ -1,4 +1,5 @@
 import type { RevalidacionAAprobarDto, RevalidacionDto } from '@validasoft/api-client';
+import { seccionFicha } from '../terceros/ficha/secciones';
 
 /** Días desde los que el plazo se marca como urgente. */
 export const DIAS_URGENTE = 3;
@@ -6,6 +7,11 @@ export const DIAS_URGENTE = 3;
 /** Una revalidación es un documento de un expediente: la clave combina los dos. */
 export function claveRevalidacion(r: Pick<RevalidacionDto, 'expedienteId' | 'requisitoId'>): string {
   return `${r.expedienteId}|${r.requisitoId}`;
+}
+
+/** Revalidación de una sección de la información del tercero (F2, FM-28): su código es el de la sección. */
+export function esRevalidacionDeSeccion(f: Pick<RevalidacionDto, 'tipoDocumentoCodigo'>): boolean {
+  return seccionFicha(f.tipoDocumentoCodigo) !== null;
 }
 
 /** Las filas de la página que se pueden aprobar en lote (A-18: sin cambios frente a la versión aceptada). */

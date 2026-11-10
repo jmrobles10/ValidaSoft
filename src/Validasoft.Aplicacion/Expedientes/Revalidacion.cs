@@ -5,6 +5,7 @@ using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
 
@@ -14,7 +15,9 @@ namespace Validasoft.Aplicacion.Expedientes;
 /// Revalidación por versión nueva (RV-1…RV-3, H6). Cuando la bóveda comparte con un vínculo ya aprobado y sin expediente
 /// abierto una versión distinta de un documento que la empresa aprobó en su último expediente, se abre un expediente de
 /// <c>Actualizacion</c> solo con esos documentos (nacen cargados, así que pasa directo a revisión), el vínculo conserva su
-/// estado y el certificado vigente queda «Con pendientes» hasta que la actualización se apruebe y se reemita.
+/// estado y el certificado vigente queda «Con pendientes» hasta que la actualización se apruebe y se reemita. Lo mismo con
+/// las secciones de la ficha (F2, las Actualizaciones del SRM): una versión nueva, completa para la empresa, de una sección
+/// que el vínculo ya tenía aceptada abre (o entra en) la actualización solo con esa sección.
 /// </summary>
 public static class Revalidacion
 {
@@ -40,7 +43,8 @@ public static class Revalidacion
         if (aprobado is null || flujo is null)
             return null;
 
-        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct), ct);
+        var contexto = await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct);
+        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, contexto, ct);
         var terceroId = vinculo.TerceroId;
         var documentos = await sesion.ForTenant(TenantsTecnicos.Boveda).Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
         var afectados = pedidos
@@ -48,24 +52,51 @@ public static class Revalidacion
                         AprobadoAntes(aprobado, p) is { } previa &&
                         (previa.DocumentoId != actual.DocumentoId || previa.Numero != actual.Numero))
             .ToList();
-        if (afectados.Count == 0)
+        var secciones = await SeccionesCambiadasAsync(sesion, vinculo, flujo, contexto, ahora, ct);
+        if (afectados.Count == 0 && secciones.Count == 0)
             return null;
 
         var expediente = await ProcesoDeValidacion.AbrirAsync(sesion, vinculoStream, flujo, null, certificados, ahora, ct,
-            tipoExpediente: TipoExpediente.Actualizacion, soloRequisitos: afectados.Select(p => p.Requisito.Id).ToHashSet(), actor: actor);
+            tipoExpediente: TipoExpediente.Actualizacion,
+            soloRequisitos: afectados.Select(p => p.Requisito.Id).Concat(secciones.Select(s => s.RequisitoId)).ToHashSet(), actor: actor);
 
         var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
-        if (expediente.EstaAbierto && certificado.Aggregate?.MarcarConPendientes(MotivoDePendientes(afectados), expediente.Id, ahora) is { } pendientes)
+        var motivo = MotivoDePendientes([.. afectados.Select(p => p.Tipo.Nombre), .. secciones.Select(s => s.Nombre)]);
+        if (expediente.EstaAbierto && certificado.Aggregate?.MarcarConPendientes(motivo, expediente.Id, ahora) is { } pendientes)
             certificado.AppendOne(pendientes);
         if (expediente.EstaAbierto && mensajes is not null && Guid.TryParse(sesion.TenantId, out var tenantId))
             await mensajes.ScheduleAsync(new VencerPlazoDeRevalidacion(tenantId, vinculoId, expediente.Id), ahora.AddDays(DiasDePlazo));
         return expediente;
     }
 
-    /// <summary>«Revalidación de Registro Único Tributario y Cámara de comercio».</summary>
-    public static string MotivoDePendientes(IReadOnlyList<RequisitoPedido> afectados)
+    /// <summary>
+    /// Secciones que el flujo pide al vínculo, que la empresa ya tenía aceptadas (<see cref="SeccionAceptada"/>) y cuya versión
+    /// vigente, completa para la empresa, es otra: entran a la actualización. Una versión nueva incompleta (el tercero aún la
+    /// diligencia) no abre nada.
+    /// </summary>
+    private static async Task<IReadOnlyList<RequisitoDeSeccionPedido>> SeccionesCambiadasAsync(IDocumentSession sesion, Vinculo vinculo,
+        FlujoResuelto flujo, Dominio.Flujos.ContextoDeExigencia contexto, DateTimeOffset ahora, CancellationToken ct)
     {
-        var nombres = afectados.Select(p => p.Tipo.Nombre).ToList();
+        var pedidas = RequisitosDeExpediente.SeccionesDelFlujo(flujo.Version, contexto, CalculadoraDeVigencia.Fecha(ahora));
+        if (pedidas.Count == 0)
+            return [];
+
+        var aceptadas = await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct);
+        if (aceptadas.Count == 0)
+            return [];
+
+        var ficha = await RequisitosDeExpediente.FichaAsync(sesion, vinculo.TerceroId, ct);
+        return
+        [
+            .. pedidas.Where(p => RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, p) is { } aceptada &&
+                                  RequisitosDeSeccion.Evaluar(p, ficha.GetValueOrDefault(p.SeccionId(vinculo.TerceroId))).Disponible is { } actual &&
+                                  actual.Numero != aceptada.Numero)
+        ];
+    }
+
+    /// <summary>«Revalidación de Registro Único Tributario y Cámara de comercio».</summary>
+    public static string MotivoDePendientes(IReadOnlyList<string> nombres)
+    {
         var lista = nombres.Count == 1 ? nombres[0] : $"{string.Join(", ", nombres.Take(nombres.Count - 1))} y {nombres[^1]}";
         return $"Revalidación de {lista}";
     }
@@ -73,15 +104,28 @@ public static class Revalidacion
     private static VersionDeRequisito? AprobadoAntes(Expediente aprobado, RequisitoPedido pedido) =>
         AprobadoEn(aprobado, pedido.Tipo.Id, pedido.Tipo.TipoCanonico, pedido.Tipo.Ambito);
 
-    /// <summary>La versión que la empresa aprobó para ese tipo en el expediente (no eximida); nula si no lo aprobó.</summary>
+    /// <summary>La versión que la empresa aprobó para ese tipo de documento en el expediente (no eximida); nula si no lo aprobó.</summary>
     public static VersionDeRequisito? AprobadoEn(Expediente aprobado, Guid tipoDocumentoTenantId, string? tipoCanonico, AmbitoDocumento ambito) =>
         aprobado.Requisitos
-            .Where(r => !r.Eximido && r.Estado == EstadoRequisito.Aprobado && r.VersionActual is not null &&
+            .Where(r => !r.EsSeccion && !r.Eximido && r.Estado == EstadoRequisito.Aprobado && r.VersionActual is not null &&
                         (r.TipoDocumentoTenantId == tipoDocumentoTenantId ||
                          (r.Ambito == AmbitoDocumento.Global && ambito == AmbitoDocumento.Global &&
                           r.TipoCanonico is not null && r.TipoCanonico == tipoCanonico)))
             .Select(r => r.VersionActual)
             .FirstOrDefault();
+
+    /// <summary>
+    /// Lo que la empresa aprobó antes para el requisito: un documento por su tipo (<see cref="AprobadoEn(Expediente, Guid, string?, AmbitoDocumento)"/>);
+    /// una sección por su sección y periodo.
+    /// </summary>
+    public static VersionDeRequisito? AprobadoEn(Expediente aprobado, RequisitoDeExpediente requisito) =>
+        requisito.EsSeccion
+            ? requisito.VersionAceptadaPrevia ?? aprobado.Requisitos
+                .Where(r => r.EsSeccion && !r.Eximido && r.Estado == EstadoRequisito.Aprobado && r.Seccion == requisito.Seccion &&
+                            r.Periodo == requisito.Periodo)
+                .Select(r => r.VersionActual)
+                .FirstOrDefault()
+            : AprobadoEn(aprobado, requisito.TipoDocumentoTenantId, requisito.TipoCanonico, requisito.Ambito);
 
     /// <summary>Hasta cuándo puede resolverse la revalidación antes de que sus pendientes bloqueen (RV-4).</summary>
     public static DateTimeOffset PlazoHasta(Expediente actualizacion) => actualizacion.AbiertoEn.AddDays(DiasDePlazo);

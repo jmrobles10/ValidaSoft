@@ -125,6 +125,42 @@ describe('Tercero 360: información del tercero', () => {
     expect(within(financiera).getByRole('region', { name: 'Moneda extranjera' })).toHaveTextContent('Estados Unidos (US)');
   });
 
+  it('dice qué versión aceptó la empresa activa por vínculo y si hay una nueva pendiente, con enlace a su revalidación (F2)', async () => {
+    permisos.scopes = new Set([SCOPES.tercerosLeer, SCOPES.vinculosLeer]);
+    montar(
+      ficha([
+        seccion({
+          version: 3,
+          aceptaciones: [
+            {
+              vinculoId: 'v1',
+              versionAceptada: 2,
+              aceptadaEn: '2026-10-05T15:00:00Z',
+              expedienteId: 'x1',
+              folio: 'VS-E-2026-000001',
+              versionNuevaPendiente: true,
+              revalidacion: { expedienteId: 'x2', folio: 'VS-E-2026-000007', estado: 'EnRevision', version: 3, plazoHasta: '2026-11-24T15:00:00Z' },
+            },
+          ],
+        }),
+        seccion({ seccion: 'FICHA_SST', nombre: 'Seguridad y salud en el trabajo', aceptaciones: [{ vinculoId: 'v1', versionAceptada: null, aceptadaEn: null, expedienteId: null, folio: null, versionNuevaPendiente: false, revalidacion: null }] }),
+      ]),
+    );
+
+    const general = await screen.findByRole('region', { name: 'Información general' });
+    const validacion = within(general).getByRole('region', { name: 'Validación de la empresa' });
+    expect(validacion).toHaveTextContent('Proveedor: aceptada la versión 2 el 05/10/2026');
+    expect(within(validacion).getByRole('link', { name: 'Ver el expediente VS-E-2026-000001' })).toHaveAttribute('href', '/e/emp/expedientes/x1');
+    expect(validacion).toHaveTextContent('Versión nueva pendiente de revisión');
+    const revalidacion = within(validacion).getByRole('link', { name: 'Ver la revalidación VS-E-2026-000007' });
+    expect(revalidacion).toHaveAttribute('href', '/e/emp/expedientes/x2');
+    expect(revalidacion).toHaveTextContent('Revalidación VS-E-2026-000007: versión 3, plazo hasta el 24/11/2026');
+
+    const sst = screen.getByRole('region', { name: 'Seguridad y salud en el trabajo' });
+    expect(within(sst).getByRole('region', { name: 'Validación de la empresa' })).toHaveTextContent('Proveedor: aún no la acepta');
+    expect(sst).not.toHaveTextContent('Versión nueva pendiente de revisión');
+  });
+
   it('sin secciones diligenciadas lo dice', async () => {
     permisos.scopes = new Set([SCOPES.tercerosLeer, SCOPES.vinculosLeer]);
     montar(ficha([]));

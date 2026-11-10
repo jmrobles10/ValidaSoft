@@ -20,4 +20,6 @@ export interface VeredictoDto {
   versiones?: VeredictoDtoVersiones;
   /** @nullable */
   requisitos?: ObservacionDeRequisitoDto[] | null;
+  /** @nullable */
+  campos?: string[] | null;
 }

@@ -58,7 +58,7 @@ export function useMotivos(empresaId: string, habilitado = true) {
 /** Una decisión sobre el expediente; cada variante lleva lo que exige su endpoint. */
 export type EntradaExpediente =
   | { tipo: 'veredicto'; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string }
-  | { tipo: 'veredictoRequisito'; requisitoId: string; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string; sobreVersion: number }
+  | { tipo: 'veredictoRequisito'; requisitoId: string; areaId: string; veredicto: Veredicto; motivos: string[]; observacion: string; sobreVersion: number; campos?: string[] }
   | { tipo: 'eximir'; requisitoId: string; justificacion: string }
   | { tipo: 'veredictoArea'; areaId: string; decision: DecisionDeArea }
   | { tipo: 'rechazar'; areaId: string; motivos: string[]; justificacion: string }
@@ -84,6 +84,7 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
       );
     case 'veredictoRequisito':
       // `sobreVersion` es obligatorio: si llegó otra versión mientras se revisaba, la API responde 409 `version-superada`.
+      // `campos` solo al observar una sección (en un documento la API responde 422 `campos-solo-en-secciones`).
       return emitirVeredictoRequisito(
         expedienteId,
         entrada.requisitoId,
@@ -93,6 +94,7 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
           motivos: entrada.veredicto === 'Observado' ? entrada.motivos : [],
           observacion: texto(entrada.observacion),
           sobreVersion: entrada.sobreVersion,
+          ...(entrada.veredicto === 'Observado' && entrada.campos?.length ? { campos: entrada.campos } : {}),
         },
         opciones,
       );

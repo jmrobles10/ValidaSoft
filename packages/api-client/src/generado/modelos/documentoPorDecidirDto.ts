@@ -4,8 +4,14 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { TipoRequisito } from './tipoRequisito';
 
 export interface DocumentoPorDecidirDto {
   requisitoId: string;
   versionVigente: number;
+  tipoRequisito?: TipoRequisito;
+  /** @nullable */
+  seccion?: string | null;
+  /** @nullable */
+  periodo?: number | null;
 }

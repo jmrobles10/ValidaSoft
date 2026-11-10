@@ -15,6 +15,7 @@ import { useTiposVinculo } from '../../vinculos/api';
 import { useCrearFlujo, useTiposDocumento, useDefinirPorDefecto, useEditarFlujo, useFlujo, usePublicarFlujo, useVersionesFlujo } from '../api';
 import { FormularioFlujo } from '../components/FormularioFlujo';
 import { VersionesFlujo } from '../components/VersionesFlujo';
+import { errorDeApiEnRequisitos } from '../requisitosDeSeccion';
 import { borradorDesdeVersion, borradorVacio, erroresBloqueantes, etapasADto, firmaBorrador, normalizarCodigo, requisitosADto, validarFlujo, type BorradorFlujo } from '../editor';
 
 /**
@@ -43,6 +44,8 @@ export function EditorFlujo() {
   const [verVersion, setVerVersion] = useState<number | null>(null);
   const [intentado, setIntentado] = useState(false);
   const [confirmarPublicar, setConfirmarPublicar] = useState(false);
+  // Lo que se envió la última vez: un 422 de un requisito se muestra en su campo mientras el borrador siga igual.
+  const [firmaEnviada, setFirmaEnviada] = useState<string | null>(null);
 
   const datos = flujo.data;
   const idBorradorServidor = datos?.borrador?.id;
@@ -82,14 +85,17 @@ export function EditorFlujo() {
   const editando = !versionVista && borrador !== null && puedeEscribir;
   const errores = borrador ? validarFlujo(borrador, listaAreas, nuevo, tiposDocumento.data ?? []) : [];
   const bloqueantes = erroresBloqueantes(errores);
-  const visibles = editando ? (intentado ? errores : errores.filter((e) => e.aviso)) : [];
+  const errorMutacion = crear.error ?? editar.error ?? publicar.error;
+  const errorEnRequisito = borrador ? errorDeApiEnRequisitos(errorMutacion, borrador.requisitos) : null;
+  const errorEnCampo = errorEnRequisito && borrador && firmaEnviada === firmaBorrador(borrador) ? [errorEnRequisito] : [];
+  const visibles = editando ? [...(intentado ? errores : errores.filter((e) => e.aviso)), ...errorEnCampo] : [];
   const sinGuardar = Boolean(borrador && (nuevo || !datos?.borrador || firmaBorrador(borrador) !== firmaBorrador(borradorDesdeVersion(base(datos), datos.borrador))));
   const ocupado = crear.isPending || editar.isPending || publicar.isPending;
-  const errorMutacion = crear.error ?? editar.error ?? publicar.error;
 
   const guardar = () => {
     setIntentado(true);
     if (!borrador || bloqueantes.length > 0) return;
+    setFirmaEnviada(firmaBorrador(borrador));
     const comun = {
       nombre: borrador.nombre.trim(),
       etapas: etapasADto(borrador.etapas),
@@ -113,7 +119,8 @@ export function EditorFlujo() {
     }
   };
 
-  const confirmarPublicacion = () =>
+  const confirmarPublicacion = () => {
+    if (borrador) setFirmaEnviada(firmaBorrador(borrador));
     publicar.mutate(undefined, {
       onSuccess: (f) => {
         mostrar(t('flujos.editor.publicado', { version: String(f.publicada?.version ?? '') }));
@@ -123,6 +130,7 @@ export function EditorFlujo() {
       },
       onError: () => setConfirmarPublicar(false),
     });
+  };
 
   const titulo = nuevo ? t('flujos.editor.nuevoTitulo') : (datos?.nombre ?? '');
 
@@ -176,7 +184,7 @@ export function EditorFlujo() {
         }
       />
 
-      {errorMutacion && <Alert severity="error" sx={{ mb: 2 }}>{mensajeDeError(errorMutacion, t)}</Alert>}
+      {errorMutacion && !errorEnRequisito && <Alert severity="error" sx={{ mb: 2 }}>{mensajeDeError(errorMutacion, t)}</Alert>}
       {intentado && bloqueantes.length > 0 && <Alert severity="warning" sx={{ mb: 2 }}>{t('flujos.editor.revisa')}</Alert>}
       {areas.isSuccess && listaAreas.every((a) => !a.activa) && <Alert severity="warning" sx={{ mb: 2 }}>{t('flujos.editor.sinAreas')}</Alert>}
       {!borrador && datos?.publicada && !versionVista && puedeEscribir && (

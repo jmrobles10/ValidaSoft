@@ -140,7 +140,8 @@ public static class ExpedientesEndpoints
                 var observaciones = new List<ObservacionDeRequisito>();
                 foreach (var requisito in dto.Requisitos ?? [])
                     observaciones.Add(new ObservacionDeRequisito(requisito.RequisitoId, requisito.SobreVersion,
-                        await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, requisito.Motivos, AplicaMotivo.Observacion, ct), requisito.Observacion));
+                        await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, requisito.Motivos, AplicaMotivo.Observacion, ct), requisito.Observacion,
+                        requisito.Campos));
                 eventos = expediente.ObservarArea(areaId, revisor, observaciones, ahora);
             }
 
@@ -167,7 +168,7 @@ public static class ExpedientesEndpoints
             var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
             var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
             var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
-                reloj.GetUtcNow());
+                reloj.GetUtcNow(), dto.Campos);
             return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
         });
     }

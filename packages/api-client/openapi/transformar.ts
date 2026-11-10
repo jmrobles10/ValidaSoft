@@ -285,6 +285,9 @@ const ENUMS: Record<string, string[]> = {
   TipoTextoLegal: ['AvisoPlataforma', 'AutorizacionEmpresa', 'TerminosEmpresa'],
   EstadoRequisito: ['Pendiente', 'Cargado', 'EnRevision', 'Observado', 'Aprobado', 'Eximido'],
   EstadoAreaRequisito: ['Esperando', 'Pendiente', 'Aprobado', 'Observado', 'Eximido'],
+  // Ficha maestra por empresa (F2): qué pide un requisito y cómo cambió un campo entre la versión aceptada y la nueva.
+  TipoRequisito: ['Documento', 'Seccion'],
+  TipoCambio: ['Agregado', 'Quitado', 'Modificado'],
 };
 
 /** `Esquema.propiedad` → enum. */
@@ -328,6 +331,11 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'RequisitoPublicoDto.estado': 'EstadoRequisito',
   'AreaDeRequisitoDto.estado': 'EstadoAreaRequisito',
   'TipoDocumentoRequisitoDto.ambito': 'AmbitoDocumento',
+  'RequisitoExpedienteDto.tipoRequisito': 'TipoRequisito',
+  'RequisitoPublicoDto.tipoRequisito': 'TipoRequisito',
+  'DocumentoPorDecidirDto.tipoRequisito': 'TipoRequisito',
+  'CambioDeCampoDto.tipoCambio': 'TipoCambio',
+  'RevalidacionDeSeccionDto.estado': 'EstadoRequisito',
 };
 
 const METODOS = ['get', 'post', 'put', 'patch', 'delete'];

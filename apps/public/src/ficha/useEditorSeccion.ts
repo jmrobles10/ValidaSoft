@@ -1,6 +1,7 @@
 import { esErrorApi, type ErrorApi, type FaltanteSeccionDto, type JsonElement, type SeccionFichaDto, type SeccionGuardadaDto, type SoporteSeccionDto } from '@validasoft/api-client';
 import { useState } from 'react';
 import { useGuardarSeccion } from './api';
+import { estaSenalado } from './etiquetas';
 import { claveDeRuta, type CodigoSeccion } from './secciones';
 import type { PersonaRelacionada } from './tipos';
 
@@ -30,12 +31,18 @@ export function datosParaEnviar(codigo: CodigoSeccion, datos: object): JsonEleme
   return copia;
 }
 
+/** Campos que una empresa señaló al observar la sección (F2) y el mensaje con que se marcan en el formulario. */
+export interface Senalados {
+  campos: readonly string[];
+  mensaje: string;
+}
+
 /**
  * Estado del formulario de una sección: los datos (snake_case), los soportes y lo último que dijo el servidor — sus
- * faltantes exactos (FM-16) y el error 422 de un campo —. Un campo que el tercero vuelve a tocar deja de marcarse
- * hasta el siguiente guardado. La completitud nunca se calcula aquí.
+ * faltantes exactos (FM-16) y el error 422 de un campo —, más los campos que una empresa señaló al observarla. Un campo
+ * que el tercero vuelve a tocar deja de marcarse hasta el siguiente guardado. La completitud nunca se calcula aquí.
  */
-export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, inicial: SeccionFichaDto) {
+export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, inicial: SeccionFichaDto, senalados: Senalados | null = null) {
   const [datos, setDatos] = useState<object>(() => inicial.datos ?? {});
   const [soportes, setSoportes] = useState<SoporteSeccionDto[]>(() => inicial.soportes);
   const [faltantes, setFaltantes] = useState<FaltanteSeccionDto[]>(() => inicial.completitud?.faltantes ?? []);
@@ -60,12 +67,16 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
     if (editados.has(claveDeRuta(ruta))) return null;
     const error = erroresCampo.find((e) => e.campo === ruta);
     if (error) return error.mensaje;
-    return faltantes.find((f) => f.campo === ruta)?.mensaje ?? null;
+    const faltante = faltantes.find((f) => f.campo === ruta)?.mensaje;
+    if (faltante) return faltante;
+    return senalados && estaSenalado(ruta, senalados.campos) ? senalados.mensaje : null;
   };
 
   /** El error 422 de cualquier ruta bajo una clave (`soportes[1]`, `personas[0].numero`), si no se ha vuelto a tocar. */
   const errorEn = (clave: string): string | null =>
-    editados.has(clave) ? null : (erroresCampo.find((e) => claveDeRuta(e.campo) === clave)?.mensaje ?? null);
+    editados.has(clave)
+      ? null
+      : (erroresCampo.find((e) => claveDeRuta(e.campo) === clave)?.mensaje ?? (senalados && estaSenalado(clave, senalados.campos) ? senalados.mensaje : null));
 
   const guardar = (alGuardar: (respuesta: SeccionGuardadaDto) => void) => {
     guardado.mutate(

@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Authorization;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
+using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -18,10 +21,13 @@ namespace Validasoft.Aplicacion.Vinculos;
 /// Ficha 360 del tercero para la empresa activa (docs/03 §14 <c>Tercero360</c>, docs/06 <c>/terceros/:id</c>): identificación,
 /// contactos y cada vínculo con esta empresa con su certificado, su cuenta designada y los documentos compartidos con él.
 /// De las otras empresas del grupo solo dice que hay vínculo y en qué estado. Incluye las secciones vigentes de la ficha
-/// maestra (datos, completitud y soportes). Se arma al consultar.
+/// maestra (datos, completitud y soportes) y, por cada vínculo con la empresa activa, lo que aceptó de cada una, si hay una
+/// versión nueva pendiente y su revalidación (F2). Se arma al consultar.
 /// </summary>
 public static class FichaTerceroEndpoints
 {
+    private static readonly EstadoExpediente[] Abiertos = [EstadoExpediente.Abierto, EstadoExpediente.EnRevision, EstadoExpediente.Observado];
+
     [WolverineGet("/api/v1/terceros/{id}/ficha")]
     [Authorize(Policy = Permisos.TercerosLeer)]
     public static async Task<FichaTerceroDto> Obtener(Guid id, SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto,
@@ -40,6 +46,7 @@ public static class FichaTerceroEndpoints
         IReadOnlyList<SeccionFichaDto> secciones;
         await using (var boveda = sesiones.ConsultaBoveda())
             secciones = await Ficha.FichaMaestraEndpoints.VigentesAsync(boveda, id, ct);
+        secciones = await ConAceptacionesAsync(empresa, propios, secciones, ct);
 
         var veVinculos = contexto.Scopes.Contains(Permisos.VinculosLeer);
         var otras = veVinculos
@@ -84,6 +91,44 @@ public static class FichaTerceroEndpoints
         }
 
         return new FichaTerceroDto(tercero.ADto(), vinculos, otras, secciones);
+    }
+
+    /// <summary>
+    /// Por sección y vínculo de la empresa activa (FM-3, FM-29): la versión aceptada (privada de la empresa), si la vigente del
+    /// tercero es otra y la revalidación abierta que la revisa.
+    /// </summary>
+    private static async Task<IReadOnlyList<SeccionFichaDto>> ConAceptacionesAsync(SesionDeEmpresa empresa, IReadOnlyList<Vinculo> propios,
+        IReadOnlyList<SeccionFichaDto> secciones, CancellationToken ct)
+    {
+        if (secciones.Count == 0)
+            return secciones;
+
+        var ids = propios.Select(v => v.Id).ToArray();
+        var aceptadas = await empresa.Sesion.Query<SeccionAceptada>().Where(a => a.VinculoId.IsOneOf(ids)).ToListAsync(ct);
+        var revalidaciones = await empresa.Expedientes()
+            .Where(e => e.VinculoId.IsOneOf(ids) && e.Tipo == TipoExpediente.Actualizacion && e.Estado.IsOneOf(Abiertos))
+            .ToListAsync(ct);
+
+        return
+        [
+            .. secciones.Select(s => s with
+            {
+                Aceptaciones =
+                [
+                    .. propios.Select(v =>
+                    {
+                        var aceptada = aceptadas.FirstOrDefault(a => a.VinculoId == v.Id && a.Seccion == s.Seccion && a.Periodo == s.Periodo);
+                        var revision = revalidaciones.Where(e => e.VinculoId == v.Id)
+                            .SelectMany(e => e.Requisitos.Where(r => r.EsSeccion && r.Seccion == s.Seccion && r.Periodo == s.Periodo)
+                                .Select(r => new RevalidacionDeSeccionDto(e.Id, e.Folio, r.Estado.ToString(), r.VersionActual?.Numero,
+                                    Revalidacion.PlazoHasta(e))))
+                            .FirstOrDefault();
+                        return new AceptacionDeSeccionDto(v.Id, aceptada?.Version, aceptada?.AceptadaEn, aceptada?.ExpedienteId, aceptada?.Folio,
+                            aceptada is not null && s.Version is { } vigente && vigente != aceptada.Version, revision);
+                    })
+                ]
+            })
+        ];
     }
 
     private static async Task<IReadOnlyList<Documento>> DocumentosDelTerceroAsync(ISesiones sesiones, Guid terceroId, CancellationToken ct)

@@ -4,6 +4,7 @@ import type {
   DatoDeclaradoDto,
   ExpedienteDto,
   RequisitoExpedienteDto,
+  SeccionDeRequisitoDto,
   VeredictoEmitidoDto,
   VigenciaDto,
 } from '@validasoft/api-client';
@@ -118,6 +119,33 @@ export function requisitoFormulario(cambios: Partial<RequisitoExpedienteDto> = {
     id: 'r-sarlaft',
     tipoDocumento: { id: 'td-sarlaft', codigo: 'SARLAFT', nombre: 'Formulario SARLAFT', tipoCanonico: null, ambito: 'PorVinculo', modo: 'Formulario', campos: [], archivo: null, tienePlantilla: false },
     versionActual: { documentoId: 'doc-sarlaft', n: 2, sha256: 'def', cargadaEn: '2026-11-07T14:00:00Z', datosDeclarados: DATOS_DECLARADOS, vigencia: vigencia(), estado: 'Actual', clase: 'Formulario' },
+    ...cambios,
+  });
+}
+
+/**
+ * Requisito de sección de la ficha (F2): la información general v3 con su completitud para la empresa, los datos de la
+ * versión, un soporte (el RUT compartido con el vínculo) y, aceptada antes la v2, lo que cambió.
+ */
+export function requisitoSeccion(cambios: Partial<RequisitoExpedienteDto> = {}, seccion: Partial<SeccionDeRequisitoDto> = {}): RequisitoExpedienteDto {
+  return requisito({
+    id: 'r-general',
+    tipoRequisito: 'Seccion',
+    tipoDocumento: { id: '00000000-0000-0000-0000-000000000000', codigo: 'FICHA_GENERAL', nombre: 'Información general', tipoCanonico: 'FICHA_GENERAL', ambito: 'Global', modo: 'Formulario' },
+    versionActual: { documentoId: 'sec-general', n: 3, sha256: 'huella', cargadaEn: '2026-11-08T14:00:00Z', estado: 'Actual', clase: 'Formulario' },
+    seccion: {
+      seccion: 'FICHA_GENERAL',
+      nombre: 'Información general',
+      periodo: null,
+      exigeSoporte: true,
+      completitud: { completa: true, faltantes: [], reglaVersion: 1 },
+      versionEvaluada: 3,
+      datos: { razon_social: 'Aceros del Norte S.A.S.', certificado_iso: true },
+      soportes: [{ documentoId: 'doc-rut', version: 2, tipoDocumento: 'RUT' }],
+      versionAceptada: null,
+      cambios: [],
+      ...seccion,
+    },
     ...cambios,
   });
 }

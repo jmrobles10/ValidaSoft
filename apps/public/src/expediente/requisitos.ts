@@ -1,4 +1,5 @@
 import type { ExpedientePublicoDto, ObservacionPublicaDto, RequisitoPublicoDto, VigenciaDto } from '@validasoft/api-client';
+import { enlaceSeccion } from '../ficha/secciones';
 import { requiereAtencion } from '../vigencia/vigencia';
 
 /** Lo que el tercero puede hacer con un documento que le piden. */
@@ -75,6 +76,16 @@ export function enlaceDeSubida(requisito: RequisitoPublicoDto, vinculoId: string
     return null;
   }
   return `/boveda/subir?${parametros.toString()}`;
+}
+
+/** Una sección de «Mi información» que pide la empresa (F2): no se sube aquí, se completa o corrige en el wizard. */
+export function esRequisitoDeSeccion(requisito: Pick<RequisitoPublicoDto, 'tipoRequisito' | 'seccion'>): boolean {
+  return requisito.tipoRequisito === 'Seccion' || Boolean(requisito.seccion);
+}
+
+/** El wizard de la sección (`/ficha/:seccion`, la financiera con `?periodo=`). */
+export function enlaceDeSeccion(requisito: Pick<RequisitoPublicoDto, 'seccion' | 'tipoDocumento'>): string {
+  return enlaceSeccion(requisito.seccion?.seccion ?? requisito.tipoDocumento.codigo, requisito.seccion?.periodo);
 }
 
 /**
