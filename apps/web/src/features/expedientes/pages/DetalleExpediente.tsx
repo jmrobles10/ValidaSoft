@@ -13,6 +13,7 @@ import { usePermisos } from '../../../shared/usePermisos';
 import { useAreas } from '../../configuracion/areas/api';
 import { useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { BotonExportarExpediente } from '../../informes/BotonExportarExpediente';
 import { useVinculo } from '../../vinculos/api';
 import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
@@ -116,6 +117,7 @@ export function DetalleExpediente() {
             <Button component={RouterLink} to={`/e/${empresa.id}/vinculos/${expediente.vinculoId}`} variant="outlined" startIcon={<Link2 size={16} aria-hidden />}>
               {t('expedientes.verVinculo')}
             </Button>
+            <BotonExportarExpediente empresaId={empresa.id} expedienteId={expediente.id} />
             {acciones.includes('reenviar') && (
               <Button variant="contained" startIcon={<Send size={16} aria-hidden />} onClick={() => setDialogo({ tipo: 'reenviar' })}>
                 {t('expedientes.acciones.reenviar')}

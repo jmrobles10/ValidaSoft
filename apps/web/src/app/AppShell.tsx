@@ -15,7 +15,7 @@ import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
 interface Pestana {
-  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'certificados' | 'vinculos' | 'auditoria' | 'configuracion';
+  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'certificados' | 'vinculos' | 'informes' | 'auditoria' | 'configuracion';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
@@ -51,6 +51,8 @@ export function AppShell() {
   if (permisos.puede(SCOPES.documentosLeer)) pestanas.push({ clave: 'vencimientos', ruta: 'vencimientos', prefijos: ['vencimientos'] });
   if (permisos.puede(SCOPES.certificadosLeer)) pestanas.push({ clave: 'certificados', ruta: 'certificados', prefijos: ['certificados'] });
   if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros'] });
+  if (permisos.puede(SCOPES.expedientesLeer) || permisos.puede(SCOPES.vinculosLeer))
+    pestanas.push({ clave: 'informes', ruta: permisos.puede(SCOPES.expedientesLeer) ? 'informes/estado-expedientes' : 'informes/vinculos', prefijos: ['informes'] });
   if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });
   const primera = configuracion[0];
   if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });

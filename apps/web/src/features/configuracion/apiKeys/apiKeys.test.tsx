@@ -14,8 +14,8 @@ import { alternarGrupo, claveDeScope, resumirScopes, SCOPES_DEL_TENANT, scopesDe
 /** `Permisos.DelTenant` (src/Validasoft.Aplicacion/Comun/Permisos.cs): lo único que la API acepta en una llave. */
 const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
-  'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer',
-  'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'documentos:leer', 'documentos:descargar',
+  'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer', 'auditoria:exportar',
+  'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'expedientes:exportar', 'documentos:leer', 'documentos:descargar',
   'certificados:leer', 'eventos:leer', 'webhooks:administrar',
 ];
 
