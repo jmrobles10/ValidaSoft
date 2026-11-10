@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Responsable |
 |---|---|---|
-| Propuesto (para revisión de Producto) | 2026-11-09 | Arquitectura |
+| Aprobado por Producto | 2026-11-09 | Arquitectura |
 
 **Propósito.** Validasoft se vuelve el **dueño de la información del tercero**: la que hoy vive en las tablas del Portal de Proveedores y que el SRM usa para validar, aprobar y crear el proveedor en el ERP. Este documento cuenta lo que hay hoy (§1–§2), cómo lo modela Validasoft (§3–§7), cómo se migra (§8) y en qué orden se construye (§9). Las decisiones están en el [registro](decisiones/registro.md) (FM-1 a FM-16) y en [ADR-0013](adr/0013-ficha-maestra-del-tercero.md).
 

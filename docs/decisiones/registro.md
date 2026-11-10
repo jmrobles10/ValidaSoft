@@ -499,7 +499,7 @@ Cada empresa personaliza asunto, cabecera y pie de los correos que Validasoft le
 | IA-13 | Pendiente | Pantalla de Plataforma para configurar el plan de cada empresa (hoy por API: `PUT /api/v1/plataforma/tenants/{t}/empresas/{e}/plan-ia`); conjunto de prueba con documentos reales para medir la precisión por campo (IA-7) antes del modo automático; API Batch (mitad de precio) para la re-verificación masiva; aviso de tratamiento que nombre a OpenAI como encargado (P-6-5); con varias réplicas, la cola `ia` es secuencial por nodo: dos nodos podrían llamar dos veces por la misma versión (solo se registra un análisis; el costo de ambas llamadas sí). | Pendiente |
 | IA-14 | Web | Configuración › «Plan y uso de IA» (`/e/{empresa}/uso-ia`, `configuracion:leer`): mes (últimos 12, en la zona del tenant), incluidas usadas con barra (ámbar ≥ 80 %, roja al 100 %), adicionales y tope, análisis pagados y si hay llave (nunca la llave), costo real en USD, tokens y serie por día; sin plan, explica que no está contratada. Panel «Revisión automática» en la tarjeta del requisito y en el visor: confianza, escalamiento, legibilidad, tipo detectado (alerta si no coincide), alertas de manipulación y los datos extraídos con nombres legibles; sin análisis, «revísalo manualmente». El color de la confianza usa el umbral por omisión (0,85), no el del plan de la empresa. | Arquitectura |
 
-## 5-tricies. Ficha maestra del tercero (2026-11-09, ADR-0013, docs/14) — propuesta
+## 5-tricies. Ficha maestra del tercero (2026-11-09, ADR-0013, docs/14) — aprobada por Producto
 
 | Id | Tema | Decisión | Origen |
 |---|---|---|---|

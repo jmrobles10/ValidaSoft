@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Reemplaza |
 |---|---|---|
-| Propuesto | 2026-11-09 (decisiones FM-1 a FM-16) | Concreta P-3-1/P-3-2 (formularios canónicos) y B-3 (personas relacionadas); amplía ADR-0004 y ADR-0005 |
+| Aceptado | 2026-11-09 (decisiones FM-1 a FM-16) | Concreta P-3-1/P-3-2 (formularios canónicos) y B-3 (personas relacionadas); amplía ADR-0004 y ADR-0005 |
 
 ## Contexto
 La información del tercero que hoy usa el SRM para validar, aprobar y crear el proveedor en el ERP vive en las tablas del Portal de Proveedores, organizada por **secciones**: general, tributaria, bancaria, financiera, legal (representantes, socios, revisor fiscal, contador), SISO/SST, especialidades, contactos, términos y tratamiento de datos (análisis en [docs/14](../14-ficha-maestra-del-tercero.md) §1). El SRM la usa para:
