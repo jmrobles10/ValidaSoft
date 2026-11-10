@@ -55,7 +55,6 @@ export function AppShell() {
   }
   if (permisos.puede(SCOPES.certificadosLeer)) pestanas.push({ clave: 'certificados', ruta: 'certificados', prefijos: ['certificados'] });
   if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros', 'invitaciones'] });
-  if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ clave: 'vinculos', ruta: 'vinculos', prefijos: ['vinculos', 'terceros'] });
   if (permisos.puede(SCOPES.expedientesLeer) || permisos.puede(SCOPES.vinculosLeer))
     pestanas.push({ clave: 'informes', ruta: permisos.puede(SCOPES.expedientesLeer) ? 'informes/estado-expedientes' : 'informes/vinculos', prefijos: ['informes'] });
   if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });

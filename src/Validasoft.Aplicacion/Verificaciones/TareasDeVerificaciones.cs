@@ -77,7 +77,9 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
         }
 
         var stream = await sesion.Events.FetchForExclusiveWriting<Expediente>(expedienteId, ct);
-        if (stream.Aggregate is not { EstaAbierto: true } actual)
+        // Mientras se consultaba al proveedor alguien pudo consultar a mano: esa consulta manda (y sus coincidencias, con sus
+        // ids, no se pisan). Solo se registra si la consulta automática sigue pendiente.
+        if (stream.Aggregate is not { EstaAbierto: true } actual || actual.ProximaConsultaDeListas is not { } pendiente || pendiente > reloj.GetUtcNow())
             return;
         await ProcesoDeValidacion.AnexarAsync(sesion, stream, actual.RegistrarConsultaDeListas(resultado, "sistema", reloj.GetUtcNow()), null, certificados,
             reloj.GetUtcNow(), ct);
