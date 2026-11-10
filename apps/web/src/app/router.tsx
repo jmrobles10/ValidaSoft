@@ -1,5 +1,6 @@
 import { createHashRouter, Navigate } from 'react-router';
 import { EmpresaDeLaRuta, RedireccionInicial } from '../features/empresas/RutasEmpresa';
+import { SegunSesion, ShellPlataforma, SoloTenant } from '../features/plataforma/ShellPlataforma';
 import { AppShell } from './AppShell';
 import { InicioEmpresa } from './InicioEmpresa';
 import { LayoutConfiguracion } from './LayoutConfiguracion';
@@ -11,10 +12,38 @@ import { LayoutConfiguracion } from './LayoutConfiguracion';
  */
 export function crearRouter() {
   return createHashRouter([
-    { path: '/', element: <RedireccionInicial /> },
+    { path: '/', element: <SegunSesion deTenant={<RedireccionInicial />} /> },
+    // Consola de Plataforma (P-15-2, PT-4): solo con la sesión de un operador (sin tenant).
+    {
+      path: '/plataforma',
+      element: <ShellPlataforma />,
+      children: [
+        { index: true, element: <Navigate to="grupos" replace /> },
+        {
+          path: 'grupos',
+          lazy: () => import('../features/plataforma/PaginaGrupos').then((m) => ({ Component: m.PaginaGrupos })),
+        },
+        {
+          path: 'grupos/nuevo',
+          lazy: () => import('../features/plataforma/PaginaNuevoGrupo').then((m) => ({ Component: m.PaginaNuevoGrupo })),
+        },
+        {
+          path: 'grupos/:tenantId/empresas/:empresaId/plan-ia',
+          lazy: () => import('../features/plataforma/PaginaPlanIa').then((m) => ({ Component: m.PaginaPlanIa })),
+        },
+        {
+          path: 'secretos',
+          lazy: () => import('../features/plataforma/PaginaSecretos').then((m) => ({ Component: m.PaginaSecretos })),
+        },
+      ],
+    },
     {
       path: '/e/:empresaId',
-      element: <EmpresaDeLaRuta />,
+      element: (
+        <SoloTenant>
+          <EmpresaDeLaRuta />
+        </SoloTenant>
+      ),
       children: [
         {
           element: <AppShell />,

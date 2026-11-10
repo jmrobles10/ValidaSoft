@@ -1,7 +1,7 @@
 import { Alert, Button, Card, CardContent, Link, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { abrirSesionDelegada, canjearSesion, cargarSemilla, type SemillaDev } from '../dev/firmarAsercion';
+import { abrirSesionDelegada, abrirSesionDePlataforma, canjearSesion, cargarSemilla, type SemillaDev } from '../dev/firmarAsercion';
 import { mensajeDeError } from '../shared/errores';
 import { useSesion } from './sesionStore';
 
@@ -63,6 +63,19 @@ export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) 
     }
   };
 
+  const entrarComoOperador = async () => {
+    if (!semilla?.plataforma) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      establecer((await abrirSesionDePlataforma(semilla.plataforma)).token);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   return (
     <Card sx={{ maxWidth: 640, mx: 'auto', my: 4, borderRadius: (th) => `${String(th.radio.md)}px` }}>
       <CardContent component="form" onSubmit={(e) => void enviar(e)}>
@@ -110,6 +123,18 @@ export function FormularioSesionDev({ vencida = false }: { vencida?: boolean }) 
             </Button>
             <Link href="embed-demo.html">{t('sesion.dev.demo')}</Link>
           </Stack>
+          {semilla && (
+            <Stack spacing={1} sx={{ pt: 2, borderTop: 1, borderColor: 'divider' }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {semilla.plataforma ? t('sesion.dev.operadorAyuda') : t('sesion.dev.operadorSinSemilla')}
+              </Typography>
+              {semilla.plataforma && (
+                <Button variant="outlined" disabled={enviando} onClick={() => void entrarComoOperador()} sx={{ alignSelf: 'flex-start' }}>
+                  {t('sesion.dev.operador')} · {semilla.plataforma.persona.nombre}
+                </Button>
+              )}
+            </Stack>
+          )}
         </Stack>
       </CardContent>
     </Card>

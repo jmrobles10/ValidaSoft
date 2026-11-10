@@ -3,7 +3,7 @@
  * (ADR-0011). Firma la aserción `X-Usuario-Delegado` con la clave privada del sistema y la canjea, junto con su API
  * key, por la sesión corta de Validasoft. Una clave privada nunca debe llegar a un navegador fuera de esta demo.
  */
-import { crearSesionUsuario, type SesionUsuarioDto } from '@validasoft/api-client';
+import { crearSesionPlataforma, crearSesionUsuario, type SesionUsuarioDto } from '@validasoft/api-client';
 
 export interface PersonaDelegada {
   sub: string;
@@ -17,6 +17,17 @@ export interface CredencialesSistema {
   clavePrivadaPem: string;
 }
 
+/**
+ * Operador de la consola de Plataforma (PT-4): el sistema de Plataforma que firma su aserción y la credencial de
+ * Plataforma (la clave de arranque de desarrollo) con la que su backoffice la canjea.
+ */
+export interface OperadorDev {
+  clavePlataforma: string;
+  sistema: string;
+  clavePrivadaPem: string;
+  persona: PersonaDelegada;
+}
+
 /** Lo que `pnpm semilla:dev` deja en apps/web/.semilla.local.json. */
 export interface SemillaDev {
   apiKey: string;
@@ -24,6 +35,8 @@ export interface SemillaDev {
   sistema: { id: string; codigo: string };
   empresas: { id: string; nombre: string }[];
   usuarios: (PersonaDelegada & { descripcion: string })[];
+  /** Ausente en semillas anteriores a la consola de Plataforma. */
+  plataforma?: OperadorDev;
 }
 
 const VIGENCIA_ASERCION_S = 300;
@@ -103,6 +116,16 @@ export function canjearSesion(apiKey: string, asercion: string): Promise<SesionU
 export async function abrirSesionDelegada(credenciales: CredencialesSistema, persona: PersonaDelegada): Promise<SesionUsuarioDto> {
   const asercion = await firmarAsercion(credenciales.sistema, credenciales.clavePrivadaPem, persona);
   return canjearSesion(credenciales.apiKey, asercion);
+}
+
+/** `POST /api/v1/plataforma/sesiones` como lo haría el backoffice de Plataforma: su credencial y la aserción del operador. */
+export async function abrirSesionDePlataforma(operador: OperadorDev): Promise<SesionUsuarioDto> {
+  const asercion = await firmarAsercion(operador.sistema, operador.clavePrivadaPem, operador.persona);
+  return crearSesionPlataforma({
+    token: null,
+    empresa: null,
+    headers: { 'X-Api-Key': operador.clavePlataforma, 'X-Usuario-Delegado': asercion },
+  });
 }
 
 export async function cargarSemilla(): Promise<SemillaDev | null> {

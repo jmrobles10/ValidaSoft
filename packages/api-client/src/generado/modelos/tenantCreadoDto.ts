@@ -5,9 +5,16 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ApiKeyDto } from './apiKeyDto';
+import type { EmpresaDto } from './empresaDto';
+import type { SistemaIntegradoDto } from './sistemaIntegradoDto';
 import type { TenantDto } from './tenantDto';
+import type { UsuarioDto } from './usuarioDto';
 
 export interface TenantCreadoDto {
   tenant: TenantDto;
   apiKeyAdministrador: ApiKeyDto;
+  empresa: null | EmpresaDto;
+  administrador: null | UsuarioDto;
+  sistema: null | SistemaIntegradoDto;
+  apiKeySistema: null | ApiKeyDto;
 }

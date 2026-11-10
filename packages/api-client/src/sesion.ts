@@ -15,14 +15,21 @@ export const RECLAMOS = {
   sistema: 'validasoft:sistema',
   sistemaId: 'validasoft:sistema-id',
   sujeto: 'sub',
+  nombre: 'name',
 } as const;
+
+/** Actor de las sesiones de la consola de Plataforma (PT-4): sin tenant ni empresas, solo `plataforma:tenants`. */
+export const ACTOR_PLATAFORMA = 'Plataforma';
 
 export interface SesionValidasoft {
   token: string;
   /** Vencimiento según el claim `exp`. */
   expira: Date;
   usuarioId: string;
-  tenantId: string;
+  /** Nulo solo en la sesión de un operador de Plataforma (no pertenece a ningún tenant). */
+  tenantId: string | null;
+  /** Nombre visible que trae el token (lo emite la sesión de Plataforma; las de tenant lo piden a `GET /yo`). */
+  nombre: string | null;
   /** Código del sistema integrado desde el que se abrió la sesión (SRM, MARCO…). */
   sistema: string | null;
   actorTipo: string | null;
@@ -72,7 +79,8 @@ export function leerSesion(token: string): SesionValidasoft {
   const exp = claims.exp;
   const usuarioId = textoOpcional(claims[RECLAMOS.sujeto]);
   const tenantId = textoOpcional(claims[RECLAMOS.tenant]);
-  if (typeof exp !== 'number' || !usuarioId || !tenantId) {
+  const actorTipo = textoOpcional(claims[RECLAMOS.actorTipo]);
+  if (typeof exp !== 'number' || !usuarioId || (!tenantId && actorTipo !== ACTOR_PLATAFORMA)) {
     throw new TokenInvalido('El token de sesión no trae exp, sub o tenant.');
   }
 
@@ -93,12 +101,18 @@ export function leerSesion(token: string): SesionValidasoft {
     expira: new Date(exp * 1000),
     usuarioId,
     tenantId,
+    nombre: textoOpcional(claims[RECLAMOS.nombre]),
     sistema: textoOpcional(claims[RECLAMOS.sistema]),
-    actorTipo: textoOpcional(claims[RECLAMOS.actorTipo]),
+    actorTipo,
     scopesDeTenant: new Set(lista(claims[RECLAMOS.scope])),
     scopesPorEmpresa,
     empresas: empresas.includes('*') ? '*' : new Set(empresas),
   };
+}
+
+/** Sesión de un operador de Plataforma (consola `/plataforma`, PT-4): sin tenant y con `plataforma:tenants`. */
+export function esSesionDePlataforma(sesion: SesionValidasoft): boolean {
+  return sesion.tenantId === null && sesion.actorTipo === ACTOR_PLATAFORMA && sesion.scopesDeTenant.has('plataforma:tenants');
 }
 
 /** Scopes que aplican con esa empresa activa (o sin empresa), como `PermisosEfectivos.EnEmpresa` en la API. */

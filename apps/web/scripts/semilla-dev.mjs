@@ -6,7 +6,8 @@
 // sistema (con los scopes de flujos, expedientes y documentos), usuarios con distintos roles, áreas (Jurídica, Compras
 // y Cumplimiento), tipos de vínculo (PROVEEDOR exige OTP en el enlace), el flujo «Habilitación de proveedores» publicado
 // en Norte con sus requisitos (RUT lo revisan Compras y Cumplimiento; Cámara de comercio, solo Cumplimiento), los textos
-// legales de Norte y vínculos en varios estados. Las invitaciones llegan a Mailpit (http://localhost:8025) con el enlace del tercero. Escribe las
+// legales de Norte y vínculos en varios estados. También registra el sistema de Plataforma CONSOLA_DEV (su clave se rota en
+// cada ejecución) y un operador para entrar a la consola de Plataforma (/plataforma) desde el formulario de sesión. Las invitaciones llegan a Mailpit (http://localhost:8025) con el enlace del tercero. Escribe las
 // credenciales en apps/web/.semilla.local.json (ignorado por git), que Vite sirve solo en `vite dev` para prellenar
 // el formulario de sesión y embed-demo.html. Cada ejecución crea un tenant distinto: no reutiliza ni borra nada.
 import { createSign, generateKeyPairSync, randomUUID } from 'node:crypto';
@@ -54,12 +55,12 @@ function base64Url(datos) {
  * Aserción X-Usuario-Delegado (ADR-0011): JWT RS256 de 5 minutos firmado con la clave privada del sistema, con `jti`
  * aleatorio: cada aserción vale una sola vez (SE-4), así que se firma una por petición.
  */
-function asercion(clavePrivadaPem, usuario) {
+function asercion(clavePrivadaPem, usuario, emisor = SISTEMA) {
   const ahora = Math.floor(Date.now() / 1000);
   const cabecera = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const carga = base64Url(
     JSON.stringify({
-      iss: SISTEMA,
+      iss: emisor,
       aud: 'validasoft',
       sub: usuario.sub,
       name: usuario.nombre,
@@ -386,6 +387,22 @@ for (const [persona, codigoArea] of [
 const certificado = await llamar('GET', `/api/v1/vinculos/${aprobado.id}/certificado`, { llave: admin, empresa: norte.id });
 console.log(`Aceros del Norte quedó aprobado en Norte con el certificado ${certificado.actual?.folio ?? '(sin emitir)'}.`);
 
+// Consola de Plataforma (PT-4): el backoffice de desarrollo que firma las aserciones de sus operadores. Se reemplaza su clave
+// en cada ejecución (la del archivo anterior deja de servir) y aloja la consola desde la app de Vite.
+const SISTEMA_PLATAFORMA = 'CONSOLA_DEV';
+const clavesPlataforma = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: { type: 'spki', format: 'pem' },
+  privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+});
+await llamar('PUT', `/api/v1/plataforma/sistemas/${SISTEMA_PLATAFORMA}`, {
+  llave: CLAVE_PLATAFORMA,
+  cuerpo: { nombre: 'Backoffice de Plataforma (desarrollo)', clavePublicaPem: clavesPlataforma.publicKey, origenesPermitidos: ORIGENES_DEMO },
+});
+const operador = { sub: 'op-paula', nombre: 'Paula Plataforma', correo: 'paula@validasoft.local' };
+// Verifica que el operador entra (y lo deja registrado).
+await llamar('POST', '/api/v1/plataforma/sesiones', { llave: CLAVE_PLATAFORMA, delegado: asercion(clavesPlataforma.privateKey, operador, SISTEMA_PLATAFORMA) });
+
 const salida = {
   generadoEn: new Date().toISOString(),
   apiUrl: API,
@@ -398,9 +415,10 @@ const salida = {
     { id: sur.id, nombre: sur.nombre },
   ],
   usuarios: usuarios.map(({ sub, nombre, correo, descripcion }) => ({ sub, nombre, correo, descripcion })),
+  plataforma: { clavePlataforma: CLAVE_PLATAFORMA, sistema: SISTEMA_PLATAFORMA, clavePrivadaPem: clavesPlataforma.privateKey, persona: operador },
 };
 await writeFile(new URL('../.semilla.local.json', import.meta.url), JSON.stringify(salida, null, 2) + '\n', 'utf8');
 
-console.log(`Listo: ${vinculos.length + 1} vínculos, ${usuarios.length} usuarios, sistema ${SISTEMA}.`);
+console.log(`Listo: ${vinculos.length + 1} vínculos, ${usuarios.length} usuarios, sistema ${SISTEMA} y operador de Plataforma ${operador.nombre}.`);
 console.log('Credenciales en apps/web/.semilla.local.json (solo desarrollo; no se versiona).');
 console.log('Invitaciones (enlace del tercero y código OTP) en Mailpit: http://localhost:8025, o en apps/public: /dev/correos.');
