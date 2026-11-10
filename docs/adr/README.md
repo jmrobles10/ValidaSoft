@@ -15,5 +15,6 @@ Cada decisión estructural se registra una vez y no se reescribe: si cambia, se 
 | [0009](0009-consentimiento-antes-de-compartir.md) | Consentimiento antes de compartir: la bóveda se abre a una empresa solo al aceptar su invitación (precisa 0005) | Aceptado |
 | [0010](0010-personas-relacionadas-con-boveda-propia.md) | Personas relacionadas (representantes, socios, UBO, miembros) son terceros con bóveda propia (precisa 0004) | Aceptado |
 | [0011](0011-identidad-delegada-desde-sistemas-integrados.md) | Identidad delegada desde los sistemas integrados: aserción firmada, roles en Validasoft y sesiones embebidas (precisa 0003) | Aceptado |
+| [0013](0013-ficha-maestra-del-tercero.md) | Ficha maestra del tercero por secciones en Validasoft: formularios canónicos globales versionados, aceptación por empresa, cruce con documentos y migración desde el Portal (docs/14) | Aceptado |
 
 Plantilla: `Contexto · Decisión · Alternativas descartadas · Consecuencias · Cómo se revierte`.
