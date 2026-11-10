@@ -27,6 +27,8 @@ export const SCOPES = {
   certificadosLeer: 'certificados:leer',
   eventosLeer: 'eventos:leer',
   webhooksAdministrar: 'webhooks:administrar',
+  verificacionesEscribir: 'verificaciones:escribir',
+  cumplimientoDecidir: 'cumplimiento:decidir',
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];

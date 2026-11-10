@@ -61,19 +61,21 @@ public sealed record CondicionDto(
 /// </summary>
 public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
-    bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
-/// versión; <c>requisitos: []</c> los quita.
+/// versión; <c>requisitos: []</c> los quita y <c>verificaciones: []</c> también.
 /// </summary>
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
-    IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
-    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null);
+    DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null);
 
 /// <summary>Flujo con su versión publicada y su borrador (si existen) y si es el flujo por defecto de su tipo de vínculo.</summary>
 public sealed record FlujoDto(
@@ -204,7 +206,9 @@ public sealed record ExpedienteDto(
     DateTimeOffset? CerradoEn,
     DateTimeOffset ActualizadoEn,
     long Version,
-    IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null);
+    IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null,
+    IReadOnlyList<VerificacionDto>? Verificaciones = null,
+    bool EsperandoVerificaciones = false);
 
 /// <summary>
 /// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c>. El área (y el requisito) van en la ruta.

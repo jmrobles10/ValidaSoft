@@ -8,6 +8,7 @@ import type { EstadoFlujoVersion } from './estadoFlujoVersion';
 import type { EtapaDto } from './etapaDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
+import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
 
 export interface FlujoVersionDto {
   id: string;
@@ -23,4 +24,6 @@ export interface FlujoVersionDto {
   retiradaEn: string | null;
   /** @nullable */
   requisitos?: RequisitoDelFlujoDto[] | null;
+  /** @nullable */
+  verificaciones?: VerificacionRequeridaDto[] | null;
 }

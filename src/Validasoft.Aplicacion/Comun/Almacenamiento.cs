@@ -64,6 +64,10 @@ public static class ClavesDeAlmacen
     /// <summary>PDF de una emisión del certificado (bucket del tenant), content-addressed por su SHA-256.</summary>
     public static string Certificado(Guid empresaId, string folio, string sha256) => $"empresas/{empresaId:N}/certificados/{folio}/{sha256}";
 
+    /// <summary>Evidencia de una consulta de listas (PDF) o respuesta cruda del proveedor (json), content-addressed (VE-10).</summary>
+    public static string EvidenciaDeVerificacion(Guid empresaId, string sha256, string extension) =>
+        $"empresas/{empresaId:N}/verificaciones/{sha256}.{extension}";
+
     /// <summary>Versiones devueltas: nunca se comparten (docs/07 §6.1).</summary>
     public static string Cuarentena(Guid documentoId, int numero) => $"cuarentena/{documentoId:N}/v{numero}";
 }

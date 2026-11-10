@@ -46,13 +46,19 @@ public static class Permisos
     /// <summary>Crear y gestionar suscripciones de webhooks y sus entregas (NW-4).</summary>
     public const string WebhooksAdministrar = "webhooks:administrar";
 
+    /// <summary>Consultar o reconsultar las listas restrictivas de un expediente (VE-15).</summary>
+    public const string VerificacionesEscribir = "verificaciones:escribir";
+
+    /// <summary>Decidir como Cumplimiento: resolver coincidencias en listas y registrar el estudio SAGRILAFT (VE-15).</summary>
+    public const string CumplimientoDecidir = "cumplimiento:decidir";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, VerificacionesEscribir, CumplimientoDecidir
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -80,7 +86,8 @@ public static class Permisos
     {
         Rol.Administrador => DelTenant,
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
-        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar],
+        Rol.OficialCumplimiento =>
+            [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, VerificacionesEscribir, CumplimientoDecidir, AuditoriaLeer],
         Rol.Auditor => [.. Lecturas, AuditoriaLeer],
         _ => []
     };

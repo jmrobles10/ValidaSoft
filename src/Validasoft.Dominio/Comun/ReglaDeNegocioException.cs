@@ -19,7 +19,10 @@ public enum TipoFalla
     DemasiadoGrande,
 
     /// <summary>El tipo real del archivo no está en la lista blanca (415).</summary>
-    TipoNoSoportado
+    TipoNoSoportado,
+
+    /// <summary>Un servicio externo del que depende la operación no responde o no está configurado (503, VE-8).</summary>
+    NoDisponible
 }
 
 /// <summary>
@@ -54,6 +57,8 @@ public sealed class ReglaDeNegocioException(TipoFalla tipo, string codigo, strin
     public static ReglaDeNegocioException DemasiadoGrande(string mensaje) => new(TipoFalla.DemasiadoGrande, "archivo-demasiado-grande", mensaje);
 
     public static ReglaDeNegocioException TipoNoSoportado(string mensaje) => new(TipoFalla.TipoNoSoportado, "tipo-archivo-no-soportado", mensaje);
+
+    public static ReglaDeNegocioException NoDisponible(string codigo, string mensaje) => new(TipoFalla.NoDisponible, codigo, mensaje);
 }
 
 /// <summary>Quién origina un cambio (docs/03 §3).</summary>

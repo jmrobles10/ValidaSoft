@@ -108,6 +108,7 @@ export const apiKeys = {
     configuracion: 'Configuración y flujos',
     vinculos: 'Terceros y vínculos',
     revision: 'Expedientes, documentos y certificados',
+    cumplimiento: 'Cumplimiento (SAGRILAFT)',
     integracion: 'Eventos y webhooks',
     auditoria: 'Auditoría',
   },
@@ -134,6 +135,8 @@ export const apiKeys = {
     certificadosLeer: 'Ver y descargar certificados',
     eventosLeer: 'Leer eventos (consulta y SSE)',
     webhooksAdministrar: 'Administrar webhooks',
+    verificacionesEscribir: 'Consultar listas restrictivas',
+    cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',
     auditoriaLeer: 'Leer la auditoría',
   },
   claveCreada: {

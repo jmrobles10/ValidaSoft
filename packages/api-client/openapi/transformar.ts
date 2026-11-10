@@ -236,6 +236,19 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plataforma/importacion/portal/{id}/rechazos': 'descargarRechazosImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/{id}/reanudar': 'reanudarImportacionPortal',
   'POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar': 'sincronizarTerceroPortal',
+  // Verificaciones externas y cumplimiento (H7, VE-5…VE-16).
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/consultar': 'consultarVerificacion',
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/coincidencias/{coincidenciaId}/resolver': 'resolverCoincidencia',
+  'POST /api/v1/expedientes/{id}/verificaciones/estudio-cumplimiento': 'registrarEstudioCumplimiento',
+  'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/evidencia/descarga': 'descargarEvidenciaVerificacion',
+  'GET /api/v1/cumplimiento/bandeja': 'listarBandejaCumplimiento',
+  'GET /api/v1/vinculos/{id}/monitoreo-listas': 'obtenerMonitoreoListas',
+  'POST /api/v1/vinculos/{id}/monitoreo-listas/coincidencias/{coincidenciaId}/resolver': 'resolverCoincidenciaMonitoreo',
+  'POST /api/v1/vinculos/{id}/monitoreo-listas/evidencia/descarga': 'descargarEvidenciaMonitoreo',
+  'GET /api/v1/configuracion/listas-restrictivas': 'obtenerListasRestrictivas',
+  'PUT /api/v1/configuracion/listas-restrictivas': 'actualizarListasRestrictivas',
+  'GET /api/v1/informes/cumplimiento': 'obtenerInformeCumplimiento',
+  'GET /api/v1/informes/cumplimiento/excel': 'exportarInformeCumplimiento',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -301,11 +314,31 @@ const ENUMS: Record<string, string[]> = {
   // Ficha maestra por empresa (F2): qué pide un requisito y cómo cambió un campo entre la versión aceptada y la nueva.
   TipoRequisito: ['Documento', 'Seccion'],
   TipoCambio: ['Agregado', 'Quitado', 'Modificado'],
+  // Verificaciones externas (H7).
+  TipoVerificacion: ['ListasRestrictivas', 'EstudioDeCumplimiento'],
+  EstadoVerificacion: ['Pendiente', 'CoincidenciaPorAnalizar', 'Satisfecha', 'Fallida', 'Expirada'],
+  ResultadoVerificacion: ['SinCoincidencias', 'Coincidencias', 'Aprobado', 'Rechazado'],
+  DecisionCoincidencia: ['Descartada', 'Confirmada'],
+  DebidaDiligencia: ['Simple', 'Ampliada'],
+  ConceptoCumplimiento: ['Favorable', 'Desfavorable'],
+  ModoBusquedaListas: ['PorNombre', 'PorDocumento'],
+  OrigenFilaCumplimiento: ['Expediente', 'Monitoreo'],
 };
 
 /** `Esquema.propiedad` → enum. */
 const PROPIEDADES_ENUM: Record<string, string> = {
   'VinculoDto.estado': 'EstadoVinculo',
+  'VerificacionDto.tipo': 'TipoVerificacion',
+  'VerificacionDto.estado': 'EstadoVerificacion',
+  'VerificacionRequeridaDto.tipo': 'TipoVerificacion',
+  'VerificacionPendienteDto.tipo': 'TipoVerificacion',
+  'VerificacionPendienteDto.estado': 'EstadoVerificacion',
+  'ResolverCoincidenciaDto.decision': 'DecisionCoincidencia',
+  'EstudioCumplimientoDto.debidaDiligencia': 'DebidaDiligencia',
+  'EstudioCumplimientoDto.concepto': 'ConceptoCumplimiento',
+  'RegistrarEstudioCumplimientoDto.debidaDiligencia': 'DebidaDiligencia',
+  'RegistrarEstudioCumplimientoDto.concepto': 'ConceptoCumplimiento',
+  'FilaCumplimientoDto.origen': 'OrigenFilaCumplimiento',
   'VinculoDto.origen': 'OrigenVinculo',
   'RolAsignadoDto.rol': 'Rol',
   'ExpedienteDto.estado': 'EstadoExpediente',

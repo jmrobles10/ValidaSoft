@@ -12,13 +12,14 @@ export const GRUPOS_PERMISOS = [
   { grupo: 'configuracion', claves: ['configuracionLeer', 'configuracionEscribir', 'flujosLeer', 'flujosEscribir'] },
   { grupo: 'vinculos', claves: ['tercerosLeer', 'tercerosEscribir', 'vinculosLeer', 'vinculosEscribir', 'vinculosBloquear', 'cuentasAprobar'] },
   { grupo: 'revision', claves: ['expedientesLeer', 'expedientesRevisar', 'expedientesAdministrar', 'documentosLeer', 'documentosDescargar', 'certificadosLeer'] },
+  { grupo: 'cumplimiento', claves: ['verificacionesEscribir', 'cumplimientoDecidir'] },
   { grupo: 'integracion', claves: ['eventosLeer', 'webhooksAdministrar'] },
   { grupo: 'auditoria', claves: ['auditoriaLeer'] },
 ] as const satisfies readonly { grupo: string; claves: readonly ClavePermiso[] }[];
 
 export type GrupoPermisos = (typeof GRUPOS_PERMISOS)[number]['grupo'];
 
-/** Los 22 scopes del tenant, en el orden de los grupos. */
+/** Los 24 scopes del tenant, en el orden de los grupos. */
 export const SCOPES_DEL_TENANT: readonly string[] = GRUPOS_PERMISOS.flatMap((g) => g.claves.map((c) => SCOPES[c]));
 
 const CLAVE_DE_SCOPE = new Map<string, ClavePermiso>(GRUPOS_PERMISOS.flatMap((g) => g.claves.map((c) => [SCOPES[c], c] as const)));
@@ -45,7 +46,7 @@ export function scopesDeGrupo(grupo: GrupoPermisos): string[] {
 }
 
 export interface ResumenPermisos {
-  /** Tiene los 22 scopes del tenant. */
+  /** Tiene los 24 scopes del tenant. */
   todos: boolean;
   /** Grupos con al menos un scope, en orden, y cuántos de cada uno. */
   grupos: { grupo: GrupoPermisos; cuantos: number; total: number }[];
