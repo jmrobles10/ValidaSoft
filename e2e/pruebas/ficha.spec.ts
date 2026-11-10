@@ -24,13 +24,27 @@ test('el proveedor abre Mi información, guarda General a medias, ve lo que falt
   await page.getByRole('button', { name: 'Continuar' }).or(page.getByRole('link', { name: 'Continuar' })).first().click();
   await expect(page).toHaveURL(/\/ficha\/general/);
 
-  // Guardar sin llenar: el servidor responde los faltantes exactos y el wizard no avanza.
-  await page.getByRole('button', { name: 'Guardar y continuar' }).click();
+  // Sin datos no hay nada que guardar ni se puede continuar: la barra dice cuánto falta (lo evalúa la API, FM-46).
+  const barra = page.getByRole('group', { name: 'Guardar la sección' });
+  await expect(barra.getByText(/Faltan? \d+ datos? para continuar/)).toBeVisible();
+  await expect(barra.getByRole('button', { name: 'Guardar y continuar' })).toBeDisabled();
+  await expect(barra.getByRole('button', { name: 'Guardar', exact: true })).toBeDisabled();
+  // El panel acompaña la sección: todas las secciones con su estado y la abierta marcada.
+  const panel = page.getByRole('navigation', { name: 'Secciones de mi información' });
+  await expect(panel.getByRole('link', { name: /^Información general:/ })).toHaveAttribute('aria-current', 'step');
+
+  // Un dato a medias: «Guardar» deja el borrador con los faltantes exactos del servidor y el wizard no avanza.
+  await page.getByRole('textbox', { name: 'Razón social' }).fill('Ferretería La Ficha S.A.S.');
+  await expect(barra.getByText('Tienes cambios sin guardar')).toBeVisible();
+  await barra.getByRole('button', { name: 'Guardar', exact: true }).click();
   await expect(page.getByText(/Para completar esta sección faltan? \d+ datos?/)).toBeVisible();
   await expect(page).toHaveURL(/\/ficha\/general/);
+  await expect(barra.getByRole('button', { name: 'Guardar y continuar' })).toBeDisabled();
+  await expect(panel.getByRole('link', { name: /^Información general: Faltan? \d+ datos?$/ })).toBeVisible();
   await page.screenshot({ path: 'test-results/ficha-general-faltantes.png', fullPage: true });
 
   // De vuelta en el resumen, General queda como borrador con sus faltantes.
-  await page.getByRole('link', { name: 'Mi información' }).first().click();
+  await panel.getByRole('link', { name: 'Mi información' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Mi información' })).toBeVisible();
   await expect(page.getByText(/Faltan? \d+ datos?/).first()).toBeVisible();
 });
