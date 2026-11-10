@@ -43,6 +43,9 @@ public sealed class ApiFixture : IAsyncLifetime
     /// <summary>Carpeta temporal con un <c>dist/</c> mínimo de cada app para servirlas desde la API (SE-3).</summary>
     public string CarpetaApps { get; } = Path.Combine(Path.GetTempPath(), "validasoft-apps-" + Guid.NewGuid().ToString("N"));
 
+    /// <summary>JSON del Portal que lee el sincronizador de coexistencia (origen configurado <c>Archivo</c>, F4); lo escriben las pruebas.</summary>
+    public string ArchivoPortal { get; } = Path.Combine(Path.GetTempPath(), "validasoft-portal-" + Guid.NewGuid().ToString("N") + ".json");
+
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("postgres:17").Build();
     private readonly MinioContainer _minio = new MinioBuilder(ImagenMinio).Build();
 
@@ -78,6 +81,7 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);
             b.UseSetting("Validasoft:Proxies:Confiables:0", ProxyConfiable);
             b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
+            b.UseSetting("Validasoft:Importacion:Portal:Archivo", ArchivoPortal); // sincronizador del Portal sin red (F4)
             b.UseSetting("Validasoft:Certificados:SegundosProceso", "1"); // PDF de los certificados casi al instante
             // Webhooks (NW): receptor local por http, reintentos de segundos y deshabilitación tras 3 fallos seguidos.
             b.UseSetting("Validasoft:Webhooks:PermitirHttpLocal", "true");

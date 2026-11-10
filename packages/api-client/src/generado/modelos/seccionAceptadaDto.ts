@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { ContenidoDeSeccionDto } from './contenidoDeSeccionDto';
+import type { OrigenDeAceptacion } from './origenDeAceptacion';
 
 export interface SeccionAceptadaDto {
   seccion: string;
@@ -20,4 +21,5 @@ export interface SeccionAceptadaDto {
   /** @nullable */
   versionVigente: number | null;
   versionNuevaPendiente: boolean;
+  origen?: OrigenDeAceptacion;
 }

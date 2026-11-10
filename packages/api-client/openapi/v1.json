@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5095/"
+      "url": "http://localhost:5096/"
     }
   ],
   "paths": {
@@ -3677,6 +3677,189 @@
         }
       }
     },
+    "/api/v1/plataforma/importacion/portal": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_portal",
+        "description": "POST_api_v1_plataforma_importacion_portal",
+        "operationId": "POST_api_v1_plataforma_importacion_portal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportarPortalDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/portal/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_importacion_portal_id",
+        "description": "GET_api_v1_plataforma_importacion_portal_id",
+        "operationId": "GET_api_v1_plataforma_importacion_portal_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorridaImportacionPortalDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/portal/{id}/rechazos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
+        "description": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
+        "operationId": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/portal/{id}/reanudar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
+        "description": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
+        "operationId": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
+        "description": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
+        "operationId": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
+        "parameters": [
+          {
+            "name": "terid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SincronizacionPortalDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/fichas/recalcular": {
       "post": {
         "tags": [
@@ -7264,6 +7447,12 @@
                 "$ref": "#/components/schemas/RevalidacionDeSeccionDto"
               }
             ]
+          },
+          "origen": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8131,6 +8320,69 @@
           },
           "consentimientoPlataforma": {
             "type": "boolean"
+          }
+        }
+      },
+      "AvisoImportacionDto": {
+        "required": [
+          "claveLegado",
+          "terid",
+          "seccion",
+          "periodo",
+          "campo",
+          "codigo",
+          "mensaje",
+          "dato",
+          "accionSugerida"
+        ],
+        "type": "object",
+        "properties": {
+          "claveLegado": {
+            "type": "string"
+          },
+          "terid": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "seccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "campo": {
+            "type": "string"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "dato": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accionSugerida": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -9099,6 +9351,27 @@
           }
         }
       },
+      "ConstructoraEmpresaDto": {
+        "required": [
+          "constructora",
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "constructora": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ContactoDto": {
         "required": [
           "nombre",
@@ -9650,6 +9923,98 @@
             "items": {
               "$ref": "#/components/schemas/IcaErpDto"
             }
+          }
+        }
+      },
+      "CorridaImportacionPortalDto": {
+        "required": [
+          "id",
+          "estado",
+          "dryRun",
+          "origen",
+          "tamanoLote",
+          "importarCatalogos",
+          "constructoras",
+          "cursor",
+          "lotes",
+          "creadaEn",
+          "actualizadaEn",
+          "terminadaEn",
+          "error",
+          "resumen"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "tamanoLote": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "importarCatalogos": {
+            "type": "boolean"
+          },
+          "constructoras": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConstructoraEmpresaDto"
+            }
+          },
+          "cursor": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lotes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualizadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "terminadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resumen": {
+            "$ref": "#/components/schemas/ResumenImportacionPortalDto"
           }
         }
       },
@@ -12727,6 +13092,48 @@
           }
         }
       },
+      "ImportarPortalDto": {
+        "type": "object",
+        "properties": {
+          "dryRun": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "origen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "archivo": {},
+          "constructoras": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ConstructoraEmpresaDto"
+            }
+          },
+          "tamanoLote": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "importarCatalogos": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "IndicadoresDto": {
         "required": [
           "dias",
@@ -15167,6 +15574,160 @@
           }
         }
       },
+      "ResumenImportacionPortalDto": {
+        "required": [
+          "tercerosLeidos",
+          "tercerosCreados",
+          "tercerosEncontrados",
+          "tercerosRechazados",
+          "secciones",
+          "aceptaciones",
+          "aceptacionesExistentes",
+          "sinVinculo",
+          "catalogos",
+          "advertencias",
+          "rechazos",
+          "detalleAdvertencias",
+          "detalleRechazos"
+        ],
+        "type": "object",
+        "properties": {
+          "tercerosLeidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tercerosCreados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tercerosEncontrados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tercerosRechazados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResumenSeccionImportadaDto"
+            }
+          },
+          "aceptaciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aceptacionesExistentes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sinVinculo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "catalogos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultadoImportacionCatalogoDto"
+            }
+          },
+          "advertencias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rechazos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detalleAdvertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoImportacionDto"
+            }
+          },
+          "detalleRechazos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoImportacionDto"
+            }
+          }
+        }
+      },
+      "ResumenSeccionImportadaDto": {
+        "required": [
+          "seccion",
+          "creadas",
+          "sinCambios",
+          "rechazadas"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "creadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sinCambios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rechazadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "RetirarVersionDto": {
         "required": [
           "motivo"
@@ -15489,6 +16050,12 @@
           },
           "versionNuevaPendiente": {
             "type": "boolean"
+          },
+          "origen": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15725,6 +16292,45 @@
           }
         }
       },
+      "SeccionSincronizadaDto": {
+        "required": [
+          "seccion",
+          "periodo",
+          "version",
+          "creada",
+          "rechazada"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "creada": {
+            "type": "boolean"
+          },
+          "rechazada": {
+            "type": "boolean"
+          }
+        }
+      },
       "SesionTerceroDto": {
         "required": [
           "accessToken",
@@ -15784,6 +16390,59 @@
           "expira": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "SincronizacionPortalDto": {
+        "required": [
+          "terid",
+          "claveLegado",
+          "terceroId",
+          "terceroCreado",
+          "secciones",
+          "advertencias",
+          "rechazos"
+        ],
+        "type": "object",
+        "properties": {
+          "terid": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "claveLegado": {
+            "type": "string"
+          },
+          "terceroId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "terceroCreado": {
+            "type": "boolean"
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionSincronizadaDto"
+            }
+          },
+          "advertencias": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoImportacionDto"
+            }
+          },
+          "rechazos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvisoImportacionDto"
+            }
           }
         }
       },
@@ -17947,6 +18606,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.RecalculoDeFichasEndpoints"
