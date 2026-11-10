@@ -117,32 +117,35 @@ public static class ExpedientesEndpoints
     {
         empresa.UsarMensajeria(mensajes);
         var veredicto = LeerVeredicto(dto);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        var expediente = stream.Aggregate!;
-        await AsegurarVinculoNoBloqueadoAsync(empresa, expediente, ct);
-        var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
-        var ahora = reloj.GetUtcNow();
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            var expediente = stream.Aggregate!;
+            await AsegurarVinculoNoBloqueadoAsync(empresa, expediente, ct);
+            var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
+            var ahora = reloj.GetUtcNow();
 
-        IReadOnlyList<object> eventos;
-        if (!expediente.ConRequisitos)
-        {
-            var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
-            eventos = expediente.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, ahora);
-        }
-        else if (veredicto == Dominio.Expedientes.Veredicto.Aprobado)
-        {
-            eventos = expediente.AprobarArea(areaId, revisor, dto.Versiones, ahora);
-        }
-        else
-        {
-            var observaciones = new List<ObservacionDeRequisito>();
-            foreach (var requisito in dto.Requisitos ?? [])
-                observaciones.Add(new ObservacionDeRequisito(requisito.RequisitoId, requisito.SobreVersion,
-                    await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, requisito.Motivos, AplicaMotivo.Observacion, ct), requisito.Observacion));
-            eventos = expediente.ObservarArea(areaId, revisor, observaciones, ahora);
-        }
+            IReadOnlyList<object> eventos;
+            if (!expediente.ConRequisitos)
+            {
+                var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
+                eventos = expediente.EmitirVeredicto(areaId, revisor, veredicto, motivos, dto.Observacion, ahora);
+            }
+            else if (veredicto == Dominio.Expedientes.Veredicto.Aprobado)
+            {
+                eventos = expediente.AprobarArea(areaId, revisor, dto.Versiones, ahora);
+            }
+            else
+            {
+                var observaciones = new List<ObservacionDeRequisito>();
+                foreach (var requisito in dto.Requisitos ?? [])
+                    observaciones.Add(new ObservacionDeRequisito(requisito.RequisitoId, requisito.SobreVersion,
+                        await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, requisito.Motivos, AplicaMotivo.Observacion, ct), requisito.Observacion));
+                eventos = expediente.ObservarArea(areaId, revisor, observaciones, ahora);
+            }
 
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>
@@ -157,13 +160,16 @@ public static class ExpedientesEndpoints
     {
         empresa.UsarMensajeria(mensajes);
         var veredicto = LeerVeredicto(dto);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
-        var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
-        var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
-            reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var revisor = await Revisores.DelAreaAsync(empresa, contexto, areaId, ct);
+            var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Observacion, ct);
+            var eventos = stream.Aggregate!.EmitirVeredictoDeRequisito(requisitoId, areaId, revisor, veredicto, dto.SobreVersion, motivos, dto.Observacion,
+                reloj.GetUtcNow());
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>
@@ -176,10 +182,13 @@ public static class ExpedientesEndpoints
         IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var eventos = stream.Aggregate!.EximirRequisito(requisitoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var eventos = stream.Aggregate!.EximirRequisito(requisitoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>Rechazo terminal por un área con <c>puedeRechazarExpediente</c> (motivos y justificación).</summary>
@@ -189,12 +198,15 @@ public static class ExpedientesEndpoints
         HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var revisor = await Revisores.DelAreaAsync(empresa, contexto, dto.AreaId, ct);
-        var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Rechazo, ct);
-        var eventos = stream.Aggregate!.Rechazar(dto.AreaId, revisor, motivos, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var revisor = await Revisores.DelAreaAsync(empresa, contexto, dto.AreaId, ct);
+            var motivos = await CatalogoDeMotivos.ResolverAsync(empresa.Sesion, dto.Motivos, AplicaMotivo.Rechazo, ct);
+            var eventos = stream.Aggregate!.Rechazar(dto.AreaId, revisor, motivos, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>
@@ -207,10 +219,13 @@ public static class ExpedientesEndpoints
         IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var eventos = await ReenvioConVersionesAsync(empresa.Sesion, stream.Aggregate!, OrigenReenvio.Integrador, dto.Respuesta, reloj.GetUtcNow(), ct);
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var eventos = await ReenvioConVersionesAsync(empresa.Sesion, stream.Aggregate!, OrigenReenvio.Integrador, dto.Respuesta, reloj.GetUtcNow(), ct);
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>
@@ -232,9 +247,12 @@ public static class ExpedientesEndpoints
         IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        var eventos = new object[] { stream.Aggregate!.Anular(dto.Motivo, reloj.GetUtcNow()) };
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            var eventos = new object[] { stream.Aggregate!.Anular(dto.Motivo, reloj.GetUtcNow()) };
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>Aprobación en nombre del área (origen <c>Administrador</c>), con justificación.</summary>
@@ -244,10 +262,13 @@ public static class ExpedientesEndpoints
         IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
-        var eventos = stream.Aggregate!.AprobarComoAdministrador(areaId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var eventos = stream.Aggregate!.AprobarComoAdministrador(areaId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     /// <summary>Anula un veredicto vigente del área (el indicado o el más reciente), con justificación. No revierte un rechazo.</summary>
@@ -257,9 +278,12 @@ public static class ExpedientesEndpoints
         IContextoSolicitud contexto, HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         empresa.UsarMensajeria(mensajes);
-        var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
-        var eventos = stream.Aggregate!.AnularVeredicto(areaId, dto.VeredictoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
-        return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            var eventos = stream.Aggregate!.AnularVeredicto(areaId, dto.VeredictoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+        });
     }
 
     private static Veredicto LeerVeredicto(VeredictoDto dto) =>

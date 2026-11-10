@@ -533,6 +533,7 @@ Cada empresa personaliza asunto, cabecera y pie de los correos que Validasoft le
 | Id | Tema | Decisión | Origen |
 |---|---|---|---|
 | FE-1 | Calendario en la zona del negocio | Las fechas de calendario (hoy, días para vencer, vigencias, «expedición no futura») se toman en la zona del negocio (`Validasoft:ZonaHoraria`, por omisión `America/Bogota`), no en UTC: entre las 7 p. m. y la medianoche de Bogotá el sistema creía que ya era el día siguiente y los días restantes salían con uno menos (detectado por la e2e de vencimientos en CI). La zona por tenant (`Tenant.ZonaHoraria`) queda para cuando haya tenants fuera de Colombia. | Arquitectura (corrección) |
+| FE-2 | Reintento ante carreras en el expediente | Los endpoints del expediente que leen el stream, deciden y guardan (veredictos, eximir, rechazar, aprobar en nombre de…) corren dentro de `SesionDeEmpresa.ReintentarAnteCarreraAsync`: si la escritura pierde la carrera con un proceso en segundo plano (el PDF del certificado que se reemite al cerrar), se descarta la sesión y sus mensajes y se repite hasta 5 veces. Con `If-Match` desactualizado sigue el 412. Corrige la falla intermitente de la prueba de actualización en CI. | Arquitectura (corrección) |
 
 ## 6. Consecuencias estructurales a propagar
 
