@@ -47,8 +47,9 @@ describe('Panel de verificaciones del expediente (H7)', () => {
     await userEvent.type(dialogo.getByLabelText(/Justificación/), 'Homónimo: otra cédula.');
     await userEvent.click(dialogo.getByRole('button', { name: 'Guardar decisión' }));
     const [entrada, init] = fetch.mock.calls[0] ?? [];
-    expect(String(entrada)).toContain('/api/v1/expedientes/e1/verificaciones/ListasRestrictivas/coincidencias/c1/resolver');
-    expect(JSON.parse(String(init?.body))).toEqual({ decision: 'Descartada', justificacion: 'Homónimo: otra cédula.' });
+    const url = entrada instanceof Request ? entrada.url : (entrada?.toString() ?? '');
+    expect(url).toContain('/api/v1/expedientes/e1/verificaciones/ListasRestrictivas/coincidencias/c1/resolver');
+    expect(JSON.parse(typeof init?.body === 'string' ? init.body : '{}')).toEqual({ decision: 'Descartada', justificacion: 'Homónimo: otra cédula.' });
   });
 
   it('sin cumplimiento:decidir no ofrece resolver ni registrar el estudio; una decisión heredada dice hasta cuándo vale', () => {
