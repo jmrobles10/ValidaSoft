@@ -79,3 +79,12 @@ export function documentosDeSoporte(documentos: readonly DocumentoBovedaDto[], s
 export const claveDeRuta = (ruta: string) => ruta.split(/[.[]/)[0] ?? ruta;
 
 export const esFaltanteDeSoporte = (f: FaltanteSeccionDto) => f.regla === REGLA_SOPORTE;
+
+/**
+ * La fila de la sección abierta. La financiera abierta en un periodo que aún no tiene fila (uno nuevo) marca la primera
+ * fila de la financiera.
+ */
+export function filaActual(filas: readonly EstadoSeccionFichaDto[], seccion: string, periodo: number | null): EstadoSeccionFichaDto | null {
+  const deLaSeccion = filas.filter((f) => f.seccion === seccion);
+  return deLaSeccion.find((f) => periodo === null || f.periodo === periodo) ?? deLaSeccion[0] ?? null;
+}

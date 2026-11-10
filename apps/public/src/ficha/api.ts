@@ -1,16 +1,19 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   buscarEnCatalogoPublico,
+  evaluarSeccionFicha,
   getBuscarEnCatalogoPublicoQueryOptions,
   getObtenerFichaQueryKey,
   getObtenerFichaQueryOptions,
   getObtenerSeccionFichaQueryKey,
   getObtenerSeccionFichaQueryOptions,
   guardarSeccionFicha,
+  type CompletitudSeccionDto,
   type EntradaCatalogoDto,
   type GuardarSeccionDto,
   type SeccionGuardadaDto,
 } from '@validasoft/api-client';
+import { useDiferido } from '../shared/useDiferido';
 
 export type Catalogo = 'ciudades' | 'actividades-economicas' | 'responsabilidades-dian' | 'especialidades';
 
@@ -36,6 +39,23 @@ export function useGuardarSeccion(codigo: string, periodo: number | null) {
       void cliente.invalidateQueries({ queryKey: getObtenerFichaQueryKey() });
     },
   });
+}
+
+/**
+ * Completitud que tendría la sección con lo que hay en el formulario, sin guardarla (FM-46): la evalúa la API con la misma
+ * regla del guardado. `cuerpo` es el JSON de lo que se guardaría; se consulta medio segundo después del último cambio y,
+ * mientras llega la respuesta, se conserva la anterior. `pendiente` = aún no refleja lo último escrito.
+ */
+export function useEvaluacionSeccion(codigo: string, periodo: number | null, cuerpo: string) {
+  const diferido = useDiferido(cuerpo, 500);
+  const consulta = useQuery<CompletitudSeccionDto>({
+    queryKey: ['/public/v1/ficha', codigo, 'evaluacion', periodo, diferido],
+    queryFn: ({ signal }) => evaluarSeccionFicha(codigo, JSON.parse(diferido) as GuardarSeccionDto, parametrosPeriodo(periodo), undefined, signal),
+    placeholderData: keepPreviousData,
+    staleTime: Infinity,
+    retry: false,
+  });
+  return { ...consulta, pendiente: diferido !== cuerpo || consulta.isFetching };
 }
 
 /** Búsqueda en un catálogo grande (ciudades, CIIU) por prefijo de código o parte del nombre. */

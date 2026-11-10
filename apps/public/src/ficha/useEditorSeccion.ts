@@ -49,6 +49,8 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   const [erroresCampo, setErroresCampo] = useState<ErrorDeCampo[]>([]);
   const errorCampo = erroresCampo[0] ?? null;
   const [editados, setEditados] = useState<ReadonlySet<string>>(() => new Set());
+  // Hay algo tocado desde el último guardado exitoso (un 422 no lo guarda).
+  const [sinGuardar, setSinGuardar] = useState(false);
   const guardado = useGuardarSeccion(codigo, periodo);
 
   const marcar = (claves: string[]) => setEditados((previos) => new Set([...previos, ...claves]));
@@ -56,11 +58,13 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   const cambiar = (cambio: object) => {
     setDatos((d) => ({ ...d, ...cambio }));
     marcar(Object.keys(cambio));
+    setSinGuardar(true);
   };
 
   const cambiarSoportes = (nuevos: SoporteSeccionDto[]) => {
     setSoportes(nuevos);
     marcar(['soportes']);
+    setSinGuardar(true);
   };
 
   const mensaje = (ruta: string): string | null => {
@@ -78,10 +82,12 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
       ? null
       : (erroresCampo.find((e) => claveDeRuta(e.campo) === clave)?.mensaje ?? (senalados && estaSenalado(clave, senalados.campos) ? senalados.mensaje : null));
 
+  // Lo que se enviaría al guardar. El tipo de cada soporte lo pone el servidor: se envía solo qué versión de qué documento.
+  const cuerpo = { datos: datosParaEnviar(codigo, datos), soportes: soportes.map(({ documentoId, version }) => ({ documentoId, version })) };
+
   const guardar = (alGuardar: (respuesta: SeccionGuardadaDto) => void) => {
     guardado.mutate(
-      // El tipo de cada soporte lo pone el servidor: se envía solo qué versión de qué documento.
-      { datos: datosParaEnviar(codigo, datos), soportes: soportes.map(({ documentoId, version }) => ({ documentoId, version })) },
+      cuerpo,
       {
         onSuccess: (respuesta) => {
           setDatos(respuesta.seccion.datos ?? {});
@@ -89,6 +95,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
           setFaltantes(respuesta.completitud.faltantes);
           setErroresCampo([]);
           setEditados(new Set());
+          setSinGuardar(false);
           alGuardar(respuesta);
         },
         onError: (error) => {
@@ -102,7 +109,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   // Un error que no es de un campo (sesión, red, 5xx…) va arriba del formulario.
   const errorGeneral = guardado.isError && !errorCampo ? guardado.error : null;
 
-  return { datos, cambiar, soportes, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending };
+  return { datos, cambiar, soportes, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
 }
 
 export type EditorSeccion = ReturnType<typeof useEditorSeccion>;

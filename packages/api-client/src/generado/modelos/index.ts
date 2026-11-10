@@ -131,6 +131,7 @@ export * from './estadoVersion';
 export * from './estadoVinculo';
 export * from './etapaDto';
 export * from './etapaExpedienteDto';
+export * from './evaluarSeccionFichaParams';
 export * from './eventoHistorialDto';
 export * from './eventoHistorialDtoDatos';
 export * from './eventoPublicoDto';

@@ -229,6 +229,7 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/ficha': 'obtenerFicha',
   'GET /public/v1/ficha/{seccion}': 'obtenerSeccionFicha',
   'PUT /public/v1/ficha/{seccion}': 'guardarSeccionFicha',
+  'POST /public/v1/ficha/{seccion}/evaluacion': 'evaluarSeccionFicha',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */

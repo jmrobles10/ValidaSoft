@@ -155,6 +155,21 @@ public sealed class SeccionDeFicha
     }
 
     /// <summary>
+    /// Completitud que tendría una versión con estos datos y soportes, sin registrarla (FM-46): la vista previa con la que el
+    /// wizard habilita «Guardar y continuar». Usa la misma regla y la misma referencia del cambio que <see cref="Registrar"/>;
+    /// un error de formato es el mismo 422. Sin sección guardada, <paramref name="actual"/> es nulo.
+    /// </summary>
+    public static CompletitudDeSeccion Anticipar(SeccionDeFicha? actual, DefinicionDeSeccion seccion, object datos, int soportes, ContextoDeSeccion contexto,
+        ICatalogosDeFicha catalogos)
+    {
+        var huellaDatos = JsonDeFicha.Huella(seccion.Esquema.Canonico(datos));
+        var referencia = actual?.Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero)?.HuellaDatos;
+        var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, referencia is not null && referencia != huellaDatos, soportes);
+        ReglasDeFicha.AsegurarFormato(resultado);
+        return resultado.Completitud;
+    }
+
+    /// <summary>
     /// Recalcula la completitud de la versión vigente con las reglas actuales (FM-16); sin cambios ⇒ nulo (idempotente).
     /// La regla del soporte usa la huella de referencia (última versión completa) guardada con la versión.
     /// </summary>

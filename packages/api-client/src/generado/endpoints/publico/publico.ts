@@ -30,6 +30,7 @@ import type {
   BuscarEnCatalogoPublicoParams,
   CargaPrefirmadaDto,
   CertificadoPublicoDto,
+  CompletitudSeccionDto,
   ConfirmacionCargaDto,
   CuentaBancariaPublicaDto,
   DescargaDto,
@@ -38,6 +39,7 @@ import type {
   DocumentoDto,
   EnviarFormularioDto,
   EstadoFichaDto,
+  EvaluarSeccionFichaParams,
   ExpedientePublicoDto,
   GuardarSeccionDto,
   GuardarSeccionFichaParams,
@@ -1368,6 +1370,70 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getGuardarSeccionFichaMutationOptions(options), queryClient);
+    }
+    export const evaluarSeccionFicha = (
+    seccion: string,
+    guardarSeccionDto: BodyType<GuardarSeccionDto>,
+    params?: EvaluarSeccionFichaParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<CompletitudSeccionDto>(
+      {url: `/public/v1/ficha/${seccion}/evaluacion`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: guardarSeccionDto,
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getEvaluarSeccionFichaMutationKey = () => ['evaluarSeccionFicha'] as const;
+
+export const getEvaluarSeccionFichaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluarSeccionFicha>>, TError,EvaluarSeccionFichaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof evaluarSeccionFicha>>, TError,EvaluarSeccionFichaMutationVariables, TContext> => {
+
+const mutationKey = getEvaluarSeccionFichaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof evaluarSeccionFicha>>, EvaluarSeccionFichaMutationVariables> = (props) => {
+          const {seccion,data,params} = props ?? {};
+
+          return  evaluarSeccionFicha(seccion,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EvaluarSeccionFichaMutationResult = NonNullable<Awaited<ReturnType<typeof evaluarSeccionFicha>>>
+    export type EvaluarSeccionFichaMutationBody = BodyType<GuardarSeccionDto>
+    export type EvaluarSeccionFichaMutationError = ErrorType<void>
+    export type EvaluarSeccionFichaMutationVariables = {seccion: string;data: BodyType<GuardarSeccionDto>;params?: EvaluarSeccionFichaParams}
+
+    export const useEvaluarSeccionFicha = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluarSeccionFicha>>, TError,EvaluarSeccionFichaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof evaluarSeccionFicha>>,
+        TError,
+        EvaluarSeccionFichaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getEvaluarSeccionFichaMutationOptions(options), queryClient);
     }
     export const obtenerExpedientePublico = (
     id: string,

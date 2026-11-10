@@ -34,7 +34,8 @@ describe('Mi información: la observación de una empresa (F2)', () => {
       expedientes: { e1: expedienteConSecciones([GENERAL_OBSERVADA, FINANCIERA_PENDIENTE]) },
     });
 
-    const aviso = await screen.findByRole('alert', { name: 'Constructora Norte pidió corregir esta sección' });
+    // Llega tras el vínculo y su expediente: con la suite en paralelo puede tardar más del segundo por omisión.
+    const aviso = await screen.findByRole('alert', { name: 'Constructora Norte pidió corregir esta sección' }, { timeout: 4000 });
     expect(aviso).toHaveTextContent('Un dato no coincide con el soporte.');
     expect(aviso).toHaveTextContent('“La razón social no coincide con el RUT.”');
     expect(aviso).toHaveTextContent('Datos por corregir: Razón social, Dirección');

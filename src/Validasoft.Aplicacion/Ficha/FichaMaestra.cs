@@ -124,6 +124,29 @@ public static class GuardadoDeSecciones
     }
 
     /// <summary>
+    /// Vista previa del guardado (FM-46): lee los datos y verifica los soportes igual que <see cref="GuardarAsync"/> (mismos
+    /// 422) y devuelve la completitud que tendría la versión, sin escribir nada.
+    /// </summary>
+    public static async Task<CompletitudDeSeccion> EvaluarAsync(ISesiones sesiones, Guid terceroId, DefinicionDeSeccion definicion, int? periodo,
+        GuardarSeccionDto dto, TimeProvider reloj, CancellationToken ct)
+    {
+        var hoy = reloj.Hoy();
+        var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, hoy);
+        var tercero = await TerceroAsync(sesiones, terceroId, ct);
+        var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, periodoValido, hoy);
+        var datos = ReglasDeFicha.Leer(definicion, dto.Datos, contexto);
+
+        ICatalogosDeFicha catalogos;
+        await using (var global = sesiones.ConsultaGlobal())
+            catalogos = await ImportacionDeCatalogos.CargarAsync(global, definicion.Esquema.Referencias(datos), ct);
+
+        await using var boveda = sesiones.ConsultaBoveda();
+        var soportes = await VerificarSoportesAsync(boveda, terceroId, definicion, dto.Soportes, ct);
+        var actual = await boveda.LoadAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(terceroId, definicion.Codigo, periodoValido), ct);
+        return SeccionDeFicha.Anticipar(actual, definicion, datos, soportes.Count, contexto, catalogos);
+    }
+
+    /// <summary>
     /// Una versión nueva de la sección: cada vínculo aceptado del tercero (de cualquier tenant) pide poner al día su expediente
     /// (RQ-2) o abrir la actualización (RV-1). El manejador es idempotente y solo actúa si el flujo pide la sección.
     /// </summary>
@@ -261,6 +284,21 @@ public static class FichaMaestraEndpoints
         var vigente = resultado.Seccion.Vigente!;
         return new SeccionGuardadaDto(vigente.Numero, resultado.Creada, vigente.Completitud.ADto(),
             resultado.Estado.SiguienteSeccion(resultado.TipoPersona, definicion.Codigo), resultado.Seccion.ADto(definicion, resultado.Seccion.Periodo));
+    }
+
+    /// <summary>
+    /// Completitud que tendría la sección con estos datos y soportes, sin guardarla (FM-46): con ella el wizard habilita
+    /// «Guardar y continuar» solo cuando la sección quedaría completa. Mismos 422 de formato que el guardado. Tiene su propio
+    /// cupo en el límite público, porque el wizard la pide mientras el tercero escribe.
+    /// </summary>
+    [WolverinePost("/public/v1/ficha/{seccion}/evaluacion")]
+    [Authorize(Policy = ReclamosTercero.Politica)]
+    public static async Task<CompletitudSeccionDto> Evaluar(string seccion, int? periodo, GuardarSeccionDto dto, HttpContext http, ISesiones sesiones,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var definicion = CatalogoDeSecciones.Requerida(seccion);
+        return (await GuardadoDeSecciones.EvaluarAsync(sesiones, terceroId, definicion, periodo, dto, reloj, ct)).ADto();
     }
 
     /// <summary>Secciones vigentes del tercero, en el orden del wizard (la financiera, del periodo más reciente al más antiguo).</summary>
