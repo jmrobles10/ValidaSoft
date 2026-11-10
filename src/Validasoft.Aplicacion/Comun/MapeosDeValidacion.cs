@@ -1,4 +1,5 @@
 using Validasoft.Aplicacion.Expedientes;
+using Validasoft.Aplicacion.Verificaciones;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -28,7 +29,16 @@ public static class MapeosDeValidacion
                 ? new RequisitoDelFlujoDto(r.Id, null, null, r.Obligatorio, r.AreasQueRevisan, r.AprobadoresRequeridos, r.Condicion?.ADto(), r.Seccion,
                     r.Periodos, r.ExigeSoporte)
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
-                    r.AprobadoresRequeridos, r.Condicion?.ADto()))]);
+                    r.AprobadoresRequeridos, r.Condicion?.ADto()))],
+            [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))]);
+
+    /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
+    public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
+        new(Enum.TryParse<TipoVerificacion>(v.Tipo, true, out var tipo) && Enum.IsDefined(tipo)
+                ? tipo
+                : throw ReglaDeNegocioException.Validacion("verificacion-invalida",
+                    $"«{v.Tipo}» no es una verificación ({string.Join(", ", Enum.GetNames<TipoVerificacion>())})."),
+            v.Bloqueante, v.VigenciaDias, v.FrecuenciaReconsultaMeses);
 
     public static CondicionDto ADto(this CondicionDeExigencia c) =>
         new(c.Tipo.ToString(), c.Nodos?.Select(ADto).ToList(), c.Atributo, c.Operador?.ToString(), c.Valores);
@@ -100,7 +110,9 @@ public static class MapeosDeValidacion
             e.Rechazo is null ? null : new RechazoDto(e.Rechazo.AreaId, e.Rechazo.RevisorId, [.. e.Rechazo.Motivos.Select(m => m.Codigo)],
                 e.Rechazo.Justificacion, e.Rechazo.Fecha),
             e.MotivoAnulacion, e.AbiertoEn, e.CerradoEn, e.ActualizadoEn, e.Version,
-            [.. e.Requisitos.Select(r => r.ADto(e, documentacion))]);
+            [.. e.Requisitos.Select(r => r.ADto(e, documentacion))],
+            [.. e.Verificaciones.Select(v => v.ADto())],
+            e.EsperandoVerificaciones);
 
     /// <summary>Requisito con la decisión de cada área que lo revisa (estado, aprobaciones y veredictos de esa área).</summary>
     private static RequisitoExpedienteDto ADto(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>

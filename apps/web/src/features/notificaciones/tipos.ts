@@ -12,6 +12,9 @@ export const CLAVES_TIPO = {
   'documento.vencido': 'vencido',
   'webhook.deshabilitado': 'webhookDeshabilitado',
   'ia.cupo': 'cupoIa',
+  'verificacion.coincidencia': 'coincidenciaListas',
+  'verificacion.estudio_pendiente': 'estudioPendiente',
+  'verificacion.expirada': 'verificacionExpirada',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];

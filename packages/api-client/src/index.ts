@@ -49,3 +49,6 @@ export * from './generado/endpoints/tipos-vinculo/tipos-vinculo';
 export * from './generado/endpoints/usuarios/usuarios';
 export * from './generado/endpoints/vinculos/vinculos';
 export * from './generado/endpoints/webhooks/webhooks';
+export * from './generado/endpoints/verificaciones/verificaciones';
+export * from './generado/endpoints/listas-restrictivas/listas-restrictivas';
+export * from './generado/endpoints/informe-cumplimiento/informe-cumplimiento';

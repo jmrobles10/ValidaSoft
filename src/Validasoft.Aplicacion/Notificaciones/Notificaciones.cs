@@ -83,11 +83,22 @@ public static class TiposNotificacion
     /// <summary>La empresa llegó al 80 % o al 100 % de sus validaciones con IA incluidas del mes (IA-4).</summary>
     public const string CupoIa = "ia.cupo";
 
+    /// <summary>Una consulta de listas (o su monitoreo) encontró coincidencias por analizar (plantilla <c>coincidencia</c>, VE-13).</summary>
+    public const string CoincidenciaListas = "verificacion.coincidencia";
+
+    /// <summary>Un expediente que pide el estudio de cumplimiento entró a revisión.</summary>
+    public const string EstudioPendiente = "verificacion.estudio_pendiente";
+
+    /// <summary>Venció una verificación con el expediente abierto (plantilla <c>verificacion-expirada</c>, solo campana).</summary>
+    public const string VerificacionExpirada = "verificacion.expirada";
+
     public static readonly IReadOnlyList<string> Todos =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, CoincidenciaListas,
+            EstudioPendiente, VerificacionExpirada];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
-    public static readonly IReadOnlyList<string> ConCorreo = [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa];
+    public static readonly IReadOnlyList<string> ConCorreo =
+        [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa, CoincidenciaListas, EstudioPendiente];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -146,9 +157,45 @@ public sealed class PlanificadorDeNotificaciones
                 return await CertificadoAlTerceroAsync(evento, revocado.Emision, revocado.Fecha, revocado: true, contexto, ct);
             case CertificadoSuspendido suspendido:
                 return await CertificadoAlTerceroAsync(evento, suspendido.Emision, suspendido.Fecha, revocado: false, contexto, ct);
+            case VerificacionExternaRegistrada registrada when registrada.Coincidencias.Any(c => c.Heredada is null):
+                return await ACumplimientoAsync(evento, contexto, TiposNotificacion.CoincidenciaListas, "Coincidencia en listas restrictivas",
+                    t => $"La consulta de listas de {t} encontró {registrada.Coincidencias.Count(c => c.Heredada is null)} coincidencia(s) por analizar.", orden, ct);
+            case ExpedienteEnviadoARevision:
+                return await EstudioPendienteAsync(evento, contexto, orden, ct);
+            case VerificacionExpirada expirada:
+                return await ACumplimientoAsync(evento, contexto, TiposNotificacion.VerificacionExpirada, "Verificación vencida",
+                    t => expirada.Tipo == TipoVerificacion.ListasRestrictivas
+                        ? $"Venció la consulta de listas de {t}: se reconsulta sola."
+                        : $"Venció el estudio de cumplimiento de {t}: hay que volver a hacerlo antes de cerrar el expediente.", orden, ct);
             default:
                 return PlanDeNotificaciones.Vacio;
         }
+    }
+
+    /// <summary>El expediente entró a revisión y pide el estudio de cumplimiento: aviso a los oficiales (VE-13).</summary>
+    private static async Task<PlanDeNotificaciones> EstudioPendienteAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.ExpedienteAsync(tenantId, evento.StreamId, ct) is not { } expediente ||
+            expediente.BuscarVerificacion(TipoVerificacion.EstudioDeCumplimiento) is not { Estado: EstadoVerificacion.Pendiente })
+            return PlanDeNotificaciones.Vacio;
+        return await ACumplimientoAsync(evento, contexto, TiposNotificacion.EstudioPendiente, "Estudio de cumplimiento pendiente",
+            t => $"El expediente de {t} está en revisión y necesita el estudio del oficial de cumplimiento.", orden, ct);
+    }
+
+    /// <summary>Aviso a los oficiales de cumplimiento de la empresa del expediente (o a sus administradores si no hay, VE-13).</summary>
+    private static async Task<PlanDeNotificaciones> ACumplimientoAsync(IEvent evento, IContextoDeEventos contexto, string tipo, string titulo,
+        Func<string, string> mensaje, long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.ExpedienteAsync(tenantId, evento.StreamId, ct) is not { } expediente)
+            return PlanDeNotificaciones.Vacio;
+        var usuarios = await contexto.UsuariosDelTenantAsync(tenantId, ct);
+        var preferencias = new Dictionary<Guid, PreferenciasNotificacion?>();
+        foreach (var usuario in Verificaciones.NotificacionesDeCumplimiento.Destinatarios(usuarios, expediente.EmpresaId))
+            preferencias[usuario.Id] = await contexto.PreferenciasAsync(tenantId, usuario.Id, ct);
+        var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+        return Verificaciones.NotificacionesDeCumplimiento.Plan(tenantId, expediente.EmpresaId, tipo, titulo, mensaje(expediente.TerceroNombre),
+            $"{evento.Id:N}", expediente.Id, expediente.VinculoId, expediente.Folio, $"/e/{expediente.EmpresaId}/expedientes/{expediente.Id}?pestana=verificaciones",
+            empresa?.Nombre, usuarios, id => preferencias.GetValueOrDefault(id), evento.Timestamp, orden);
     }
 
     private static async Task<PlanDeNotificaciones> AAreasAsync(IEvent evento, IContextoDeEventos contexto, string tipo, IReadOnlyList<Guid>? areas,

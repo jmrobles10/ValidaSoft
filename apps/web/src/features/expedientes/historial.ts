@@ -35,6 +35,10 @@ function textosDeMotivos(valor: unknown): string[] {
     .filter((m): m is string => m !== null);
 }
 
+function tipoDeVerificacion(tipo: string, t: TFunction): string {
+  return tipo === 'EstudioDeCumplimiento' ? t('cumplimiento.tipos.EstudioDeCumplimiento') : t('cumplimiento.tipos.ListasRestrictivas');
+}
+
 /** Convierte el stream del expediente en la entrada de `LineaDeTiempo`. */
 export function eventoExpedienteATimeline(
   evento: EventoHistorialDto,
@@ -149,6 +153,45 @@ export function eventoExpedienteATimeline(
       return { ...base, titulo: t('expedientes.historial.eximido', { documento: requisito(campo(datos, 'requisitoId')) }), motivo: texto(campo(datos, 'justificacion')) };
     case 'veredicto_anulado_por_administrador':
       return { ...base, detalle: area(campo(datos, 'areaId')), motivo: texto(campo(datos, 'justificacion')) };
+    // Verificaciones externas (H7): sin nombres de personas en el título; el detalle está en el panel de verificaciones.
+    case 'verificaciones_requeridas':
+      return {
+        ...base,
+        detalle: lista(campo(datos, 'verificaciones'))
+          .map((v) => (v && typeof v === 'object' ? texto(campo(v as Record<string, unknown>, 'tipo')) : null))
+          .filter((v): v is string => v !== null)
+          .map((v) => tipoDeVerificacion(v, t))
+          .join(' · '),
+      };
+    case 'verificacion_externa_registrada':
+      return {
+        ...base,
+        detalle: t('expedientes.historial.consultaListas', {
+          proveedor: texto(campo(datos, 'proveedor')) ?? '',
+          personas: String(lista(campo(datos, 'personas')).length),
+          count: lista(campo(datos, 'coincidencias')).length,
+        }),
+      };
+    case 'coincidencia_resuelta':
+      return {
+        ...base,
+        detalle: t(`cumplimiento.decisiones.${campo(datos, 'decision') === 'Confirmada' ? 'Confirmada' : 'Descartada'}`),
+        motivo: texto(campo(datos, 'justificacion')),
+      };
+    case 'estudio_de_cumplimiento_registrado': {
+      const estudio = campo(datos, 'estudio');
+      const delEstudio = (clave: string) => (estudio && typeof estudio === 'object' ? campo(estudio as Record<string, unknown>, clave) : null);
+      const concepto = delEstudio('concepto') === 'Desfavorable' ? 'Desfavorable' : 'Favorable';
+      return {
+        ...base,
+        detalle: t('expedientes.historial.estudio', { riesgo: numero(delEstudio('nivelRiesgo')), concepto: t(`cumplimiento.conceptos.${concepto}`) }),
+        motivo: texto(delEstudio('observaciones')),
+      };
+    }
+    case 'verificacion_expirada':
+      return { ...base, detalle: tipoDeVerificacion(texto(campo(datos, 'tipo')) ?? '', t) };
+    case 'consulta_de_verificacion_fallida':
+      return { ...base, detalle: texto(campo(datos, 'proveedor')), motivo: texto(campo(datos, 'error')) };
     default:
       return base;
   }

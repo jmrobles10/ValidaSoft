@@ -13,12 +13,13 @@ export const GRUPOS_PERMISOS = [
   { grupo: 'vinculos', claves: ['tercerosLeer', 'tercerosEscribir', 'vinculosLeer', 'vinculosEscribir', 'vinculosBloquear', 'cuentasAprobar'] },
   { grupo: 'revision', claves: ['expedientesLeer', 'expedientesRevisar', 'expedientesAdministrar', 'documentosLeer', 'documentosDescargar', 'certificadosLeer'] },
   { grupo: 'integracion', claves: ['eventosLeer', 'webhooksAdministrar', 'consultasLeer'] },
+  { grupo: 'cumplimiento', claves: ['verificacionesEscribir', 'cumplimientoDecidir'] },
   { grupo: 'auditoria', claves: ['auditoriaLeer'] },
 ] as const satisfies readonly { grupo: string; claves: readonly ClavePermiso[] }[];
 
 export type GrupoPermisos = (typeof GRUPOS_PERMISOS)[number]['grupo'];
 
-/** Los 24 scopes del tenant, en el orden de los grupos. */
+/** Los scopes del tenant, en el orden de los grupos. */
 export const SCOPES_DEL_TENANT: readonly string[] = GRUPOS_PERMISOS.flatMap((g) => g.claves.map((c) => SCOPES[c]));
 
 const CLAVE_DE_SCOPE = new Map<string, ClavePermiso>(GRUPOS_PERMISOS.flatMap((g) => g.claves.map((c) => [SCOPES[c], c] as const)));

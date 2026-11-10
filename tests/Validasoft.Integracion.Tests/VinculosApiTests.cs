@@ -83,6 +83,7 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Proxies:Confiables:1", RedConfiable);
             b.UseSetting("Validasoft:Importacion:Portal:Archivo", ArchivoPortal); // sincronizador del Portal sin red (F4)
             b.UseSetting("Validasoft:Certificados:SegundosProceso", "1"); // PDF de los certificados casi al instante
+            b.UseSetting("Validasoft:Verificadores:SegundosProceso", "1"); // consultas automáticas de listas casi al instante
             // Webhooks (NW): receptor local por http, reintentos de segundos y deshabilitación tras 3 fallos seguidos.
             b.UseSetting("Validasoft:Webhooks:PermitirHttpLocal", "true");
             b.UseSetting("Validasoft:Webhooks:Reintentos:0", "00:00:01");

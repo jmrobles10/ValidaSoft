@@ -15,6 +15,7 @@ using Validasoft.Infraestructura.Almacenamiento;
 using Validasoft.Infraestructura.Certificados;
 using Validasoft.Infraestructura.Correo;
 using Validasoft.Aplicacion.Notificaciones;
+using Validasoft.Aplicacion.Verificaciones;
 using Validasoft.Infraestructura.Http;
 using Validasoft.Infraestructura.IA;
 using Validasoft.Infraestructura.Notificaciones;
@@ -101,6 +102,7 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDelProcesoDeValidacion>();
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeCertificados>(); // certificado.* (NW-13)
         servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeLaFicha>(); // seccion.aceptada (FM-32)
+        servicios.AddSingleton<IMapeadorDeEventos, MapeadorDeVerificaciones>(); // expediente.verificacion_* (VE-13)
         servicios.AddSingleton<CatalogoDeEventos>();
         servicios.AddSingleton<PlanificadorDeNotificaciones>();
         servicios.AddSingleton<ProcesadorDeEventos>();
@@ -117,6 +119,23 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
         servicios.AddSingleton<ArchivoDeCertificados>();
         servicios.AddHostedService<ProcesadorDeCertificados>();
+        // Verificaciones externas (H7, VE-5…VE-16): listas restrictivas con Infolaft como principal entre los reales (apagados
+        // por omisión; credenciales por empresa), simulado solo con PermitirSimulado, PDF de evidencia y procesador periódico.
+        servicios.AddSingleton<OpcionesDeVerificaciones>();
+        Aplicacion.Expedientes.ProcesoDeValidacion.DiasMonitoreoDeListas =
+            Math.Clamp(configuracion.GetValue("Validasoft:Verificadores:ListasRestrictivas:DiasMonitoreo", 30), 0, 365);
+        servicios.AddSingleton<ControlDeProveedores>();
+        servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorInfolaft>();
+        servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorStradata>();
+        servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorCompliance>();
+        servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorSimulado>();
+        servicios.AddSingleton<IGeneradorDePdfDeEvidencia, Verificaciones.GeneradorPdfDeEvidencia>();
+        servicios.AddSingleton<ConsultaDeListas>();
+        servicios.AddSingleton<TareasDeVerificaciones>();
+        servicios.AddHostedService<Verificaciones.ProcesadorDeVerificaciones>();
+        servicios.AddHttpClient(Verificaciones.VerificadorInfolaft.Cliente);
+        servicios.AddHttpClient(Verificaciones.VerificadorStradata.Cliente);
+        servicios.AddHttpClient(Verificaciones.VerificadorCompliance.Cliente);
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
         servicios.AddScoped<CupoDeIa>();

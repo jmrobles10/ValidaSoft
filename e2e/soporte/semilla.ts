@@ -12,7 +12,7 @@ const SCOPES = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer',
   'configuracion:escribir', 'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar',
   'auditoria:leer', 'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar',
-  'documentos:leer', 'documentos:descargar', 'certificados:leer', 'eventos:leer', 'webhooks:administrar',
+  'documentos:leer', 'documentos:descargar', 'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'verificaciones:escribir', 'cumplimiento:decidir',
 ];
 
 export interface Persona extends PersonaDelSistema {

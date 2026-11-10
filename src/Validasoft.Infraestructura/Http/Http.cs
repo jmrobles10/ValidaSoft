@@ -246,6 +246,7 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
                 TipoFalla.DemasiadosIntentos => StatusCodes.Status429TooManyRequests,
                 TipoFalla.DemasiadoGrande => StatusCodes.Status413PayloadTooLarge,
                 TipoFalla.TipoNoSoportado => StatusCodes.Status415UnsupportedMediaType,
+                TipoFalla.NoDisponible => StatusCodes.Status503ServiceUnavailable,
                 _ => StatusCodes.Status409Conflict
             }, r.Codigo, r.Message),
             ConcurrencyException or EventStreamUnexpectedMaxEventIdException =>

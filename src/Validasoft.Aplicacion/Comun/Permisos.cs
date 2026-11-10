@@ -51,6 +51,11 @@ public static class Permisos
     /// pagar o contratar. Solo devuelve el resumen (sin documentos ni datos personales); por eso va aparte de los demás.
     /// </summary>
     public const string ConsultasLeer = "consultas:leer";
+    /// <summary>Consultar o reconsultar las listas restrictivas de un expediente (VE-15).</summary>
+    public const string VerificacionesEscribir = "verificaciones:escribir";
+
+    /// <summary>Decidir como Cumplimiento: resolver coincidencias en listas y registrar el estudio SAGRILAFT (VE-15).</summary>
+    public const string CumplimientoDecidir = "cumplimiento:decidir";
 
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
@@ -58,7 +63,7 @@ public static class Permisos
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -89,7 +94,8 @@ public static class Permisos
     {
         Rol.Administrador => DelTenant,
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
-        Rol.OficialCumplimiento => [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar],
+        Rol.OficialCumplimiento =>
+            [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, VerificacionesEscribir, CumplimientoDecidir, AuditoriaLeer],
         Rol.Auditor => [.. Lecturas, AuditoriaLeer],
         _ => []
     };

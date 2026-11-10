@@ -165,7 +165,14 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_expediente_folio", TenancyScope.PerTenant, x => x.Folio)
                     .Index(x => x.EmpresaId)
                     .Index(x => x.VinculoId)
-                    .Index(x => x.AbiertoEn);
+                    .Index(x => x.AbiertoEn)
+                    .Index(x => x.ProximaConsultaDeListas)
+                    .Index(x => x.ProximoVencimientoDeVerificacion);
+                // Verificaciones externas (H7): listas por empresa (id = empresa, credenciales cifradas), consumo mensual con
+                // concurrencia optimista y monitoreo de listas por vínculo activo (id = vínculo).
+                opts.Schema.For<ListasRestrictivasEmpresa>().MultiTenanted();
+                opts.Schema.For<UsoMensualListas>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
+                opts.Schema.For<MonitoreoDeListas>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.ProximaConsulta);
                 // Lo aceptado de cada sección de la ficha por vínculo (F2, FM-29): privado de la empresa, en su tenant.
                 opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()
                     .Index(x => x.VinculoId)

@@ -6,6 +6,7 @@
  */
 import type { EtapaDto } from './etapaDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
+import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
 
 export interface EditarFlujoDto {
   /** @nullable */
@@ -18,4 +19,6 @@ export interface EditarFlujoDto {
   separacionDeFunciones?: boolean | null;
   /** @nullable */
   requisitos?: RequisitoDelFlujoDto[] | null;
+  /** @nullable */
+  verificaciones?: VerificacionRequeridaDto[] | null;
 }

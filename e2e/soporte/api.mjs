@@ -57,6 +57,8 @@ const entorno = {
   Validasoft__Certificados__SegundosProceso: '1',
   // Análisis con IA y «Probar llave» sin salir a OpenAI (PT-6): las pruebas nunca usan una llave real.
   Validasoft__IA__Proveedor: 'Simulado',
+  // La consulta automática de listas (proveedor simulado) corre casi al instante tras pasar a revisión.
+  Validasoft__Verificadores__SegundosProceso: '1',
   ...(aislado && {
     ConnectionStrings__Validasoft: `Host=localhost;Port=5432;Database=${BASE_AISLADA};Username=validasoft;Password=validasoft`,
     Validasoft__Correo__Puerto: '1026',

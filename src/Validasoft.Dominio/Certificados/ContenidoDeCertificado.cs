@@ -27,7 +27,7 @@ public sealed record FlujoCertificado(string Codigo, string Nombre, int Version)
 public sealed record RequisitoCertificado(
     string Codigo, string Nombre, int? VersionN, string? Sha256, DateOnly? VigenteHasta, bool Eximido, string? Justificacion);
 
-/// <summary>Reservado para las verificaciones externas (listas, identidad): aún no existen, la lista va vacía.</summary>
+/// <summary>Verificación externa satisfecha al aprobar (listas restrictivas, estudio de cumplimiento; H7): sin personas ni listas.</summary>
 public sealed record VerificacionCertificado(string Tipo, string Proveedor, string Resultado, DateTimeOffset Fecha);
 
 /// <summary>Área que aprobó y de qué forma (<c>Humano | Sistema | Administrador</c>), sin el nombre de quién (#61).</summary>

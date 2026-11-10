@@ -21,7 +21,8 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
 {
     private static readonly string[] ScopesDeSistema =
     [
-        "configuracion:leer", "vinculos:leer", "flujos:leer", "expedientes:leer", "expedientes:revisar", "expedientes:administrar"
+        "configuracion:leer", "vinculos:leer", "flujos:leer", "expedientes:leer", "expedientes:revisar", "expedientes:administrar",
+        "verificaciones:escribir", "cumplimiento:decidir", "auditoria:leer"
     ];
 
     private IAlbaHost Host => fixture.Host;

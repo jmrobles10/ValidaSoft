@@ -1,4 +1,14 @@
-import type { AreaDto, CondicionDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion, RequisitoDelFlujoDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
+import type {
+  AreaDto,
+  CondicionDto,
+  EtapaDto,
+  FlujoVersionDto,
+  PoliticaDevolucion,
+  RequisitoDelFlujoDto,
+  TipoDocumentoTenantDto,
+  TipoVerificacion,
+  VerificacionRequeridaDto,
+} from '@validasoft/api-client';
 import { requisitoDeSeccionADto, validarRequisitoDeSeccion } from './requisitosDeSeccion';
 
 /**
@@ -45,6 +55,25 @@ export interface RequisitoEnEditor {
   exigeSoporte: boolean;
 }
 
+/**
+ * Verificación externa que pide el flujo (VE-6): listas restrictivas o estudio de cumplimiento. `null` en vigencia o
+ * reconsulta = la de la configuración (estudio 30 días; listas cada 12 meses).
+ */
+export interface VerificacionEnEditor {
+  tipo: TipoVerificacion;
+  bloqueante: boolean;
+  vigenciaDias: number | null;
+  frecuenciaReconsultaMeses: number | null;
+}
+
+export const TIPOS_VERIFICACION: readonly TipoVerificacion[] = ['ListasRestrictivas', 'EstudioDeCumplimiento'];
+export const MAXIMO_VIGENCIA_DIAS = 3650;
+export const MAXIMO_MESES_RECONSULTA = 60;
+
+export function verificacionNueva(tipo: TipoVerificacion): VerificacionEnEditor {
+  return { tipo, bloqueante: true, vigenciaDias: null, frecuenciaReconsultaMeses: null };
+}
+
 export interface BorradorFlujo {
   codigo: string;
   nombre: string;
@@ -54,6 +83,7 @@ export interface BorradorFlujo {
   separacionDeFunciones: boolean;
   etapas: EtapaEnEditor[];
   requisitos: RequisitoEnEditor[];
+  verificaciones: VerificacionEnEditor[];
 }
 
 export type CodigoErrorFlujo =
@@ -78,7 +108,9 @@ export type CodigoErrorFlujo =
   | 'area-sin-requisitos'
   | 'seccion-invalida'
   | 'periodos-no-aplica'
-  | 'periodos-invalidos';
+  | 'periodos-invalidos'
+  | 'vigencia-invalida'
+  | 'reconsulta-invalida';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
@@ -127,6 +159,7 @@ export function borradorVacio(): BorradorFlujo {
     separacionDeFunciones: false,
     etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }],
     requisitos: [],
+    verificaciones: [],
   };
 }
 
@@ -159,6 +192,12 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
       seccion: r.seccion ?? null,
       periodos: r.periodos ?? null,
       exigeSoporte: r.exigeSoporte ?? false,
+    })),
+    verificaciones: (version.verificaciones ?? []).map((v) => ({
+      tipo: v.tipo,
+      bloqueante: v.bloqueante ?? true,
+      vigenciaDias: v.vigenciaDias ?? null,
+      frecuenciaReconsultaMeses: v.frecuenciaReconsultaMeses ?? null,
     })),
   };
 }
@@ -214,7 +253,37 @@ export function validarFlujo(
     });
   });
   errores.push(...validarRequisitos(borrador, tiposDocumento));
+  errores.push(...validarVerificaciones(borrador.verificaciones));
   return errores;
+}
+
+/** Vigencia de 1 a 3650 días y reconsulta de listas de 1 a 60 meses (vacías = las de la configuración), como `DefinicionDeFlujo`. */
+export function validarVerificaciones(verificaciones: readonly VerificacionEnEditor[]): ErrorFlujo[] {
+  const errores: ErrorFlujo[] = [];
+  for (const v of verificaciones) {
+    const campo = `verificacion.${v.tipo}`;
+    if (v.vigenciaDias !== null && (!Number.isInteger(v.vigenciaDias) || v.vigenciaDias < 1 || v.vigenciaDias > MAXIMO_VIGENCIA_DIAS)) {
+      errores.push({ codigo: 'vigencia-invalida', campo });
+    }
+    if (
+      v.tipo === 'ListasRestrictivas' &&
+      v.frecuenciaReconsultaMeses !== null &&
+      (!Number.isInteger(v.frecuenciaReconsultaMeses) || v.frecuenciaReconsultaMeses < 1 || v.frecuenciaReconsultaMeses > MAXIMO_MESES_RECONSULTA)
+    ) {
+      errores.push({ codigo: 'reconsulta-invalida', campo });
+    }
+  }
+  return errores;
+}
+
+/** Verificaciones para la API, en el orden fijo de los tipos (la reconsulta solo va en listas). */
+export function verificacionesADto(verificaciones: readonly VerificacionEnEditor[]): VerificacionRequeridaDto[] {
+  return TIPOS_VERIFICACION.flatMap((tipo) => verificaciones.filter((v) => v.tipo === tipo)).map((v) => ({
+    tipo: v.tipo,
+    bloqueante: v.bloqueante,
+    vigenciaDias: v.vigenciaDias,
+    frecuenciaReconsultaMeses: v.tipo === 'ListasRestrictivas' ? v.frecuenciaReconsultaMeses : null,
+  }));
 }
 
 /**
@@ -328,5 +397,6 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     separacion: borrador.separacionDeFunciones,
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos),
+    verificaciones: verificacionesADto(borrador.verificaciones),
   });
 }

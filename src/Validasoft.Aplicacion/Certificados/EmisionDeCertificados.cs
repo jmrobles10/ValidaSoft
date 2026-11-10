@@ -93,7 +93,13 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
             new TipoVinculoCertificado(tipo?.Codigo ?? expediente.TipoVinculoCodigo, tipo?.Nombre ?? expediente.TipoVinculoNombre),
             new FlujoCertificado(expediente.Flujo?.Codigo ?? string.Empty, expediente.Flujo?.Nombre ?? string.Empty, expediente.Flujo?.Version ?? 0),
             requisitos,
-            [],
+            // Las verificaciones externas satisfechas al aprobar (H7): tipo, proveedor, resultado y fecha; sin personas ni listas.
+            [
+                .. expediente.Verificaciones.Where(v => v.Estado == EstadoVerificacion.Satisfecha && v.RegistradaEn is not null)
+                    .OrderBy(v => v.Tipo)
+                    .Select(v => new VerificacionCertificado(v.Tipo.ToString(), v.Proveedor ?? string.Empty, v.Resultado?.ToString() ?? string.Empty,
+                        v.RegistradaEn!.Value))
+            ],
             areas,
             ahora,
             null);

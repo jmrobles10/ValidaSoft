@@ -374,7 +374,7 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
         // Una llave de varias empresas sin X-Empresa recibe 422 empresa-requerida en los listados, no un 500.
         foreach (var ruta in new[] { "/api/v1/vinculos", "/api/v1/expedientes", "/api/v1/areas", "/api/v1/flujos" })
             (await CodigoAsync(await ApiAsync("GET", ruta, new Credencial(e.Admin), null, 422))).ShouldBe("empresa-requerida");
-        tipos.Count.ShouldBe(29); // 21 del proceso de validación (3 de cuenta designada, CB-3) + 7 del certificado (NW-13, RV-3) + seccion.aceptada (FM-32)
+        tipos.Count.ShouldBe(32); // 21 del proceso de validación (3 de cuenta designada, CB-3) + 7 del certificado (NW-13, RV-3) + seccion.aceptada (FM-32) + 3 de verificaciones (VE-13)
     }
 
     // ---------- preparación ----------

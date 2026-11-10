@@ -12,6 +12,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAreas } from '../../configuracion/areas/api';
 import { useNombresUsuarios } from '../../configuracion/usuarios/api';
+import { PanelVerificaciones } from '../../cumplimiento/components/PanelVerificaciones';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { useVinculo } from '../../vinculos/api';
 import { identificacionResumida } from '../../vinculos/tercero';
@@ -159,6 +160,17 @@ export function DetalleExpediente() {
           {frenadas.length > 0 && ` ${t('expedientes.avisos.frenadas', { areas: frenadas.map((a) => a.nombre).join(', ') })}`}
         </Alert>
       )}
+      {expediente.esperandoVerificaciones && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.esperandoVerificacionesTitulo')}</AlertTitle>
+          {t('expedientes.avisos.esperandoVerificaciones', {
+            verificaciones: (expediente.verificaciones ?? [])
+              .filter((v) => v.bloqueante && v.estado !== 'Satisfecha')
+              .map((v) => `${t(`cumplimiento.tipos.${v.tipo}`)} (${t(`cumplimiento.estados.${v.estado}`).toLowerCase()})`)
+              .join(', '),
+          })}
+        </Alert>
+      )}
       {expediente.estado === 'Aprobado' && (
         <Alert severity="success" sx={{ mb: 2 }}>
           <AlertTitle>{t('expedientes.avisos.aprobadoTitulo')}</AlertTitle>
@@ -184,6 +196,7 @@ export function DetalleExpediente() {
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <PanelDecisionArea expediente={expediente} contexto={contexto} onAccion={setDialogo} />
           <PanelRequisitos expediente={expediente} contexto={contexto} nombres={nombres} onAccion={setDialogo} />
+          <PanelVerificaciones expediente={expediente} empresaId={empresa.id} scopes={permisos.scopes} nombres={nombres} />
           <EtapasExpediente expediente={expediente} contexto={contexto} nombres={nombres} motivos={nombresMotivos} onAccion={setDialogo} />
           <UltimaRespuesta expediente={expediente} />
           <DatosExpediente expediente={expediente} />
