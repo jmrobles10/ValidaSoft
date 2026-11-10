@@ -119,7 +119,12 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
-        servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
+        // Validasoft:IA:Proveedor = Simulado: analizador determinista que lee marcas del propio archivo (desarrollo y e2e, F5);
+        // por omisión, OpenAI.
+        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], AnalizadorSimulado.Proveedor, StringComparison.OrdinalIgnoreCase))
+            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorSimulado>();
+        else
+            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)
@@ -176,6 +181,7 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeResultadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Ficha.CruzarFichaConDocumentos>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<VencerPlazoDeRevalidacion>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<RenovarPorVencimiento>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Documentos.CorreoDeVencimientoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();

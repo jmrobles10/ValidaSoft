@@ -44,10 +44,18 @@ public sealed record EtapaDeFlujo(int Orden, IReadOnlyList<AreaDeEtapa> Areas);
 /// </summary>
 public sealed record RequisitoDelFlujo(
     Guid Id, Guid TipoDocumentoTenantId, string CodigoTipo, bool Obligatorio, IReadOnlyList<Guid> AreasQueRevisan, int? AprobadoresRequeridos,
-    CondicionDeExigencia? Condicion = null, string? Seccion = null, int? Periodos = null, bool ExigeSoporte = false)
+    CondicionDeExigencia? Condicion = null, string? Seccion = null, int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null)
 {
     [JsonIgnore]
     public bool EsSeccion => Seccion is not null;
+
+    /// <summary>
+    /// «Usar como soporte de las secciones» (F5, FM-13): un requisito de documento cuyo tipo canónico respalda secciones de la
+    /// ficha (RUT, Cámara, estados financieros, cédula) también sirve de soporte de esas secciones y se cruza con ellas. Activa
+    /// por omisión (<see cref="UsarComoSoporte"/> nulo); la empresa la apaga con <c>false</c>.
+    /// </summary>
+    public bool UsaComoSoporte(string? tipoCanonico) =>
+        !EsSeccion && UsarComoSoporte != false && Ficha.MapaDeRespaldo.RespaldaAlguna(tipoCanonico);
 }
 
 /// <summary>Contenido versionado de un flujo (lo que se congela al publicar). Sin requisitos, cada área decide sobre el expediente (FL-1).</summary>
@@ -175,8 +183,17 @@ public sealed record DefinicionDeFlujo(
                     throw ReglaDeNegocioException.Validacion("aprobadores-invalidos",
                         $"El requisito {tipo.Codigo} necesita entre 1 y {MaximoAprobadores} aprobadores.");
 
+                // «Usar como soporte» (FM-13) solo tiene sentido si el tipo respalda alguna sección; se guarda solo el «no» explícito.
+                if (requisito.UsarComoSoporte == true && !Ficha.MapaDeRespaldo.RespaldaAlguna(tipo.TipoCanonico))
+                    throw ReglaDeNegocioException.Validacion("soporte-no-aplica",
+                        $"{tipo.Nombre} no respalda ninguna sección de la ficha: no se puede usar como soporte.");
+
                 var condicion = AtributosDeExigencia.Validar(requisito.Condicion, tipoVinculo, tipo.Nombre);
-                resultado.Add(requisito with { Id = id, CodigoTipo = tipo.Codigo, AreasQueRevisan = areas, Condicion = condicion });
+                resultado.Add(requisito with
+                {
+                    Id = id, CodigoTipo = tipo.Codigo, AreasQueRevisan = areas, Condicion = condicion,
+                    UsarComoSoporte = Ficha.MapaDeRespaldo.RespaldaAlguna(tipo.TipoCanonico) && requisito.UsarComoSoporte == false ? false : null
+                });
             }
             catch (ReglaDeNegocioException ex) when (ex.Tipo == TipoFalla.Validacion && ex.Datos?.ContainsKey("requisito") != true)
             {
@@ -219,6 +236,8 @@ public sealed record DefinicionDeFlujo(
             throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {definicion.Codigo}.");
         if (requisito.Periodos is not null && !definicion.PorPeriodo)
             throw ReglaDeNegocioException.Validacion("periodos-no-aplica", $"{definicion.Nombre} no va por periodo.");
+        if (requisito.UsarComoSoporte is not null)
+            throw ReglaDeNegocioException.Validacion("soporte-no-aplica", "«Usar como soporte» es de los requisitos de documento, no de las secciones.");
         if (requisito.Periodos is < 1 or > Expedientes.RequisitosDeSeccion.MaximoPeriodos)
             throw ReglaDeNegocioException.Validacion("periodos-invalidos",
                 $"Se piden entre 1 y {Expedientes.RequisitosDeSeccion.MaximoPeriodos} periodos de {definicion.Nombre}.");

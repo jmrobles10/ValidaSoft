@@ -5,6 +5,7 @@ import { certificadosLista } from './es-CO-certificados-lista';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
+import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { inicio } from './es-CO-inicio';
 import { ia } from './es-CO-ia';
@@ -256,6 +257,7 @@ export const esCO = {
   terceros,
   fichaMaestra,
   fichaEmpresa,
+  cruce,
   auditoria,
   plantillas,
   ia,
@@ -586,6 +588,7 @@ export const esCO = {
     ...erroresRevalidaciones,
     ...erroresCuentas,
     ...erroresFichaEmpresa,
+    ...erroresCruce,
   },
 } as const;
 

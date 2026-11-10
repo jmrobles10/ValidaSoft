@@ -13,7 +13,8 @@ namespace Validasoft.Integracion.Tests;
 /// <summary>
 /// Analizador falso de las pruebas (nunca se llama a OpenAI). Responde según la llave de la empresa que paga: con
 /// <c>-falla-</c> lanza la falla controlada de un HTTP 500; con <c>-baja-</c> el modelo por defecto devuelve confianza baja
-/// (y el de escalamiento, alta); si no, hechos de un RUT con confianza alta. Cuenta las llamadas por llave.
+/// (y el de escalamiento, alta); si no, hechos de un RUT con confianza alta. Si el archivo trae marcas <c>[[clave=valor]]</c>,
+/// responde esos campos (como el analizador simulado de la API, F5). Cuenta las llamadas por llave.
 /// </summary>
 public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
 {
@@ -30,6 +31,14 @@ public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
             throw new AnalisisDeIaException("http-500", "OpenAI respondió 500.");
 
         var confianza = apiKey.Contains("-baja-", StringComparison.Ordinal) && solicitud.Modelo == PlanDeIaEmpresa.ModeloPorDefectoInicial ? 0.5m : 0.97m;
+        // F5: un archivo con marcas [[clave=valor]] responde lo que dicen (el mismo lector del analizador simulado).
+        if (Validasoft.Infraestructura.IA.AnalizadorSimulado.Marcas(solicitud.Contenido).Count > 0)
+        {
+            var simulados = Validasoft.Infraestructura.IA.AnalizadorSimulado.Hechos(EsquemasDeAnalisis.Para(solicitud.TipoCanonico)!, solicitud.Contenido);
+            return Task.FromResult(new ResultadoDeAnalisis(solicitud.Modelo, simulados with { Confianza = confianza }, new UsoDeTokens(1000, 200, 300),
+                solicitud.Paginas, 0));
+        }
+
         var campos = new Dictionary<string, JsonElement>
         {
             ["nit"] = JsonSerializer.SerializeToElement(NitExtraido),
