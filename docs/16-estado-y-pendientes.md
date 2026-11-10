@@ -61,7 +61,7 @@ las fusiones de las demás. **No tiene PR.**
 | **H7: verificaciones y SAGRILAFT** | `feature/verificaciones` | Terminado | VE-5..VE-18 |
 | **H8: invitación masiva y caducidad** | `feature/lotes-y-caducidad` | Terminado, verificación sin cerrar (ver §4.3) | LT-1..LT-10 |
 | **H8: informes y exportes** | `feature/informes` | Terminado, verificación sin cerrar (ver §4.4) | IF-1..IF-8 |
-| **F5: IA sección ↔ documento** | `feature/ficha-f5` | **A medias y fuera de esta rama**: se fusionó y se revirtió porque su prueba de integración es intermitente (ver §4.5) | sin filas |
+| **F5: IA sección ↔ documento** | `feature/ficha-f5-cierre` | **Terminado, fuera de esta rama** (sale de `main` con #48 e integra F5 con H7, H8 y H9): se había revertido por una prueba intermitente cuya causa era un hueco de H6/F2, ya resuelto con la decisión de Producto de ampliar la actualización abierta (§4.5) | FM-48..FM-55 |
 
 **Contenido de cada bloque:**
 - **H9:**
@@ -149,38 +149,31 @@ las fusiones de las demás. **No tiene PR.**
 - El agente se detuvo al cerrar su verificación: correr `informes.spec.ts` y las pruebas de integración de los exportes.
 - El informe SAGRILAFT está en H7 (`/informes/cumplimiento`); unificar la pantalla de «Informes» con él.
 
-### 4.5 F5 — IA sección ↔ documento (a medias, en `feature/ficha-f5`)
-**Dónde está:** rama `feature/ficha-f5-cierre`, que sale de `main` (con #48) y restaura F5 ya integrado con H7, H8 y H9.
+### 4.5 F5 — IA sección ↔ documento (terminado en `feature/ficha-f5-cierre`)
+**Dónde está:** rama `feature/ficha-f5-cierre`, que sale de `main` (con #48) e integra F5 con H7, H8 y H9. Falta abrir su PR.
 
-**Causa de la prueba intermitente** (`Un_RUT_nuevo_propone_al_tercero…`): no es la prueba, es un hueco que viene de H6/F2.
-Con una actualización **ya abierta** en el vínculo, un cambio en otro requisito no se revalida:
-`SincronizarRequisitosDelVinculo` solo pone al día los requisitos que el expediente abierto ya tiene, y
-`Revalidacion.AbrirSiCorrespondeAsync` no hace nada si hay un expediente abierto. Tampoco se vuelve a sincronizar al
-cerrarlo. En el flujo de F5 pasa siempre: el RUT nuevo abre la actualización (solo con el RUT) y, cuando el tercero
-confirma la propuesta, la sección General cambiada queda fuera. La prueba pasaba solo cuando la sección se guardaba
-antes de que se abriera la actualización del RUT. Afecta igual a los documentos (RUT nuevo y luego Cámara nueva).
+**La causa de la prueba intermitente** (`Un_RUT_nuevo_propone…`) no era la prueba: era un hueco que venía de H6/F2. Con una
+actualización **ya abierta** en el vínculo, un cambio en otro requisito no se revalidaba: `SincronizarRequisitosDelVinculo` solo ponía al
+día los requisitos que el expediente abierto ya tenía y `Revalidacion.AbrirSiCorrespondeAsync` no hacía nada si había un expediente
+abierto. En F5 pasa siempre: el RUT nuevo abre la actualización (solo con el RUT) y, al confirmar la propuesta, la General cambiada
+quedaba fuera. Afectaba igual a los documentos (RUT nuevo y luego Cámara nueva).
 
-**Decisión pendiente de Producto** (hay que tomarla antes de seguir):
-- *Ampliar la actualización abierta:* el requisito nuevo entra al expediente abierto y el revisor ve todo junto. Pide un
-  evento nuevo en el expediente (`RequisitosAgregados`) y reabrir las áreas que ya habían decidido.
-- *Encadenar:* al cerrar el expediente se vuelve a sincronizar y lo que cambió mientras tanto abre otra actualización.
-  Es más simple, pero el revisor ve dos expedientes seguidos.
+**Decisión de Producto (2026-11-10): ampliar la actualización abierta** (FM-48…FM-50; la otra opción era encadenar otra actualización
+al cerrar la primera). El requisito que cambia entra al mismo expediente con el evento `RequisitosAgregados`; las áreas que lo revisan
+vuelven a quedar pendientes (si su etapa estaba aprobada se reabre); el certificado con pendientes actualiza su motivo; la línea de tiempo,
+la bandeja, las revalidaciones, los tiempos y el aviso al área lo reflejan. Idempotente y solo para `Actualizacion`. La prueba pasó 6 veces
+seguidas con la corrección.
 
-**Objetivo** (pedido del usuario, [14 §5.2, §5.3, §6](14-ficha-maestra-del-tercero.md)): que un documento exigido, por
-ejemplo el RUT obligatorio, sirva además como soporte verificado de las secciones de la ficha que respalda:
-- RUT → General y Tributaria;
-- Cámara de Comercio → Legal (representantes, socios);
-- Estados financieros → Financiera;
-- certificación bancaria → cuentas.
+**Qué quedó hecho de F5** (FM-51…FM-54; [14 §5.2, §5.3, §6](14-ficha-maestra-del-tercero.md)):
+- el **cruce** sección ↔ documento como hecho compartido de la versión, con el análisis ya cobrado (ADR-0012): sin análisis, revisión manual;
+- «**Usar como soporte**» por requisito del flujo (interruptor en el editor de flujos) y el requisito de documento con las secciones que
+  respalda y su cruce; en el de sección, el cruce campo por campo;
+- una **discrepancia crítica pide justificación** al aprobar (por documento y por área) y no se aprueba en lote;
+- la **actualización desde el documento**: propuesta campo por campo en «Mi información» y en la sección (`/public/v1/ficha/propuestas`),
+  que el tercero confirma o corrige y nunca se guarda sola.
 
-Además, que una versión nueva del documento le proponga al tercero los cambios para actualizar la ficha.
-
-| Hecho (commit `wip`, sin probar a fondo) | Falta |
-|---|---|
-| Dominio `CruceConDocumento` y `PropuestaDesdeDocumento`; esquemas de extracción por tipo de documento (`EsquemasDeAnalisis.cs`); analizador simulado determinista (`AnalizadorSimulado.cs`); `UsarComoSoporte` en el requisito de documento del flujo; componente web `CruceSeccion.tsx` | Conectar el cruce en `DetalleSeccionRequisito`, en la tarjeta del documento y en el diálogo de aprobación. «Actualizar desde mi RUT/Cámara…» en el wizard del portal, con propuesta campo por campo que el tercero confirma (nunca se guarda sola) y que al guardar abre la revalidación por sección (F2). Consumo de cupo según ADR-0012 y fail-closed (sin IA o sin cupo, revisión manual). Filas FM-48+ en el registro. Pruebas de dominio, integración y e2e (tercero sube un RUT nuevo, acepta la propuesta y la empresa ve la revalidación con el cruce). Mover `porcentaje` fuera de `CruceSeccion.tsx` (lleva un `eslint-disable` temporal). |
-
-Regla que no se negocia: el cruce es un **hecho compartido** de la versión (se calcula una vez), y la **decisión** es
-de cada empresa. Nada se aprueba solo por la IA.
+**Pendiente tras F5** (FM-55): la revisión automática de H7 aún no usa el cruce; la certificación bancaria no está en el mapa de respaldo;
+una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15); la cédula respalda solo la General.
 
 ### 4.6 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre
@@ -253,7 +246,7 @@ La suite tiene 19 specs. Faltan, como mínimo:
 
 - **Ramas:** la de trabajo es `feature/avance-2026-11-10`. Las ramas de origen siguen existiendo:
   `feature/integracion-sdk`, `feature/verificaciones`, `feature/lotes-y-caducidad`, `feature/informes` y
-  `feature/ficha-f5`.
+  `feature/ficha-f5` (F5 terminado en `feature/ficha-f5-cierre`, que la incluye).
 - **Compilar:** con `--artifacts-path` propio y `MSBUILDDISABLENODEREUSE=1`, porque la API de desarrollo bloquea los
   DLL.
 - **Cliente:** regenerarlo con una API temporal: `openapi:actualizar` y luego `generar:api`.
