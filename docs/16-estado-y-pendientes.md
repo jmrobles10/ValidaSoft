@@ -61,7 +61,7 @@ las fusiones de las demás. **No tiene PR.**
 | **H7: verificaciones y SAGRILAFT** | `feature/verificaciones` | Terminado | VE-5..VE-18 |
 | **H8: invitación masiva y caducidad** | `feature/lotes-y-caducidad` | Terminado, verificación sin cerrar (ver §4.3) | LT-1..LT-10 |
 | **H8: informes y exportes** | `feature/informes` | Terminado, verificación sin cerrar (ver §4.4) | IF-1..IF-8 |
-| **F5: IA sección ↔ documento** | `feature/ficha-f5` | **A medias** (commit `wip`, ver §4.5) | sin filas |
+| **F5: IA sección ↔ documento** | `feature/ficha-f5` | **A medias y fuera de esta rama**: se fusionó y se revirtió porque su prueba de integración es intermitente (ver §4.5) | sin filas |
 
 **Contenido de cada bloque:**
 - **H9:**
@@ -96,8 +96,17 @@ las fusiones de las demás. **No tiene PR.**
 | `dotnet build` (toda la solución, incluidas las pruebas) | 0 errores |
 | `pnpm typecheck` | en verde |
 | `pnpm lint` | en verde |
-| Pruebas de dominio | 648/648 |
-| Pruebas de integración, `pnpm test` (Vitest) y `pnpm e2e` | **no se corrieron** sobre la rama consolidada; cada rama sí las corrió por separado (§4) |
+| Pruebas de dominio | 637/637 (sin las de F5) |
+| Pruebas de integración | 141/141 |
+| `pnpm test` (Vitest) | 596/597; la que falló (`ObservacionEnWizard`) es intermitente por tiempo y ya pasa con una espera mayor |
+| `pnpm build` | en verde |
+| `pnpm e2e` (aislada) | 46/46 |
+
+**Errores que encontró la verificación, ya corregidos:**
+- la pestaña «Vínculos» quedaba duplicada tras la fusión;
+- la consulta automática de listas podía pisar una consulta manual hecha mientras respondía el proveedor
+  (`TareasDeVerificaciones`): ahora vuelve a comprobar que sigue pendiente;
+- el conteo de tipos de evento públicos es 35 con lotes y verificaciones juntos.
 
 **Conflictos de la fusión, resueltos a mano. Revisarlos al retomar:**
 - `Flujo.cs`, `Expediente.cs` y los DTO de flujo y expediente: plazo de cargue y verificaciones juntos, con el plazo
@@ -108,7 +117,6 @@ las fusiones de las demás. **No tiene PR.**
 - `Persistencia.cs`: índices.
 - `Permisos.cs`, `scopes.ts` y sus pruebas: todos los permisos nuevos.
 - `PdfDeCertificado.cs`: una sola firma de `Construir`.
-- `AnalizadorOpenAi.cs` y `AnalizadorSimulado.cs`: clase parcial con la prueba de llave (PT-6) y el análisis simulado (F5).
 - `AppShell.tsx`: pestañas «Cumplimiento» e «Informes».
 - `EditorFlujo.tsx`, textos i18n, el registro de decisiones (secciones 5-duotricies a 5-sextricies renumeradas) y el
   cliente de la API (regenerado desde la API de esta rama).
@@ -116,16 +124,10 @@ las fusiones de las demás. **No tiene PR.**
 ## 4. Qué falta, con detalle
 
 ### 4.1 Cerrar la rama consolidada (lo primero)
-1. Correr la suite completa sobre la rama:
-   - `pnpm test`;
-   - pruebas de integración;
-   - `pnpm e2e` (aislada; 19 specs, entre ellas las nuevas: `integracion`, `verificaciones`, `lotes`, `informes` y
-     `plataforma`).
-2. Arreglar lo que salga, sobre todo en los puntos de fusión de §3.
-3. Abrir el PR a `main` y fusionarlo con el CI en verde. Si F5 impide cerrar, separarlo: revertir la fusión de
-   `feature/ficha-f5` en la rama y terminarlo aparte.
-4. Las pruebas de Vitest de `apps/public/src/ficha` y la de webhooks fallaron por tiempo con la máquina saturada y
-   pasaron solas. Si se repite en CI, subirles el `timeout`.
+1. ~~Correr la suite completa sobre la rama y arreglar lo que salga.~~ Hecho (§3).
+2. Abrir el PR a `main` y fusionarlo con el CI en verde.
+3. Las pruebas de Vitest de `apps/public/src/ficha` y la de webhooks pueden fallar por tiempo con la máquina saturada.
+   Si se repite en CI, subirles el `timeout`.
 
 ### 4.2 H9 — pendiente
 - Sandbox con datos aislados: hoy `sandbox` solo cambia el prefijo de la llave.
@@ -147,7 +149,12 @@ las fusiones de las demás. **No tiene PR.**
 - El agente se detuvo al cerrar su verificación: correr `informes.spec.ts` y las pruebas de integración de los exportes.
 - El informe SAGRILAFT está en H7 (`/informes/cumplimiento`); unificar la pantalla de «Informes» con él.
 
-### 4.5 F5 — IA sección ↔ documento (a medias)
+### 4.5 F5 — IA sección ↔ documento (a medias, en `feature/ficha-f5`)
+Al retomarlo: rebasar `feature/ficha-f5` sobre `main` (chocará en `MapeosDeValidacion.cs`, `ServiciosInfraestructura.cs`,
+`AnalizadorOpenAi.cs` —el analizador simulado debe quedar como clase parcial junto a la prueba de llave de PT-6— y el
+cliente generado). Su prueba `Un_RUT_nuevo_propone_al_tercero…` es **intermitente**: a veces el cruce de la versión 2
+no llega en 20 s; hay que encontrar la causa antes de fusionar.
+
 **Objetivo** (pedido del usuario, [14 §5.2, §5.3, §6](14-ficha-maestra-del-tercero.md)): que un documento exigido, por
 ejemplo el RUT obligatorio, sirva además como soporte verificado de las secciones de la ficha que respalda:
 - RUT → General y Tributaria;
