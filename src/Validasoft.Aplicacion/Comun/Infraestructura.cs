@@ -118,6 +118,15 @@ public interface IProtectorDeSecretos
     string Recifrar(string protegido) => EstaConClaveActual(protegido) ? protegido : Proteger(Desproteger(protegido));
 }
 
+/// <summary>
+/// Caché de verificaciones de API keys (para no pagar Argon2 en cada petición). Al revocar o rotar una llave se olvida su
+/// verificación en este nodo, así el cambio vale de inmediato; en los demás nodos, como mucho 5 minutos después (CN-3).
+/// </summary>
+public interface ICacheDeCredenciales
+{
+    void Olvidar(Guid apiKeyId);
+}
+
 /// <summary>Genera y verifica API keys; el algoritmo (Argon2id) vive en infraestructura.</summary>
 public interface IGeneradorDeApiKeys
 {

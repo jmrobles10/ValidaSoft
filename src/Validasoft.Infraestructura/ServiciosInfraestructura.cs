@@ -72,6 +72,7 @@ public static class ServiciosInfraestructura
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IContextoSolicitud, ContextoDesdeHttp>();
         servicios.AddSingleton<IGeneradorDeApiKeys, GeneradorDeApiKeys>();
+        servicios.AddSingleton<ICacheDeCredenciales, CacheDeCredenciales>();
         // Origen del importador y del sincronizador del Portal (F4, FM-39): configuración Validasoft:Importacion:Portal.
         servicios.AddSingleton<Aplicacion.Ficha.IFabricaDeOrigenesPortal, Portal.FabricaDeOrigenesPortal>();
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();

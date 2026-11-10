@@ -1,2 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    DTOs públicos de la API v1 (docs/05 §4). Además de la API (net10.0) los usan los integradores a través del SDK
+    (Validasoft.Sdk): por eso se compila también para net7.0 (el SRM) y net8.0 (T-16, CN-5).
+  -->
+  <PropertyGroup>
+    <TargetFramework></TargetFramework>
+    <TargetFrameworks>net7.0;net8.0;net10.0</TargetFrameworks>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <IsPackable>true</IsPackable>
+    <PackageId>Validasoft.Contratos</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Validasoft</Authors>
+    <Description>Contratos (DTO) de la API v1 de Validasoft.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
 </Project>

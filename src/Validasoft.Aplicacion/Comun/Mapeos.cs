@@ -27,7 +27,7 @@ public static class Mapeos
         new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa, e.ColorMarca);
 
     public static ApiKeyDto ADto(this ApiKey k, string? valor = null) =>
-        new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor, k.SistemaId);
+        new(k.Id, k.Prefijo, k.Nombre, k.Scopes, k.Empresas, k.ExpiraEn, k.CreadaEn, k.Sandbox, valor, k.SistemaId, k.RotadaDe, k.ReemplazadaPor);
 
     public static SistemaIntegradoDto ADto(this SistemaIntegrado s) =>
         new(s.Id, s.Codigo, s.Nombre, s.ClavePublicaPem, s.Activo, s.CreadoEn, [.. s.OrigenesPermitidos]);

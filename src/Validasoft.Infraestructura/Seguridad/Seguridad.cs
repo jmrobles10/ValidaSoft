@@ -158,6 +158,20 @@ public sealed class GeneradorDeApiKeys(IHostEnvironment entorno) : IGeneradorDeA
 }
 
 /// <summary>
+/// Marca en la caché del nodo el momento en que cambió una API key (revocada o rotada, CN-3): una verificación guardada antes
+/// de esa marca se descarta y la llave se vuelve a verificar contra la base.
+/// </summary>
+public sealed class CacheDeCredenciales(IMemoryCache cache, TimeProvider reloj) : ICacheDeCredenciales
+{
+    private static string Clave(string apiKeyId) => "apikey-cambio:" + apiKeyId;
+
+    public void Olvidar(Guid apiKeyId) => cache.Set(Clave(apiKeyId.ToString()), reloj.GetUtcNow(), TimeSpan.FromMinutes(10));
+
+    internal static bool CambioDespuesDe(IMemoryCache cache, string apiKeyId, DateTimeOffset verificadaEn) =>
+        cache.TryGetValue(Clave(apiKeyId), out DateTimeOffset cambio) && cambio >= verificadaEn;
+}
+
+/// <summary>
 /// Autenticación por <c>X-Api-Key</c>. La llave de arranque de Plataforma (<c>Validasoft:Plataforma:ClaveBootstrap</c>)
 /// solo sirve para administrar tenants mientras llega el login OIDC (H1, ADR-0003). Las verificaciones exitosas se
 /// guardan 5 minutos en memoria para no pagar Argon2 en cada petición. Con <c>X-Usuario-Delegado</c>, la llave de un
@@ -178,7 +192,14 @@ public sealed class AutenticacionPorApiKey(
 
     private sealed record LlaveValidada(
         string TenantId, string ApiKeyId, IReadOnlyList<string> Scopes, IReadOnlyList<string> Empresas, DateTimeOffset? ExpiraEn,
-        Guid? SistemaId, string? Sistema);
+        Guid? SistemaId, string? Sistema)
+    {
+        /// <summary>Cuándo se verificó contra la base (reloj de Validasoft).</summary>
+        public DateTimeOffset VerificadaEn { get; init; }
+
+        /// <summary>Hasta cuándo vale la verificación guardada, según el reloj de Validasoft (como mucho 5 minutos).</summary>
+        public DateTimeOffset CacheadaHasta { get; init; }
+    }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
@@ -197,14 +218,23 @@ public sealed class AutenticacionPorApiKey(
         }
 
         var claveCache = "apikey:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(valor)));
-        if (!cache.TryGetValue(claveCache, out LlaveValidada? validada) || validada is null)
+        var ahora = reloj.GetUtcNow();
+        // La verificación guardada vence con el reloj de Validasoft (no solo con el de la caché): una llave que expira o que se
+        // rotó (CN-3) deja de valer a su hora, y como mucho 5 minutos después si cambió mientras estaba en caché.
+        // También se vuelve a verificar si el reloj retrocedió desde la verificación guardada.
+        if (!cache.TryGetValue(claveCache, out LlaveValidada? validada) || validada is null || validada.CacheadaHasta <= ahora ||
+            validada.VerificadaEn > ahora || CacheDeCredenciales.CambioDespuesDe(cache, validada.ApiKeyId, validada.VerificadaEn))
         {
             validada = await ValidarAsync(valor);
             if (validada is null)
+            {
+                cache.Remove(claveCache);
                 return AuthenticateResult.Fail("API key inválida, revocada o expirada.");
+            }
 
-            var vence = reloj.GetUtcNow().AddMinutes(5);
-            cache.Set(claveCache, validada, validada.ExpiraEn is not null && validada.ExpiraEn < vence ? validada.ExpiraEn.Value : vence);
+            var vence = ahora.AddMinutes(5);
+            validada = validada with { VerificadaEn = ahora, CacheadaHasta = validada.ExpiraEn is { } expira && expira < vence ? expira : vence };
+            cache.Set(claveCache, validada, TimeSpan.FromMinutes(5));
         }
 
         var asercion = Request.Headers[VerificadorDeIdentidadDelegada.Cabecera].ToString();

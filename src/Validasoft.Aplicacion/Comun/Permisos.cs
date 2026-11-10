@@ -46,13 +46,19 @@ public static class Permisos
     /// <summary>Crear y gestionar suscripciones de webhooks y sus entregas (NW-4).</summary>
     public const string WebhooksAdministrar = "webhooks:administrar";
 
+    /// <summary>
+    /// Consulta rápida del estado de certificación de un tercero (<c>GET /consultas/certificacion</c>, H9): la usa Marco al
+    /// pagar o contratar. Solo devuelve el resumen (sin documentos ni datos personales); por eso va aparte de los demás.
+    /// </summary>
+    public const string ConsultasLeer = "consultas:leer";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];

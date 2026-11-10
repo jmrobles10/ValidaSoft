@@ -16,18 +16,22 @@ namespace Validasoft.Aplicacion.Notificaciones;
 /// </summary>
 public static class EventosEndpoints
 {
-    /// <summary><c>?desde={cursor}&amp;tipos=a,b&amp;limite=50</c> (máx. 200). Sin <c>desde</c> empieza por el primero.</summary>
+    /// <summary>
+    /// <c>?desde={cursor}&amp;tipos=a,b&amp;empresaId=&amp;limite=50</c> (máx. 200). Sin <c>desde</c> empieza por el primero.
+    /// <c>empresaId</c> equivale a <c>X-Empresa</c> (para el pull de un integrador con varias empresas, CN-4); una empresa
+    /// fuera del alcance de la credencial responde 403 <c>alcance-insuficiente</c>.
+    /// </summary>
     [WolverineGet("/api/v1/eventos")]
     [Authorize(Policy = Permisos.EventosLeer)]
-    public static async Task<PaginaEventosDto> Listar(string? desde, string? tipos, int? limite, ISesiones sesiones, IContextoSolicitud contexto,
-        CancellationToken ct)
+    public static async Task<PaginaEventosDto> Listar(string? desde, string? tipos, Guid? empresaId, int? limite, ISesiones sesiones,
+        IContextoSolicitud contexto, CancellationToken ct)
     {
         var tenantId = contexto.TenantRequerido();
         var cursor = string.IsNullOrWhiteSpace(desde) ? 0L : LeerCursor(desde);
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
 
         await using var sesion = sesiones.ConsultaGlobal();
-        var consulta = Filtrar(sesion.Query<EventoPublico>().Where(e => e.TenantId == tenantId && e.Cursor > cursor), tipos, contexto);
+        var consulta = Filtrar(sesion.Query<EventoPublico>().Where(e => e.TenantId == tenantId && e.Cursor > cursor), tipos, contexto, empresaId);
         var pagina = await consulta.OrderBy(e => e.Cursor).Take(tamano + 1).ToListAsync(ct);
         var datos = pagina.Take(tamano).Select(e => e.ADto()).ToList();
         return new PaginaEventosDto(datos, datos.Count > 0 ? datos[^1].Cursor : cursor.ToString(CultureInfo.InvariantCulture), pagina.Count > tamano);
@@ -74,14 +78,23 @@ public static class EventosEndpoints
         return Sse.Fin;
     }
 
-    private static IQueryable<EventoPublico> Filtrar(IQueryable<EventoPublico> consulta, string? tipos, IContextoSolicitud contexto)
+    private static IQueryable<EventoPublico> Filtrar(IQueryable<EventoPublico> consulta, string? tipos, IContextoSolicitud contexto,
+        Guid? empresaPedida = null)
     {
         var lista = (tipos ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(t => t.ToLowerInvariant()).ToArray();
         if (lista.Length > 0)
             consulta = consulta.Where(e => e.Tipo.IsOneOf(lista));
 
-        if (contexto.EmpresaId is { } activa)
+        if (empresaPedida is { } pedida)
+        {
+            if ((contexto.EmpresaId is { } conCabecera && conCabecera != pedida) ||
+                (!contexto.Empresas.Contains("*") && !contexto.Empresas.Contains(pedida.ToString())))
+                throw ReglaDeNegocioException.Prohibido("alcance-insuficiente", "Esa empresa no está al alcance de tu credencial.");
+            Guid? empresa = pedida;
+            consulta = consulta.Where(e => e.EmpresaId == empresa);
+        }
+        else if (contexto.EmpresaId is { } activa)
         {
             Guid? empresa = activa;
             consulta = consulta.Where(e => e.EmpresaId == empresa);

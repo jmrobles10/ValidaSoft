@@ -5,9 +5,11 @@
     <Project Path="src/Validasoft.Contratos/Validasoft.Contratos.csproj" />
     <Project Path="src/Validasoft.Dominio/Validasoft.Dominio.csproj" />
     <Project Path="src/Validasoft.Infraestructura/Validasoft.Infraestructura.csproj" />
+    <Project Path="src/Validasoft.Sdk/Validasoft.Sdk.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Validasoft.Dominio.Tests/Validasoft.Dominio.Tests.csproj" />
     <Project Path="tests/Validasoft.Integracion.Tests/Validasoft.Integracion.Tests.csproj" />
+    <Project Path="tests/Validasoft.Sdk.Tests/Validasoft.Sdk.Tests.csproj" />
   </Folder>
 </Solution>

@@ -117,10 +117,11 @@ public sealed class RegistroIdempotencia
 public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
 {
     /// <summary>
-    /// Respuestas con un secreto que no se guardan en el registro: el secreto de un webhook (NW-4), las API keys del alta de
-    /// un grupo y la sesión de un operador de Plataforma (PT-5, PT-4). Repetir el alta responde 409 <c>slug-duplicado</c>.
+    /// Respuestas con un secreto que no se guardan en el registro: el secreto de un webhook (NW-4), la clave nueva de una API
+    /// key rotada (CN-3), las API keys del alta de un grupo y la sesión de un operador de Plataforma (PT-5, PT-4). Repetir el
+    /// alta responde 409 <c>slug-duplicado</c>; rotar dos veces, 409 <c>api-key-ya-rotada</c>.
     /// </summary>
-    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|plataforma/tenants|plataforma/sesiones)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|api-keys/[^/]+/rotar|plataforma/tenants|plataforma/sesiones)$", RegexOptions.IgnoreCase)]
     private static partial Regex RutaConSecreto();
 
     public const string Cabecera = "Idempotency-Key";
@@ -138,8 +139,9 @@ public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
         var clave = http.Request.Headers[Cabecera].ToString();
         var esPost = HttpMethods.IsPost(http.Request.Method) && ruta.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase);
 
-        // Las respuestas que muestran un secreto (webhook, llaves del alta de un grupo, sesión de Plataforma) no se guardan: el
-        // registro de idempotencia lo dejaría en claro 24 h (NW-4, PT-5). Esas rutas no repiten respuesta.
+        // Las respuestas que muestran un secreto (webhook, clave nueva de una API key rotada, llaves del alta de un grupo, sesión
+        // de Plataforma) no se guardan: el registro de idempotencia lo dejaría en claro 24 h (NW-4, CN-3, PT-5). Esas rutas no
+        // repiten respuesta.
         if (!esPost || http.User.Identity?.IsAuthenticated != true || RutaConSecreto().IsMatch(ruta))
         {
             await siguiente(http);
