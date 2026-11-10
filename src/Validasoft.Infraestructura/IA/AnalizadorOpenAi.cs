@@ -62,12 +62,64 @@ public sealed class AnalizadorOpenAi(IHttpClientFactory fabrica, OpcionesDeIa op
         }
     }
 
+    /// <summary>
+    /// <c>GET {UrlBase}/models</c> con la llave (PT-6): no consume tokens. 200 ⇒ válida; 401/403 ⇒ inválida; 429 ⇒ sin cuota
+    /// o límite; otra respuesta, red o tiempo agotado ⇒ error. El cuerpo de la respuesta no se lee ni se registra.
+    /// </summary>
+    public async Task<ResultadoDePruebaDeLlave> ProbarLlaveAsync(string apiKey, CancellationToken ct)
+    {
+        using var peticion = new HttpRequestMessage(HttpMethod.Get, opciones.UrlBase + "/models");
+        peticion.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limite.CancelAfter(TimeSpan.FromSeconds(Math.Min(15, opciones.Timeout.TotalSeconds)));
+        try
+        {
+            using var respuesta = await fabrica.CreateClient(Cliente).SendAsync(peticion, HttpCompletionOption.ResponseHeadersRead, limite.Token);
+            return respuesta.StatusCode switch
+            {
+                HttpStatusCode.OK => new(ResultadoDePruebaDeLlave.Valida, "OpenAI aceptó la llave."),
+                HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new(ResultadoDePruebaDeLlave.Invalida,
+                    "OpenAI rechazó la llave: revisa que esté completa y activa en la organización."),
+                HttpStatusCode.TooManyRequests => new(ResultadoDePruebaDeLlave.Limite,
+                    "OpenAI aceptó la llave pero respondió que no hay cuota o se superó el límite de uso."),
+                _ => new(ResultadoDePruebaDeLlave.Error, $"OpenAI respondió {(int)respuesta.StatusCode}; intenta de nuevo más tarde.")
+            };
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return new(ResultadoDePruebaDeLlave.Error, "OpenAI no respondió a tiempo.");
+        }
+        catch (HttpRequestException)
+        {
+            logger.LogWarning("No se pudo conectar con OpenAI para probar una llave.");
+            return new(ResultadoDePruebaDeLlave.Error, "No se pudo conectar con OpenAI.");
+        }
+    }
+
     private static string Motivo(HttpStatusCode codigo) => codigo switch
     {
         HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => "llave-invalida",
         HttpStatusCode.TooManyRequests => "limite-del-proveedor",
         _ => $"http-{(int)codigo}"
     };
+}
+
+/// <summary>
+/// Analizador sin red (<c>Validasoft:IA:Proveedor = Simulado</c>, PT-6), para pruebas de punta a punta y demos: el análisis
+/// falla de forma controlada (<c>analizador-simulado</c>, como cuando OpenAI no responde: la versión sigue sin IA) y la
+/// prueba de la llave la acepta salvo que contenga «rechazada» (inválida) o «limite» (sin cuota).
+/// </summary>
+public sealed class AnalizadorSimulado : IAnalizadorDeDocumentos
+{
+    public Task<ResultadoDeAnalisis> AnalizarAsync(SolicitudDeAnalisis solicitud, string apiKey, CancellationToken ct) =>
+        throw new AnalisisDeIaException("analizador-simulado", "El analizador de IA está en modo simulado (Validasoft:IA:Proveedor).");
+
+    public Task<ResultadoDePruebaDeLlave> ProbarLlaveAsync(string apiKey, CancellationToken ct) =>
+        Task.FromResult(apiKey.Contains("rechazada", StringComparison.OrdinalIgnoreCase)
+            ? new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Invalida, "La llave fue rechazada (analizador simulado).")
+            : apiKey.Contains("limite", StringComparison.OrdinalIgnoreCase)
+                ? new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Limite, "La llave no tiene cuota (analizador simulado).")
+                : new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Valida, "Llave aceptada (analizador simulado: no se llamó a OpenAI)."));
 }
 
 /// <summary>Archivo listo para enviar: el PDF recortado a las páginas permitidas (o el original) y lo enviado/omitido.</summary>

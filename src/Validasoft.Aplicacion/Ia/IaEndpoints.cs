@@ -57,6 +57,36 @@ public static class PlanIaEndpoints
         return despues;
     }
 
+    /// <summary>
+    /// «Probar llave» (PT-6): verifica contra el proveedor la llave del cuerpo (aún sin guardar) o, si viene nula, la guardada
+    /// en el plan. Solo cuando Plataforma lo pide; no cambia el plan ni consume validaciones. Responde siempre 200 con el
+    /// resultado (<c>valida</c>, <c>invalida</c>, <c>limite</c>, <c>sin-llave</c>, <c>error</c>) y solo los últimos cuatro de la
+    /// llave. 404 <c>tenant-no-encontrado</c> / <c>empresa-no-encontrada</c>; 422 <c>api-key-invalida</c> (forma).
+    /// </summary>
+    [WolverinePost("/api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia/probar-llave")]
+    [Authorize(Policy = Permisos.PlataformaTenants)]
+    public static async Task<PruebaDeLlaveIaDto> ProbarLlave(Guid tenantId, Guid empresaId, ProbarLlaveIaDto dto, ISesiones sesiones,
+        IProtectorDeSecretos protector, IAnalizadorDeDocumentos analizador, TimeProvider reloj, CancellationToken ct)
+    {
+        await EmpresaDelTenantAsync(sesiones, tenantId, empresaId, ct);
+        string? llave;
+        if (!string.IsNullOrWhiteSpace(dto.ApiKeyOpenAi))
+            llave = PlanDeIaEmpresa.ValidarLlave(dto.ApiKeyOpenAi);
+        else
+        {
+            await using var sesion = sesiones.ParaTenant(tenantId);
+            var plan = await sesion.LoadAsync<PlanDeIaEmpresa>(empresaId, ct);
+            llave = plan is { LlaveConfigurada: true } ? protector.Desproteger(plan.ApiKeyOpenAiProtegida!) : null;
+        }
+
+        if (llave is null)
+            return new PruebaDeLlaveIaDto(ResultadoDePruebaDeLlave.SinLlave, "La empresa no tiene una llave de OpenAI configurada.", null,
+                reloj.GetUtcNow());
+
+        var resultado = await analizador.ProbarLlaveAsync(llave, ct);
+        return new PruebaDeLlaveIaDto(resultado.Resultado, resultado.Mensaje, llave[^4..], reloj.GetUtcNow());
+    }
+
     public static PlanIaEmpresaDto ADto(this PlanDeIaEmpresa p, bool configurado) =>
         new(p.EmpresaId, configurado, p.ValidacionesIncluidasMes, p.AdicionalHabilitado, p.TopeAdicionalMes, p.LlaveConfigurada,
             p.LlaveConfigurada ? p.UltimosCuatroLlave : null, p.ModeloPorDefecto, p.ModeloEscalamiento, p.UmbralConfianza, p.Activo,

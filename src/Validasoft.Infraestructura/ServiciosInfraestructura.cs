@@ -77,12 +77,14 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
+        servicios.AddHostedService<VerificacionDeClaveMaestra>(); // sin clave maestra de secretos la API no arranca (PT-1)
         servicios.AddSingleton<IEnviadorDeCorreo, EnviadorSmtp>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
+        servicios.AddScoped<IVerificadorDeOperadores, VerificadorDeOperadores>(); // operadores de Plataforma (PT-4)
         servicios.AddSingleton<RegistroDeAsercionesUsadas>();
         servicios.AddHostedService<LimpiezaDeAsercionesUsadas>();
         // Embebido desde otros dominios (SE-1…SE-3): orígenes de los sistemas, apps estáticas, CORS opcional y proxies.
@@ -119,7 +121,11 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
-        servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
+        // Validasoft:IA:Proveedor = Simulado: sin red (e2e y demos, PT-6). Por defecto, OpenAI con la llave de cada empresa.
+        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], "Simulado", StringComparison.OrdinalIgnoreCase))
+            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorSimulado>();
+        else
+            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)

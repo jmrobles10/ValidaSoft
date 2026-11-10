@@ -96,9 +96,7 @@ public sealed partial class PlanDeIaEmpresa
             }
             else
             {
-                if (limpia.Length is < 20 or > 512 || limpia.Any(char.IsWhiteSpace))
-                    throw ReglaDeNegocioException.Validacion("api-key-invalida",
-                        "La API key de OpenAI no parece válida: debe tener entre 20 y 512 caracteres y no llevar espacios.");
+                ValidarLlave(limpia);
                 ApiKeyOpenAiProtegida = proteger(limpia);
                 UltimosCuatroLlave = limpia[^4..];
             }
@@ -112,6 +110,16 @@ public sealed partial class PlanDeIaEmpresa
         UmbralConfianza = umbral;
         Activo = cambios.Activo;
         ActualizadoEn = ahora;
+    }
+
+    /// <summary>Forma de una API key de OpenAI: 20 a 512 caracteres sin espacios. Devuelve la llave recortada o 422 <c>api-key-invalida</c>.</summary>
+    public static string ValidarLlave(string llave)
+    {
+        var limpia = (llave ?? string.Empty).Trim();
+        if (limpia.Length is < 20 or > 512 || limpia.Any(char.IsWhiteSpace))
+            throw ReglaDeNegocioException.Validacion("api-key-invalida",
+                "La API key de OpenAI no parece válida: debe tener entre 20 y 512 caracteres y no llevar espacios.");
+        return limpia;
     }
 
     private static string? ValidarModelo(string? modelo)

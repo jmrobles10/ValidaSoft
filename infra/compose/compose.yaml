@@ -62,6 +62,7 @@ services:
       ConnectionStrings__Validasoft: "Host=postgres;Port=5432;Database=validasoft;Username=validasoft;Password=validasoft"
       Validasoft__Plataforma__ClaveBootstrap: "dev-plataforma-solo-local-cambiar-0001"
       Validasoft__Sesiones__ClaveFirma: "dev-sesiones-solo-local-cambiar-000000000001"
+      Validasoft__Secretos__ClaveMaestra: "HMyhDz1MEG6gvVomJ8uD3Ntu6cOs8mREw+8Cmf1Qufo="
       Validasoft__Persistencia__CrearEsquemaAlIniciar: "true"
       Validasoft__Correo__Host: "mailpit"
       Validasoft__Correo__Puerto: "1025"
