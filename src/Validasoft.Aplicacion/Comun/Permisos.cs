@@ -77,9 +77,12 @@ public static class Permisos
     public static readonly IReadOnlySet<string> SoloDeTenant =
         new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
 
-    /// <summary>Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol (docs/07 §3.2).</summary>
+    /// <summary>
+    /// Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol, y la consulta
+    /// de certificación la hace cualquiera (docs/07 §3.2, CN-1).
+    /// </summary>
     private static readonly string[] Lecturas =
-        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar, CertificadosLeer];
+        [ConfiguracionLeer, TercerosLeer, VinculosLeer, FlujosLeer, ExpedientesLeer, DocumentosLeer, DocumentosDescargar, CertificadosLeer, ConsultasLeer];
 
     /// <summary>Mapeo rol → scopes (docs/07 §3.1).</summary>
     public static IReadOnlyList<string> DeRol(Rol rol) => rol switch

@@ -19,4 +19,8 @@ export interface ApiKeyDto {
   valor: string | null;
   /** @nullable */
   sistemaId?: string | null;
+  /** @nullable */
+  rotadaDe?: string | null;
+  /** @nullable */
+  reemplazadaPor?: string | null;
 }

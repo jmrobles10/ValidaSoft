@@ -8,7 +8,18 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DialogoApiKey } from './DialogoApiKey';
 import { DialogoClaveCreada } from './DialogoClaveCreada';
-import { borradorApiKeyNuevo, cuerpoCrearApiKey, estadoApiKey, finDelDia, textoAlcance, TODO_EL_GRUPO, validarApiKey } from './modelo';
+import { DialogoRotarApiKey } from './DialogoRotarApiKey';
+import {
+  anteriorValidaHasta,
+  borradorApiKeyNuevo,
+  cuerpoCrearApiKey,
+  estadoApiKey,
+  finDelDia,
+  sePuedeRotar,
+  textoAlcance,
+  TODO_EL_GRUPO,
+  validarApiKey,
+} from './modelo';
 import { alternarGrupo, claveDeScope, resumirScopes, SCOPES_DEL_TENANT, scopesDeGrupo } from './scopes';
 
 /** `Permisos.DelTenant` (src/Validasoft.Aplicacion/Comun/Permisos.cs): lo único que la API acepta en una llave. */
@@ -16,7 +27,7 @@ const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
   'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer',
   'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'documentos:leer', 'documentos:descargar',
-  'certificados:leer', 'eventos:leer', 'webhooks:administrar',
+  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer',
 ];
 
 const EMPRESAS = [
@@ -75,14 +86,14 @@ describe('permisos de una API key', () => {
     expect(resumen.todos).toBe(false);
     expect(resumen.grupos).toEqual([
       { grupo: 'vinculos', cuantos: 2, total: 6 },
-      { grupo: 'integracion', cuantos: 1, total: 2 },
+      { grupo: 'integracion', cuantos: 1, total: 3 },
     ]);
     expect(resumen.desconocidos).toEqual(['nuevo:scope']);
   });
 
   it('marcar un grupo agrega los que faltan; con el grupo completo, lo desmarca', () => {
     const integracion = scopesDeGrupo('integracion');
-    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar']);
+    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar', 'consultas:leer']);
     expect(alternarGrupo([...integracion, 'vinculos:leer'], 'integracion')).toEqual(['vinculos:leer']);
   });
 });
@@ -111,6 +122,13 @@ describe('modelo de API keys', () => {
   it('estado y alcance visibles', () => {
     expect(estadoApiKey({ expiraEn: null }, ahora)).toBe('vigente');
     expect(estadoApiKey({ expiraEn: '2026-11-01T00:00:00Z' }, ahora)).toBe('vencida');
+    // Rotada: vale hasta el fin del solapamiento y ya no se puede volver a rotar.
+    expect(estadoApiKey({ expiraEn: '2026-11-10T15:00:00Z', reemplazadaPor: 'k2' }, ahora)).toBe('reemplazada');
+    expect(estadoApiKey({ expiraEn: '2026-11-09T14:00:00Z', reemplazadaPor: 'k2' }, ahora)).toBe('vencida');
+    expect(sePuedeRotar({ expiraEn: null }, ahora)).toBe(true);
+    expect(sePuedeRotar({ expiraEn: '2026-11-10T15:00:00Z', reemplazadaPor: 'k2' }, ahora)).toBe(false);
+    expect(anteriorValidaHasta('24h', ahora)).toBe('2026-11-10T15:00:00.000Z');
+    expect(anteriorValidaHasta('inmediato', ahora)).toBe('2026-11-09T15:00:00.000Z');
     expect(textoAlcance({ empresas: ['*'] }, EMPRESAS, 'Todo el grupo')).toBe('Todo el grupo');
     expect(textoAlcance({ empresas: ['e1', 'e2'] }, EMPRESAS, 'Todo el grupo')).toBe('Constructora Norte, Logística Sur');
   });
@@ -127,6 +145,35 @@ function CrearConClave() {
     <DialogoApiKey claveIdempotencia="idem-1" empresas={EMPRESAS} sistemas={[]} onCerrar={() => undefined} onCreada={setCreada} />
   );
 }
+
+describe('rotar una API key', () => {
+  it('pide cuánto sigue valiendo la actual, la rota y muestra la nueva una sola vez con el aviso', async () => {
+    const usuario = userEvent.setup();
+    const nueva: ApiKeyDto = { ...LLAVE, id: 'k2', prefijo: '7c1d00aa', valor: 'vsk_live_grupo_7c1d00aa', rotadaDe: 'k1' };
+    const onRotada = vi.fn();
+    const peticiones = montar(<DialogoRotarApiKey llave={{ ...LLAVE, valor: null }} onCerrar={() => undefined} onRotada={onRotada} />, () => json(nueva, 201));
+
+    expect(screen.getByRole('dialog', { name: /Rotar SRM producción/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '24 horas más' })).toBeChecked();
+    await usuario.click(screen.getByRole('radio', { name: 'Siete días más' }));
+    const antes = Date.now();
+    await usuario.click(screen.getByRole('button', { name: 'Rotar clave' }));
+
+    await waitFor(() => expect(onRotada).toHaveBeenCalledOnce());
+    expect(peticiones).toHaveLength(1);
+    expect(peticiones[0]?.url).toBe('/api/v1/api-keys/k1/rotar');
+    const hasta = (peticiones[0]?.cuerpo as { anteriorValidaHasta: string }).anteriorValidaHasta;
+    expect(new Date(hasta).getTime() - antes).toBeGreaterThanOrEqual(7 * 24 * 3_600_000 - 1_000);
+    expect(onRotada).toHaveBeenCalledWith(nueva, hasta);
+  });
+
+  it('la clave nueva dice hasta cuándo vale la anterior', () => {
+    const hasta = new Date(Date.now() + 3_600_000).toISOString();
+    montar(<DialogoClaveCreada llave={LLAVE} valor="vsk_live_grupo_nueva" empresas={EMPRESAS} anteriorHasta={hasta} onCerrar={() => undefined} />, () => json({}));
+    expect(screen.getByText('Clave nueva de «SRM producción»')).toBeInTheDocument();
+    expect(screen.getByText(/La clave anterior vale hasta/)).toBeInTheDocument();
+  });
+});
 
 describe('crear una API key', () => {
   it('pide nombre y permisos, manda el alcance elegido y muestra la clave completa una sola vez', async () => {

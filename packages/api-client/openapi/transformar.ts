@@ -133,6 +133,9 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/api-keys': 'crearApiKey',
   'GET /api/v1/api-keys': 'listarApiKeys',
   'DELETE /api/v1/api-keys/{id}': 'revocarApiKey',
+  // Integración con SRM y Marco (H9, CN-1…CN-3).
+  'POST /api/v1/api-keys/{id}/rotar': 'rotarApiKey',
+  'GET /api/v1/consultas/certificacion': 'consultarCertificacion',
   'POST /api/v1/tipos-vinculo': 'crearTipoVinculo',
   'GET /api/v1/tipos-vinculo': 'listarTiposVinculo',
   'GET /api/v1/tipos-vinculo/{id}': 'obtenerTipoVinculo',
@@ -263,6 +266,10 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearEmpresa: { '201': 'EmpresaDto' },
   crearApiKey: { '201': 'ApiKeyDto' },
   revocarApiKey: { '204': null },
+  // La nueva llave con su `valor` (una sola vez); la anterior sigue valiendo hasta la fecha pedida (CN-3).
+  rotarApiKey: { '201': 'ApiKeyDto' },
+  // 304 sin cuerpo con `If-None-Match` igual al ETag (CN-1).
+  consultarCertificacion: { '200': 'ConsultaCertificacionDto', '304': null },
   crearTipoVinculo: { '201': 'TipoVinculoDto' },
   crearArea: { '201': 'AreaDto' },
   crearMotivo: { '201': 'MotivoTipificadoDto' },

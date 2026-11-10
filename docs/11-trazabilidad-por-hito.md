@@ -913,6 +913,18 @@ Hacia atrás: política de deprecación de 12 meses sobre v1 (H5). Hacia adelant
 | Endpoint | `POST /documentos` habilitado para integraciones con `documentos:escribir` (decisión abierta 3 de este documento, cerrada) | 05 §2.5 |
 | Dependencia / paquete | H9 depende de H6 **y de H7** (B-8); `Validasoft.Sdk` multi-target `net7.0;net8.0;net10.0` (T-16); flag y corte por empresa (T-18); nombres de eventos de 08 alineados con 05 §7 (#3) | 09, 08 §3–§5 |
 
+#### H9 — Estado de implementación (2026-11-10, CN-1…CN-7)
+| Elemento | Estado | Dónde |
+|---|---|---|
+| `GET /consultas/certificacion` (`consultas:leer`, ETag/304, `private, max-age=300`) | Hecho, sin proyección: consulta indexada (CN-1); `motivoBloqueo` con `Revocado` (CN-2) | `Aplicacion/Integracion/ConsultaCertificacionEndpoints.cs`; 05 §2.6.2 |
+| `GET /eventos` (pull) | Ya existía (NW-1); se agrega `empresaId` (CN-4) | `Notificaciones/EventosEndpoints.cs` |
+| Rotación de API keys con solapamiento | Hecho: `POST /api-keys/{id}/rotar` y botón «Rotar» en Configuración › API keys (CN-3) | `ConfiguracionEndpoints.cs`, `apps/web/.../apiKeys/DialogoRotarApiKey.tsx` |
+| `Validasoft.Sdk` + `Validasoft.Contratos` multi-target `net7.0;net8.0;net10.0` | Hecho, sin dependencias (CN-5) | `src/Validasoft.Sdk`, `tests/Validasoft.Sdk.Tests` |
+| `@validasoft/sdk` | Hecho, fetch + Web Crypto (CN-6) | `packages/sdk` |
+| Guía de integración y ejemplo ejecutable | Hecho (CN-7) | 08 §2.1, `docs/ejemplos/IntegradorSrm` (`net7.0`) |
+| Pruebas | Unitarias del SDK (.NET y TS), integración con el SDK contra la API en memoria y e2e de consulta, pull + webhook y rotación | `IntegracionSdkApiTests.cs`, `e2e/pruebas/integracion.spec.ts` |
+| Pendiente | Sandbox con datos aislados, `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección `EstadoCertificacionTercero` + k6 (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), publicación de paquetes | — |
+
 ### H10 — Importador y piloto de migración
 
 #### 2.10.1 Entidades y eventos

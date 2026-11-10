@@ -8,5 +8,6 @@
 export type ListarEventosParams = {
   desde?: string;
   tipos?: string;
+  empresaId?: string;
   limite?: number;
 };

@@ -159,7 +159,7 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | **Sistema integrado** | `sistemaId` opcional (ADR-0011): fija el sistema de las referencias externas y permite `X-Usuario-Delegado`; la llave del alta del tenant no tiene sistema |
 | **Alcance por empresa** | `empresas[]` o `*`; una llave con `[A1]` no ve nada de `A2` aunque sea del mismo tenant: la API responde **`404 no-encontrado`** (T-4), nunca un 403 que revele existencia |
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
-| Rotación / revocación | Solapamiento 24 h (0–72); revocación inmediata; cache 60 s invalidado por evento |
+| Rotación / revocación | `POST /api-keys/{id}/rotar`: la anterior vale 24 h por defecto (de 0 a 30 días, CN-3); revocación inmediata; la caché de verificaciones (5 min) vence con el reloj de Validasoft y se olvida en el nodo al rotar o revocar (otros nodos, ≤ 5 min) |
 | Registro | `ultimoUsoEn`, `ultimaIp`, contador; alerta por uso de llave inactiva 90 días |
 | Restricción | IPs/CIDR, `expiraEn`; **sandbox** por llave de prueba (`vsk_test_…`) en H9 (P-11-4) |
 | Prohibido | API keys en navegadores; el embed usa `POST /sesiones-usuario` servidor a servidor. El CORS opcional (SE-5) no admite `X-Api-Key` ni `X-Usuario-Delegado` |

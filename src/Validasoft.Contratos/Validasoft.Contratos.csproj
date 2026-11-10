@@ -12,7 +12,11 @@
     <Version>1.0.0</Version>
     <Authors>Validasoft</Authors>
     <Description>Contratos (DTO) de la API v1 de Validasoft.</Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      La documentación XML solo al empaquetar (dotnet pack): si la API la encontrara al compilar, el OpenAPI de .NET 10 la
+      copiaría como descripción de cada esquema y cambiaría el contrato publicado.
+    -->
+    <GenerateDocumentationFile Condition="'$(_IsPacking)' == 'true'">true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
   </PropertyGroup>
 </Project>

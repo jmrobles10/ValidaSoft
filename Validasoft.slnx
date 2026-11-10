@@ -7,6 +7,9 @@
     <Project Path="src/Validasoft.Infraestructura/Validasoft.Infraestructura.csproj" />
     <Project Path="src/Validasoft.Sdk/Validasoft.Sdk.csproj" />
   </Folder>
+  <Folder Name="/docs/ejemplos/">
+    <Project Path="docs/ejemplos/IntegradorSrm/IntegradorSrm.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Validasoft.Dominio.Tests/Validasoft.Dominio.Tests.csproj" />
     <Project Path="tests/Validasoft.Integracion.Tests/Validasoft.Integracion.Tests.csproj" />

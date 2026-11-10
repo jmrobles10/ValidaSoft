@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { crearApiKey, getListarApiKeysQueryOptions, getListarSistemasQueryOptions, revocarApiKey } from '@validasoft/api-client';
+import { crearApiKey, getListarApiKeysQueryOptions, getListarSistemasQueryOptions, revocarApiKey, rotarApiKey } from '@validasoft/api-client';
 import { invalidarRuta } from '../../../shared/consultas';
 import { cuerpoCrearApiKey, type BorradorApiKey } from './modelo';
 
@@ -21,6 +21,18 @@ export function useCrearApiKey(claveIdempotencia: string) {
   return useMutation({
     mutationFn: (b: BorradorApiKey) => crearApiKey(cuerpoCrearApiKey(b), { ...SIN_EMPRESA, idempotencyKey: claveIdempotencia }),
     onSuccess: () => invalidarRuta(cliente, '/api/v1/api-keys'),
+  });
+}
+
+/**
+ * Rotación con solapamiento (CN-3): la respuesta es la llave nueva con su `valor` (una sola vez). La API no guarda la
+ * respuesta para idempotencia (traería la clave en claro): un segundo intento responde 409 `api-key-ya-rotada`.
+ */
+export function useRotarApiKey() {
+  const cliente = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, anteriorValidaHasta }: { id: string; anteriorValidaHasta: string }) => rotarApiKey(id, { anteriorValidaHasta }, SIN_EMPRESA),
+    onSettled: () => invalidarRuta(cliente, '/api/v1/api-keys'),
   });
 }
 

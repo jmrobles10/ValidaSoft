@@ -25,7 +25,8 @@ import type {
 
 import type {
   ApiKeyDto,
-  CrearApiKeyDto
+  CrearApiKeyDto,
+  RotarApiKeyDto
 } from '../../modelos';
 
 import { clienteValidasoft } from '../../../fetcher';
@@ -259,4 +260,66 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRevocarApiKeyMutationOptions(options), queryClient);
+    }
+    export const rotarApiKey = (
+    id: string,
+    rotarApiKeyDto: BodyType<RotarApiKeyDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ApiKeyDto>(
+      {url: `/api/v1/api-keys/${id}/rotar`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: rotarApiKeyDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getRotarApiKeyMutationKey = () => ['rotarApiKey'] as const;
+
+export const getRotarApiKeyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotarApiKey>>, TError,RotarApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof rotarApiKey>>, TError,RotarApiKeyMutationVariables, TContext> => {
+
+const mutationKey = getRotarApiKeyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rotarApiKey>>, RotarApiKeyMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rotarApiKey(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RotarApiKeyMutationResult = NonNullable<Awaited<ReturnType<typeof rotarApiKey>>>
+    export type RotarApiKeyMutationBody = BodyType<RotarApiKeyDto>
+    export type RotarApiKeyMutationError = ErrorType<unknown>
+    export type RotarApiKeyMutationVariables = {id: string;data: BodyType<RotarApiKeyDto>}
+
+    export const useRotarApiKey = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotarApiKey>>, TError,RotarApiKeyMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rotarApiKey>>,
+        TError,
+        RotarApiKeyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRotarApiKeyMutationOptions(options), queryClient);
     }

@@ -7,6 +7,7 @@ export * from './catalogo-documental/catalogo-documental';
 export * from './catalogos/catalogos';
 export * from './catalogos-de-ficha/catalogos-de-ficha';
 export * from './certificados/certificados';
+export * from './consulta-certificacion/consulta-certificacion';
 export * from './cuenta-designada/cuenta-designada';
 export * from './documentos-de-vinculo/documentos-de-vinculo';
 export * from './empresas/empresas';

@@ -252,6 +252,20 @@ Implementado el certificado del vínculo con su verificación pública (decision
 
 **Diferencias con §2.6 y §4** (pendiente o cambiado): no existen todavía `GET /certificados` (lista), `GET /certificados/{folio}/emisiones` (el historial va en `GET /vinculos/{id}/certificado`) ni `GET /certificados/{folio}/pdf` (es `POST …/descarga`, porque escribe la auditoría, como BO-7); revocar pide `expedientes:administrar` (no se creó `certificados:revocar`); `VinculoDto.certificado`, `VinculoPublicoDto.certificado`, `GET /public/v1/certificados/{folio}` (vista del tercero) y `GET /consultas/certificacion` (`ConsultaCertificacionDto`) siguen pendientes; `ConPendientes`, `pendientes` y `verificaciones` van vacíos hasta H6/H7; `contenidoCanonico` agrega `nombre` en requisitos, `codigo` en áreas y `nombre` en flujo y tipo de vínculo, y no separa `hashDatos` (en una versión solo de formulario `sha256` ya es la huella de sus datos, TD-4); `urlVerificacion` lleva la emisión y `?huella=` (CE-8); el PDF no es PDF/A-2b (CE-6).
 
+#### 2.6.2 Estado de implementación — integración con SRM y Marco (H9, 2026-11-10)
+
+Decisiones CN-1…CN-7 del [registro](decisiones/registro.md); guía para el integrador en [08 §2.1](08-integracion-y-migracion.md).
+
+| Ruta | Permiso | Contrato |
+|---|---|---|
+| `GET /api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=&numero=&tipoVinculo=` o `?vinculoId=` | `consultas:leer` (nuevo; en `Permisos.DelTenant` y en las lecturas de todos los roles) | `X-Empresa` obligatoria (422 `empresa-requerida`). El número se normaliza (puntos, guiones y DV se aceptan; 422 `numero-identificacion-invalido`); `pais` por omisión `CO`; `tipoVinculo` = código (sin él sirve si el tercero tiene un solo vínculo con la empresa; si tiene varios, 422 `tipo-vinculo-requerido`); sin identificación ni `vinculoId`, 422 `consulta-incompleta`; `vinculoId` de otra empresa, 404 `vinculo-no-encontrado`. Tercero desconocido o sin vínculo con la empresa ⇒ 200 `SinVinculo` (no revela si existe). `ConsultaCertificacionDto` (§4) con `estado` de la emisión actual, `vigenteHasta`, `revalidacionPendiente[]` (requisitos sin aprobar del expediente de actualización abierto, `plazo` = apertura + 15 días, `bloqueante` = pendientes vencidos), `documentosVencidos[]` (códigos del contenido del certificado con vigencia anterior a hoy), `bloqueado` + `motivoBloqueo` (CN-2), `cuentaDesignada` (solo la aprobada), `legacy: null` (pendiente). `ETag: "c-{32 hex}"` = SHA-256 del cuerpo; `If-None-Match` igual (o `*`) ⇒ 304 sin cuerpo; `Cache-Control: private, max-age=300`, `Vary: X-Empresa, X-Api-Key, Authorization`. |
+| `POST /api/v1/api-keys/{id}/rotar` | `api-keys:administrar` | `RotarApiKeyDto { anteriorValidaHasta? }` ⇒ **201** `ApiKeyDto` de la **nueva** con `valor` (una sola vez) y `rotadaDe`; copia nombre, scopes, empresas, sistema, sandbox y expiración. La anterior queda con `reemplazadaPor` y `expiraEn = anteriorValidaHasta` (nulo = 24 h; ahora = corte inmediato; nunca más allá de su expiración). 404 `api-key-no-encontrada` (o revocada), 409 `api-key-ya-rotada`, 409 `api-key-vencida`, 422 `solapamiento-invalido` (pasada o más de 30 días), 403 `alcance-insuficiente`. Auditoría: `Rotado` (la anterior) + `Creado` (la nueva). La respuesta **no** se guarda para idempotencia (como los secretos de webhook): repetirla responde 409. |
+| `GET /api/v1/eventos?empresaId=` | `eventos:leer` | Nuevo filtro `empresaId` (equivale a `X-Empresa`; útil para una llave de varias empresas). Fuera del alcance de la credencial, o distinto de `X-Empresa`, 403 `alcance-insuficiente`. |
+
+**Caché de API keys** (CN-3): la verificación Argon2 se guarda 5 minutos, pero vence con el reloj de Validasoft (también al llegar el `expiraEn` de la llave) y se **olvida en el nodo** al rotar o revocar; en otros nodos, como mucho 5 minutos después.
+
+**Diferencias con §2.6 y §4**: sin proyección `EstadoCertificacionTercero` (consulta indexada, CN-1); `motivoBloqueo` agrega `Revocado` (CN-2); `Cache-Control` es `private`; `legacy` va nulo; la rotación no tiene `ipsPermitidas` ni `ultimoUsoEn` (no existen aún en la llave) y no deshabilita webhooks por `empresas-fuera-de-alcance` (la rotación copia el alcance, así que no lo reduce). El modo sandbox con datos aislados sigue pendiente.
+
 ### 2.7 Vencimientos, notificaciones y auditoría
 
 | Método y ruta | Descripción | Permiso | Respuestas | Emite |
@@ -548,7 +562,7 @@ Tipos base: `uuid`, `string`, `int`, `decimal`, `bool`, `date` (`YYYY-MM-DD`), `
 | `TenantDto` | `id*`, `slug*`, `nombre*`, `region*`, `plan*`, `claveKmsId*`, `zonaHoraria*`, `idioma*`, `activo*`, `creadoEn*` |
 | `TenantConfigDto` | `zonaHoraria*`, `calendarioHabil*: {pais, festivosExtra: date[]}`, `politicasPorDefecto*: {reglaFrescura, diasAviso, diasGracia, diasRevalidacion, politicaDesactualizada, nivelRevision, aprobadoresRequeridos, porcentajeMuestreo}` (mismos nombres que `TipoDocumentoTenantDto`, B-4), `smtp: {host, puerto, usuario, remitente}` (secreto nunca se devuelve), `marca: {logoUrl, colorPrimario, colorSecundario, modoClaro}` (la marca por empresa va en `EmpresaDto`, T-18), `separacionDeFunciones*: bool`, `consentimientoIa*: {versionTexto, obligatorio}` |
 | `PaisDto` | `codigo*: string (ISO 3166-1 alpha-2)`, `nombre*`, `tiposIdentificacion*: TipoIdentificacionDto[]`, `monedaPorDefecto` |
-| `ApiKeyDto` | `id*`, `prefijo*`, `nombre*`, `scopes*: string[]`, `empresas*: string[]`, `ipsPermitidas: string[]`, `expiraEn`, `ultimoUsoEn`, `creadaEn*`, `valor` (solo al crear/rotar), `sandbox*: bool` (única forma; no existe `modo`), `sistemaId: uuid?` (ADR-0011) |
+| `ApiKeyDto` | `id*`, `prefijo*`, `nombre*`, `scopes*: string[]`, `empresas*: string[]`, `ipsPermitidas: string[]`, `expiraEn`, `ultimoUsoEn`, `creadaEn*`, `valor` (solo al crear/rotar), `sandbox*: bool` (única forma; no existe `modo`), `sistemaId: uuid?` (ADR-0011), `rotadaDe: uuid?`, `reemplazadaPor: uuid?` (CN-3) |
 | `SistemaIntegradoDto` | `id*`, `codigo*` (mayúsculas, único en el tenant; es el `iss` de las aserciones), `nombre*`, `clavePublicaPem*` (SPKI PEM, RSA ≥ 2048 o EC P-256), `activo*`, `creadoEn*` |
 | `SesionUsuarioDto` | `token*` (JWT de Validasoft, HS256, 30 min, con tenant, usuario, sistema, scopes y empresas efectivos), `expira*` |
 | `IdentidadExternaDto` | `sistemaId*`, `idExterno*` (`sub` de la aserción); única por tenant |
@@ -713,7 +727,7 @@ La fila sigue exactamente `RevalidacionDto` (§4); `bloqueante` pasa a `true` cu
 ```http
 GET /api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900123456&tipoVinculo=proveedor
 X-Api-Key: vsk_live_acme_…   X-Empresa: 01J9E…A1   If-None-Match: "c-01JA…-7"
-→ 200  ETag: "c-01JA…-8"  Cache-Control: max-age=300
+→ 200  ETag: "c-5a7e0c1d9f22…"  Cache-Control: private, max-age=300
 { "certificado": true, "folio": "VS-ACME1-C-2026-000418-2", "estado": "ConPendientes", "estadoVinculo": "Activo",
   "vinculoId": "01J9ZK3M7A…", "terceroId": "01J9ZK2P…", "vigenteHasta": "2027-04-30",
   "revalidacionPendiente": [ { "tipo": "RUT", "plazo": "2026-11-12", "bloqueante": false } ], "documentosVencidos": [],
