@@ -6,6 +6,7 @@ import { useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/use
 import { useScrollPropio } from '../sesion/alturaFija';
 import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION, type SeccionConfiguracion } from './secciones';
+import { RELLENO_CONTENIDO } from './rellenoContenido';
 
 function Grupo({ titulo, secciones, empresaId, actual }: { titulo: string; secciones: readonly SeccionConfiguracion[]; empresaId: string; actual: string }) {
   const { t } = useTranslation();
@@ -65,7 +66,12 @@ export function LayoutConfiguracion() {
 
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '232px minmax(0, 1fr)' }, gap: 3, alignItems: 'start' }}>
-      <Box component="nav" aria-label={t('nav.configuracion')} sx={{ position: { md: 'sticky' }, top: `calc(var(${VARIABLE_TOPE}, 0px) + 24px)` }}>
+      {/* Se pega justo donde empieza (bajo la barra, más el relleno del contenido): no baja ni se corre al desplazar. */}
+      <Box
+        component="nav"
+        aria-label={t('nav.configuracion')}
+        sx={{ position: { md: 'sticky' }, top: (tema) => `calc(var(${VARIABLE_TOPE}, 0px) + ${tema.spacing(RELLENO_CONTENIDO.y)})` }}
+      >
         <Grupo titulo={t('configuracion.grupo')} secciones={visibles.filter((s) => s.alcance === 'grupo')} empresaId={empresa.id} actual={actual} />
         <Grupo titulo={empresa.nombre} secciones={visibles.filter((s) => s.alcance === 'empresa')} empresaId={empresa.id} actual={actual} />
       </Box>
