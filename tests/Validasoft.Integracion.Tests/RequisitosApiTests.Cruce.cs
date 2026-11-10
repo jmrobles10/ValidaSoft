@@ -158,6 +158,11 @@ public sealed partial class RequisitosApiTests
 
         // El tercero sube el RUT nuevo (cambió la dirección): la IA lo lee y la plataforma le propone el cambio; nada se guarda solo.
         var rut2 = (await SubirAsync(sesion, "RUT", RutCon(nit, "Cl 80 # 10-20"))).Version;
+        // El RUT nuevo abre la actualización solo con el RUT (aún no hay nada que cambiar en la general).
+        var actualizacionId = await AbiertoEnAsync(e.Norte, vinculo.Id, inicial);
+        var soloRut = await EsperarAsync(e.Norte, actualizacionId, x => x.Estado == "EnRevision");
+        soloRut.Tipo.ShouldBe("Actualizacion");
+        soloRut.Requisitos!.Select(r => r.TipoDocumento.Codigo).ShouldBe(["RUT"]);
         List<PropuestaDeSeccionDto> propuestas = [];
         await EsperarAsync(async () =>
         {
@@ -175,13 +180,15 @@ public sealed partial class RequisitosApiTests
         datos.GetProperty("direccion").GetString().ShouldBe("Cl 80 # 10-20");
         datos.GetProperty("correo").GetString().ShouldBe("compras@aceros.co");
 
-        // Confirma la propuesta con el RUT v2 como soporte ⇒ versión 2 ⇒ Norte abre la actualización solo con la general (y el RUT).
+        // Confirma la propuesta con el RUT v2 como soporte ⇒ versión 2 ⇒ la general entra a la MISMA actualización que abrió el RUT
+        // (se amplía la actualización abierta; no se abre otro expediente) y se revalida con su cruce.
         await GuardarSeccionAsync(sesion, "FICHA_GENERAL", datos.GetRawText(), new SoporteSeccionDto(rut2.DocumentoId, rut2.N));
-        var actualizacionId = await AbiertoEnAsync(e.Norte, vinculo.Id, inicial);
         var actualizacion = await EsperarAsync(e.Norte, actualizacionId, x =>
             x.Requisitos!.Any(r => r.TipoDocumento.Codigo == "FICHA_GENERAL" && r.VersionActual?.N == 2 &&
                                    r.Seccion?.Cruce?.Cruces.Any(c => c.VersionDocumento == 2) == true));
+        (await AbiertoEnAsync(e.Norte, vinculo.Id)).ShouldBe(actualizacionId);
         actualizacion.Tipo.ShouldBe("Actualizacion");
+        actualizacion.Requisitos!.Select(r => r.TipoDocumento.Codigo).ShouldBe(["RUT", "FICHA_GENERAL"], ignoreOrder: true);
         var general = Requisito(actualizacion, "FICHA_GENERAL").Seccion!;
         general.Cambios.ShouldBe([new CambioDeCampoDto("direccion", "Dirección", "Calle 45 # 12-08", "Cl 80 # 10-20", "Modificado")]);
         var conRut2 = general.Cruce!.Cruces.Single(c => c.VersionDocumento == 2);

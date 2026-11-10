@@ -149,6 +149,8 @@ public sealed class PlanificadorDeNotificaciones
                 return await AAreasAsync(evento, contexto, TiposNotificacion.TerceroRespondio, reenviado.AreasReabiertas, orden, ct);
             case VersionAdjuntadaARequisito { NumeroAnterior: not null } adjuntada:
                 return await VersionNuevaAsync(evento, adjuntada, contexto, orden, ct);
+            case RequisitosAgregados agregados:
+                return await RequisitosAgregadosAsync(evento, agregados, contexto, orden, ct);
             case ExpedienteAprobado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Aprobado, null, orden, ct);
             case ExpedienteCaducado:
@@ -247,6 +249,32 @@ public sealed class PlanificadorDeNotificaciones
                       $"{adjuntada.NumeroAnterior}): lo decidido sobre la anterior quedó sin efecto y hay que revisarla de nuevo.";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
             "Versión nueva de un documento", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
+            deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+    }
+
+    /// <summary>
+    /// La actualización abierta sumó requisitos que cambiaron después de abrirse (RV-1): avisa a las áreas que los revisan, porque
+    /// lo que ya habían decidido en el expediente no cubre lo nuevo y vuelven a tener algo pendiente. Con el expediente devuelto al
+    /// tercero no avisa: de eso se encarga «El tercero respondió» al reenviar.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> RequisitosAgregadosAsync(IEvent evento, RequisitosAgregados agregados, IContextoDeEventos contexto,
+        long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.ExpedienteAsync(tenantId, evento.StreamId, ct) is not { } expediente ||
+            expediente.Estado != EstadoExpediente.EnRevision)
+            return PlanDeNotificaciones.Vacio;
+
+        var nuevos = expediente.Requisitos.Where(r => agregados.Requisitos.Any(a => a.RequisitoId == r.Id)).ToList();
+        if (nuevos.Count == 0)
+            return PlanDeNotificaciones.Vacio;
+
+        var ids = nuevos.SelectMany(r => r.AreasQueRevisan).Distinct().ToList();
+        var deLasAreas = (await contexto.AreasAsync(tenantId, ids, ct)).Where(a => a.EmpresaId == expediente.EmpresaId).ToList();
+        var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+        var mensaje = $"{expediente.TerceroNombre} actualizó {string.Join(", ", nuevos.Select(r => r.Nombre))}: se sumó a la actualización que ya estaba " +
+                      "abierta y hay que revisarlo, aunque tu área ya hubiera decidido lo demás.";
+        return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
+            "Requisitos nuevos en una actualización", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
             deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
     }
 

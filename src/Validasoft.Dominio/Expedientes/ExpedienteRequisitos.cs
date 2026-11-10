@@ -271,6 +271,31 @@ public sealed partial class Expediente
         }, ahora);
     }
 
+    /// <summary>
+    /// Amplía una actualización abierta con los requisitos que cambiaron después de abrirse (<see cref="RequisitosAgregados"/>):
+    /// cada uno entra con la versión que lo cubre y las áreas que lo revisan vuelven a quedar pendientes aunque ya hubieran
+    /// decidido lo demás (si su etapa estaba aprobada, se reabre y las posteriores esperan). Solo en expedientes de
+    /// <c>Actualizacion</c> abiertos; idempotente: lo que el expediente ya tiene (por id de requisito) no se agrega y, sin nada
+    /// nuevo, no emite eventos. Si la actualización estaba devuelta al tercero y la etapa reabierta es anterior a la que
+    /// observó, la revisión se reanuda (<see cref="RevisionReanudada"/>).
+    /// </summary>
+    public IReadOnlyList<object> AgregarRequisitos(IReadOnlyList<RequisitoCalculado> requisitos, DateTimeOffset ahora)
+    {
+        if (Tipo != TipoExpediente.Actualizacion || !EstaAbierto)
+            return [];
+        var nuevos = requisitos.DistinctBy(r => r.RequisitoId).Where(r => BuscarRequisito(r.RequisitoId) is null).ToList();
+        if (nuevos.Count == 0)
+            return [];
+
+        var areas = Etapas.OrderBy(e => e.Orden).SelectMany(e => e.Areas).Select(a => a.AreaId).ToList();
+        return Simular(s =>
+        {
+            s.Emitir(new RequisitosAgregados(ResolverAlcance(nuevos, areas), ahora));
+            if (s.Estado is { Estado: EstadoExpediente.Observado, EtapaActiva: { } etapa } && etapa.Areas.All(a => a.Estado != EstadoAreaExpediente.Observada))
+                s.Emitir(new RevisionReanudada(Guid.Empty, ahora));
+        }, ahora);
+    }
+
     /// <summary>¿La etapa del área ya se aprobó? Sus veredictos quedan cerrados (no los invalida una versión nueva).</summary>
     private bool EtapaCerrada(Guid areaId) => EtapaDe(areaId) is { Estado: EstadoEtapa.Aprobada };
 
@@ -294,28 +319,68 @@ public sealed partial class Expediente
 
     public void Apply(RequisitosCalculados e)
     {
-        Requisitos = [.. e.Requisitos.Select(r => new RequisitoDeExpediente
-        {
-            Id = r.RequisitoId,
-            TipoRequisito = r.TipoRequisito,
-            Seccion = r.Seccion,
-            Periodo = r.Periodo,
-            ExigeSoporte = r.ExigeSoporte,
-            Completitud = r.Completitud,
-            VersionAceptadaPrevia = r.Aceptada,
-            TipoDocumentoTenantId = r.TipoDocumentoTenantId,
-            Codigo = r.Codigo,
-            Nombre = r.Nombre,
-            TipoCanonico = r.TipoCanonico,
-            Ambito = r.Ambito,
-            Obligatorio = r.Obligatorio,
-            AreasQueRevisan = [.. r.AreasQueRevisan],
-            AprobadoresRequeridos = r.AprobadoresRequeridos,
-            VersionActual = r.Version,
-            AprobacionPrevia = r.Previa
-        })];
+        Requisitos = [.. e.Requisitos.Select(DeCalculado)];
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(RequisitosAgregados e)
+    {
+        var nuevos = e.Requisitos.Select(DeCalculado).ToList();
+        Requisitos = [.. Requisitos, .. nuevos];
+        var reabiertas = ReabrirEtapasDe(nuevos);
+        RecalcularRequisitos(e.Fecha);
+        // La etapa reabierta cuenta su SLA desde que le llegó lo nuevo (como al activarse).
+        foreach (var area in reabiertas.SelectMany(etapa => etapa.Areas).Where(a => a.Estado == EstadoAreaExpediente.Pendiente))
+            area.SlaVence = area.SlaHoras is { } horas ? e.Fecha.AddHours(horas) : null;
+        ActualizadoEn = e.Fecha;
+    }
+
+    private static RequisitoDeExpediente DeCalculado(RequisitoCalculado r) => new()
+    {
+        Id = r.RequisitoId,
+        TipoRequisito = r.TipoRequisito,
+        Seccion = r.Seccion,
+        Periodo = r.Periodo,
+        ExigeSoporte = r.ExigeSoporte,
+        Completitud = r.Completitud,
+        VersionAceptadaPrevia = r.Aceptada,
+        TipoDocumentoTenantId = r.TipoDocumentoTenantId,
+        Codigo = r.Codigo,
+        Nombre = r.Nombre,
+        TipoCanonico = r.TipoCanonico,
+        Ambito = r.Ambito,
+        Obligatorio = r.Obligatorio,
+        AreasQueRevisan = [.. r.AreasQueRevisan],
+        AprobadoresRequeridos = r.AprobadoresRequeridos,
+        VersionActual = r.Version,
+        AprobacionPrevia = r.Previa
+    };
+
+    /// <summary>
+    /// Un requisito nuevo lo revisan áreas cuya etapa pudo haberse aprobado ya: la primera de ellas se reabre y las posteriores
+    /// vuelven a esperarla (cuando se apruebe de nuevo se reactivan y, con sus decisiones vigentes, avanzan solas). Con todas
+    /// las áreas en etapas abiertas no cambia nada. Devuelve las etapas reabiertas.
+    /// </summary>
+    private List<EtapaDeExpediente> ReabrirEtapasDe(IEnumerable<RequisitoDeExpediente> nuevos)
+    {
+        var cerradas = nuevos.SelectMany(r => r.AreasQueRevisan).Select(EtapaDe).OfType<EtapaDeExpediente>()
+            .Where(e => e.Estado == EstadoEtapa.Aprobada).ToList();
+        if (cerradas.Count == 0)
+            return [];
+
+        var primera = cerradas.Min(e => e.Orden);
+        foreach (var posterior in Etapas.Where(e => e.Orden > primera && e.Estado != EstadoEtapa.Esperando))
+        {
+            posterior.Estado = EstadoEtapa.Esperando;
+            posterior.ActivadaEn = null;
+            posterior.AprobadaEn = null;
+        }
+
+        var reabierta = Etapas.First(e => e.Orden == primera);
+        reabierta.Estado = EstadoEtapa.Activa;
+        reabierta.AprobadaEn = null;
+        return [reabierta];
     }
 
     public void Apply(VersionAdjuntadaARequisito e)
@@ -408,11 +473,11 @@ public sealed partial class Expediente
     // ---------- Reglas internas ----------
 
     /// <summary>Copia las áreas del flujo a los requisitos que no las indican (vacío ⇒ todas las áreas, cada una en su etapa).</summary>
-    private static IReadOnlyList<RequisitoCalculado> ResolverAlcance(IReadOnlyList<RequisitoCalculado> requisitos, FlujoParaExpediente flujo)
-    {
-        var todas = flujo.Etapas.OrderBy(e => e.Orden).SelectMany(e => e.Areas).Select(a => a.AreaId).ToList();
-        return [.. requisitos.Select(r => r.AreasQueRevisan is { Count: > 0 } ? r : r with { AreasQueRevisan = todas })];
-    }
+    private static IReadOnlyList<RequisitoCalculado> ResolverAlcance(IReadOnlyList<RequisitoCalculado> requisitos, FlujoParaExpediente flujo) =>
+        ResolverAlcance(requisitos, flujo.Etapas.OrderBy(e => e.Orden).SelectMany(e => e.Areas).Select(a => a.AreaId).ToList());
+
+    private static IReadOnlyList<RequisitoCalculado> ResolverAlcance(IReadOnlyList<RequisitoCalculado> requisitos, IReadOnlyList<Guid> todas) =>
+        [.. requisitos.Select(r => r.AreasQueRevisan is { Count: > 0 } ? r : r with { AreasQueRevisan = todas })];
 
     private EtapaDeExpediente? EtapaDe(Guid areaId) => Etapas.FirstOrDefault(e => e.Areas.Any(a => a.AreaId == areaId));
 

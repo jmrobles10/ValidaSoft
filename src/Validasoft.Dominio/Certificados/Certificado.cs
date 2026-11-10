@@ -160,6 +160,16 @@ public sealed class Certificado
             : null;
 
     /// <summary>
+    /// La actualización abierta sumó requisitos (RV-3): el certificado, ya con pendientes y sin que su plazo haya vencido, los
+    /// vuelve a informar con el motivo actualizado. En cualquier otro estado, nada.
+    /// </summary>
+    public CertificadoConPendientes? ActualizarMotivoDePendientes(string motivo, Guid expedienteId, DateTimeOffset ahora) =>
+        Estado == EstadoCertificado.ConPendientes && !PendientesBloqueantes
+            ? new CertificadoConPendientes(EmisionActual, Requerido(motivo, "motivo-requerido", "Los pendientes necesitan un motivo."), expedienteId, ahora,
+                Ampliado: true)
+            : null;
+
+    /// <summary>
     /// Venció el plazo de la revalidación de <paramref name="expedienteId"/> (RV-4): si el certificado sigue con esos
     /// pendientes, pasan a bloqueantes; si ya se reemitió o cambió de estado, nada.
     /// </summary>

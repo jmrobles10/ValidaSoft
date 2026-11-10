@@ -65,7 +65,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
                 }
                 : null),
             CertificadoConPendientes p => ("certificado.con_pendientes", Datos(Emision(p.Emision, EstadoCertificado.ConPendientes)) is { } d
-                ? d with { EstadoAnterior = nameof(EstadoCertificado.Vigente), Motivo = p.Motivo, ExpedienteId = p.ExpedienteId }
+                ? d with { EstadoAnterior = p.Ampliado ? nameof(EstadoCertificado.ConPendientes) : nameof(EstadoCertificado.Vigente), Motivo = p.Motivo, ExpedienteId = p.ExpedienteId }
                 : null),
             PlazoDeRevalidacionVencido v => ("certificado.con_pendientes", Datos(Emision(v.Emision, EstadoCertificado.ConPendientes)) is { } d
                 ? d with { ExpedienteId = v.ExpedienteId, Bloqueante = true, Motivo = "Venció el plazo de la revalidación." }

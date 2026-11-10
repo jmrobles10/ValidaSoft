@@ -219,6 +219,7 @@ public static partial class ExportacionDeExpedienteEndpoints
         ExpedienteAbierto => "Expediente abierto",
         FlujoSeleccionado f => $"Flujo {f.Nombre} (versión {f.Version})",
         RequisitosCalculados r => $"Se piden {r.Requisitos.Count} requisitos",
+        RequisitosAgregados r => $"Se agregan a la actualización: {string.Join(", ", r.Requisitos.Select(x => x.Nombre))}",
         VersionAdjuntadaARequisito v => $"Versión {v.Version.Numero} recibida",
         VeredictosInvalidadosPorNuevaVersion => "Versión nueva: se invalidan las decisiones previas",
         VeredictoDeRequisitoEmitido v => $"Requisito {(v.Veredicto == Veredicto.Aprobado ? "aprobado" : "observado")}",
