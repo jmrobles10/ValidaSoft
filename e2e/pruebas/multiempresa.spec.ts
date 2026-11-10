@@ -151,10 +151,10 @@ test('si como cliente solo se pide lo que ya aprobó como proveedor, el vínculo
   await expect(tarjeta(page, RUT)).toContainText('Aprobado');
 });
 
-/** `dd/mm/aaaa` de hoy (UTC, como la fecha de carga de la vigencia) más `dias`. */
+/** `dd/mm/aaaa` de hoy más `dias`, en la zona del negocio (FE-1), como calcula el servidor la fecha de carga. */
 function vence(dias: number): string {
   const fecha = new Date(Date.now() + dias * 86_400_000);
-  return new Intl.DateTimeFormat('es-CO', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(fecha);
+  return new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric' }).format(fecha);
 }
 
 test('dos grupos empresariales invitan al mismo proveedor: una sola bóveda, cada grupo con su vigencia del RUT y sin ver al otro', async ({ page, browser }) => {
