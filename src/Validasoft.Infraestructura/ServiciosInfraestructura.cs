@@ -112,6 +112,7 @@ public static class ServiciosInfraestructura
         servicios.AddHostedService<VerificacionDeClavesDeCertificados>(); // sin clave de sellado la API no arranca (CE-11)
         servicios.AddSingleton<EmisorDeCertificados>();
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
+        servicios.AddSingleton<Validasoft.Aplicacion.Informes.IGeneradorDePdfDeInformes, GeneradorPdfDeInformes>();
         servicios.AddSingleton<ArchivoDeCertificados>();
         servicios.AddHostedService<ProcesadorDeCertificados>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.

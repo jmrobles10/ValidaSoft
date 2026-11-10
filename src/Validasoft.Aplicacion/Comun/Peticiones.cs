@@ -93,6 +93,6 @@ public static class Peticiones
         e is ConcurrencyException or EventStreamUnexpectedMaxEventIdException or DocumentAlreadyExistsException ||
         e is MartenCommandException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } };
 
-    private static string? Cabecera(IEvent evento, string nombre) =>
+    internal static string? Cabecera(IEvent evento, string nombre) =>
         evento.Headers is not null && evento.Headers.TryGetValue(nombre, out var valor) ? valor?.ToString() : null;
 }

@@ -70,13 +70,17 @@ public static class InicioEndpoints
             vencimientos.Count(v => v.Estado == nameof(EstadoVigencia.Vencida)));
     }
 
-    /// <summary><paramref name="dias"/>: ventana de los indicadores de flujo (30 por defecto, de 1 a 365).</summary>
+    /// <summary>
+    /// <paramref name="dias"/>: ventana de los indicadores de flujo (30 por defecto, de 1 a 365), en días de calendario de la zona
+    /// del negocio: hoy y los <paramref name="dias"/> - 1 anteriores. Es el mismo rango del informe de estado con
+    /// <c>fecha=Cierre&amp;desde=…</c>, y los tiempos salen de la misma medida (<see cref="Informes.Estadistica"/>, IF-7).
+    /// </summary>
     [WolverineGet("/api/v1/indicadores")]
     [Authorize(Policy = Permisos.ExpedientesLeer)]
     public static async Task<IndicadoresDto> Indicadores(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, CancellationToken ct)
     {
         var ventana = Math.Clamp(dias ?? 30, 1, 365);
-        var desde = reloj.GetUtcNow().AddDays(-ventana);
+        var desde = Informes.Exportaciones.InicioDelDia(CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()).AddDays(1 - ventana));
         var empresaId = empresa.EmpresaId;
 
         var vinculos = await empresa.Vinculos().Select(v => v.Estado).ToListAsync(ct);
@@ -100,12 +104,9 @@ public static class InicioEndpoints
             Vinculos(EstadoVinculo.Vencido), Vinculos(EstadoVinculo.Bloqueado),
             abiertos.Count(e => e != EstadoExpediente.Observado), abiertos.Count(e => e == EstadoExpediente.Observado),
             cerrados.Count(e => e.Estado == EstadoExpediente.Aprobado), cerrados.Count(e => e.Estado == EstadoExpediente.Rechazado),
-            tiempos.Count == 0 ? null : Math.Round(tiempos.Average(), 1), tiempos.Count == 0 ? null : Math.Round(Mediana(tiempos), 1),
+            Informes.Estadistica.Promedio(tiempos), Informes.Estadistica.Mediana(tiempos),
             certificados.Count(c => c.Estado == EstadoCertificado.Vigente),
             certificados.Count(c => c.Estado == EstadoCertificado.ConPendientes),
             certificados.Count(c => c.Bloqueante));
     }
-
-    private static double Mediana(IReadOnlyList<double> ordenados) =>
-        ordenados.Count % 2 == 1 ? ordenados[ordenados.Count / 2] : (ordenados[ordenados.Count / 2 - 1] + ordenados[ordenados.Count / 2]) / 2;
 }
