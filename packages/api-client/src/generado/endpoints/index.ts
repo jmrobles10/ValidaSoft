@@ -15,6 +15,7 @@ export * from './expedientes/expedientes';
 export * from './ficha-del-vinculo/ficha-del-vinculo';
 export * from './ficha-tercero/ficha-tercero';
 export * from './flujos/flujos';
+export * from './importacion-de-portal/importacion-de-portal';
 export * from './inicio/inicio';
 export * from './lista-de-certificados/lista-de-certificados';
 export * from './motivos/motivos';

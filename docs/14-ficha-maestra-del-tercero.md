@@ -185,7 +185,9 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
   - mapear ciudades a DANE y bancos al catálogo.
 
   Lo que no se pueda convertir va al CSV de rechazos.
-- **Coexistencia por empresa** (FM-11). Mientras una empresa no haya hecho el corte, el Portal sigue siendo su UI. Un sincronizador de un solo sentido, del Portal a Validasoft, lleva cada guardado de sección como una versión nueva, con origen `Portal`. Después del corte, el Portal lee la ficha de Validasoft o embebe su UI, y ya no escribe en `Ter*`.
+
+  Construido en F4: endpoints, tablas del traductor, idempotencia y aceptación importada en [08 §6.6](08-integracion-y-migracion.md) y FM-39…FM-45. Las versiones que llegan del legado (origen `Importada` o `Portal`) no exigen el soporte del cambio.
+- **Coexistencia por empresa** (FM-11). Mientras una empresa no haya hecho el corte, el Portal sigue siendo su UI. Un sincronizador de un solo sentido, del Portal a Validasoft, lleva cada guardado de sección como una versión nueva, con origen `Portal`. Después del corte, el Portal lee la ficha de Validasoft o embebe su UI, y ya no escribe en `Ter*`. El sincronizador es `POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar`, que el Portal llama tras cada guardado (FM-43, FM-44).
 
 ## 9. Orden de construcción
 Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sectores de información con sus soportes, más la sección de documentos que ya existe. La parte de la información es global del tercero, y cada empresa hace su propia validación. La IA entra al final, sobre una base que ya funciona como hoy.

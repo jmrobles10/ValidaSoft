@@ -59,7 +59,7 @@ public static class FichaDelVinculoEndpoints
             var vigente = f.Seccion?.VersionVigente;
             return new SeccionAceptadaDto(definicion.Codigo, definicion.Nombre, f.Aceptada.Periodo, f.Aceptada.Version, f.Aceptada.AceptadaEn,
                 f.Aceptada.ExpedienteId, f.Aceptada.Folio, f.Aceptada.Huella, ContenidoParaErp.Normalizar(f.Datos, catalogos), vigente,
-                vigente is { } v && v != f.Aceptada.Version);
+                vigente is { } v && v != f.Aceptada.Version, f.Aceptada.Origen.ToString());
         }).ToList();
 
         var representante = RepresentanteLegalPrincipal.Elegir(tercero.TipoPersona,

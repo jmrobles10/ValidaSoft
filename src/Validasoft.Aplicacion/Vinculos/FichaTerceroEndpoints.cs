@@ -123,8 +123,11 @@ public static class FichaTerceroEndpoints
                                 .Select(r => new RevalidacionDeSeccionDto(e.Id, e.Folio, r.Estado.ToString(), r.VersionActual?.Numero,
                                     Revalidacion.PlazoHasta(e))))
                             .FirstOrDefault();
-                        return new AceptacionDeSeccionDto(v.Id, aceptada?.Version, aceptada?.AceptadaEn, aceptada?.ExpedienteId, aceptada?.Folio,
-                            aceptada is not null && s.Version is { } vigente && vigente != aceptada.Version, revision);
+                        // La aceptación importada del Portal (F4, FM-42) no tiene expediente ni folio.
+                        var expediente = aceptada?.ExpedienteId is { } e && e != Guid.Empty ? e : (Guid?)null;
+                        return new AceptacionDeSeccionDto(v.Id, aceptada?.Version, aceptada?.AceptadaEn, expediente,
+                            string.IsNullOrEmpty(aceptada?.Folio) ? null : aceptada.Folio,
+                            aceptada is not null && s.Version is { } vigente && vigente != aceptada.Version, revision, aceptada?.Origen.ToString());
                     })
                 ]
             })

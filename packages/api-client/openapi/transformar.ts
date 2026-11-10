@@ -230,6 +230,12 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/ficha/{seccion}': 'obtenerSeccionFicha',
   'PUT /public/v1/ficha/{seccion}': 'guardarSeccionFicha',
   'POST /public/v1/ficha/{seccion}/evaluacion': 'evaluarSeccionFicha',
+  // Importador de la ficha desde el Portal y sincronizador de coexistencia (F4, docs/08 §6.6).
+  'POST /api/v1/plataforma/importacion/portal': 'importarPortal',
+  'GET /api/v1/plataforma/importacion/portal/{id}': 'obtenerImportacionPortal',
+  'GET /api/v1/plataforma/importacion/portal/{id}/rechazos': 'descargarRechazosImportacionPortal',
+  'POST /api/v1/plataforma/importacion/portal/{id}/reanudar': 'reanudarImportacionPortal',
+  'POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar': 'sincronizarTerceroPortal',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -263,10 +269,15 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   cerrarSesionTercero: { '204': null },
   // 201 con la URL prefirmada; 200 `duplicado` sin `carga` (el archivo ya es una versión del documento).
   iniciarCargaDocumento: { '200': 'CargaPrefirmadaDto', '201': 'CargaPrefirmadaDto' },
+  // 202: la corrida queda encolada; su estado se consulta con obtenerImportacionPortal.
+  importarPortal: { '202': 'CorridaImportacionPortalDto' },
+  reanudarImportacionPortal: { '202': 'CorridaImportacionPortalDto' },
 };
 
 /** Enums textuales del dominio (docs/03 §3.1, docs/07 §3.1). */
 const ENUMS: Record<string, string[]> = {
+  EstadoCorridaPortal: ['Encolada', 'EnCurso', 'Completada', 'Fallida'],
+  OrigenDeAceptacion: ['Expediente', 'Importacion'],
   EstadoVinculo: ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'],
   OrigenVinculo: ['Invitacion', 'Autorregistro', 'Migracion', 'Api'],
   Rol: ['Administrador', 'Revisor', 'OficialCumplimiento', 'Auditor'],
@@ -338,6 +349,9 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'DocumentoPorDecidirDto.tipoRequisito': 'TipoRequisito',
   'CambioDeCampoDto.tipoCambio': 'TipoCambio',
   'RevalidacionDeSeccionDto.estado': 'EstadoRequisito',
+  'AceptacionDeSeccionDto.origen': 'OrigenDeAceptacion',
+  'SeccionAceptadaDto.origen': 'OrigenDeAceptacion',
+  'CorridaImportacionPortalDto.estado': 'EstadoCorridaPortal',
 };
 
 const METODOS = ['get', 'post', 'put', 'patch', 'delete'];

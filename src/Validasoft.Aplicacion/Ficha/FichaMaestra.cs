@@ -86,10 +86,26 @@ public static class GuardadoDeSecciones
         await using (var boveda = sesiones.ConsultaBoveda())
             soportes = await VerificarSoportesAsync(boveda, terceroId, definicion, dto.Soportes, ct);
 
-        return await ConReintentosAsync(async () =>
+        var actor = mensajes is not null && solicitud is not null ? (solicitud.ActorTipo.ToString(), solicitud.ActorId) : ((string, string)?)null;
+        return await RegistrarAsync(() => sesiones.Boveda(mensajes), tercero, definicion, periodoValido, datos, soportes, contexto, catalogos, origen, autor,
+            reloj, ct, mensajes, actor);
+    }
+
+    /// <summary>
+    /// Agrega la versión (datos ya leídos y normalizados) al stream de la sección si la huella cambió y refleja el
+    /// <see cref="EstadoDeFicha"/> en la misma transacción, con reintentos ante carreras. Con <paramref name="mensajes"/> y
+    /// <paramref name="actorSincronizacion"/>, en el mismo outbox pide poner al día los vínculos aceptados del tercero (F2).
+    /// Lo usan el guardado del tercero (F1) y el importador y el sincronizador del Portal (F4, FM-11).
+    /// </summary>
+    public static Task<Resultado> RegistrarAsync(Func<IDocumentSession> abrirBoveda, Tercero tercero, DefinicionDeSeccion definicion, int? periodoValido,
+        object datos, IReadOnlyList<SoporteDeSeccion> soportes, ContextoDeSeccion contexto, ICatalogosDeFicha catalogos, OrigenDeSeccion origen, string autor,
+        TimeProvider reloj, CancellationToken ct, IMessageBus? mensajes = null, (string Tipo, string Id)? actorSincronizacion = null)
+    {
+        var terceroId = tercero.Id;
+        return ConReintentosAsync(async () =>
         {
             var ahora = reloj.GetUtcNow();
-            await using var sesion = sesiones.Boveda(mensajes);
+            await using var sesion = abrirBoveda();
             var id = SeccionDeFicha.IdPara(terceroId, definicion.Codigo, periodoValido);
             var existente = await sesion.Events.FetchStreamStateAsync(id, ct) is not null;
             var stream = existente ? await sesion.Events.FetchForExclusiveWriting<SeccionDeFicha>(id, ct) : null;
@@ -116,8 +132,8 @@ public static class GuardadoDeSecciones
             var proyectada = actual.Proyectar(eventos);
             estado.Reflejar(proyectada);
             sesion.Store(estado);
-            if (mensajes is not null && solicitud is not null)
-                await PedirSincronizacionAsync(sesion, terceroId, mensajes, solicitud, ct);
+            if (mensajes is not null && actorSincronizacion is { } actor)
+                await PedirSincronizacionAsync(sesion, terceroId, mensajes, actor.Tipo, actor.Id, ct);
             await sesion.SaveChangesAsync(ct);
             return new Resultado(proyectada, true, estado, tercero.TipoPersona);
         }, mensajes);
@@ -150,15 +166,15 @@ public static class GuardadoDeSecciones
     /// Una versión nueva de la sección: cada vínculo aceptado del tercero (de cualquier tenant) pide poner al día su expediente
     /// (RQ-2) o abrir la actualización (RV-1). El manejador es idempotente y solo actúa si el flujo pide la sección.
     /// </summary>
-    private static async Task PedirSincronizacionAsync(IDocumentSession sesion, Guid terceroId, IMessageBus mensajes, IContextoSolicitud contexto,
+    private static async Task PedirSincronizacionAsync(IDocumentSession sesion, Guid terceroId, IMessageBus mensajes, string actorTipo, string actorId,
         CancellationToken ct)
     {
         var vinculos = await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.InvitacionAceptada).ToListAsync(ct);
         if (vinculos.Count == 0)
             return;
         var empresas = (await sesion.LoadManyAsync<Empresa>(ct, vinculos.Select(v => v.EmpresaId).Distinct().ToArray())).ToDictionary(e => e.Id);
-        await ComparticionDeDocumentos.PedirSincronizacionAsync(mensajes,
-            vinculos.Where(v => empresas.ContainsKey(v.EmpresaId)).Select(v => (empresas[v.EmpresaId].TenantId, v.Id)), contexto);
+        foreach (var (tenantId, vinculoId) in vinculos.Where(v => empresas.ContainsKey(v.EmpresaId)).Select(v => (empresas[v.EmpresaId].TenantId, v.Id)).Distinct())
+            await mensajes.PublishAsync(new SincronizarRequisitosDelVinculo(tenantId, vinculoId, actorTipo, actorId));
     }
 
     /// <summary>

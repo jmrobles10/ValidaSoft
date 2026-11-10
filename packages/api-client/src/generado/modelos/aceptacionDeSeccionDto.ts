@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { OrigenDeAceptacion } from './origenDeAceptacion';
 import type { RevalidacionDeSeccionDto } from './revalidacionDeSeccionDto';
 
 export interface AceptacionDeSeccionDto {
@@ -18,4 +19,5 @@ export interface AceptacionDeSeccionDto {
   folio: string | null;
   versionNuevaPendiente: boolean;
   revalidacion: null | RevalidacionDeSeccionDto;
+  origen?: OrigenDeAceptacion;
 }

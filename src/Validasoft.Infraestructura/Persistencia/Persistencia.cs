@@ -96,6 +96,9 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Validasoft.Dominio.Ficha.EntradaDeCatalogo>().DatabaseSchemaName("plataforma")
                     .Index(x => x.Catalogo)
                     .Index(x => x.Padre);
+                // Importador del Portal (F4, FM-39): corridas con su cursor y su informe, y el JSON de las de origen archivo.
+                opts.Schema.For<Aplicacion.Ficha.CorridaDeImportacionPortal>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<Aplicacion.Ficha.ArchivoDeCorridaPortal>().DatabaseSchemaName("plataforma");
 
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);

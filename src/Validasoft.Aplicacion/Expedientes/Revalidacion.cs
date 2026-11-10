@@ -40,18 +40,25 @@ public static class Revalidacion
             .OrderByDescending(e => e.ActualizadoEn)
             .FirstOrDefault();
         var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
-        if (aprobado is null || flujo is null)
+        if (flujo is null)
             return null;
 
         var contexto = await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct);
-        var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, contexto, ct);
-        var terceroId = vinculo.TerceroId;
-        var documentos = await sesion.ForTenant(TenantsTecnicos.Boveda).Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
-        var afectados = pedidos
-            .Where(p => RequisitosDeExpediente.Cubre(p.Tipo.Id, p.Tipo.TipoCanonico, p.Tipo.Ambito, documentos, vinculoId) is { } actual &&
-                        AprobadoAntes(aprobado, p) is { } previa &&
-                        (previa.DocumentoId != actual.DocumentoId || previa.Numero != actual.Numero))
-            .ToList();
+        // Los documentos se comparan con lo que aprobó el último expediente; las secciones, con lo aceptado (SeccionAceptada), que
+        // también puede venir de la importación del Portal sin expediente en Validasoft (F4, FM-42).
+        List<RequisitoPedido> afectados = [];
+        if (aprobado is not null)
+        {
+            var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, contexto, ct);
+            var terceroId = vinculo.TerceroId;
+            var documentos = await sesion.ForTenant(TenantsTecnicos.Boveda).Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
+            afectados = pedidos
+                .Where(p => RequisitosDeExpediente.Cubre(p.Tipo.Id, p.Tipo.TipoCanonico, p.Tipo.Ambito, documentos, vinculoId) is { } actual &&
+                            AprobadoAntes(aprobado, p) is { } previa &&
+                            (previa.DocumentoId != actual.DocumentoId || previa.Numero != actual.Numero))
+                .ToList();
+        }
+
         var secciones = await SeccionesCambiadasAsync(sesion, vinculo, flujo, contexto, ahora, ct);
         if (afectados.Count == 0 && secciones.Count == 0)
             return null;

@@ -19,4 +19,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Validasoft.Api\Validasoft.Api.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- JSON del Portal de Proveedores para el importador y el sincronizador (F4), sin red. -->
+    <None Update="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

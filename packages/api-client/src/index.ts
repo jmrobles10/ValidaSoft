@@ -35,6 +35,7 @@ export * from './generado/endpoints/inicio/inicio';
 export * from './generado/endpoints/lista-de-certificados/lista-de-certificados';
 export * from './generado/endpoints/ficha-tercero/ficha-tercero';
 export * from './generado/endpoints/ficha-del-vinculo/ficha-del-vinculo';
+export * from './generado/endpoints/importacion-de-portal/importacion-de-portal';
 export * from './generado/endpoints/auditoria/auditoria';
 export * from './generado/endpoints/plantillas-notificacion/plantillas-notificacion';
 export * from './generado/endpoints/plan-ia/plan-ia';

@@ -67,7 +67,7 @@ public sealed record SeccionFichaDto(
 /// </summary>
 public sealed record AceptacionDeSeccionDto(
     Guid VinculoId, int? VersionAceptada, DateTimeOffset? AceptadaEn, Guid? ExpedienteId, string? Folio, bool VersionNuevaPendiente,
-    RevalidacionDeSeccionDto? Revalidacion);
+    RevalidacionDeSeccionDto? Revalidacion, string? Origen = null);
 
 /// <summary>
 /// Revalidación (expediente de actualización abierto) de la sección: su folio, el estado del requisito
@@ -196,7 +196,7 @@ public sealed record ContenidoDeSeccionDto(
 /// </summary>
 public sealed record SeccionAceptadaDto(
     string Seccion, string Nombre, int? Periodo, int Version, DateTimeOffset AceptadaEn, Guid ExpedienteId, string Folio, string Huella,
-    ContenidoDeSeccionDto Contenido, int? VersionVigente, bool VersionNuevaPendiente);
+    ContenidoDeSeccionDto Contenido, int? VersionVigente, bool VersionNuevaPendiente, string? Origen = null);
 
 /// <summary>
 /// La ficha aceptada por la empresa en un vínculo (FM-35), para crear o actualizar el proveedor en el ERP: cada sección aceptada,
