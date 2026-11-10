@@ -1,3 +1,5 @@
+import { ficha } from './es-CO-ficha';
+
 /** Textos de la app del tercero (es-CO, tuteo, siguiente paso en cada error: docs/06 §2.3). */
 export const esCO = {
   comun: {
@@ -18,6 +20,7 @@ export const esCO = {
     boveda: 'Mi bóveda',
     empresas: 'Mis empresas',
     cuentas: 'Mis cuentas',
+    ficha: 'Mi información',
     salir: 'Salir',
   },
   acceso: {
@@ -283,6 +286,7 @@ export const esCO = {
     otroArchivo: 'Elegir otro archivo',
     irBoveda: 'Ver mi bóveda',
     volverRevision: 'Volver a mi revisión',
+    volverFicha: 'Volver a mi información',
     problemas: {
       vacio: 'El archivo está vacío. Elige otro.',
       'demasiado-grande': 'Este archivo pesa {{tamano}}. El máximo es {{maximo}}: comprímelo o divídelo e inténtalo de nuevo.',
@@ -398,6 +402,7 @@ export const esCO = {
       versionFormulario: 'Versión {{n}} · enviada el {{fecha}}',
     },
   },
+  ficha,
   dev: {
     titulo: 'Correos de desarrollo (Mailpit)',
     sub: 'Solo en desarrollo: lee las invitaciones y los códigos sin salir de la app.',

@@ -12,6 +12,7 @@ import { useEmpresaActiva } from '../empresas/useEmpresas';
 import { identificacionDe } from '../vinculos/tercero';
 import { useFichaTercero } from './api';
 import { DatosTercero, Mono } from './DatosTercero';
+import { InformacionTercero } from './ficha/InformacionTercero';
 import { textoTipoPersona } from './modelo';
 import { OtrasEmpresas } from './OtrasEmpresas';
 import { TarjetaVinculoFicha } from './TarjetaVinculoFicha';
@@ -20,7 +21,8 @@ const REJILLA = { display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', l
 
 /**
  * Ficha del tercero (Tercero 360, docs/06 §`/terceros/:id`): su identificación y contactos, cada vínculo con la empresa
- * activa (certificado, cuenta designada y documentos compartidos) y, de las otras empresas del grupo, solo que hay vínculo.
+ * activa (certificado, cuenta designada y documentos compartidos), la información que diligenció (ficha maestra, docs/14)
+ * y, de las otras empresas del grupo, solo que hay vínculo.
  */
 export function PaginaFichaTercero() {
   const { t } = useTranslation();
@@ -72,7 +74,7 @@ export function PaginaFichaTercero() {
     );
   }
 
-  const { tercero, vinculos, otrasEmpresasDelGrupo } = consulta.data;
+  const { tercero, vinculos, otrasEmpresasDelGrupo, secciones } = consulta.data;
 
   return (
     <>
@@ -89,7 +91,10 @@ export function PaginaFichaTercero() {
         }
       />
       <Box sx={REJILLA}>
-        <VinculosDeLaFicha empresaId={empresa.id} empresaNombre={empresa.nombre} vinculos={vinculos} puedeVer={permisos.puede(SCOPES.vinculosLeer)} />
+        <Stack spacing={3} sx={{ minWidth: 0 }}>
+          <VinculosDeLaFicha empresaId={empresa.id} empresaNombre={empresa.nombre} vinculos={vinculos} puedeVer={permisos.puede(SCOPES.vinculosLeer)} />
+          {secciones && <InformacionTercero empresaId={empresa.id} secciones={secciones} vinculos={vinculos} />}
+        </Stack>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosTercero tercero={tercero} />
           <OtrasEmpresas otras={otrasEmpresasDelGrupo} empresas={empresas} />

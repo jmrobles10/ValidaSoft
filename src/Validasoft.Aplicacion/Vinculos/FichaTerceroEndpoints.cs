@@ -17,7 +17,8 @@ namespace Validasoft.Aplicacion.Vinculos;
 /// <summary>
 /// Ficha 360 del tercero para la empresa activa (docs/03 §14 <c>Tercero360</c>, docs/06 <c>/terceros/:id</c>): identificación,
 /// contactos y cada vínculo con esta empresa con su certificado, su cuenta designada y los documentos compartidos con él.
-/// De las otras empresas del grupo solo dice que hay vínculo y en qué estado. Se arma al consultar.
+/// De las otras empresas del grupo solo dice que hay vínculo y en qué estado. Incluye las secciones vigentes de la ficha
+/// maestra (datos, completitud y soportes). Se arma al consultar.
 /// </summary>
 public static class FichaTerceroEndpoints
 {
@@ -35,6 +36,11 @@ public static class FichaTerceroEndpoints
         if (tercero is null || propios.Count == 0)
             throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero en la empresa.");
 
+        // Secciones vigentes de la ficha maestra (FM-20): con terceros:leer y vínculo con la empresa activa (ya comprobado).
+        IReadOnlyList<SeccionFichaDto> secciones;
+        await using (var boveda = sesiones.ConsultaBoveda())
+            secciones = await Ficha.FichaMaestraEndpoints.VigentesAsync(boveda, id, ct);
+
         var veVinculos = contexto.Scopes.Contains(Permisos.VinculosLeer);
         var otras = veVinculos
             ? vinculosDelGrupo.Where(v => v.EmpresaId != empresa.EmpresaId)
@@ -43,7 +49,7 @@ public static class FichaTerceroEndpoints
                 .ToList()
             : [];
         if (!veVinculos)
-            return new FichaTerceroDto(tercero.ADto(), [], otras);
+            return new FichaTerceroDto(tercero.ADto(), [], otras, secciones);
 
         var tipos = (await empresa.Sesion.LoadManyAsync<TipoVinculo>(ct, propios.Select(v => v.TipoVinculoId).Distinct().ToArray()))
             .ToDictionary(t => t.Id);
@@ -77,7 +83,7 @@ public static class FichaTerceroEndpoints
                 await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, protector, ct), compartidos));
         }
 
-        return new FichaTerceroDto(tercero.ADto(), vinculos, otras);
+        return new FichaTerceroDto(tercero.ADto(), vinculos, otras, secciones);
     }
 
     private static async Task<IReadOnlyList<Documento>> DocumentosDelTerceroAsync(ISesiones sesiones, Guid terceroId, CancellationToken ct)

@@ -61,6 +61,27 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
             await pendientes.ClearAllAsync();
     }
 
+    /// <summary>
+    /// Corre una operación de escritura y, si pierde una carrera de concurrencia con un proceso en segundo plano (p. ej. el
+    /// PDF del certificado que se reemite al cerrar el expediente), descarta la sesión y sus mensajes y la repite. Con
+    /// <c>If-Match</c> desactualizado sigue respondiendo 412: el stream del expediente vuelve a no coincidir en cada intento.
+    /// </summary>
+    public async Task<T> ReintentarAnteCarreraAsync<T>(Func<Task<T>> accion, int intentos = 5)
+    {
+        for (var intento = 1; ; intento++)
+        {
+            try
+            {
+                return await accion();
+            }
+            catch (Exception e) when (intento < intentos && Peticiones.EsCarrera(e))
+            {
+                await DescartarAsync();
+                await Task.Delay(Random.Shared.Next(5, 25 * intento));
+            }
+        }
+    }
+
     public Guid EmpresaId => contexto.EmpresaRequerida();
 
     /// <summary>Id del usuario que consulta si es una persona (identidad delegada o su sesión); nulo para integraciones.</summary>

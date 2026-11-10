@@ -80,6 +80,8 @@ public static class ServiciosInfraestructura
         // Embebido desde otros dominios (SE-1…SE-3): orígenes de los sistemas, apps estáticas, CORS opcional y proxies.
         servicios.AddSingleton<OrigenesDeEmbebido>();
         servicios.AddHostedService<SembradoDeTextosLegales>();
+        // Catálogos de la ficha maestra: semilla idempotente solo en Development (FM-22).
+        servicios.AddHostedService<Aplicacion.Ficha.SembradoDeCatalogosDeDesarrollo>();
         // Bóveda de documentos: almacenamiento S3/MinIO y límites de carga (docs/04 §6).
         servicios.AddSingleton<ReglasDeCarga>();
         servicios.AddSingleton<FabricaClienteS3>();

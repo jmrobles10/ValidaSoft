@@ -88,6 +88,15 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted()
                     .Index(x => x.TerceroId);
 
+                // Ficha maestra (ADR-0013, FM-18): secciones como streams SeccionDeFicha-{id determinista} en el tenant técnico
+                // "boveda" (snapshot inline) y la proyección EstadoDeFicha por tercero, escrita en la misma transacción
+                // (concurrencia optimista). Los catálogos de plataforma son globales, con id {catalogo}|{codigo}.
+                opts.Schema.For<Validasoft.Dominio.Ficha.SeccionDeFicha>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
+                opts.Schema.For<Validasoft.Dominio.Ficha.EstadoDeFicha>().DatabaseSchemaName("boveda").MultiTenanted().UseOptimisticConcurrency(true);
+                opts.Schema.For<Validasoft.Dominio.Ficha.EntradaDeCatalogo>().DatabaseSchemaName("plataforma")
+                    .Index(x => x.Catalogo)
+                    .Index(x => x.Padre);
+
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);
                 opts.Schema.For<AccesoSoporte>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.ExpiraEn);
@@ -192,6 +201,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Ficha.SeccionDeFicha>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
             })

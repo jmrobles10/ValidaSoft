@@ -128,7 +128,7 @@ export function EstadoDeSubida({
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
         {volver && (
           <Button component={RouterLink} to={volver} variant="contained">
-            {t('subir.volverRevision')}
+            {volver.startsWith('/ficha') ? t('subir.volverFicha') : t('subir.volverRevision')}
           </Button>
         )}
         <Button component={RouterLink} to="/boveda" variant={volver ? 'outlined' : 'contained'}>

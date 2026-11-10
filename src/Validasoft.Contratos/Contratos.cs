@@ -153,10 +153,11 @@ public sealed record TerceroDto(
 
 /// <summary>
 /// Ficha del tercero para la empresa activa (<c>Tercero360</c>): sus vínculos con esta empresa y, de las demás empresas
-/// del grupo, solo que existe el vínculo y su estado (sin decisiones ni documentos).
+/// del grupo, solo que existe el vínculo y su estado (sin decisiones ni documentos). <see cref="Secciones"/>: las versiones
+/// vigentes de la ficha maestra (datos, completitud y soportes; FM-20); la aceptación por empresa llega con F2.
 /// </summary>
 public sealed record FichaTerceroDto(TerceroDto Tercero, IReadOnlyList<VinculoEnFichaDto> Vinculos,
-    IReadOnlyList<VinculoEnOtraEmpresaDto> OtrasEmpresasDelGrupo);
+    IReadOnlyList<VinculoEnOtraEmpresaDto> OtrasEmpresasDelGrupo, IReadOnlyList<SeccionFichaDto>? Secciones = null);
 
 /// <summary>
 /// Un vínculo del tercero con la empresa activa. <see cref="Certificado"/> y <see cref="Documentos"/> son nulos cuando

@@ -27,6 +27,7 @@ import type {
   AceptarInvitacionDto,
   AutorregistroDto,
   BovedaDto,
+  BuscarEnCatalogoPublicoParams,
   CargaPrefirmadaDto,
   CertificadoPublicoDto,
   ConfirmacionCargaDto,
@@ -36,16 +37,23 @@ import type {
   DesignarCuentaDto,
   DocumentoDto,
   EnviarFormularioDto,
+  EstadoFichaDto,
   ExpedientePublicoDto,
+  GuardarSeccionDto,
+  GuardarSeccionFichaParams,
   IniciarCargaDto,
   InvitacionAceptadaDto,
   InvitacionPublicaDto,
+  ObtenerSeccionFichaParams,
   OrigenesEmbebidoDto,
   OtpRequeridoDto,
+  PaginaDtoOfEntradaCatalogoDto,
   ReenviarExpedienteDto,
   RegistrarCuentaBancariaDto,
   RetirarVersionDto,
   RetiroDto,
+  SeccionFichaDto,
+  SeccionGuardadaDto,
   SesionTerceroDto,
   SolicitarAccesoDto,
   SolicitudRecibidaDto,
@@ -1026,7 +1034,342 @@ export function useListarOrigenesEmbebido<TData = Awaited<ReturnType<typeof list
 
 
 
-export const obtenerExpedientePublico = (
+export const buscarEnCatalogoPublico = (
+    catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<PaginaDtoOfEntradaCatalogoDto>(
+      {url: `/public/v1/catalogos/${catalogo}`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getBuscarEnCatalogoPublicoQueryKey = (catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams,) => {
+    return [
+    `/public/v1/catalogos/${catalogo}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getBuscarEnCatalogoPublicoQueryOptions = <TData = Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError = ErrorType<void>>(catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBuscarEnCatalogoPublicoQueryKey(catalogo,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>> = ({ signal }) => buscarEnCatalogoPublico(catalogo,params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: catalogo !== null && catalogo !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BuscarEnCatalogoPublicoQueryResult = NonNullable<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>>
+export type BuscarEnCatalogoPublicoQueryError = ErrorType<void>
+
+
+export function useBuscarEnCatalogoPublico<TData = Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError = ErrorType<void>>(
+ catalogo: string,
+    params: undefined |  BuscarEnCatalogoPublicoParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof buscarEnCatalogoPublico>>,
+          TError,
+          Awaited<ReturnType<typeof buscarEnCatalogoPublico>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBuscarEnCatalogoPublico<TData = Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError = ErrorType<void>>(
+ catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof buscarEnCatalogoPublico>>,
+          TError,
+          Awaited<ReturnType<typeof buscarEnCatalogoPublico>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBuscarEnCatalogoPublico<TData = Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError = ErrorType<void>>(
+ catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBuscarEnCatalogoPublico<TData = Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError = ErrorType<void>>(
+ catalogo: string,
+    params?: BuscarEnCatalogoPublicoParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof buscarEnCatalogoPublico>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBuscarEnCatalogoPublicoQueryOptions(catalogo,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerFicha = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<EstadoFichaDto>(
+      {url: `/public/v1/ficha`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerFichaQueryKey = () => {
+    return [
+    `/public/v1/ficha`
+    ] as const;
+    }
+
+
+export const getObtenerFichaQueryOptions = <TData = Awaited<ReturnType<typeof obtenerFicha>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerFichaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerFicha>>> = ({ signal }) => obtenerFicha(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerFichaQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerFicha>>>
+export type ObtenerFichaQueryError = ErrorType<void>
+
+
+export function useObtenerFicha<TData = Awaited<ReturnType<typeof obtenerFicha>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerFicha>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerFicha>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerFicha<TData = Awaited<ReturnType<typeof obtenerFicha>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerFicha>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerFicha>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerFicha<TData = Awaited<ReturnType<typeof obtenerFicha>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerFicha<TData = Awaited<ReturnType<typeof obtenerFicha>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerFichaQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerSeccionFicha = (
+    seccion: string,
+    params?: ObtenerSeccionFichaParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SeccionFichaDto>(
+      {url: `/public/v1/ficha/${seccion}`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerSeccionFichaQueryKey = (seccion: string,
+    params?: ObtenerSeccionFichaParams,) => {
+    return [
+    `/public/v1/ficha/${seccion}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getObtenerSeccionFichaQueryOptions = <TData = Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError = ErrorType<void>>(seccion: string,
+    params?: ObtenerSeccionFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerSeccionFichaQueryKey(seccion,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerSeccionFicha>>> = ({ signal }) => obtenerSeccionFicha(seccion,params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: seccion !== null && seccion !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerSeccionFichaQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerSeccionFicha>>>
+export type ObtenerSeccionFichaQueryError = ErrorType<void>
+
+
+export function useObtenerSeccionFicha<TData = Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError = ErrorType<void>>(
+ seccion: string,
+    params: undefined |  ObtenerSeccionFichaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerSeccionFicha>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerSeccionFicha>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSeccionFicha<TData = Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: ObtenerSeccionFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerSeccionFicha>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerSeccionFicha>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSeccionFicha<TData = Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: ObtenerSeccionFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSeccionFicha<TData = Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: ObtenerSeccionFichaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSeccionFicha>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerSeccionFichaQueryOptions(seccion,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const guardarSeccionFicha = (
+    seccion: string,
+    guardarSeccionDto: BodyType<GuardarSeccionDto>,
+    params?: GuardarSeccionFichaParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SeccionGuardadaDto>(
+      {url: `/public/v1/ficha/${seccion}`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: guardarSeccionDto,
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getGuardarSeccionFichaMutationKey = () => ['guardarSeccionFicha'] as const;
+
+export const getGuardarSeccionFichaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof guardarSeccionFicha>>, TError,GuardarSeccionFichaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof guardarSeccionFicha>>, TError,GuardarSeccionFichaMutationVariables, TContext> => {
+
+const mutationKey = getGuardarSeccionFichaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof guardarSeccionFicha>>, GuardarSeccionFichaMutationVariables> = (props) => {
+          const {seccion,data,params} = props ?? {};
+
+          return  guardarSeccionFicha(seccion,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GuardarSeccionFichaMutationResult = NonNullable<Awaited<ReturnType<typeof guardarSeccionFicha>>>
+    export type GuardarSeccionFichaMutationBody = BodyType<GuardarSeccionDto>
+    export type GuardarSeccionFichaMutationError = ErrorType<void>
+    export type GuardarSeccionFichaMutationVariables = {seccion: string;data: BodyType<GuardarSeccionDto>;params?: GuardarSeccionFichaParams}
+
+    export const useGuardarSeccionFicha = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof guardarSeccionFicha>>, TError,GuardarSeccionFichaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof guardarSeccionFicha>>,
+        TError,
+        GuardarSeccionFichaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getGuardarSeccionFichaMutationOptions(options), queryClient);
+    }
+    export const obtenerExpedientePublico = (
     id: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {
