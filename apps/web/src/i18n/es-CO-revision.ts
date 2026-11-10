@@ -472,6 +472,9 @@ export const flujos = {
       'requisito-aprobadores-invalidos': 'Entre 1 y 10, o vacío para usar los del área.',
       'area-sin-requisitos': 'Con documentos, esta área debe revisar al menos uno.',
       'requisito-siempre-requerido': 'Al menos un documento debe pedirse siempre.',
+      'seccion-invalida': 'Elige la sección.',
+      'periodos-no-aplica': 'Solo la información financiera va por periodos.',
+      'periodos-invalidos': 'Entre 1 y 5 periodos.',
     },
     documentos: 'Documentos que pide',
     requisitos: {

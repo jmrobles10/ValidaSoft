@@ -2,7 +2,7 @@
 
 export const fichaMaestra = {
   titulo: 'Información del tercero',
-  ayuda: 'Lo que el tercero diligenció en Validasoft, global para todas las empresas. La validación por empresa llega después.',
+  ayuda: 'Lo que el tercero diligenció en Validasoft, global para todas las empresas. Cada empresa la valida en sus expedientes.',
   vacia: 'El tercero aún no ha diligenciado su información.',
   nombreConPeriodo: '{{nombre}} · {{periodo}}',
   completa: 'Completa',

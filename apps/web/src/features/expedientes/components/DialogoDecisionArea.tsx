@@ -9,9 +9,15 @@ import { useAvisos } from '../../../shared/useAvisos';
 import { useAccionExpediente } from '../api';
 import { documentosDelArea, falloDeDecision, requisitosParaObservar, validarObservacion, versionesParaAprobar } from '../decisionArea';
 import { MAXIMO_TEXTO_EXPEDIENTE, motivosPara, type DialogoDeArea } from '../reglas';
+import { SelectorCamposSeccion } from './SelectorCamposSeccion';
 import { SelectorMotivos } from './SelectorMotivos';
 
-type Marcas = Map<string, { motivos: string[]; observacion: string }>;
+interface Marca {
+  motivos: string[];
+  observacion: string;
+  campos?: string[];
+}
+type Marcas = Map<string, Marca>;
 
 /**
  * La decisión del área en un paso (como en el SRM): «Aprobar área» aprueba los documentos que la persona vio, con su
@@ -60,7 +66,7 @@ export function DialogoDecisionArea({
   const disponibles = motivosPara(motivos, 'Observacion');
   const ocupado = mutacion.isPending;
 
-  const cambiarMarca = (requisitoId: string, cambio: Partial<{ motivos: string[]; observacion: string }> | null) =>
+  const cambiarMarca = (requisitoId: string, cambio: Partial<Marca> | null) =>
     setMarcas((previas) => {
       const siguientes = new Map(previas);
       if (cambio === null) siguientes.delete(requisitoId);
@@ -138,6 +144,14 @@ export function DialogoDecisionArea({
                             error={faltanSusMotivos ? t('expedientes.veredicto.motivosRequeridos') : null}
                             deshabilitado={!aplica}
                           />
+                          {requisito.seccion && (
+                            <SelectorCamposSeccion
+                              seccion={requisito.seccion.seccion}
+                              elegidos={marca.campos ?? []}
+                              onCambiar={(campos) => cambiarMarca(requisito.id, { campos })}
+                              deshabilitado={!aplica}
+                            />
+                          )}
                           <TextField
                             size="small"
                             label={t('expedientes.decisionArea.nota')}

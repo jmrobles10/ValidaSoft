@@ -10,6 +10,7 @@ import { ResumenVersion } from '../../documentos/ResumenVersion';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
 import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { documentoEnVisor, versionVigente } from '../requisitos';
+import { SelectorCamposSeccion } from './SelectorCamposSeccion';
 import { SelectorMotivos } from './SelectorMotivos';
 
 export interface DialogoDecisionProps {
@@ -37,6 +38,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const [veredicto, setVeredicto] = useState<Veredicto>('Aprobado');
   const [elegidos, setElegidos] = useState<string[]>([]);
   const [texto, setTexto] = useState('');
+  const [campos, setCampos] = useState<string[]>([]);
   // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, el botón de enviar está deshabilitado.
   const [motivosTocados, setMotivosTocados] = useState(false);
   const [textoTocado, setTextoTocado] = useState(false);
@@ -51,7 +53,9 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const requisito = 'requisito' in dialogo ? dialogo.requisito : null;
   const documento = requisito?.tipoDocumento.nombre ?? '';
   const versionRevisada = requisito?.versionActual?.n ?? null;
-  const version = requisito ? documentoEnVisor(requisito) : null;
+  // Una sección (F2) no tiene archivo ni datos declarados: sus datos están en la tarjeta; al observarla se señalan campos.
+  const seccion = requisito?.seccion ?? null;
+  const version = requisito && !seccion ? documentoEnVisor(requisito) : null;
   // Si llegó otra versión del documento, el aviso dice cuál (en vez del genérico «el expediente cambió»).
   const versionNueva = dialogo.tipo === 'veredictoRequisito' && !aplica ? versionVigente(expediente, dialogo.requisito.id) : null;
   const faltanMotivos = conMotivos && elegidos.length === 0;
@@ -134,6 +138,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
           motivos: elegidos,
           observacion: observando ? texto : '',
           sobreVersion: versionRevisada ?? 0,
+          campos: observando && seccion ? campos : [],
         };
       case 'eximir':
         return { tipo: 'eximir', requisitoId: dialogo.requisito.id, justificacion: texto };
@@ -238,6 +243,8 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                   deshabilitado={!aplica}
                 />
               ))}
+
+            {observando && seccion && <SelectorCamposSeccion seccion={seccion.seccion} elegidos={campos} onCambiar={setCampos} deshabilitado={!aplica} />}
 
             {mostrarCampo && (
               <TextField

@@ -90,6 +90,10 @@ public class FichaPorEmpresaTests
             .ShouldBe("periodos-invalidos");
         Codigo(() => Definicion(Pide(CodigosDeSeccion.General, _compras), Pide(CodigosDeSeccion.General, _contabilidad)).Validar(_empresa, areas))
             .ShouldBe("requisito-duplicado");
+        // El 422 dice en qué requisito está el problema (su posición), para mostrarlo en su campo.
+        Should.Throw<ReglaDeNegocioException>(() =>
+                Definicion(Pide(CodigosDeSeccion.General, _compras), Pide(CodigosDeSeccion.General, _contabilidad)).Validar(_empresa, areas))
+            .Datos!["requisito"].ShouldBe(1);
         // Cada área revisa algo: Contabilidad no tiene secciones en su alcance.
         Codigo(() => Definicion(Pide(CodigosDeSeccion.General, _compras)).Validar(_empresa, areas)).ShouldBe("area-sin-requisitos");
     }

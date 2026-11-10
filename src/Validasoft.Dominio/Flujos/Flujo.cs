@@ -142,37 +142,47 @@ public sealed record DefinicionDeFlujo(
         var seccionesVistas = new HashSet<string>(StringComparer.Ordinal);
         var idsVistos = new HashSet<Guid>();
         var resultado = new List<RequisitoDelFlujo>();
+        var indice = -1;
         foreach (var requisito in Requisitos)
         {
-            if (requisito.EsSeccion)
+            indice++;
+            try
             {
-                resultado.Add(ValidarSeccion(requisito, areasDelFlujo, seccionesVistas, idsVistos, tipoVinculo));
-                continue;
+                if (requisito.EsSeccion)
+                {
+                    resultado.Add(ValidarSeccion(requisito, areasDelFlujo, seccionesVistas, idsVistos, tipoVinculo));
+                    continue;
+                }
+
+                var tipo = tipos.FirstOrDefault(t => t.Id == requisito.TipoDocumentoTenantId);
+                if (tipo is not { Activo: true })
+                    throw ReglaDeNegocioException.Validacion("requisito-invalido",
+                        $"El tipo de documento {(string.IsNullOrWhiteSpace(requisito.CodigoTipo) ? requisito.TipoDocumentoTenantId.ToString() : requisito.CodigoTipo)} no existe en el tenant o está inactivo.");
+                if (!tipo.CargaSoportada)
+                    throw ReglaDeNegocioException.Validacion("clase-no-soportada",
+                        $"{tipo.Codigo} es un formulario sin campos (o global); defínele campos y déjalo PorVinculo para pedirlo en un flujo.");
+                if (!tiposVistos.Add(tipo.Id))
+                    throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {tipo.Codigo}.");
+
+                var id = requisito.Id == Guid.Empty ? Guid.CreateVersion7() : requisito.Id;
+                if (!idsVistos.Add(id))
+                    throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"Hay dos requisitos con el id {id}.");
+
+                var areas = (requisito.AreasQueRevisan ?? []).Distinct().ToList();
+                if (areas.Any(a => !areasDelFlujo.Contains(a)))
+                    throw ReglaDeNegocioException.Validacion("requisito-area-invalida", $"Un área que revisa {tipo.Codigo} no participa en el flujo.");
+                if (requisito.AprobadoresRequeridos is < 1 or > MaximoAprobadores)
+                    throw ReglaDeNegocioException.Validacion("aprobadores-invalidos",
+                        $"El requisito {tipo.Codigo} necesita entre 1 y {MaximoAprobadores} aprobadores.");
+
+                var condicion = AtributosDeExigencia.Validar(requisito.Condicion, tipoVinculo, tipo.Nombre);
+                resultado.Add(requisito with { Id = id, CodigoTipo = tipo.Codigo, AreasQueRevisan = areas, Condicion = condicion });
             }
-
-            var tipo = tipos.FirstOrDefault(t => t.Id == requisito.TipoDocumentoTenantId);
-            if (tipo is not { Activo: true })
-                throw ReglaDeNegocioException.Validacion("requisito-invalido",
-                    $"El tipo de documento {(string.IsNullOrWhiteSpace(requisito.CodigoTipo) ? requisito.TipoDocumentoTenantId.ToString() : requisito.CodigoTipo)} no existe en el tenant o está inactivo.");
-            if (!tipo.CargaSoportada)
-                throw ReglaDeNegocioException.Validacion("clase-no-soportada",
-                    $"{tipo.Codigo} es un formulario sin campos (o global); defínele campos y déjalo PorVinculo para pedirlo en un flujo.");
-            if (!tiposVistos.Add(tipo.Id))
-                throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"El flujo ya pide {tipo.Codigo}.");
-
-            var id = requisito.Id == Guid.Empty ? Guid.CreateVersion7() : requisito.Id;
-            if (!idsVistos.Add(id))
-                throw ReglaDeNegocioException.Validacion("requisito-duplicado", $"Hay dos requisitos con el id {id}.");
-
-            var areas = (requisito.AreasQueRevisan ?? []).Distinct().ToList();
-            if (areas.Any(a => !areasDelFlujo.Contains(a)))
-                throw ReglaDeNegocioException.Validacion("requisito-area-invalida", $"Un área que revisa {tipo.Codigo} no participa en el flujo.");
-            if (requisito.AprobadoresRequeridos is < 1 or > MaximoAprobadores)
-                throw ReglaDeNegocioException.Validacion("aprobadores-invalidos",
-                    $"El requisito {tipo.Codigo} necesita entre 1 y {MaximoAprobadores} aprobadores.");
-
-            var condicion = AtributosDeExigencia.Validar(requisito.Condicion, tipoVinculo, tipo.Nombre);
-            resultado.Add(requisito with { Id = id, CodigoTipo = tipo.Codigo, AreasQueRevisan = areas, Condicion = condicion });
+            catch (ReglaDeNegocioException ex) when (ex.Tipo == TipoFalla.Validacion && ex.Datos?.ContainsKey("requisito") != true)
+            {
+                // El 422 dice en qué requisito está el problema (su posición en el flujo), para mostrarlo en su campo.
+                throw ConRequisito(ex, indice);
+            }
         }
 
         if (resultado.All(r => r.Condicion is not null))
@@ -185,6 +195,12 @@ public sealed record DefinicionDeFlujo(
                 $"El área {sinRequisitos} no revisa ningún requisito: con requisitos, cada área aprueba los de su alcance.");
 
         return resultado;
+    }
+
+    private static ReglaDeNegocioException ConRequisito(ReglaDeNegocioException ex, int indice)
+    {
+        var datos = new Dictionary<string, object?>(ex.Datos ?? new Dictionary<string, object?>()) { ["requisito"] = indice };
+        return new ReglaDeNegocioException(ex.Tipo, ex.Codigo, ex.Message) { Datos = datos };
     }
 
     /// <summary>

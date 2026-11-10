@@ -62,8 +62,8 @@ export function bloqueoDecisionArea(expediente: ExpedienteDto, area: AreaExpedie
   return documentosPorDecidir(area).length === 0 ? 'nada-por-decidir' : null;
 }
 
-/** Lo marcado en «Observar»: por documento, sus motivos y su nota. */
-export type MarcasDeObservacion = ReadonlyMap<string, { motivos: readonly string[]; observacion: string }>;
+/** Lo marcado en «Observar»: por documento, sus motivos y su nota; en una sección, los campos señalados (FM-28). */
+export type MarcasDeObservacion = ReadonlyMap<string, { motivos: readonly string[]; observacion: string; campos?: readonly string[] }>;
 
 export type ErrorObservacion = { tipo: 'sin-documentos' } | { tipo: 'sin-motivos'; requisitoId: string };
 
@@ -78,7 +78,8 @@ export function requisitosParaObservar(marcas: MarcasDeObservacion, expediente: 
   return [...marcas].flatMap(([requisitoId, m]) => {
     const version = requisitosDe(expediente).find((r) => r.id === requisitoId)?.versionActual?.n;
     if (version === undefined) return [];
-    return [{ requisitoId, sobreVersion: version, motivos: [...m.motivos], observacion: m.observacion.trim() || null }];
+    const campos = m.campos?.length ? { campos: [...m.campos] } : {};
+    return [{ requisitoId, sobreVersion: version, motivos: [...m.motivos], observacion: m.observacion.trim() || null, ...campos }];
   });
 }
 

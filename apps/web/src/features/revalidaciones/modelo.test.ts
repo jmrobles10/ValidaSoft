@@ -1,6 +1,6 @@
 import type { RevalidacionDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
-import { claveRevalidacion, lote, seleccionables, tonoPlazo } from './modelo';
+import { claveRevalidacion, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
 
 function fila(parcial: Partial<RevalidacionDto>): RevalidacionDto {
   return {
@@ -41,5 +41,10 @@ describe('revalidaciones', () => {
     expect(tonoPlazo({ bloqueante: false, diasRestantes: 10 })).toBe('normal');
     expect(tonoPlazo({ bloqueante: false, diasRestantes: 3 })).toBe('urgente');
     expect(tonoPlazo({ bloqueante: true, diasRestantes: 0 })).toBe('bloqueante');
+  });
+
+  it('una revalidación de sección de la información (F2) se reconoce por el código de la sección', () => {
+    expect(esRevalidacionDeSeccion(fila({ tipoDocumentoCodigo: 'FICHA_FINANCIERA', tipoDocumento: 'Información financiera 2025' }))).toBe(true);
+    expect(esRevalidacionDeSeccion(fila({}))).toBe(false);
   });
 });

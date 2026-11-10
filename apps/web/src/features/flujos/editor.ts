@@ -1,4 +1,5 @@
 import type { AreaDto, CondicionDto, EtapaDto, FlujoVersionDto, PoliticaDevolucion, RequisitoDelFlujoDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
+import { requisitoDeSeccionADto, validarRequisitoDeSeccion } from './requisitosDeSeccion';
 
 /**
  * Modelo del editor de flujos y su validación. Replica `DefinicionDeFlujo.Validar` y `Flujo.Crear` del dominio
@@ -23,7 +24,7 @@ export interface EtapaEnEditor {
   areas: AreaEnEditor[];
 }
 
-/** Documento que pide el flujo (RQ-1). */
+/** Documento (RQ-1) o sección de la información del tercero (F2, FM-25) que pide el flujo. */
 export interface RequisitoEnEditor {
   /** Clave estable para React; el `id` de la API se conserva para que los expedientes reconozcan el requisito. */
   clave: string;
@@ -36,6 +37,12 @@ export interface RequisitoEnEditor {
   aprobadoresRequeridos: number | null;
   /** «Se pide a» (RQ-12); `null` = siempre. Se conserva tal cual aunque el editor no la sepa armar. */
   condicion: CondicionDto | null;
+  /** Sección de la ficha (`FICHA_GENERAL`…) en vez de documento; `null` = pide un documento. */
+  seccion: string | null;
+  /** Cierres financieros que se piden (solo la financiera; `null` = el último). */
+  periodos: number | null;
+  /** La versión de la sección debe traer soporte para estar completa para la empresa. */
+  exigeSoporte: boolean;
 }
 
 export interface BorradorFlujo {
@@ -68,11 +75,14 @@ export type CodigoErrorFlujo =
   | 'requisito-area-invalida'
   | 'requisito-aprobadores-invalidos'
   | 'requisito-siempre-requerido'
-  | 'area-sin-requisitos';
+  | 'area-sin-requisitos'
+  | 'seccion-invalida'
+  | 'periodos-no-aplica'
+  | 'periodos-invalidos';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
-  /** `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>` o `requisito.<k>`. */
+  /** `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>`, `requisito.<k>` o `requisito.<k>.periodos`. */
   campo: string;
   /** Es aviso: no impide guardar (la API lo acepta) pero el flujo no avanzaría. */
   aviso?: boolean;
@@ -89,7 +99,23 @@ export function areaNueva(areaId = ''): AreaEnEditor {
 }
 
 export function requisitoNuevo(tipoDocumentoTenantId = ''): RequisitoEnEditor {
-  return { clave: nuevaClave(), id: null, tipoDocumentoTenantId, obligatorio: true, areasQueRevisan: [], aprobadoresRequeridos: null, condicion: null };
+  return {
+    clave: nuevaClave(),
+    id: null,
+    tipoDocumentoTenantId,
+    obligatorio: true,
+    areasQueRevisan: [],
+    aprobadoresRequeridos: null,
+    condicion: null,
+    seccion: null,
+    periodos: null,
+    exigeSoporte: false,
+  };
+}
+
+/** Requisito de sección recién agregado: aún sin elegir la sección (`''`). */
+export function requisitoDeSeccionNuevo(seccion = ''): RequisitoEnEditor {
+  return { ...requisitoNuevo(), seccion };
 }
 
 export function borradorVacio(): BorradorFlujo {
@@ -130,6 +156,9 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
       areasQueRevisan: [...(r.areasQueRevisan ?? [])],
       aprobadoresRequeridos: r.aprobadoresRequeridos ?? null,
       condicion: r.condicion ?? null,
+      seccion: r.seccion ?? null,
+      periodos: r.periodos ?? null,
+      exigeSoporte: r.exigeSoporte ?? false,
     })),
   };
 }
@@ -205,9 +234,12 @@ export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requ
   const errores: ErrorFlujo[] = [];
   const areasDelFlujo = new Set(borrador.etapas.flatMap((e) => e.areas.map((a) => a.areaId)).filter(Boolean));
   const tipos = new Set<string>();
+  const secciones = new Set<string>();
   borrador.requisitos.forEach((r, k) => {
     const campo = `requisito.${String(k)}`;
-    if (!r.tipoDocumentoTenantId) {
+    if (r.seccion !== null) {
+      errores.push(...validarRequisitoDeSeccion(r, campo, secciones));
+    } else if (!r.tipoDocumentoTenantId) {
       errores.push({ codigo: 'requisito-sin-tipo', campo });
     } else {
       if (tipos.has(r.tipoDocumentoTenantId)) errores.push({ codigo: 'requisito-duplicado', campo });
@@ -234,9 +266,9 @@ export function validarRequisitos(borrador: Pick<BorradorFlujo, 'etapas' | 'requ
   return errores;
 }
 
-/** Requisitos para la API (`null` en aprobadores = los del área). */
+/** Requisitos para la API (`null` en aprobadores = los del área); una sección va sin tipo de documento. */
 export function requisitosADto(requisitos: readonly RequisitoEnEditor[]): RequisitoDelFlujoDto[] {
-  return requisitos.map((r) => ({
+  return requisitos.map((r) => (r.seccion !== null ? requisitoDeSeccionADto(r) : {
     id: r.id,
     tipoDocumentoTenantId: r.tipoDocumentoTenantId,
     tipoDocumento: null,

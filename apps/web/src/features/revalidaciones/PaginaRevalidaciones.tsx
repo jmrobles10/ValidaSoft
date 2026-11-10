@@ -13,7 +13,7 @@ import { useAreas } from '../configuracion/areas/api';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
 import { TerceroEnLinea } from '../expedientes/componentes';
 import { useAprobarRevalidaciones, useRevalidaciones } from './api';
-import { claveRevalidacion, lote, seleccionables, tonoPlazo } from './modelo';
+import { claveRevalidacion, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
 
 const TAMANO_PAGINA = 25;
 /** Plazo de la revalidación (RV-4, `Revalidacion.DiasDePlazo`). */
@@ -85,7 +85,25 @@ export function PaginaRevalidaciones() {
           ]
         : []),
       { id: 'tercero', encabezado: t('revalidaciones.columnas.tercero'), celda: (f) => <TerceroEnLinea tercero={f.tercero} /> },
-      { id: 'documento', encabezado: t('revalidaciones.columnas.documento'), ancho: 200, celda: (f) => f.tipoDocumento },
+      {
+        id: 'documento',
+        encabezado: t('revalidaciones.columnas.documento'),
+        ancho: 200,
+        // Una sección de la información (F2) se ve como un documento, con el nombre de la sección.
+        celda: (f) =>
+          esRevalidacionDeSeccion(f) ? (
+            <Box>
+              <Typography component="span" variant="body2" sx={{ display: 'block' }}>
+                {f.tipoDocumento}
+              </Typography>
+              <Typography component="span" variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
+                {t('fichaEmpresa.revalidacion.seccion')}
+              </Typography>
+            </Box>
+          ) : (
+            f.tipoDocumento
+          ),
+      },
       {
         id: 'versiones',
         encabezado: t('revalidaciones.columnas.versiones'),
@@ -103,13 +121,20 @@ export function PaginaRevalidaciones() {
         id: 'comparacion',
         encabezado: t('revalidaciones.columnas.comparacion'),
         ancho: 130,
-        celda: (f) => (
-          <Tooltip title={t(`revalidaciones.comparacionAyuda.${f.comparacion as 'Distinta'}`, { defaultValue: '' })}>
-            <Typography component="span" variant="body2" color={f.aprobableEnLote ? 'text.primary' : 'text.secondary'}>
-              {t(`revalidaciones.comparaciones.${f.comparacion as 'Distinta'}`, { defaultValue: f.comparacion })}
-            </Typography>
-          </Tooltip>
-        ),
+        celda: (f) =>
+          esRevalidacionDeSeccion(f) ? (
+            <Tooltip title={t('fichaEmpresa.revalidacion.cambiosAyuda')}>
+              <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
+                {t('fichaEmpresa.revalidacion.cambios')}
+              </Typography>
+            </Tooltip>
+          ) : (
+            <Tooltip title={t(`revalidaciones.comparacionAyuda.${f.comparacion as 'Distinta'}`, { defaultValue: '' })}>
+              <Typography component="span" variant="body2" color={f.aprobableEnLote ? 'text.primary' : 'text.secondary'}>
+                {t(`revalidaciones.comparaciones.${f.comparacion as 'Distinta'}`, { defaultValue: f.comparacion })}
+              </Typography>
+            </Tooltip>
+          ),
       },
       {
         id: 'plazo',
