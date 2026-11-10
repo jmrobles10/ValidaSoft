@@ -51,6 +51,16 @@ public sealed class GeneradorPdfDeCertificados : IGeneradorDePdfDeCertificados
         foreach (var a in c.Areas)
             y = Fila(pdf, y, false, (a.Area, 250), (Origen(a.Origen), 130), (a.Fecha.UtcDateTime.ToString("yyyy-MM-dd HH:mm", Invariante), 119));
 
+        if (c.Verificaciones.Count > 0)
+        {
+            y = Seccion(pdf, y - 6, "Verificaciones de cumplimiento");
+            y = Fila(pdf, y, true, ("Verificación", 200), ("Proveedor", 130), ("Resultado", 90), ("Fecha (UTC)", 79));
+            foreach (var v in c.Verificaciones)
+                y = Fila(pdf, y, false, (v.Tipo == "EstudioDeCumplimiento" ? "Estudio de cumplimiento" : "Listas restrictivas", 200), (v.Proveedor, 130),
+                    (v.Resultado switch { "SinCoincidencias" => "Sin coincidencias", "Coincidencias" => "Coincidencias descartadas", "Aprobado" => "Favorable", _ => v.Resultado }, 90),
+                    (v.Fecha.UtcDateTime.ToString("yyyy-MM-dd", Invariante), 79));
+        }
+
         y -= 10;
         y = Nota(pdf, y, "La validez de este certificado se consulta en línea: su estado puede cambiar después de emitido (suspensión, " +
                          "revocación, vencimiento o reemplazo por una emisión nueva). No incluye contactos ni la identidad de quienes revisaron.");

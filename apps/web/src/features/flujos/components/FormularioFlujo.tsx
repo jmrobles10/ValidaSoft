@@ -5,6 +5,7 @@ import { Tarjeta } from '../../../shared/componentes';
 import { limpiarAreasDeRequisitos, type BorradorFlujo, type ErrorFlujo } from '../editor';
 import { EditorEtapas } from './EditorEtapas';
 import { EditorRequisitos } from './EditorRequisitos';
+import { EditorVerificaciones } from './EditorVerificaciones';
 
 export interface FormularioFlujoProps {
   borrador: BorradorFlujo;
@@ -135,6 +136,15 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
           areas={areas}
           tiposDocumento={tiposDocumento}
           onCambiar={(requisitos) => onCambiar({ ...borrador, requisitos })}
+          errores={errores}
+          soloLectura={soloLectura}
+        />
+      </Tarjeta>
+
+      <Tarjeta titulo={t('flujos.editor.verificaciones.titulo')}>
+        <EditorVerificaciones
+          verificaciones={borrador.verificaciones}
+          onCambiar={(verificaciones) => onCambiar({ ...borrador, verificaciones })}
           errores={errores}
           soloLectura={soloLectura}
         />

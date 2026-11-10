@@ -3,6 +3,7 @@ import { auditoria } from './es-CO-auditoria';
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { certificadosLista } from './es-CO-certificados-lista';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
+import { cumplimiento, erroresCumplimiento } from './es-CO-cumplimiento';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
@@ -29,6 +30,7 @@ export const esCO = {
     bandeja: 'Bandeja',
     revalidaciones: 'Revalidaciones',
     vencimientos: 'Vencimientos',
+    cumplimiento: 'Cumplimiento',
     certificados: 'Certificados',
     vinculos: 'Vínculos',
     auditoria: 'Auditoría',
@@ -36,6 +38,7 @@ export const esCO = {
     motivos: 'Motivos',
     plantillas: 'Plantillas de correo',
     'uso-ia': 'Plan y uso de IA',
+    'listas-restrictivas': 'Listas restrictivas',
     'tipos-documento': 'Tipos de documento',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
@@ -242,6 +245,7 @@ export const esCO = {
   bandeja,
   revalidaciones,
   vencimientos,
+  cumplimiento,
   expedientes,
   documentos,
   notificaciones,
@@ -585,6 +589,7 @@ export const esCO = {
     ...erroresConfiguracion,
     ...erroresRevalidaciones,
     ...erroresCuentas,
+    ...erroresCumplimiento,
     ...erroresFichaEmpresa,
   },
 } as const;

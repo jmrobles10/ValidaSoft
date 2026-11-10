@@ -2,7 +2,7 @@
 import {
   Archive, Ban, CalendarX, CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleEllipsis, CircleMinus, CirclePause, CircleX,
   Clock, Eye, FileUp, FolderOpen, History, Hourglass, Inbox, Lock, Mail, OctagonAlert, RefreshCw, Replace, ScanSearch,
-  ShieldCheck, ShieldMinus, ShieldX, TimerOff, TriangleAlert, Undo2, Unlink, type LucideIcon,
+  SearchCheck, ShieldAlert, ShieldCheck, ShieldMinus, ShieldX, TimerOff, TriangleAlert, Undo2, Unlink, type LucideIcon,
 } from 'lucide-react';
 
 export type TonoEstado = 'encurso' | 'exito' | 'advertencia' | 'error' | 'info' | 'neutro';
@@ -14,9 +14,12 @@ export type EstadoExpediente = 'Abierto' | 'EnRevision' | 'Observado' | 'Aprobad
 export type EstadoCertificado = 'Vigente' | 'ConPendientes' | 'Suspendido' | 'Vencido' | 'Revocado' | 'Reemplazado';
 export type EstadoAceptacion = 'AlDia' | 'Desactualizada' | 'PorVencer' | 'Vencida';
 export type EstadoCuentaDesignada = 'Propuesta' | 'Aprobada' | 'Rechazada' | 'Reemplazada';
+/** Verificación externa del expediente (H7): listas restrictivas o estudio de cumplimiento. */
+export type EstadoVerificacion = 'Pendiente' | 'CoincidenciaPorAnalizar' | 'Satisfecha' | 'Fallida' | 'Expirada';
 
 export type Estado =
-  | EstadoVinculo | EstadoRequisito | EstadoVersion | EstadoExpediente | EstadoCertificado | EstadoAceptacion | EstadoCuentaDesignada;
+  | EstadoVinculo | EstadoRequisito | EstadoVersion | EstadoExpediente | EstadoCertificado | EstadoAceptacion | EstadoCuentaDesignada
+  | EstadoVerificacion;
 
 export interface Apariencia {
   /** Clave i18n del texto visible (`estados.<Estado>`); el valor es-CO va en `etiqueta`. */
@@ -72,6 +75,11 @@ export const APARIENCIA_ESTADO: Readonly<Record<Estado, Apariencia>> = {
   Aprobada: { etiqueta: 'Aprobada', tono: 'exito', icono: CircleCheck, verboFecha: 'Aprobada el' },
   Rechazada: { etiqueta: 'Rechazada', tono: 'error', icono: CircleX, verboFecha: 'Rechazada el' },
   Reemplazada: { etiqueta: 'Reemplazada', tono: 'neutro', icono: Replace, verboFecha: 'Reemplazada el' },
+  // Verificación
+  CoincidenciaPorAnalizar: { etiqueta: 'Coincidencia por analizar', tono: 'advertencia', icono: ShieldAlert, verboFecha: 'Consultada el' },
+  Satisfecha: { etiqueta: 'Satisfecha', tono: 'exito', icono: SearchCheck, verboFecha: 'Vigente hasta el' },
+  Fallida: { etiqueta: 'Fallida', tono: 'error', icono: OctagonAlert, verboFecha: 'Desde el' },
+  Expirada: { etiqueta: 'Expirada', tono: 'advertencia', icono: TimerOff, verboFecha: 'Venció el' },
 };
 
 /** `ConPendientes` bloqueante pasa a tono error y cambia el círculo por el octágono (se distingue sin color). */

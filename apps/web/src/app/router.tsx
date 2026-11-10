@@ -37,6 +37,10 @@ export function crearRouter() {
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
             {
+              path: 'cumplimiento',
+              lazy: () => import('../features/cumplimiento/PaginaCumplimiento').then((m) => ({ Component: m.PaginaCumplimiento })),
+            },
+            {
               path: 'certificados',
               lazy: () => import('../features/certificados/lista/PaginaCertificados').then((m) => ({ Component: m.PaginaCertificados })),
             },
@@ -78,6 +82,11 @@ export function crearRouter() {
                 {
                   path: 'uso-ia',
                   lazy: () => import('../features/configuracion/usoIa/PaginaUsoIa').then((m) => ({ Component: m.PaginaUsoIa })),
+                },
+                {
+                  path: 'listas-restrictivas',
+                  lazy: () =>
+                    import('../features/configuracion/listasRestrictivas/PaginaListasRestrictivas').then((m) => ({ Component: m.PaginaListasRestrictivas })),
                 },
                 {
                   path: 'motivos',

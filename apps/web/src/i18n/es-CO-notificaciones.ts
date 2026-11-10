@@ -54,6 +54,18 @@ export const notificaciones = {
       titulo: 'Documento vencido',
       explicacion: 'Cuando un documento de un vínculo de tus áreas venció y ya pasó su plazo de gracia.',
     },
+    coincidenciaListas: {
+      titulo: 'Coincidencia en listas restrictivas',
+      explicacion: 'A los oficiales de cumplimiento, cuando una consulta de listas (o el monitoreo de un vínculo activo) encuentra coincidencias por analizar.',
+    },
+    estudioPendiente: {
+      titulo: 'Estudio de cumplimiento pendiente',
+      explicacion: 'A los oficiales de cumplimiento, cuando entra a revisión un expediente que necesita su estudio.',
+    },
+    verificacionExpirada: {
+      titulo: 'Verificación vencida',
+      explicacion: 'A los oficiales de cumplimiento, cuando vence una consulta de listas o un estudio con el expediente abierto.',
+    },
     cupoIa: {
       titulo: 'Cupo de revisión automática',
       explicacion: 'A los administradores, cuando la empresa llega al 80 % y al 100 % de las validaciones con IA incluidas en su plan del mes.',

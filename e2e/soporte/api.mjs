@@ -55,6 +55,8 @@ const entorno = {
   Validasoft__LimitePublico__Peticiones: '100000',
   // El PDF del certificado se genera casi al instante (por defecto espera unos segundos entre pasadas).
   Validasoft__Certificados__SegundosProceso: '1',
+  // La consulta automática de listas (proveedor simulado) corre casi al instante tras pasar a revisión.
+  Validasoft__Verificadores__SegundosProceso: '1',
   ...(aislado && {
     ConnectionStrings__Validasoft: `Host=localhost;Port=5432;Database=${BASE_AISLADA};Username=validasoft;Password=validasoft`,
     Validasoft__Correo__Puerto: '1026',

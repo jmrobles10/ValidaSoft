@@ -120,6 +120,12 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
     agregar(r.exencion?.por);
     for (const a of r.areas) for (const v of a.veredictos) agregar(v.usuario);
   }
+  // Quién consultó listas, resolvió coincidencias o registró el estudio (H7); «sistema» no es un usuario.
+  for (const v of expediente.verificaciones ?? []) {
+    if (v.registradaPor !== 'sistema') agregar(v.registradaPor);
+    agregar(v.estudio?.oficial);
+    for (const c of v.coincidencias) if (c.resueltaPor !== 'sistema') agregar(c.resueltaPor);
+  }
   agregar(expediente.rechazo?.usuario);
   return [...ids].sort();
 }
