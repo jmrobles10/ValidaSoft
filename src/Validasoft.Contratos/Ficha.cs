@@ -100,3 +100,109 @@ public sealed record ReglaSeccionDto(string Seccion, int ReglaVersion, int Esque
 
 /// <summary>Resultado del recálculo de completitud: secciones revisadas, las que cambiaron y terceros cuyo estado se reconstruyó.</summary>
 public sealed record RecalculoFichasDto(int Secciones, int Recalculadas, int Terceros, IReadOnlyList<ReglaSeccionDto> Reglas);
+
+// ---------- Lo aceptado, normalizado para el ERP (F3, FM-9, FM-32…) ----------
+
+/// <summary>Código de un catálogo de plataforma con su nombre (nulo si el código ya no está en el catálogo).</summary>
+public sealed record CodigoNombreDto(string Codigo, string? Nombre);
+
+/// <summary>Municipio DANE: código de 5 dígitos, nombre, departamento (los dos primeros dígitos y su nombre) y país.</summary>
+public sealed record CiudadErpDto(string Codigo, string? Nombre, string CodigoDepartamento, string? Departamento, string? Pais);
+
+/// <summary>Dirección en el formato estructurado de AyF.</summary>
+public sealed record DireccionEstructuradaDto(
+    string? TipoVia, string? NumeroVia, string? LetraVia, bool? Bis, string? Cuadrante, string? NumeroCruce, string? LetraCruce, string? Placa,
+    string? Complemento);
+
+/// <summary>
+/// El representante legal que recibe AyF (FM-34): en persona natural, el propio tercero (<see cref="Origen"/> = <c>FICHA_GENERAL</c>);
+/// en jurídica, el principal de menor orden de la sección legal (o el primero), con su posición en <see cref="Indice"/>.
+/// <see cref="Nombre"/> = nombres y apellidos.
+/// </summary>
+public sealed record RepresentanteLegalErpDto(
+    string Origen, int? Indice, string Nombre, string? Nombres, string? Apellidos, string? TipoIdentificacion, string? Numero, string? Dv,
+    string? TipoRepresentacion, string? Cargo, DateOnly? FechaExpedicion, string? Correo, string? Telefono);
+
+/// <summary><c>FICHA_GENERAL</c> aceptada. <see cref="Nombre"/> = razón social o nombres y apellidos; el representante solo en persona natural.</summary>
+public sealed record ContenidoGeneralDto(
+    string? TipoPersona, string? TipoIdentificacion, string? NumeroIdentificacion, string? Dv, string? Nombre, string? RazonSocial, string? Nombres,
+    string? Apellidos, string? Direccion, DireccionEstructuradaDto? DireccionEstructurada, CiudadErpDto? Ciudad, string? Pais, string? Telefono,
+    string? Correo, CodigoNombreDto? CiiuPrincipal, IReadOnlyList<CodigoNombreDto> CiiuSecundarias, string? PaginaWeb, bool? CertificadoIso,
+    int? AnioInicio, RepresentanteLegalErpDto? RepresentanteLegal);
+
+/// <summary>
+/// Las calidades S/N del Portal derivadas de los códigos DIAN (FM-33): las 13 del PUT de terceros de AyF más
+/// <see cref="AutorretenedorRft"/> (AyF no la recibe). <c>null</c> = no se puede derivar de la ficha (ver
+/// <c>calidadesSinDerivar</c>); AyF recibe <c>NoObligadoFacturar</c> = no <see cref="ObligadoAFacturar"/>.
+/// </summary>
+public sealed record CalidadesTributariasDto(
+    bool? ResponsableIva, bool? Autorretenedor, bool? DeclaranteRenta, bool? GranContribuyente, bool? AutorretenedorIca, bool? RegimenSimple,
+    bool? GranContribuyenteBogota, bool? RegimenEspecial, bool? AutorretenedorRft, bool? DescuentoSenaFic, bool? ProfesionalIndependiente,
+    bool? ExentoRetencion, bool? AgenteRetenedorIva, bool? ObligadoAFacturar);
+
+/// <summary>Calidad que va como <c>null</c> y por qué (no está en la casilla 53 ni en la ficha).</summary>
+public sealed record CalidadSinDerivarDto(string Calidad, string Nota);
+
+public sealed record ResolucionDto(string? Numero, DateOnly? Fecha);
+
+/// <summary>Municipio donde declara ICA, su actividad (CIIU) y la tarifa por mil, si la hay.</summary>
+public sealed record IcaErpDto(CiudadErpDto? Municipio, CodigoNombreDto? Ciiu, decimal? TarifaPorMil);
+
+/// <summary><c>FICHA_TRIBUTARIA</c> aceptada: responsabilidades DIAN (código y nombre), las calidades derivadas, resoluciones e ICA.</summary>
+public sealed record ContenidoTributarioDto(
+    IReadOnlyList<CodigoNombreDto> Responsabilidades, CalidadesTributariasDto Calidades, IReadOnlyList<CalidadSinDerivarDto> CalidadesSinDerivar,
+    ResolucionDto? ResolucionGranContribuyente, ResolucionDto? ResolucionAutorretenedor, bool? ResponsableIca, bool? AutorretenedorIca,
+    IReadOnlyList<IcaErpDto> Ica);
+
+/// <summary>Persona de la sección legal (FM-7, fase 1). <see cref="Rol"/>: RepresentanteLegal, Suplente, Apoderado, Socio, JuntaDirectiva, RevisorFiscal, Contador.</summary>
+public sealed record PersonaRelacionadaDto(
+    string? Rol, string? TipoRepresentacion, string? TipoIdentificacion, string? Numero, string? Dv, string? Nombres, string? Apellidos, string? Cargo,
+    decimal? Porcentaje, bool? Pep, bool? VinculoPep, DateOnly? FechaExpedicion, DateOnly? FechaNacimiento, string? Nacionalidad, string? Residencia,
+    string? Correo, string? Telefono);
+
+public sealed record FirmaRevisoraDto(string? Nit, string? RazonSocial);
+
+/// <summary><c>FICHA_LEGAL</c> aceptada: el representante que va a AyF y la lista completa de personas.</summary>
+public sealed record ContenidoLegalDto(RepresentanteLegalErpDto? RepresentanteLegal, IReadOnlyList<PersonaRelacionadaDto> Personas,
+    FirmaRevisoraDto? RevisorFiscalFirma);
+
+public sealed record MonedaExtranjeraDto(bool? Realiza, IReadOnlyList<string> Tipos, IReadOnlyList<string> Paises);
+
+/// <summary><c>FICHA_FINANCIERA</c> aceptada de un periodo (no va a AyF: el ERP no guarda estados financieros).</summary>
+public sealed record ContenidoFinancieroDto(
+    int? Periodo, DateOnly? FechaCorte, decimal? Activos, decimal? Pasivos, decimal? Patrimonio, decimal? IngresosBrutos, decimal? IngresosNetos,
+    decimal? GastosOperacionales, decimal? GastosNoOperacionales, decimal? OtrosIngresos, MonedaExtranjeraDto? MonedaExtranjera);
+
+/// <summary><c>FICHA_SST</c> aceptada: las ocho preguntas sí/no (no va a AyF).</summary>
+public sealed record ContenidoSstDto(
+    bool? ProgramaSaludOcupacional, bool? IdentificaFactoresDeRiesgo, bool? ComiteParitario, bool? ProgramaHigieneYSeguridad, bool? GestionAmbiental,
+    bool? ReglamentoInterno, bool? PoliticaHseq, bool? LicenciasYPermisos);
+
+/// <summary><c>FICHA_ESPECIALIDADES</c> aceptada: códigos de nivel 3 con su nombre (no va a AyF).</summary>
+public sealed record ContenidoEspecialidadesDto(IReadOnlyList<CodigoNombreDto> Especialidades);
+
+/// <summary>
+/// Contenido aceptado de una sección, normalizado para el ERP (FM-32): solo viene la propiedad de la sección (las demás, nulas).
+/// Es el mismo en el evento <c>seccion.aceptada</c> y en <c>GET /api/v1/vinculos/{id}/ficha</c>.
+/// </summary>
+public sealed record ContenidoDeSeccionDto(
+    ContenidoGeneralDto? General = null, ContenidoTributarioDto? Tributaria = null, ContenidoLegalDto? Legal = null,
+    ContenidoFinancieroDto? Financiera = null, ContenidoSstDto? Sst = null, ContenidoEspecialidadesDto? Especialidades = null);
+
+/// <summary>
+/// Lo que la empresa tiene aceptado de una sección en el vínculo (FM-35): versión, fecha, expediente, huella y el contenido
+/// normalizado; <see cref="VersionVigente"/> es la versión vigente del tercero y <see cref="VersionNuevaPendiente"/> dice si es
+/// otra (aún no aceptada).
+/// </summary>
+public sealed record SeccionAceptadaDto(
+    string Seccion, string Nombre, int? Periodo, int Version, DateTimeOffset AceptadaEn, Guid ExpedienteId, string Folio, string Huella,
+    ContenidoDeSeccionDto Contenido, int? VersionVigente, bool VersionNuevaPendiente);
+
+/// <summary>
+/// La ficha aceptada por la empresa en un vínculo (FM-35), para crear o actualizar el proveedor en el ERP: cada sección aceptada,
+/// el representante legal que va a AyF (de la General y la Legal aceptadas) y la cuenta designada aprobada (número completo
+/// solo con <c>cuentas:aprobar</c>, CB-2).
+/// </summary>
+public sealed record FichaDelVinculoDto(
+    Guid VinculoId, Guid EmpresaId, Guid TerceroId, IReadOnlyList<ReferenciaExternaDto> Referencias, string TipoPersona,
+    IReadOnlyList<SeccionAceptadaDto> Secciones, RepresentanteLegalErpDto? RepresentanteLegal, CuentaDesignadaDto? CuentaDesignada);

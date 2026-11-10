@@ -171,7 +171,7 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
 
 ## 7. Eventos e integración
 - **Eventos de dominio:** los del documento (versión cargada, compartida, aceptada…), más `CruceDeSeccionRegistrado(numero, resultados[])`.
-- **Evento público** `seccion.aceptada { terceroId, vinculoId, seccion, version, datos }`, emitido cuando una empresa acepta una versión (FM-9). El SRM lo aplica en AyF con el mapeo de hoy: General, Tributaria, el representante legal y la cuenta designada. Si AyF falla, el SRM lo reintenta y lo deja en su bandeja; la aceptación en Validasoft no se revierte, porque es una decisión de negocio, no una transacción distribuida.
+- **Evento público** `seccion.aceptada { terceroId, vinculoId, empresaId, seccion, periodo?, version, aceptadaEn, contenido }`, emitido cuando una empresa acepta una versión (FM-9, FM-32). `contenido` es lo aceptado normalizado para el ERP, con las 13 calidades derivadas de los códigos DIAN (FM-33) y el representante legal que usa AyF (FM-34); el detalle está en [05 §6.6](05-api-contratos-y-webhooks.md). El SRM lo aplica en AyF con el mapeo de hoy: General, Tributaria, el representante legal y la cuenta designada. Si AyF falla, el SRM lo reintenta y lo deja en su bandeja; la aceptación en Validasoft no se revierte, porque es una decisión de negocio, no una transacción distribuida.
 - **API para el Portal, el SRM y Marco:**
   - `GET /api/v1/vinculos/{id}/ficha`: lo **aceptado** por esa empresa, sección por sección.
   - `GET /api/v1/terceros/{id}/ficha`: se amplía Tercero 360 con las secciones.
@@ -200,6 +200,6 @@ Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sect
 | F6 | Personas relacionadas con bóveda propia (fase 2) y cargo de los contactos por empresa. |
 
 ## Decisiones abiertas
-1. ¿Las 13 calidades tributarias se exponen al SRM como hoy (S/N) además de los códigos DIAN? Propuesta: sí, derivadas, para no romper AyF.
+1. ~~¿Las 13 calidades tributarias se exponen al SRM como hoy (S/N) además de los códigos DIAN?~~ Resuelta en FM-33: sí, derivadas de los códigos, y `null` en las que no se pueden derivar.
 2. ¿Cuántos periodos financieros se exigen? Propuesta: el último cierre, y el anterior si la empresa lo configura.
 3. ¿La SST se respalda con un documento? Propuesta: opcional por empresa.

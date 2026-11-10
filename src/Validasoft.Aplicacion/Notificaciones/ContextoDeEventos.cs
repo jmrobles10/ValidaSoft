@@ -5,6 +5,7 @@ using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Integraciones;
 using Validasoft.Dominio.Plataforma;
@@ -30,6 +31,12 @@ public interface IContextoDeEventos
     Task<Tercero?> TerceroAsync(Guid id, CancellationToken ct);
 
     Task<Documento?> DocumentoAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Sección de la ficha del tercero (stream <c>SeccionDeFicha</c> de la bóveda), con todas sus versiones (inmutables).</summary>
+    Task<SeccionDeFicha?> SeccionDeFichaAsync(Guid id, CancellationToken ct);
+
+    /// <summary>Las entradas de los catálogos de plataforma a las que refieren unos datos de la ficha (nombres de códigos).</summary>
+    Task<ICatalogosDeFicha> CatalogosDeFichaAsync(IEnumerable<ReferenciaACatalogo> referencias, CancellationToken ct);
 
     Task<Certificado?> CertificadoAsync(Guid tenantId, Guid id, CancellationToken ct);
 
@@ -90,6 +97,11 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
     public Task<Documento?> DocumentoAsync(Guid id, CancellationToken ct) => CargarAsync<Documento>(TenantsTecnicos.Boveda, id, ct);
 
     public Task<Empresa?> EmpresaAsync(Guid id, CancellationToken ct) => CargarAsync<Empresa>(null, id, ct);
+
+    public Task<SeccionDeFicha?> SeccionDeFichaAsync(Guid id, CancellationToken ct) => CargarAsync<SeccionDeFicha>(TenantsTecnicos.Boveda, id, ct);
+
+    public Task<ICatalogosDeFicha> CatalogosDeFichaAsync(IEnumerable<ReferenciaACatalogo> referencias, CancellationToken ct) =>
+        Aplicacion.Ficha.ImportacionDeCatalogos.CargarAsync(Sesion(null), referencias, ct);
 
     public Task<Certificado?> CertificadoAsync(Guid tenantId, Guid id, CancellationToken ct) =>
         CargarAsync<Certificado>(Tenant(tenantId), id, ct);
