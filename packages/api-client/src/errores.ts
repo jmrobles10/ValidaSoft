@@ -145,11 +145,21 @@ function texto(valor: unknown): string | undefined {
   return typeof valor === 'string' && valor.length > 0 ? valor : undefined;
 }
 
-function erroresPorCampo(valor: unknown): Record<string, string[]> {
-  if (!esObjeto(valor)) return {};
+function erroresPorCampo(valor: unknown, lista?: unknown): Record<string, string[]> {
   const resultado: Record<string, string[]> = {};
-  for (const [campo, mensajes] of Object.entries(valor)) {
-    if (Array.isArray(mensajes)) resultado[campo] = mensajes.filter((m): m is string => typeof m === 'string');
+  if (esObjeto(valor)) {
+    for (const [campo, mensajes] of Object.entries(valor)) {
+      if (Array.isArray(mensajes)) resultado[campo] = mensajes.filter((m): m is string => typeof m === 'string');
+    }
+  }
+  // Extensión `errores: [{ campo, mensaje }]` (p. ej. la ficha del tercero, FM-19): todos los errores, no solo el primero.
+  if (Array.isArray(lista)) {
+    for (const item of lista) {
+      if (!esObjeto(item)) continue;
+      const campo = texto(item.campo);
+      const mensaje = texto(item.mensaje);
+      if (campo && mensaje) (resultado[campo] ??= []).push(mensaje);
+    }
   }
   return resultado;
 }
@@ -166,7 +176,7 @@ export function errorDesdeProblema(estado: number, cuerpo: unknown, correlationI
     detalle,
     texto(problema.traceId) ?? null,
     correlationId,
-    erroresPorCampo(problema.errors),
+    erroresPorCampo(problema.errors, problema.errores),
     extensionesDe(problema),
   );
 }

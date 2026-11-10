@@ -1,0 +1,139 @@
+// Datos de cada sección tal como viajan en `datos` (docs/14 §4, FM-19): claves en snake_case; `null` o ausente = sin
+// diligenciar (distinto de 0 o false). Son los `record` de `Validasoft.Dominio/Ficha/DatosDeSecciones.cs`.
+
+export interface DireccionEstructurada {
+  tipo_via?: string | null;
+  numero_via?: string | null;
+  letra_via?: string | null;
+  bis?: boolean | null;
+  cuadrante?: string | null;
+  numero_cruce?: string | null;
+  letra_cruce?: string | null;
+  placa?: string | null;
+  complemento?: string | null;
+}
+
+export interface DatosGenerales {
+  razon_social?: string | null;
+  nombres?: string | null;
+  apellidos?: string | null;
+  tipo_persona?: string | null;
+  tipo_identificacion?: string | null;
+  numero?: string | null;
+  dv?: string | null;
+  correo?: string | null;
+  telefono?: string | null;
+  pais?: string | null;
+  ciudad?: string | null;
+  direccion?: string | null;
+  direccion_estructurada?: DireccionEstructurada | null;
+  ciiu_principal?: string | null;
+  ciiu_secundarias?: string[] | null;
+  pagina_web?: string | null;
+  certificado_iso?: boolean | null;
+  anio_inicio?: number | null;
+}
+
+export interface Resolucion {
+  numero?: string | null;
+  fecha?: string | null;
+}
+
+export interface FilaIca {
+  municipio?: string | null;
+  ciiu?: string | null;
+  tarifa_por_mil?: number | null;
+}
+
+export interface DatosTributarios {
+  responsabilidades?: string[] | null;
+  resolucion_gran_contribuyente?: Resolucion | null;
+  resolucion_autorretenedor?: Resolucion | null;
+  responsable_ica?: boolean | null;
+  autorretenedor_ica?: boolean | null;
+  ica?: FilaIca[] | null;
+}
+
+export const TIPOS_OPERACION = ['Importaciones', 'Exportaciones', 'Inversiones', 'Prestamos', 'Giros', 'PagoDeServicios', 'Otras'] as const;
+export type TipoOperacionExtranjera = (typeof TIPOS_OPERACION)[number];
+
+export interface MonedaExtranjera {
+  realiza?: boolean | null;
+  tipos?: TipoOperacionExtranjera[] | null;
+  paises?: string[] | null;
+}
+
+export interface DatosFinancieros {
+  periodo?: number | null;
+  fecha_corte?: string | null;
+  activos?: number | null;
+  pasivos?: number | null;
+  patrimonio?: number | null;
+  ingresos_brutos?: number | null;
+  ingresos_netos?: number | null;
+  gastos_operacionales?: number | null;
+  gastos_no_operacionales?: number | null;
+  otros_ingresos?: number | null;
+  moneda_extranjera?: MonedaExtranjera | null;
+}
+
+export const ROLES = ['RepresentanteLegal', 'Suplente', 'Apoderado', 'Socio', 'JuntaDirectiva', 'RevisorFiscal', 'Contador'] as const;
+export type RolPersona = (typeof ROLES)[number];
+
+export const TIPOS_IDENTIFICACION_PERSONA = ['CC', 'CE', 'NIT', 'PA', 'PPT', 'TI', 'PASAPORTE', 'ID_FISCAL'] as const;
+
+export interface PersonaRelacionada {
+  rol?: RolPersona | null;
+  tipo_representacion?: string | null;
+  tipo_identificacion?: string | null;
+  numero?: string | null;
+  dv?: string | null;
+  nombres?: string | null;
+  apellidos?: string | null;
+  cargo?: string | null;
+  porcentaje?: number | null;
+  pep?: boolean | null;
+  vinculo_pep?: boolean | null;
+  fecha_expedicion?: string | null;
+  fecha_nacimiento?: string | null;
+  nacionalidad?: string | null;
+  residencia?: string | null;
+  correo?: string | null;
+  telefono?: string | null;
+}
+
+export interface FirmaRevisora {
+  nit?: string | null;
+  razon_social?: string | null;
+}
+
+export interface DatosLegales {
+  personas?: PersonaRelacionada[] | null;
+  revisor_fiscal_firma?: FirmaRevisora | null;
+}
+
+export const PREGUNTAS_SST = [
+  'programa_salud_ocupacional',
+  'identifica_factores_de_riesgo',
+  'comite_paritario',
+  'programa_higiene_y_seguridad',
+  'gestion_ambiental',
+  'reglamento_interno',
+  'politica_hseq',
+  'licencias_y_permisos',
+] as const;
+export type PreguntaSst = (typeof PREGUNTAS_SST)[number];
+export type DatosSst = Partial<Record<PreguntaSst, boolean | null>>;
+
+export interface DatosEspecialidades {
+  especialidades?: string[] | null;
+}
+
+/** Lo que cada formulario recibe: sus datos, cómo cambiarlos (por claves de primer nivel) y el mensaje de cada ruta. */
+export interface PropsFormulario<T> {
+  datos: T;
+  onCambiar: (cambio: Partial<T>) => void;
+  /** Error de formato (422) o faltante del servidor de la ruta (`personas[0].pep`); `null` si no hay. */
+  mensaje: (ruta: string) => string | null;
+  deshabilitado: boolean;
+}
