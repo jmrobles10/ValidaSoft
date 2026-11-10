@@ -37,6 +37,7 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 | SRM/Portal dentro del marco ERP | Grant `urn:validasoft:erp-token` (token exchange) | Access JWT 15 min con `tenant`, `empresas[]`, `sub`, roles |
 | Integraciones servidor-a-servidor | `X-Api-Key` | §4 |
 | Persona de un sistema integrado (SRM, Marco, Portal…) | `X-Api-Key` del sistema + `X-Usuario-Delegado` (JWT ≤ 5 min firmado por el sistema) | §2.6; pantallas embebidas: sesión de Validasoft HS256 de 30 min (`POST /sesiones-usuario`) |
+| Operador de Plataforma (consola `/plataforma`) | Credencial de Plataforma (`X-Api-Key`, clave de arranque) + `X-Usuario-Delegado` firmado por un **sistema de Plataforma** | **Implementado (PT-4):** `POST /plataforma/sesiones` ⇒ sesión HS256 de 30 min sin tenant ni empresas, actor `Plataforma`, solo `plataforma:tenants`; el operador queda registrado para la auditoría. Mientras llega el login OIDC con 2FA (§2.4) |
 | CLI de importación | Client Credentials con `importacion:escribir` | 15 min |
 
 ### 2.2 Grant `urn:validasoft:magic-link`
@@ -51,7 +52,7 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 - `EnlaceDeAcceso` global (esquema `identidad`): `Id` = SHA-256 hex del token de 256 bits (base64url), `tenantId?`, `vinculoId?`, `terceroId`, `correoDestino`, `expira`, `requiereOtp`, `usado`, hash del OTP, intentos; concurrencia optimista. Cada `InvitacionEnviada` crea uno con la vigencia de la invitación y **borra** los no usados del vínculo (el anterior responde `404 enlace-no-encontrado`). `requiereOtp` sale de `TipoVinculo.exigeOtpEnEnlace` (semilla: solo `PROVEEDOR`).
 - Canje: usado ⇒ `410 enlace-usado`; vencido ⇒ `410 enlace-vencido`; con OTP ⇒ `202 { requiereOtp, expira }` y código de 6 dígitos (hash ligado al enlace, 10 min) al mismo correo; `…/otp`: malo ⇒ `422 otp-invalido` con `intentosRestantes`, agotado ⇒ `429 otp-bloqueado` (5 fallos **por enlace**; volver a canjear da otro código pero no reinicia la cuenta), vencido ⇒ `410 otp-vencido`.
 - Sesión del tercero: JWT HS256 de 30 min con `Validasoft:Sesiones:ClaveFirma` y audiencia `validasoft:tercero`; reclamos `tipo=tercero`, `terceroId`, `correo`, `otpVerificado` y `vinculos` (`vinculoId|tenantId|empresaId`: los de ese tercero cuyo correo de invitación coincide con el del enlace, en todos los tenants, fijados al emitir). Esquema `Tercero` solo en `/public/v1/*` (el selector de esquema es por ruta): ahí no valen API keys ni sesiones de usuario, y `/api/v1` no acepta el token del tercero. El access token viaja en el cuerpo y se usa como `Authorization: Bearer` (en memoria del navegador); lo que sobrevive a recargar es el **token de refresco** en la cookie `HttpOnly` `vs_tercero` (ver «Reingreso» abajo). Los vínculos ya no quedan fijados por toda la sesión: se recalculan en cada renovación.
-- Correo: `IEnviadorDeCorreo` (MailKit/SMTP, `Validasoft:Correo:{Host, Puerto, Seguridad, Remitente, UrlPublica}`); en desarrollo **Mailpit** (`infra/compose`: SMTP 1025, bandeja en http://localhost:8025). Los correos salen por el **outbox de Wolverine** (cola local durable `correo`) después del commit; el token y el OTP viajan **cifrados** (AES-256-GCM con clave HKDF de `ClaveFirma`) en el sobre, y el segmento del token se enmascara en logs y en `instance` de los ProblemDetails.
+- Correo: `IEnviadorDeCorreo` (MailKit/SMTP, `Validasoft:Correo:{Host, Puerto, Seguridad, Remitente, UrlPublica}`); en desarrollo **Mailpit** (`infra/compose`: SMTP 1025, bandeja en http://localhost:8025). Los correos salen por el **outbox de Wolverine** (cola local durable `correo`) después del commit; el token y el OTP viajan **cifrados** (AES-256-GCM; desde PT-1 con la clave maestra de §6.3, antes con una clave HKDF de `ClaveFirma`) en el sobre, y el segmento del token se enmascara en logs y en `instance` de los ProblemDetails.
 - Aceptación por `vinculoId` (no hay expedientes aún): exige autorización y T&C **vigentes** de la empresa (si no están publicados ⇒ `409 textos-legales-faltantes`) y el aviso de la plataforma si el tercero no tiene su versión vigente; versión distinta ⇒ `409 texto-desactualizado`; no aceptado ⇒ `422`. Si el tipo de vínculo exige OTP y la sesión no lo verificó ⇒ `403 otp-requerido`. Eventos `ConsentimientosRegistrados` + `InvitacionAceptada` con actor `Tercero`; el aviso aceptado queda también en el `Tercero`. Aún no se comparte nada porque no hay documentos.
 - Rate limit por IP en `/public/v1/*` (ventana fija, 60/min por defecto); detrás de un proxy cuenta la IP real de `X-Forwarded-For` solo si la petición viene de un proxy confiable (§2.6 punto 8, SE-6). Pendiente: constancia por correo de la aceptación (`consentimiento-empresa`).
 
@@ -100,7 +101,7 @@ Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cue
 
 | Rol | Alcance posible | Descripción |
 |---|---|---|
-| `Plataforma` | Global (`tenant_id = NULL`) | Crea tenants y empresas, administra el catálogo canónico y las propuestas, ve uso y costos agregados; **nunca accede a documentos ni decisiones por defecto**. Para un incidente, un `Administrador` del tenant le concede un **acceso temporal de soporte** (`AccesoSoporteDto`: alcance empresa/expediente/tercero, 1–72 h, justificación) que se registra con actor `Plataforma` en auditoría de configuración y en `DocumentoAccedido`; expira solo y es revocable (B-6). Sección `/plataforma` (P-15-2). |
+| `Plataforma` | Global (`tenant_id = NULL`) | Crea tenants y empresas, administra el catálogo canónico y las propuestas, ve uso y costos agregados; **nunca accede a documentos ni decisiones por defecto**. Para un incidente, un `Administrador` del tenant le concede un **acceso temporal de soporte** (`AccesoSoporteDto`: alcance empresa/expediente/tercero, 1–72 h, justificación) que se registra con actor `Plataforma` en auditoría de configuración y en `DocumentoAccedido`; expira solo y es revocable (B-6). Sección `/plataforma` (P-15-2). **Implementado (PT-4…PT-7):** consola con grupos y empresas, alta de un grupo con su empresa, administrador y sistema integrado, plan de IA de cada empresa con su llave de OpenAI de solo escritura y secretos en reposo. |
 | `Administrador` | Tenant o empresa | Configuración, usuarios, API keys, webhooks, override con justificación, bloqueos, reaperturas |
 | `Revisor` | Empresa + área(s) | Veredictos en sus áreas; ve expedientes cuyos flujos incluyen un área suya |
 | `Auditor` | Tenant o empresa | Solo lectura total, auditoría de accesos, exportaciones |
@@ -226,7 +227,7 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 | Binarios | MinIO con **SSE-KMS y clave por tenant** para `tenant-{id}` (P-14-3); `boveda` con clave de plataforma; buckets separados con IAM; versionado; Object Lock governance sobre versiones referenciadas (prod). Cierre de tenant ⇒ borrado criptográfico de su clave |
 | Región | Atributo del tenant (P-14-2); un despliegue por región; on-premise = instancia del cliente; la IA externa se declara en la autorización |
 | Base de datos | Cifrado de volumen; columnas sensibles (SMTP, secretos de webhook, credenciales de verificadores, números de cuenta) con Data Protection **por tenant**; claves protegidas por certificado X.509 o KMS |
-| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave. El sello de los certificados es una semilla Ed25519 (`Validasoft:Certificados:ClavePrivada`, 32 bytes en base64; en `appsettings.Development.json` solo una de desarrollo): su `kid`, la publicación de la pública en `/.well-known/validasoft-certificados.json` y la rotación (la anterior pasa a `ClavesAnteriores`) están en CE-4 del [registro](decisiones/registro.md) |
+| Secretos | `VALIDASOFT__*` / `_FILE` / Key Vault; test que falla si `appsettings` contiene patrones de clave. Los secretos en reposo (llaves de OpenAI, secretos de webhook, números de cuenta) van cifrados con la clave maestra `Validasoft:Secretos:ClaveMaestra`, rotable (§6.3). El sello de los certificados es una semilla Ed25519 (`Validasoft:Certificados:ClavePrivada`, 32 bytes en base64; en `appsettings.Development.json` solo una de desarrollo): su `kid`, la publicación de la pública en `/.well-known/validasoft-certificados.json` y la rotación (la anterior pasa a `ClavesAnteriores`) están en CE-4 del [registro](decisiones/registro.md) |
 | Logs | Sin tokens, llaves ni cuerpos; redacción de correos e identificaciones |
 | Backups | Cifrados; restauración probada en pipeline (GitHub Actions) |
 
@@ -239,6 +240,31 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 
 ### 6.2 URLs prefirmadas y auditoría de acceso
 Emisión solo tras autorizar (§5.2); 5 min descarga / 15 min subida; claves por hash; `Content-Disposition` fijo; cada emisión escribe `DocumentoAccedido(VersionId, TenantId?, EmpresaId?, ActorId, ActorTipo, Ip, UserAgent, Motivo, ExpedienteId?)` en `auditoria-accesos-{terceroId}` con la **misma retención que el documento** (P-14-7).
+
+### 6.3 Clave maestra de los secretos en reposo (PT-1…PT-3)
+
+Las llaves de OpenAI de cada empresa, los secretos de los webhooks, los números de cuenta bancaria y los tokens y códigos que esperan en el outbox se cifran con AES-256-GCM y la **clave maestra** `Validasoft:Secretos:ClaveMaestra` (32 bytes aleatorios en base64). Cada texto cifrado lleva el identificador de su clave: `vs1.{kid}.{datos}`, donde `kid` son los 8 primeros caracteres hexadecimales del SHA-256 de la clave (lo muestra `GET /api/v1/plataforma/secretos` y la consola de Plataforma › Secretos). La clave ya no depende de `Validasoft:Sesiones:ClaveFirma`: rotar la de sesiones no toca los secretos.
+
+**Generarla** (una por entorno; nunca en el repositorio ni en `appsettings.json`, que la deja vacía):
+
+```bash
+openssl rand -base64 32
+# o: python -c "import os,base64; print(base64.b64encode(os.urandom(32)).decode())"
+# o (PowerShell): [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Se entrega como secreto de configuración: `VALIDASOFT__SECRETOS__CLAVEMAESTRA` (o `Validasoft__Secretos__ClaveMaestra`), archivo `_FILE` o Key Vault. Sin una clave válida la API **no arranca** (mensaje con el motivo, nunca con la clave). En desarrollo hay una de solo desarrollo en `appsettings.Development.json` y en `infra/compose/compose.yaml`: no hace falta configurar nada.
+
+**Rotarla:**
+
+1. Genera la nueva y pon la actual en `Validasoft:Secretos:ClavesAnteriores` (arreglo; solo descifra): `ClaveMaestra = nueva`, `ClavesAnteriores:0 = actual`. Despliega todas las réplicas con esa configuración.
+2. En la consola de Plataforma › Secretos (o `POST /api/v1/plataforma/secretos/recifrar`) re-cifra con la vigente las llaves de OpenAI, los secretos de webhook y los números de cuenta. Es idempotente; lo que quede con «Ilegibles» es porque su clave no está configurada.
+3. Espera a que se vacíe el outbox de correo (los sobres viven minutos) y revisa `GET /api/v1/plataforma/secretos`: «Por re-cifrar» en cero.
+4. Mantén la anterior en `ClavesAnteriores` mientras existan **copias congeladas en eventos** con ella: la cuenta designada de un vínculo (`CuentaParaDesignar.NumeroProtegido`) no se reescribe porque los eventos son inmutables. Quitarla deja esas copias ilegibles para siempre.
+
+**Compatibilidad con lo cifrado antes de la clave maestra** (sin `vs1.`): se descifra con la clave derivada (HKDF-SHA256) de la `ClaveFirma` de sesiones vigente. Si se va a rotar la clave de sesiones antes de re-cifrar, la anterior va en `Validasoft:Secretos:ClavesFirmaHeredadas` (arreglo). Tras el primer re-cifrado lo único que queda en ese formato son las copias en eventos y los sobres del outbox.
+
+**Desarrollo y pruebas:** `Validasoft:IA:Proveedor = Simulado` no llama a OpenAI (la e2e lo usa); por defecto es `OpenAi`, así que basta cargar la llave real de una empresa en su plan de IA para que sus documentos se analicen con ella.
 
 ---
 

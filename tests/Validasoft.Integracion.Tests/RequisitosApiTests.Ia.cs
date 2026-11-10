@@ -38,6 +38,19 @@ public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
         return Task.FromResult(new ResultadoDeAnalisis(solicitud.Modelo, new HechosExtraidos(solicitud.TipoCanonico, true, confianza, [], null, campos),
             new UsoDeTokens(1000, 200, 300), solicitud.Paginas, 0));
     }
+
+    /// <summary>«Probar llave» sin red (PT-6): con <c>-rechazada-</c> es inválida; si no, válida. Cuenta las pruebas por llave.</summary>
+    public Task<ResultadoDePruebaDeLlave> ProbarLlaveAsync(string apiKey, CancellationToken ct)
+    {
+        _pruebas.Enqueue(apiKey);
+        return Task.FromResult(apiKey.Contains("-rechazada-", StringComparison.Ordinal)
+            ? new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Invalida, "Rechazada (falso).")
+            : new ResultadoDePruebaDeLlave(ResultadoDePruebaDeLlave.Valida, "Aceptada (falso)."));
+    }
+
+    private readonly ConcurrentQueue<string> _pruebas = new();
+
+    public int PruebasCon(string llave) => _pruebas.Count(p => p == llave);
 }
 
 public sealed partial class RequisitosApiTests

@@ -50,6 +50,7 @@ export function iniciarSesionDePrueba() {
     expira: new Date(Date.now() + 30 * 60_000),
     usuarioId: 'u-verif',
     tenantId: 't-1',
+    nombre: null,
     sistema: 'SRM',
     actorTipo: 'Usuario',
     scopesDeTenant: new Set(),

@@ -68,6 +68,14 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/plataforma/tenants': 'crearTenant',
   'GET /api/v1/plataforma/tenants': 'listarTenants',
   'GET /api/v1/plataforma/tenants/{id}': 'obtenerTenant',
+  // Consola de Plataforma (PT-3…PT-6): grupos con sus empresas, sistemas y sesión del operador, secretos y prueba de la llave.
+  'GET /api/v1/plataforma/grupos': 'listarGrupos',
+  'GET /api/v1/plataforma/sistemas': 'listarSistemasPlataforma',
+  'PUT /api/v1/plataforma/sistemas/{codigo}': 'fijarSistemaPlataforma',
+  'POST /api/v1/plataforma/sesiones': 'crearSesionPlataforma',
+  'GET /api/v1/plataforma/secretos': 'obtenerEstadoSecretos',
+  'POST /api/v1/plataforma/secretos/recifrar': 'recifrarSecretos',
+  'POST /api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia/probar-llave': 'probarLlaveIaEmpresa',
   'GET /api/v1/plataforma/textos-legales/aviso': 'obtenerAvisoPlataforma',
   'PUT /api/v1/plataforma/textos-legales/aviso': 'publicarAvisoPlataforma',
   'GET /api/v1/catalogos/paises': 'listarPaises',
@@ -370,12 +378,18 @@ export function transformarOpenApi(entrada: unknown): DocumentoOpenApi {
   // `JsonElement` (contenido canónico del certificado, datos de un evento público): siempre un objeto JSON.
   esquemas.JsonElement = { type: 'object', additionalProperties: true };
 
+  // Con el alta completa (PT-5) trae además la empresa, el administrador, el sistema y su llave; si no, llegan nulos.
+  const opcional = (esquema: string): Esquema => ({ oneOf: [{ type: 'null' }, { $ref: `#/components/schemas/${esquema}` }] });
   esquemas.TenantCreadoDto = {
     type: 'object',
-    required: ['tenant', 'apiKeyAdministrador'],
+    required: ['tenant', 'apiKeyAdministrador', 'empresa', 'administrador', 'sistema', 'apiKeySistema'],
     properties: {
       tenant: { $ref: '#/components/schemas/TenantDto' },
       apiKeyAdministrador: { $ref: '#/components/schemas/ApiKeyDto' },
+      empresa: opcional('EmpresaDto'),
+      administrador: opcional('UsuarioDto'),
+      sistema: opcional('SistemaIntegradoDto'),
+      apiKeySistema: opcional('ApiKeyDto'),
     },
   };
 

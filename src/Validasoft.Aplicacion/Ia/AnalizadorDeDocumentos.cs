@@ -52,6 +52,25 @@ public sealed class AnalisisDeIaException(string motivo, string mensaje, Excepti
 public interface IAnalizadorDeDocumentos
 {
     Task<ResultadoDeAnalisis> AnalizarAsync(SolicitudDeAnalisis solicitud, string apiKey, CancellationToken ct);
+
+    /// <summary>
+    /// Verifica la llave con una consulta que no consume tokens (PT-6). Solo cuando Plataforma lo pide («Probar llave»).
+    /// Nunca lanza por la respuesta del proveedor: la traduce a <see cref="ResultadoDePruebaDeLlave"/>.
+    /// </summary>
+    Task<ResultadoDePruebaDeLlave> ProbarLlaveAsync(string apiKey, CancellationToken ct);
+}
+
+/// <summary>
+/// Resultado de probar una llave: <c>valida</c>, <c>invalida</c> (401/403), <c>limite</c> (429) o <c>error</c> (red, tiempo
+/// agotado u otra respuesta). El mensaje no lleva la llave ni el cuerpo de la respuesta.
+/// </summary>
+public sealed record ResultadoDePruebaDeLlave(string Resultado, string Mensaje)
+{
+    public const string Valida = "valida";
+    public const string Invalida = "invalida";
+    public const string Limite = "limite";
+    public const string Error = "error";
+    public const string SinLlave = "sin-llave";
 }
 
 /// <summary>
@@ -71,6 +90,13 @@ public sealed class OpcionesDeIa(IConfiguration configuracion)
 
     /// <summary>Apagada ⇒ ninguna versión se analiza (nada se consume).</summary>
     public bool Habilitada => _seccion.GetValue("Habilitada", true);
+
+    /// <summary>
+    /// <c>OpenAi</c> (por defecto) llama a la API real con la llave de cada empresa; <c>Simulado</c> no sale a la red (pruebas
+    /// de punta a punta y demos): el análisis falla de forma controlada y la prueba de la llave la acepta salvo que contenga
+    /// <c>rechazada</c> (PT-6).
+    /// </summary>
+    public string Proveedor => _seccion["Proveedor"] is { Length: > 0 } proveedor ? proveedor : "OpenAi";
 
     public string UrlBase => (_seccion["UrlBase"] is { Length: > 0 } url ? url : "https://api.openai.com/v1").TrimEnd('/');
 

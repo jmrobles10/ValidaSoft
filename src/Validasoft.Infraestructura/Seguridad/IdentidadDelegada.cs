@@ -26,7 +26,7 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
     /// <summary>Longitud máxima del <c>jti</c> (un UUID tiene 36).</summary>
     public const int LongitudMaximaJti = 128;
 
-    private static readonly TimeSpan Tolerancia = TimeSpan.FromSeconds(30);
+    internal static readonly TimeSpan Tolerancia = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan VigenciaMaxima = TimeSpan.FromMinutes(5);
     private static readonly JsonWebTokenHandler Manejador = new() { MapInboundClaims = false };
 
@@ -37,7 +37,7 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         if (sistema is null || !sistema.Activo)
             throw ReglaDeNegocioException.NoAutenticado("sistema-inactivo", "El sistema integrado de la API key no existe o está desactivado.");
 
-        var (datos, jti, expira) = await ValidarAsync(asercion, sistema);
+        var (datos, jti, expira) = await ValidarAsync(asercion, sistema.Codigo, sistema.ClavePublicaPem, reloj.GetUtcNow());
         // Después de la firma (nadie llena el registro con aserciones falsas) y antes de tocar al usuario.
         await usadas.RegistrarAsync(sistema.Id, jti, reloj.GetUtcNow(), expira + Tolerancia, ct);
         var usuario = await usuarios.ResolverAsync(tenantId, sistema, apiKeyId, datos, correlationId, ct);
@@ -57,13 +57,18 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         return reclamos;
     }
 
-    private async Task<(AsercionDelegada Datos, string Jti, DateTimeOffset Expira)> ValidarAsync(string asercion, SistemaIntegrado sistema)
+    /// <summary>
+    /// Verifica firma, emisor (<paramref name="codigo"/>), audiencia, vigencia (≤ 5 min), <c>jti</c> y <c>sub</c>/<c>name</c>/<c>email</c>.
+    /// Lo usan también los operadores de Plataforma (PT-4), con la clave de su sistema de plataforma.
+    /// </summary>
+    internal static async Task<(AsercionDelegada Datos, string Jti, DateTimeOffset Expira)> ValidarAsync(string asercion, string codigo,
+        string clavePublicaPem, DateTimeOffset ahora)
     {
         var parametros = new TokenValidationParameters
         {
-            ValidIssuer = sistema.Codigo,
+            ValidIssuer = codigo,
             ValidAudience = Audiencia,
-            IssuerSigningKey = ClaveDeVerificacion(sistema.ClavePublicaPem),
+            IssuerSigningKey = ClaveDeVerificacion(clavePublicaPem),
             ValidAlgorithms = [SecurityAlgorithms.RsaSha256, SecurityAlgorithms.EcdsaSha256],
             // La vigencia se valida abajo con el reloj de Validasoft, para exigir además el máximo de 5 minutos.
             ValidateLifetime = false
@@ -76,10 +81,9 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
                 ? ReglaDeNegocioException.NoAutenticado("asercion-firma-invalida",
                     "La firma de X-Usuario-Delegado no corresponde a la clave pública registrada del sistema.")
                 : ReglaDeNegocioException.NoAutenticado("asercion-invalida",
-                    $"X-Usuario-Delegado no es válido: debe ser un JWT RS256/ES256 con iss = {sistema.Codigo} y aud = {Audiencia}.");
+                    $"X-Usuario-Delegado no es válido: debe ser un JWT RS256/ES256 con iss = {codigo} y aud = {Audiencia}.");
         }
 
-        var ahora = reloj.GetUtcNow();
         if (jwt.ValidTo == DateTime.MinValue)
             throw ReglaDeNegocioException.NoAutenticado("asercion-invalida", "La aserción necesita exp.");
         var expira = new DateTimeOffset(jwt.ValidTo, TimeSpan.Zero);
@@ -156,6 +160,25 @@ public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSe
         var reclamos = principal.Claims.Where(c => ReclamosCopiados.Contains(c.Type)).Select(c => new Claim(c.Type, c.Value)).ToList();
         reclamos.Add(new Claim(Reclamos.Sujeto, principal.FindFirstValue(ClaimTypes.NameIdentifier)!));
 
+        return Firmar(reclamos, ahora);
+    }
+
+    /// <summary>
+    /// Sesión de la consola de Plataforma (PT-4): sin tenant ni empresas; actor <c>Plataforma</c> con el id del operador,
+    /// su sistema, su nombre (<c>name</c>, para mostrarlo) y solo el scope <c>plataforma:tenants</c>.
+    /// </summary>
+    public SesionUsuarioDto EmitirPlataforma(OperadorDePlataforma operador, DateTimeOffset ahora) =>
+        Firmar(
+        [
+            new Claim(Reclamos.Sujeto, operador.Id),
+            new Claim(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
+            new Claim(Reclamos.Sistema, operador.Sistema),
+            new Claim(Reclamos.Nombre, operador.Nombre),
+            new Claim(Reclamos.Scope, Permisos.PlataformaTenants)
+        ], ahora);
+
+    private SesionUsuarioDto Firmar(List<Claim> reclamos, DateTimeOffset ahora)
+    {
         var expira = ahora + Duracion;
         var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {

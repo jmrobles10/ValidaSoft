@@ -38,6 +38,18 @@ public interface IEmisorDeSesiones
 {
     /// <summary>Solo a partir de una petición con API key + <c>X-Usuario-Delegado</c> ya verificada.</summary>
     Contratos.SesionUsuarioDto Emitir(System.Security.Claims.ClaimsPrincipal principal, DateTimeOffset ahora);
+
+    /// <summary>Sesión de la consola de Plataforma para un operador ya verificado (PT-4): sin tenant, solo <c>plataforma:tenants</c>.</summary>
+    Contratos.SesionUsuarioDto EmitirPlataforma(OperadorDePlataforma operador, DateTimeOffset ahora);
+}
+
+/// <summary>
+/// Verifica la aserción <c>X-Usuario-Delegado</c> de un operador de Plataforma contra la clave de su sistema de plataforma
+/// (<c>iss</c>), la marca como usada (un solo uso) y registra o actualiza al operador (PT-4).
+/// </summary>
+public interface IVerificadorDeOperadores
+{
+    Task<OperadorDePlataforma> VerificarAsync(string asercion, string correlationId, CancellationToken ct);
 }
 
 /// <summary>
@@ -82,12 +94,28 @@ public static class TenantsTecnicos
     public const string Boveda = "boveda";
 }
 
-/// <summary>Cifra secretos de corta vida (token del enlace, código OTP) que viajan en el outbox hasta el correo (IN-3).</summary>
+/// <summary>
+/// Cifra secretos: los de corta vida que viajan en el outbox hasta el correo (token del enlace, código OTP, IN-3) y los
+/// que quedan en reposo (llave de OpenAI, secretos de webhook, números de cuenta). Cifra con la clave maestra vigente y
+/// descifra con la que indique el texto cifrado (PT-1).
+/// </summary>
 public interface IProtectorDeSecretos
 {
     string Proteger(string secreto);
 
     string Desproteger(string protegido);
+
+    /// <summary>Identificador (kid) de la clave maestra vigente: va en cada texto cifrado.</summary>
+    string ClaveVigente { get; }
+
+    /// <summary>Identificadores de las claves anteriores configuradas (solo descifran).</summary>
+    IReadOnlyList<string> ClavesAnteriores { get; }
+
+    /// <summary>El texto ya está cifrado con la clave maestra vigente (no hace falta re-cifrarlo).</summary>
+    bool EstaConClaveActual(string protegido);
+
+    /// <summary>El mismo secreto cifrado con la clave vigente; si ya lo está, lo devuelve tal cual.</summary>
+    string Recifrar(string protegido) => EstaConClaveActual(protegido) ? protegido : Proteger(Desproteger(protegido));
 }
 
 /// <summary>Genera y verifica API keys; el algoritmo (Argon2id) vive en infraestructura.</summary>

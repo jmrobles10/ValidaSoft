@@ -16,13 +16,31 @@ public sealed record PaisDto(string Codigo, string Nombre, IReadOnlyList<TipoIde
 
 // ---------- Plataforma ----------
 
-public sealed record CrearTenantDto(string Slug, string Nombre, string? Region, string? ZonaHoraria);
+/// <summary>
+/// Alta de un grupo (tenant). Con <see cref="Empresa"/>, <see cref="Administrador"/> y <see cref="Sistema"/> queda operable de
+/// punta a punta en una sola transacción (PT-5): su primera empresa, su administrador de todo el grupo y el sistema integrado
+/// con una API key que puede actuar en nombre del administrador.
+/// </summary>
+public sealed record CrearTenantDto(
+    string Slug, string Nombre, string? Region, string? ZonaHoraria, CrearEmpresaDto? Empresa = null, AdministradorInicialDto? Administrador = null,
+    CrearSistemaIntegradoDto? Sistema = null);
+
+/// <summary>
+/// Administrador inicial del grupo (rol <c>Administrador</c> de todo el tenant). <see cref="IdExterno"/> es su <c>sub</c> en el
+/// sistema integrado inicial (exige <c>sistema</c>); sin él, su primer acceso delegado lo enlaza por correo.
+/// </summary>
+public sealed record AdministradorInicialDto(string Nombre, string Correo, string? IdExterno = null);
 
 public sealed record TenantDto(
     Guid Id, string Slug, string Nombre, string Region, string Plan, string ZonaHoraria, string Idioma, bool Activo, DateTimeOffset CreadoEn);
 
-/// <summary>Respuesta del alta de tenant: incluye la primera API key de administración (su valor se muestra una sola vez).</summary>
-public sealed record TenantCreadoDto(TenantDto Tenant, ApiKeyDto ApiKeyAdministrador);
+/// <summary>
+/// Respuesta del alta de tenant: incluye la primera API key de administración y, si se pidió el sistema integrado, su API
+/// key (los valores se muestran una sola vez), además de la empresa y el administrador creados.
+/// </summary>
+public sealed record TenantCreadoDto(
+    TenantDto Tenant, ApiKeyDto ApiKeyAdministrador, EmpresaDto? Empresa = null, UsuarioDto? Administrador = null, SistemaIntegradoDto? Sistema = null,
+    ApiKeyDto? ApiKeySistema = null);
 
 // ---------- Empresas ----------
 

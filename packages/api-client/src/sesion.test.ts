@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { accionesDisponibles, accionPermitidaPorEstado } from './dominio';
-import { accedeAEmpresa, leerSesion, msRestantes, puede, scopesEn, TokenInvalido } from './sesion';
+import { accedeAEmpresa, esSesionDePlataforma, leerSesion, msRestantes, puede, scopesEn, TokenInvalido } from './sesion';
 
 function base64Url(texto: string): string {
   return Buffer.from(texto, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -60,6 +60,18 @@ describe('leerSesion', () => {
   it('rechaza tokens mal formados o incompletos', () => {
     expect(() => leerSesion('no-es-jwt')).toThrow(TokenInvalido);
     expect(() => leerSesion(token({ sub: 'x' }))).toThrow(TokenInvalido);
+    // Sin tenant solo vale la sesión de Plataforma.
+    expect(() => leerSesion(token({ sub: 'x', exp: 1_900_000_000, 'validasoft:actor-tipo': 'Usuario' }))).toThrow(TokenInvalido);
+  });
+
+  it('lee la sesión de un operador de Plataforma: sin tenant, con su nombre y solo plataforma:tenants', () => {
+    const sesion = leerSesion(
+      token({ sub: 'BACKOFFICE:jperez', exp: 1_900_000_000, 'validasoft:actor-tipo': 'Plataforma', name: 'Juana Pérez', scope: 'plataforma:tenants' }),
+    );
+    expect(sesion.tenantId).toBeNull();
+    expect(sesion.nombre).toBe('Juana Pérez');
+    expect(esSesionDePlataforma(sesion)).toBe(true);
+    expect(esSesionDePlataforma(leerSesion(token({ ...base, scope: 'plataforma:tenants' })))).toBe(false);
   });
 });
 

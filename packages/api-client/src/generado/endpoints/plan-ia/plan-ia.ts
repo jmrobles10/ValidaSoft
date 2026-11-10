@@ -25,7 +25,9 @@ import type {
 
 import type {
   ActualizarPlanIaEmpresaDto,
-  PlanIaEmpresaDto
+  PlanIaEmpresaDto,
+  ProbarLlaveIaDto,
+  PruebaDeLlaveIaDto
 } from '../../modelos';
 
 import { clienteValidasoft } from '../../../fetcher';
@@ -209,4 +211,67 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getActualizarPlanIaEmpresaMutationOptions(options), queryClient);
+    }
+    export const probarLlaveIaEmpresa = (
+    tenantId: string,
+    empresaId: string,
+    probarLlaveIaDto: BodyType<ProbarLlaveIaDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<PruebaDeLlaveIaDto>(
+      {url: `/api/v1/plataforma/tenants/${tenantId}/empresas/${empresaId}/plan-ia/probar-llave`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: probarLlaveIaDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getProbarLlaveIaEmpresaMutationKey = () => ['probarLlaveIaEmpresa'] as const;
+
+export const getProbarLlaveIaEmpresaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof probarLlaveIaEmpresa>>, TError,ProbarLlaveIaEmpresaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof probarLlaveIaEmpresa>>, TError,ProbarLlaveIaEmpresaMutationVariables, TContext> => {
+
+const mutationKey = getProbarLlaveIaEmpresaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof probarLlaveIaEmpresa>>, ProbarLlaveIaEmpresaMutationVariables> = (props) => {
+          const {tenantId,empresaId,data} = props ?? {};
+
+          return  probarLlaveIaEmpresa(tenantId,empresaId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProbarLlaveIaEmpresaMutationResult = NonNullable<Awaited<ReturnType<typeof probarLlaveIaEmpresa>>>
+    export type ProbarLlaveIaEmpresaMutationBody = BodyType<ProbarLlaveIaDto>
+    export type ProbarLlaveIaEmpresaMutationError = ErrorType<void>
+    export type ProbarLlaveIaEmpresaMutationVariables = {tenantId: string;empresaId: string;data: BodyType<ProbarLlaveIaDto>}
+
+    export const useProbarLlaveIaEmpresa = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof probarLlaveIaEmpresa>>, TError,ProbarLlaveIaEmpresaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof probarLlaveIaEmpresa>>,
+        TError,
+        ProbarLlaveIaEmpresaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getProbarLlaveIaEmpresaMutationOptions(options), queryClient);
     }

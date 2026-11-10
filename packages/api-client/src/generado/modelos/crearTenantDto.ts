@@ -4,6 +4,9 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AdministradorInicialDto } from './administradorInicialDto';
+import type { CrearEmpresaDto } from './crearEmpresaDto';
+import type { CrearSistemaIntegradoDto } from './crearSistemaIntegradoDto';
 
 export interface CrearTenantDto {
   slug: string;
@@ -12,4 +15,7 @@ export interface CrearTenantDto {
   region: string | null;
   /** @nullable */
   zonaHoraria: string | null;
+  empresa?: null | CrearEmpresaDto;
+  administrador?: null | AdministradorInicialDto;
+  sistema?: null | CrearSistemaIntegradoDto;
 }

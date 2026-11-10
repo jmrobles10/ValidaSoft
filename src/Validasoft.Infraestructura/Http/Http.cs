@@ -116,7 +116,11 @@ public sealed class RegistroIdempotencia
 /// </summary>
 public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
 {
-    [GeneratedRegex("^/api/v1/webhooks(/[^/]+/rotar-secreto)?$", RegexOptions.IgnoreCase)]
+    /// <summary>
+    /// Respuestas con un secreto que no se guardan en el registro: el secreto de un webhook (NW-4), las API keys del alta de
+    /// un grupo y la sesión de un operador de Plataforma (PT-5, PT-4). Repetir el alta responde 409 <c>slug-duplicado</c>.
+    /// </summary>
+    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|plataforma/tenants|plataforma/sesiones)$", RegexOptions.IgnoreCase)]
     private static partial Regex RutaConSecreto();
 
     public const string Cabecera = "Idempotency-Key";
@@ -134,8 +138,8 @@ public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
         var clave = http.Request.Headers[Cabecera].ToString();
         var esPost = HttpMethods.IsPost(http.Request.Method) && ruta.StartsWith("/api/v1/", StringComparison.OrdinalIgnoreCase);
 
-        // Las respuestas que muestran un secreto de webhook (crear y rotar) no se guardan: el registro de idempotencia lo
-        // dejaría en claro 24 h (NW-4). Esas rutas no repiten respuesta; un POST repetido crea otra suscripción.
+        // Las respuestas que muestran un secreto (webhook, llaves del alta de un grupo, sesión de Plataforma) no se guardan: el
+        // registro de idempotencia lo dejaría en claro 24 h (NW-4, PT-5). Esas rutas no repiten respuesta.
         if (!esPost || http.User.Identity?.IsAuthenticated != true || RutaConSecreto().IsMatch(ruta))
         {
             await siguiente(http);

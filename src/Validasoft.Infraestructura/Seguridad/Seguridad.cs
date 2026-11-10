@@ -92,6 +92,9 @@ public static class Reclamos
 
     /// <summary>Identificador del actor en los tokens de sesión (usuario de Validasoft).</summary>
     public const string Sujeto = "sub";
+
+    /// <summary>Nombre visible del operador en la sesión de Plataforma (PT-4).</summary>
+    public const string Nombre = "name";
 }
 
 /// <summary>
@@ -189,7 +192,7 @@ public sealed class AutenticacionPorApiKey(
             var soporte = Request.Headers[CabeceraAccesoSoporte].ToString();
             if (string.IsNullOrWhiteSpace(soporte))
                 return Exito([new(Reclamos.Scope, Permisos.PlataformaTenants), new(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
-                    new(ClaimTypes.NameIdentifier, "plataforma-bootstrap")]);
+                    new(ClaimTypes.NameIdentifier, Aplicacion.Plataforma.ActoresDePlataforma.Bootstrap)]);
             return await ConAccesoDeSoporteAsync(soporte.Trim());
         }
 

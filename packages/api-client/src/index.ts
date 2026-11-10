@@ -26,6 +26,8 @@ export * from './generado/endpoints/quien-soy/quien-soy';
 export * from './generado/endpoints/sesiones-usuario/sesiones-usuario';
 export * from './generado/endpoints/sistemas/sistemas';
 export * from './generado/endpoints/tenants/tenants';
+export * from './generado/endpoints/operadores-de-plataforma/operadores-de-plataforma';
+export * from './generado/endpoints/secretos/secretos';
 export * from './generado/endpoints/accesos-soporte/accesos-soporte';
 export * from './generado/endpoints/revalidaciones/revalidaciones';
 export * from './generado/endpoints/recalculo-de-fichas/recalculo-de-fichas';

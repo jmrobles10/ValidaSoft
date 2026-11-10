@@ -109,6 +109,10 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Usuario>().DatabaseSchemaName("identidad").MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_usuario_correo", TenancyScope.PerTenant, x => x.Correo);
                 opts.Schema.For<IndiceIdentidadExterna>().DatabaseSchemaName("identidad").MultiTenanted();
+                // Consola de Plataforma (PT-4): sistemas del backoffice que firman las aserciones de sus operadores, y los
+                // operadores registrados en su primer acceso. Globales (no pertenecen a ningún tenant).
+                opts.Schema.For<SistemaDePlataforma>().DatabaseSchemaName("identidad");
+                opts.Schema.For<OperadorDePlataforma>().DatabaseSchemaName("identidad");
                 // Enlaces de acceso del tercero: globales (el tercero no pertenece a un tenant). Concurrencia optimista para
                 // que dos intentos de OTP simultáneos no pierdan la cuenta de fallos.
                 opts.Schema.For<EnlaceDeAcceso>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)

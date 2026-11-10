@@ -10,7 +10,8 @@ using Wolverine.Http;
 namespace Validasoft.Aplicacion.Identidad;
 
 /// <summary>
-/// Unión de los orígenes de los sistemas integrados <b>activos</b> de todos los tenants (SE-1, SE-2): la usan la
+/// Unión de los orígenes de los sistemas integrados <b>activos</b> de todos los tenants y de los sistemas de Plataforma
+/// (SE-1, SE-2, PT-4): la usan la
 /// cabecera <c>frame-ancestors</c> de las pantallas embebibles y el endpoint público con el que la app embebida decide a
 /// qué contenedor responder por <c>postMessage</c>. Se guarda en memoria <see cref="Vigencia"/>; editar orígenes,
 /// crear o desactivar un sistema la invalida en este nodo (los demás nodos la ven al vencer la caché).
@@ -31,7 +32,13 @@ public sealed class OrigenesDeEmbebido(IDocumentStore store, IMemoryCache cache,
 
         await using var consulta = store.QuerySession();
         var sistemas = await consulta.Query<SistemaIntegrado>().Where(s => s.AnyTenant() && s.Activo).ToListAsync(ct);
-        origenes = [.. sistemas.SelectMany(s => s.OrigenesPermitidos).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+        // Los sistemas de Plataforma también alojan la app (la consola, PT-4).
+        var dePlataforma = await consulta.Query<SistemaDePlataforma>().Where(s => s.Activo).ToListAsync(ct);
+        origenes =
+        [
+            .. sistemas.SelectMany(s => s.OrigenesPermitidos).Concat(dePlataforma.SelectMany(s => s.OrigenesPermitidos))
+                .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+        ];
         cache.Set(ClaveCache, origenes, Vigencia);
         return origenes;
     }
