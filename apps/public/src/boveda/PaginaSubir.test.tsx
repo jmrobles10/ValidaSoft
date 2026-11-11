@@ -1,6 +1,6 @@
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configurarCliente, reiniciarCliente, type ExpedientePublicoDto, type TipoDocumentoRequisitoDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
@@ -76,7 +76,9 @@ describe('subir lo que pide un requisito', () => {
     expect(elegir).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Para subir el archivo, llena: Fecha de expedición.');
 
-    await usuario.type(screen.getByLabelText(/Fecha de expedición/), '2026-10-01');
+    // La fecha se escribe en el selector por secciones (dd/mm/aaaa), no en un input de fecha del navegador.
+    await usuario.click(within(screen.getByRole('group', { name: /Fecha de expedición/ })).getByRole('spinbutton', { name: 'Día' }));
+    await usuario.keyboard('01102026');
     expect(elegir).toBeEnabled();
   });
 

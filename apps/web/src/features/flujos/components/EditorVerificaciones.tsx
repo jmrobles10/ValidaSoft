@@ -1,4 +1,5 @@
-import { Box, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Box, FormControlLabel, Stack, Switch, Typography } from '@mui/material';
+import { CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { TIPOS_VERIFICACION, verificacionNueva, type ErrorFlujo, type VerificacionEnEditor } from '../editor';
 
@@ -66,29 +67,23 @@ export function EditorVerificaciones({ verificaciones, onCambiar, errores, soloL
                   sx={{ mx: 0, mt: 0.5 }}
                 />
                 {tipo === 'EstudioDeCumplimiento' ? (
-                  <TextField
-                    label={t('flujos.editor.verificaciones.vigenciaDias')}
-                    type="number"
-                    size="small"
-                    value={v.vigenciaDias ?? ''}
-                    onChange={(e) => cambiar(tipo, { vigenciaDias: numero(e.target.value) })}
-                    disabled={soloLectura}
+                  <CampoNumero
+                    etiqueta={t('flujos.editor.verificaciones.vigenciaDias')}
+                    valor={v.vigenciaDias}
+                    onCambiar={(texto) => cambiar(tipo, { vigenciaDias: numero(texto) })}
+                    deshabilitado={soloLectura}
                     error={Boolean(eVigencia)}
-                    helperText={eVigencia ? t(`flujos.editor.errores.${eVigencia.codigo}`) : t('flujos.editor.verificaciones.vigenciaAyuda')}
-                    slotProps={{ htmlInput: { min: 1, max: 3650 } }}
+                    ayuda={eVigencia ? t(`flujos.editor.errores.${eVigencia.codigo}`) : t('flujos.editor.verificaciones.vigenciaAyuda')}
                     sx={{ width: 200 }}
                   />
                 ) : (
-                  <TextField
-                    label={t('flujos.editor.verificaciones.reconsultaMeses')}
-                    type="number"
-                    size="small"
-                    value={v.frecuenciaReconsultaMeses ?? ''}
-                    onChange={(e) => cambiar(tipo, { frecuenciaReconsultaMeses: numero(e.target.value) })}
-                    disabled={soloLectura}
+                  <CampoNumero
+                    etiqueta={t('flujos.editor.verificaciones.reconsultaMeses')}
+                    valor={v.frecuenciaReconsultaMeses}
+                    onCambiar={(texto) => cambiar(tipo, { frecuenciaReconsultaMeses: numero(texto) })}
+                    deshabilitado={soloLectura}
                     error={Boolean(eReconsulta)}
-                    helperText={eReconsulta ? t(`flujos.editor.errores.${eReconsulta.codigo}`) : t('flujos.editor.verificaciones.reconsultaAyuda')}
-                    slotProps={{ htmlInput: { min: 1, max: 60 } }}
+                    ayuda={eReconsulta ? t(`flujos.editor.errores.${eReconsulta.codigo}`) : t('flujos.editor.verificaciones.reconsultaAyuda')}
                     sx={{ width: 220 }}
                   />
                 )}

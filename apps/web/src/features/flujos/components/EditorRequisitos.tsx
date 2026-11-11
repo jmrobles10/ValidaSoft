@@ -1,13 +1,13 @@
 import { Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import type { AreaDto, TipoDocumentoTenantDto } from '@validasoft/api-client';
-import { AlineadoConCampo } from '@validasoft/ui';
+import { AlineadoConCampo, CampoNumero } from '@validasoft/ui';
 import { ClipboardList, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { fichaEmpresa } from '../../../i18n/es-CO-ficha-empresa';
 import { resumenTipo } from '../../configuracion/tiposDocumento/resumen';
 import { nombreSeccion, seccionFicha } from '../../terceros/ficha/secciones';
 import { atajoDe, condicionDe, describirCondicion, type AtajoCondicion } from '../condiciones';
-import { MAXIMO_APROBADORES, requisitoDeSeccionNuevo, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
+import { requisitoDeSeccionNuevo, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
 import { seccionesQueRespalda } from '../requisitosDeSeccion';
 import { OpcionesSeccion, SelectorSeccion } from './CamposRequisitoSeccion';
 import { SelectorAreasRequisito } from './SelectorAreasRequisito';
@@ -117,15 +117,12 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 ))}
                 {atajoDe(r.condicion) === 'personalizada' && <MenuItem value="personalizada">{t('flujos.editor.requisitos.atajos.personalizada')}</MenuItem>}
               </TextField>
-              <TextField
-                size="small"
-                type="number"
-                label={t('flujos.editor.requisitos.aprobadores')}
-                value={r.aprobadoresRequeridos ?? ''}
+              <CampoNumero
+                etiqueta={t('flujos.editor.requisitos.aprobadores')}
+                valor={r.aprobadoresRequeridos}
                 placeholder={t('flujos.editor.requisitos.losDelArea')}
-                onChange={(ev) => cambiar(k, { aprobadoresRequeridos: ev.target.value === '' ? null : Number(ev.target.value) })}
-                slotProps={{ htmlInput: { min: 1, max: MAXIMO_APROBADORES } }}
-                disabled={soloLectura}
+                onCambiar={(texto) => cambiar(k, { aprobadoresRequeridos: texto === '' ? null : Number(texto) })}
+                deshabilitado={soloLectura}
               />
               <AlineadoConCampo desde="sm">
                 <FormControlLabel

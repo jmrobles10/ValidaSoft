@@ -1,6 +1,6 @@
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
 import type { ApiKeyDto, EmpresaDto, SistemaIntegradoDto } from '@validasoft/api-client';
-import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
+import { CampoFecha, FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
@@ -57,14 +57,12 @@ export function DialogoApiKey({ claveIdempotencia, empresas, sistemas, onCerrar,
             <SelectorPermisos valor={b.scopes} onCambiar={(scopes) => cambiar({ scopes })} />
             <SelectorAlcance valor={b.empresas} empresas={empresas} onCambiar={(seleccion) => cambiar({ empresas: seleccion })} />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <TextField
-                type="date"
-                label={t('apiKeys.campos.expira')}
-                value={b.expira}
-                onChange={(e) => cambiar({ expira: e.target.value })}
+              <CampoFecha
+                etiqueta={t('apiKeys.campos.expira')}
+                valor={b.expira}
+                onCambiar={(iso) => cambiar({ expira: iso })}
                 error={errorExpira}
-                helperText={errorExpira ? t('apiKeys.errores.expiracion-invalida') : t('apiKeys.campos.expiraAyuda')}
-                slotProps={{ inputLabel: { shrink: true } }}
+                ayuda={errorExpira ? t('apiKeys.errores.expiracion-invalida') : t('apiKeys.campos.expiraAyuda')}
                 sx={{ flex: 1, minWidth: 0 }}
               />
               {sistemas && (

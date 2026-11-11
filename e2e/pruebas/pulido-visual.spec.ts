@@ -5,11 +5,12 @@ import { join } from 'node:path';
 import { CLAVE_PLATAFORMA, llamar } from '../soporte/api';
 import { pdf } from '../soporte/archivos';
 import { abrirConsolaDePlataforma } from '../soporte/plataforma';
-import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../soporte/proveedor';
-import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../soporte/semilla';
+import { escribirFecha } from '../soporte/fechas';
+import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento, tarjeta } from '../soporte/proveedor';
+import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, SST } from '../soporte/semilla';
 
 /**
- * Pulido visual de toda la aplicación (UI-1…UI-6, docs/06 §2.4): cargando = skeleton (nunca texto «Cargando…» ni un spinner de
+ * Pulido visual de toda la aplicación (UI-1…UI-9, docs/06 §2.4): cargando = skeleton (nunca texto «Cargando…» ni un spinner de
  * página), botones compactos, el campo de autocompletar con su ícono dentro y en español, nada de contenedores cuadrados y la
  * consola sin layouts volcados a la izquierda. Además de comprobarlo, deja las capturas que se revisan a ojo en
  * `E2E_CAPTURAS` (por omisión `test-results/pulido`).
@@ -107,6 +108,14 @@ test('el wizard, Mi información y los campos del tercero: avisos agrupados, bot
   await page.screenshot({ path: captura('mi-informacion'), fullPage: true });
   const filasDeAviso = await aviso.getByRole('link', { name: /^Actualizar desde mi/ }).count();
   expect(filasDeAviso).toBe(2);
+  // Cada documento es un bloque con su borde, separado del siguiente, y el subtítulo del aviso es una línea corta.
+  const bloques = aviso.locator('li').filter({ has: page.getByRole('link', { name: /^Actualizar desde mi/ }) });
+  await expect(bloques).toHaveCount(2);
+  const primero = (await bloques.nth(0).boundingBox())!;
+  const segundo = (await bloques.nth(1).boundingBox())!;
+  expect(segundo.y).toBeGreaterThanOrEqual(primero.y + primero.height + 4);
+  expect(await bloques.nth(0).evaluate((n) => getComputedStyle(n).borderTopWidth)).toBe('1px');
+  await expect(aviso.getByText('Revisa los cambios y decide cuáles usar.')).toBeVisible();
   expect(await botonesMasAltosQue(page, 40)).toEqual([]);
 
   // Wizard, General: dos avisos casi iguales (RUT y Cámara) agrupados en uno, con una línea por documento.
@@ -211,4 +220,83 @@ test('el alta de un grupo y los secretos de la consola también usan todo el anc
   const tabla = (await consola.getByRole('table', { name: 'Secretos en reposo' }).boundingBox())!;
   expect(tabla.width).toBeGreaterThan(1500);
   await page.screenshot({ path: captura('consola-secretos') });
+});
+
+/** Controles nativos del navegador que no debe haber en ninguna pantalla (UI-7). */
+const NATIVOS = 'input[type="date"], input[type="time"], input[type="month"], input[type="datetime-local"], input[type="number"], select';
+
+test('Información financiera: sin controles nativos, año y fecha de corte en la misma fila y calendario en español con el estilo de la app', async ({ page }) => {
+  test.setTimeout(240_000);
+  const e = await crearEscenario();
+  await publicarFlujoConFicha(e, e.sur, 'CLIENTES_FECHA', e.sur.areas.revision!, [{ seccion: 'FICHA_FINANCIERA' }]);
+  const invitacion = await invitar(e, e.sur, nuevoTercero('Tornillos Fecha S.A.S.'), 'CLIENTE');
+  await entrarPorInvitacion(page, invitacion);
+  await aceptarInvitacion(page, invitacion);
+  await page.goto('/ficha/financiera');
+  await expect(page.getByRole('heading', { level: 1, name: /Información financiera/ })).toBeVisible();
+  const barra = page.getByRole('group', { name: 'Guardar la sección' });
+
+  // Año y fecha de corte son campos cortos: comparten fila (cada uno de media columna), no ocupan todo el ancho.
+  const anio = (await page.getByRole('combobox', { name: /^Año \(periodo\)/ }).boundingBox())!;
+  const fecha = page.getByRole('group', { name: 'Fecha de corte' });
+  const caja = (await fecha.boundingBox())!;
+  expect(Math.abs(anio.y + anio.height / 2 - (caja.y + caja.height / 2))).toBeLessThanOrEqual(3);
+  expect(caja.x).toBeGreaterThan(anio.x + anio.width - 1);
+  const formulario = (await page.getByRole('form', { name: /Información financiera/ }).boundingBox())!;
+  expect(caja.width).toBeLessThan(formulario.width * 0.6);
+  expect(anio.width).toBeLessThan(formulario.width * 0.6);
+
+  // Escribir con el teclado: dd/mm/aaaa en español, con el formato visible desde antes de enfocar.
+  await expect(fecha.getByRole('spinbutton', { name: 'Día' })).toHaveText('dd');
+  await escribirFecha(page, 'Fecha de corte', '2025-12-31');
+  expect(await page.locator(NATIVOS).count()).toBe(0);
+
+  // Calendario: tarjeta con el estilo de los menús, mes en español y lunes primero.
+  await fecha.getByRole('button', { name: /^Elegir fecha/ }).click();
+  const calendario = page.getByRole('dialog');
+  await expect(calendario.getByText(/diciembre 2025/i)).toBeVisible();
+  await expect(calendario.getByRole('button', { name: 'Hoy' })).toBeVisible();
+  await expect(page.locator('.MuiPickerPopper-paper')).toHaveCSS('border-top-left-radius', '12px');
+  // La captura se toma con la tarjeta ya completamente opaca (termina su animación de entrada).
+  await expect(page.locator('.MuiPickerPopper-paper')).toHaveCSS('opacity', '1');
+  const zona = (await page.getByRole('form', { name: /Información financiera/ }).boundingBox())!;
+  await page.screenshot({ path: captura('financiera-calendario'), clip: { x: Math.max(0, zona.x - 16), y: Math.max(0, caja.y - 56), width: zona.width + 32, height: 520 } });
+
+  // Elegir un día en el calendario pasa la fecha al campo; lo que se guarda viaja como aaaa-mm-dd.
+  await calendario.getByRole('gridcell', { name: '15', exact: true }).click();
+  await expect(fecha.getByRole('spinbutton', { name: 'Día' })).toHaveText('15');
+  await expect(fecha.getByRole('spinbutton', { name: 'Mes' })).toHaveText('12');
+  const guardado = page.waitForRequest((r) => r.method() !== 'GET' && (r.postData() ?? '').includes('fecha_corte'));
+  await barra.getByRole('button', { name: 'Guardar', exact: true }).click();
+  expect((await guardado).postData()).toContain('2025-12-15');
+  await expect(page.getByText(/^Guardaste Información financiera/)).toBeVisible();
+
+  // Al volver, la fecha guardada se muestra como dd/mm/aaaa.
+  await page.reload();
+  await expect(page.getByRole('group', { name: 'Fecha de corte' }).getByRole('spinbutton', { name: 'Día' })).toHaveText('15');
+  await page.screenshot({ path: captura('financiera-fila-anio-fecha'), fullPage: true });
+});
+
+test('el formulario de un documento con fecha usa el mismo selector (sin <input type="date">) y valida la expedición futura', async ({ page }) => {
+  test.setTimeout(180_000);
+  const e = await crearEscenario();
+  const invitacion = await invitar(e, e.sur, nuevoTercero('Pernos Fecha S.A.S.'));
+  await entrarPorInvitacion(page, invitacion);
+  await aceptarInvitacion(page, invitacion);
+  await tarjeta(page, SST.nombre).getByRole('link', { name: /^Subir/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: `Subir ${SST.nombre}` })).toBeVisible();
+  const fecha = page.getByRole('group', { name: /^Fecha de expedición/ });
+  await expect(fecha).toBeVisible();
+  expect(await page.locator(NATIVOS).count()).toBe(0);
+
+  // Una fecha futura no se admite; el aviso va en el campo y el botón de elegir archivo sigue deshabilitado.
+  const manana = new Date(Date.now() + 3 * 86_400_000);
+  await escribirFecha(page, /^Fecha de expedición/, new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(manana));
+  await expect(page.getByRole('button', { name: 'Elegir archivo' })).toBeDisabled();
+  await fecha.getByRole('button', { name: /^Elegir fecha/ }).click();
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Hoy' })).toBeVisible();
+  await expect(page.locator('.MuiPickerPopper-paper')).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: captura('documento-con-fecha'), fullPage: true });
+  await page.getByRole('dialog').getByRole('button', { name: 'Hoy' }).click();
+  await expect(page.getByRole('button', { name: 'Elegir archivo' })).toBeEnabled();
 });

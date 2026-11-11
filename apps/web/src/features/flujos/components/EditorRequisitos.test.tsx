@@ -81,10 +81,10 @@ describe('EditorRequisitos: secciones de la información del tercero (F2)', () =
     const fila = within(screen.getByRole('region', { name: 'Información financiera' }));
     expect(fila.getByRole('combobox', { name: 'Sección de la información del tercero' })).toHaveTextContent('Información financiera');
     expect(fila.queryByRole('combobox', { name: 'Tipo de documento' })).not.toBeInTheDocument();
-    expect(fila.getByRole('spinbutton', { name: 'Periodos' })).toHaveValue(2);
+    expect(fila.getByRole('textbox', { name: 'Periodos' })).toHaveValue('2');
     expect(fila.getByText('Legal y Financiera no aplican a persona natural: a ella no se le piden.')).toBeInTheDocument();
 
-    fireEvent.change(fila.getByRole('spinbutton', { name: 'Periodos' }), { target: { value: '3' } });
+    fireEvent.change(fila.getByRole('textbox', { name: 'Periodos' }), { target: { value: '3' } });
     expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ seccion: 'FICHA_FINANCIERA', periodos: 3 })]);
     fireEvent.click(fila.getByRole('checkbox', { name: 'Exige soporte' }));
     expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ exigeSoporte: true })]);
@@ -112,7 +112,7 @@ describe('EditorRequisitos: secciones de la información del tercero (F2)', () =
     );
     const [primera, segunda] = screen.getAllByRole('region', { name: 'Información financiera' });
     if (!primera || !segunda) throw new Error('faltan las filas');
-    expect(within(primera).getByRole('spinbutton', { name: 'Periodos' })).toHaveAccessibleDescription('Entre 1 y 5 periodos.');
+    expect(within(primera).getByRole('textbox', { name: 'Periodos' })).toHaveAccessibleDescription('Entre 1 y 5 periodos.');
     expect(within(primera).queryByText('Esa sección ya está en la lista.')).not.toBeInTheDocument();
     expect(within(segunda).getByText('Esa sección ya está en la lista.')).toBeInTheDocument();
   });

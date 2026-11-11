@@ -1,6 +1,7 @@
 /* Validasoft: tema MUI v6 (dirección Registro). createValidasoftTheme(modo, { app, colorEmpresa }). */
 import { createTheme, type Theme } from '@mui/material';
 import { esES } from '@mui/material/locale';
+import type {} from '@mui/x-date-pickers/themeAugmentation';
 import { createElement, type CSSProperties } from 'react';
 import { BORDE, COLOR, DENSIDAD, FUENTE, MOVIMIENTO, RADIO, SOMBRA, TIPOGRAFIA, type Modo, type TokenColor } from './tokens';
 import type { TonoEstado } from './estados';
@@ -265,6 +266,43 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
           },
         },
       },
+      // Sin los adornos del navegador (UI-7): ni la «x» de limpiar del `type="search"` ni el ojo de Edge en las claves.
+      MuiInputBase: {
+        styleOverrides: {
+          input: {
+            '&[type="search"]::-webkit-search-cancel-button, &[type="search"]::-webkit-search-decoration': { display: 'none', WebkitAppearance: 'none' },
+            '&::-ms-reveal, &::-ms-clear': { display: 'none' },
+          },
+        },
+      },
+      // Selector de fecha (UI-7, `CampoFecha`): mismo alto (32 en web, 44 en el celular del tercero y 36 en escritorio), borde,
+      // radio y etiqueta fija encima que los `TextField`. El calendario va en una tarjeta con el estilo de los menús.
+      MuiPickersOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: radioControl, backgroundColor: c.superficieNivel1, padding: web ? '0 4px 0 10px' : '0 6px 0 14px',
+            '& .MuiPickersOutlinedInput-notchedOutline': { top: 0, borderColor: c.bordeControl, '& legend': { display: 'none' } },
+            '&:hover .MuiPickersOutlinedInput-notchedOutline': { borderColor: c.textoSecundario },
+            '&.Mui-focused .MuiPickersOutlinedInput-notchedOutline': { borderColor: c.foco, borderWidth: BORDE.anilloFoco },
+            '&.Mui-error .MuiPickersOutlinedInput-notchedOutline': { borderColor: c.accionDestructiva },
+            '&.Mui-disabled': { backgroundColor: c.superficieNivel2 },
+            '&.Mui-disabled .MuiPickersOutlinedInput-notchedOutline': { borderColor: c.bordeControl },
+          },
+          sectionsContainer: {
+            '&&': {
+              padding: web ? '6px 0' : '10px 0',
+              lineHeight: web ? '20px' : '24px',
+              ...(web ? {} : { [ESCRITORIO]: { padding: '8px 0', fontSize: 14, lineHeight: '20px' } }),
+            },
+          },
+        },
+      },
+      MuiPickerPopper: {
+        styleOverrides: {
+          paper: { backgroundColor: c.superficieElevada, backgroundImage: 'none', border: `1px solid ${c.bordeSutil}`, boxShadow: s.menu, borderRadius: radioMarco, marginTop: 4 },
+        },
+      },
+      MuiPickersCalendarHeader: { styleOverrides: { label: { ...TIPOGRAFIA.titulo4, textTransform: 'capitalize' } } },
       MuiFormHelperText: {
         styleOverrides: {
           root: { margin: '4px 0 0', fontSize: web ? 12 : 14, lineHeight: web ? '16px' : '20px', color: c.textoSecundario, '&.Mui-error': { color: c.estadoErrorTexto } },

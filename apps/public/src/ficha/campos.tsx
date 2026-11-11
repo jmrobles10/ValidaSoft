@@ -1,4 +1,5 @@
 import { Box, FormControl, FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup, TextField, Typography } from '@mui/material';
+import { CampoFecha } from '@validasoft/ui';
 import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { escribirCifra, leerCifra } from './cifras';
@@ -12,7 +13,7 @@ interface PropsCampoTexto {
   onCambiar: (valor: string | null) => void;
   mensaje?: string | null;
   ayuda?: string;
-  tipo?: 'text' | 'email' | 'tel' | 'url' | 'date';
+  tipo?: 'text' | 'email' | 'tel' | 'url';
   inputMode?: 'text' | 'numeric' | 'email' | 'tel' | 'url';
   autoComplete?: string;
   maxLength?: number;
@@ -31,8 +32,25 @@ export function CampoTexto({ etiqueta, valor, onCambiar, mensaje, ayuda, tipo = 
       helperText={mensaje ?? ayuda}
       disabled={deshabilitado}
       fullWidth
-      slotProps={{ htmlInput: { inputMode, autoComplete, maxLength }, inputLabel: tipo === 'date' ? { shrink: true } : undefined }}
+      slotProps={{ htmlInput: { inputMode, autoComplete, maxLength } }}
     />
+  );
+}
+
+interface PropsCampoFechaFicha {
+  etiqueta: string;
+  /** Fecha ISO `aaaa-mm-dd`. */
+  valor: string | null | undefined;
+  onCambiar: (valor: string | null) => void;
+  mensaje?: string | null;
+  ayuda?: string;
+  deshabilitado?: boolean;
+}
+
+/** Fecha con el selector de la aplicación (`dd/mm/aaaa` y calendario); sin fecha es `null`, como en `CampoTexto`. */
+export function CampoFechaFicha({ etiqueta, valor, onCambiar, mensaje, ayuda, deshabilitado = false }: PropsCampoFechaFicha) {
+  return (
+    <CampoFecha etiqueta={etiqueta} valor={valor} onCambiar={(iso) => onCambiar(iso === '' ? null : iso)} error={Boolean(mensaje)} ayuda={mensaje ?? ayuda} deshabilitado={deshabilitado} fullWidth />
   );
 }
 

@@ -92,7 +92,7 @@ export function DialogoEmpresa({ claveIdempotencia, onCerrar, onCreada }: { clav
               error={errorNumero !== null}
               helperText={errorNumero ?? (tipo?.tieneDv ? t('empresasGrupo.campos.numeroAyudaDv') : undefined)}
               slotProps={{ htmlInput: { spellCheck: false, autoComplete: 'off' } }}
-              sx={{ '& input': { fontFamily: (th) => th.typography.mono.fontFamily } }}
+              sx={{ maxWidth: 280, '& input': { fontFamily: (th) => th.typography.mono.fontFamily } }}
             />
             <TextField
               required

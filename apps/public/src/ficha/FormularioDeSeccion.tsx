@@ -1,4 +1,5 @@
 import type { EstadoFichaDto } from '@validasoft/api-client';
+import type { ReactNode } from 'react';
 import { FormularioEspecialidades } from './especialidades/FormularioEspecialidades';
 import { FormularioFinanciera } from './formularios/FormularioFinanciera';
 import { FormularioGeneral } from './formularios/FormularioGeneral';
@@ -9,7 +10,7 @@ import type { CodigoSeccion } from './secciones';
 import type { EditorSeccion } from './useEditorSeccion';
 
 /** El formulario de cada sección sobre el mismo editor (datos en snake_case, mensajes del servidor por ruta). */
-export function FormularioDeSeccion({ codigo, estado, editor }: { codigo: CodigoSeccion; estado: EstadoFichaDto; editor: EditorSeccion }) {
+export function FormularioDeSeccion({ codigo, estado, editor, selectorPeriodo }: { codigo: CodigoSeccion; estado: EstadoFichaDto; editor: EditorSeccion; selectorPeriodo?: ReactNode }) {
   const comun = { onCambiar: editor.cambiar, mensaje: editor.mensaje, deshabilitado: editor.guardando };
   switch (codigo) {
     case 'FICHA_GENERAL':
@@ -19,7 +20,7 @@ export function FormularioDeSeccion({ codigo, estado, editor }: { codigo: Codigo
     case 'FICHA_LEGAL':
       return <FormularioLegal {...comun} datos={editor.datos} />;
     case 'FICHA_FINANCIERA':
-      return <FormularioFinanciera {...comun} datos={editor.datos} />;
+      return <FormularioFinanciera {...comun} datos={editor.datos} selectorPeriodo={selectorPeriodo} />;
     case 'FICHA_SST':
       return <FormularioSst {...comun} datos={editor.datos} />;
     case 'FICHA_ESPECIALIDADES':

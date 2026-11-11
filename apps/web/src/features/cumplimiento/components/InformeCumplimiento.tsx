@@ -1,5 +1,5 @@
-import { Box, Button, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { Dato, EstadoVacio, formatearFecha, RejillaDatos } from '@validasoft/ui';
+import { Box, Button, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { CampoFecha, Dato, EstadoVacio, formatearFecha, RejillaDatos } from '@validasoft/ui';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,8 +39,8 @@ export function InformeCumplimiento({ empresaId }: { empresaId: string }) {
   return (
     <Stack spacing={2}>
       <Stack direction="row" spacing={1.5} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-        <TextField type="date" size="small" label={t('cumplimiento.informe.desde')} value={desde} onChange={(e) => setDesde(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField type="date" size="small" label={t('cumplimiento.informe.hasta')} value={hasta} onChange={(e) => setHasta(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <CampoFecha etiqueta={t('cumplimiento.informe.desde')} valor={desde} onCambiar={setDesde} />
+        <CampoFecha etiqueta={t('cumplimiento.informe.hasta')} valor={hasta} onCambiar={setHasta} />
         <Box sx={{ flex: 1 }} />
         <Button variant="outlined" startIcon={excel.isPending ? <IconoCarga /> : <Download size={16} aria-hidden />} onClick={exportar} disabled={excel.isPending}>
           {excel.isPending ? t('cumplimiento.informe.exportando') : t('cumplimiento.informe.exportar')}

@@ -1,6 +1,7 @@
 import { Checkbox, FormControl, FormControlLabel, FormGroup, FormHelperText, FormLabel, Paper, Stack, Typography } from '@mui/material';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CampoCifra, CampoSiNo, CampoTexto, Rejilla } from '../campos';
+import { CampoCifra, CampoFechaFicha, CampoSiNo, Rejilla } from '../campos';
 import { cuadre, formatearPesos } from '../cifras';
 import { PAISES } from '../paises';
 import { SelectorMultiple } from '../selectores';
@@ -22,10 +23,11 @@ const CIFRAS: readonly { clave: Cifra; etiqueta: EtiquetaCifra }[] = [
 ];
 
 /**
- * Información financiera de un periodo (`FICHA_FINANCIERA`): fecha de corte, las cifras con el cuadre activos = pasivos +
- * patrimonio en vivo (informativo: la completitud la dice el servidor) y las operaciones en moneda extranjera.
+ * Información financiera de un periodo (`FICHA_FINANCIERA`): el año y la fecha de corte en la misma fila (UI-8: son campos
+ * cortos), las cifras con el cuadre activos = pasivos + patrimonio en vivo (informativo: la completitud la dice el
+ * servidor) y las operaciones en moneda extranjera.
  */
-export function FormularioFinanciera({ datos, onCambiar, mensaje, deshabilitado }: PropsFormulario<DatosFinancieros>) {
+export function FormularioFinanciera({ datos, onCambiar, mensaje, deshabilitado, selectorPeriodo }: PropsFormulario<DatosFinancieros> & { selectorPeriodo?: ReactNode }) {
   const { t } = useTranslation();
   const moneda: MonedaExtranjera = datos.moneda_extranjera ?? {};
   const cambiarMoneda = (cambio: MonedaExtranjera) => onCambiar({ moneda_extranjera: { ...moneda, ...cambio } });
@@ -38,7 +40,10 @@ export function FormularioFinanciera({ datos, onCambiar, mensaje, deshabilitado 
 
   return (
     <Stack spacing={2.5}>
-      <CampoTexto etiqueta={t('ficha.financiera.fechaCorte')} valor={datos.fecha_corte} onCambiar={(v) => onCambiar({ fecha_corte: v })} mensaje={mensaje('fecha_corte')} tipo="date" deshabilitado={deshabilitado} />
+      <Rejilla>
+        {selectorPeriodo}
+        <CampoFechaFicha etiqueta={t('ficha.financiera.fechaCorte')} valor={datos.fecha_corte} onCambiar={(v) => onCambiar({ fecha_corte: v })} mensaje={mensaje('fecha_corte')} deshabilitado={deshabilitado} />
+      </Rejilla>
       <Rejilla>
         {CIFRAS.map(({ clave, etiqueta }) => (
           <CampoCifra

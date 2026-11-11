@@ -1,4 +1,5 @@
 import { Box, FormControlLabel, MenuItem, Radio, RadioGroup, Stack, Switch, TextField, Typography } from '@mui/material';
+import { CampoNumero } from '@validasoft/ui';
 import type { AreaDto, PoliticaDevolucion, TipoDocumentoTenantDto, TipoVinculoDto } from '@validasoft/api-client';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
@@ -123,14 +124,7 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
             </Typography>
             <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 1.5 }}>{t('flujoPlazo.ayuda')}</Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '160px minmax(0,320px)' }, gap: 2 }}>
-              <TextField
-                size="small"
-                type="number"
-                label={t('flujoPlazo.dias')}
-                value={borrador.plazoDias}
-                onChange={(e) => onCambiar({ ...borrador, plazoDias: e.target.value })}
-                slotProps={{ htmlInput: { min: 0, max: 365 } }}
-              />
+              <CampoNumero etiqueta={t('flujoPlazo.dias')} valor={borrador.plazoDias} onCambiar={(texto) => onCambiar({ ...borrador, plazoDias: texto })} />
               <TextField
                 size="small"
                 label={t('flujoPlazo.recordatorios')}

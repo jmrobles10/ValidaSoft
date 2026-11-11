@@ -80,7 +80,8 @@ test('el tercero sube un RUT nuevo, acepta la propuesta en el wizard y la empres
 
   await page.goto('/ficha');
   const aviso = page.getByRole('alert', { name: 'Tienes documentos más nuevos que tu información' });
-  await expect(aviso).toContainText('Tu RUT · versión 2 — 1 dato distinto', { timeout: 45_000 });
+  await expect(aviso).toContainText('Tu RUT · versión 2', { timeout: 45_000 });
+  await expect(aviso.getByText('1 dato distinto')).toBeVisible();
   // Un solo aviso por documento, con la sección que cambia como chip y una acción pequeña.
   await expect(aviso.getByRole('link', { name: /^Actualizar desde mi RUT/ })).toHaveCount(1);
   await aviso.getByRole('link', { name: /^Actualizar desde mi RUT/ }).click();

@@ -43,7 +43,7 @@ export function DialogoConcederAcceso({ empresas, empresaInicial, onCerrar }: { 
               </MenuItem>
             ))}
           </TextField>
-          <TextField select size="small" label={t('accesosSoporte.duracion')} value={borrador.horas} onChange={(e) => setBorrador((b) => ({ ...b, horas: Number(e.target.value) }))}>
+          <TextField select size="small" label={t('accesosSoporte.duracion')} value={borrador.horas} onChange={(e) => setBorrador((b) => ({ ...b, horas: Number(e.target.value) }))} sx={{ maxWidth: 240 }}>
             {DURACIONES.map((h) => (
               <MenuItem key={h} value={h}>
                 {t('accesosSoporte.horas', { count: h })}

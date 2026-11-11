@@ -1,9 +1,9 @@
 import { Box, Button, FormControlLabel, IconButton, MenuItem, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import type { AreaDto } from '@validasoft/api-client';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
-import { AlineadoConCampo } from '@validasoft/ui';
+import { AlineadoConCampo, CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
-import { areaNueva, areasElegibles, MAXIMO_APROBADORES, moverEtapa, nuevaClave, type AreaEnEditor, type ErrorFlujo, type EtapaEnEditor } from '../editor';
+import { areaNueva, areasElegibles, moverEtapa, nuevaClave, type AreaEnEditor, type ErrorFlujo, type EtapaEnEditor } from '../editor';
 
 export interface EditorEtapasProps {
   etapas: EtapaEnEditor[];
@@ -94,23 +94,17 @@ export function EditorEtapas({ etapas, areas, onCambiar, errores, soloLectura }:
                         </MenuItem>
                       ))}
                     </TextField>
-                    <TextField
-                      size="small"
-                      type="number"
-                      label={t('flujos.editor.aprobadores')}
-                      value={area.automatica ? 1 : area.aprobadoresRequeridos}
-                      onChange={(e) => cambiarArea(i, j, { aprobadoresRequeridos: Number(e.target.value) })}
-                      disabled={soloLectura || area.automatica}
-                      slotProps={{ htmlInput: { min: 1, max: MAXIMO_APROBADORES } }}
+                    <CampoNumero
+                      etiqueta={t('flujos.editor.aprobadores')}
+                      valor={area.automatica ? 1 : area.aprobadoresRequeridos}
+                      onCambiar={(texto) => cambiarArea(i, j, { aprobadoresRequeridos: Number(texto) })}
+                      deshabilitado={soloLectura || area.automatica}
                     />
-                    <TextField
-                      size="small"
-                      type="number"
-                      label={t('flujos.editor.sla')}
-                      value={area.slaHoras ?? ''}
-                      onChange={(e) => cambiarArea(i, j, { slaHoras: e.target.value === '' ? null : Number(e.target.value) })}
-                      disabled={soloLectura}
-                      slotProps={{ htmlInput: { min: 1 } }}
+                    <CampoNumero
+                      etiqueta={t('flujos.editor.sla')}
+                      valor={area.slaHoras}
+                      onCambiar={(texto) => cambiarArea(i, j, { slaHoras: texto === '' ? null : Number(texto) })}
+                      deshabilitado={soloLectura}
                     />
                     {/* Switches y «Quitar área» a la altura de los campos (no de sus etiquetas); en pantallas medianas, en una línea aparte. */}
                     <AlineadoConCampo desde="lg" columna={{ xs: '1 / -1', lg: 'auto' }}>

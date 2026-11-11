@@ -1,10 +1,11 @@
-import { Alert, AlertTitle, Box, Button, Collapse, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, AlertTitle, Button, Collapse, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { PropuestaDeSeccionDto, SoporteSeccionDto } from '@validasoft/api-client';
 import { FileSearch } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePropuestasDeSeccion } from './api';
 import { agruparPorDocumento, clavePropuesta, datosDePropuesta, mismoSoporte, soporteDePropuesta, type PropuestasDeDocumento } from './propuestas';
+import { TarjetaDeDocumento } from './TarjetaDeDocumento';
 
 interface Props {
   codigo: string;
@@ -18,7 +19,7 @@ interface Props {
 
 /**
  * «Actualizar desde mi RUT / Cámara…» (F5, FM-14): en la sección, lo que los documentos más nuevos proponen, en **un solo aviso**
- * con una línea por documento (UI-6). El tercero confirma («Usar estos valores» solo llena el formulario) o corrige a mano, y guarda
+ * con un bloque con borde por documento (UI-6, UI-9). El tercero confirma («Usar estos valores» solo llena el formulario) o corrige a mano, y guarda
  * como siempre: la propuesta nunca se guarda sola y el documento queda como soporte de la versión. Sin lectura automática (sin plan
  * de IA, sin cupo o fallida) no hay valores: se dice en pocas palabras y el tercero diligencia con el documento a la vista.
  */
@@ -42,7 +43,7 @@ export function PropuestaDesdeDocumento({ codigo, periodo, soportes, onUsarValor
   return (
     <Alert severity="info" icon={<FileSearch size={20} aria-hidden />} aria-label={t('ficha.propuesta.titulo')} sx={{ '& .MuiAlert-message': { minWidth: 0, flex: 1 } }}>
       <AlertTitle>{t('ficha.propuesta.titulo')}</AlertTitle>
-      <Stack component="ul" spacing={1.25} sx={{ p: 0, m: 0, listStyle: 'none' }}>
+      <Stack component="ul" spacing={1} sx={{ p: 0, m: 0, mt: 0.5, listStyle: 'none' }}>
         {documentos.map((documento) => {
           const propuesta = documento.propuestas[0];
           if (!propuesta) return null;
@@ -84,26 +85,22 @@ interface LineaProps {
   onAhoraNo: () => void;
 }
 
-/** Una línea por documento: qué dice, y a la derecha las acciones pequeñas (los cambios se despliegan debajo, campo por campo). */
+/** Un bloque por documento: qué dice (en chips), la acción pequeña a la derecha y los cambios que se despliegan debajo, campo por campo. */
 function LineaDeDocumento({ documento, propuesta, aplicada, deshabilitado, onUsar, onSoloSoporte, onAhoraNo }: LineaProps) {
   const { t } = useTranslation();
   const [abierta, setAbierta] = useState(false);
   const idTabla = useId();
   const nombre = documento.documento;
   const vacio = t('ficha.propuesta.vacio');
-  const resumen = propuesta.disponible ? t('ficha.propuesta.datosDistintos', { count: propuesta.campos.length }) : t('ficha.propuesta.noLeido');
 
   return (
-    <Box component="li">
-      <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-        <Typography sx={{ flex: '1 1 220px', minWidth: 0, fontSize: 14 }}>
-          <Box component="span" sx={{ fontWeight: 500 }}>
-            {t('ficha.propuesta.linea', { documento: nombre, n: String(documento.version) })}
-          </Box>
-          {' — '}
-          {resumen}
-        </Typography>
-        {aplicada ? null : propuesta.disponible ? (
+    <TarjetaDeDocumento
+      documento={nombre}
+      version={documento.version}
+      datosDistintos={propuesta.disponible ? propuesta.campos.length : 0}
+      noLeido={!propuesta.disponible}
+      acciones={
+        aplicada ? null : propuesta.disponible ? (
           <>
             <Button size="small" variant="text" aria-expanded={abierta} aria-controls={idTabla} aria-label={t('ficha.propuesta.verCambiosAccesible', { documento: nombre })} onClick={() => setAbierta((v) => !v)}>
               {abierta ? t('ficha.propuesta.ocultarCambios') : t('ficha.propuesta.verCambios')}
@@ -124,16 +121,17 @@ function LineaDeDocumento({ documento, propuesta, aplicada, deshabilitado, onUsa
               {t('ficha.propuesta.ahoraNo')}
             </Button>
           </>
-        )}
-      </Stack>
+        )
+      }
+    >
       {aplicada && (
-        <Typography role="status" sx={{ fontSize: 13, color: 'text.secondary', mt: 0.5 }}>
+        <Typography role="status" sx={{ fontSize: 13, color: 'text.secondary' }}>
           {propuesta.disponible ? t('ficha.propuesta.aplicada') : t('ficha.propuesta.soporteAgregado')}
         </Typography>
       )}
       {propuesta.disponible && !aplicada && (
         <Collapse in={abierta} unmountOnExit>
-          <TableContainer id={idTabla} sx={{ mt: 1, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px` }}>
+          <TableContainer id={idTabla} sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.sm)}px` }}>
             <Table size="small" aria-label={t('ficha.propuesta.tabla', { documento: nombre })}>
               <TableHead>
                 <TableRow>
@@ -155,6 +153,6 @@ function LineaDeDocumento({ documento, propuesta, aplicada, deshabilitado, onUsa
           </TableContainer>
         </Collapse>
       )}
-    </Box>
+    </TarjetaDeDocumento>
   );
 }

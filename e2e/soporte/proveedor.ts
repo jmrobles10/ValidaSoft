@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { codigo, enlace, esperarCorreo } from './correo';
+import { escribirFecha, esFechaIso } from './fechas';
 import type { Invitacion } from './semilla';
 
 interface Archivo {
@@ -80,7 +81,11 @@ export interface OpcionesSubida {
 export async function subirDocumento(page: Page, nombre: string, archivo: Archivo, { version = 1, campos = {} }: OpcionesSubida = {}): Promise<void> {
   await tarjeta(page, nombre).getByRole('link', { name: /^Subir/ }).click();
   await expect(page.getByRole('heading', { level: 1, name: `Subir ${nombre}` })).toBeVisible();
-  for (const [etiqueta, valor] of Object.entries(campos)) await page.getByLabel(new RegExp(escapar(etiqueta))).fill(valor);
+  for (const [etiqueta, valor] of Object.entries(campos)) {
+    // Una fecha (`aaaa-mm-dd`) se escribe en el selector de fecha por secciones; lo demás es texto.
+    if (esFechaIso(valor)) await escribirFecha(page, new RegExp(escapar(etiqueta)), valor);
+    else await page.getByLabel(new RegExp(escapar(etiqueta))).fill(valor);
+  }
   const selector = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Elegir archivo' }).click();
   await (await selector).setFiles(archivo);

@@ -46,8 +46,19 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     const aviso = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que tu información' });
     // Dos documentos (RUT y Cámara) aunque haya cuatro propuestas (sección x documento): una acción por documento.
     expect(within(aviso).getAllByRole('link', { name: /^Actualizar desde mi/ })).toHaveLength(2);
-    expect(aviso).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto · no pudimos leerlo');
-    expect(aviso).toHaveTextContent('Tu Cámara de Comercio · versión 2 — 2 datos distintos');
+    // Cada documento es su propio bloque: nombre y versión, y su estado en chips cortos.
+    const bloqueRut = within(aviso).getByText('Tu RUT').closest('li')!;
+    expect(bloqueRut).toHaveTextContent('Tu RUT · versión 2');
+    expect(within(bloqueRut).getByText('1 dato distinto')).toBeInTheDocument();
+    expect(within(bloqueRut).getByText('No pudimos leerlo')).toBeInTheDocument();
+    const bloqueCamara = within(aviso).getByText('Tu Cámara de Comercio').closest('li')!;
+    expect(bloqueCamara).toHaveTextContent('Tu Cámara de Comercio · versión 2');
+    expect(within(bloqueCamara).getByText('2 datos distintos')).toBeInTheDocument();
+    expect(within(bloqueCamara).queryByText('No pudimos leerlo')).not.toBeInTheDocument();
+    expect(within(bloqueRut).queryByText('Tu Cámara de Comercio')).not.toBeInTheDocument();
+    // El subtítulo es una línea corta, y la acción dice solo «Actualizar» (el bloque ya nombra el documento).
+    expect(within(aviso).getByText('Revisa los cambios y decide cuáles usar.')).toBeInTheDocument();
+    expect(within(bloqueRut).getByRole('link', { name: /^Actualizar desde mi RUT/ })).toHaveTextContent(/^Actualizar$/);
     const rut = within(aviso).getByRole('link', { name: 'Actualizar desde mi RUT: Información general, Información tributaria' });
     expect(rut).toHaveAttribute('href', '/ficha/general');
     // Cada sección afectada es un chip que lleva a su formulario.
@@ -73,8 +84,9 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     });
 
     const propuesta = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
-    // Una línea por documento; los cambios campo por campo se despliegan a pedido.
-    expect(propuesta).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto');
+    // Un bloque por documento; los cambios campo por campo se despliegan a pedido.
+    expect(propuesta).toHaveTextContent('Tu RUT · versión 2');
+    expect(within(propuesta).getByText('1 dato distinto')).toBeInTheDocument();
     expect(within(propuesta).queryByRole('table')).not.toBeInTheDocument();
     await usuario.click(within(propuesta).getByRole('button', { name: 'Ver los cambios de mi RUT' }));
     const tabla = within(propuesta).getByRole('table', { name: 'Datos que cambian según tu RUT' });
@@ -132,7 +144,8 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     montarFicha('/ficha/general', { estado: estadoFicha(), secciones: { FICHA_GENERAL: GENERAL }, propuestas: [SIN_LECTURA] });
 
     const aviso = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
-    expect(aviso).toHaveTextContent('Tu RUT · versión 2 — no pudimos leerlo');
+    expect(aviso).toHaveTextContent('Tu RUT · versión 2');
+    expect(within(aviso).getByText('No pudimos leerlo')).toBeInTheDocument();
     expect(aviso).not.toHaveTextContent('automáticamente');
     expect(within(aviso).queryByRole('table')).not.toBeInTheDocument();
     expect(within(aviso).queryByRole('button', { name: /^Usar los valores/ })).not.toBeInTheDocument();
@@ -143,7 +156,7 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     expect(screen.getByText('Tienes cambios sin guardar')).toBeInTheDocument();
   });
 
-  it('en la sección, dos documentos más nuevos (RUT y Cámara) van en un solo aviso con una línea por documento', async () => {
+  it('en la sección, dos documentos más nuevos (RUT y Cámara) van en un solo aviso con un bloque por documento', async () => {
     const usuario = userEvent.setup();
     montarFicha('/ficha/general', {
       estado: estadoFicha(),
@@ -156,8 +169,10 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     const aviso = avisos[0]!;
     const lineas = within(aviso).getAllByRole('listitem');
     expect(lineas).toHaveLength(2);
-    expect(lineas[0]).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto');
-    expect(lineas[1]).toHaveTextContent('Tu Cámara de Comercio · versión 2 — 1 dato distinto');
+    expect(lineas[0]).toHaveTextContent('Tu RUT · versión 2');
+    expect(within(lineas[0]!).getByText('1 dato distinto')).toBeInTheDocument();
+    expect(lineas[1]).toHaveTextContent('Tu Cámara de Comercio · versión 2');
+    expect(within(lineas[1]!).getByText('1 dato distinto')).toBeInTheDocument();
 
     // «Ahora no» descarta solo la línea de ese documento.
     await usuario.click(within(lineas[0]!).getByRole('button', { name: 'Ahora no usar mi RUT' }));
