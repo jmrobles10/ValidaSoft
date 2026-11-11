@@ -247,6 +247,22 @@ public static class ConfiguracionMarten
                     .Index(x => x.Estado)
                     .Index(x => x.N);
 
+                // Habeas data y exportación de la bóveda (OD-1…OD-12): las solicitudes son streams en el tenant técnico «boveda» (snapshot
+                // inline); la llave de datos de cada tercero (crypto-shredding) y las exportaciones son globales, como el propio tercero.
+                opts.Schema.For<Validasoft.Dominio.Habeas.SolicitudHabeas>().DatabaseSchemaName("boveda").MultiTenanted()
+                    .Index(x => x.TerceroId)
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.VenceEl);
+                opts.Schema.For<Validasoft.Dominio.Habeas.LlaveDeDatosDelTercero>().DatabaseSchemaName("boveda");
+                opts.Schema.For<Validasoft.Dominio.Habeas.ExportacionDeBoveda>().DatabaseSchemaName("boveda")
+                    .Index(x => x.TerceroId)
+                    .Index(x => x.ExpiraEn);
+                // Plan y límites por grupo, y las llamadas a la API del mes (OD-14, OD-15): globales (id = tenant).
+                opts.Schema.For<Validasoft.Dominio.Plataforma.PlanDelGrupo>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<Validasoft.Dominio.Plataforma.UsoMensualDelGrupo>().DatabaseSchemaName("plataforma").Index(x => x.TenantId);
+                // Dominio de correo propio de cada empresa (OD-18; id = empresa), en el tenant del grupo.
+                opts.Schema.For<Validasoft.Dominio.Configuracion.DominioDeCorreoEmpresa>().MultiTenanted();
+
                 // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
                 // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
                 opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
@@ -265,6 +281,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Habeas.SolicitudHabeas>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos

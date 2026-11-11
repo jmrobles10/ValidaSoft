@@ -34,7 +34,7 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
     public const string CabeceraEmpresa = "X-Empresa";
     public const string CabeceraCorrelacion = "X-Correlation-Id";
 
-    public async Task InvokeAsync(HttpContext http, IDocumentStore store, IEntornos entornos, CacheDeEmpresas empresas)
+    public async Task InvokeAsync(HttpContext http, IDocumentStore store, IEntornos entornos, CacheDeEmpresas empresas, Aplicacion.Plataforma.ControlDePlan plan)
     {
         var contexto = ContextoDesdeHttp.De(http);
         contexto.CorrelationId = Correlacion(http);
@@ -80,6 +80,13 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
             }
 
             contexto.Scopes = scopes;
+
+            // Plan del grupo (OD-15): cada llamada a /api/v1 con una API key de producción cuenta para el límite mensual de llamadas; no cuentan
+            // las pantallas (sesiones), el sandbox ni la Plataforma. Con el bloqueo suave y el tope alcanzado, las escrituras responden 429.
+            if (usuario.Identity.AuthenticationType == AutenticacionPorApiKey.Esquema && contexto.TenantId is { } grupo && !contexto.EsSandbox &&
+                contexto.ActorTipo != ActorTipo.Plataforma && http.Request.Path.StartsWithSegments("/api/v1", StringComparison.OrdinalIgnoreCase))
+                await plan.RegistrarLlamadaAsync(grupo, !HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method) && !HttpMethods.IsOptions(http.Request.Method),
+                    http.RequestAborted);
         }
 
         await siguiente(http);

@@ -34,6 +34,7 @@ export const SCOPES = {
   sandboxAdministrar: 'sandbox:administrar',
   verificacionesEscribir: 'verificaciones:escribir',
   cumplimientoDecidir: 'cumplimiento:decidir',
+  supresionesResolver: 'supresiones:resolver',
 } as const;
 
 export type Scope = (typeof SCOPES)[keyof typeof SCOPES];

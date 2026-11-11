@@ -10,10 +10,14 @@ namespace Validasoft.Aplicacion.Comun;
 /// Correo listo para enviar (texto plano y HTML). <see cref="TenantId"/>: el tenant de quien lo origina; si es un sandbox el correo
 /// no sale a su destinatario sino al buzón de pruebas (SB-4). Nulo = no es de un tenant (acceso del tercero sin empresa).
 /// </summary>
-public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html, Guid? TenantId = null)
+public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html, Guid? TenantId = null, Guid? EmpresaId = null,
+    RemitenteDeCorreo? Remitente = null)
 {
-    /// <summary>El mismo correo atribuido al tenant que lo origina (lo usan todos los manejadores de la cola <c>correo</c>).</summary>
-    public MensajeDeCorreo DeTenant(Guid? tenantId) => this with { TenantId = tenantId };
+    /// <summary>
+    /// El mismo correo atribuido al tenant que lo origina (lo usan todos los manejadores de la cola <c>correo</c>) y, si es de una empresa,
+    /// a ella: si la empresa tiene un dominio de correo verificado, sale desde su dirección (OD-20).
+    /// </summary>
+    public MensajeDeCorreo DeTenant(Guid? tenantId, Guid? empresaId = null) => this with { TenantId = tenantId, EmpresaId = empresaId };
 }
 
 /// <summary>Envío de correo; la implementación (SMTP con MailKit) vive en infraestructura.</summary>
@@ -428,7 +432,7 @@ public static class CorreoDeObservacionPendienteHandler
             return;
         var mensaje = redactor.RedactarObservacion(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
         await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -447,7 +451,7 @@ public static class CorreoDeResultadoPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Resultado, ct))
             return;
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
-            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -462,6 +466,6 @@ public static class CorreoDeAccesoPendienteHandler
         if (correo.Plantilla == PlantillaCorreo.Invitacion)
             mensaje = await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Invitacion, correo.TenantId, correo.EmpresaId,
                 EjemplosDeCorreo.VariablesDe(correo.Empresa, tipoVinculo: correo.TipoVinculo), ct);
-        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId), ct);
+        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }

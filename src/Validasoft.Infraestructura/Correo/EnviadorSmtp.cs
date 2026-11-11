@@ -25,7 +25,10 @@ public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorS
         var seguridad = Enum.TryParse<SecureSocketOptions>(seccion["Seguridad"], true, out var opcion) ? opcion : SecureSocketOptions.Auto;
 
         var correo = new MimeMessage();
-        correo.From.Add(MailboxAddress.Parse(seccion["Remitente"] is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>"));
+        // Con el dominio de correo de la empresa verificado (OD-20) sale desde su dirección; si no, con el de la plataforma.
+        correo.From.Add(mensaje.Remitente is { } propio
+            ? new MailboxAddress(propio.Nombre, propio.Direccion)
+            : MailboxAddress.Parse(seccion["Remitente"] is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>"));
         correo.To.Add(MailboxAddress.Parse(mensaje.Para));
         correo.Subject = mensaje.Asunto;
         correo.Body = new BodyBuilder { TextBody = mensaje.Texto, HtmlBody = mensaje.Html }.ToMessageBody();

@@ -62,7 +62,7 @@ public enum AvisoDeVigencia
 /// el enlace de acceso a la renovación (cifrado, IN-3).
 /// </summary>
 public sealed record CorreoDeVigenciaPendiente(string Para, string Empresa, AvisoDeVigencia Aviso, DateOnly VigenteHasta, int DiasRestantes,
-    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null);
+    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null);
 
 public static class CorreoDeVigenciaPendienteHandler
 {
@@ -71,7 +71,7 @@ public static class CorreoDeVigenciaPendienteHandler
     public static Task Handle(CorreoDeVigenciaPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector, RedactorDeCorreos redactor,
         CancellationToken ct) =>
         enviador.EnviarAsync(Redactar(correo, redactor.UrlPublica, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido))
-            .DeTenant(correo.TenantId), ct);
+            .DeTenant(correo.TenantId, correo.EmpresaId), ct);
 
     internal static MensajeDeCorreo Redactar(CorreoDeVigenciaPendiente correo, string urlPublica, string? token)
     {
@@ -418,7 +418,7 @@ public static class VigenciasDeVinculos
             ahora + VigenciaDelEnlace, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
         sesion.Store(enlace);
         await mensajes.PublishAsync(new CorreoDeVigenciaPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", aviso, hasta, diasRestantes,
-            protector.Proteger(secreto), enlace.Expira, empresa?.TenantId));
+            protector.Proteger(secreto), enlace.Expira, empresa?.TenantId, empresa?.Id));
     }
 }
 
