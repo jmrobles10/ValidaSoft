@@ -17,7 +17,7 @@ namespace Validasoft.Integracion.Tests;
 /// </summary>
 public sealed partial class RequisitosApiTests
 {
-    private static Credencial Plataforma => new(ApiFixture.ClavePlataforma);
+    private static Credencial PlataformaPi => new(ApiFixture.ClavePlataforma);
 
     // ---------- consumo de IA por cliente ----------
 
@@ -48,11 +48,11 @@ public sealed partial class RequisitosApiTests
         var tenant = norte.Datos.TenantId;
 
         // Con la tarifa general, lo adicional vale cuántas × el precio.
-        var tarifa = await ApiAsync<TarifaDeIaDto>("PUT", "/api/v1/plataforma/ia/tarifa", Plataforma, new FijarTarifaDeIaDto(500m, " cop "), 200);
+        var tarifa = await ApiAsync<TarifaDeIaDto>("PUT", "/api/v1/plataforma/ia/tarifa", PlataformaPi, new FijarTarifaDeIaDto(500m, " cop "), 200);
         (tarifa.PrecioPorValidacionAdicional, tarifa.Moneda, tarifa.ActualizadaEn is not null, tarifa.ActualizadaPor!.StartsWith("Plataforma:", StringComparison.Ordinal)).ShouldBe((500m, "COP", true, true));
-        (await ApiAsync<TarifaDeIaDto>("GET", "/api/v1/plataforma/ia/tarifa", Plataforma, null, 200)).PrecioPorValidacionAdicional.ShouldBe(500m);
+        (await ApiAsync<TarifaDeIaDto>("GET", "/api/v1/plataforma/ia/tarifa", PlataformaPi, null, 200)).PrecioPorValidacionAdicional.ShouldBe(500m);
 
-        var consumo = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", Plataforma, null, 200);
+        var consumo = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200);
         consumo.Periodo.ShouldBe(mes);
         var grupo = consumo.Grupos.ShouldHaveSingleItem();
         grupo.GrupoId.ShouldBe(tenant);
@@ -70,16 +70,16 @@ public sealed partial class RequisitosApiTests
 
         // El precio propio de la empresa gana sobre la tarifa; vaciarlo vuelve a la general.
         await PlanIaAsync(norte, new ActualizarPlanIaEmpresaDto(1, true, TopeAdicionalMes: 5, PrecioAdicional: 320.5m));
-        var propio = (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single();
+        var propio = (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200)).Grupos.Single().Empresas.Single();
         (propio.PrecioAdicional, propio.PrecioPropio, propio.ValorAdicional).ShouldBe((320.5m, true, 320.5m));
-        (await ApiAsync<PlanIaEmpresaDto>("GET", $"/api/v1/plataforma/tenants/{tenant}/empresas/{norte.Datos.Id}/plan-ia", Plataforma, null, 200)).PrecioAdicional.ShouldBe(320.5m);
-        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single().Modelos.Count.ShouldBe(2); // la llave se conservó
+        (await ApiAsync<PlanIaEmpresaDto>("GET", $"/api/v1/plataforma/tenants/{tenant}/empresas/{norte.Datos.Id}/plan-ia", PlataformaPi, null, 200)).PrecioAdicional.ShouldBe(320.5m);
+        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200)).Grupos.Single().Empresas.Single().Modelos.Count.ShouldBe(2); // la llave se conservó
         await PlanIaAsync(norte, new ActualizarPlanIaEmpresaDto(1, true, TopeAdicionalMes: 5));
-        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single().PrecioPropio.ShouldBeFalse();
+        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200)).Grupos.Single().Empresas.Single().PrecioPropio.ShouldBeFalse();
         // Gratis es un precio, no «sin precio».
         await PlanIaAsync(norte, new ActualizarPlanIaEmpresaDto(1, true, TopeAdicionalMes: 5, PrecioAdicional: 0m));
-        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single().ValorAdicional.ShouldBe(0m);
-        (await CodigoAsync(await ApiAsync("PUT", $"/api/v1/plataforma/tenants/{tenant}/empresas/{norte.Datos.Id}/plan-ia", Plataforma, new ActualizarPlanIaEmpresaDto(1, true, PrecioAdicional: -1m), 422)))
+        (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200)).Grupos.Single().Empresas.Single().ValorAdicional.ShouldBe(0m);
+        (await CodigoAsync(await ApiAsync("PUT", $"/api/v1/plataforma/tenants/{tenant}/empresas/{norte.Datos.Id}/plan-ia", PlataformaPi, new ActualizarPlanIaEmpresaDto(1, true, PrecioAdicional: -1m), 422)))
             .ShouldBe("precio-adicional-invalido");
     }
 
@@ -91,30 +91,30 @@ public sealed partial class RequisitosApiTests
         var otra = await EmpresaNuevaAsync("Otra Empresa S.A.S.", "OTRA"); // otro grupo, sin plan ni consumo
 
         // Otro mes: la empresa aparece sin consumo.
-        var vacio = (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo=2020-01&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single();
+        var vacio = (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo=2020-01&grupoId={tenant}", PlataformaPi, null, 200)).Grupos.Single().Empresas.Single();
         (vacio.IncluidasConsumidas, vacio.AdicionalesConsumidas, vacio.CostoUsd, vacio.Modelos.Count).ShouldBe((0, 0, 0m, 0));
 
         // Búsqueda por nombre de empresa o del grupo (acotada al grupo: la base de pruebas es compartida y otras pruebas crean empresas con el mismo nombre); los totales
         // son los de todo lo que cumple el filtro, no solo los de la página.
-        var porEmpresa = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Norte S.A.S.")}", Plataforma, null, 200);
+        var porEmpresa = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Norte S.A.S.")}", PlataformaPi, null, 200);
         porEmpresa.Grupos.ShouldHaveSingleItem().GrupoId.ShouldBe(tenant);
-        var porGrupo = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Grupo Norte")}", Plataforma, null, 200);
+        var porGrupo = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Grupo Norte")}", PlataformaPi, null, 200);
         porGrupo.Grupos.ShouldHaveSingleItem().GrupoId.ShouldBe(tenant);
-        var sinCoincidencia = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={otra.Datos.TenantId}&q={Uri.EscapeDataString("Norte S.A.S.")}", Plataforma, null, 200);
+        var sinCoincidencia = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={otra.Datos.TenantId}&q={Uri.EscapeDataString("Norte S.A.S.")}", PlataformaPi, null, 200);
         sinCoincidencia.Grupos.ShouldBeEmpty();
         sinCoincidencia.Totales.Grupos.ShouldBe(0);
-        var primeraPagina = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&limite=1", Plataforma, null, 200);
+        var primeraPagina = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&limite=1", PlataformaPi, null, 200);
         primeraPagina.Grupos.Count.ShouldBe(1);
         primeraPagina.SiguienteCursor.ShouldNotBeNull();
         primeraPagina.Totales.Grupos.ShouldBeGreaterThanOrEqualTo(2);
-        var segunda = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&limite=1&cursor={Uri.EscapeDataString(primeraPagina.SiguienteCursor!)}", Plataforma, null, 200);
+        var segunda = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&limite=1&cursor={Uri.EscapeDataString(primeraPagina.SiguienteCursor!)}", PlataformaPi, null, 200);
         segunda.Grupos.Single().GrupoId.ShouldNotBe(primeraPagina.Grupos.Single().GrupoId);
 
         // Valores inválidos y credenciales: solo Plataforma.
-        (await CodigoAsync(await ApiAsync("GET", "/api/v1/plataforma/ia/consumo?periodo=2026-13", Plataforma, null, 422))).ShouldBe("periodo-invalido");
-        (await CodigoAsync(await ApiAsync("GET", "/api/v1/plataforma/ia/consumo/exportar?formato=pdf", Plataforma, null, 422))).ShouldBe("formato-invalido");
-        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/plataforma/ia/tarifa", Plataforma, new FijarTarifaDeIaDto(-1m, "COP"), 422))).ShouldBe("precio-adicional-invalido");
-        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/plataforma/ia/tarifa", Plataforma, new FijarTarifaDeIaDto(1m, "PESOS"), 422))).ShouldBe("moneda-invalida");
+        (await CodigoAsync(await ApiAsync("GET", "/api/v1/plataforma/ia/consumo?periodo=2026-13", PlataformaPi, null, 422))).ShouldBe("periodo-invalido");
+        (await CodigoAsync(await ApiAsync("GET", "/api/v1/plataforma/ia/consumo/exportar?formato=pdf", PlataformaPi, null, 422))).ShouldBe("formato-invalido");
+        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/plataforma/ia/tarifa", PlataformaPi, new FijarTarifaDeIaDto(-1m, "COP"), 422))).ShouldBe("precio-adicional-invalido");
+        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/plataforma/ia/tarifa", PlataformaPi, new FijarTarifaDeIaDto(1m, "PESOS"), 422))).ShouldBe("moneda-invalida");
         await ApiAsync("GET", "/api/v1/plataforma/ia/consumo", Admin(norte), null, 403);
         await ApiAsync("GET", "/api/v1/plataforma/ia/consumo/exportar", Admin(norte), null, 403);
         await ApiAsync("PUT", "/api/v1/plataforma/ia/tarifa", Admin(norte), new FijarTarifaDeIaDto(1m, "COP"), 403);
@@ -124,12 +124,12 @@ public sealed partial class RequisitosApiTests
     public async Task El_consumo_de_IA_se_exporta_a_Excel_y_a_CSV_con_los_mismos_numeros_de_la_consola()
     {
         var (norte, mes) = await EmpresaConConsumoDeIaAsync();
-        await ApiAsync<TarifaDeIaDto>("PUT", "/api/v1/plataforma/ia/tarifa", Plataforma, new FijarTarifaDeIaDto(750m, "COP"), 200);
+        await ApiAsync<TarifaDeIaDto>("PUT", "/api/v1/plataforma/ia/tarifa", PlataformaPi, new FijarTarifaDeIaDto(750m, "COP"), 200);
         var tenant = norte.Datos.TenantId;
         var uso = await UsoIaAsync(norte);
 
         // CSV: una fila por empresa, con BOM para Excel, números con punto y sin celdas que se lean como fórmulas.
-        var csv = await ApiAsync("GET", $"/api/v1/plataforma/ia/consumo/exportar?periodo={mes}&grupoId={tenant}&formato=csv", Plataforma, null, 200);
+        var csv = await ApiAsync("GET", $"/api/v1/plataforma/ia/consumo/exportar?periodo={mes}&grupoId={tenant}&formato=csv", PlataformaPi, null, 200);
         csv.Context.Response.ContentType.ShouldStartWith("text/csv");
         csv.Context.Response.Headers.ContentDisposition.ToString().ShouldContain($"consumo-ia-{mes}.csv");
         var texto = Encoding.UTF8.GetString(CuerpoEnBytes(csv));
@@ -142,7 +142,7 @@ public sealed partial class RequisitosApiTests
         lineas[1].ShouldContain($",No,2,{uso.TokensEntrada},{uso.TokensEntradaEnCache},{uso.TokensSalida},");
 
         // Excel: un libro con las hojas «Por empresa» y «Por modelo».
-        var xlsx = await ApiAsync("GET", $"/api/v1/plataforma/ia/consumo/exportar?periodo={mes}&grupoId={tenant}", Plataforma, null, 200);
+        var xlsx = await ApiAsync("GET", $"/api/v1/plataforma/ia/consumo/exportar?periodo={mes}&grupoId={tenant}", PlataformaPi, null, 200);
         xlsx.Context.Response.ContentType.ShouldBe(HojaDeCalculo.TipoContenido);
         var libro = CuerpoEnBytes(xlsx);
         libro[..2].ShouldBe([(byte)'P', (byte)'K']); // un zip (Office Open XML)
@@ -247,14 +247,14 @@ public sealed partial class RequisitosApiTests
         (await ApiAsync<CuentaDesignadaDelVinculoDto>("GET", url, Delegado(e.Norte, e.Laura), null, 200)).Actual!.Numero.ShouldBeNull();
 
         // El estado de los secretos cuenta lo pendiente sin tocar nada; re-cifrar lo pasa a la clave del grupo, es idempotente y deja el valor legible.
-        var conteo = await ApiAsync<EstadoDeSecretosDto>("GET", "/api/v1/plataforma/secretos", Plataforma, null, 200);
+        var conteo = await ApiAsync<EstadoDeSecretosDto>("GET", "/api/v1/plataforma/secretos", PlataformaPi, null, 200);
         conteo.Simulado.ShouldBeTrue();
         var enEventosPendientes = conteo.PorTipo.Single(t => t.Tipo == "cuenta-en-eventos");
         (enEventosPendientes.Total - enEventosPendientes.Vigentes).ShouldBeGreaterThanOrEqualTo(2); // la propuesta y la aprobación (las de otras pruebas ya están con la clave del grupo)
         enEventosPendientes.Recifrados.ShouldBe(0);
         (await NumerosEnEventosAsync(tenant)).ShouldAllBe(n => n.Valor.StartsWith("vs1.", StringComparison.Ordinal));
 
-        var recifrado = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", Plataforma, null, 200);
+        var recifrado = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", PlataformaPi, null, 200);
         var eventosRecifrados = recifrado.PorTipo.Single(t => t.Tipo == "cuenta-en-eventos");
         var vinculosRecifrados = recifrado.PorTipo.Single(t => t.Tipo == "cuenta-en-vinculos");
         eventosRecifrados.Recifrados.ShouldBeGreaterThanOrEqualTo(2);
@@ -265,7 +265,7 @@ public sealed partial class RequisitosApiTests
         (await NumeroEnElVinculoAsync(tenant, vinculo.Id, "cuentaDesignada"))!.ShouldStartWith("vg1.");
         (await ApiAsync<CuentaDesignadaDelVinculoDto>("GET", url, Delegado(e.Norte, e.Carlos), null, 200)).Actual!.Numero.ShouldBe("03112345678");
 
-        var otraPasada = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", Plataforma, null, 200);
+        var otraPasada = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", PlataformaPi, null, 200);
         otraPasada.PorTipo.Single(t => t.Tipo == "cuenta-en-eventos").Recifrados.ShouldBe(0);
         otraPasada.PorTipo.Single(t => t.Tipo == "cuenta-en-vinculos").Recifrados.ShouldBe(0);
         var estado = otraPasada.PorTipo.Single(t => t.Tipo == "cuenta-en-eventos");
@@ -273,7 +273,7 @@ public sealed partial class RequisitosApiTests
 
         // Un valor ilegible (su clave ya no está) se cuenta como fallido y se deja igual.
         await EscribirNumeroAsync(tenant, vinculo.Id, "cuentaDesignada", "vg1.00000000.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", enEventos: true);
-        var conIlegible = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", Plataforma, null, 200);
+        var conIlegible = await ApiAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", PlataformaPi, null, 200);
         conIlegible.PorTipo.Single(t => t.Tipo == "cuenta-en-eventos").Fallidos.ShouldBeGreaterThanOrEqualTo(1);
         (await NumerosEnEventosAsync(tenant)).ShouldContain(n => n.Valor.StartsWith("vg1.00000000.", StringComparison.Ordinal));
     }
