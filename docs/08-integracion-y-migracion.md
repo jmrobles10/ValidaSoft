@@ -10,6 +10,8 @@
 
 > Actualizado el 2026-10-28 con las decisiones del registro: tenant = grupo con **empresas internas** (P-11-2, ADR-0008: una instancia del SRM = una empresa; `empresaId` en todos los eventos), identidad multipaís (P-1-1), reconciliación de identidad por clave única (P-12-1), webhooks + pull desde el MVP (P-12-2), SDK .NET y TS (P-12-3), revisión solo en Validasoft durante la coexistencia (P-12-4), sandbox por API key (P-11-4), cuenta designada por el tercero (P-3-3), alcance de la migración (P-13-x), modo de respaldo en Marco (adición 9).
 
+> Actualizado el 2026-11-11 (integración abierta, IO-1…IO-10): el núcleo no nombra ni asume el SRM, el Portal ni AyF; todo es mecanismo genérico (API, webhooks, SDK, embebido, referencias externas por sistema, adaptadores de origen). §2.2 embebido del tercero, §2.3 guía «integrar un sistema nuevo en 5 pasos», §3.4 contrato del sistema legado («el interruptor»), §6.6 importador genérico y §9 auditoría de acoplamiento. Donde abajo se lee SRM, Portal o Marco, es **un ejemplo de sistema integrador**: lo mismo vale para cualquier ERP, portal o CRM.
+
 > Actualizado el 2026-11-10 (H9, CN-1…CN-7 del registro): §2 y la guía paso a paso de §2.1 describen lo implementado (SDK .NET y TypeScript, consulta de certificación, pull, rotación de API keys); §5 precisa la consulta.
 
 ---
@@ -150,6 +152,52 @@ Sin vínculo con la empresa (o tercero desconocido): `200 { certificado: false, 
 
 **9. Rotar la API key sin cortar el servicio.** Configuración › API keys › «Rotar» (o `POST /api/v1/api-keys/{id}/rotar { anteriorValidaHasta }`): sale una clave nueva con los mismos permisos, alcance y sistema, y la actual sigue valiendo el tiempo elegido (24 h por defecto, hasta 30 días; «ahora» corta de inmediato). Procedimiento: rotar → poner la nueva en el gestor de secretos y desplegar → verificar que el sistema la usa → la anterior deja de valer sola a su hora (401). Revocar sigue siendo inmediato.
 
+### 2.2 Embebido genérico del tercero (IO-6)
+
+Cualquier sistema integrador con permiso puede montar la **bóveda**, el **expediente** o la **ficha** de un tercero en un iframe de su página, sin que Validasoft sepa quién es. Ejemplo ejecutable sin librerías: [`docs/ejemplos/anfitrion-tercero`](ejemplos/anfitrion-tercero/index.html) (la página anfitriona) y [`servidor.mjs`](ejemplos/anfitrion-tercero/servidor.mjs) (su backend); lo prueba `e2e/pruebas/embebido-tercero.spec.ts` con un anfitrión ficticio.
+
+```mermaid
+sequenceDiagram
+  participant P as Página del sistema (origen A)
+  participant B as Backend del sistema
+  participant V as Validasoft API
+  participant I as iframe /embed/boveda
+  P->>B: el tercero abre «Mi bóveda»
+  B->>V: POST /api/v1/sesiones-tercero {vinculoId, componente, origen A} + API key + X-Empresa
+  V-->>B: 201 {token (≤15 min), url, expira}
+  B-->>P: {token, url}
+  P->>I: iframe src = url (sin token)
+  I-->>P: postMessage validasoft:ready
+  P->>I: postMessage validasoft:sesion {token} → solo al origen de Validasoft
+  I->>V: GET /public/v1/sesion/actual (Bearer token)
+  I-->>P: validasoft:resize {height} · validasoft:sesion-requerida {por-vencer}
+  P->>B: pedir otra sesión
+```
+
+**Quién puede y qué liga el token.** Solo la API key de un **sistema integrador** con `sesiones-tercero:crear`, para un vínculo de la empresa (`X-Empresa`) que **lleve la referencia de ese sistema** (403 `vinculo-ajeno`: un sistema embebe lo que integra) y con la invitación aceptada (409 `invitacion-no-aceptada`). El `origen` pedido debe estar entre los del sistema (`origenesPermitidos`, SE-1; 403 `origen-no-permitido`). El JWT (HS256, 1 a 15 minutos, 10 por omisión) trae el tercero, **un** vínculo, `sistema`, `origen`, `componente` y un `jti`; no hay cookie de refresco: el sistema pide otra sesión a su backend (la app avisa con `validasoft:sesion-requerida` un minuto antes de vencer). La respuesta no se guarda en el registro de idempotencia.
+
+**Qué valida el iframe** (defensa en profundidad, además de `frame-ancestors` con la unión de orígenes de los sistemas, SE-1/SE-2): lee los orígenes permitidos de `GET /public/v1/embed/origenes-permitidos`; solo anuncia `ready` al contenedor si su origen es uno de ellos; acepta el token **solo** de la ventana padre con ese origen y solo si el token fue emitido para **ese mismo origen**, es embebido, de un componente conocido y no venció; si no, muestra un aviso y ningún dato. Dentro del iframe no hay marca, navegación ni pie y **nunca** se pide el correo.
+
+**Protocolo** (versión 1; el mismo de ID-3 para la web de empresa, ahora en `@validasoft/sdk`): iframe → página `validasoft:ready`, `validasoft:sesion-requerida {motivo: inicial|por-vencer|vencida|rechazada}`, `validasoft:resize {height}`; página → iframe `validasoft:sesion {token}` y `validasoft:tema {mode}`. Quien usa un empaquetador monta todo con `montarEmbebido({ contenedor, sesion, renovarSesion })` del SDK de TypeScript (ver §2.1 paso 5 para el embebido de **usuarios** de la empresa, que sigue usando `sesiones-usuario`).
+
+```ts
+// Backend del sistema (Node): la API key nunca llega al navegador.
+const sesion = await cliente.sesiones.crearDelTercero({ vinculoId, componente: 'boveda', origen: 'https://erp.cliente.co' });
+// Página: montarEmbebido({ contenedor, sesion, renovarSesion: () => fetch('/mi-backend/sesion').then(r => r.json()) });
+```
+
+### 2.3 Integrar un sistema nuevo en 5 pasos
+
+Para un ERP, un portal o un CRM cualquiera (el SRM, el Portal y Marco son los primeros, no los únicos). Todo es genérico: nada de lo siguiente depende de un sistema concreto.
+
+1. **Registrar el sistema y su llave.** Un administrador del grupo crea el sistema (`POST /api/v1/sistemas { codigo, nombre, clavePublicaPem, origenesPermitidos }`) y su API key con los permisos mínimos y solo las empresas que integra (§2.1, pasos 1 y 2). El `codigo` es el que identifica a ese sistema en todas las referencias externas.
+2. **Identificar sus terceros y vínculos (referencias externas).** Crear el tercero con su clave (`POST /api/v1/terceros { …, referenciaExterna: { id: "C-77" } }`: idempotente, 201 la primera vez y 200 el mismo tercero después) o agregarla (`POST /terceros/{id}/referencias`); crear el vínculo con la suya (`POST /api/v1/vinculos { …, referenciaExterna }` o `POST /vinculos/{id}/referencias`) y buscar después por clave (`GET /terceros/por-referencia?sistema=&clave=`, `GET /vinculos/por-referencia?sistema=&clave=`). El sistema lo fija la API key y las claves son **privadas del tenant**: otro tenant con un sistema del mismo código no las ve ni choca con ellas.
+3. **Escuchar lo que pasa.** Webhooks firmados (`POST /api/v1/webhooks`) o pull (`GET /api/v1/eventos?desde=`), con el mismo sobre; deduplicar por `Validasoft-Event-Id` (§2.1 pasos 6 y 7). Los eventos que importan están en §3.4.
+4. **Consultar lo aceptado.** `GET /api/v1/vinculos/{id}/ficha` entrega, para que cualquier ERP cree o actualice al tercero: las secciones aceptadas normalizadas (con las calidades tributarias de Colombia, el lugar de expedición del representante y el representante principal), la **cuenta designada** (banco con su código de compensación y SWIFT, contacto de pagos), los **contactos por empresa** y las **referencias** del vínculo y del tercero. `GET /consultas/certificacion` responde si se le puede pagar o contratar (§2.1 paso 8).
+5. **Mostrar las pantallas.** Embebido del tercero (§2.2) o de las personas de la empresa (§2.1 paso 5), con orígenes validados; y, si hay históricos, un **adaptador de origen** para el importador (§6.6): la misma forma que el del Portal (`IAdaptadorDeOrigen`), sin tocar el núcleo.
+
+Sin SRM y sin Portal todo esto funciona igual: son clientes de la API como cualquier otro, y el importador responde 404 `origen-no-registrado` si no hay adaptador.
+
 ---
 
 ## 3. SRM
@@ -203,6 +251,32 @@ Mientras el SRM mantenga sus enums, cada evento trae `legacy.estadoTercero` (tab
 
 ### 3.3 Lo que se apaga en el SRM (por empresa con flag `Validasoft`)
 `/PortalProveedorERP/*` (`NovedadesRoutes.cs:18-140`, `DocumentosRoutes.cs:144,168`), `background/GestionProveedor` (`MapBackGroundProveedor.cs:14`), `background/vencimiento-proveedor/procesar`, `actualizacion-proveedor/*` de escritura, `Documentos/proximosvencer` hacia el Portal (`DocumentosRequericosBL.cs:347,865,963`), `GET /TokenAdproveedor` (`MapConfigroutes.cs:52`, expone la API key; se elimina para todas), pantallas legacy `menuProveedor.html`/`AprobacionProveedor.html` (se reemplazan por enlace profundo a `web` con token exchange, doc 07).
+
+### 3.4 El interruptor: contrato que un sistema legado debe cumplir para dejar de escribir en sus tablas (IO-7)
+
+No se toca el repositorio del SRM ni el del Portal: este es el contrato, válido para **cualquier** sistema que hoy valide terceros por su cuenta. Por empresa (instancia), cuando el flag del sistema pasa a «usar Validasoft» (§3.1), el sistema deja de escribir la validación documental en sus propias tablas y se comporta así:
+
+| El sistema… | Cómo, con qué mecanismo genérico |
+|---|---|
+| **Se identifica** | Guarda la clave de su tercero y de su vínculo en Validasoft (`referenciaExterna`, §2.3 paso 2) y el id de Validasoft (`terceroId`, `vinculoId`) en sus tablas. Busca por clave, no por identificación. |
+| **Invita y pide** | `POST /terceros` + `POST /vinculos` (con clave de idempotencia estable: el id de su solicitud), `POST /vinculos/{id}/invitaciones`, `POST /expedientes`. No sube documentos ni decide aprobaciones: eso vive en Validasoft. |
+| **Escucha** | `vinculo.creado`, `vinculo.invitacion_aceptada`, `vinculo.activado`, `vinculo.bloqueado` / `desbloqueado` / `desvinculado` / `reintegrado` / `anulado`, `expediente.observado` / `aprobado` / `rechazado` / `caducado` / `desaprobado`, `certificado.emitido` / `suspendido` / `revocado` / `vencido`, `vinculo.cuenta_designada`, `vinculo.contactos_actualizados`, `seccion.aceptada`, `documento.por_vencer` / `vencido`. Mismo sobre por webhook y por pull; deduplica por `Validasoft-Event-Id`; responde 200 en menos de 5 s y procesa en cola. |
+| **Consulta** | `GET /vinculos/{id}/ficha` (lo aceptado, representante, cuenta, contactos, referencias), `GET /vinculos/{id}/cuenta-designada` (con `cuentas:aprobar`, el número completo), `GET /consultas/certificacion` antes de pagar o contratar, `GET /vinculos/{id}/certificado`. |
+| **Muestra** | Enlaza o embebe las pantallas (§2.2 para el tercero; §2.1 paso 5 para las personas de la empresa). Retira sus pantallas de revisión y de carga de documentos. |
+| **Aplica en su ERP** | Con un **adaptador propio** (en el sistema legado o en un servicio aparte, nunca en el núcleo de Validasoft) que traduce los eventos y la ficha a las operaciones de su ERP, de forma idempotente por `terceroId`/`vinculoId`, y solo lo que `aplicaEnErp` indica. |
+| **Deja de hacer** | Escribir adjuntos, estados de validación, vencimientos y actualizaciones en sus tablas; los jobs de vencimiento y de recordatorios; los endpoints que el portal le llamaba (§3.3). Si vuelve a `Legacy`, la sincronización inversa de §7 deja sus tablas al día. |
+
+**Ejemplo de adaptador: el SRM hacia AyF.** El núcleo entrega las **calidades tributarias de Colombia** (`responsableIva`, `autorretenedor`, `declaranteRenta`, `granContribuyente`, `autorretenedorIca`, `regimenSimple`, `granContribuyenteBogota`, `regimenEspecial`, `autorretenedorRft`, `descuentoSenaFic`, `profesionalIndependiente`, `exentoRetencion`, `agenteRetenedorIva`, `obligadoAFacturar` y `exentoReteCree`) y cada ERP las mapea a **sus** campos; el del SRM hacia el PUT de terceros de AyF es:
+
+| Calidad (Validasoft) | Campo de AyF | Nota |
+|---|---|---|
+| `responsableIva` · `autorretenedor` · `declaranteRenta` · `granContribuyente` · `autorretenedorIca` · `regimenSimple` · `regimenEspecial` · `descuentoSenaFic` · `profesionalIndependiente` | `RegimenIva` · `AutoRetenedor` · `DeclaranteRenta` · `GranContribuyente` · `AutoRetenedorICA` · `RegimenSimple` · `RegimenEspecial` · `DescuentoSenaFic` · `ProfesionalIndependiente` | S/N directos |
+| `granContribuyenteBogota` · `exentoRetencion` · `agenteRetenedorIva` | `GranContribuyenteBta` · `ExentoRetefuente` · `AgenteRetenedorIVA` | S/N directos |
+| `obligadoAFacturar` | `NoObligadoFacturar` | AyF recibe la **negación** |
+| `autorretenedorRft` · `exentoReteCree` | — | AyF no las recibe (el PUT no las toca: el adaptador conserva lo que AyF ya tenga) |
+| `null` en cualquier calidad | el valor actual de AyF | «sin derivar» = no se sobrescribe (el PUT de AyF pone «N» a todo S/N que no se envía) |
+
+Banco: `bancoCodigo` (código de compensación) → `BcoCod` de AyF; `bancoSwift` y `contactoPagos` viajan con la cuenta designada (el SRM las tenía en el sector bancario). Representante: `lugarExpedicion` → `Expedicion`. Contacto por empresa de rol `Pagos` / `Comercial` → los contactos del tercero del ERP. Decisiones que aún necesita el equipo de Marco para aplicarlo (cuenta de servicio, bloqueo, cifrado de secretos) están en [16 §3.2](16-estado-y-pendientes.md).
 
 ---
 
@@ -295,20 +369,22 @@ Las versiones importadas no tienen hechos IA. La re-verificación masiva con la 
 ### 6.5 Informe de rechazos
 CSV por fila: `ClaveLegado, tenant, empresa, paso, motivo, dato, accionSugerida` (tercero duplicado o fusionado, identificación inválida para su país, archivo ausente, estado no mapeable, tipo de adjunto sin canónico, formulario que no valida contra el esquema). Cero rechazos críticos (pasos 5–8) es condición para el corte.
 
-### 6.6 Importador de la ficha maestra y sincronizador de coexistencia (F4, FM-39…FM-45)
+### 6.6 Importador de la ficha maestra y sincronizador de coexistencia (F4, FM-39…FM-45; genérico: IO-1)
 La ficha (docs/14) se importa **dentro de la API**, no por la CLI de §6.1: necesita la misma regla única de las secciones, el outbox de Wolverine (para la revalidación de F2) y la bóveda. Rol Plataforma (`plataforma:tenants`).
+
+**Importador genérico + adaptadores de origen.** El importador y el sincronizador no conocen ningún sistema: leen y traducen los terceros de un **adaptador** (`IAdaptadorDeOrigen`: `Codigo`, `ValidarArchivo`, `DesdeArchivo`, `Conectado`, `Configurado`; cada tercero llega como `TerceroDeOrigen { Clave, UnidadesAceptadas, Traducir }`) y hacen lo común: crear o encontrar el tercero (id UUID v5 de `{sistema}:{clave}`), registrar cada sección como versión (la misma regla del wizard), anotar la **referencia externa** del tercero en ese sistema y aceptar por empresa según el mapa de **unidades**. El Portal es el primer adaptador (`Validasoft.Adaptadores.Portal`, opcional: `Validasoft.Api` lo registra y el núcleo no lo referencia); el código del origen (`portal`) va en la ruta. Para otro sistema se escribe otro adaptador de la misma forma y se registra con `AddSingleton<IAdaptadorDeOrigen, …>()`; sin adaptadores, 404 `origen-no-registrado`. Las filas de abajo usan `portal` como ejemplo del `{origen}`.
 
 | Entrada | Qué hace |
 |---|---|
-| `POST /api/v1/plataforma/importacion/portal` | Encola una corrida (202): `dryRun`, `origen` (`Archivo` con el JSON en `archivo`, o `SqlServer`), `constructoras[] { constructora, empresaId }` (aceptación importada), `tamanoLote` (1–500, 100) e `importarCatalogos` (sí). |
-| `GET /api/v1/plataforma/importacion/portal/{id}` | Estado (`Encolada`, `EnCurso`, `Completada`, `Fallida`), cursor, lotes y resumen: terceros creados/encontrados/rechazados, versiones creadas/sin cambios/rechazadas por sección, aceptaciones (creadas, existentes, sin vínculo), catálogos y hasta 500 avisos. |
-| `GET …/{id}/rechazos` | CSV (UTF-8 con BOM): `claveLegado, terid, seccion, periodo, campo, codigo, motivo, dato, accionSugerida`. |
+| `POST /api/v1/plataforma/importacion/{origen}` | Encola una corrida (202): `dryRun`, `fuente` (`Archivo` con el JSON en `archivo`, o `Conectado`: el origen configurado del adaptador), `unidades[] { unidad, empresaId }` (aceptación importada; en el Portal, la unidad es la constructora), `tamanoLote` (1–500, 100) e `importarCatalogos` (sí). 404 `origen-no-registrado`, 409 `origen-no-configurado`. |
+| `GET /api/v1/plataforma/importacion/{origen}/{id}` | Estado (`Encolada`, `EnCurso`, `Completada`, `Fallida`), cursor, lotes y resumen: terceros creados/encontrados/rechazados, versiones creadas/sin cambios/rechazadas por sección, aceptaciones (creadas, existentes, sin vínculo), catálogos y hasta 500 avisos. |
+| `GET …/{id}/rechazos` | CSV (UTF-8 con BOM): `claveLegado, clave, seccion, periodo, campo, codigo, motivo, dato, accionSugerida`. |
 | `POST …/{id}/reanudar` | Vuelve a encolar una corrida fallida; sigue desde su cursor (409 `corrida-completada`). |
-| `POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar` | Sincronizador: reimporta un tercero desde el origen configurado con origen `Portal`. |
+| `POST /api/v1/plataforma/importacion/{origen}/terceros/{clave}/sincronizar` | Sincronizador: reimporta un tercero desde el origen configurado con origen `SistemaExterno` (antes `Portal`; lo ya guardado se lee igual). |
 
-**Origen.** `IOrigenPortal` lee los catálogos y, por lotes de `Terid`, cada tercero con sus filas (`Terceros`, `TerInformacionGeneral`, `TerDireccionEstructurada`, `TerInfoTributaria`, `TerRetencionICA`, `TerInfoFinanciera`, `TerTransaccionMonedaExtranjera*`, `TerCamaraComercio`, `TerSISO`, `TerEspecialidad`, `TercerosConstructora`; catálogos `Ciudades`, `ActividadEconomica`, `Bancos`, `GruposTercero` → `CategoriasTercero` → `EspecialidadesTercero`, `Paises`). `OrigenPortalSqlServer` hace solo `SELECT` parametrizados con `Microsoft.Data.SqlClient` (cadena en `Validasoft:Importacion:Portal:CadenaDeConexion`, sin valor por omisión; se recomienda usuario de solo lectura y `ApplicationIntent=ReadOnly`). `OrigenPortalArchivo` lee un JSON con la misma forma (`{ catalogos, terceros[] }`, nombres de tabla y columna del Portal): lo usan las pruebas, un dry-run sin red y, con `Validasoft:Importacion:Portal:Archivo`, el sincronizador en desarrollo.
+**Origen del Portal (el adaptador de ejemplo).** `IOrigenPortal` lee los catálogos y, por lotes de `Terid`, cada tercero con sus filas (`Terceros`, `TerInformacionGeneral`, `TerDireccionEstructurada`, `TerInfoTributaria`, `TerRetencionICA`, `TerInfoFinanciera`, `TerTransaccionMonedaExtranjera*`, `TerCamaraComercio`, `TerSISO`, `TerEspecialidad`, `TercerosConstructora`; catálogos `Ciudades`, `ActividadEconomica`, `Bancos`, `GruposTercero` → `CategoriasTercero` → `EspecialidadesTercero`, `Paises`). `OrigenPortalSqlServer` hace solo `SELECT` parametrizados con `Microsoft.Data.SqlClient` (cadena en `Validasoft:Importacion:Portal:CadenaDeConexion`, sin valor por omisión; se recomienda usuario de solo lectura y `ApplicationIntent=ReadOnly`). `OrigenPortalArchivo` lee un JSON con la misma forma (`{ catalogos, terceros[] }`, nombres de tabla y columna del Portal): lo usan las pruebas, un dry-run sin red y, con `Validasoft:Importacion:Portal:Archivo`, el sincronizador en desarrollo.
 
-**Traductor (puro, `TraductorDelPortal`).** Correcciones de FM-10/FM-11; detalle en FM-40:
+**Traductor del adaptador del Portal (puro, `TraductorDelPortal`).** Correcciones de FM-10/FM-11; detalle en FM-40:
 
 | Dato del Portal | En la ficha |
 |---|---|
@@ -330,7 +406,7 @@ Después, cada sección pasa por la regla única de la ficha (FM-16): un error d
 
 **Aceptación importada.** Con el mapa de constructoras, si el tercero estaba `Completada` (3) o `Actualizacion` (4) en una constructora mapeada, cada vínculo suyo con esa empresa recibe `SeccionAceptada` con origen `Importacion` (sin expediente ni folio) para la versión vigente de cada sección. No publica `seccion.aceptada` y no se mueve en corridas posteriores. Si el vínculo aún no existe se cuenta en `sinVinculo` y se acepta al volver a correr.
 
-**Sincronizador (coexistencia, un solo sentido).** Mientras la empresa no haga el corte, **el Portal** llama `POST …/terceros/{terid}/sincronizar` después de cada guardado de una sección `Ter*` (o un job lo llama por lotes de terceros modificados), con una API key de Plataforma. Un cambio crea una versión con origen `Portal` y, en la misma transacción, pide `SincronizarRequisitosDelVinculo` a cada vínculo aceptado: la empresa que ya la tenía aceptada abre su revalidación de F2. El Portal no necesita leer la respuesta (idempotente: repetir la llamada no crea nada). Qué tiene que hacer el Portal: (1) guardar la URL y la API key cifradas; (2) llamar al endpoint tras `SaveChanges` de cualquier `Ter*` del tercero, sin bloquear al usuario (cola con reintentos); (3) dejar de hacerlo cuando la empresa haga el corte (§7). Validasoft nunca escribe en las tablas del Portal.
+**Sincronizador (coexistencia, un solo sentido).** Mientras la empresa no haga el corte, **el Portal** llama `POST …/terceros/{terid}/sincronizar` después de cada guardado de una sección `Ter*` (o un job lo llama por lotes de terceros modificados), con una API key de Plataforma. Un cambio crea una versión con origen `SistemaExterno` y, en la misma transacción, pide `SincronizarRequisitosDelVinculo` a cada vínculo aceptado: la empresa que ya la tenía aceptada abre su revalidación de F2. El Portal no necesita leer la respuesta (idempotente: repetir la llamada no crea nada). Qué tiene que hacer el Portal: (1) guardar la URL y la API key cifradas; (2) llamar al endpoint tras `SaveChanges` de cualquier `Ter*` del tercero, sin bloquear al usuario (cola con reintentos); (3) dejar de hacerlo cuando la empresa haga el corte (§7). Validasoft nunca escribe en las tablas del Portal.
 
 ---
 
@@ -384,6 +460,28 @@ sequenceDiagram
 | Cuenta bancaria distinta por constructora en el legado | Se preserva como `cuenta_designada` por vínculo; el tercero ve todas sus cuentas en `/cuentas` y puede unificarlas cuando quiera (cada cambio pasa por la aprobación de la empresa) |
 
 ---
+
+## 9. Auditoría de acoplamiento (IO-8)
+
+Búsqueda de todo lo que nombra o asume SRM, Portal, AyF, Marco, Sinco o constructora en `src/`, `apps/`, `packages/`, contratos, eventos, enums y textos (2026-11-11), y qué quedó:
+
+| Dónde | Qué nombraba o asumía | Qué quedó |
+|---|---|---|
+| `Dominio/Ficha/Portal/*` (traductor, modelo, códigos y calidades inversas) | las tablas y columnas del Portal (`Terid`, `TerInfoTributaria`…) | **Movido** a `Validasoft.Adaptadores.Portal` (proyecto opcional); el dominio ya no tiene la carpeta |
+| `Aplicacion/Ficha/ImportacionDePortal*`, `OrigenesDelPortal` y rutas `…/importacion/portal` | importador atado al Portal: `Terid` entero, constructoras, fuente `SqlServer` | **Generalizado**: `Aplicacion/Importacion` (`IAdaptadorDeOrigen`), rutas `…/importacion/{origen}`, clave y cursor de texto, `unidades`, fuente `Conectado` |
+| `Infraestructura/Portal/OrigenPortalSqlServer` y el paquete `Microsoft.Data.SqlClient` | lector de SQL Server del Portal en la infraestructura | **Movido** al adaptador; la infraestructura ya no depende de SqlClient |
+| `OrigenDeSeccion.Portal` (persistido en `VersionDeSeccionRegistrada`) | origen de una versión | `SistemaExterno`; un convertidor lee el `Portal` ya guardado (upcasting, IO-2) y el sistema va en el autor |
+| `Tercero.ClaveLegado` (`portal:48112`) e `IdDeLegado.ClaveTerceroPortal/TerceroPortal` | clave del tercero atada al Portal | **Unificado** en `ReferenciaDeTercero` por sistema y tenant (IO-3); `IdDeLegado.Clave/Tercero(sistema, clave)` da el mismo UUID v5 que antes para `portal:48112` |
+| `SeccionAceptada.ClaveLegado` | `portal:…|constructora:7` | `{sistema}:{clave}|unidad:{unidad}` (solo informativa) |
+| `Dominio/Ficha/IntegracionErp.cs`: `ReglaDeCalidad(CampoAyf, CampoPortal)` y textos «va a AyF» | el mapeo a campos de AyF y del Portal vivía en el núcleo | **Quitado**: tabla de calidades tributarias de Colombia sin campos de sistemas (+ `ExentoReteCree`); el mapeo es del adaptador del ERP (§3.4, ejemplo AyF) |
+| Contratos de ficha, importación y consulta («formato de AyF», «el representante que recibe AyF», `ImportarPortalDto`, `ConstructoraEmpresaDto`, `Terid`) | nombres y supuestos | **Neutros**: `ImportarTercerosDto`, `UnidadEmpresaDto`, `clave`, `representanteLegal`, formato estructurado colombiano |
+| Textos de la web y de la app del tercero («SRM · PRV-002», «(SRM, Marco…)», «Marco y ERP») | ejemplos con sistemas concretos | **Reescritos** con «ERP», «portal», «un sistema integrado»; el sistema que se muestra sale de la sesión, con «ERP» por omisión |
+| `ConsultaCertificacionDto.legacy.estadoTercero` | estado numérico del legado SRM/Portal | **Se conserva** como puente genérico de coexistencia de cualquier sistema (nulo mientras no haya mapeo; documentado así) |
+| Comentarios y documentación de paridad («como en el SRM», `DesaprobarAFlujo` del SRM, «proveedor principal de Sinco») | historia de por qué existe una regla | **Se conservan**: no hay lógica; explican la paridad exigida en el diseño |
+| `docs/ejemplos/IntegradorSrm`, `docs/ejemplos/anfitrion-tercero` y los ejemplos de código de §2 | ejemplos con un sistema concreto | **Ejemplos**, claramente fuera del núcleo (el segundo no nombra ningún sistema) |
+| `apps/web/embed-demo.html`, semillas y datos de prueba («Constructora Norte») | datos de demostración | Fuera del núcleo; las empresas de prueba son datos, no tipos |
+
+Lo que **no** cambió por ser genérico desde el inicio: sistemas integrados (`SistemaIntegrado`), API keys por sistema, identidad delegada, webhooks y pull, SDKs, referencias externas del vínculo y la consulta de certificación.
 
 ## Decisiones abiertas
 0. ~~Nombres de eventos y contrato de consulta distintos de 05~~ **Cerrada** (I-5/#3/#22): este documento usa solo el catálogo de 05 §7 y `ConsultaCertificacionDto`; la CI de trazabilidad lo verifica.

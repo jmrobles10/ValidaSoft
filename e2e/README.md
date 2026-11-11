@@ -16,6 +16,7 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 
 - **Empresa** (`soporte/semilla.ts`): grupo con Constructora Norte (Compras y Cumplimiento; Cumplimiento puede rechazar) y Constructora Sur (Revisión), el sistema integrado E2E con sus claves y personas con roles distintos.
 - **Proveedor** (`soporte/proveedor.ts`): entra con el enlace del correo y el código (Mailpit), acepta, sube documentos (PDF generados en `soporte/archivos.ts`) y responde observaciones.
+- **Tercero embebido por un sistema cualquiera** (`pruebas/embebido-tercero.spec.ts`, IO-6): la página anfitriona es `docs/ejemplos/anfitrion-tercero/index.html` servida por `page.route` en otro origen; su «backend» (la prueba) canjea la sesión del tercero con `POST /api/v1/sesiones-tercero`. Con `E2E_CAPTURAS=<carpeta>` las pruebas de pantallas nuevas guardan capturas en claro y en celular (`soporte/capturas.ts`).
 - **Personas de la empresa** (`soporte/embebido.ts`, `soporte/empresa.ts`): usan Validasoft embebido en un iframe de otro origen; la sesión llega por `postMessage` con identidad delegada firmada por el sistema integrado. Para cambiar de sección se usa `irASeccion(app, nombre)`: la barra superior pasa a «Más» las pestañas que no caben en el ancho del iframe, así que la sección puede ser un enlace de la barra o un ítem de ese menú.
 - **Sistema integrado** (`soporte/receptor.ts`): recibe los webhooks y verifica su firma.
 

@@ -30,7 +30,7 @@ export const webhooks = {
     url: 'Dirección (URL)',
     urlAyuda: 'Debe ser https. Responde 2xx en menos de 5 segundos y procesa después.',
     descripcion: 'Descripción (opcional)',
-    descripcionAyuda: 'Para reconocerlo: «SRM producción», «Integración contable»…',
+    descripcionAyuda: 'Para reconocerlo: «ERP producción», «Integración contable»…',
     eventos: 'Qué eventos recibe',
     todosLosEventos: 'Todos los eventos, también los que se agreguen después',
     empresas: 'De qué empresas',

@@ -1,0 +1,118 @@
+<!doctype html>
+<!--
+  Sistema anfitrión ficticio (IO-5, docs/08 §2.2): una página de «cualquier sistema» (un ERP, un portal, un CRM) que embebe la bóveda,
+  el expediente o la ficha del tercero de Validasoft en un iframe, sin librerías.
+
+  El sistema NUNCA pone la API key en esta página: el token de la sesión lo pide el BACKEND del sistema (ver servidor.mjs, que llama a
+  POST /api/v1/sesiones-tercero) y la página solo lo recibe. Contrato por postMessage (docs/06 §3.2; el mismo que implementa
+  `montarEmbebido` de @validasoft/sdk para quien usa un empaquetador):
+
+    iframe → página   { tipo: 'validasoft:ready', version }                  el iframe espera la sesión
+                      { tipo: 'validasoft:sesion-requerida', motivo }        falta, está por vencer o venció: pedir otra
+                      { tipo: 'validasoft:resize', height }                  alto del contenido
+    página → iframe   { tipo: 'validasoft:sesion', token }                   solo al origen exacto de Validasoft, nunca «*»
+
+  Fuente de la sesión: `window.obtenerSesionDeValidasoft(componente, motivo)` si existe (las pruebas e2e la inyectan) o, si no,
+  `POST /sesion` del backend de este mismo sistema.
+-->
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistema anfitrión (ficticio) · Validasoft embebido</title>
+    <style>
+      :root { font-family: 'Segoe UI', system-ui, sans-serif; color: #1d2533; background: #eef1f5; }
+      body { margin: 0; }
+      header { background: #263238; color: #fff; padding: 0 20px; height: 48px; display: flex; align-items: center; gap: 12px; }
+      main { max-width: 960px; margin: 16px auto; padding: 0 16px; display: grid; gap: 12px; }
+      .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: #fff; border: 1px solid #d5dbe5; border-radius: 12px; padding: 10px 12px; }
+      select, button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid #d5dbe5; background: #fff; }
+      button.primario { background: #00695c; color: #fff; border-color: #00695c; cursor: pointer; }
+      #contenedor { background: #fff; border: 1px solid #d5dbe5; border-radius: 12px; overflow: hidden; min-height: 120px; }
+      #bitacora { list-style: none; margin: 0; padding: 8px 12px; font: 12px/1.5 ui-monospace, monospace; color: #5d6878; background: #fff; border: 1px solid #d5dbe5; border-radius: 12px; max-height: 160px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <header><strong>Sistema anfitrión</strong><span>ficticio · ejemplo de integración</span></header>
+    <main>
+      <div class="barra">
+        <label>Pantalla del tercero
+          <select id="componente">
+            <option value="boveda">Bóveda</option>
+            <option value="expediente">Expediente</option>
+            <option value="ficha">Ficha</option>
+          </select>
+        </label>
+        <button id="abrir" class="primario" type="button">Abrir</button>
+      </div>
+      <div id="contenedor" aria-live="polite"></div>
+      <ol id="bitacora" aria-label="Mensajes con Validasoft"></ol>
+    </main>
+
+    <script>
+      const contenedor = document.getElementById('contenedor');
+      const bitacora = document.getElementById('bitacora');
+      window.mensajesDeValidasoft = [];
+      let actual = null; // { iframe, sesion, origen, alRecibir }
+
+      const registrar = (flecha, mensaje) => {
+        const fila = document.createElement('li');
+        fila.textContent = `${flecha} ${JSON.stringify(mensaje, (k, v) => (k === 'token' ? '…' : v))}`;
+        bitacora.append(fila);
+      };
+
+      /** El backend del sistema canjea la sesión con su API key; esta página solo recibe el resultado. */
+      async function pedirSesion(componente, motivo) {
+        if (typeof window.obtenerSesionDeValidasoft === 'function') return window.obtenerSesionDeValidasoft(componente, motivo);
+        const respuesta = await fetch('/sesion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ componente, motivo }),
+        });
+        if (!respuesta.ok) throw new Error(`El backend no pudo abrir la sesión (${respuesta.status}).`);
+        return respuesta.json();
+      }
+
+      async function abrir(componente) {
+        cerrar();
+        const sesion = await pedirSesion(componente, 'inicial');
+        const origenValidasoft = new URL(sesion.url).origin;
+        const iframe = document.createElement('iframe');
+        iframe.id = 'validasoft';
+        iframe.title = 'Validasoft';
+        iframe.src = sesion.url; // sin el token: va por postMessage
+        iframe.style.cssText = 'display:block;width:100%;height:480px;border:0';
+        iframe.setAttribute('referrerpolicy', 'origin'); // Validasoft comprueba desde dónde se le embebe
+
+        const enviarSesion = (s) => iframe.contentWindow.postMessage({ tipo: 'validasoft:sesion', token: s.token }, origenValidasoft);
+        const alRecibir = async (evento) => {
+          // Solo del iframe que montamos y del origen de Validasoft.
+          if (evento.source !== iframe.contentWindow || evento.origin !== origenValidasoft) return;
+          const mensaje = evento.data;
+          if (!mensaje || typeof mensaje.tipo !== 'string') return;
+          window.mensajesDeValidasoft.push(mensaje);
+          registrar('←', mensaje);
+          if (mensaje.tipo === 'validasoft:ready') enviarSesion(sesion);
+          else if (mensaje.tipo === 'validasoft:sesion-requerida') {
+            if (mensaje.motivo === 'inicial') return enviarSesion(sesion);
+            const nueva = await pedirSesion(componente, mensaje.motivo); // otra sesión del backend
+            sesion.token = nueva.token;
+            enviarSesion(nueva);
+          } else if (mensaje.tipo === 'validasoft:resize') iframe.style.height = `${Math.ceil(mensaje.height)}px`;
+        };
+        window.addEventListener('message', alRecibir);
+        contenedor.append(iframe);
+        actual = { iframe, alRecibir };
+      }
+
+      function cerrar() {
+        if (!actual) return;
+        window.removeEventListener('message', actual.alRecibir);
+        actual.iframe.remove();
+        actual = null;
+      }
+
+      document.getElementById('abrir').addEventListener('click', () => void abrir(document.getElementById('componente').value));
+    </script>
+  </body>
+</html>

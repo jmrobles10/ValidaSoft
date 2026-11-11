@@ -154,7 +154,7 @@ export function ListaVinculos() {
             if (!valor) setSinCoincidencia(null);
           }}
           onBuscar={(valor) => void buscar(valor)}
-          placeholder={t('vinculos.buscar.placeholder', { sistema: sistemaSesion ?? 'SRM' })}
+          placeholder={t('vinculos.buscar.placeholder', { sistema: sistemaSesion ?? 'ERP' })}
         />
         <FiltroMenu
           etiqueta={t('vinculos.filtros.estado')}
@@ -197,7 +197,7 @@ export function ListaVinculos() {
               compacto
               icono={Search}
               titulo={t('vinculos.buscar.sinResultado', { referencia: sinCoincidencia })}
-              texto={t('vinculos.buscar.sinResultadoAyuda', { sistema: sistemaSesion ?? 'SRM' })}
+              texto={t('vinculos.buscar.sinResultadoAyuda', { sistema: sistemaSesion ?? 'ERP' })}
               accion={
                 <Button variant="outlined" onClick={limpiarBusqueda}>
                   {t('vinculos.buscar.limpiar')}

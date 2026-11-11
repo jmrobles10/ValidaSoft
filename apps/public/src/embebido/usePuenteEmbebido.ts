@@ -42,7 +42,7 @@ export function usePuenteEmbebido(): void {
       remotos = siguienteListaDeOrigenes(remotos, await cargarOrigenesPermitidos(base));
       if (!activo) return;
       const lista = origenesPermitidos(configurados, propio, remotos, import.meta.env.DEV);
-      const cambio = permitidosRef.current === null || permitidosRef.current.join('|') !== lista.join('|');
+      const cambio = permitidosRef.current?.join('|') !== lista.join('|');
       permitidosRef.current = lista;
       const contenedor = origenDelContenedor(window, lista);
       contenedorRef.current = contenedor;
@@ -59,7 +59,7 @@ export function usePuenteEmbebido(): void {
       activo = false;
       clearInterval(id);
     };
-  }, [configurados, propio]);
+  }, [configurados, propio, setEstado]);
 
   // Mensajes del contenedor.
   useEffect(() => {
@@ -96,7 +96,7 @@ export function usePuenteEmbebido(): void {
     };
     window.addEventListener('message', alRecibir);
     return () => window.removeEventListener('message', alRecibir);
-  }, []);
+  }, [setEstado]);
 
   // Sesión por vencer o vencida: se le pide otra al sistema (el iframe no renueva solo, no hay cookie).
   useEffect(() => {

@@ -135,6 +135,8 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `verificaciones:escribir` | — | ✓ | — | ✓ | — | scope | — |
 | `certificados:leer` / `revocar` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope / — | propios |
 | `consultas:leer` · `eventos:leer` · `sesiones-tercero:crear` | — | ✓ | ✓ | ✓ | ✓ | scope | — |
+
+> `sesiones-tercero:crear` (IO-6) solo sirve a la API key de un **sistema integrador**: abre la sesión de un tercero cuyo vínculo lleva la referencia de ese sistema, para un origen de los que el sistema registró, con un token de ≤ 15 minutos ligado a ese vínculo, origen y componente. Las llaves ya emitidas no la tienen: se crea o rota una con ella.
 | `vencimientos:leer` / `escribir` | — | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / — | scope | — |
 | `auditoria:leer` (dominio, configuración, identidad y accesos; alcance por empresa o tenant) | — | ✓ | — | ✓ | ✓ | scope (solo referencias) | — |
 | `auditoria:exportar` (Excel con los filtros de la pantalla, IF-4; ZIP firmado pendiente) | — | ✓ | — | — | ✓ | — | — |

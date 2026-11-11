@@ -51,6 +51,7 @@ export interface DatosTributarios {
   resolucion_autorretenedor?: Resolucion | null;
   responsable_ica?: boolean | null;
   autorretenedor_ica?: boolean | null;
+  exento_rete_cree?: boolean | null;
   ica?: FilaIca[] | null;
 }
 
@@ -95,6 +96,7 @@ export interface PersonaRelacionada {
   pep?: boolean | null;
   vinculo_pep?: boolean | null;
   fecha_expedicion?: string | null;
+  lugar_expedicion?: string | null;
   fecha_nacimiento?: string | null;
   nacionalidad?: string | null;
   residencia?: string | null;

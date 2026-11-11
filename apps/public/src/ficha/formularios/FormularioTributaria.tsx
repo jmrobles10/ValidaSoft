@@ -53,6 +53,7 @@ export function FormularioTributaria({ datos, onCambiar, mensaje, deshabilitado 
       {(responsabilidades.includes(AUTORRETENEDOR) || datos.resolucion_autorretenedor) && resolucion('resolucion_autorretenedor', t('ficha.tributaria.autorretenedor'))}
       <CampoSiNo etiqueta={t('ficha.tributaria.responsableIca')} valor={datos.responsable_ica} onCambiar={(v) => onCambiar({ responsable_ica: v })} mensaje={mensaje('responsable_ica')} deshabilitado={deshabilitado} />
       <CampoSiNo etiqueta={t('ficha.tributaria.autorretenedorIca')} valor={datos.autorretenedor_ica} onCambiar={(v) => onCambiar({ autorretenedor_ica: v })} mensaje={mensaje('autorretenedor_ica')} deshabilitado={deshabilitado} />
+      <CampoSiNo etiqueta={t('ficha.tributaria.exentoReteCree')} valor={datos.exento_rete_cree} onCambiar={(v) => onCambiar({ exento_rete_cree: v })} mensaje={mensaje('exento_rete_cree')} deshabilitado={deshabilitado} />
       {(datos.responsable_ica === true || (datos.ica ?? []).length > 0) && (
         <FilasIca filas={datos.ica ?? []} onCambiar={(ica) => onCambiar({ ica: ica.length > 0 ? ica : null })} mensaje={mensaje} deshabilitado={deshabilitado} />
       )}

@@ -25,7 +25,7 @@ export interface ReclamosEmbebidos {
 
 export function reclamosEmbebidos(token: string): ReclamosEmbebidos | null {
   const r = leerReclamosDeJwt(token);
-  if (!r || r.embebido !== 'true' || typeof r.origen !== 'string' || typeof r.componente !== 'string') return null;
+  if (r?.embebido !== 'true' || typeof r.origen !== 'string' || typeof r.componente !== 'string') return null;
   return { origen: r.origen, componente: r.componente, sistema: typeof r.sistema === 'string' ? r.sistema : '', expira: typeof r.exp === 'number' ? r.exp * 1000 : null };
 }
 
@@ -44,7 +44,7 @@ export function evaluarSesion(
 ): VeredictoDeSesion {
   if (!origenPermitido(origenDelMensaje, permitidos) || (contenedor !== null && contenedor !== origenDelMensaje)) return { aceptada: false, motivo: 'origen-no-permitido' };
   const reclamos = reclamosEmbebidos(token);
-  if (!reclamos || reclamos.origen !== origenDelMensaje || !esComponente(reclamos.componente)) return { aceptada: false, motivo: 'token-ajeno' };
+  if (reclamos?.origen !== origenDelMensaje || !esComponente(reclamos.componente)) return { aceptada: false, motivo: 'token-ajeno' };
   if (reclamos.expira !== null && reclamos.expira <= ahora) return { aceptada: false, motivo: 'token-vencido' };
   return { aceptada: true, reclamos };
 }

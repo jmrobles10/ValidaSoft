@@ -20,7 +20,7 @@ Sistema de validación documental para cualquier vínculo comercial (proveedor, 
 | 05 | [API, contratos y webhooks](docs/05-api-contratos-y-webhooks.md) | REST v1, idempotencia, errores, eventos públicos, firma de webhooks |
 | 06 | [Frontend y UX](docs/06-frontend-y-ux.md) | Apps del revisor y del tercero, design system, pantallas, flujos |
 | 07 | [Seguridad, identidad y tenancy](docs/07-seguridad-identidad-y-tenancy.md) | OpenIddict, roles, API keys, magic links, aislamiento, retención |
-| 08 | [Integración y migración](docs/08-integracion-y-migracion.md) | SDKs, SRM/Portal/Marco, importador, corte por empresa, rollback |
+| 08 | [Integración y migración](docs/08-integracion-y-migracion.md) | Integración abierta (cualquier sistema: guía en 5 pasos, embebido genérico, contrato del interruptor), SDKs, SRM/Portal/Marco como primeros sistemas, importador con adaptadores de origen, corte por empresa, rollback |
 | 09 | [Plan de hitos y responsabilidades](docs/09-plan-de-hitos-y-responsabilidades.md) | Hitos H0–H11 con entregables, responsables y criterios de aceptación |
 | 10 | [Glosario](docs/10-glosario.md) | Lenguaje ubicuo y equivalencias con el legado |
 | 11 | [Trazabilidad por hito](docs/11-trazabilidad-por-hito.md) | Qué endpoints, DTOs, eventos, alertas y pantallas entrega cada hito |

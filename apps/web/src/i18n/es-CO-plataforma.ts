@@ -63,7 +63,7 @@ export const plataforma = {
     adminIdExternoAyuda: 'El «sub» con el que el sistema lo identifica. Si lo dejas vacío, se enlaza por su correo la primera vez que entre.',
     sistema: 'Sistema integrado',
     sistemaAyuda:
-      'El sistema del cliente (su ERP, el SRM…) que autentica a sus personas y firma sus aserciones. Recibe una API key con todos los permisos del grupo.',
+      'El sistema del cliente (su ERP, su portal…) que autentica a sus personas y firma sus aserciones. Recibe una API key con todos los permisos del grupo.',
     sistemaCodigo: 'Código',
     sistemaCodigoAyuda: 'Mayúsculas, números y guion bajo. Es el «iss» de sus aserciones.',
     sistemaNombre: 'Nombre del sistema',

@@ -56,9 +56,9 @@ export function DialogoContactos({ vinculo, onCerrar }: { vinculo: VinculoPublic
                 telefono: t('contactos.telefono'),
                 rol: t('contactos.rol'),
                 agregar: t('contactos.agregar'),
-                quitar: (n) => t('contactos.quitar', { n }),
+                quitar: (n) => t('contactos.quitar', { n: String(n) }),
                 vacio: t('contactos.vacio', { empresa: vinculo.empresa.nombre }),
-                contacto: (n) => t('contactos.contacto', { n }),
+                contacto: (n) => t('contactos.contacto', { n: String(n) }),
               }}
               errores={intentado ? errores : {}}
               deshabilitado={guardar.isPending}
