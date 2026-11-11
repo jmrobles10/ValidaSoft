@@ -282,6 +282,17 @@ const NOMBRES: Record<string, string> = {
   // Plazo de cargue del expediente inicial: reapertura del caducado y job de Plataforma (P-4-2, LT-1…LT-4).
   'POST /api/v1/expedientes/{id}/reabrir': 'reabrirExpediente',
   'POST /api/v1/plataforma/plazos-de-cargue/revisar': 'revisarPlazosDeCargue',
+  // Campana del tercero y recordatorio de observaciones pendientes (NT-1…NT-3).
+  'GET /public/v1/notificaciones': 'listarNotificacionesTercero',
+  'POST /public/v1/notificaciones/{id}/leida': 'marcarNotificacionTerceroLeida',
+  'POST /public/v1/notificaciones/leidas': 'marcarNotificacionesTerceroLeidas',
+  'GET /public/v1/preferencias-notificacion': 'obtenerPreferenciasNotificacionTercero',
+  'PUT /public/v1/preferencias-notificacion': 'actualizarPreferenciasNotificacionTercero',
+  'POST /api/v1/expedientes/{id}/recordar-observaciones': 'recordarObservaciones',
+  'POST /api/v1/expedientes/recordar-observaciones': 'recordarObservacionesEnLote',
+  'GET /api/v1/configuracion/recordatorio-observaciones': 'obtenerRecordatorioAutomatico',
+  'PUT /api/v1/configuracion/recordatorio-observaciones': 'actualizarRecordatorioAutomatico',
+  'POST /api/v1/plataforma/recordatorios-observaciones/revisar': 'revisarRecordatoriosDeObservaciones',
   // Invitación masiva por lote (H8, LT-5…LT-10).
   'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
   'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',

@@ -222,7 +222,8 @@ public sealed record ExpedienteDto(
     bool EsperandoVerificaciones = false,
     PlazoCargueExpedienteDto? PlazoCargue = null,
     int Desaprobaciones = 0,
-    DesaprobacionDto? UltimaDesaprobacion = null);
+    DesaprobacionDto? UltimaDesaprobacion = null,
+    RecordatorioObservacionesDto? RecordatorioObservaciones = null);
 
 /// <summary>
 /// Última vez que un administrador devolvió a revisión lo ya decidido del expediente (DS-1, DS-2). <see cref="Alcance"/>:

@@ -25,7 +25,9 @@ import type {
 
 import type {
   AceptarInvitacionDto,
+  ActualizarPreferenciasNotificacionDto,
   AutorregistroDto,
+  BandejaNotificacionesTerceroDto,
   BovedaDto,
   BuscarEnCatalogoPublicoParams,
   CargaPrefirmadaDto,
@@ -46,11 +48,15 @@ import type {
   IniciarCargaDto,
   InvitacionAceptadaDto,
   InvitacionPublicaDto,
+  ListarNotificacionesTerceroParams,
+  NotificacionTerceroDto,
+  NotificacionesMarcadasDto,
   ObtenerPropuestasSeccionParams,
   ObtenerSeccionFichaParams,
   OrigenesEmbebidoDto,
   OtpRequeridoDto,
   PaginaDtoOfEntradaCatalogoDto,
+  PreferenciasNotificacionDto,
   PropuestaDeSeccionDto,
   ReenviarExpedienteDto,
   RegistrarCuentaBancariaDto,
@@ -359,6 +365,356 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDesignarCuentaMutationOptions(options), queryClient);
+    }
+    export const listarNotificacionesTercero = (
+    params?: ListarNotificacionesTerceroParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<BandejaNotificacionesTerceroDto>(
+      {url: `/public/v1/notificaciones`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getListarNotificacionesTerceroQueryKey = (params?: ListarNotificacionesTerceroParams,) => {
+    return [
+    `/public/v1/notificaciones`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListarNotificacionesTerceroQueryOptions = <TData = Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError = ErrorType<void>>(params?: ListarNotificacionesTerceroParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarNotificacionesTerceroQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarNotificacionesTercero>>> = ({ signal }) => listarNotificacionesTercero(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarNotificacionesTerceroQueryResult = NonNullable<Awaited<ReturnType<typeof listarNotificacionesTercero>>>
+export type ListarNotificacionesTerceroQueryError = ErrorType<void>
+
+
+export function useListarNotificacionesTercero<TData = Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError = ErrorType<void>>(
+ params: undefined |  ListarNotificacionesTerceroParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarNotificacionesTercero>>,
+          TError,
+          Awaited<ReturnType<typeof listarNotificacionesTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarNotificacionesTercero<TData = Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError = ErrorType<void>>(
+ params?: ListarNotificacionesTerceroParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarNotificacionesTercero>>,
+          TError,
+          Awaited<ReturnType<typeof listarNotificacionesTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarNotificacionesTercero<TData = Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError = ErrorType<void>>(
+ params?: ListarNotificacionesTerceroParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarNotificacionesTercero<TData = Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError = ErrorType<void>>(
+ params?: ListarNotificacionesTerceroParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarNotificacionesTerceroQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const marcarNotificacionTerceroLeida = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<NotificacionTerceroDto>(
+      {url: `/public/v1/notificaciones/${id}/leida`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getMarcarNotificacionTerceroLeidaMutationKey = () => ['marcarNotificacionTerceroLeida'] as const;
+
+export const getMarcarNotificacionTerceroLeidaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>, TError,MarcarNotificacionTerceroLeidaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>, TError,MarcarNotificacionTerceroLeidaMutationVariables, TContext> => {
+
+const mutationKey = getMarcarNotificacionTerceroLeidaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>, MarcarNotificacionTerceroLeidaMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  marcarNotificacionTerceroLeida(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarcarNotificacionTerceroLeidaMutationResult = NonNullable<Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>>
+
+    export type MarcarNotificacionTerceroLeidaMutationError = ErrorType<void>
+    export type MarcarNotificacionTerceroLeidaMutationVariables = {id: string}
+
+    export const useMarcarNotificacionTerceroLeida = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>, TError,MarcarNotificacionTerceroLeidaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof marcarNotificacionTerceroLeida>>,
+        TError,
+        MarcarNotificacionTerceroLeidaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getMarcarNotificacionTerceroLeidaMutationOptions(options), queryClient);
+    }
+    export const marcarNotificacionesTerceroLeidas = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<NotificacionesMarcadasDto>(
+      {url: `/public/v1/notificaciones/leidas`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getMarcarNotificacionesTerceroLeidasMutationKey = () => ['marcarNotificacionesTerceroLeidas'] as const;
+
+export const getMarcarNotificacionesTerceroLeidasMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>, TError,void, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>, TError,void, TContext> => {
+
+const mutationKey = getMarcarNotificacionesTerceroLeidasMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>, void> = () => {
+
+
+          return  marcarNotificacionesTerceroLeidas(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarcarNotificacionesTerceroLeidasMutationResult = NonNullable<Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>>
+
+    export type MarcarNotificacionesTerceroLeidasMutationError = ErrorType<void>
+
+
+    export const useMarcarNotificacionesTerceroLeidas = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>, TError,void, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof marcarNotificacionesTerceroLeidas>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarcarNotificacionesTerceroLeidasMutationOptions(options), queryClient);
+    }
+    export const obtenerPreferenciasNotificacionTercero = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<PreferenciasNotificacionDto>(
+      {url: `/public/v1/preferencias-notificacion`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerPreferenciasNotificacionTerceroQueryKey = () => {
+    return [
+    `/public/v1/preferencias-notificacion`
+    ] as const;
+    }
+
+
+export const getObtenerPreferenciasNotificacionTerceroQueryOptions = <TData = Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerPreferenciasNotificacionTerceroQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>> = ({ signal }) => obtenerPreferenciasNotificacionTercero(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerPreferenciasNotificacionTerceroQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>>
+export type ObtenerPreferenciasNotificacionTerceroQueryError = ErrorType<void>
+
+
+export function useObtenerPreferenciasNotificacionTercero<TData = Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerPreferenciasNotificacionTercero<TData = Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerPreferenciasNotificacionTercero<TData = Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerPreferenciasNotificacionTercero<TData = Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerPreferenciasNotificacionTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerPreferenciasNotificacionTerceroQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const actualizarPreferenciasNotificacionTercero = (
+    actualizarPreferenciasNotificacionDto: BodyType<ActualizarPreferenciasNotificacionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<PreferenciasNotificacionDto>(
+      {url: `/public/v1/preferencias-notificacion`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: actualizarPreferenciasNotificacionDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getActualizarPreferenciasNotificacionTerceroMutationKey = () => ['actualizarPreferenciasNotificacionTercero'] as const;
+
+export const getActualizarPreferenciasNotificacionTerceroMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>, TError,ActualizarPreferenciasNotificacionTerceroMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>, TError,ActualizarPreferenciasNotificacionTerceroMutationVariables, TContext> => {
+
+const mutationKey = getActualizarPreferenciasNotificacionTerceroMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>, ActualizarPreferenciasNotificacionTerceroMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  actualizarPreferenciasNotificacionTercero(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActualizarPreferenciasNotificacionTerceroMutationResult = NonNullable<Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>>
+    export type ActualizarPreferenciasNotificacionTerceroMutationBody = BodyType<ActualizarPreferenciasNotificacionDto>
+    export type ActualizarPreferenciasNotificacionTerceroMutationError = ErrorType<void>
+    export type ActualizarPreferenciasNotificacionTerceroMutationVariables = {data: BodyType<ActualizarPreferenciasNotificacionDto>}
+
+    export const useActualizarPreferenciasNotificacionTercero = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>, TError,ActualizarPreferenciasNotificacionTerceroMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof actualizarPreferenciasNotificacionTercero>>,
+        TError,
+        ActualizarPreferenciasNotificacionTerceroMutationVariables,
+        TContext
+      > => {
+      return useMutation(getActualizarPreferenciasNotificacionTerceroMutationOptions(options), queryClient);
     }
     export const canjearEnlace = (
     token: string,

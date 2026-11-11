@@ -821,6 +821,7 @@ public sealed partial class Expediente
             case ExpedienteReabierto e: Apply(e); break;
             case ExpedienteDesaprobado e: Apply(e); break;
             case EtapaReabierta e: Apply(e); break;
+            case RecordatorioDeObservacionesEnviado e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento desconocido para el expediente: {evento.GetType().Name}.");
         }
     }

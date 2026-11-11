@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
+using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -116,6 +117,9 @@ public static class VencimientosEndpoints
                 Fecha = ahora,
                 Por = contexto.ActorId
             });
+            // El tercero también lo ve en la campana de su portal (NT-1).
+            empresa.Sesion.Store(PlanificadorDeNotificacionesDelTercero.DeRecordatorioDeVencimiento(contexto.TenantRequerido(), vencimiento.Tercero.Id,
+                empresa.EmpresaId, pedido.VinculoId, nombreEmpresa, vencimiento.Documento, vencimiento.VigenteHasta, ahora));
         }
 
         foreach (var grupo in enviar.GroupBy(x => x.Correo))
@@ -123,7 +127,9 @@ public static class VencimientosEndpoints
             [
                 .. grupo.OrderBy(x => x.Vencimiento.VigenteHasta)
                     .Select(x => new DocumentoPorVencer(x.Vencimiento.Documento, [new VencimientoPorEmpresa(nombreEmpresa, x.Vencimiento.VigenteHasta)]))
-            ]));
+            ],
+            // Un solo tercero detrás del correo: puede apagar este tipo de correo (NT-1); con varios no se sabe de quién es la preferencia.
+            grupo.Select(x => x.Vencimiento.Tercero.Id).Distinct().ToList() is [var terceroId] ? terceroId : null));
         await empresa.Sesion.SaveChangesAsync(ct);
         return new RecordatorioEnviadoDto(enviar.Select(x => x.Correo).Distinct().Count(), enviar.Count, omitidos);
     }

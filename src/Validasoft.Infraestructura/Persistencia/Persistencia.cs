@@ -211,6 +211,10 @@ public static class ConfiguracionMarten
                     .Index(x => x.UsuarioId)
                     .Index(x => x.Orden);
                 opts.Schema.For<PreferenciasNotificacion>().MultiTenanted();
+                // Campana del tercero (NT-1): sus preferencias de correo son globales (id = tercero), como el propio tercero.
+                opts.Schema.For<PreferenciasDelTercero>().DatabaseSchemaName("boveda");
+                // Recordatorio automático de observaciones pendientes por empresa (NT-3; id = empresa).
+                opts.Schema.For<Validasoft.Aplicacion.Expedientes.ConfiguracionDeRecordatorios>().MultiTenanted();
 
                 // Invitación masiva (H8, LT-5): el lote es un stream con snapshot inline; sus filas, documentos aparte que se
                 // leen por lote, estado y número (la tanda toma las pendientes en orden).

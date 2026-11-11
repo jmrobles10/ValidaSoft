@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
@@ -42,13 +43,15 @@ public enum AvisoDePlazo
 
 /// <summary>Correo al tercero sobre su plazo (cola <c>correo</c>, plantilla <c>caducidad</c>); el enlace de la reapertura va cifrado (IN-3).</summary>
 public sealed record CorreoDePlazoDeCarguePendiente(string Para, string Empresa, string Folio, AvisoDePlazo Aviso, DateTimeOffset PlazoHasta, int DiasRestantes,
-    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null);
+    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null);
 
 public static class CorreoDePlazoDeCarguePendienteHandler
 {
     public static async Task Handle(CorreoDePlazoDeCarguePendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
-        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
+        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, PreferenciasDeCorreoDelTercero preferencias, CancellationToken ct)
     {
+        if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.PlazoDeCargue, ct))
+            return;
         var mensaje = redactor.RedactarPlazoDeCargue(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
         await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Caducidad, correo.TenantId, correo.EmpresaId,
             EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
@@ -140,7 +143,7 @@ public static class PlazosDeCargue
             var empresa = await sesion.LoadAsync<Empresa>(expediente.EmpresaId, ct);
             await mensajes.PublishAsync(new CorreoDePlazoDeCarguePendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", expediente.Folio,
                 caduca ? AvisoDePlazo.Caducado : AvisoDePlazo.Recordatorio, hasta!.Value, DiasRestantes(hasta.Value, ahora), TenantId: mensaje.TenantId,
-                EmpresaId: expediente.EmpresaId));
+                EmpresaId: expediente.EmpresaId, TerceroId: vinculo.TerceroId));
         }
 
         await sesion.SaveChangesAsync(ct);
@@ -243,7 +246,7 @@ public static class PlazosDeCargueEndpoints
                 empresa.Sesion.Store(enlace);
                 await mensajes.PublishAsync(new CorreoDePlazoDeCarguePendiente(enlace.CorreoDestino, datosEmpresa?.Nombre ?? "La empresa", expediente.Folio,
                     AvisoDePlazo.Reabierto, reabierto.PlazoHasta, PlazosDeCargue.DiasRestantes(reabierto.PlazoHasta, ahora), protector.Proteger(token),
-                    enlace.Expira, datosEmpresa?.TenantId, expediente.EmpresaId));
+                    enlace.Expira, datosEmpresa?.TenantId, expediente.EmpresaId, vinculo.TerceroId));
             }
 
             await mensajes.PublishAsync(new SincronizarRequisitosDelVinculo(contexto.TenantRequerido(), vinculo.Id, contexto.ActorTipo.ToString(),

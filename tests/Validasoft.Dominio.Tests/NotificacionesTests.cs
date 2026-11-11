@@ -417,8 +417,11 @@ public class NotificacionesTests
         alTercero.Para.ShouldBe(CorreoTercero);
         alTercero.Empresa.ShouldBe("Norte S.A.S.");
         alTercero.VigenteHasta.ShouldBe(new DateOnly(2026, 11, 1));
-        plan.Campana.ShouldNotBeEmpty();
-        plan.Campana.ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.Vencido && c.Notificacion.Titulo == "Documento vencido");
+        // Las áreas se enteran en su campana (y el tercero en la suya, NT-1: sin correo aparte).
+        var deLasAreas = plan.Campana.Where(c => c.Notificacion.Tipo == TiposNotificacion.Vencido).ToList();
+        deLasAreas.ShouldNotBeEmpty();
+        deLasAreas.ShouldAllBe(c => c.Notificacion.Titulo == "Documento vencido");
+        plan.Campana.Single(c => c.Notificacion.UsuarioId == TerceroId).Notificacion.Tipo.ShouldBe(TiposNotificacionTercero.DocumentoVencido);
 
         var mensaje = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarVencido(alTercero);
         mensaje.Asunto.ShouldBe($"Tu {alTercero.Documento} venció para Norte S.A.S.");

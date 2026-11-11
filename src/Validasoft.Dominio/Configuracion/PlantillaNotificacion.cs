@@ -24,6 +24,7 @@ public static class CatalogoDePlantillas
     public const string Vencido = "vencido";
     public const string Certificado = "certificado";
     public const string Caducidad = "caducidad";
+    public const string RecordatorioObservaciones = "recordatorio-observaciones";
 
     public static readonly IReadOnlyList<EventoDePlantilla> Eventos =
     [
@@ -33,7 +34,9 @@ public static class CatalogoDePlantillas
         new(ConsentimientoEmpresa, "Constancia de aceptación", "Constancia de los textos legales que el tercero aceptó.", ["empresa"]),
         new(Vencido, "Documento vencido", "Un documento venció para la empresa y pasó el plazo de gracia.", ["empresa", "documento"]),
         new(Certificado, "Certificado revocado o suspendido", "El certificado del tercero dejó de valer.", ["empresa", "folio"]),
-        new(Caducidad, "Plazo de cargue", "Recordatorio del plazo para completar el expediente, su caducidad y su reapertura.", ["empresa", "folio"])
+        new(Caducidad, "Plazo de cargue", "Recordatorio del plazo para completar el expediente, su caducidad y su reapertura.", ["empresa", "folio"]),
+        new(RecordatorioObservaciones, "Recordatorio de observaciones", "La empresa le recuerda al tercero las observaciones que sigue teniendo pendientes.",
+            ["empresa", "folio"])
     ];
 
     public static EventoDePlantilla? Buscar(string? evento) =>

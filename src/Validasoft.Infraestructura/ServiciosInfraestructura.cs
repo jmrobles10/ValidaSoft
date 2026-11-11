@@ -115,6 +115,9 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IMapeadorDeEventos, Aplicacion.Invitaciones.MapeadorDeLotes>(); // invitaciones.lote_terminado (LT-9)
         servicios.AddSingleton<CatalogoDeEventos>();
         servicios.AddSingleton<PlanificadorDeNotificaciones>();
+        servicios.AddScoped<PreferenciasDeCorreoDelTercero>(); // el tercero puede apagar cada correo (NT-1)
+        // Recordatorio automático de observaciones pendientes (NT-3): barrido periódico (Validasoft:RecordatoriosDeObservaciones:Intervalo).
+        servicios.AddHostedService<ProgramadorDeRecordatoriosDeObservaciones>();
         servicios.AddSingleton<ProcesadorDeEventos>();
         servicios.AddSingleton<OpcionesDeWebhooks>();
         servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
@@ -241,6 +244,9 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

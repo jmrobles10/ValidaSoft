@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using Microsoft.Extensions.Configuration;
+using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Dominio.Configuracion;
 
 namespace Validasoft.Aplicacion.Comun;
@@ -141,6 +142,32 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                     string.Join("\n", lineas.Select(l => "- " + l)) + "\n\n" + ComoEntrar(token, correo.EnlaceExpira);
         var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> " +
                    "y necesita que corrijas lo siguiente:</p><ul>" +
+                   string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) + "</ul>" +
+                   ComoEntrarHtml(token, correo.EnlaceExpira);
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
+    /// Recordatorio de las observaciones que el tercero sigue teniendo pendientes (NT-2): las mismas observaciones vigentes del
+    /// correo de observación, con los días que lleva devuelto el expediente y un enlace de acceso nuevo de un solo uso. Nunca
+    /// nombra a los revisores ni a las áreas.
+    /// </summary>
+    public MensajeDeCorreo RedactarRecordatorioDeObservaciones(Expedientes.CorreoDeRecordatorioDeObservacionesPendiente correo, string? token = null)
+    {
+        var asunto = $"{correo.Empresa} te recuerda las observaciones de tu validación {correo.Folio}";
+        var lineas = correo.Observaciones.Select(o =>
+            (o.Requisito is null ? string.Empty : $"{o.Requisito}: ") + UnirMotivos(o.Motivos) +
+            (string.IsNullOrWhiteSpace(o.Observacion) ? string.Empty : $" — {o.Observacion.Trim()}")).ToList();
+        var pendiente = correo.DiasPendiente switch
+        {
+            <= 0 => "tiene observaciones pendientes",
+            1 => "lleva 1 día con observaciones pendientes",
+            var dias => $"lleva {dias} días con observaciones pendientes"
+        };
+        var texto = $"{correo.Empresa} sigue esperando tu respuesta: tu validación {correo.Folio} {pendiente}. Esto es lo que falta corregir:\n\n" +
+                    string.Join("\n", lineas.Select(l => "- " + l)) + "\n\n" + ComoEntrar(token, correo.EnlaceExpira);
+        var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} sigue esperando tu respuesta: tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> " +
+                   $"{WebUtility.HtmlEncode(pendiente)}. Esto es lo que falta corregir:</p><ul>" +
                    string.Concat(lineas.Select(l => $"<li>{WebUtility.HtmlEncode(l)}</li>")) + "</ul>" +
                    ComoEntrarHtml(token, correo.EnlaceExpira);
         return new MensajeDeCorreo(correo.Para, asunto, texto, html);
@@ -305,13 +332,16 @@ public sealed record ObservacionParaCorreo(IReadOnlyList<string> Motivos, string
 /// </summary>
 public sealed record CorreoDeObservacionPendiente(
     string Para, string Empresa, string Folio, IReadOnlyList<ObservacionParaCorreo> Observaciones, string? EnlaceProtegido = null,
-    DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null);
+    DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null);
 
 public static class CorreoDeObservacionPendienteHandler
 {
     public static async Task Handle(CorreoDeObservacionPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector,
-        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
+        RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, PreferenciasDeCorreoDelTercero preferencias, CancellationToken ct)
     {
+        // El tercero puede apagar el correo de este tipo (NT-1): la campana de su portal avisa igual.
+        if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Observado, ct))
+            return;
         var mensaje = redactor.RedactarObservacion(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
         await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
             EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
@@ -323,14 +353,18 @@ public static class CorreoDeObservacionPendienteHandler
 /// transacción de la decisión se confirma. <see cref="Motivos"/>: textos al tercero de los motivos del rechazo.
 /// </summary>
 public sealed record CorreoDeResultadoPendiente(string Para, string Empresa, string Folio, bool Aprobado, IReadOnlyList<string> Motivos,
-    Guid? TenantId = null, Guid? EmpresaId = null);
+    Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null);
 
 public static class CorreoDeResultadoPendienteHandler
 {
     public static async Task Handle(CorreoDeResultadoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor,
-        PlantillasDeCorreo plantillas, CancellationToken ct) =>
+        PlantillasDeCorreo plantillas, PreferenciasDeCorreoDelTercero preferencias, CancellationToken ct)
+    {
+        if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Resultado, ct))
+            return;
         await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
             correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+    }
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>
