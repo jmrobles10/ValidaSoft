@@ -1,6 +1,7 @@
 import { ficha } from './es-CO-ficha';
 import { camposFicha, fichaObservada, ratificarSeccion, seccionEnExpediente } from './es-CO-ficha-empresas';
 import { notificaciones } from './es-CO-notificaciones';
+import { erroresPrivacidad, privacidad } from './es-CO-privacidad';
 
 /** Textos de la app del tercero (es-CO, tuteo, siguiente paso en cada error: docs/06 §2.3). */
 export const esCO = {
@@ -29,6 +30,7 @@ export const esCO = {
     empresas: 'Mis empresas',
     cuentas: 'Mis cuentas',
     ficha: 'Mi información',
+    privacidad: 'Privacidad',
     salir: 'Salir',
   },
   embebido: {
@@ -518,6 +520,7 @@ export const esCO = {
     camposSenalados: 'Datos por corregir: {{campos}}',
   },
   ficha: { ...ficha, observada: fichaObservada, campos: camposFicha },
+  privacidad,
   notificaciones,
   dev: {
     titulo: 'Correos de desarrollo (Mailpit)',
@@ -633,6 +636,7 @@ export const esCO = {
     },
   },
   errores: {
+    ...erroresPrivacidad,
     red: 'No pudimos comunicarnos con Validasoft. Revisa tu conexión e inténtalo de nuevo.',
     'certificado-no-encontrado': 'No encontramos este certificado. Revisa el folio y la huella.',
     'certificado-no-vigente': 'El certificado ya no está vigente, así que su PDF no se entrega. Recarga la página para ver su estado.',

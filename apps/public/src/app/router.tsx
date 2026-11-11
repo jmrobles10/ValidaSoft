@@ -27,6 +27,8 @@ const rutas: RouteObject[] = [
           { path: 'ficha', lazy: () => import('../ficha/PaginaFicha').then((m) => ({ Component: m.PaginaFicha })) },
           { path: 'ficha/:seccion', lazy: () => import('../ficha/PaginaSeccion').then((m) => ({ Component: m.PaginaSeccion })) },
           { path: 'cuentas', lazy: () => import('../cuentas/PaginaCuentas').then((m) => ({ Component: m.PaginaCuentas })) },
+          // Habeas data y exportación firmada de la bóveda (OD-1, OD-9).
+          { path: 'privacidad', lazy: () => import('../privacidad/PaginaPrivacidad').then((m) => ({ Component: m.PaginaPrivacidad })) },
           { path: 'expediente/:id', lazy: () => import('../expediente/PaginaExpediente').then((m) => ({ Component: m.PaginaExpediente })) },
         ],
       },
