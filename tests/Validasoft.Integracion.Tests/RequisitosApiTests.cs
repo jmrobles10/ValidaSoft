@@ -1187,6 +1187,9 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture)
             case "PUT":
                 s.Put.Json(cuerpo ?? new { }).ToUrl(url);
                 break;
+            case "DELETE":
+                s.Delete.Url(url);
+                break;
             case "POST" when cuerpo is null:
                 s.Post.Url(url);
                 break;

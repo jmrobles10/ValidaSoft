@@ -33,8 +33,26 @@ public static class AvisosAAdministradores
     public static async Task<int> AvisarAsync(ISesiones sesiones, IMessageBus? mensajes, Guid tenantId, DestinatariosDeAviso destinatarios, string tipo, string titulo,
         string mensaje, string? ruta, string claveDelHecho, string? nombreDeLaEmpresa, DateTimeOffset ahora, CancellationToken ct)
     {
-        if (mensajes is IMessageContext contexto)
+        // La sesión del outbox toma el tenant del contexto del mensaje (TD-8): se fija para esta transacción y se devuelve, así otra sesión
+        // del mismo contexto (la de un stream de la bóveda) no hereda el tenant del grupo.
+        var contexto = mensajes as IMessageContext;
+        var tenantPrevio = contexto?.TenantId;
+        if (contexto is not null)
             contexto.TenantId = tenantId.ToString("N");
+        try
+        {
+            return await AvisarEnElTenantAsync(sesiones, mensajes, tenantId, destinatarios, tipo, titulo, mensaje, ruta, claveDelHecho, nombreDeLaEmpresa, ahora, ct);
+        }
+        finally
+        {
+            if (contexto is not null)
+                contexto.TenantId = tenantPrevio;
+        }
+    }
+
+    private static async Task<int> AvisarEnElTenantAsync(ISesiones sesiones, IMessageBus? mensajes, Guid tenantId, DestinatariosDeAviso destinatarios, string tipo, string titulo,
+        string mensaje, string? ruta, string claveDelHecho, string? nombreDeLaEmpresa, DateTimeOffset ahora, CancellationToken ct)
+    {
         await using var sesion = mensajes is null ? sesiones.ParaTenant(tenantId) : sesiones.ParaTenant(tenantId, mensajes);
         var personas = (await sesion.Query<Usuario>().Where(u => u.Activo).ToListAsync(ct)).Where(destinatarios.Incluye).OrderBy(u => u.Id).ToList();
         if (personas.Count == 0)

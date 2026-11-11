@@ -43,7 +43,7 @@ public static class PlazosDeHabeas
     }
 
     /// <summary>Revisa una solicitud y avisa si toca. Devuelve el aviso enviado, o nulo si no había nada que avisar.</summary>
-    public static async Task<AvisoDePlazoHabeas?> RevisarAsync(ISesiones sesiones, IMessageBus mensajes, IConfiguration configuracion, Guid solicitudId,
+    public static async Task<AvisoDePlazoHabeas?> RevisarAsync(ISesiones sesiones, IWolverineRuntime runtime, IConfiguration configuracion, Guid solicitudId,
         DateTimeOffset ahora, CancellationToken ct)
     {
         var hoy = CalculadoraDeVigencia.Fecha(ahora);
@@ -66,10 +66,12 @@ public static class PlazosDeHabeas
         {
             await using (var consulta = sesiones.ConsultaGlobal())
                 nombreDeLaEmpresa = (await consulta.LoadAsync<Dominio.Plataforma.Empresa>(empresaId, ct))?.Nombre;
-            await AvisosAAdministradores.AvisarAsync(sesiones, mensajes, tenantId, new DestinatariosDeAviso(empresaId, ConOficial: true), TiposNotificacion.HabeasPlazo,
+            // Cada transacción con su propio contexto de mensajería: la del aviso en el tenant del grupo y la del stream de la bóveda.
+            await AvisosAAdministradores.AvisarAsync(sesiones, new MessageContext(runtime), tenantId, new DestinatariosDeAviso(empresaId, ConOficial: true), TiposNotificacion.HabeasPlazo,
                 titulo, mensaje, $"/e/{empresaId}/habeas-data", $"habeas-{aviso}:{solicitud.Id:N}", nombreDeLaEmpresa, ahora, ct);
         }
 
+        var mensajes = new MessageContext(runtime);
         await using var sesion = sesiones.Boveda(mensajes);
         sesion.SetHeader("actorTipo", nameof(ActorTipo.Sistema));
         sesion.SetHeader("actorId", Actor);
@@ -108,9 +110,9 @@ public static class RevisarSolicitudesHabeasHandler
 
 public static class RevisarSolicitudHabeasHandler
 {
-    public static Task Handle(RevisarSolicitudHabeas mensaje, ISesiones sesiones, IMessageContext mensajes, IConfiguration configuracion, TimeProvider reloj,
+    public static Task Handle(RevisarSolicitudHabeas mensaje, ISesiones sesiones, IWolverineRuntime runtime, IConfiguration configuracion, TimeProvider reloj,
         CancellationToken ct) =>
-        PlazosDeHabeas.RevisarAsync(sesiones, mensajes, configuracion, mensaje.SolicitudId, mensaje.Ahora ?? reloj.GetUtcNow(), ct);
+        PlazosDeHabeas.RevisarAsync(sesiones, runtime, configuracion, mensaje.SolicitudId, mensaje.Ahora ?? reloj.GetUtcNow(), ct);
 }
 
 /// <summary>
@@ -171,7 +173,7 @@ public static class PlazosDeHabeasEndpoints
         foreach (var id in await PlazosDeHabeas.AbiertasAsync(sesiones, ct))
         {
             revisadas++;
-            var aviso = await PlazosDeHabeas.RevisarAsync(sesiones, new MessageContext(runtime), configuracion, id, ahora, ct);
+            var aviso = await PlazosDeHabeas.RevisarAsync(sesiones, runtime, configuracion, id, ahora, ct);
             if (aviso == AvisoDePlazoHabeas.PorVencer)
                 porVencer++;
             else if (aviso == AvisoDePlazoHabeas.Vencida)
