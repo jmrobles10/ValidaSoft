@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { pdf } from '../soporte/archivos';
-import { esperarCorreo, literal } from '../soporte/correo';
+import { esperarCorreo, literal, textoSinEnlaces } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea, aprobarEnNombreDe, observar, rechazar, regionDeArea } from '../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero, esperarTarjeta, responder, subirDocumento, tarjeta } from '../soporte/proveedor';
@@ -76,7 +76,7 @@ test('Compras observa el RUT, el tercero sube la versión corregida y la aprobac
   expect(correo.texto).toContain('El documento no se puede leer con claridad.');
   expect(correo.texto).toContain('La información o el documento está incompleto.');
   expect(correo.texto).toContain('La página 2 está cortada.');
-  for (const interno of ['Rubén', 'Compras', 'Olga', 'Cumplimiento']) expect(correo.texto).not.toContain(interno);
+  for (const interno of ['Rubén', 'Compras', 'Olga', 'Cumplimiento']) expect(textoSinEnlaces(correo.texto)).not.toContain(interno);
 
   await esperarEstadoDelTercero(page, 'Observado');
   await expect(tarjeta(page, RUT)).toContainText('El documento no se puede leer con claridad.');

@@ -107,10 +107,11 @@ Rama lista para revisar, **sin push ni PR**. Decisiones **ING-1…ING-9** en el 
   - web: pantalla de ingreso, registro guiado de la passkey, «Mi cuenta», Configuración › Usuarios y operadores;
   - auditoría de identidad (ingresos exitosos y fallidos, passkeys, sesiones, con dispositivo e IP) y abstracción
     `IProveedorDeIdentidad` lista para OIDC/WorkOS (no integrado).
-- **Verificación:** dominio 694/694; integración 179/179; Vitest 730/730; e2e aislada 63/63; lint, tipos y build en verde.
-  En la corrida completa del e2e una prueba previa (`decisiones.spec`) falló porque el token aleatorio de un enlace
-  contenía «Olga» (el texto del correo no debe nombrar áreas); pasó al repetirla. El e2e usa el autenticador virtual de
-  Chrome (CDP) para registrar y firmar de verdad.
+- **Verificación** (rebasada sobre `main` en `3b81cd4`): dominio 758/758; integración 205/206 (la que falla,
+  `Reintegrar_avisa_al_tercero_segun_el_modo…`, también falla en `main` sin esta rama); Vitest 815/815; e2e de ingreso,
+  tiempo real, novedades del tercero y decisiones 17/17 (63/63 antes del rebase); lint, tipos y build en verde. El e2e usa el
+  autenticador virtual de Chrome (CDP) para registrar y firmar de verdad. Se arregló de paso la intermitencia de
+  `decisiones.spec` (el token del enlace podía contener «Olga»): el chequeo de «no nombra áreas» ahora ignora las direcciones.
 - **Queda fuera** (§4.6): WorkOS/OIDC, autocompletado de passkeys en el campo del correo (conditional UI), reautenticación
   para acciones sensibles, avisos por correo de cambios de passkey y consulta de la auditoría de ingreso de Plataforma.
 
