@@ -336,7 +336,8 @@ public sealed partial class RequisitosApiTests
         await SubirAsync(sesion, "RUT", Pdf("RUT"));
         await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara"));
 
-        var decidido = await EsperarAsync(e.Norte, expedienteId, x => x.Requisitos!.All(r => r.RevisionesAutomaticas is { Count: > 0 }));
+        // Espera a las dos revisiones de Compras (la aprobada y la que se queda sin presupuesto): se registran una a una, no a la vez.
+        var decidido = await EsperarAsync(e.Norte, expedienteId, x => RevisionDe(x, "RUT", "COMPRAS") is not null && RevisionDe(x, "CAMARA_COMERCIO", "COMPRAS") is not null);
         RevisionDe(decidido, "RUT", "COMPRAS")!.Resultado.ShouldBe("AprobadaAutomaticamente");
         var sinPresupuesto = RevisionDe(decidido, "CAMARA_COMERCIO", "COMPRAS")!;
         (sinPresupuesto.Resultado, sinPresupuesto.PendienteDeAtencion).ShouldBe(("Excepcion", true));
