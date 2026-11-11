@@ -29,4 +29,5 @@ export interface IndicadoresDto {
   certificadosVigentes: number;
   certificadosConPendientes: number;
   certificadosNoValidos: number;
+  vinculosPorVencer?: number;
 }

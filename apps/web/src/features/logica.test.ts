@@ -41,6 +41,45 @@ const historial: EventoHistorialDto[] = [
   },
 ];
 
+describe('historial del vínculo: vigencia periódica (VV-1)', () => {
+  const evento = (tipo: string, datos: Record<string, unknown>): EventoHistorialDto => ({
+    version: 9,
+    tipo,
+    fecha: '2027-10-07T13:00:00Z',
+    actorTipo: 'Sistema',
+    actorId: 'vigencia-vinculo',
+    sistema: null,
+    datos,
+  });
+  const contexto = { usuarioActual: null };
+
+  it('la vigencia fijada dice hasta cuándo vale (fecha de calendario) o que no vence', () => {
+    expect(eventoATimeline(evento('vigencia_del_vinculo_fijada', { VigenteHasta: '2027-11-06', DiasGracia: 0 }), contexto, t)).toMatchObject({
+      titulo: 'Vigencia fijada',
+      detalle: 'Vigente hasta el 06/11/2027',
+    });
+    expect(eventoATimeline(evento('vigencia_del_vinculo_fijada', { VigenteHasta: null }), contexto, t).detalle).toBe('Sin vencimiento periódico');
+  });
+
+  it('el primer aviso pasa el vínculo de Activo a Por vencer (pre-vencimiento) con la fecha de vencimiento', () => {
+    expect(eventoATimeline(evento('vinculo_por_vencer', { VigenteHasta: '2027-11-06', DiasRestantes: 30, AvisosCumplidos: [30] }), contexto, t)).toMatchObject({
+      titulo: 'Vínculo en pre-vencimiento',
+      antes: 'Activo',
+      despues: 'PorVencer',
+      detalle: 'Vence el 06/11/2027',
+      actor: { nombre: 'Sistema (IA)', tipo: 'sistema' },
+    });
+  });
+
+  it('el vencimiento dice por qué venció', () => {
+    expect(eventoATimeline(evento('vinculo_vencido', { Documento: 'Vigencia del vínculo', Causa: 'Vigencia' }), contexto, t)).toMatchObject({
+      titulo: 'Vínculo vencido',
+      despues: 'Vencido',
+      motivo: 'Vigencia del vínculo',
+    });
+  });
+});
+
 describe('historial del vínculo', () => {
   it('lee campos sin importar mayúsculas y estados numéricos o textuales', () => {
     expect(campo({ Motivo: 'x' }, 'motivo')).toBe('x');

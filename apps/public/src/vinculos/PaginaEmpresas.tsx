@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { useExpedientePublico, useVinculosPublicos } from '../shared/api';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas, LogoEmpresa } from '../shared/componentes';
-import { avanceDelTercero } from './avance';
+import { avanceDelTercero, type AvanceTercero } from './avance';
 import { AvisoRechazo } from './AvisoRechazo';
 import { ChipAvance } from './ChipAvance';
 import { DialogoContactos } from './DialogoContactos';
@@ -50,10 +50,25 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
   const expedienteId = v.expedienteId ?? '';
   const conExpediente = expedienteId !== '' && situacion === 'vigente' && v.invitacionAceptada;
   const expediente = useExpedientePublico(expedienteId, conExpediente);
-  const avance = avanceDelTercero(v, conExpediente ? expediente.data : null);
-  // Mientras llega el expediente no se muestra «En validación»: el chip espera (salvo que el vínculo ya diga algo propio).
-  const esperando = conExpediente && expediente.isPending && avance === null;
+  const conocido = avanceDelTercero(v, conExpediente ? expediente.data : null);
+  // Mientras llega el expediente no se muestra «En validación» ni «Por vencer»: la renovación abierta cambia lo que le toca (VV-3),
+  // así que el chip espera en vez de mostrar un estado que luego se contradice.
+  const esperando = conExpediente && expediente.isPending && (conocido === null || conocido.tipo === 'porVencer');
+  const avance = esperando ? null : conocido;
   const [editandoContactos, setEditandoContactos] = useState(false);
+  const textoDelBoton = (tipo: AvanceTercero['tipo'] | undefined) => {
+    switch (tipo) {
+      case 'faltan':
+        return t('empresas.subirDocumentos');
+      case 'observado':
+        return t('empresas.verObservaciones');
+      case 'preVencimiento':
+      case 'ratificar':
+        return t('empresas.ratificar');
+      default:
+        return t('empresas.verExpediente');
+    }
+  };
 
   return (
     <Card component="li" sx={{ p: 2 }}>
@@ -101,7 +116,7 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
             variant={v.invitacionAceptada ? 'contained' : 'outlined'}
             startIcon={avance?.tipo === 'faltan' ? <Upload size={18} aria-hidden /> : undefined}
           >
-            {avance?.tipo === 'faltan' ? t('empresas.subirDocumentos') : avance?.tipo === 'observado' ? t('empresas.verObservaciones') : t('empresas.verExpediente')}
+            {textoDelBoton(avance?.tipo)}
           </Button>
         )}
         {v.invitacionAceptada && situacion !== 'terminada' && (

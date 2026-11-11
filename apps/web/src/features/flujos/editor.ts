@@ -10,6 +10,7 @@ import type {
   VerificacionRequeridaDto,
 } from '@validasoft/api-client';
 import { requisitoDeSeccionADto, validarRequisitoDeSeccion } from './requisitosDeSeccion';
+import { VIGENCIA_POR_DEFECTO, validarVigenciaDelVinculo, vigenciaADto } from './vigencia';
 
 /**
  * Modelo del editor de flujos y su validación. Replica `DefinicionDeFlujo.Validar` y `Flujo.Crear` del dominio
@@ -58,6 +59,13 @@ export interface RequisitoEnEditor {
    * (F5). `null` = activo por omisión; se conserva al guardar para no pisar lo que la API ya tenía.
    */
   usarComoSoporte: boolean | null;
+  /**
+   * Solo en secciones (VV-1): días que vale lo que la empresa aceptó; pasados, la sección vence y entra a la renovación para que el
+   * tercero la ratifique o la actualice. `null` = no vence por sí sola.
+   */
+  vigenciaDias: number | null;
+  /** Solo en secciones (RV-4): plazo para resolver una actualización que la incluya. `null` = el por omisión (15 días). */
+  diasRevalidacion: number | null;
 }
 
 /**
@@ -92,6 +100,13 @@ export interface BorradorFlujo {
   /** Reintento del tercero tras un rechazo (DS-4): si puede volver a postularse por su cuenta y cuántos días espera (0 = de inmediato). */
   reintentoPermitido: boolean;
   reintentoDias: string;
+  /**
+   * Vigencia periódica del vínculo (VV-1), como la escribe la persona: días desde la última aprobación (0 = sin vencimiento
+   * periódico), avisos «30, 15, 5» (días antes de vencer) y días de gracia.
+   */
+  vigenciaDias: string;
+  vigenciaAvisos: string;
+  vigenciaGracia: string;
   etapas: EtapaEnEditor[];
   requisitos: RequisitoEnEditor[];
   verificaciones: VerificacionEnEditor[];
@@ -121,11 +136,20 @@ export type CodigoErrorFlujo =
   | 'periodos-no-aplica'
   | 'periodos-invalidos'
   | 'vigencia-invalida'
-  | 'reconsulta-invalida';
+  | 'reconsulta-invalida'
+  | 'vigencia-vinculo-invalida'
+  | 'aviso-vigencia-invalido'
+  | 'gracia-vigencia-invalida'
+  | 'vigencia-sin-secciones'
+  | 'vigencia-seccion-invalida'
+  | 'dias-revalidacion-invalidos';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
-  /** `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>`, `requisito.<k>` o `requisito.<k>.periodos`. */
+  /**
+   * `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>`, `requisito.<k>`, `requisito.<k>.periodos`,
+   * `requisito.<k>.vigencia`, `requisito.<k>.revalidacion`, `vigencia.dias`, `vigencia.avisos` o `vigencia.gracia`.
+   */
   campo: string;
   /** Es aviso: no impide guardar (la API lo acepta) pero el flujo no avanzaría. */
   aviso?: boolean;
@@ -154,6 +178,8 @@ export function requisitoNuevo(tipoDocumentoTenantId = ''): RequisitoEnEditor {
     periodos: null,
     exigeSoporte: false,
     usarComoSoporte: null,
+    vigenciaDias: null,
+    diasRevalidacion: null,
   };
 }
 
@@ -173,6 +199,9 @@ export function borradorVacio(): BorradorFlujo {
     plazoRecordatorios: PLAZO_POR_DEFECTO.recordatorios.join(', '),
     reintentoPermitido: false,
     reintentoDias: '0',
+    vigenciaDias: String(VIGENCIA_POR_DEFECTO.dias),
+    vigenciaAvisos: VIGENCIA_POR_DEFECTO.avisos.join(', '),
+    vigenciaGracia: String(VIGENCIA_POR_DEFECTO.gracia),
     etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }],
     requisitos: [],
     verificaciones: [],
@@ -189,6 +218,9 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
     plazoRecordatorios: (version.plazoCargue?.recordatorios ?? PLAZO_POR_DEFECTO.recordatorios).join(', '),
     reintentoPermitido: version.reintento?.permitido ?? false,
     reintentoDias: String(version.reintento?.diasEspera ?? 0),
+    vigenciaDias: String(version.vigenciaVinculo?.dias ?? VIGENCIA_POR_DEFECTO.dias),
+    vigenciaAvisos: (version.vigenciaVinculo?.diasAviso ?? VIGENCIA_POR_DEFECTO.avisos).join(', '),
+    vigenciaGracia: String(version.vigenciaVinculo?.diasGracia ?? VIGENCIA_POR_DEFECTO.gracia),
     etapas: [...version.etapas]
       .sort((a, b) => a.orden - b.orden)
       .map((e) => ({
@@ -213,6 +245,8 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
       periodos: r.periodos ?? null,
       exigeSoporte: r.exigeSoporte ?? false,
       usarComoSoporte: r.usarComoSoporte ?? null,
+      vigenciaDias: r.vigenciaDias ?? null,
+      diasRevalidacion: r.diasRevalidacion ?? null,
     })),
     verificaciones: (version.verificaciones ?? []).map((v) => ({
       tipo: v.tipo,
@@ -275,6 +309,7 @@ export function validarFlujo(
   });
   errores.push(...validarRequisitos(borrador, tiposDocumento));
   errores.push(...validarVerificaciones(borrador.verificaciones));
+  errores.push(...validarVigenciaDelVinculo(borrador));
   return errores;
 }
 
@@ -419,6 +454,7 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     separacion: borrador.separacionDeFunciones,
     plazo: plazoADto(borrador),
     reintento: reintentoADto(borrador),
+    vigencia: vigenciaADto(borrador),
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos),
     verificaciones: verificacionesADto(borrador.verificaciones),

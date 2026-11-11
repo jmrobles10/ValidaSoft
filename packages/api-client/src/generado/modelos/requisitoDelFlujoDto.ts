@@ -26,4 +26,8 @@ export interface RequisitoDelFlujoDto {
   exigeSoporte?: boolean;
   /** @nullable */
   usarComoSoporte?: boolean | null;
+  /** @nullable */
+  vigenciaDias?: number | null;
+  /** @nullable */
+  diasRevalidacion?: number | null;
 }

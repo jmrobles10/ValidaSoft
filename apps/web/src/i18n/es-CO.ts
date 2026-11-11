@@ -11,6 +11,7 @@ import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { informes } from './es-CO-informes';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
+import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -289,6 +290,8 @@ export const esCO = {
   plazoCargue,
   flujoPlazo,
   flujoReintento,
+  flujoVigencia,
+  vigenciaVinculo,
   informes,
   expedientes,
   documentos,
@@ -325,10 +328,14 @@ export const esCO = {
     vinculo_anulado: 'Vínculo anulado',
     expediente_vinculado: 'Expediente abierto',
     vinculo_activado: 'Vínculo activado',
+    vinculo_por_vencer: 'Vínculo en pre-vencimiento',
+    vinculo_vencido: 'Vínculo vencido',
+    vigencia_del_vinculo_fijada: 'Vigencia fijada',
     expediente_cerrado: 'Expediente cerrado',
     referencia: 'Referencia {{sistema}} {{id}}',
     invitacion: 'A {{correo}}, vence el {{expira}}',
     hasta: 'Hasta el {{fecha}}',
+    vigencia: { venceEl: 'Vence el {{fecha}}', vigenteHasta: 'Vigente hasta el {{fecha}}', sinVigencia: 'Sin vencimiento periódico' },
     actor: {
       tu: 'Tú',
       Usuario: 'Usuario',
@@ -640,6 +647,7 @@ export const esCO = {
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
     ...erroresLotes,
+    ...erroresVigencias,
     ...erroresCruce,
     ...erroresRecordatorios,
   },

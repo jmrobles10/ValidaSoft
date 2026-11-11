@@ -291,8 +291,10 @@ export async function publicarFlujoConFicha(
   empresa: Empresa,
   codigo: string,
   area: Area,
-  requisitos: { tipoDocumento?: string; seccion?: string; usarComoSoporte?: boolean }[],
-): Promise<void> {
+  requisitos: { tipoDocumento?: string; seccion?: string; usarComoSoporte?: boolean; vigenciaDias?: number; diasRevalidacion?: number }[],
+  /** Vigencia periódica del vínculo del flujo (VV-1): días desde la última aprobación, avisos y gracia. */
+  vigenciaVinculo?: { dias: number; diasAviso?: number[]; diasGracia?: number },
+): Promise<string> {
   const flujo = await llamar<{ id: string }>('POST', '/api/v1/flujos', {
     llave: e.admin,
     empresa: empresa.id,
@@ -304,7 +306,29 @@ export async function publicarFlujoConFicha(
       politicaDevolucion: 'Inmediata',
       separacionDeFunciones: false,
       requisitos: requisitos.map((r) => ({ ...r, obligatorio: true, areasQueRevisan: [area.id], aprobadoresRequeridos: null })),
+      vigenciaVinculo,
     },
   });
   await llamar('POST', `/api/v1/flujos/${flujo.id}/publicar`, { llave: e.admin, empresa: empresa.id });
+  return flujo.id;
+}
+
+export interface ResultadoDeVigencias {
+  revisados: number;
+  avisados: number;
+  vencidos: number;
+  desbloqueados: number;
+  documentosVencidos: number;
+}
+
+/**
+ * Corre ya el job de vigencias de vínculos del grupo (Plataforma) como si fuera `fecha` (solo Development): avisa, vence (con su
+ * renovación) o levanta los bloqueos con fecha que ya tocaban. Con `incluirDocumentos` también vence antes las versiones de
+ * documentos cuya gracia terminó a esa fecha. Cada llamada avanza a lo sumo una transición por vínculo.
+ */
+export async function revisarVigencias(e: Escenario, fecha: Date, { incluirDocumentos = false }: { incluirDocumentos?: boolean } = {}): Promise<ResultadoDeVigencias> {
+  return llamar<ResultadoDeVigencias>('POST', '/api/v1/plataforma/vigencias-de-vinculos/revisar', {
+    llave: CLAVE_PLATAFORMA,
+    cuerpo: { tenantId: e.tenantId, fecha: fecha.toISOString(), incluirDocumentos },
+  });
 }

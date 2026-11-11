@@ -11,6 +11,28 @@ export const seccionEnExpediente = {
   completar: 'Completar en Mi información',
   corregir: 'Corregir en Mi información',
   ayuda: 'Esta información no se sube aquí: la diligencias una sola vez en «Mi información» y le llega a cada empresa.',
+  /** Renovación periódica del vínculo (VV-3): la sección ya aceptada se ratifica o se actualiza. */
+  ratificarAyuda: '{{empresa}} te pide confirmar esta información. Si no cambió, ratifícala; si cambió, actualízala.',
+  actualizar: 'Actualizar en Mi información',
+  ratificada: 'Confirmaste el {{fecha}} que sigue igual.',
+} as const;
+
+/** Ratificar una sección de la ficha: en el expediente de renovación, en Mi información y en el wizard de la sección. */
+export const ratificarSeccion = {
+  boton: 'Ratificar',
+  titulo: '¿Tu información de {{documento}} sigue igual?',
+  texto: 'Confirmas que tu información de {{documento}} no ha cambiado. {{empresa}} la da por renovada sin volver a revisarla y su vigencia vuelve a contar desde hoy.',
+  siCambio: 'Si cambió algo, cierra y actualízala.',
+  confirmar: 'Sí, sigue igual',
+  hecho: 'Confirmaste tu información de {{documento}}. {{empresa}} la dio por renovada.',
+  /** Mi información: lo que pide cada empresa. */
+  bannerTitulo_one: '{{count}} empresa te pide ratificar tu información',
+  bannerTitulo_other: '{{count}} empresas te piden ratificar tu información',
+  bannerTexto: 'Confirma que sigue igual (sin cambiar nada) o actualízala. Te lo piden: {{empresas}}',
+  porRatificar: 'Por ratificar para {{empresa}}',
+  paraEmpresa: 'Ratificar para {{empresa}}',
+  enSeccionTitulo: '{{empresa}} te pide ratificar esta información',
+  enSeccionTexto: 'Si no cambió, confírmalo. Si cambió, actualiza el formulario y guarda: {{empresa}} revisará la versión nueva.',
 } as const;
 
 export const fichaObservada = {

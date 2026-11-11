@@ -3,6 +3,8 @@ import { CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
 import type { RequisitoEnEditor } from '../editor';
+import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
+import { CampoDias } from './CampoDias';
 
 interface Props {
   requisito: RequisitoEnEditor;
@@ -34,9 +36,17 @@ export function SelectorSeccion({ requisito, onCambiar, deshabilitado }: Props) 
 
 /**
  * Lo propio de un requisito de sección (FM-25): «Periodos» en la financiera (1–5; vacío = el último cierre), «Exige
- * soporte» y la nota de que Legal y Financiera no se piden a la persona natural.
+ * soporte», la vigencia propia de lo que la empresa acepta (VV-1; vacía = no vence sola), el plazo de revalidación (RV-4; vacío = 15
+ * días) y la nota de que Legal y Financiera no se piden a la persona natural.
  */
-export function OpcionesSeccion({ requisito, onCambiar, deshabilitado, errorPeriodos }: Props & { errorPeriodos: string | null }) {
+export function OpcionesSeccion({
+  requisito,
+  onCambiar,
+  deshabilitado,
+  errorPeriodos,
+  errorVigencia = null,
+  errorRevalidacion = null,
+}: Props & { errorPeriodos: string | null; errorVigencia?: string | null; errorRevalidacion?: string | null }) {
   const { t } = useTranslation();
   const definicion = seccionFicha(requisito.seccion);
   return (
@@ -58,6 +68,28 @@ export function OpcionesSeccion({ requisito, onCambiar, deshabilitado, errorPeri
           control={<Checkbox checked={requisito.exigeSoporte} onChange={(ev) => onCambiar({ exigeSoporte: ev.target.checked })} disabled={deshabilitado} />}
           label={t('fichaEmpresa.editor.exigeSoporte')}
           sx={{ mx: 0, minHeight: 40 }}
+        />
+        <CampoDias
+          label={t('fichaEmpresa.editor.vigenciaDias')}
+          valor={String(requisito.vigenciaDias ?? '')}
+          maximo={MAXIMO_VIGENCIA_VINCULO_DIAS}
+          placeholder={t('fichaEmpresa.editor.noVence')}
+          onCambiar={(valor) => onCambiar({ vigenciaDias: valor === '' ? null : Number(valor) })}
+          error={Boolean(errorVigencia)}
+          helperText={errorVigencia ?? t('fichaEmpresa.editor.vigenciaDiasAyuda')}
+          disabled={deshabilitado}
+          sx={{ width: 230 }}
+        />
+        <CampoDias
+          label={t('fichaEmpresa.editor.diasRevalidacion')}
+          valor={String(requisito.diasRevalidacion ?? '')}
+          maximo={MAXIMO_DIAS_REVALIDACION}
+          placeholder="15"
+          onCambiar={(valor) => onCambiar({ diasRevalidacion: valor === '' ? null : Number(valor) })}
+          error={Boolean(errorRevalidacion)}
+          helperText={errorRevalidacion ?? t('fichaEmpresa.editor.diasRevalidacionAyuda')}
+          disabled={deshabilitado}
+          sx={{ width: 230 }}
         />
       </Stack>
       {!definicion?.porPeriodo && errorPeriodos && (

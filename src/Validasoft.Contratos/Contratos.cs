@@ -260,7 +260,8 @@ public sealed record VinculoDto(
     Guid? ExpedienteAbiertoId = null,
     bool AperturaDeExpedientePendiente = false,
     string? UltimoResultado = null,
-    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null);
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null,
+    DateOnly? VigenteHasta = null);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -355,7 +356,7 @@ public sealed record SesionEmbebidaDto(string Token, DateTimeOffset Expira, stri
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
     DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null,
-    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null);
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null);
 
 /// <summary>
 /// Lo que el tercero ve de un rechazo (DS-4): cuándo y con qué motivos (los textos al tercero, sin áreas ni revisores). Con
@@ -487,4 +488,5 @@ public sealed record MisPendientesDto(IReadOnlyList<PendientesDeAreaDto> PorArea
 /// </summary>
 public sealed record IndicadoresDto(int Dias, int VinculosActivos, int VinculosEnValidacion, int VinculosInvitados, int VinculosVencidos,
     int VinculosBloqueados, int ExpedientesEnCurso, int ExpedientesObservados, int ExpedientesAprobados, int ExpedientesRechazados,
-    double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos);
+    double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos,
+    int VinculosPorVencer = 0);

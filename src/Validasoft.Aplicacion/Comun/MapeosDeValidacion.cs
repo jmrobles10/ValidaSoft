@@ -27,11 +27,11 @@ public static class MapeosDeValidacion
             v.CreadaEn, v.PublicadaEn, v.RetiradaEn,
             [.. v.Requisitos.Select(r => r.EsSeccion
                 ? new RequisitoDelFlujoDto(r.Id, null, null, r.Obligatorio, r.AreasQueRevisan, r.AprobadoresRequeridos, r.Condicion?.ADto(), r.Seccion,
-                    r.Periodos, r.ExigeSoporte)
+                    r.Periodos, r.ExigeSoporte, VigenciaDias: r.VigenciaDias, DiasRevalidacion: r.DiasRevalidacion)
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
                     r.AprobadoresRequeridos, r.Condicion?.ADto(), UsarComoSoporte: r.UsarComoSoporte))],
             [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
-            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto());
+            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto(), v.VigenciaEfectiva().ADto());
 
     /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
     public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
@@ -44,6 +44,15 @@ public static class MapeosDeValidacion
     public static ReintentoDto ADto(this ReintentoTrasRechazo r) => new(r.Permitido, r.DiasEspera);
 
     public static ReintentoTrasRechazo ADominio(this ReintentoDto r) => new(r.Permitido, r.DiasEspera);
+
+    public static VigenciaVinculoDto ADto(this VigenciaDelVinculo v) => new(v.Dias, [.. v.DiasAviso], v.DiasGracia);
+
+    /// <summary>
+    /// Vigencia del cuerpo a dominio: sin avisos indicados, los de por omisión (30, 15 y 5) que quepan antes de vencer; con ellos,
+    /// los indicados. El dominio valida el resto (422 <c>vigencia-vinculo-invalida</c>, <c>aviso-vigencia-invalido</c>…).
+    /// </summary>
+    public static VigenciaDelVinculo ADominio(this VigenciaVinculoDto v) =>
+        new(v.Dias, v.DiasAviso ?? [.. VigenciaDelVinculo.AvisosPorOmision.Where(a => v.Dias <= 0 || a < v.Dias)], v.DiasGracia);
 
     public static PlazoCargueDto ADto(this PlazoDeCargue p) => new(p.Dias, [.. p.Recordatorios]);
 
@@ -78,7 +87,7 @@ public static class MapeosDeValidacion
                 throw ReglaDeNegocioException.Validacion("soporte-no-aplica", "«Usar como soporte» es de los requisitos de documento, no de las secciones.");
             var seccion = r.Seccion.Trim().ToUpperInvariant();
             return new RequisitoDelFlujo(r.Id ?? Guid.Empty, Guid.Empty, seccion, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
-                r.Condicion?.ADominio(), seccion, r.Periodos, r.ExigeSoporte);
+                r.Condicion?.ADominio(), seccion, r.Periodos, r.ExigeSoporte, VigenciaDias: r.VigenciaDias, DiasRevalidacion: r.DiasRevalidacion);
         }
 
         if (r.Periodos is not null || r.ExigeSoporte)
@@ -88,7 +97,7 @@ public static class MapeosDeValidacion
         if (tipoId == Guid.Empty && codigo.Length == 0)
             throw ReglaDeNegocioException.Validacion("requisito-invalido", "Cada requisito necesita el tipo de documento (id o código).");
         return new RequisitoDelFlujo(r.Id ?? Guid.Empty, tipoId, codigo, r.Obligatorio, [.. r.AreasQueRevisan ?? []], r.AprobadoresRequeridos,
-            r.Condicion?.ADominio(), UsarComoSoporte: r.UsarComoSoporte);
+            r.Condicion?.ADominio(), UsarComoSoporte: r.UsarComoSoporte, VigenciaDias: r.VigenciaDias, DiasRevalidacion: r.DiasRevalidacion);
     }
 
     public static FlujoDto ADto(this Flujo f, TipoVinculo? tipo, bool esPorDefecto) =>
@@ -223,12 +232,15 @@ public static class MapeosDeValidacion
             e.Requisitos.Count(r => r.Obligatorio && r.Estado == EstadoRequisito.Pendiente), e.Tipo.ToString(), e.PlazoCargueHasta);
 
     /// <summary>
-    /// ¿Puede el tercero ratificar este documento (RN-2, I-14)? En una renovación abierta, sobre un documento global sin
-    /// versión en ella cuyo tipo canónico lo permite (RUT sí; Cámara y estados financieros, no).
+    /// ¿Puede el tercero ratificar este requisito (RN-2, I-14)? En una renovación abierta, sobre un documento global sin
+    /// versión en ella cuyo tipo canónico lo permite (RUT sí; Cámara y estados financieros, no), o sobre una sección de la ficha
+    /// que la renovación periódica del vínculo le pide ratificar (VV-1: la empresa ya la había aceptado y aún no hay versión nueva).
     /// </summary>
     private static bool PuedeRatificar(Expediente e, RequisitoDeExpediente r) =>
-        e.EstaAbierto && e.Tipo == TipoExpediente.Renovacion && !r.Eximido && r.VersionActual is null && r.Ambito == AmbitoDocumento.Global &&
-        Dominio.Documentos.CatalogoCanonico.Buscar(r.TipoCanonico)?.PermiteRatificacion == true;
+        e.EstaAbierto && e.Tipo == TipoExpediente.Renovacion && !r.Eximido && r.VersionActual is null &&
+        (r.EsSeccion
+            ? r.ExigeRatificacion && r.VersionAceptadaPrevia is not null
+            : r.Ambito == AmbitoDocumento.Global && Dominio.Documentos.CatalogoCanonico.Buscar(r.TipoCanonico)?.PermiteRatificacion == true);
 
     private static ObservacionPublicaDto APublica(this VeredictoRegistrado v, string? requisito) =>
         new([.. v.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))], v.Observacion, v.Fecha, requisito,

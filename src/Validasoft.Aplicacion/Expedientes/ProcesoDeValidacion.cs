@@ -3,6 +3,7 @@ using Marten;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
+using Validasoft.Aplicacion.Vinculos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
@@ -94,12 +95,14 @@ public static class ProcesoDeValidacion
     /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1). Una
     /// <c>Actualizacion</c> (RV-1) lleva solo los requisitos de <paramref name="soloRequisitos"/> y la abre el sistema en
     /// nombre de <paramref name="actor"/> (quien subió la versión). <paramref name="retiros"/>: por requisito, la versión que la
-    /// empresa había aprobado y el tercero retiró (RT-3), para que la revalidación lleve el motivo.
+    /// empresa había aprobado y el tercero retiró (RT-3), para que la revalidación lleve el motivo. Con <paramref name="exigirRatificacion"/>
+    /// (la renovación periódica del vínculo, VV-1) las secciones que la empresa ya había aceptado nacen pendientes de que el tercero las
+    /// ratifique o las actualice.
     /// </summary>
     public static async Task<Expediente> AbrirAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, FlujoResuelto flujo,
         IContextoSolicitud? contexto, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null,
         TipoExpediente tipoExpediente = TipoExpediente.Inicial, IReadOnlySet<Guid>? soloRequisitos = null, ActorDeExpediente? actor = null,
-        IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null)
+        IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null, bool exigirRatificacion = false)
     {
         var vinculo = vinculoStream.Aggregate ?? throw new InvalidOperationException("El vínculo no existe.");
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -118,7 +121,7 @@ public static class ProcesoDeValidacion
 
         var exigencia = ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
         var requisitos = await CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, flujo.Version, exigencia, soloRequisitos, documentos, ahora, ct,
-            retiros);
+            retiros, exigirRatificacion);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
@@ -148,10 +151,12 @@ public static class ProcesoDeValidacion
     /// compartida que ya lo cubre, cada sección con la versión vigente si es completa para la empresa y lo que la empresa ya
     /// aceptó o aprobó (RQ-11). La usan la apertura del expediente y la ampliación de una actualización abierta, para que ambos
     /// calculen igual. Con <paramref name="documentos"/> nulo y la invitación aceptada, comparte con el vínculo lo que el flujo pide (RQ-3).
+    /// Con <paramref name="exigirRatificacion"/> una sección cuya versión vigente es la misma que la empresa ya aceptó no la cubre
+    /// (nace pendiente, <see cref="RequisitoCalculado.ExigeRatificacion"/>): el tercero la ratifica o la actualiza (VV-1).
     /// </summary>
     public static async Task<IReadOnlyList<RequisitoCalculado>> CalcularRequisitosAsync(IDocumentSession sesion, Vinculo vinculo, Tercero tercero,
         Guid tenantId, FlujoVersion version, ContextoDeExigencia exigencia, IReadOnlySet<Guid>? soloRequisitos, DocumentosDelVinculo? documentos,
-        DateTimeOffset ahora, CancellationToken ct, IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null)
+        DateTimeOffset ahora, CancellationToken ct, IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null, bool exigirRatificacion = false)
     {
         var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, version, exigencia, ct))
             .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
@@ -169,8 +174,8 @@ public static class ProcesoDeValidacion
             ? await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct)
             : new Dictionary<string, SeccionAceptada>();
         var calculados = pedidos.Select(p => (p.Requisito.Id, Calculado: RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)))
-            .Concat(secciones.Select(s => (s.Requisito.Id, Calculado: RequisitosDeExpediente.CalcularSeccion(s, tercero.Id, ficha,
-                RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, s)))))
+            .Concat(secciones.Select(s => (s.Requisito.Id, Calculado: ConRatificacion(RequisitosDeExpediente.CalcularSeccion(s, tercero.Id, ficha,
+                RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, s)), exigirRatificacion))))
             .ToList();
         // En el orden del flujo (los periodos de la financiera, del más reciente al más antiguo).
         var orden = version.Requisitos.Select(r => r.Id).ToList();
@@ -181,6 +186,13 @@ public static class ProcesoDeValidacion
             ? ordenados
             : [.. ordenados.Select(r => retiros.TryGetValue(r.RequisitoId, out var retiro) ? r with { Retiro = retiro } : r)];
     }
+
+    /// <summary>Renovación periódica: la sección cuya versión completa es la ya aceptada no queda cubierta; hace falta ratificarla (VV-1).</summary>
+    private static RequisitoCalculado ConRatificacion(RequisitoCalculado calculado, bool exigir) =>
+        exigir && calculado is { TipoRequisito: TipoDeRequisito.Seccion, Version: { } version, Aceptada: { } aceptada } &&
+        version.DocumentoId == aceptada.DocumentoId && version.Numero == aceptada.Numero
+            ? calculado with { Version = null, ExigeRatificacion = true }
+            : calculado;
 
     /// <summary>
     /// Anexa los eventos de una decisión al expediente y propaga sus efectos en la misma sesión: bandeja, cierre del
@@ -280,9 +292,13 @@ public static class ProcesoDeValidacion
             {
                 var cerrado = vinculo.CerrarExpediente(estado.Id, cierre, ahora);
                 vinculoStream.AppendMany(cerrado);
-                // Vínculo Activo por un expediente aprobado ⇒ certificado en la misma transacción (docs/03 §8, CE-2).
+                // Vínculo Activo por un expediente aprobado ⇒ certificado en la misma transacción (docs/03 §8, CE-2), con la vigencia
+                // periódica del vínculo (VV-1) que esa aprobación fija.
                 if (cerrado.OfType<VinculoActivado>().Any())
-                    await certificados.EmitirAsync(sesion, estado, vinculo, ahora, ct);
+                {
+                    var vigenteHasta = await VigenciasDeVinculos.FijarAlAprobarAsync(sesion, vinculoStream, vinculo, estado, ahora, ct);
+                    await certificados.EmitirAsync(sesion, estado, vinculo, ahora, ct, vigenteHastaDelVinculo: vigenteHasta);
+                }
             }
 
             // Aprobado con listas consultadas ⇒ el vínculo queda en monitoreo periódico (VE-12), heredando las decisiones.

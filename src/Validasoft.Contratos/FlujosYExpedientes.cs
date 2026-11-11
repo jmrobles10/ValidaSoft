@@ -38,12 +38,14 @@ public sealed record EtapaDto(int Orden, IReadOnlyList<AreaDeEtapaDto> Areas);
 /// <see cref="ExigeSoporte"/> (la versión debe traer soporte para estar completa para la empresa). Las áreas que revisan son
 /// el «responsable por sector» del SRM. A la persona natural no se le piden Legal ni Financiera.
 /// <see cref="UsarComoSoporte"/> (F5, FM-13): en un documento que respalda secciones (RUT, Cámara, estados financieros, cédula),
-/// <c>false</c> lo deja de cruzar con ellas; nulo = por omisión (activo).
+/// <c>false</c> lo deja de cruzar con ellas; nulo = por omisión (activo). Solo en una sección: <see cref="VigenciaDias"/> (VV-1) son los días que
+/// vale lo que la empresa aceptó (pasados, la sección entra a la renovación del vínculo para ratificarla o actualizarla; nulo = no vence) y
+/// <see cref="DiasRevalidacion"/> (RV-4) el plazo para resolver una actualización que la incluya (nulo = 15; en un documento lo da su tipo).
 /// </summary>
 public sealed record RequisitoDelFlujoDto(
     Guid? Id = null, Guid? TipoDocumentoTenantId = null, string? TipoDocumento = null, bool Obligatorio = true,
     IReadOnlyList<Guid>? AreasQueRevisan = null, int? AprobadoresRequeridos = null, CondicionDto? Condicion = null, string? Seccion = null,
-    int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null);
+    int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null, int? VigenciaDias = null, int? DiasRevalidacion = null);
 
 /// <summary>
 /// «Se pide cuando» (docs/03 §12, RQ-12). <see cref="Tipo"/>: <c>Y</c>|<c>O</c>|<c>No</c> combinan <see cref="Nodos"/>
@@ -64,7 +66,8 @@ public sealed record CondicionDto(
 public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
     bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
-    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
+    VigenciaVinculoDto? VigenciaVinculo = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
@@ -73,18 +76,28 @@ public sealed record CrearFlujoDto(
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
     IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null,
-    PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
+    PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null, VigenciaVinculoDto? VigenciaVinculo = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
     DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
-    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
+    VigenciaVinculoDto? VigenciaVinculo = null);
 
 /// <summary>
 /// Reintento del tercero tras un rechazo (DS-4): con <see cref="Permitido"/> el tercero rechazado ve los motivos en su portal y
 /// puede «Volver a postularse» pasados <see cref="DiasEspera"/> días desde el rechazo (0 = de inmediato). Por defecto no se permite.
 /// </summary>
 public sealed record ReintentoDto(bool Permitido, int DiasEspera = 0);
+
+/// <summary>
+/// Vigencia periódica del vínculo (VV-1, la «vigencia del proveedor» del SRM): a los <see cref="Dias"/> de su última aprobación el vínculo
+/// vence y el tercero debe ratificar o actualizar las secciones de la ficha que pide el flujo (0 = sin vencimiento periódico). Con
+/// vigencia, el flujo debe pedir al menos una sección (422 <c>vigencia-sin-secciones</c>). <see cref="DiasAviso"/> son los días antes de
+/// vencer en que se le avisa (el primero deja el vínculo <c>PorVencer</c>; por omisión 30, 15 y 5, los menores que <see cref="Dias"/>, hasta 5)
+/// y <see cref="DiasGracia"/> los que sigue siendo válido después de la fecha (por omisión 0).
+/// </summary>
+public sealed record VigenciaVinculoDto(int Dias, IReadOnlyList<int>? DiasAviso = null, int DiasGracia = 0);
 
 /// <summary>Flujo con su versión publicada y su borrador (si existen) y si es el flujo por defecto de su tipo de vínculo.</summary>
 public sealed record FlujoDto(
@@ -368,3 +381,17 @@ public sealed record ReabrirExpedienteDto(string? Justificacion = null);
 public sealed record RevisarPlazosDto(Guid? TenantId = null, DateTimeOffset? Fecha = null);
 
 public sealed record ResultadoRevisionPlazosDto(int Revisados, int Recordatorios, int Caducados);
+
+/// <summary>
+/// Cuerpo del job de vigencias de vínculos (Plataforma): <c>fecha</c> simula «ahora» (solo Development). Con <c>fecha</c> y
+/// <c>tenantId</c>, <see cref="IncluirDocumentos"/> también vence antes las versiones de documentos compartidas con ese tenant cuya
+/// gracia ya terminó a esa fecha (lo que hacen sus mensajes programados al llegar la hora), para probar de punta a punta la renovación por
+/// documento vencido sin esperar días.
+/// </summary>
+public sealed record RevisarVigenciasDto(Guid? TenantId = null, DateTimeOffset? Fecha = null, bool IncluirDocumentos = false);
+
+/// <summary>
+/// Lo que hizo el job de vigencias: vínculos revisados, avisos enviados, vencidos (con su renovación), bloqueos con fecha levantados y
+/// versiones de documentos vencidas (solo con <see cref="RevisarVigenciasDto.IncluirDocumentos"/>).
+/// </summary>
+public sealed record ResultadoRevisionVigenciasDto(int Revisados, int Avisados, int Vencidos, int Desbloqueados, int DocumentosVencidos = 0);

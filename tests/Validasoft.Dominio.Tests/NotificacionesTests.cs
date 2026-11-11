@@ -52,6 +52,8 @@ public class NotificacionesTests
             { new VinculoActivado(ExpedienteId, Ahora), "vinculo.activado", VinculoId },
             { new VinculoBloqueado(EstadoVinculo.Activo, "Sanción", null, Ahora), "vinculo.bloqueado", VinculoId },
             { new VinculoDesbloqueado(EstadoVinculo.Activo, "Levantada", Ahora), "vinculo.desbloqueado", VinculoId },
+            { new VinculoPorVencer(new DateOnly(2027, 11, 6), 30, [30], Ahora), "vinculo.por_vencer", VinculoId },
+            { new VinculoVencido("Vigencia del vínculo", Ahora, CausaDeVencimiento.Vigencia), "vinculo.vencido", VinculoId },
             { new VinculoDesvinculado(EstadoVinculo.Activo, "Fin del contrato", Ahora), "vinculo.desvinculado", VinculoId },
             { new VinculoAnulado(EstadoVinculo.Invitado, "Error de captura", Ahora), "vinculo.anulado", VinculoId },
             { new VinculoReintegrado(EstadoVinculo.Activo, "Se renovó el contrato", Ahora, true), "vinculo.reintegrado", VinculoId },

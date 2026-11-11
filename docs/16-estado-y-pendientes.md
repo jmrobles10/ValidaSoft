@@ -69,9 +69,9 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 
 | Rama | Huecos | Contenido |
 |---|---|---|
-| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones**; plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. Registro VV- |
+| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones** que se abre en el primer aviso (**pre-vencimiento**); plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. **Terminada y verificada; falta su PR.** Registro VV- (sección «5-unquadragies») |
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | **Terminada, con la verificación completa (§4.10).** Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
-| `feature/integracion-abierta` | Principio de producto | **Integración abierta (IO-1…IO-10).** El núcleo no nombra ni asume el SRM, el Portal ni AyF: importador genérico con adaptador de origen (el Portal es un adaptador opcional), referencias externas por sistema (tercero y vínculo, idempotentes y privadas de cada tenant), contactos por empresa (nombre, cargo, correo, teléfono, rol), datos de pago genéricos (banco del catálogo con código de compensación y SWIFT, contacto de pagos, lugar de expedición, `ExentoReteCree`) y embebido genérico del tercero (`POST /sesiones-tercero`, `/embed/:componente`, `montarEmbebido`). Guía «integrar un sistema nuevo en 5 pasos» y contrato del interruptor en [08](08-integracion-y-migracion.md) §2.2, §2.3 y §3.4; auditoría de acoplamiento en §9 |
+| `feature/integracion-abierta` | Principio de producto | **Integración abierta (IO-1…IO-10).** El núcleo no nombra ni asume el SRM, el Portal ni AyF: importador genérico con adaptador de origen (el Portal es un adaptador opcional), referencias externas por sistema (tercero y vínculo, idempotentes y privadas de cada tenant), contactos por empresa (nombre, cargo, correo, teléfono, rol), datos de pago genéricos (banco del catálogo con código de compensación y SWIFT, contacto de pagos, lugar de expedición, `ExentoReteCree`) y embebido genérico del tercero (`POST /sesiones-tercero`, `/embed/:componente`, `montarEmbebido`). Guía «integrar un sistema nuevo en 5 pasos» y contrato del interruptor en [integracion.md](integracion.md) §1.1 y §8.1 y en [08](08-integracion-y-migracion.md) §3.4; auditoría de acoplamiento en §9 |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
 ### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
@@ -133,14 +133,25 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 
 **Huecos** (los numerados están en curso, §3):
 1. **Aplicación en AyF:** en espera (§3.2).
-2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** en curso.
+2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** **resuelto** en
+   `feature/vigencia-vinculo` (VV-1..VV-12, [03 §5.4](03-dominio-y-eventos.md)): el flujo configura días, avisos y gracia
+   (`dias = 0` mantiene el comportamiento anterior); el vínculo pasa a `PorVencer` en el primer aviso (**pre-vencimiento**) y
+   ahí se abre la renovación, que pide **ratificar** (sin cambiar datos) o **actualizar** las secciones de la ficha y los
+   documentos obligatorios no vigentes; si se aprueba antes de la fecha el vínculo nunca vence y la vigencia nueva cuenta
+   desde esa aprobación; si no, vence con su certificado y la misma renovación sigue abierta; cada sección puede traer su vigencia.
 3. **Desaprobar una etapa ya aprobada o volver a la fase inicial:** resuelto en `feature/desaprobar-y-reintegrar`
    (§4.10), a la espera de su PR.
 4. **Campana del tercero y recordatorio de observaciones:** en curso.
-5. **Plazo de revalidación configurable:** en curso.
-6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** el desbloqueo sigue en curso
-   (`feature/vigencia-vinculo`); reintegrar sin revalidar y el reinicio tras un rechazo están resueltos en
+5. **Plazo de revalidación configurable:** **resuelto** en la misma rama (VV-7): rige el menor `diasRevalidacion` de los
+   requisitos de la actualización (tipo de documento o sección del flujo), 15 por omisión.
+6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** el desbloqueo automático está **resuelto**
+   en `feature/vigencia-vinculo` (VV-8: mensaje programado de Wolverine al bloquear con fecha, respaldado por el barrido
+   del job de vigencias); reintegrar sin revalidar y el reinicio tras un rechazo están resueltos en
    `feature/desaprobar-y-reintegrar` (§4.10).
+
+**Pendiente de lo resuelto en `feature/vigencia-vinculo`:** un vínculo vencido por dos documentos a la vez solo abre la renovación con el primero
+(RN-1); el aviso de vigencia aún no es una plantilla personalizable (PL-1); los vínculos con vigencia o bloqueo anteriores
+al cambio se indexan con su próximo evento (o reconstruyendo la proyección del vínculo).
 
 ### 4.2 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre

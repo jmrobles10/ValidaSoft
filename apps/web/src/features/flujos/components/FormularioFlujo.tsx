@@ -7,6 +7,7 @@ import { limpiarAreasDeRequisitos, type BorradorFlujo, type ErrorFlujo } from '.
 import { EditorEtapas } from './EditorEtapas';
 import { EditorRequisitos } from './EditorRequisitos';
 import { EditorVerificaciones } from './EditorVerificaciones';
+import { EditorVigenciaVinculo } from './EditorVigenciaVinculo';
 
 export interface FormularioFlujoProps {
   borrador: BorradorFlujo;
@@ -167,6 +168,7 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
               />
             )}
           </Box>
+          <EditorVigenciaVinculo borrador={borrador} onCambiar={onCambiar} errores={errores} soloLectura={soloLectura} />
         </Stack>
       </Tarjeta>
 

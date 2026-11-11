@@ -4,6 +4,7 @@ import { ChipEstado, formatearFecha } from '@validasoft/ui';
 import { ClipboardList, PencilLine } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
+import { ConfirmarRatificacion } from './ConfirmarRatificacion';
 import { Observacion } from './Observacion';
 import { accionDeRequisito, enlaceDeSeccion, observacionesDeRequisito } from './requisitos';
 
@@ -32,7 +33,11 @@ export function TarjetaRequisitoSeccion({ requisito, expediente, conAccion }: { 
             {requisito.tipoDocumento.nombre}
           </Typography>
           <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
-            {version ? t('expediente.seccion.version', { n: String(version.n), fecha: formatearFecha(version.cargadaEn) }) : t('expediente.seccion.sinVersion')}
+            {requisito.ratificadoEn
+              ? t('expediente.seccion.ratificada', { fecha: formatearFecha(requisito.ratificadoEn) })
+              : version
+                ? t('expediente.seccion.version', { n: String(version.n), fecha: formatearFecha(version.cargadaEn) })
+                : t('expediente.seccion.sinVersion')}
           </Typography>
         </Box>
         <ChipEstado estado={requisito.estado} size="medium" />
@@ -55,7 +60,27 @@ export function TarjetaRequisitoSeccion({ requisito, expediente, conAccion }: { 
         <Observacion key={o.fecha} observacion={o} />
       ))}
 
-      {boton && (
+      {requisito.puedeRatificar && conAccion && (
+        // Renovación periódica (VV-3): la sección que la empresa ya aceptó se ratifica (sigue igual) o se actualiza.
+        <Box sx={{ mt: 1, pl: 3.25 }}>
+          <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>{t('expediente.seccion.ratificarAyuda', { empresa })}</Typography>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <ConfirmarRatificacion
+              tipo="seccion"
+              compacto
+              expedienteId={expediente.id}
+              requisitoId={requisito.id}
+              documento={requisito.tipoDocumento.nombre}
+              empresa={empresa}
+            />
+            <Button component={RouterLink} to={enlaceDeSeccion(requisito)} variant="text" size="small" startIcon={<PencilLine size={16} aria-hidden />}>
+              {t('expediente.seccion.actualizar')}
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      {boton && !requisito.puedeRatificar && (
         <Box sx={{ mt: 1, pl: 3.25 }}>
           <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>{t('expediente.seccion.ayuda')}</Typography>
           <Button

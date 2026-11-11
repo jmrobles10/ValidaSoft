@@ -310,6 +310,7 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/configuracion/recordatorio-observaciones': 'obtenerRecordatorioAutomatico',
   'PUT /api/v1/configuracion/recordatorio-observaciones': 'actualizarRecordatorioAutomatico',
   'POST /api/v1/plataforma/recordatorios-observaciones/revisar': 'revisarRecordatoriosDeObservaciones',
+  'POST /api/v1/plataforma/vigencias-de-vinculos/revisar': 'revisarVigenciasDeVinculos',
   // Invitación masiva por lote (H8, LT-5…LT-10).
   'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
   'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',

@@ -67,6 +67,13 @@ public sealed partial class Vinculo
     /// <summary>Expediente abierto (a lo sumo uno, invariante 1 de docs/03 §5.3).</summary>
     public Guid? ExpedienteAbiertoId { get; set; }
 
+    /// <summary>Tipo del expediente abierto (nulo sin expediente abierto o si se abrió antes de que el vínculo lo registrara).</summary>
+    public TipoExpediente? ExpedienteAbiertoTipo { get; set; }
+
+    /// <summary>¿El expediente abierto es una renovación? (la de pre-vencimiento o la del vencimiento: la misma se reutiliza).</summary>
+    [JsonIgnore]
+    public bool TieneRenovacionAbierta => ExpedienteAbiertoId is not null && ExpedienteAbiertoTipo == TipoExpediente.Renovacion;
+
     /// <summary>Último expediente cerrado y su resultado.</summary>
     public Guid? UltimoExpedienteId { get; set; }
 
@@ -426,18 +433,24 @@ public sealed partial class Vinculo
     public void Apply(ExpedienteVinculado e)
     {
         ExpedienteAbiertoId = e.ExpedienteId;
+        ExpedienteAbiertoTipo = e.Tipo;
         if (Estado == EstadoVinculo.Invitado)
             Estado = EstadoVinculo.EnValidacion;
+        if (e.Tipo == TipoExpediente.Renovacion)
+            RenovacionPorVigenciaPendiente = false;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
     public void Apply(ExpedienteCerrado e)
     {
         ExpedienteAbiertoId = null;
+        ExpedienteAbiertoTipo = null;
         UltimoExpedienteId = e.ExpedienteId;
         UltimoResultado = e.Resultado;
         if (e.Resultado != ResultadoExpediente.Aprobado && Estado == EstadoVinculo.EnValidacion)
             Estado = EstadoVinculo.Invitado;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -445,6 +458,9 @@ public sealed partial class Vinculo
     {
         Estado = EstadoVinculo.Activo;
         TuvoAprobacion = true;
+        UltimaAprobacionEn = e.Fecha;
+        RenovacionPorVigenciaPendiente = false;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -458,6 +474,9 @@ public sealed partial class Vinculo
     public void Apply(VinculoVencido e)
     {
         Estado = EstadoVinculo.Vencido;
+        // Con la renovación ya abierta (la del pre-vencimiento) no hay otra por abrir: la misma sigue su curso (VV-3).
+        RenovacionPorVigenciaPendiente = e.Causa == CausaDeVencimiento.Vigencia && !TieneRenovacionAbierta;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -466,6 +485,7 @@ public sealed partial class Vinculo
         EstadoPrevioAlBloqueo = e.EstadoPrevio;
         Estado = EstadoVinculo.Bloqueado;
         Bloqueo = new Bloqueo(e.Motivo, e.Fecha, e.Hasta);
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -474,6 +494,7 @@ public sealed partial class Vinculo
         Estado = e.EstadoRestituido;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -484,6 +505,7 @@ public sealed partial class Vinculo
         Estado = EstadoVinculo.Desvinculado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -497,6 +519,7 @@ public sealed partial class Vinculo
             InvitacionAceptadaEn = null;
         }
 
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -506,6 +529,7 @@ public sealed partial class Vinculo
         Estado = EstadoVinculo.Anulado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -519,6 +543,7 @@ public sealed partial class Vinculo
         UltimoExpedienteId = abierto;
         UltimoResultado = ResultadoExpediente.Anulado;
         ExpedienteAbiertoId = null;
+        ExpedienteAbiertoTipo = null;
     }
 
     private void AsegurarNoTerminal(string accion)

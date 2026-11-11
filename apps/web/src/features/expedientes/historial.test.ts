@@ -31,6 +31,22 @@ describe('historial del expediente', () => {
   });
 });
 
+describe('historial: ratificación del tercero en una renovación', () => {
+  it('«requisito_ratificado» dice qué ratificó el tercero', () => {
+    const evento: EventoHistorialDto = {
+      version: 4,
+      tipo: 'requisito_ratificado',
+      fecha: '2026-11-09T12:00:00Z',
+      actorTipo: 'Tercero',
+      actorId: 'tercero',
+      sistema: null,
+      datos: { requisitoId: 'r1', por: 'tercero:ana@aceros.co', fecha: '2026-11-09T12:00:00Z' },
+    };
+    const entrada = eventoExpedienteATimeline(evento, { ...contexto, requisitos: new Map([['r1', 'Información general']]) }, t);
+    expect(entrada.titulo).toBe('El tercero ratificó Información general: sigue igual');
+  });
+});
+
 describe('historial: ampliación de la actualización abierta', () => {
   it('«requisitos_agregados» dice qué se sumó a la actualización', () => {
     const evento: EventoHistorialDto = {

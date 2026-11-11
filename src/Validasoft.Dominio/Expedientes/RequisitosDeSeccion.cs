@@ -47,7 +47,7 @@ public sealed record RequisitoDeSeccionPedido(Guid RequisitoId, RequisitoDelFluj
     public RequisitoCalculado Calcular(EvaluacionDeSeccion? evaluacion, VersionDeRequisito? aceptada) =>
         new(RequisitoId, Guid.Empty, Definicion.Codigo, Nombre, Definicion.Codigo, AmbitoDocumento.Global, Requisito.Obligatorio,
             Requisito.AreasQueRevisan, Requisito.AprobadoresRequeridos, evaluacion?.Disponible, null, TipoDeRequisito.Seccion, Definicion.Codigo,
-            Periodo, Requisito.ExigeSoporte, aceptada, evaluacion?.Completitud);
+            Periodo, Requisito.ExigeSoporte, aceptada, evaluacion?.Completitud, DiasRevalidacion: Requisito.DiasRevalidacion);
 }
 
 /// <summary>

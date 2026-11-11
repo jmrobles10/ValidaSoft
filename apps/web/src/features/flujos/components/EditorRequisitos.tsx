@@ -50,6 +50,8 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
       {requisitos.map((r, k) => {
         const e = error(`requisito.${String(k)}`);
         const ePeriodos = error(`requisito.${String(k)}.periodos`);
+        const eVigencia = error(`requisito.${String(k)}.vigencia`);
+        const eRevalidacion = error(`requisito.${String(k)}.revalidacion`);
         const esSeccion = r.seccion !== null;
         const tipo = esSeccion ? undefined : tiposDocumento.find((x) => x.id === r.tipoDocumentoTenantId);
         const seccion = seccionFicha(r.seccion);
@@ -62,7 +64,7 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
             key={r.clave}
             component="section"
             aria-label={nombre}
-            sx={{ border: 1, borderColor: e || ePeriodos ? 'error.main' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}
+            sx={{ border: 1, borderColor: e || ePeriodos || eVigencia || eRevalidacion ? 'error.main' : 'divider', borderRadius: (th) => `${String(th.radio.sm)}px`, p: 1.5 }}
           >
             <Box
               sx={{
@@ -140,7 +142,14 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
               </AlineadoConCampo>
             </Box>
             {esSeccion && (
-              <OpcionesSeccion requisito={r} onCambiar={(cambio) => cambiar(k, cambio)} deshabilitado={soloLectura} errorPeriodos={ePeriodos ? textoError(ePeriodos, true) : null} />
+              <OpcionesSeccion
+                requisito={r}
+                onCambiar={(cambio) => cambiar(k, cambio)}
+                deshabilitado={soloLectura}
+                errorPeriodos={ePeriodos ? textoError(ePeriodos, true) : null}
+                errorVigencia={eVigencia ? textoError(eVigencia, true) : null}
+                errorRevalidacion={eRevalidacion ? textoError(eRevalidacion, true) : null}
+              />
             )}
             {tipo && seccionesQueRespalda(tipo.tipoCanonico).length > 0 && (
               <Box sx={{ mt: 0.5 }}>

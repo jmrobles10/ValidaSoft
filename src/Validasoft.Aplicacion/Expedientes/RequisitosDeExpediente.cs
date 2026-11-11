@@ -91,7 +91,7 @@ public static class RequisitosDeExpediente
         var tipo = pedido.Tipo;
         return new RequisitoCalculado(pedido.Requisito.Id, tipo.Id, tipo.Codigo, tipo.Nombre, tipo.TipoCanonico, tipo.Ambito,
             pedido.Requisito.Obligatorio, pedido.Requisito.AreasQueRevisan, pedido.Requisito.AprobadoresRequeridos,
-            Cubre(tipo.Id, tipo.TipoCanonico, tipo.Ambito, documentos, vinculoId));
+            Cubre(tipo.Id, tipo.TipoCanonico, tipo.Ambito, documentos, vinculoId), DiasRevalidacion: tipo.DiasRevalidacion);
     }
 
     /// <summary>

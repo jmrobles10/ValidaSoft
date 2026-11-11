@@ -2,11 +2,12 @@ import type { EstadoVinculo, EventoHistorialDto } from '@validasoft/api-client';
 import { formatearFecha, type EventoTimeline, type TipoActor } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { esCO } from '../../i18n/es-CO';
+import { formatearFechaDeclarada } from '../documentos/formatoDatos';
 
 /** Orden del enum `EstadoVinculo` del dominio: los eventos lo guardan como número. */
 const ORDEN_ESTADOS: readonly EstadoVinculo[] = ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'];
 
-type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor'>;
+type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor' | 'vigencia'>;
 
 /**
  * Los datos del evento llegan como los serializa Marten (PascalCase y enums numéricos), distinto del resto de la
@@ -37,7 +38,7 @@ export function tipoNormalizado(tipo: string): string {
 }
 
 function esTipoConocido(tipo: string): tipo is TipoConocido {
-  return tipo in esCO.historial && !['referencia', 'invitacion', 'hasta', 'actor'].includes(tipo);
+  return tipo in esCO.historial && !['referencia', 'invitacion', 'hasta', 'actor', 'vigencia'].includes(tipo);
 }
 
 export interface ContextoHistorial {
@@ -123,6 +124,17 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       return { ...base, antes: 'Invitado', despues: 'EnValidacion', detalle: texto(campo(datos, 'folio')) };
     case 'vinculo_activado':
       return { ...base, antes: 'EnValidacion', despues: 'Activo' };
+    // Vigencia periódica del vínculo (VV-1): la fecha que fijó la aprobación, el aviso previo y el vencimiento.
+    case 'vigencia_del_vinculo_fijada': {
+      const hasta = texto(campo(datos, 'vigenteHasta'));
+      return { ...base, detalle: hasta ? t('historial.vigencia.vigenteHasta', { fecha: formatearFechaDeclarada(hasta) }) : t('historial.vigencia.sinVigencia') };
+    }
+    case 'vinculo_por_vencer': {
+      const hasta = texto(campo(datos, 'vigenteHasta'));
+      return { ...base, antes: 'Activo', despues: 'PorVencer', detalle: hasta ? t('historial.vigencia.venceEl', { fecha: formatearFechaDeclarada(hasta) }) : null };
+    }
+    case 'vinculo_vencido':
+      return { ...base, despues: 'Vencido', motivo: texto(campo(datos, 'documento')) };
     case 'expediente_cerrado': {
       const resultado = texto(campo(datos, 'resultado'));
       return resultado === 'Aprobado' || resultado === 'Rechazado' || resultado === 'Anulado' || resultado === 'Caducado' ? { ...base, despues: resultado } : base;
