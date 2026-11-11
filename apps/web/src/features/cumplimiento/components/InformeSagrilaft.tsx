@@ -1,10 +1,9 @@
 import { Box, Button, Stack } from '@mui/material';
-import { EsqueletoTabla, EsqueletoTarjeta } from '@validasoft/ui';
+import { CampoFecha, EsqueletoTabla, EsqueletoTarjeta } from '@validasoft/ui';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorRecuperable, IconoCarga } from '../../../shared/componentes';
-import { CampoFecha } from '../../../shared/camposTransitorios';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { guardarArchivo } from '../../vencimientos/api';

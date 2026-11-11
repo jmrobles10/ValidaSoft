@@ -1,11 +1,10 @@
 import { Box, Button, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
-import { Dato, EstadoVacio, formatearFecha, RejillaDatos } from '@validasoft/ui';
+import { CampoFecha, Dato, EstadoVacio, RejillaDatos, formatearFecha } from '@validasoft/ui';
 import { Download, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorRecuperable, IconoCarga, Tarjeta } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
-import { CampoFecha } from '../../../shared/camposTransitorios';
 import { useAvisos } from '../../../shared/useAvisos';
 import { guardarArchivo } from '../../vencimientos/api';
 import { useDescargarInformeCumplimiento, useInformeCumplimiento } from '../api';

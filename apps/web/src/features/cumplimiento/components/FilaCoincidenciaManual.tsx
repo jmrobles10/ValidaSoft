@@ -2,8 +2,8 @@ import { Box, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/ma
 import type { PersonaConsultadaDto } from '@validasoft/api-client';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CampoNumero } from '../../../shared/camposTransitorios';
 import type { BorradorCoincidenciaManual } from '../consultaManual';
+import { CampoNumero } from '@validasoft/ui';
 
 export interface FilaCoincidenciaManualProps {
   numero: number;

@@ -2,10 +2,10 @@ import { Box, Chip, Typography } from '@mui/material';
 import type { RevisionAutomaticaConfigDto } from '@validasoft/api-client';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
-import { CampoNumero } from '../../../shared/camposTransitorios';
 import { MOTIVOS_QUE_LLEVAN_A_UNA_PERSONA } from '../../revisionAutomatica/modelo';
 import { MAXIMO_ESPERA, MAXIMO_TOPE, type BorradorRevision, type ErroresDeRevision } from './modelo';
 import { SelectorMultiple } from './SelectorMultiple';
+import { CampoNumero } from '@validasoft/ui';
 
 export interface TarjetaAlcanceProps {
   borrador: BorradorRevision;

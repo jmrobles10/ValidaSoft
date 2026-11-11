@@ -4,7 +4,6 @@ import { FileText, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../../../shared/componentes';
-import { CampoFecha, CampoNumero } from '../../../shared/camposTransitorios';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePersonasDeConsulta } from '../api';
 import {
@@ -21,6 +20,7 @@ import {
 import { formatearPeso } from '../modelo';
 import { FilaCoincidenciaManual } from './FilaCoincidenciaManual';
 import { SelectorDeArchivo } from './SelectorDeArchivo';
+import { CampoFecha, CampoNumero } from '@validasoft/ui';
 
 export interface DialogoConsultaManualProps {
   expediente: ExpedienteDto;

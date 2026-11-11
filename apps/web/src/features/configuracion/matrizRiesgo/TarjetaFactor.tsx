@@ -1,10 +1,10 @@
 import { Box, Button, Chip, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CampoNumero } from '../../../shared/camposTransitorios';
 import { COLUMNAS_OPCION } from './estilos';
 import { FilaOpcion } from './FilaOpcion';
 import { erroresDe, esAutomatico, MAXIMO_OPCIONES, type BorradorFactor, type CambioFactor, type CambioOpcion, type ErrorMatriz } from './modelo';
+import { CampoNumero } from '@validasoft/ui';
 
 export interface TarjetaFactorProps {
   factor: BorradorFactor;

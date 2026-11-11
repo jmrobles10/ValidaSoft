@@ -1,9 +1,9 @@
 import { Box, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { CampoNumero } from '../../../shared/camposTransitorios';
 import { ChipNivelRiesgo } from '../../cumplimiento/components/ChipNivelRiesgo';
 import { tonoDeRiesgo } from '../../cumplimiento/modelo';
 import { tramos } from './modelo';
+import { CampoNumero } from '@validasoft/ui';
 
 export interface TarjetaLimitesProps {
   limiteBajo: string;

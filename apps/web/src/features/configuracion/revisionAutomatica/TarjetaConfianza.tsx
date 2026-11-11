@@ -1,8 +1,7 @@
 import { Box, Typography } from '@mui/material';
-import { AlineadoConCampo } from '@validasoft/ui';
+import { AlineadoConCampo, CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
-import { CampoNumero } from '../../../shared/camposTransitorios';
 import { UMBRAL_MINIMO } from './modelo';
 
 export interface TarjetaConfianzaProps {

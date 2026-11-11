@@ -263,6 +263,51 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         otraVez.PorTipo.Single(t => t.Tipo == "llave-openai").Fallidos.ShouldBe(0);
     }
 
+    [Fact]
+    public async Task Las_credenciales_de_listas_se_cifran_con_la_clave_del_grupo_y_el_recifrado_migra_lo_guardado_con_la_clave_de_la_instalacion()
+    {
+        var (token, _, _) = await SesionDeOperadorAsync("op-5");
+        var operador = new Credencial(null, Bearer: token);
+        var slug = "g" + Guid.NewGuid().ToString("N")[..10];
+        var alta = await EnviarAsync<TenantCreadoDto>("POST", "/api/v1/plataforma/tenants", operador, AltaCompleta(slug, RSA.Create(2048), $"c.{slug}@a.co"));
+        var grupoId = alta.Tenant.Id;
+        var empresa = new Credencial(alta.ApiKeyAdministrador.Valor, alta.Empresa!.Id);
+        var protector = Host.Services.GetRequiredService<Validasoft.Aplicacion.Comun.IProtectorDeSecretos>();
+
+        // Lo que la empresa guarda por la API ya queda con la clave de su grupo y la API nunca devuelve la clave.
+        var respuesta = await EnviarAsync("PUT", "/api/v1/configuracion/listas-restrictivas", empresa,
+            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Infolaft", "sinco-norte", "clave-super-secreta-9876")), esperado: 200);
+        (await respuesta.ReadAsTextAsync()).ShouldNotContain("clave-super-secreta");
+        await using (var consulta = Store.QuerySession(grupoId.ToString("N")))
+        {
+            var guardada = (await consulta.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Infolaft"].ClaveProtegida;
+            guardada.ShouldStartWith("vs2.");
+            guardada.ShouldNotContain("secreta");
+            protector.DesprotegerDeGrupo(grupoId, guardada).ShouldBe("clave-super-secreta-9876");
+            Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(Guid.NewGuid(), guardada)); // otro grupo no la abre
+        }
+
+        // Una guardada antes con la clave de la instalación se sigue leyendo y el recifrado la pasa a la del grupo.
+        await using (var sesion = Store.LightweightSession(grupoId.ToString("N")))
+        {
+            var configuracion = (await sesion.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!;
+            configuracion.Credenciales["Infolaft"].ClaveProtegida = protector.Proteger("clave-legada-1234");
+            sesion.Store(configuracion);
+            await sesion.SaveChangesAsync();
+        }
+
+        var antes = await EnviarAsync<EstadoDeSecretosDto>("GET", "/api/v1/plataforma/secretos", operador, esperado: 200);
+        var tipoAntes = antes.PorTipo.Single(t => t.Tipo == "credenciales-listas");
+        (tipoAntes.Total - tipoAntes.Vigentes).ShouldBeGreaterThanOrEqualTo(1);
+        var despues = await EnviarAsync<EstadoDeSecretosDto>("POST", "/api/v1/plataforma/secretos/recifrar", operador, esperado: 200);
+        despues.PorTipo.Single(t => t.Tipo == "credenciales-listas").Recifrados.ShouldBeGreaterThanOrEqualTo(1);
+
+        await using var releida = Store.QuerySession(grupoId.ToString("N"));
+        var migrada = (await releida.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Infolaft"].ClaveProtegida;
+        migrada.ShouldStartWith($"vs2.{despues.ClaveVigente}.");
+        protector.DesprotegerDeGrupo(grupoId, migrada).ShouldBe("clave-legada-1234");
+    }
+
     private Task<PaginaDto<GrupoDto>> GruposAsync(Credencial credencial, string? q = null, int? limite = null, string? cursor = null)
     {
         var consulta = new List<string>();
