@@ -48,7 +48,7 @@ export function ConfirmarRatificacion({ expedienteId, requisitoId, documento, em
         size={compacto ? 'small' : 'medium'}
         startIcon={<CheckCheck size={16} aria-hidden />}
         onClick={() => setAbierto(true)}
-        sx={compacto ? undefined : { mt: 1, ml: 3.25 }}
+        sx={compacto ? { minHeight: 36 } : { mt: 1, ml: 3.25 }}
       >
         {etiqueta ?? t(`${k}.boton`)}
       </Button>

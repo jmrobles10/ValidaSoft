@@ -307,6 +307,47 @@ public sealed partial class RequisitosApiTests
         (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Bloqueante.ShouldBeTrue();
     }
 
+    [Fact]
+    public async Task El_job_de_Plataforma_con_fecha_simulada_vence_los_documentos_y_el_vinculo_abre_la_renovacion_que_el_tercero_ratifica()
+    {
+        // Solo el RUT vence (la Cámara no vence en este grupo): una sola renovación, sin carreras entre documentos.
+        var e = await PrepararAsync();
+        var camara = (await ApiAsync<List<TipoDocumentoTenantDto>>("GET", "/api/v1/tipos-documento", Admin(e.Norte), null, 200)).Single(t => t.Codigo == "CAMARA_COMERCIO");
+        await ApiAsync<TipoDocumentoTenantDto>("PUT", $"/api/v1/tipos-documento/{camara.Id}", Admin(e.Norte),
+            new ActualizarTipoDocumentoDto(ReglaFrescura: new ReglaFrescuraDto("Ninguna")), 200);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT v1"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara v1"));
+        await AceptarAsync(sesion, vinculo.Id);
+        await AprobarAreasAsync(e, await ExpedienteAbiertoAsync(e, vinculo.Id));
+        var plataforma = new Credencial(ApiFixture.ClavePlataforma);
+
+        // Sin tenant y fecha no se pueden incluir los documentos.
+        (await CodigoAsync(await ApiAsync("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
+            new RevisarVigenciasDto(IncluirDocumentos: true), 422))).ShouldBe("fecha-requerida");
+        // Antes de que termine la gracia del RUT (365 + 15 días) no vence nada.
+        (await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
+            new RevisarVigenciasDto(e.Norte.Datos.TenantId, DateTimeOffset.UtcNow.AddDays(300), IncluirDocumentos: true), 200)).DocumentosVencidos.ShouldBe(0);
+
+        var resultado = await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
+            new RevisarVigenciasDto(e.Norte.Datos.TenantId, DateTimeOffset.UtcNow.AddDays(400), IncluirDocumentos: true), 200);
+        resultado.DocumentosVencidos.ShouldBe(1);
+
+        var renovacionId = await ExpedienteAbiertoAsync(e, vinculo.Id);
+        (await VinculoAsync(e.Norte, vinculo.Id)).Estado.ShouldBe("Vencido");
+        (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(e.Norte), null, 200)).Tipo.ShouldBe("Renovacion");
+        var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{renovacionId}", sesion.AccessToken, null, 200);
+        var rut = vista.Requisitos!.ShouldHaveSingleItem();
+        (rut.TipoDocumento.Codigo, rut.PuedeRatificar).ShouldBe(("RUT", true));
+
+        // El tercero ratifica su RUT: la renovación se aprueba y el vínculo vuelve a Activo.
+        (await TerceroAsync<ExpedientePublicoDto>("POST", $"/public/v1/expedientes/{renovacionId}/requisitos/{rut.Id}/ratificar", sesion.AccessToken, new { }, 200))
+            .Estado.ShouldBe("Aprobado");
+        (await VinculoAsync(e.Norte, vinculo.Id)).Estado.ShouldBe("Activo");
+    }
+
     // ---------- desbloqueo automático (VV-5) ----------
 
     [Fact]

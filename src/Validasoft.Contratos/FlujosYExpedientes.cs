@@ -349,8 +349,16 @@ public sealed record RevisarPlazosDto(Guid? TenantId = null, DateTimeOffset? Fec
 
 public sealed record ResultadoRevisionPlazosDto(int Revisados, int Recordatorios, int Caducados);
 
-/// <summary>Cuerpo del job de vigencias de vínculos (Plataforma): <c>fecha</c> simula «ahora» (solo Development).</summary>
-public sealed record RevisarVigenciasDto(Guid? TenantId = null, DateTimeOffset? Fecha = null);
+/// <summary>
+/// Cuerpo del job de vigencias de vínculos (Plataforma): <c>fecha</c> simula «ahora» (solo Development). Con <c>fecha</c> y
+/// <c>tenantId</c>, <see cref="IncluirDocumentos"/> también vence antes las versiones de documentos compartidas con ese tenant cuya
+/// gracia ya terminó a esa fecha (lo que hacen sus mensajes programados al llegar la hora), para probar de punta a punta la renovación por
+/// documento vencido sin esperar días.
+/// </summary>
+public sealed record RevisarVigenciasDto(Guid? TenantId = null, DateTimeOffset? Fecha = null, bool IncluirDocumentos = false);
 
-/// <summary>Vínculos revisados por el job de vigencias: avisos enviados, vencidos (con su renovación) y bloqueos con fecha levantados.</summary>
-public sealed record ResultadoRevisionVigenciasDto(int Revisados, int Avisados, int Vencidos, int Desbloqueados);
+/// <summary>
+/// Lo que hizo el job de vigencias: vínculos revisados, avisos enviados, vencidos (con su renovación), bloqueos con fecha levantados y
+/// versiones de documentos vencidas (solo con <see cref="RevisarVigenciasDto.IncluirDocumentos"/>).
+/// </summary>
+public sealed record ResultadoRevisionVigenciasDto(int Revisados, int Avisados, int Vencidos, int Desbloqueados, int DocumentosVencidos = 0);

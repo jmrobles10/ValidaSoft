@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Certificados;
@@ -451,7 +452,12 @@ public static class VigenciasDeVinculosEndpoints
         if (dto.Fecha is not null && !entorno.IsDevelopment())
             throw ReglaDeNegocioException.Validacion("fecha-simulada-no-permitida", "La fecha simulada solo se admite en Development.");
 
+        if (dto.IncluirDocumentos && (dto.Fecha is null || dto.TenantId is null))
+            throw ReglaDeNegocioException.Validacion("fecha-requerida", "Para incluir los documentos indica el tenant y la fecha simulada.");
+
         var ahora = dto.Fecha ?? reloj.GetUtcNow();
+        // Primero los documentos: lo que vence aquí abre la renovación del vínculo por la cola, igual que su mensaje programado.
+        var documentosVencidos = dto.IncluirDocumentos ? await VencerDocumentosAsync(store, sesiones, runtime, dto.TenantId!.Value, ahora, ct) : 0;
         var pendientes = await VigenciasDeVinculos.PendientesAsync(store, dto.TenantId, ahora, ct);
         int avisados = 0, vencidos = 0, desbloqueados = 0;
         foreach (var pendiente in pendientes)
@@ -472,6 +478,41 @@ public static class VigenciasDeVinculosEndpoints
             }
         }
 
-        return new ResultadoRevisionVigenciasDto(pendientes.Count, avisados, vencidos, desbloqueados);
+        return new ResultadoRevisionVigenciasDto(pendientes.Count, avisados, vencidos, desbloqueados, documentosVencidos);
+    }
+
+    /// <summary>
+    /// Vence, a la fecha simulada <paramref name="ahora"/>, las versiones actuales de los documentos compartidos con el tenant cuya
+    /// gracia ya terminó: el mismo manejador del mensaje programado <see cref="VencerVersionDeDocumento"/>, con un reloj fijo. Devuelve
+    /// cuántas venció. Solo para pruebas (Development).
+    /// </summary>
+    private static async Task<int> VencerDocumentosAsync(IDocumentStore store, ISesiones sesiones, IWolverineRuntime runtime, Guid tenantId, DateTimeOffset ahora,
+        CancellationToken ct)
+    {
+        List<Documento> documentos;
+        await using (var consulta = store.QuerySession(TenantsTecnicos.Boveda))
+            documentos = [.. await consulta.Query<Documento>().Where(d => d.Comparticiones.Any(c => c.TenantId == tenantId)).ToListAsync(ct)];
+
+        var hoy = CalculadoraDeVigencia.Fecha(ahora);
+        var reloj = new RelojFijo(ahora);
+        var vencidos = 0;
+        foreach (var documento in documentos.Where(d => d.VersionActual is not null))
+        {
+            var version = documento.Buscar(documento.VersionActual!.Value)!;
+            foreach (var vigencia in version.Vigencias.Where(v => v.TenantId == tenantId && v.VencidaEn is null && v.VigenteHasta is not null && hoy > v.FinDeGracia))
+            {
+                await VencerVersionDeDocumentoHandler.Handle(
+                    new VencerVersionDeDocumento(documento.Id, version.Numero, vigencia.VinculoId, vigencia.VigenteHasta!.Value, vigencia.DiasGracia),
+                    sesiones, new MessageContext(runtime), reloj, ct);
+                vencidos++;
+            }
+        }
+
+        return vencidos;
+    }
+
+    private sealed class RelojFijo(DateTimeOffset ahora) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => ahora;
     }
 }

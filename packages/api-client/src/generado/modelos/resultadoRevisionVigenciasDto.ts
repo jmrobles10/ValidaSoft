@@ -10,4 +10,5 @@ export interface ResultadoRevisionVigenciasDto {
   avisados: number;
   vencidos: number;
   desbloqueados: number;
+  documentosVencidos?: number;
 }

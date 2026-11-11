@@ -10,4 +10,5 @@ export interface RevisarVigenciasDto {
   tenantId?: string | null;
   /** @nullable */
   fecha?: string | null;
+  incluirDocumentos?: boolean;
 }

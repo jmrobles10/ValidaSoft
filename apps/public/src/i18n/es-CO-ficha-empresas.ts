@@ -28,7 +28,7 @@ export const ratificarSeccion = {
   /** Mi información: lo que pide cada empresa. */
   bannerTitulo_one: '{{count}} empresa te pide ratificar tu información',
   bannerTitulo_other: '{{count}} empresas te piden ratificar tu información',
-  bannerTexto: 'Confirma que sigue igual (sin cambiar nada) o actualízala: {{empresas}}.',
+  bannerTexto: 'Confirma que sigue igual (sin cambiar nada) o actualízala. Te lo piden: {{empresas}}',
   porRatificar: 'Por ratificar para {{empresa}}',
   paraEmpresa: 'Ratificar para {{empresa}}',
   enSeccionTitulo: '{{empresa}} te pide ratificar esta información',

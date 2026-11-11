@@ -303,14 +303,33 @@ stateDiagram-v2
 | `CancelarRevalidacion(TipoTenantId, VersionRetiradaId)` | `RevalidacionCancelada` | Al restituirse la versión anterior por retiro de la actual (§4.2): la aceptación vuelve a `AlDia` y el `Expediente(Actualizacion)` se anula con motivo `VersionRetirada`. |
 | `RatificarRequisito(TipoTenantId, VersionId, DeclaradoPor)` | `RequisitoRatificado(NuevaVigenteHasta)` | **Condición única (I-14):** el canónico **y** la configuración efectiva `PermiteRatificacion`, la versión es la actual y no tiene `FechaVencimientoDoc` pasada. La ratificación **reinicia la frescura**: la fecha base pasa a ser la de la ratificación. Nunca pasa por área (A-7) y nunca la emite el sistema. Reemite el certificado si cambia la vigencia. |
 | `MarcarDocumentoPorVencer / Vencido(TipoTenantId)` | `DocumentoPorVencerEnVinculo(VigenteHasta, DiasRestantes)` / `DocumentoVencidoEnVinculo(Critico)` | Job diario (§10). Si `Critico`, el requisito pasa a `Vencido` y la saga abre `Renovacion` (tabla de casos §5.2). |
-| `MarcarPorVencer / MarcarVencido` | `VinculoPorVencer(Causa: Vigencia)` / `VinculoVencido(CausaTipos[])` | Job diario; `DiasGracia` 15 por defecto, 0 para requisitos `CriticoDeCumplimiento`. (`RevalidacionVencida` ya no es causa: T-8.) |
+| `MarcarPorVencer / MarcarVencido` | `VinculoPorVencer(Causa: Vigencia)` / `VinculoVencido(CausaTipos[])` | Job diario; `DiasGracia` 15 por defecto, 0 para requisitos `CriticoDeCumplimiento`. (`RevalidacionVencida` ya no es causa: T-8.) **Implementado** (VV-3): `FijarVigencia` ⇒ `VigenciaDelVinculoFijada`, `AvisarVigencia` ⇒ `VinculoPorVencer(VigenteHasta, DiasRestantes, AvisosCumplidos)` y `VencerPorVigencia` ⇒ `VinculoVencido(Causa: Vigencia)`; ver §5.4. |
 | `DesignarCuenta(CuentaId)` | `CuentaDesignadaPropuesta(CuentaId, CuentaAnteriorId?)` | **Solo el tercero.** La cuenta debe ser suya y tener certificación `Actual`. |
 | `AprobarCuentaDesignada(UsuarioId)` / `RechazarCuentaDesignada(Motivo)` | `CuentaDesignadaAprobada(AprobadaPor[])` / `CuentaDesignadaRechazada` | Requiere `AprobadoresRequeridos` (2 por defecto, P-4-7) distintos con `cuentas:aprobar`. **Un solo cuatro ojos (esc. 1):** la aprobación marca `Aprobado` el requisito `CUENTA_BANCARIA` del expediente abierto (si existe) con los mismos aprobadores; no se aprueba aparte. Al aprobarse se publica `vinculo.cuenta_designada` al ERP de la empresa. |
-| `Bloquear(Motivo, Hasta?)` / `Desbloquear(Justificacion)` | `VinculoBloqueado(EstadoPrevio)` / `VinculoDesbloqueado(EstadoRestituido)` | Permiso `vinculos:bloquear`; privado de la empresa. Saga: `SuspenderCertificado` + `CongelarComparticion`; al desbloquear `RestablecerCertificado` + `ReanudarComparticion` o `AbrirExpediente(Renovacion)` si algo venció (B-5). |
+| `Bloquear(Motivo, Hasta?)` / `Desbloquear(Justificacion)` | `VinculoBloqueado(EstadoPrevio)` / `VinculoDesbloqueado(EstadoRestituido)` | Con `Hasta`, el bloqueo programa su propio desbloqueo (`DesbloquearPorFecha`, mensaje programado de Wolverine; VV-8). Permiso `vinculos:bloquear`; privado de la empresa. Saga: `SuspenderCertificado` + `CongelarComparticion`; al desbloquear `RestablecerCertificado` + `ReanudarComparticion` o `AbrirExpediente(Renovacion)` si algo venció (B-5). |
 | `Desvincular(Motivo)` | `VinculoDesvinculado` | Desde cualquier estado no terminal. Congela la compartición (saga → `Documento`); histórico intacto. |
 | `Reintegrar` | `VinculoReintegrado` | Abre `Renovacion`. |
 | `Anular(Motivo)` | `VinculoAnulado` | Terminal; desde cualquier estado no terminal, incluido `Bloqueado`. |
 | `ExpirarVerificacionesDeRepresentante(RelacionSalienteId, RelacionEntranteId)` | `VerificacionesDeRepresentanteExpiradas(Tipos[])` | Adición 3: solo tras `RelacionConfirmada` (§4.5). La cédula aceptada y las listas del saliente quedan `Desactualizadas`/`Expiradas`; el requisito de cédula del entrante nace `Pendiente` (o `Cargado` si su bóveda ya la tiene). |
+
+### 5.4 Vigencia periódica del vínculo (VV-1…VV-8, implementado)
+
+El flujo con el que se aprueba un expediente dice cuántos días vale esa aprobación (`VigenciaDelVinculo`: `Dias`, `DiasAviso`, `DiasGracia`; `Dias = 0` = sin vencimiento periódico) y cada requisito de **sección** puede traer su propia vigencia (`VigenciaDias`) y plazo de revalidación (`DiasRevalidacion`). Función pura `VigenciaDeAprobacion.VigenteHasta` (zona del negocio, igual que los documentos): la menor entre aprobación + `Dias` y aceptación de cada sección + su `VigenciaDias`.
+
+```mermaid
+stateDiagram-v2
+  Activo --> PorVencer: VinculoPorVencer (primer día de aviso)
+  PorVencer --> PorVencer: VinculoPorVencer (avisos siguientes)
+  Activo --> Vencido: VinculoVencido(Causa: Vigencia) (fin de la gracia)
+  PorVencer --> Vencido: VinculoVencido(Causa: Vigencia)
+  Vencido --> Activo: Renovacion aprobada (VinculoActivado + VigenciaDelVinculoFijada)
+  PorVencer --> Activo: VigenciaDelVinculoFijada (aprobación nueva o nada que ratificar)
+```
+
+- **Estado derivado.** `Vinculo` lleva `VigenteHasta`, `DiasAvisoVigencia`, `DiasGraciaVigencia`, `AvisosDeVigenciaCumplidos`, `RenovacionPorVigenciaPendiente`, `UltimaAprobacionEn` y `ProximaRevisionDeVigencia` (el próximo aviso, el vencimiento, el reintento de la renovación o el fin del bloqueo; índice del barrido del job, como `ProximaRevisionDePlazo` del expediente).
+- **Efecto en el certificado.** Su `VigenteHasta` es la menor entre la de sus documentos y la del vínculo; al vencer el vínculo el certificado vence en la misma transacción (el procesador lo habría vencido por reloj). Un certificado suspendido por bloqueo se restablece o queda `Vencido` según su `VenceDesde`.
+- **Renovación periódica.** Expediente de `Renovacion` abierto por el sistema con las secciones aceptadas (y los documentos obligatorios no vigentes); las secciones nacen pendientes (`ExigeRatificacion`) y el tercero las **ratifica** (`RequisitoRatificado`, sin cambiar la ficha) o las **actualiza** (versión nueva que revisan las áreas). Detalle y decisiones en el [registro](decisiones/registro.md) (VV-4, VV-5).
+- **Plazo de revalidación (RV-4).** `Expediente.DiasDePlazoDeRevalidacion` es el menor `DiasRevalidacion` de los requisitos de la actualización (tipo de documento o requisito de sección del flujo), 15 por omisión.
 
 **Invariantes.** (1) un expediente abierto (tabla de casos §5.2); (2) `Renovacion`/`Actualizacion` solo tras aprobación previa; (3) una versión **no admitida** no se vuelve a aceptar en este vínculo; (4) `Anulado`/`Desvinculado`/`Bloqueado` no aceptan versiones ni expedientes; (5) una `VersionAceptada` siempre referencia una versión que fue `Actual` en el momento de aceptarse; (6) nada de este agregado es legible fuera de su `EmpresaId`; (7) ninguna versión se comparte con este vínculo antes de `InvitacionAceptada` (B-1); (8) un cierre `Aprobado` de un vínculo que exige cuenta designada tiene `CuentaDesignada = Aprobada`.
 

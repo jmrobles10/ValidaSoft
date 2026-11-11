@@ -74,7 +74,7 @@ describe('Mi información con una renovación pendiente', () => {
     });
 
     expect(await screen.findByText('1 empresa te pide ratificar tu información', undefined, { timeout: 15_000 })).toBeInTheDocument();
-    expect(screen.getByText(/Confirma que sigue igual \(sin cambiar nada\) o actualízala: Constructora Norte\./)).toBeInTheDocument();
+    expect(screen.getByText('Confirma que sigue igual (sin cambiar nada) o actualízala. Te lo piden: Constructora Norte')).toBeInTheDocument();
     const lista = screen.getByRole('list', { name: 'Mi información' });
     const general = within(within(lista).getByRole('listitem', { name: 'Información general' }));
     expect(general.getByRole('button', { name: 'Ratificar para Constructora Norte' })).toBeInTheDocument();
