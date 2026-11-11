@@ -11,6 +11,7 @@ import type { FlujoDeExpedienteDto } from './flujoDeExpedienteDto';
 import type { PlazoCargueExpedienteDto } from './plazoCargueExpedienteDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RechazoDto } from './rechazoDto';
+import type { RecordatorioObservacionesDto } from './recordatorioObservacionesDto';
 import type { RequisitoExpedienteDto } from './requisitoExpedienteDto';
 import type { TerceroResumenDto } from './terceroResumenDto';
 import type { TipoExpediente } from './tipoExpediente';
@@ -51,4 +52,5 @@ export interface ExpedienteDto {
   plazoCargue?: null | PlazoCargueExpedienteDto;
   desaprobaciones?: number;
   ultimaDesaprobacion?: null | DesaprobacionDto;
+  recordatorioObservaciones?: null | RecordatorioObservacionesDto;
 }

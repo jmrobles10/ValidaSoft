@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5111/"
+      "url": "http://localhost:5112/"
     }
   ],
   "paths": {
@@ -2392,6 +2392,203 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PreferenciasNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/notificaciones": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_notificaciones",
+        "description": "GET_public_v1_notificaciones",
+        "operationId": "GET_public_v1_notificaciones",
+        "parameters": [
+          {
+            "name": "soloNoLeidas",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BandejaNotificacionesTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/notificaciones/{id}/leida": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "POST_public_v1_notificaciones_id_leida",
+        "description": "POST_public_v1_notificaciones_id_leida",
+        "operationId": "POST_public_v1_notificaciones_id_leida",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificacionTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/notificaciones/leidas": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "POST_public_v1_notificaciones_leidas",
+        "description": "POST_public_v1_notificaciones_leidas",
+        "operationId": "POST_public_v1_notificaciones_leidas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificacionesMarcadasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/preferencias-notificacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_preferencias_notificacion",
+        "description": "GET_public_v1_preferencias_notificacion",
+        "operationId": "GET_public_v1_preferencias_notificacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciasNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "PUT_public_v1_preferencias_notificacion",
+        "description": "PUT_public_v1_preferencias_notificacion",
+        "operationId": "PUT_public_v1_preferencias_notificacion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPreferenciasNotificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreferenciasNotificacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/notificaciones/stream": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_notificaciones_stream",
+        "description": "GET_public_v1_notificaciones_stream",
+        "operationId": "GET_public_v1_notificaciones_stream",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
                 }
               }
             }
@@ -6851,6 +7048,170 @@
         }
       }
     },
+    "/api/v1/expedientes/{id}/recordar-observaciones": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RecordatoriosDeObservacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_recordar_observaciones",
+        "description": "POST_api_v1_expedientes_id_recordar_observaciones",
+        "operationId": "POST_api_v1_expedientes_id_recordar_observaciones",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/recordar-observaciones": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RecordatoriosDeObservacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_recordar_observaciones",
+        "description": "POST_api_v1_expedientes_recordar_observaciones",
+        "operationId": "POST_api_v1_expedientes_recordar_observaciones",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordarObservacionesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordatoriosEnviadosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/recordatorio-observaciones": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ConfiguracionDeRecordatoriosEndpoints"
+        ],
+        "summary": "GET_api_v1_configuracion_recordatorio_observaciones",
+        "description": "GET_api_v1_configuracion_recordatorio_observaciones",
+        "operationId": "GET_api_v1_configuracion_recordatorio_observaciones",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordatorioAutomaticoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ConfiguracionDeRecordatoriosEndpoints"
+        ],
+        "summary": "PUT_api_v1_configuracion_recordatorio_observaciones",
+        "description": "PUT_api_v1_configuracion_recordatorio_observaciones",
+        "operationId": "PUT_api_v1_configuracion_recordatorio_observaciones",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarRecordatorioAutomaticoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordatorioAutomaticoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/recordatorios-observaciones/revisar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.RecordatoriosAutomaticosEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_recordatorios_observaciones_revisar",
+        "description": "POST_api_v1_plataforma_recordatorios_observaciones_revisar",
+        "operationId": "POST_api_v1_plataforma_recordatorios_observaciones_revisar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarRecordatoriosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoRevisionRecordatoriosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/vinculos/{id}/reintentar": {
       "post": {
         "tags": [
@@ -10061,6 +10422,26 @@
           }
         }
       },
+      "ActualizarRecordatorioAutomaticoDto": {
+        "required": [
+          "activo",
+          "cadaDias"
+        ],
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          },
+          "cadaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ActualizarTipoDocumentoDto": {
         "type": "object",
         "properties": {
@@ -10741,6 +11122,36 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NotificacionDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "noLeidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BandejaNotificacionesTerceroDto": {
+        "required": [
+          "datos",
+          "siguienteCursor",
+          "noLeidas"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificacionTerceroDto"
             }
           },
           "siguienteCursor": {
@@ -15587,6 +15998,16 @@
                 "$ref": "#/components/schemas/DesaprobacionDto"
               }
             ]
+          },
+          "recordatorioObservaciones": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecordatorioObservacionesDto"
+              }
+            ]
           }
         }
       },
@@ -18391,6 +18812,84 @@
           }
         }
       },
+      "NotificacionTerceroDto": {
+        "required": [
+          "id",
+          "tipo",
+          "titulo",
+          "mensaje",
+          "empresa",
+          "expedienteId",
+          "vinculoId",
+          "folio",
+          "enlace",
+          "creadaEn",
+          "leidaEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "empresa": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EmpresaPublicaDto"
+              }
+            ]
+          },
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enlace": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "leidaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "ObservacionDeRequisitoDto": {
         "required": [
           "requisitoId",
@@ -19687,6 +20186,32 @@
           }
         }
       },
+      "RecordarObservacionesDto": {
+        "type": "object",
+        "properties": {
+          "expedientes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "todos": {
+            "type": "boolean",
+            "default": false
+          },
+          "area": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "RecordarVencimientosDto": {
         "required": [
           "vencimientos"
@@ -19698,6 +20223,33 @@
             "items": {
               "$ref": "#/components/schemas/VencimientoARecordarDto"
             }
+          }
+        }
+      },
+      "RecordatorioAutomaticoDto": {
+        "required": [
+          "activo",
+          "cadaDias"
+        ],
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          },
+          "cadaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "actualizadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -19732,6 +20284,59 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "RecordatorioObservacionesDto": {
+        "required": [
+          "ultimoEn",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "ultimoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RecordatoriosEnviadosDto": {
+        "required": [
+          "enviados",
+          "omitidos",
+          "detalle"
+        ],
+        "type": "object",
+        "properties": {
+          "enviados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "omitidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detalle": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResultadoRecordatorioDto"
+            }
           }
         }
       },
@@ -20620,6 +21225,29 @@
           }
         }
       },
+      "ResultadoRecordatorioDto": {
+        "required": [
+          "expedienteId",
+          "folio",
+          "resultado"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resultado": {
+            "type": "string"
+          }
+        }
+      },
       "ResultadoRevisionPlazosDto": {
         "required": [
           "revisados",
@@ -20645,6 +21273,31 @@
             "format": "int32"
           },
           "caducados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResultadoRevisionRecordatoriosDto": {
+        "required": [
+          "revisados",
+          "enviados"
+        ],
+        "type": "object",
+        "properties": {
+          "revisados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "enviados": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -21330,6 +21983,25 @@
         }
       },
       "RevisarPlazosDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "RevisarRecordatoriosDto": {
         "type": "object",
         "properties": {
           "tenantId": {
@@ -24688,6 +25360,9 @@
       "name": "Validasoft.Aplicacion.Notificaciones.NotificacionesEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Notificaciones.NotificacionesDelTerceroEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Notificaciones.WebhooksEndpoints"
     },
     {
@@ -24773,6 +25448,15 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.PlazosDeCargueEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.RecordatoriosDeObservacionesEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.ConfiguracionDeRecordatoriosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.RecordatoriosAutomaticosEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.ReintentoPublicoEndpoints"
