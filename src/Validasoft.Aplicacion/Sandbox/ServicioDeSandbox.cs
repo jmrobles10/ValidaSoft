@@ -297,25 +297,34 @@ public sealed class ServicioDeSandbox(ISesiones sesiones, IDocumentStore store, 
         foreach (var bloque in terceros.Chunk(TamanoDeBloque))
             await LimpiarTercerosAsync(bloque, ct);
 
-        await using (var global = store.LightweightSession())
+        // El sandbox sigue vivo mientras se limpia: webhooks, correos y procesos en segundo plano agregan eventos a los mismos flujos que
+        // aquí se borran. Si dos transacciones toman varias filas en distinto orden, PostgreSQL aborta una (40P01, interbloqueo): antes el
+        // reinicio respondía 500 de forma intermitente cuando la víctima era la limpieza. La partición del tenant (la que más filas toca)
+        // ya no espera bloqueos (BorrarParticionDelTenantAsync); los borrados por Marten se repiten si pierden el cruce.
+        await Peticiones.ReintentarSiHayConflictoAsync(async () =>
         {
+            await using var global = store.LightweightSession();
             global.DeleteWhere<EventoPublico>(e => e.TenantId == sandbox.Id);
             await global.SaveChangesAsync(ct);
-        }
+        }, ct);
 
-        await BorrarParticionDelTenantAsync(sandbox.Id, ct);
+        await Peticiones.ReintentarSiHayConflictoAsync(() => BorrarParticionDelTenantAsync(sandbox.Id, ct), ct);
         await almacen.EliminarPrefijoAsync(ClavesDeAlmacen.BucketDeTenant(sandbox.Id), string.Empty, ct);
     }
 
     /// <summary>La bóveda es global: los terceros de pruebas y todo lo que cuelga de ellos se borran por su id.</summary>
     private async Task LimpiarTercerosAsync(Guid[] terceros, CancellationToken ct)
     {
-        List<Guid> flujos;
-        await using (var boveda = store.LightweightSession(TenantsTecnicos.Boveda))
+        // Los flujos de eventos de lo que se borra se juntan entre intentos: si un intento se revierte y el siguiente ya no encuentra los
+        // documentos, igual hay que borrar sus flujos.
+        HashSet<Guid> flujos = [];
+        await Peticiones.ReintentarSiHayConflictoAsync(async () =>
         {
+            await using var boveda = store.LightweightSession(TenantsTecnicos.Boveda);
             var documentos = await boveda.Query<Documento>().Where(d => d.TerceroId.IsOneOf(terceros)).Select(d => d.Id).ToListAsync(ct);
             var secciones = await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId.IsOneOf(terceros)).Select(s => s.Id).ToListAsync(ct);
-            flujos = [.. documentos, .. secciones];
+            flujos.UnionWith(documentos);
+            flujos.UnionWith(secciones);
 
             boveda.DeleteWhere<Documento>(d => d.TerceroId.IsOneOf(terceros));
             boveda.DeleteWhere<SeccionDeFicha>(s => s.TerceroId.IsOneOf(terceros));
@@ -324,17 +333,18 @@ public sealed class ServicioDeSandbox(ISesiones sesiones, IDocumentStore store, 
             boveda.DeleteWhere<AvisoDeVencimiento>(a => a.TerceroId.IsOneOf(terceros));
             boveda.DeleteWhere<CargaDeDocumento>(c => c.TerceroId.IsOneOf(terceros));
             await boveda.SaveChangesAsync(ct);
-        }
+        }, ct);
 
-        await using (var global = store.LightweightSession())
+        await Peticiones.ReintentarSiHayConflictoAsync(async () =>
         {
+            await using var global = store.LightweightSession();
             global.DeleteWhere<EnlaceDeAcceso>(e => e.TerceroId.IsOneOf(terceros));
             global.DeleteWhere<SesionDeRefresco>(s => s.TerceroId.IsOneOf(terceros));
             global.DeleteWhere<Tercero>(t => t.Id.IsOneOf(terceros));
             await global.SaveChangesAsync(ct);
-        }
+        }, ct);
 
-        await BorrarFlujosDeEventosAsync(TenantsTecnicos.Boveda, flujos, ct);
+        await Peticiones.ReintentarSiHayConflictoAsync(() => BorrarFlujosDeEventosAsync(TenantsTecnicos.Boveda, [.. flujos], ct), ct);
         foreach (var tercero in terceros)
             await almacen.EliminarPrefijoAsync(ClavesDeAlmacen.BucketBoveda, $"terceros/{tercero:N}/", ct);
     }
@@ -342,60 +352,152 @@ public sealed class ServicioDeSandbox(ISesiones sesiones, IDocumentStore store, 
     private NpgsqlConnection Conexion() => new(configuracion.GetConnectionString("Validasoft")
                                                ?? throw new InvalidOperationException("Falta ConnectionStrings:Validasoft."));
 
+    /// <summary>Pasadas máximas de un borrado que encuentra filas bloqueadas por quien sigue escribiendo, y su espera entre una y otra.</summary>
+    private const int PasadasDeBorrado = 25;
+
+    private static TimeSpan EsperaEntrePasadas(int pasada) => TimeSpan.FromMilliseconds(Math.Min(50 * pasada, 400));
+
+    /// <summary>
+    /// Borra los eventos y los flujos de un tenant (o solo los de <paramref name="soloEstos"/>) <b>sin esperar a nadie</b>: bloquea los
+    /// flujos con <c>FOR UPDATE SKIP LOCKED</c>, borra los eventos de los que logró bloquear y luego los flujos. Los flujos que otro
+    /// proceso tiene bloqueado en ese momento (una escritura en curso) se saltan y quedan para la siguiente pasada. Quien nunca espera
+    /// un bloqueo no puede quedar en un interbloqueo, ni agregarle un evento a un flujo que ya se va a borrar: sus escrituras esperan a
+    /// que termine esta transacción. Devuelve cuántos flujos quedaron pendientes.
+    /// </summary>
+    private static async Task<int> BorrarFlujosSinEsperarAsync(NpgsqlConnection conexion, NpgsqlTransaction transaccion, string tenant,
+        Guid[]? soloEstos, CancellationToken ct)
+    {
+        var filtro = soloEstos is null ? string.Empty : " AND id = ANY(@ids)";
+
+        var visibles = new List<Guid>();
+        await using (var consulta = new NpgsqlCommand($"SELECT id FROM eventos.mt_streams WHERE tenant_id = @tenant{filtro}", conexion, transaccion))
+        {
+            consulta.Parameters.AddWithValue("tenant", tenant);
+            if (soloEstos is not null)
+                consulta.Parameters.AddWithValue("ids", soloEstos);
+            await using var lector = await consulta.ExecuteReaderAsync(ct);
+            while (await lector.ReadAsync(ct))
+                visibles.Add(lector.GetGuid(0));
+        }
+
+        if (visibles.Count == 0)
+            return 0;
+
+        var bloqueados = new List<Guid>();
+        await using (var bloquear = new NpgsqlCommand(
+                         "SELECT id FROM eventos.mt_streams WHERE tenant_id = @tenant AND id = ANY(@ids) FOR UPDATE SKIP LOCKED", conexion, transaccion))
+        {
+            bloquear.Parameters.AddWithValue("tenant", tenant);
+            bloquear.Parameters.AddWithValue("ids", visibles.ToArray());
+            await using var lector = await bloquear.ExecuteReaderAsync(ct);
+            while (await lector.ReadAsync(ct))
+                bloqueados.Add(lector.GetGuid(0));
+        }
+
+        if (bloqueados.Count > 0)
+        {
+            // Los eventos antes que sus flujos (clave foránea).
+            foreach (var tabla in new[] { ("mt_events", "stream_id"), ("mt_streams", "id") })
+            {
+                await using var borrar = new NpgsqlCommand($"DELETE FROM eventos.{tabla.Item1} WHERE tenant_id = @tenant AND {tabla.Item2} = ANY(@ids)", conexion, transaccion);
+                borrar.Parameters.AddWithValue("tenant", tenant);
+                borrar.Parameters.AddWithValue("ids", bloqueados.ToArray());
+                await borrar.ExecuteNonQueryAsync(ct);
+            }
+        }
+
+        return visibles.Count - bloqueados.Count;
+    }
+
+    /// <summary>Borra los flujos de eventos indicados (la bóveda es global: se borran por id), repitiendo con los que otro proceso tenía bloqueados.</summary>
     private async Task BorrarFlujosDeEventosAsync(string tenant, IReadOnlyList<Guid> streams, CancellationToken ct)
     {
         if (streams.Count == 0)
             return;
 
-        await using var conexion = Conexion();
-        await conexion.OpenAsync(ct);
-        await using var transaccion = await conexion.BeginTransactionAsync(ct);
-        foreach (var tabla in new[] { ("mt_events", "stream_id"), ("mt_streams", "id") })
+        var pendientes = streams.ToArray();
+        for (var pasada = 1; ; pasada++)
         {
-            await using var comando = new NpgsqlCommand(
-                $"DELETE FROM eventos.{tabla.Item1} WHERE tenant_id = @tenant AND {tabla.Item2} = ANY(@ids)", conexion, transaccion);
-            comando.Parameters.AddWithValue("tenant", tenant);
-            comando.Parameters.AddWithValue("ids", streams.ToArray());
-            await comando.ExecuteNonQueryAsync(ct);
-        }
+            await using var conexion = Conexion();
+            await conexion.OpenAsync(ct);
+            await using var transaccion = await conexion.BeginTransactionAsync(ct);
+            var sinBorrar = await BorrarFlujosSinEsperarAsync(conexion, transaccion, tenant, pendientes, ct);
+            await transaccion.CommitAsync(ct);
+            if (sinBorrar == 0)
+                return;
 
-        await transaccion.CommitAsync(ct);
+            if (pasada == PasadasDeBorrado)
+                throw ReglaDeNegocioException.Conflicto("sandbox-ocupado", "Hay actividad en curso sobre lo que se va a borrar: intenta reiniciar de nuevo en unos segundos.");
+            await Task.Delay(EsperaEntrePasadas(pasada), ct);
+        }
     }
 
     /// <summary>
     /// Vacía la partición del tenant sandbox: todo documento <c>mt_doc_*</c> de <c>validacion</c> e <c>identidad</c> y sus eventos y
-    /// flujos, en una transacción. Marten guarda el tenant en <c>tenant_id</c> de cada tabla, así que no toca nada de producción.
+    /// flujos. Marten guarda el tenant en <c>tenant_id</c> de cada tabla, así que no toca nada de producción. El sandbox sigue vivo
+    /// mientras tanto (webhooks, correos y procesos en segundo plano escriben en él), así que no se espera a quien tenga filas
+    /// bloqueadas —<c>FOR UPDATE SKIP LOCKED</c>—: se borra lo que está libre y se repite con lo que quedó, en vez de quedar en un
+    /// interbloqueo con una escritura que toma los mismos flujos y documentos en otro orden.
     /// </summary>
     private async Task BorrarParticionDelTenantAsync(Guid tenantId, CancellationToken ct)
+    {
+        var tenant = tenantId.ToString("N");
+        var tablas = new List<string>();
+        await using (var conexion = Conexion())
+        {
+            await conexion.OpenAsync(ct);
+            await using var consulta = new NpgsqlCommand(
+                """
+                SELECT c.table_schema || '.' || c.table_name
+                FROM information_schema.columns c
+                JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
+                WHERE c.column_name = 'tenant_id' AND c.table_schema IN ('validacion', 'identidad')
+                  AND c.table_name LIKE 'mt\_doc\_%'
+                """, conexion);
+            await using var lector = await consulta.ExecuteReaderAsync(ct);
+            while (await lector.ReadAsync(ct))
+                tablas.Add(lector.GetString(0));
+        }
+
+        for (var pasada = 1; ; pasada++)
+        {
+            var pendientes = await UnaPasadaDeBorradoAsync(tenant, tablas, ct);
+            if (pendientes == 0)
+                return;
+
+            if (pasada == PasadasDeBorrado)
+                throw ReglaDeNegocioException.Conflicto("sandbox-ocupado", "El sandbox tiene actividad en curso: intenta reiniciarlo de nuevo en unos segundos.");
+            await Task.Delay(EsperaEntrePasadas(pasada), ct);
+        }
+    }
+
+    /// <summary>Una pasada, en una transacción: flujos y eventos, luego los documentos. Devuelve cuántas filas quedaron por estar bloqueadas.</summary>
+    private async Task<int> UnaPasadaDeBorradoAsync(string tenant, List<string> tablas, CancellationToken ct)
     {
         await using var conexion = Conexion();
         await conexion.OpenAsync(ct);
         await using var transaccion = await conexion.BeginTransactionAsync(ct);
 
-        var tablas = new List<string>();
-        await using (var consulta = new NpgsqlCommand(
-                         """
-                         SELECT c.table_schema || '.' || c.table_name
-                         FROM information_schema.columns c
-                         JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name AND t.table_type = 'BASE TABLE'
-                         WHERE c.column_name = 'tenant_id' AND c.table_schema IN ('validacion', 'identidad', 'eventos')
-                           AND (c.table_name LIKE 'mt\_doc\_%' OR c.table_schema = 'eventos' AND c.table_name IN ('mt_events', 'mt_streams'))
-                         """, conexion, transaccion))
-        await using (var lector = await consulta.ExecuteReaderAsync(ct))
-        {
-            while (await lector.ReadAsync(ct))
-                tablas.Add(lector.GetString(0));
-        }
-
-        // Los eventos antes que sus flujos (clave foránea).
-        foreach (var tabla in tablas.OrderBy(t => t.EndsWith(".mt_streams", StringComparison.Ordinal) ? 1 : 0))
+        var pendientes = await BorrarFlujosSinEsperarAsync(conexion, transaccion, tenant, null, ct);
+        foreach (var tabla in tablas)
         {
             var partes = tabla.Split('.');
-            await using var borrar = new NpgsqlCommand($"DELETE FROM \"{partes[0]}\".\"{partes[1]}\" WHERE tenant_id = @tenant", conexion, transaccion);
-            borrar.Parameters.AddWithValue("tenant", tenantId.ToString("N"));
-            await borrar.ExecuteNonQueryAsync(ct);
+            var nombre = $"\"{partes[0]}\".\"{partes[1]}\"";
+
+            await using var contar = new NpgsqlCommand($"SELECT count(*) FROM {nombre} WHERE tenant_id = @tenant", conexion, transaccion);
+            contar.Parameters.AddWithValue("tenant", tenant);
+            var visibles = Convert.ToInt32(await contar.ExecuteScalarAsync(ct), System.Globalization.CultureInfo.InvariantCulture);
+            if (visibles == 0)
+                continue;
+
+            await using var borrar = new NpgsqlCommand(
+                $"DELETE FROM {nombre} WHERE ctid = ANY(ARRAY(SELECT ctid FROM {nombre} WHERE tenant_id = @tenant FOR UPDATE SKIP LOCKED))", conexion, transaccion);
+            borrar.Parameters.AddWithValue("tenant", tenant);
+            var borradas = await borrar.ExecuteNonQueryAsync(ct);
+            pendientes += Math.Max(0, visibles - borradas);
         }
 
         await transaccion.CommitAsync(ct);
+        return pendientes;
     }
 }

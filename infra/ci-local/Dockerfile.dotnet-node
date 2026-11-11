@@ -1,0 +1,14 @@
+# Imagen de ejecución de la API del e2e: el SDK de .NET (Ubuntu noble, como el runner) y Node, que el flujo instala en el runner con
+# `setup-dotnet` y `setup-node` y que `e2e/soporte/api.mjs` necesita a la vez (compila las apps con pnpm y publica/ejecuta la API).
+# Solo junta dos imágenes oficiales con la etiqueta que fija ci.yml: no descarga nada más. La construye `ci-local.mjs` cuando falta.
+ARG DOTNET_IMAGE
+ARG NODE_IMAGE
+FROM ${NODE_IMAGE} AS node
+
+FROM ${DOTNET_IMAGE}
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+ && ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack \
+ && node --version && npm --version && dotnet --version
