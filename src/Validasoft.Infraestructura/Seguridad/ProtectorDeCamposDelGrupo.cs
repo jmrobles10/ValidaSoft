@@ -119,7 +119,7 @@ public sealed class RecifradorDeCuentasDeVinculos(IConfiguration configuracion, 
             {
                 nuevo = campos.Proteger(tenantId, campos.Desproteger(tenantId, valor));
             }
-            catch (CryptographicException)
+            catch (Exception e) when (e is CryptographicException or FormatException or ArgumentException)
             {
                 conteo.Fallidos++;
                 continue;

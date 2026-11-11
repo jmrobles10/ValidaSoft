@@ -23,6 +23,9 @@ public sealed partial class SistemaDePlataforma
 
     public bool Activo { get; set; } = true;
 
+    /// <summary>Como <see cref="SistemaIntegrado.Generacion"/>: las sesiones del sistema de Plataforma no sobreviven a desactivarlo (PI-7).</summary>
+    public int Generacion { get; set; }
+
     public DateTimeOffset CreadoEn { get; set; }
 
     public DateTimeOffset ActualizadoEn { get; set; }
@@ -58,6 +61,7 @@ public sealed partial class SistemaDePlataforma
         if (!Activo)
             throw ReglaDeNegocioException.Conflicto("sistema-inactivo", "El sistema ya está desactivado.");
         Activo = false;
+        Generacion++;
         ActualizadoEn = ahora;
     }
 
@@ -98,6 +102,9 @@ public sealed class OperadorDePlataforma
     public string Correo { get; set; } = string.Empty;
 
     public bool Activo { get; set; } = true;
+
+    /// <summary>Cuántas veces se desactivó o se le invalidaron las sesiones (PI-7): las sesiones llevan la generación con la que nacieron y no sobreviven a un cambio.</summary>
+    public int Generacion { get; set; }
 
     public DateTimeOffset CreadoEn { get; set; }
 
@@ -149,7 +156,11 @@ public sealed class OperadorDePlataforma
         if (!Activo)
             throw ReglaDeNegocioException.Conflicto("operador-inactivo", "El operador ya está desactivado.");
         Activo = false;
+        Generacion++;
     }
+
+    /// <summary>Invalida las sesiones ya emitidas del operador sin desactivarlo (cuando se desactiva su sistema de Plataforma).</summary>
+    public void InvalidarSesiones() => Generacion++;
 
     /// <summary>Vuelve a activar al operador (PI-7): entra de nuevo con sus passkeys. 409 <c>operador-activo</c> si ya estaba activo.</summary>
     public void Reactivar()

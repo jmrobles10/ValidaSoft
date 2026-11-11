@@ -255,8 +255,8 @@ public sealed class DesafioDeIngreso
             throw ReglaDeNegocioException.Expirado("desafio-usado", "Este inicio de sesión ya se usó. Empieza de nuevo.");
         AsegurarVigente(ahora);
         Sso.Correo = Usuario.NormalizarCorreo(correo);
-        Sso.Nombre = Recortar(nombre, 200);
-        Sso.Sujeto = Recortar(sujeto, 256);
+        Sso.Nombre = Recortar(nombre?.Trim(), 200);
+        Sso.Sujeto = Recortar(sujeto?.Trim(), 256);
         Sso.Grupos = [.. grupos.Where(g => !string.IsNullOrWhiteSpace(g)).Select(g => g.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(200)];
         Sso.GruposDeclarados = gruposDeclarados;
         Sso.Multifactor = multifactor;

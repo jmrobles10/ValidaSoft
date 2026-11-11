@@ -62,11 +62,14 @@ public interface IReceptorDeInvalidaciones
 /// </summary>
 public interface ICacheDeSistemas
 {
-    /// <summary>El sistema integrador <paramref name="codigo"/> del grupo sigue activo (y su grupo también).</summary>
-    Task<bool> IntegradorActivoAsync(Guid tenantId, string codigo, CancellationToken ct);
+    /// <summary>
+    /// El sistema integrador <paramref name="codigo"/> del grupo sigue activo (y su grupo también) y no se desactivó desde que nació la sesión: <paramref name="generacion"/> es la que
+    /// llevaba la sesión y debe ser la de ahora (revocar es definitivo, aunque el sistema se reactive).
+    /// </summary>
+    Task<bool> IntegradorActivoAsync(Guid tenantId, string codigo, int generacion, CancellationToken ct);
 
-    /// <summary>El operador de Plataforma está activo y, si entró por un sistema de Plataforma, ese sistema también.</summary>
-    Task<bool> OperadorActivoAsync(string operadorId, CancellationToken ct);
+    /// <summary>El operador de Plataforma está activo, su sistema también (si entró por uno) y no se desactivó desde que nació la sesión (<paramref name="generacion"/>).</summary>
+    Task<bool> OperadorActivoAsync(string operadorId, int generacion, CancellationToken ct);
 
     void OlvidarIntegrador(Guid tenantId, string codigo);
 

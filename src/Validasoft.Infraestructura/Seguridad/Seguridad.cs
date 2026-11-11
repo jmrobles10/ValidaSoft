@@ -94,6 +94,9 @@ public static class Reclamos
 
     public const string SistemaId = "validasoft:sistema-id";
 
+    /// <summary>Generación del sistema u operador con la que nació la sesión (PI-7): si la de ahora es otra, el sistema se desactivó desde entonces y la sesión ya no vale.</summary>
+    public const string Generacion = "validasoft:generacion";
+
     /// <summary>Identificador del actor en los tokens de sesión (usuario de Validasoft).</summary>
     public const string Sujeto = "sub";
 

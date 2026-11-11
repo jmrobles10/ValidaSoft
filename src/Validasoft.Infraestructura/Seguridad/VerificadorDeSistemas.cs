@@ -24,34 +24,40 @@ public sealed class VerificadorDeSistemas(IDocumentStore store, IMemoryCache cac
 
     private static string ClaveOperador(string operadorId) => "operador-activo:" + operadorId;
 
-    public async Task<bool> IntegradorActivoAsync(Guid tenantId, string codigo, CancellationToken ct)
+    /// <summary>Lo que se guarda de un sistema u operador: si sirve (activo y su grupo o sistema también) y su generación de sesiones.</summary>
+    private sealed record Estado(bool Activo, int Generacion);
+
+    public async Task<bool> IntegradorActivoAsync(Guid tenantId, string codigo, int generacion, CancellationToken ct)
     {
         var clave = ClaveIntegrador(tenantId, codigo);
-        if (cache.TryGetValue(clave, out bool activo))
-            return activo;
+        if (!cache.TryGetValue(clave, out Estado? estado) || estado is null)
+        {
+            await using var consulta = store.QuerySession(tenantId.ToString("N"));
+            var normalizado = codigo.ToUpperInvariant();
+            var sistema = await consulta.Query<SistemaIntegrado>().FirstOrDefaultAsync(s => s.Codigo == normalizado, ct);
+            var tenant = await consulta.LoadAsync<Tenant>(tenantId, ct);
+            estado = new Estado(sistema is { Activo: true } && tenant is { Activo: true }, sistema?.Generacion ?? 0);
+            cache.Set(clave, estado, Vigencia);
+        }
 
-        await using var consulta = store.QuerySession(tenantId.ToString("N"));
-        var normalizado = codigo.ToUpperInvariant();
-        var sistema = await consulta.Query<SistemaIntegrado>().FirstOrDefaultAsync(s => s.Codigo == normalizado, ct);
-        var tenant = await consulta.LoadAsync<Tenant>(tenantId, ct);
-        activo = sistema is { Activo: true } && tenant is { Activo: true };
-        cache.Set(clave, activo, Vigencia);
-        return activo;
+        return estado.Activo && estado.Generacion == generacion;
     }
 
-    public async Task<bool> OperadorActivoAsync(string operadorId, CancellationToken ct)
+    public async Task<bool> OperadorActivoAsync(string operadorId, int generacion, CancellationToken ct)
     {
         var clave = ClaveOperador(operadorId);
-        if (cache.TryGetValue(clave, out bool activo))
-            return activo;
+        if (!cache.TryGetValue(clave, out Estado? estado) || estado is null)
+        {
+            await using var consulta = store.QuerySession();
+            var operador = await consulta.LoadAsync<OperadorDePlataforma>(operadorId, ct);
+            var activo = operador is { Activo: true };
+            if (activo && !operador!.EsDirecto && operador.Sistema.Length > 0)
+                activo = await consulta.LoadAsync<SistemaDePlataforma>(operador.Sistema, ct) is { Activo: true };
+            estado = new Estado(activo, operador?.Generacion ?? 0);
+            cache.Set(clave, estado, Vigencia);
+        }
 
-        await using var consulta = store.QuerySession();
-        var operador = await consulta.LoadAsync<OperadorDePlataforma>(operadorId, ct);
-        activo = operador is { Activo: true };
-        if (activo && !operador!.EsDirecto && operador.Sistema.Length > 0)
-            activo = await consulta.LoadAsync<SistemaDePlataforma>(operador.Sistema, ct) is { Activo: true };
-        cache.Set(clave, activo, Vigencia);
-        return activo;
+        return estado.Activo && estado.Generacion == generacion;
     }
 
     public void OlvidarIntegrador(Guid tenantId, string codigo)

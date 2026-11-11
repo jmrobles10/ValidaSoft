@@ -126,10 +126,17 @@ public static class SistemasDePlataformaEstadoEndpoints
         sistema.Desactivar(ahora);
         sesion.Store(sistema);
         Auditoria.Registrar(sesion, contexto, OperadoresDePlataformaEndpoints.EntidadSistema, sistema.Id, AccionConfiguracion.Desactivado, antes, sistema.ADto(), ahora);
-        var operadores = await sesion.Query<OperadorDePlataforma>().Where(o => o.Sistema == sistema.Id).Select(o => o.Id).ToListAsync(ct);
+        // Las sesiones que ya emitió para sus operadores no sobreviven (ni siquiera si el sistema se reactiva): cada operador cambia de generación.
+        var operadores = await sesion.Query<OperadorDePlataforma>().Where(o => o.Sistema == sistema.Id).ToListAsync(ct);
+        foreach (var operador in operadores)
+        {
+            operador.InvalidarSesiones();
+            sesion.Store(operador);
+        }
+
         await sesion.SaveChangesAsync(ct);
         foreach (var operador in operadores)
-            cacheSistemas.OlvidarOperador(operador);
+            cacheSistemas.OlvidarOperador(operador.Id);
         embebido.Invalidar();
         return sistema.ADto();
     }

@@ -653,10 +653,13 @@ public sealed partial class IngresoApiTests(ApiFixture fixture)
         var g = await GrupoAsync();
         var admin = await UsuarioAsync(g, "Administrador", deTodoElGrupo: true);
         var auditor = await UsuarioAsync(g, "Auditor");
-        var deAdmin = await EntrarConPasskeyAsync(await RegistrarPasskeyAsync(admin.Correo));
+        var autenticadorAdmin = await RegistrarPasskeyAsync(admin.Correo);
+        var deAdmin = await EntrarConPasskeyAsync(autenticadorAdmin);
         await RegistrarPasskeyAsync(auditor.Correo);
 
         var passkey = (await GetAsync<List<PasskeyDto>>($"/api/v1/usuarios/{auditor.Id}/passkeys", deAdmin.Token)).ShouldHaveSingleItem();
+        // Revocar la passkey de otra persona es una acción sensible: se confirma con la propia passkey (PI-13).
+        await ReautenticarAsync(autenticadorAdmin, deAdmin.Token);
         await PostJsonAsync<PasskeyDto>($"/api/v1/usuarios/{auditor.Id}/passkeys/{passkey.Id}/revocar", new RevocarPasskeyDto("Perdió la llave"), deAdmin.Token);
 
         var auditoria = await GetAsync<PaginaDto<RegistroAuditoriaDto>>($"/api/v1/auditoria?tipo=Identidad&entidadId={auditor.Id}&limite=100", deAdmin.Token, g.Empresa.Id);
@@ -734,8 +737,9 @@ public sealed partial class IngresoApiTests(ApiFixture fixture)
         (await GetAsync<List<TenantDto>>("/api/v1/plataforma/tenants", token)).ShouldNotBeNull();
         await Anonimo("/api/v1/usuarios", null, 403, metodo: "GET", bearer: token);
 
-        // Entra después solo con la passkey y desde su sesión crea, ve y revoca a otro operador.
+        // Entra después solo con la passkey y desde su sesión crea, ve y revoca a otro operador (confirmando antes con la passkey: acciones sensibles, PI-13).
         (await EntrarConPasskeyAsync(autenticador)).Metodo.ShouldBe("Passkey");
+        await ReautenticarAsync(autenticador, token);
         var correoOtro = $"op{Guid.NewGuid():N}@validasoft.co";
         var otro = await PostJsonAsync<OperadorDePlataformaDto>("/api/v1/plataforma/operadores", new CrearOperadorDto("Oscar Operador", correoOtro), token, 201);
         var operadores = await GetAsync<List<OperadorDePlataformaDto>>("/api/v1/plataforma/operadores", token);

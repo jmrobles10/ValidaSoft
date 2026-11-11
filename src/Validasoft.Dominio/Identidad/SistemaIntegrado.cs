@@ -23,6 +23,12 @@ public sealed class SistemaIntegrado
 
     public bool Activo { get; set; } = true;
 
+    /// <summary>
+    /// Cuántas veces se desactivó (PI-7). Las sesiones que emite el sistema llevan la generación con la que nacieron: al desactivarlo suben a otra y esas sesiones no vuelven a valer
+    /// aunque el sistema se reactive (revocar es definitivo).
+    /// </summary>
+    public int Generacion { get; set; }
+
     public DateTimeOffset CreadoEn { get; set; }
 
     /// <summary>
@@ -64,6 +70,7 @@ public sealed class SistemaIntegrado
         if (!Activo)
             throw ReglaDeNegocioException.Conflicto("sistema-inactivo", "El sistema ya está desactivado.");
         Activo = false;
+        Generacion++;
     }
 
     /// <summary>

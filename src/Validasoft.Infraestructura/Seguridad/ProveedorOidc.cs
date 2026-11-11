@@ -291,11 +291,11 @@ public sealed class ProveedorOidc(ConfiguracionesDeSso configuraciones, Opciones
 
     // ---------- lectura de reclamos ----------
 
-    internal static string? Texto(JsonElement carga, string nombre) =>
+    public static string? Texto(JsonElement carga, string nombre) =>
         carga.TryGetProperty(nombre, out var valor) && valor.ValueKind == JsonValueKind.String ? valor.GetString() : null;
 
     /// <summary>La lista (o el valor único) de un reclamo; <paramref name="declarado"/> dice si el reclamo venía en el token (aunque fuera vacío).</summary>
-    internal static IReadOnlyList<string> LeerLista(JsonElement carga, string nombre, out bool declarado)
+    public static IReadOnlyList<string> LeerLista(JsonElement carga, string nombre, out bool declarado)
     {
         declarado = false;
         if (!carga.TryGetProperty(nombre, out var valor))
@@ -310,7 +310,7 @@ public sealed class ProveedorOidc(ConfiguracionesDeSso configuraciones, Opciones
     }
 
     /// <summary>El proveedor declaró más de un factor: <c>mfa</c>, o dos factores distintos (p. ej. <c>pwd</c> y <c>otp</c>/<c>hwk</c>) en <c>amr</c> (RFC 8176).</summary>
-    internal static bool EsMultifactor(IReadOnlyList<string> amr) =>
+    public static bool EsMultifactor(IReadOnlyList<string> amr) =>
         amr.Any(m => string.Equals(m, "mfa", StringComparison.OrdinalIgnoreCase)) ||
         (amr.Any(m => FactoresFuertes.Contains(m)) && amr.Any(m => string.Equals(m, "pwd", StringComparison.OrdinalIgnoreCase) || string.Equals(m, "user", StringComparison.OrdinalIgnoreCase))) ||
         amr.Count(m => FactoresFuertes.Contains(m)) >= 2;

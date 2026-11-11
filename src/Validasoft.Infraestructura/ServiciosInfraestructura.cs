@@ -249,14 +249,15 @@ public static class ServiciosInfraestructura
 
                         var sistemas = servicios.GetRequiredService<ICacheDeSistemas>();
                         var actor = principal?.FindFirst(Reclamos.ActorTipo)?.Value;
+                        var generacion = int.TryParse(principal?.FindFirst(Reclamos.Generacion)?.Value, out var g) ? g : 0; // sin el reclamo: la generación inicial
                         if (actor == nameof(Dominio.Comun.ActorTipo.Plataforma) && principal?.FindFirst(Reclamos.Sujeto)?.Value is { Length: > 0 } operador)
                         {
-                            if (!await sistemas.OperadorActivoAsync(operador, ct))
+                            if (!await sistemas.OperadorActivoAsync(operador, generacion, ct))
                                 contexto.Fail("El operador o su sistema se desactivó.");
                         }
                         else if (actor == nameof(Dominio.Comun.ActorTipo.Usuario) && Guid.TryParse(principal?.FindFirst(Reclamos.Tenant)?.Value, out var tenantId) &&
                                  principal?.FindFirst(Reclamos.Sistema)?.Value is { Length: > 0 } codigo &&
-                                 !await sistemas.IntegradorActivoAsync(tenantId, codigo, ct))
+                                 !await sistemas.IntegradorActivoAsync(tenantId, codigo, generacion, ct))
                             contexto.Fail("El sistema integrador se desactivó.");
                     }
                 };
@@ -276,7 +277,7 @@ public static class ServiciosInfraestructura
                         var sesion = SesionDeTercero.De(principal);
                         if (sesion.Embebida is { Sistema.Length: > 0 } embebida && sesion.Vinculos.Count > 0 &&
                             !await contexto.HttpContext.RequestServices.GetRequiredService<ICacheDeSistemas>()
-                                .IntegradorActivoAsync(sesion.Vinculos[0].TenantId, embebida.Sistema, contexto.HttpContext.RequestAborted))
+                                .IntegradorActivoAsync(sesion.Vinculos[0].TenantId, embebida.Sistema, embebida.Generacion, contexto.HttpContext.RequestAborted))
                             contexto.Fail("El sistema integrador se desactivó.");
                     }
                 };

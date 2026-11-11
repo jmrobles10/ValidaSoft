@@ -51,7 +51,8 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
             new(Reclamos.ActorTipo, ActorTipo.Usuario.ToString()),
             new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
             new(Reclamos.SistemaId, sistema.Id.ToString()),
-            new(Reclamos.Sistema, sistema.Codigo)
+            new(Reclamos.Sistema, sistema.Codigo),
+            new(Reclamos.Generacion, sistema.Generacion.ToString(System.Globalization.CultureInfo.InvariantCulture))
         };
         reclamos.AddRange(permisos.DeTenant.Select(s => new Claim(Reclamos.Scope, s)));
         reclamos.AddRange(permisos.PorEmpresa.SelectMany(p => p.Value.Select(s => new Claim(Reclamos.ScopeEmpresa, $"{s}|{p.Key}"))));
@@ -149,7 +150,7 @@ public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSe
     public static readonly TimeSpan Duracion = TimeSpan.FromMinutes(30);
 
     private static readonly string[] ReclamosCopiados =
-        [Reclamos.Tenant, Reclamos.ActorTipo, Reclamos.Sistema, Reclamos.SistemaId, Reclamos.Scope, Reclamos.ScopeEmpresa, Reclamos.Empresa];
+        [Reclamos.Tenant, Reclamos.ActorTipo, Reclamos.Sistema, Reclamos.SistemaId, Reclamos.Generacion, Reclamos.Scope, Reclamos.ScopeEmpresa, Reclamos.Empresa];
 
     public SesionUsuarioDto Emitir(ClaimsPrincipal principal, DateTimeOffset ahora)
     {
@@ -176,7 +177,8 @@ public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSe
             new Claim(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
             new Claim(Reclamos.Sistema, operador.Sistema),
             new Claim(Reclamos.Nombre, operador.Nombre),
-            new Claim(Reclamos.Scope, Permisos.PlataformaTenants)
+            new Claim(Reclamos.Scope, Permisos.PlataformaTenants),
+            new Claim(Reclamos.Generacion, operador.Generacion.ToString(System.Globalization.CultureInfo.InvariantCulture))
         ], ahora);
 
     public SesionUsuarioDto EmitirDeUsuario(Usuario usuario, Guid tenantId, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora)
