@@ -28,11 +28,12 @@ public static class BovedaEndpoints
         await using var consulta = sesiones.ConsultaBoveda();
         var documentos = await consulta.Query<Documento>().Where(d => d.TerceroId == terceroId).OrderBy(d => d.CreadoEn).ToListAsync(ct);
         var vinculos = await VinculosAsync(sesiones, tercero, ct);
+        var expedientes = await ExpedientesAsync(sesiones, vinculos, ct);
 
         return new BovedaDto(terceroId,
         [
             .. documentos.Where(d => d.Ambito == AmbitoDocumento.Global || tercero.Vinculos.Any(v => v.VinculoId == d.VinculoId)).Select(d => new DocumentoBovedaDto(d.Id, d.Resumen(), d.Ambito.ToString(), d.Clase.ToString(), d.VinculoId,
-                d.VersionActual is { } actual ? d.VersionRequerida(actual).ADto(d.Id, null, hoy) : null, d.Versiones.Count, d.PorEmpresa(vinculos, hoy)))
+                d.VersionActual is { } actual ? d.VersionRequerida(actual).ADto(d.Id, null, hoy) : null, d.Versiones.Count, d.PorEmpresa(vinculos, expedientes, hoy)))
         ]);
     }
 
@@ -44,7 +45,26 @@ public static class BovedaEndpoints
         var tercero = SesionDeTercero.De(http.User);
         await using var consulta = sesiones.ConsultaBoveda();
         var documento = DelTercero(await consulta.LoadAsync<Documento>(documentoId, ct), tercero);
-        return documento.ADto(await VinculosAsync(sesiones, tercero, ct), reloj.Hoy());
+        var vinculos = await VinculosAsync(sesiones, tercero, ct);
+        return documento.ADto(vinculos, await ExpedientesAsync(sesiones, vinculos, ct), reloj.Hoy());
+    }
+
+    /// <summary>
+    /// Qué pasará si el tercero retira esta versión (RT-1), antes de pedirle el motivo: qué versión queda vigente, qué empresas la
+    /// recibieron, aprobaron o revisan (solo eso, nada de sus decisiones), qué expedientes abiertos cambian de versión y qué
+    /// secciones de su información la tienen de soporte. Solo lectura; una versión que no se puede retirar responde lo mismo que el
+    /// retiro (409 <c>estado-invalido</c>).
+    /// </summary>
+    [WolverineGet("/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retiro/impacto")]
+    [Authorize(Policy = ReclamosTercero.Politica)]
+    public static async Task<ImpactoDeRetiroDto> ImpactoDelRetiro(Guid documentoId, int numero, HttpContext http, ISesiones sesiones, CancellationToken ct)
+    {
+        var tercero = SesionDeTercero.De(http.User);
+        await using var boveda = sesiones.ConsultaBoveda();
+        var documento = DelTercero(await boveda.LoadAsync<Documento>(documentoId, ct), tercero);
+        await using var global = sesiones.ConsultaGlobal();
+        var vistos = await VistaDelTercero.CargarAsync(global, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
+        return await ImpactoDeRetiroDelTercero.CalcularAsync(global, boveda, documento, numero, vistos, ct);
     }
 
     /// <summary>URL prefirmada GET de una versión propia; queda como <c>DocumentoAccedido</c> con el tercero como actor.</summary>
@@ -115,7 +135,8 @@ public static class BovedaEndpoints
         if (eliminar)
             await almacen.EliminarAsync(version.Bucket, version.ClaveObjeto, ct);
 
-        return new RetiroDto(proyectado.ADto(await VinculosAsync(sesiones, tercero, ct)), eliminar, compartidos);
+        var vinculos = await VinculosAsync(sesiones, tercero, ct);
+        return new RetiroDto(proyectado.ADto(vinculos, await ExpedientesAsync(sesiones, vinculos, ct)), eliminar, compartidos);
     }
 
     /// <summary>El documento existe y es del tercero de la sesión (un <c>PorVinculo</c>, además, de un vínculo de su sesión); si no, 404.</summary>
@@ -136,6 +157,14 @@ public static class BovedaEndpoints
     internal static string Ip(HttpContext http) => http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";
 
     internal static string UserAgent(HttpContext http) => http.Request.Headers.UserAgent.ToString();
+
+    /// <summary>Último expediente aprobado y expediente abierto de cada vínculo del tercero: lo que cada empresa hizo con sus documentos (RT-5).</summary>
+    private static async Task<IReadOnlyDictionary<Guid, ExpedientesDelVinculo>> ExpedientesAsync(ISesiones sesiones,
+        IReadOnlyList<(Guid VinculoId, Empresa? Empresa, Guid EmpresaId)> vinculos, CancellationToken ct)
+    {
+        await using var consulta = sesiones.ConsultaGlobal();
+        return await ExpedientesDeLaBoveda.CargarAsync(consulta, vinculos.Select(v => v.VinculoId), ct);
+    }
 
     private static async Task<IReadOnlyList<(Guid VinculoId, Empresa? Empresa, Guid EmpresaId)>> VinculosAsync(ISesiones sesiones,
         SesionDeTercero tercero, CancellationToken ct)

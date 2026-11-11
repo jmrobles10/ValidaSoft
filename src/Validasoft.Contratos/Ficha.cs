@@ -36,8 +36,12 @@ public sealed record FaltanteSeccionDto(string? Campo, string? Regla, string Men
 /// <summary>Completitud guardada con la versión (FM-16) y la versión de reglas con que se calculó.</summary>
 public sealed record CompletitudSeccionDto(bool Completa, IReadOnlyList<FaltanteSeccionDto> Faltantes, int ReglaVersion);
 
-/// <summary>Versión de un documento de la bóveda del tercero que respalda la sección (FM-5). <see cref="TipoDocumento"/> lo pone el servidor.</summary>
-public sealed record SoporteSeccionDto(Guid DocumentoId, int Version, string? TipoDocumento = null);
+/// <summary>
+/// Versión de un documento de la bóveda del tercero que respalda la sección (FM-5). <see cref="TipoDocumento"/> (el canónico) y
+/// <see cref="Nombre"/> (el del tipo, legible) los pone el servidor. <see cref="Retirado"/>: el tercero retiró esa versión después
+/// de usarla como soporte (RT-4): la sección conserva sus datos y la referencia, pero el soporte ya no vale y no se reenvía al guardar.
+/// </summary>
+public sealed record SoporteSeccionDto(Guid DocumentoId, int Version, string? TipoDocumento = null, bool Retirado = false, string? Nombre = null);
 
 /// <summary>
 /// Versión vigente de una sección (o vacía: <see cref="Version"/> y <see cref="Datos"/> nulos). <see cref="Datos"/> es el
@@ -88,7 +92,7 @@ public sealed record SeccionGuardadaDto(int Version, bool Creada, CompletitudSec
 /// <summary>Estado de una sección en la proyección <c>EstadoDeFicha</c>; sin versión = sin diligenciar.</summary>
 public sealed record EstadoSeccionFichaDto(
     string Seccion, string Nombre, int? Periodo, bool Obligatoria, int? Version, bool Completa, IReadOnlyList<FaltanteSeccionDto> Faltantes,
-    int? ReglaVersion, DateTimeOffset? Actualizada);
+    int? ReglaVersion, DateTimeOffset? Actualizada, IReadOnlyList<SoporteSeccionDto>? SoportesRetirados = null);
 
 /// <summary>Ficha del tercero para el wizard: orden por tipo de persona, la siguiente sección incompleta y el estado de cada una.</summary>
 public sealed record EstadoFichaDto(

@@ -428,6 +428,99 @@ public class NotificacionesTests
         mensaje.Texto.ShouldContain("vigente hasta el 1 de noviembre de 2026");
     }
 
+    // ---------- el tercero retiró una versión (RT-2) ----------
+
+    private static readonly RetiroDeVersion RetiroDelRut = new(8, "Subí el RUT de otra empresa.", Ahora);
+
+    [Fact]
+    public async Task Retirar_la_version_que_revisa_un_expediente_avisa_a_las_areas_con_el_motivo_y_cual_vuelve_con_la_plantilla_editable()
+    {
+        var contexto = new ContextoFalso();
+        contexto.Expediente.Estado = EstadoExpediente.EnRevision;
+        var version7 = new VersionDeRequisito(DocumentoId, 7, "sha7", Ahora);
+        contexto.Expediente.Requisitos[0].VersionActual = version7;
+        var adjuntada = Evento(new VersionAdjuntadaARequisito(RequisitoId, version7, 8, Ahora, RetiroDelRut), ExpedienteId);
+
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(adjuntada, contexto, 1, CancellationToken.None);
+
+        plan.Campana.Select(c => c.Notificacion.UsuarioId).ShouldBe([contexto.Laura.Id, contexto.Pedro.Id], ignoreOrder: true);
+        plan.Campana.ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.VersionRetirada && c.Notificacion.Titulo == "Versión retirada por el tercero");
+        var aviso = plan.Campana.First().Notificacion;
+        aviso.Mensaje.ShouldContain("Aceros del Norte retiró la versión 8 de RUT (motivo: Subí el RUT de otra empresa), vuelve la 7.");
+        aviso.Mensaje.ShouldContain("Lo que se había decidido sobre ella quedó sin efecto");
+        aviso.Mensaje.ShouldNotContain("subió"); // no es «versión nueva»
+
+        // Laura recibe el correo con la plantilla editable de la empresa; Pedro, en la misma situación, también (sus preferencias son de otro tipo).
+        var correo = plan.Correos.Cast<CorreoDeNotificacionPendiente>().First(c => c.Para == contexto.Laura.Correo);
+        correo.Plantilla.ShouldBe(CatalogoDePlantillas.RetiroDeVersion);
+        correo.TenantId.ShouldBe(Tenant);
+        correo.EmpresaId.ShouldBe(EmpresaId);
+        correo.Documento.ShouldBe("RUT");
+        correo.Folio.ShouldBe("NORTE-E-2026-000001");
+        correo.Asunto.ShouldBe("Versión retirada por el tercero: NORTE-E-2026-000001");
+    }
+
+    [Fact]
+    public async Task Retirar_la_version_de_un_expediente_observado_avisa_y_de_uno_que_aun_espera_al_tercero_no()
+    {
+        var contexto = new ContextoFalso();
+        var version7 = new VersionDeRequisito(DocumentoId, 7, "sha7", Ahora);
+        contexto.Expediente.Requisitos[0].VersionActual = version7;
+        var adjuntada = Evento(new VersionAdjuntadaARequisito(RequisitoId, version7, 8, Ahora, RetiroDelRut), ExpedienteId);
+
+        contexto.Expediente.Estado = EstadoExpediente.Abierto;
+        (await new PlanificadorDeNotificaciones().PlanearAsync(adjuntada, contexto, 1, CancellationToken.None)).Campana.ShouldBeEmpty();
+
+        contexto.Expediente.Estado = EstadoExpediente.Observado;
+        (await new PlanificadorDeNotificaciones().PlanearAsync(adjuntada, contexto, 1, CancellationToken.None)).Campana
+            .ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.VersionRetirada);
+    }
+
+    [Fact]
+    public async Task La_actualizacion_que_se_abre_por_un_retiro_avisa_del_retiro_y_no_como_un_expediente_nuevo()
+    {
+        var contexto = new ContextoFalso();
+        contexto.Expediente.Tipo = TipoExpediente.Actualizacion;
+        contexto.Expediente.Estado = EstadoExpediente.EnRevision;
+        contexto.Expediente.Requisitos[0].VersionActual = new VersionDeRequisito(DocumentoId, 7, "sha7", Ahora);
+        contexto.Expediente.Requisitos[0].Retiro = RetiroDelRut;
+        var etapa = Evento(new EtapaActivada(1, [contexto.AreaA.Id], Ahora), ExpedienteId);
+
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(etapa, contexto, 1, CancellationToken.None);
+
+        plan.Campana.ShouldNotBeEmpty();
+        plan.Campana.ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.VersionRetirada);
+        plan.Campana.First().Notificacion.Mensaje.ShouldContain("retiró la versión 8 de RUT (motivo: Subí el RUT de otra empresa), vuelve la 7. Se abrió una actualización");
+
+        // Un retiro que llegó después de abrirse (el requisito ya tiene versiones en su historial) lo avisa su propio evento: la
+        // apertura, procesada tarde, sigue siendo «Nuevo expediente en tu área» y el aviso del retiro no se duplica.
+        contexto.Expediente.Requisitos[0].Historial = [new VersionDeRequisito(DocumentoId, 8, "sha8", Ahora)];
+        (await new PlanificadorDeNotificaciones().PlanearAsync(etapa, contexto, 1, CancellationToken.None)).Campana
+            .ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.NuevoEnArea);
+
+        // Un expediente de actualización sin retiro sigue siendo «Nuevo expediente en tu área».
+        contexto.Expediente.Requisitos[0].Historial = [];
+        contexto.Expediente.Requisitos[0].Retiro = null;
+        (await new PlanificadorDeNotificaciones().PlanearAsync(etapa, contexto, 1, CancellationToken.None)).Campana
+            .ShouldAllBe(c => c.Notificacion.Tipo == TiposNotificacion.NuevoEnArea);
+    }
+
+    [Fact]
+    public void La_plantilla_del_retiro_se_aplica_al_correo_de_la_empresa_con_sus_variables()
+    {
+        var evento = CatalogoDePlantillas.Buscar(CatalogoDePlantillas.RetiroDeVersion)!;
+        evento.Variables.ShouldBe(["empresa", "folio", "documento"]);
+
+        var textos = PlantillaNotificacion.Normalizar(evento, "correo", "Retiro de {{documento}} en {{folio}}", "Atención, {{empresa}}:", null);
+        var correo = new Aplicacion.Comun.RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build()).RedactarNotificacion(
+            new CorreoDeNotificacionPendiente("laura@norte.co", "Laura", "Versión retirada por el tercero: NORTE-E-2026-000001", ["El tercero retiró la versión 8."], null));
+        var enviado = Aplicacion.Comun.ComposicionDeCorreo.Aplicar(correo, textos, Aplicacion.Comun.EjemplosDeCorreo.VariablesDe("Norte S.A.S.", "NORTE-E-2026-000001", documento: "RUT"));
+
+        enviado.Asunto.ShouldBe("Retiro de RUT en NORTE-E-2026-000001");
+        enviado.Texto.ShouldStartWith("Atención, Norte S.A.S.:");
+        Should.Throw<ReglaDeNegocioException>(() => PlantillaNotificacion.Normalizar(evento, "correo", "{{tipoVinculo}}", null, null)).Codigo.ShouldBe("variable-no-permitida");
+    }
+
     [Fact]
     public async Task Revocar_o_suspender_el_certificado_avisa_al_tercero_sin_el_motivo()
     {
@@ -505,6 +598,9 @@ public class NotificacionesTests
 
         private readonly Vinculo _vinculo;
         private readonly Expediente _expediente;
+
+        /// <summary>El expediente del contexto, para que cada prueba ajuste su estado, su tipo y sus requisitos.</summary>
+        public Expediente Expediente => _expediente;
         private readonly Documento _documento;
 
         public ContextoFalso()

@@ -93,11 +93,13 @@ public static class ProcesoDeValidacion
     /// <paramref name="documentos"/> los trae la aceptación (que acaba de compartir); en una apertura manual de un vínculo
     /// ya aceptado se comparte aquí lo que pide el flujo (RQ-3). Sin aceptar, todos nacen <c>Pendiente</c> (B-1). Una
     /// <c>Actualizacion</c> (RV-1) lleva solo los requisitos de <paramref name="soloRequisitos"/> y la abre el sistema en
-    /// nombre de <paramref name="actor"/> (quien subió la versión).
+    /// nombre de <paramref name="actor"/> (quien subió la versión). <paramref name="retiros"/>: por requisito, la versión que la
+    /// empresa había aprobado y el tercero retiró (RT-3), para que la revalidación lleve el motivo.
     /// </summary>
     public static async Task<Expediente> AbrirAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, FlujoResuelto flujo,
         IContextoSolicitud? contexto, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, DocumentosDelVinculo? documentos = null,
-        TipoExpediente tipoExpediente = TipoExpediente.Inicial, IReadOnlySet<Guid>? soloRequisitos = null, ActorDeExpediente? actor = null)
+        TipoExpediente tipoExpediente = TipoExpediente.Inicial, IReadOnlySet<Guid>? soloRequisitos = null, ActorDeExpediente? actor = null,
+        IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null)
     {
         var vinculo = vinculoStream.Aggregate ?? throw new InvalidOperationException("El vínculo no existe.");
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -115,7 +117,8 @@ public static class ProcesoDeValidacion
             a.Automatica, a.SlaHoras))])).ToList();
 
         var exigencia = ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
-        var requisitos = await CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, flujo.Version, exigencia, soloRequisitos, documentos, ahora, ct);
+        var requisitos = await CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, flujo.Version, exigencia, soloRequisitos, documentos, ahora, ct,
+            retiros);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
@@ -148,7 +151,7 @@ public static class ProcesoDeValidacion
     /// </summary>
     public static async Task<IReadOnlyList<RequisitoCalculado>> CalcularRequisitosAsync(IDocumentSession sesion, Vinculo vinculo, Tercero tercero,
         Guid tenantId, FlujoVersion version, ContextoDeExigencia exigencia, IReadOnlySet<Guid>? soloRequisitos, DocumentosDelVinculo? documentos,
-        DateTimeOffset ahora, CancellationToken ct)
+        DateTimeOffset ahora, CancellationToken ct, IReadOnlyDictionary<Guid, RetiroDeVersion>? retiros = null)
     {
         var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, version, exigencia, ct))
             .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
@@ -171,8 +174,12 @@ public static class ProcesoDeValidacion
             .ToList();
         // En el orden del flujo (los periodos de la financiera, del más reciente al más antiguo).
         var orden = version.Requisitos.Select(r => r.Id).ToList();
-        return await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
+        var ordenados = await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
             [.. calculados.OrderBy(c => orden.IndexOf(c.Id)).Select(c => c.Calculado)], ct);
+        // Lo que la empresa había aprobado y el tercero retiró (RT-3): el requisito nace con el motivo del retiro.
+        return retiros is null || retiros.Count == 0
+            ? ordenados
+            : [.. ordenados.Select(r => retiros.TryGetValue(r.RequisitoId, out var retiro) ? r with { Retiro = retiro } : r)];
     }
 
     /// <summary>

@@ -248,6 +248,7 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/confirmar': 'confirmarCargaDocumento',
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/descarga': 'descargarDocumentoBoveda',
   'POST /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retirar': 'retirarVersionDocumento',
+  'GET /public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retiro/impacto': 'obtenerImpactoDeRetiro',
   // Ficha maestra del tercero (F1, docs/14): catálogos de plataforma, secciones del wizard y recálculo de completitud.
   'POST /api/v1/plataforma/catalogos/{catalogo}/importar': 'importarCatalogo',
   'GET /api/v1/catalogos/{catalogo}': 'buscarEnCatalogo',

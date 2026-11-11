@@ -161,16 +161,23 @@ public sealed record AreaDeRequisitoDto(
 public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffset Fecha);
 
 /// <summary>
+/// El tercero retiró la versión <see cref="Numero"/> de un documento que la empresa había aprobado o revisaba (RT-3): su
+/// <see cref="Motivo"/> y cuándo. La versión actual del requisito es la que vuelve.
+/// </summary>
+public sealed record RetiroDeVersionDto(int Numero, string Motivo, DateTimeOffset Fecha);
+
+/// <summary>
 /// Requisito del expediente (<c>RequisitoDto</c> de docs/05 §4, reducido). <see cref="Estado"/>:
 /// <c>Pendiente|Cargado|EnRevision|Observado|Aprobado|Eximido</c>. <see cref="TipoRequisito"/>: <c>Documento|Seccion</c>; en una
 /// sección de la ficha (F2) <see cref="TipoDocumento"/> lleva el código y nombre de la sección (modo <c>Formulario</c>),
 /// <see cref="VersionActual"/> la versión de la sección (<c>documentoId</c> = id de la sección, <c>sha256</c> = huella) y
 /// <see cref="Seccion"/> el detalle: completitud para la empresa, datos, soportes y cambios frente a lo aceptado.
+/// <see cref="Retiro"/>: el tercero retiró la versión que este requisito reemplaza y <see cref="VersionActual"/> es la que vuelve (RT-3).
 /// </summary>
 public sealed record RequisitoExpedienteDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual, int Reenvios,
     ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas, string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null,
-    SoporteDeSeccionesDto? SoporteDeSecciones = null);
+    SoporteDeSeccionesDto? SoporteDeSecciones = null, RetiroDeVersionDto? Retiro = null);
 
 /// <summary>
 /// Cambio de un campo o fila entre la versión que la empresa aceptó y la nueva (las Actualizaciones del SRM, F2):
@@ -295,7 +302,7 @@ public sealed record RevalidacionDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, Guid RequisitoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo,
     string TipoDocumentoCodigo, string TipoDocumento, VersionResumenDto? VersionAceptada, VersionResumenDto VersionActual, string Comparacion,
     bool AprobableEnLote, string EstadoRequisito, IReadOnlyList<Guid> Areas, DateTimeOffset Desde, DateTimeOffset PlazoHasta, int DiasRestantes,
-    bool Bloqueante);
+    bool Bloqueante, RetiroDeVersionDto? Retiro = null);
 
 /// <summary>Una revalidación a aprobar en lote, sobre la versión que el revisor vio.</summary>
 public sealed record RevalidacionAAprobarDto(Guid ExpedienteId, Guid RequisitoId, int SobreVersion);

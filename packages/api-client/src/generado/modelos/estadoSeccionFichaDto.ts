@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { FaltanteSeccionDto } from './faltanteSeccionDto';
+import type { SoporteSeccionDto } from './soporteSeccionDto';
 
 export interface EstadoSeccionFichaDto {
   seccion: string;
@@ -20,4 +21,6 @@ export interface EstadoSeccionFichaDto {
   reglaVersion: number | null;
   /** @nullable */
   actualizada: string | null;
+  /** @nullable */
+  soportesRetirados?: SoporteSeccionDto[] | null;
 }

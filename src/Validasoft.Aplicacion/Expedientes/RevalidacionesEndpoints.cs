@@ -78,9 +78,10 @@ public static class RevalidacionesEndpoints
             return new RevalidacionDto(e.Id, e.Folio, e.VinculoId, r.Id, new TerceroResumenDto(e.TerceroId, e.TerceroNombre, e.TerceroIdentificacion),
                 new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre), r.Codigo, r.Nombre,
                 previa is null ? null : new VersionResumenDto(previa.Numero, previa.CargadaEn), new VersionResumenDto(actual.Numero, actual.CargadaEn),
-                (comparacion ?? Comparacion.Distinta).ToString(), Revalidacion.AprobableEnLote(comparacion), r.Estado.ToString(), r.AreasQueRevisan,
+                (comparacion ?? Comparacion.Distinta).ToString(), r.Retiro is null && Revalidacion.AprobableEnLote(comparacion), r.Estado.ToString(), r.AreasQueRevisan,
                 e.AbiertoEn, plazo, Math.Max(0, (int)Math.Ceiling((plazo - ahora).TotalDays)),
-                certificado is { Estado: EstadoCertificado.ConPendientes, PendientesBloqueantes: true });
+                certificado is { Estado: EstadoCertificado.ConPendientes, PendientesBloqueantes: true },
+                r.Retiro is { } retiro ? new RetiroDeVersionDto(retiro.Numero, retiro.Motivo, retiro.Fecha) : null);
         });
         var siguiente = pendientes.Count > desde + tamano ? Peticiones.EscribirDesplazamiento(desde + tamano) : null;
         return new PaginaDto<RevalidacionDto>([.. filas], siguiente);
@@ -145,6 +146,9 @@ public static class RevalidacionesEndpoints
             throw ReglaDeNegocioException.Conflicto("version-superada", $"{requisito.Nombre} ya no está en la versión {item.SobreVersion}.");
 
         var documento = await boveda.LoadAsync<Documento>(actual.DocumentoId, ct);
+        if (requisito.Retiro is { } retiro)
+            throw ReglaDeNegocioException.Validacion("revalidacion-con-cambios",
+                $"La versión {actual.Numero} de {requisito.Nombre} volvió porque el tercero retiró la {retiro.Numero}: revísala en su expediente.");
         if (!Revalidacion.AprobableEnLote(documento?.Buscar(actual.Numero)?.Hechos?.Comparacion))
             throw ReglaDeNegocioException.Validacion("revalidacion-con-cambios",
                 $"La versión {actual.Numero} de {requisito.Nombre} no se puede aprobar en lote: revísala en su expediente.");
