@@ -78,7 +78,7 @@ test('la observación llega a la campana del tercero con su empresa: la abre y l
   await campanaDelTercero(page).click();
   await expect(panelDelTercero(page).getByRole('listitem').filter({ hasText: 'Tienes observaciones por corregir' })).not.toContainText('Sin leer');
   await panelDelTercero(page).getByRole('button', { name: 'Marcar todas como leídas' }).click();
-  await expect(page.getByText(/Marcamos \d+ notificaciones? como leídas?\./)).toBeVisible();
+  await expect(page.getByText(/Marcamos \d+ notificaci(ón|ones) como leídas?\./)).toBeVisible();
   await page.keyboard.press('Escape');
   // Con el tiempo real puede entrar otro aviso enseguida (un documento por vencer, por ejemplo): el contador puede volver a
   // encenderse, así que se comprueba que el panel se cerró y no que el contador quede en cero.
