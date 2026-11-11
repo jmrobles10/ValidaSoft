@@ -77,6 +77,18 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 ### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
 Deja **bien definida la forma de integrarse** (SB-1…SB-10, [registro](decisiones/registro.md)): **sandbox** con datos aislados (tenant hermano, buzón de correo, IA y listas simuladas, reinicio), **SDK publicables** (versión única, README/CHANGELOG, ESM + CJS, workflow `sdk-publicar.yml`; no se publicó nada), **prueba de carga k6** de la consulta de certificación (consulta de cuatro viajes a uno; el p99 < 100 ms a 500 rps queda por certificar en un entorno dedicado), la **[guía de integración](integracion.md)** de punta a punta y la **e2e de integración completa con el SDK** en el sandbox. Detalle en §4.5.
 
+### 3.1.2 Retiro de versión por el tercero (rama `feature/aviso-retiro-version`)
+El tercero ve el **impacto antes de retirar** una versión de su bóveda (qué versión queda vigente, qué empresas ya la recibieron, aprobaron o revisan y qué
+revalidaciones se abren) y la empresa recibe el aviso (campana y correo, plantilla `retiro-version`) con el motivo, que también ve en la línea de tiempo, el requisito y
+las revalidaciones; una sección cuyo soporte se retiró queda con una advertencia, no como faltante (RT-1…RT-6, sección 5-sexquadragies del [registro](decisiones/registro.md)).
+
+### 3.1.3 Lote de integración (`integracion/lote-2026-11-11`)
+Las cinco ramas anteriores —`feature/aviso-retiro-version` (RT), `feature/integracion-sandbox` (SB), `feature/integracion-abierta` (IO), `feature/vigencia-vinculo` (VV) y
+`feature/ingreso-sin-contrasena` (ING; §3.3)— se fusionaron en ese orden sobre `main` en una sola rama y se verificó **la mezcla**, no cada rama por separado. Lo que la mezcla
+obligó a decidir: los correos a terceros llevan a la vez la preferencia del tercero (NT-5) y el tenant que los origina (el sandbox los retiene, SB-4); el permiso
+`sesiones-tercero:crear` (IO-6) se ofrece en el diálogo de API keys junto a `sandbox:administrar`; el embebido del tercero y la guía de cinco pasos viven en
+[integracion.md §8.1 y §1.1](integracion.md) (08 §2.3 es solo un puntero); y el stream de la campana se corta cuando se cierra o se revoca la sesión directa (ING-3).
+
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
 push**). Por decisión de Producto queda en espera hasta validar todo el alcance de Validasoft; no se sube ni se crea
