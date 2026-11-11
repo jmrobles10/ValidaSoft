@@ -110,10 +110,11 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
             foreach (var candidata in candidatas)
             {
                 var entrada = Entrada(candidata, documentos, consumidas, cruces, config, plan, ahora, out var esperando);
-                if (esperando)
-                    continue;
                 var politica = new PoliticaDeRevision(config.Nivel, config.UmbralEfectivo(plan?.UmbralConfianza ?? PlanDeIaEmpresa.UmbralConfianzaInicial),
                     config.PorcentajeMuestreo, config.TiposAutorizados, (uso?.Aprobadas ?? 0) + aprobadasEnLaPasada, config.TopeMensualAprobaciones);
+                // Lo que está fuera del alcance de la revisión automática se anota ya: no hay análisis que esperar.
+                if (esperando && MotorDeRevision.FueraDeAlcance(entrada, politica) is null)
+                    continue;
                 if (MotorDeRevision.Decidir(entrada, politica) is not { } decision)
                     continue;
                 if (decision.Aprueba)

@@ -125,16 +125,8 @@ public static class MotorDeRevision
         if (politica.Nivel == NivelDeRevisionAutomatica.Manual)
             return null;
 
-        if (politica.Nivel == NivelDeRevisionAutomatica.Automatico)
-        {
-            var tipo = (entrada.TipoCanonico ?? string.Empty).ToUpperInvariant();
-            if (tipo.Length == 0 || !politica.TiposAutorizados.Contains(tipo, StringComparer.OrdinalIgnoreCase))
-                return SinAlcance(MotivosDeRevision.TipoNoAutorizado);
-            if (!entrada.AreaAutorizada)
-                return SinAlcance(MotivosDeRevision.AreaNoAutorizada);
-            if (entrada.AreaExigeVariasAprobaciones)
-                return SinAlcance(MotivosDeRevision.AreaConVariasAprobaciones);
-        }
+        if (FueraDeAlcance(entrada, politica) is { } fuera)
+            return fuera;
 
         var motivos = Motivos(entrada, politica.UmbralConfianza);
         var confianza = entrada.Analisis?.Confianza;
@@ -163,6 +155,22 @@ public static class MotorDeRevision
             return true;
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{documentoId:N}:{version.ToString(CultureInfo.InvariantCulture)}"));
         return BitConverter.ToUInt32(hash, 0) % 100 < (uint)porcentaje;
+    }
+
+    /// <summary>
+    /// En Automático, el tipo o el área sin autorizar (o un área que exige varias aprobaciones) dejan el documento fuera de la revisión
+    /// automática: <c>SinAlcance</c>, sin esperar análisis alguno. En otro nivel, nunca.
+    /// </summary>
+    public static DecisionDeRevision? FueraDeAlcance(EntradaDeRevision entrada, PoliticaDeRevision politica)
+    {
+        if (politica.Nivel != NivelDeRevisionAutomatica.Automatico)
+            return null;
+        var tipo = (entrada.TipoCanonico ?? string.Empty).ToUpperInvariant();
+        if (tipo.Length == 0 || !politica.TiposAutorizados.Contains(tipo, StringComparer.OrdinalIgnoreCase))
+            return SinAlcance(MotivosDeRevision.TipoNoAutorizado);
+        if (!entrada.AreaAutorizada)
+            return SinAlcance(MotivosDeRevision.AreaNoAutorizada);
+        return entrada.AreaExigeVariasAprobaciones ? SinAlcance(MotivosDeRevision.AreaConVariasAprobaciones) : null;
     }
 
     private static DecisionDeRevision SinAlcance(string codigo) => new(ResultadoDeRevision.SinAlcance, null, [MotivosDeRevision.De(codigo)], null);
