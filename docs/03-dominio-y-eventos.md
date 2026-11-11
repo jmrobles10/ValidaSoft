@@ -312,23 +312,26 @@ stateDiagram-v2
 | `Anular(Motivo)` | `VinculoAnulado` | Terminal; desde cualquier estado no terminal, incluido `Bloqueado`. |
 | `ExpirarVerificacionesDeRepresentante(RelacionSalienteId, RelacionEntranteId)` | `VerificacionesDeRepresentanteExpiradas(Tipos[])` | Adición 3: solo tras `RelacionConfirmada` (§4.5). La cédula aceptada y las listas del saliente quedan `Desactualizadas`/`Expiradas`; el requisito de cédula del entrante nace `Pendiente` (o `Cargado` si su bóveda ya la tiene). |
 
-### 5.4 Vigencia periódica del vínculo (VV-1…VV-8, implementado)
+### 5.4 Vigencia periódica del vínculo (VV-1…VV-12, implementado)
 
 El flujo con el que se aprueba un expediente dice cuántos días vale esa aprobación (`VigenciaDelVinculo`: `Dias`, `DiasAviso`, `DiasGracia`; `Dias = 0` = sin vencimiento periódico) y cada requisito de **sección** puede traer su propia vigencia (`VigenciaDias`) y plazo de revalidación (`DiasRevalidacion`). Función pura `VigenciaDeAprobacion.VigenteHasta` (zona del negocio, igual que los documentos): la menor entre aprobación + `Dias` y aceptación de cada sección + su `VigenciaDias`.
 
 ```mermaid
 stateDiagram-v2
-  Activo --> PorVencer: VinculoPorVencer (primer día de aviso)
-  PorVencer --> PorVencer: VinculoPorVencer (avisos siguientes)
-  Activo --> Vencido: VinculoVencido(Causa: Vigencia) (fin de la gracia)
-  PorVencer --> Vencido: VinculoVencido(Causa: Vigencia)
-  Vencido --> Activo: Renovacion aprobada (VinculoActivado + VigenciaDelVinculoFijada)
-  PorVencer --> Activo: VigenciaDelVinculoFijada (aprobación nueva o nada que ratificar)
+  Activo --> PorVencer: VinculoPorVencer (primer aviso = pre-vencimiento; se abre la Renovacion)
+  PorVencer --> PorVencer: VinculoPorVencer (avisos siguientes: recuerdan, sin otro expediente)
+  PorVencer --> Activo: Renovacion aprobada antes de la fecha (VinculoActivado + VigenciaDelVinculoFijada)
+  PorVencer --> Vencido: VinculoVencido(Causa: Vigencia) (fin de la gracia con la Renovacion aún abierta)
+  Activo --> Vencido: VinculoVencido(Causa: Vigencia) (sin avisos o job atrasado: la renovación se abre entonces)
+  Vencido --> Activo: la misma Renovacion se aprueba (VinculoActivado + VigenciaDelVinculoFijada)
+  Activo --> Activo: VigenciaDelVinculoFijada (nada que ratificar: la vigencia se renueva sola)
 ```
 
-- **Estado derivado.** `Vinculo` lleva `VigenteHasta`, `DiasAvisoVigencia`, `DiasGraciaVigencia`, `AvisosDeVigenciaCumplidos`, `RenovacionPorVigenciaPendiente`, `UltimaAprobacionEn` y `ProximaRevisionDeVigencia` (el próximo aviso, el vencimiento, el reintento de la renovación o el fin del bloqueo; índice del barrido del job, como `ProximaRevisionDePlazo` del expediente).
+El **pre-vencimiento** es el tramo `PorVencer` desde el primer aviso hasta el vencimiento (VV-12): ahí está abierta la `Renovacion` y el certificado sigue vigente. La vigencia nueva se cuenta **desde la aprobación** de la renovación (VV-1), no desde el vencimiento anterior.
+
+- **Estado derivado.** `Vinculo` lleva `VigenteHasta`, `DiasAvisoVigencia`, `DiasGraciaVigencia`, `AvisosDeVigenciaCumplidos`, `RenovacionPorVigenciaPendiente` (venció sin renovación abierta: el job la abre), `ExpedienteAbiertoTipo` / `TieneRenovacionAbierta` (la renovación del pre-vencimiento se reutiliza al vencer, sin un segundo expediente), `UltimaAprobacionEn` y `ProximaRevisionDeVigencia` (el próximo aviso, el vencimiento, el reintento de la renovación o el fin del bloqueo; índice del barrido del job, como `ProximaRevisionDePlazo` del expediente).
 - **Efecto en el certificado.** Su `VigenteHasta` es la menor entre la de sus documentos y la del vínculo; al vencer el vínculo el certificado vence en la misma transacción (el procesador lo habría vencido por reloj). Un certificado suspendido por bloqueo se restablece o queda `Vencido` según su `VenceDesde`.
-- **Renovación periódica.** Expediente de `Renovacion` abierto por el sistema con las secciones aceptadas (y los documentos obligatorios no vigentes); las secciones nacen pendientes (`ExigeRatificacion`) y el tercero las **ratifica** (`RequisitoRatificado`, sin cambiar la ficha) o las **actualiza** (versión nueva que revisan las áreas). Detalle y decisiones en el [registro](decisiones/registro.md) (VV-4, VV-5).
+- **Renovación periódica.** Expediente de `Renovacion` abierto por el sistema **en el primer aviso** (pre-vencimiento) con las secciones aceptadas (y los documentos obligatorios no vigentes); las secciones nacen pendientes (`ExigeRatificacion`) y el tercero las **ratifica** (`RequisitoRatificado`, sin cambiar la ficha) o las **actualiza** (versión nueva que revisan las áreas). Si nada hay que ratificar, la vigencia se renueva sola y el vínculo no llega a `PorVencer`. Detalle y decisiones en el [registro](decisiones/registro.md) (VV-4, VV-5, VV-12).
 - **Plazo de revalidación (RV-4).** `Expediente.DiasDePlazoDeRevalidacion` es el menor `DiasRevalidacion` de los requisitos de la actualización (tipo de documento o requisito de sección del flujo), 15 por omisión.
 
 **Invariantes.** (1) un expediente abierto (tabla de casos §5.2); (2) `Renovacion`/`Actualizacion` solo tras aprobación previa; (3) una versión **no admitida** no se vuelve a aceptar en este vínculo; (4) `Anulado`/`Desvinculado`/`Bloqueado` no aceptan versiones ni expedientes; (5) una `VersionAceptada` siempre referencia una versión que fue `Actual` en el momento de aceptarse; (6) nada de este agregado es legible fuera de su `EmpresaId`; (7) ninguna versión se comparte con este vínculo antes de `InvitacionAceptada` (B-1); (8) un cierre `Aprobado` de un vínculo que exige cuenta designada tiene `CuentaDesignada = Aprobada`.

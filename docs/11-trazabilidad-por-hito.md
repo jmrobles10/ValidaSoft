@@ -651,8 +651,8 @@ Hacia atrás: `ConsultaCertificacionDto` (H5) se completa; `ExpedienteDto.requis
 | Nombres | Saga `CambioCuentaDesignada` emite `CuentaDesignadaAprobada` / `CuentaDesignadaRechazada`; rutas del tercero `POST /public/v1/boveda/cuentas-bancarias` y `POST /public/v1/vinculos/{id}/cuenta-designada` (ambas en H6, #25) | 04 §5, 06 §4(g) |
 | Evento | `EstadoDeVinculoRecalculado` (I-15), `CertificadoSuspendido` (B-5), `RevalidacionCancelada`; eliminado `VinculoPorVencer(Causa: RevalidacionVencida)` (T-8) | 03 §5, §7 |
 
-#### H6 — Vigencia del vínculo, plazo de revalidación y desbloqueo automático (2026-11-10, VV-1…VV-11)
-Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones en el [registro](decisiones/registro.md), «5-novotricies»; modelo en 03 §5.4).
+#### H6 — Vigencia del vínculo, plazo de revalidación y desbloqueo automático (2026-11-10, VV-1…VV-12)
+Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones en el [registro](decisiones/registro.md), «5-unquadragies»; modelo en 03 §5.4). La renovación se abre en el primer aviso (**pre-vencimiento**, VV-12) y la vigencia nueva cuenta desde la aprobación.
 
 | Tipo | Elemento | Definido en |
 |---|---|---|
@@ -661,8 +661,8 @@ Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones e
 | Job | `RevisarVigenciasDeVinculos` / `RevisarVigenciaDeVinculo` / `DesbloquearAlLlegarLaFecha` (cola durable `vigencias`), `ProgramadorDeVigenciasDeVinculos` (`Validasoft:VigenciasDeVinculos:Intervalo`), índice `Vinculo.ProximaRevisionDeVigencia`; `POST /plataforma/vigencias-de-vinculos/revisar` (`fecha` simulada solo en Development; `incluirDocumentos`) | 05 §2.7, 03 §5.4 |
 | Endpoint | `POST /public/v1/expedientes/{id}/requisitos/{rid}/ratificar` también para secciones de la ficha (renovación periódica); `POST /vinculos/{id}/bloquear` con `hasta` programa el desbloqueo | 05 §2.4 |
 | DTO | `VinculoDto.vigenteHasta`, `VinculoPublicoDto.vigenteHasta`, `RequisitoPublicoDto.puedeRatificar` (también secciones), `IndicadoresDto.vinculosPorVencer` | 05 §4 |
-| Pantalla | web: editor de flujos (vigencia del vínculo y de cada sección), detalle del vínculo (vigente hasta, aviso, historial), inicio («Por vencer»); portal: «Ratificar» en el expediente, en Mi información y en el wizard de la sección, «Por vencer» y «Ratifica tu información» en Mis empresas | 06 |
-| Prueba | dominio (`VigenciaDelVinculoTests`: reloj simulado aviso → PorVencer → Vencido → renovación → Activo, desbloqueo por fecha; plazo de revalidación y ratificación de secciones en `RequisitosExpedienteTests.Vigencias`), integración (`RequisitosApiTests.Vigencias`) y e2e (`vigencias.spec.ts`: vencer por tiempo y ratificar, bloqueo con fecha, mensaje programado, renovación por documento) | — |
+| Pantalla | web: editor de flujos (vigencia del vínculo y de cada sección), detalle del vínculo (vigente hasta, aviso, historial), inicio («Por vencer»); portal: «Ratificar» en el expediente, en Mi información y en el wizard de la sección, «En pre-vencimiento» y «Ratifica tu información» en Mis empresas | 06 |
+| Prueba | dominio (`VigenciaDelVinculoTests`: reloj simulado aviso → PorVencer con la renovación abierta → aprobada a tiempo → Activo sin vencer, o vence con ella abierta (la misma sigue), desbloqueo por fecha; plazo de revalidación y ratificación de secciones en `RequisitosExpedienteTests.Vigencias`), integración (`RequisitosApiTests.Vigencias`) y e2e (`vigencias.spec.ts`: ratificar en pre-vencimiento y no vencer, vencer con la renovación abierta, bloqueo con fecha, mensaje programado, renovación por documento) | — |
 
 ### H7 — Verificaciones externas, cumplimiento y revisión automática
 

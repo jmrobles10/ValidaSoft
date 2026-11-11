@@ -8,7 +8,8 @@ import { abrirEmpresa, aceptarInvitacion, completarInvitacion, entrarPorInvitaci
 import { crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, revisarVigencias, SST, type Escenario, type Invitacion } from '../soporte/semilla';
 
 /**
- * Vigencias del vínculo (VV-1…VV-5): el vínculo vence por tiempo y el tercero ratifica su información; un bloqueo con fecha se levanta
+ * Vigencias del vínculo (VV-1…VV-12): en el pre-vencimiento el tercero ratifica su información y el vínculo no vence (o vence con su renovación
+ * abierta, que sigue su curso); un bloqueo con fecha se levanta
  * solo; y la renovación por un documento vencido se cierra ratificándolo. El tiempo pasa con el job de Plataforma (`fecha` simulada,
  * solo Development): avisos a las 13:00 UTC del día de aviso y vencimiento a las 05:00 UTC del día siguiente a la gracia (TD-6).
  */
@@ -85,9 +86,20 @@ async function proveedorAprobado(page: Page, browser: Browser, e: Escenario, nom
   return invitacion;
 }
 
-test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero ratifica su información desde Mi información', async ({ page, browser }) => {
+interface ClienteConVigencia {
+  e: Escenario;
+  flujoId: string;
+  invitacion: Invitacion;
+  /** Hasta cuándo vale la validación (aprobada hoy + 90 días). */
+  hasta: string;
+}
+
+/**
+ * Cliente de Sur con su flujo CLIENTE (RUT + información general; la validación vale 90 días, avisos a 30 y 5, 3 de gracia): acepta,
+ * diligencia la general, sube su RUT y Sofía lo aprueba: el vínculo queda activo con vigencia y con su certificado.
+ */
+async function clienteConVigencia(page: Page, browser: Browser): Promise<ClienteConVigencia> {
   const e = await crearEscenario();
-  // Sur le pide a sus clientes su RUT y la información general, y la validación vale 90 días (aviso a 30 y 5, 3 de gracia).
   const flujoId = await publicarFlujoConFicha(e, e.sur, 'CLIENTES_VIGENCIA', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }], {
     dias: 90,
     diasAviso: [30, 5],
@@ -95,18 +107,6 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   });
   const invitacion = await invitar(e, e.sur, nuevoTercero(RAZON_SOCIAL), 'CLIENTE');
 
-  // El editor de flujos de Sur muestra la vigencia del vínculo que quedó configurada.
-  const paginaEditor = await (await browser.newContext()).newPage();
-  const editor = await abrirEmbebido(paginaEditor, e, e.ana, e.sur, `flujos/${flujoId}`);
-  const vigencia = editor.getByRole('group', { name: 'Vigencia del vínculo' });
-  await expect(vigencia).toBeVisible();
-  await expect(vigencia.getByRole('spinbutton', { name: 'Días', exact: true })).toHaveValue('90');
-  await expect(vigencia.getByRole('textbox', { name: 'Avisos (días antes de vencer)' })).toHaveValue('30, 5');
-  await expect(vigencia.getByRole('spinbutton', { name: 'Gracia (días)' })).toHaveValue('3');
-  await expect(editor.getByRole('spinbutton', { name: 'Vigencia (días)' })).toBeVisible(); // la sección general trae la suya
-  await paginaEditor.screenshot({ path: 'test-results/vigencias-editor-de-flujos.png', fullPage: true });
-
-  // El tercero acepta, diligencia la general y sube su RUT; Sofía aprueba las dos cosas y el vínculo queda activo con vigencia.
   await entrarPorInvitacion(page, invitacion);
   await aceptarInvitacion(page, invitacion);
   await page.getByRole('link', { name: /^Completar/ }).first().click();
@@ -115,8 +115,7 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   await abrirEmpresa(page, e.sur.nombre, 'CLIENTE');
   await subirDocumento(page, RUT, pdf('RUT vigencia v1'));
   await esperarEstadoDelTercero(page, 'EnRevision');
-  const paginaSofia = await (await browser.newContext()).newPage();
-  const sofia = await abrirEmbebido(paginaSofia, e, e.sofia, e.sur);
+  const sofia = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.sofia, e.sur);
   await abrirDesdeBandeja(sofia, invitacion.nombre, 'Revisión', 'Cliente');
   await aprobarArea(sofia, 'Revisión');
   await esperarEstadoDelTercero(page, 'Aprobado');
@@ -125,8 +124,26 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   expect(activo.estado).toBe('Activo');
   const hasta = activo.vigenteHasta ?? '';
   expect(hasta).toBe(hoyMas(90));
-  const emitido = (await certificadoDe(e, invitacion)).actual;
-  expect(emitido).toMatchObject({ estado: 'Vigente', emision: 1, vigenteHasta: hasta });
+  expect((await certificadoDe(e, invitacion)).actual).toMatchObject({ estado: 'Vigente', emision: 1, vigenteHasta: hasta });
+  return { e, flujoId, invitacion, hasta };
+}
+
+/** Texto del asunto del correo de pre-vencimiento de Sur. */
+const asuntoDePreVencimiento = (e: Escenario) => new RegExp(`^Ratifica tu información con ${e.sur.nombre.replace(/[.]/g, '\\.')} antes del`);
+
+test('en el pre-vencimiento el tercero ratifica su información antes de la fecha y el vínculo nunca vence', async ({ page, browser }) => {
+  const { e, flujoId, invitacion, hasta } = await clienteConVigencia(page, browser);
+
+  // El editor de flujos de Sur muestra la vigencia del vínculo que quedó configurada.
+  const paginaEditor = await (await browser.newContext()).newPage();
+  const editor = await abrirEmbebido(paginaEditor, e, e.ana, e.sur, `flujos/${flujoId}`);
+  const vigencia = editor.getByRole('group', { name: 'Vigencia del vínculo' });
+  await expect(vigencia).toBeVisible();
+  await expect(vigencia.getByRole('textbox', { name: 'Días', exact: true })).toHaveValue('90');
+  await expect(vigencia.getByRole('textbox', { name: 'Avisos (días antes de vencer)' })).toHaveValue('30, 5');
+  await expect(vigencia.getByRole('textbox', { name: 'Gracia (días)' })).toHaveValue('3');
+  await expect(editor.getByRole('textbox', { name: 'Vigencia (días)' })).toBeVisible(); // la sección general trae la suya
+  await paginaEditor.screenshot({ path: 'test-results/vigencias-editor-de-flujos.png', fullPage: true });
 
   // La administración de Sur ve «Vigente hasta» en el vínculo.
   const paginaAna = await (await browser.newContext()).newPage();
@@ -135,39 +152,39 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   await expect(ana.getByText('Vigente hasta', { exact: true }).first()).toBeVisible();
   await expect(ana.getByText(enPantalla(hasta), { exact: true }).first()).toBeVisible();
 
-  // Llega el primer aviso (30 días antes): el vínculo pasa a «Por vencer» y el tercero recibe un correo.
+  // Llega el primer aviso (30 días antes): pre-vencimiento. El vínculo pasa a «Por vencer», el certificado sigue vigente y ya está
+  // abierta la renovación, con el correo que lleva al tercero a ratificar.
   const aviso = await revisarVigencias(e, momentoDeAviso(sumar(hasta, -30)));
   expect(aviso).toMatchObject({ revisados: 1, avisados: 1, vencidos: 0 });
-  expect((await vinculoDe(e, invitacion)).estado).toBe('PorVencer');
-  const correoAviso = await esperarCorreo(invitacion.correo, new RegExp(`^Tu validación con ${e.sur.nombre.replace(/[.]/g, '\\.')} vence el`));
-  expect(correoAviso.texto).toContain('ratificar');
+  const preVencimiento = await vinculoDe(e, invitacion);
+  expect(preVencimiento.estado).toBe('PorVencer');
+  expect(preVencimiento.expedienteAbiertoId).not.toBeNull();
+  expect((await certificadoDe(e, invitacion)).actual?.estado).toBe('Vigente');
+  const correoAviso = await esperarCorreo(invitacion.correo, asuntoDePreVencimiento(e));
+  expect(correoAviso.texto).toContain('pre-vencimiento');
+  expect(correoAviso.texto).toContain('/e/');
   await paginaAna.reload();
-  await expect(ana.getByText('La validación de este tercero vence pronto')).toBeVisible();
+  await expect(ana.getByText('La validación de este tercero está en pre-vencimiento')).toBeVisible();
+  await expect(ana.getByText(`Vence el ${enPantalla(hasta)}. Su renovación está abierta`)).toBeVisible();
   await expect(ana.getByText('Por vencer', { exact: true }).first()).toBeVisible();
-  await paginaAna.screenshot({ path: 'test-results/vigencias-vinculo-por-vencer.png', fullPage: true });
+  await paginaAna.screenshot({ path: 'test-results/vigencias-vinculo-pre-vencimiento.png', fullPage: true });
+
+  // El tercero lo ve en Mis empresas con la fecha y la acción de ratificar.
   await page.goto('/empresas');
   const tarjetaSur = page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 2, name: e.sur.nombre, exact: true }) });
-  await expect(tarjetaSur).toContainText('Por vencer');
-  await expect(tarjetaSur).toContainText(`Tu validación con ${e.sur.nombre} vence el ${enPantalla(hasta)}`);
-
-  // Terminada la gracia (3 días después de la fecha) el vínculo vence, su certificado también y se abre la renovación.
-  const vence = await revisarVigencias(e, momentoDeVencimiento(sumar(hasta, 3)));
-  expect(vence).toMatchObject({ revisados: 1, vencidos: 1 });
-  const vencido = await vinculoDe(e, invitacion);
-  expect(vencido.estado).toBe('Vencido');
-  expect(vencido.expedienteAbiertoId).not.toBeNull();
-  expect((await certificadoDe(e, invitacion)).actual?.estado).toBe('Vencido');
-  await esperarCorreo(invitacion.correo, /venció: ratifica tu información/);
+  await expect(tarjetaSur).toContainText('En pre-vencimiento');
+  await expect(tarjetaSur).toContainText(`En pre-vencimiento: ratifica tu información con ${e.sur.nombre} antes del ${enPantalla(hasta)}`);
+  await expect(tarjetaSur.getByRole('link', { name: 'Ratificar mi información' })).toBeVisible();
+  await page.screenshot({ path: 'test-results/vigencias-mis-empresas-pre-vencimiento.png', fullPage: true });
 
   // En su revisión la sección aparece para ratificar o actualizar, no para completar.
-  await page.goto('/empresas');
   await abrirEmpresa(page, e.sur.nombre, 'CLIENTE');
   const tarjetaGeneral = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Información general', exact: true }) });
   await expect(tarjetaGeneral.getByRole('button', { name: 'Ratificar' })).toBeVisible({ timeout: 30_000 });
   await expect(tarjetaGeneral.getByRole('link', { name: 'Actualizar en Mi información' })).toBeVisible();
   await page.screenshot({ path: 'test-results/vigencias-renovacion-seccion.png', fullPage: true });
 
-  // En Mi información el tercero ve qué empresa se lo pide y ratifica la sección sin editarla.
+  // En Mi información el tercero ve qué empresa se lo pide y ratifica la sección sin editarla, antes de la fecha.
   await page.goto('/ficha');
   await expect(page.getByText('1 empresa te pide ratificar tu información')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(`Confirma que sigue igual (sin cambiar nada) o actualízala. Te lo piden: ${e.sur.nombre}`)).toBeVisible();
@@ -178,7 +195,8 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   await dialogo.getByRole('button', { name: 'Sí, sigue igual' }).click();
   await expect(page.getByText(`Confirmaste tu información de Información general. ${e.sur.nombre} la dio por renovada.`)).toBeVisible();
 
-  // Activo otra vez, con vigencia nueva y el certificado reemitido; la ficha del tercero no se tocó.
+  // Activo otra vez, con la vigencia nueva desde esa aprobación y el certificado reemitido, sin haber vencido nunca: la ficha del
+  // tercero no se tocó y el historial de Sur no tiene ningún «Vínculo vencido».
   await expect.poll(async () => (await vinculoDe(e, invitacion)).estado, { timeout: 30_000 }).toBe('Activo');
   const renovado = await vinculoDe(e, invitacion);
   expect(renovado.vigenteHasta).toBe(hoyMas(90));
@@ -189,7 +207,50 @@ test('el vínculo vence por tiempo: avisa, vence con su certificado y el tercero
   await expect(tarjetaSur).toContainText('Aprobado');
   await paginaAna.reload();
   await expect(ana.getByText('Activo', { exact: true }).first()).toBeVisible();
-  await expect(ana.getByText('La validación de este tercero vence pronto')).toBeHidden();
+  await expect(ana.getByText('Vínculo en pre-vencimiento', { exact: true }).first()).toBeVisible(); // el aviso quedó en el historial
+  await expect(ana.getByText('Vínculo vencido', { exact: true })).toBeHidden();
+  await expect(ana.getByText('La validación de este tercero está en pre-vencimiento')).toBeHidden();
+});
+
+test('si el tercero no ratifica a tiempo el vínculo vence con su certificado y la misma renovación abierta sigue su curso', async ({ page, browser }) => {
+  const { e, invitacion, hasta } = await clienteConVigencia(page, browser);
+
+  // El primer aviso abre el pre-vencimiento con su renovación; el segundo (5 días antes) solo la recuerda.
+  expect(await revisarVigencias(e, momentoDeAviso(sumar(hasta, -30)))).toMatchObject({ revisados: 1, avisados: 1 });
+  const renovacionId = (await vinculoDe(e, invitacion)).expedienteAbiertoId ?? '';
+  expect(renovacionId).not.toBe('');
+  expect(await revisarVigencias(e, momentoDeAviso(sumar(hasta, -5)))).toMatchObject({ revisados: 1, avisados: 1 });
+  const recordado = await vinculoDe(e, invitacion);
+  expect(recordado).toMatchObject({ estado: 'PorVencer', expedienteAbiertoId: renovacionId });
+  await esperarCorreo(invitacion.correo, asuntoDePreVencimiento(e));
+
+  // Terminada la gracia (3 días después de la fecha) con la renovación sin ratificar: el vínculo vence, su certificado también y
+  // la renovación que ya estaba abierta es la misma (no se abre otra).
+  const vence = await revisarVigencias(e, momentoDeVencimiento(sumar(hasta, 3)));
+  expect(vence).toMatchObject({ revisados: 1, vencidos: 1 });
+  const vencido = await vinculoDe(e, invitacion);
+  expect(vencido).toMatchObject({ estado: 'Vencido', expedienteAbiertoId: renovacionId });
+  expect((await certificadoDe(e, invitacion)).actual?.estado).toBe('Vencido');
+  await esperarCorreo(invitacion.correo, /venció: ratifica tu información/);
+
+  // El tercero ve que venció y que le toca ratificar; lo hace en la misma renovación y todo vuelve a estar al día.
+  await page.goto('/empresas');
+  const tarjetaSur = page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 2, name: e.sur.nombre, exact: true }) });
+  await expect(tarjetaSur).toContainText('Ratifica tu información');
+  await expect(tarjetaSur).toContainText(`La validación con ${e.sur.nombre} venció`);
+  await page.screenshot({ path: 'test-results/vigencias-mis-empresas-vencido.png', fullPage: true });
+  await abrirEmpresa(page, e.sur.nombre, 'CLIENTE');
+  const tarjetaGeneral = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'Información general', exact: true }) });
+  await expect(tarjetaGeneral.getByRole('button', { name: 'Ratificar' })).toBeVisible({ timeout: 30_000 });
+  await tarjetaGeneral.getByRole('button', { name: 'Ratificar' }).click();
+  const dialogo = page.getByRole('dialog', { name: '¿Tu información de Información general sigue igual?' });
+  await dialogo.getByRole('button', { name: 'Sí, sigue igual' }).click();
+  await expect(page.getByText(`Confirmaste tu información de Información general. ${e.sur.nombre} la dio por renovada.`)).toBeVisible();
+
+  await expect.poll(async () => (await vinculoDe(e, invitacion)).estado, { timeout: 30_000 }).toBe('Activo');
+  const renovado = await vinculoDe(e, invitacion);
+  expect(renovado).toMatchObject({ vigenteHasta: hoyMas(90), expedienteAbiertoId: null });
+  await expect.poll(async () => (await certificadoDe(e, invitacion)).actual, { timeout: 30_000 }).toMatchObject({ estado: 'Vigente', emision: 2, vigenteHasta: hoyMas(90) });
 });
 
 test('un bloqueo con fecha se levanta solo: el job lo restituye al llegar el día y el vínculo vuelve a estar activo', async ({ page, browser }) => {

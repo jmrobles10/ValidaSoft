@@ -69,7 +69,7 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 
 | Rama | Huecos | Contenido |
 |---|---|---|
-| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones**; plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. **Terminada y verificada; falta su PR.** Registro VV- (sección «5-unquadragies») |
+| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones** que se abre en el primer aviso (**pre-vencimiento**); plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. **Terminada y verificada; falta su PR.** Registro VV- (sección «5-unquadragies») |
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
@@ -111,10 +111,11 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
 **Huecos** (los numerados están en curso, §3):
 1. **Aplicación en AyF:** en espera (§3.2).
 2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** **resuelto** en
-   `feature/vigencia-vinculo` (VV-1..VV-8, [03 §5.4](03-dominio-y-eventos.md)): el flujo configura días, avisos y gracia
-   (`dias = 0` mantiene el comportamiento anterior); el vínculo pasa a `PorVencer` en el primer aviso y a `Vencido` al
-   terminar la gracia, con su certificado; la renovación pide **ratificar** (sin cambiar datos) o **actualizar** las
-   secciones de la ficha y los documentos obligatorios no vigentes; cada sección puede traer su vigencia.
+   `feature/vigencia-vinculo` (VV-1..VV-12, [03 §5.4](03-dominio-y-eventos.md)): el flujo configura días, avisos y gracia
+   (`dias = 0` mantiene el comportamiento anterior); el vínculo pasa a `PorVencer` en el primer aviso (**pre-vencimiento**) y
+   ahí se abre la renovación, que pide **ratificar** (sin cambiar datos) o **actualizar** las secciones de la ficha y los
+   documentos obligatorios no vigentes; si se aprueba antes de la fecha el vínculo nunca vence y la vigencia nueva cuenta
+   desde esa aprobación; si no, vence con su certificado y la misma renovación sigue abierta; cada sección puede traer su vigencia.
 3. **Desaprobar una etapa ya aprobada o volver a la fase inicial:** en curso.
 4. **Campana del tercero y recordatorio de observaciones:** en curso.
 5. **Plazo de revalidación configurable:** **resuelto** en la misma rama (VV-7): rige el menor `diasRevalidacion` de los
@@ -123,8 +124,7 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
    en `feature/vigencia-vinculo` (VV-8: mensaje programado de Wolverine al bloquear con fecha, respaldado por el barrido
    del job de vigencias); reintegrar sin revalidar y el reinicio tras rechazo siguen en curso.
 
-**Pendiente de lo resuelto en `feature/vigencia-vinculo`:** abrir la renovación en el primer aviso (ratificar **antes** de
-vencer) es decisión de Producto; un vínculo vencido por dos documentos a la vez solo abre la renovación con el primero
+**Pendiente de lo resuelto en `feature/vigencia-vinculo`:** un vínculo vencido por dos documentos a la vez solo abre la renovación con el primero
 (RN-1); el aviso de vigencia aún no es una plantilla personalizable (PL-1); los vínculos con vigencia o bloqueo anteriores
 al cambio se indexan con su próximo evento (o reconstruyendo la proyección del vínculo).
 
