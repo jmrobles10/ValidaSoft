@@ -1088,6 +1088,20 @@ Cierra la coexistencia; `legacy.estadoTercero` desaparece del catálogo cuando n
 |---|---|---|
 | Endpoint | `GET /plataforma/operacion/dead-letters`, `POST …/dead-letters/{id}/reintentar`, `POST …/proyecciones/{nombre}/rebuild`, `GET …/salud` (`DeadLetterDto`, `RebuildDto`; permiso `plataforma:operacion`) | 05 §2.1, 07 §3.2 |
 
+### Ingreso sin contraseñas (2026-11-11, ING-1…ING-9)
+
+Decisión de Producto: sin contraseñas; ingreso directo con código y passkeys, identidad delegada sin cambios y modos por grupo. Diseño en [07 §2.7](07-seguridad-identidad-y-tenancy.md), contrato en [05 §2.10](05-api-contratos-y-webhooks.md), pantallas en [06 §3.4](06-frontend-y-ux.md) y decisiones en ING-1…ING-9 del [registro](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Entidad (global, `identidad`) | `DesafioDeIngreso` (código o ceremonia de passkey; señuelo), `Passkey` (credencial detectable, contador, revocación), `SesionDeUsuario` (familia de refresco con inactividad y duración), `RegistroDeIngreso` (auditoría), `LimiteDeAccesoPorCorreo` con `uso`; `Tenant.ModosDeIngreso`, `SesionHoras`, `InactividadMinutos`, `PasskeyParaTodos`; `Usuario.TenantId`, `InvitadoEn`; `OperadorDePlataforma` directo (`DIRECTO:{correo}`) | 03 §2, 07 §2.7 |
+| Servicio | `ServicioDeIngreso`, `IProveedorDeIdentidad` (`ProveedorLocalDeCodigos`), `IServicioDePasskeys` (Fido2NetLib 4.3.2), `CuentasDeIngreso`, `PoliticaDeIngreso`, `ICacheDeSesionesDirectas`, `LimpiezaDeIngresos`; `IEmisorDeSesiones.EmitirDeUsuario/EmitirDeOperador` | 07 §2.7 |
+| Endpoint | `/ingreso/codigo`, `/ingreso/codigo/verificar`, `/ingreso/cuenta`, `/ingreso/passkey/{opciones,verificar,registro}`, `/ingreso/sesion/{renovar,cerrar}`; `/mi-cuenta` (+ `/passkeys`, `/sesiones`); `/usuarios/{id}/{sesiones,passkeys,invitar}`; `/configuracion/ingreso`; `/plataforma/tenants/{id}/ingreso`; `/plataforma/operadores…`; `GET /auditoria?tipo=Identidad` | 05 §2.10 |
+| Correo | Plantillas `CodigoDeIngreso` e `InvitacionDeUsuario` (sin secreto) | 05 §8 |
+| Pantalla | Ingreso (correo, código, cuenta, passkey), Mi cuenta, Configuración › Ingreso, Usuarios (invitar, passkeys y sesiones), Plataforma › Operadores, Auditoría › Ingresos, menú de cuenta y aviso de passkey | 06 §3.1, §3.4 |
+| Configuración | `Validasoft:LimiteIngreso`, `Validasoft:Ingreso:{MinutosAcceso, MinutosLimpieza, CookieSegura, Plataforma, Passkeys}` | 07 §2.7 |
+| Pruebas | Dominio: `IngresoTests` (código, passkeys, sesión, política, correos). Integración: `IngresoApiTests` (vencimiento, un solo uso, límites, no enumeración, modos por grupo, passkey obligatoria por rol, revocación, sesiones, Mi cuenta, gestión, auditoría, operadores) con un autenticador WebAuthn por software. Web: `estado`, `passkeys`, `sesionDirecta`, `CampoCodigo`, política del grupo. E2E: `ingreso.spec.ts` con el autenticador virtual de Chromium (CDP `WebAuthn`) | 04 §12 |
+
 ## 3. Matrices globales
 
 ### 3(a) Endpoint → hito

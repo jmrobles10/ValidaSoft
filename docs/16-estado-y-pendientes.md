@@ -93,6 +93,27 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
   - lugar de expedición del representante;
   - cifrar los secretos que el SRM guarda en claro.
 
+### 3.3 Ingreso sin contraseñas (`feature/ingreso-sin-contrasena`, 2026-11-11)
+Rama lista para revisar, **sin push ni PR**. Decisiones **ING-1…ING-9** en el [registro](decisiones/registro.md); diseño en
+[07 §2.7](07-seguridad-identidad-y-tenancy.md), contrato en [05 §2.10](05-api-contratos-y-webhooks.md).
+- **Qué hace:**
+  - ingreso directo por correo, código de 6 dígitos y **passkey** (WebAuthn, Fido2NetLib 4.3.2), sin contraseñas;
+  - la passkey sola vale por dos factores; es obligatoria para `Administrador`, `OficialCumplimiento`, `Auditor` y
+    Plataforma (y para todos si el grupo lo pide);
+  - modos por grupo `Delegado`, `Directo` o ambos (los grupos existentes quedan en `Delegado`); duración e
+    inactividad de la sesión por grupo; refresco rotativo con detección de reuso en la cookie `vs_usuario`;
+  - operadores de Plataforma con ingreso directo (la clave de arranque solo da de alta al primero);
+  - administración: invitar, desactivar, ver y cerrar sesiones, ver y revocar passkeys (la recuperación);
+  - web: pantalla de ingreso, registro guiado de la passkey, «Mi cuenta», Configuración › Usuarios y operadores;
+  - auditoría de identidad (ingresos exitosos y fallidos, passkeys, sesiones, con dispositivo e IP) y abstracción
+    `IProveedorDeIdentidad` lista para OIDC/WorkOS (no integrado).
+- **Verificación:** dominio 694/694; integración 179/179; Vitest 730/730; e2e aislada 63/63; lint, tipos y build en verde.
+  En la corrida completa del e2e una prueba previa (`decisiones.spec`) falló porque el token aleatorio de un enlace
+  contenía «Olga» (el texto del correo no debe nombrar áreas); pasó al repetirla. El e2e usa el autenticador virtual de
+  Chrome (CDP) para registrar y firmar de verdad.
+- **Queda fuera** (§4.6): WorkOS/OIDC, autocompletado de passkeys en el campo del correo (conditional UI), reautenticación
+  para acciones sensibles, avisos por correo de cambios de passkey y consulta de la auditoría de ingreso de Plataforma.
+
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
 Sale de `main` y cierra los huecos con el SRM + Portal sobre las novedades del tercero. **No tiene PR.** Detalle en el
@@ -176,9 +197,14 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 - La caché de API keys se invalida al instante solo en el nodo que rota.
 
 ### 4.6 Plataforma e identidad
-- Login propio de Plataforma con OIDC y 2FA; hoy entra con la clave de arranque más identidad delegada.
-- 2FA de usuarios (P-14-4): definir si lo resuelve el sistema integrador o Validasoft.
-- Desactivar sistemas y operadores de Plataforma por API; agregar empresas a un grupo desde la consola.
+- Plataforma ya entra **directo** (correo, código y passkey obligatoria; ING-4). Falta **desactivar la clave de arranque en producción** una vez
+  creado el primer operador (hoy es dejar vacía la variable `VALIDASOFT__PLATAFORMA__CLAVEBOOTSTRAP`; una acción en la consola sería mejor) y, más adelante,
+  federar con OIDC/WorkOS (ING-7: la abstracción existe, no está integrada).
+- 2FA de usuarios (P-14-4): **resuelta** con las passkeys (ING-2). Pendiente a evaluar: reautenticación (step-up) para acciones sensibles,
+  códigos de recuperación y avisos por correo cuando se registra o revoca una passkey.
+- Conditional UI: ofrecer las passkeys del sitio en el propio campo del correo (hoy hay un botón «Entrar con una passkey»).
+- Consultar en la consola la auditoría de ingreso de los operadores de Plataforma (hoy se registra; la consulta es la del grupo).
+- Desactivar sistemas de Plataforma por API (los operadores ya se desactivan, ING-4); agregar empresas a un grupo desde la consola.
 - `POST /api-keys` y `POST /sesiones-usuario` todavía guardan su respuesta en el registro de idempotencia 24 h.
 - Ayuda por documento **por empresa** (hoy es por tenant, B-4).
 
