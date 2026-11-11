@@ -60,9 +60,9 @@ public sealed class AvisoDeVencimiento
 /// <summary>Cuándo se dispara cada mensaje: avisos a las 13:00 UTC (8:00 en Colombia); vencimientos a las 05:00 UTC del día siguiente a la gracia.</summary>
 public static class CalendarioDeVigencias
 {
-    public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => new(fecha.ToDateTime(new TimeOnly(13, 0)), TimeSpan.Zero);
+    public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => CalculadoraDeVigencia.MomentoDeAviso(fecha);
 
-    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia) => new(finDeGracia.AddDays(1).ToDateTime(new TimeOnly(5, 0)), TimeSpan.Zero);
+    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia) => CalculadoraDeVigencia.MomentoDeVencimiento(finDeGracia);
 
     /// <summary>
     /// Sesión de escritura del tenant técnico <c>boveda</c> enlistada en el outbox del mensaje que se está manejando. Dentro

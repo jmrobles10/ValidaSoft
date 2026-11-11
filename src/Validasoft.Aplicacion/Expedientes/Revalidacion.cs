@@ -24,8 +24,12 @@ namespace Validasoft.Aplicacion.Expedientes;
 /// </summary>
 public static class Revalidacion
 {
-    /// <summary>Días para resolver la revalidación antes de que los pendientes del certificado bloqueen (RV-4, A-2).</summary>
-    public const int DiasDePlazo = 15;
+    /// <summary>
+    /// Días por omisión para resolver la revalidación antes de que los pendientes del certificado bloqueen (RV-4, A-2). Cada tipo
+    /// de documento (<c>diasRevalidacion</c>) y cada requisito de sección del flujo pueden fijar el suyo: rige el menor de los
+    /// requisitos de la actualización (<see cref="Expediente.DiasDePlazoDeRevalidacion"/>).
+    /// </summary>
+    public const int DiasDePlazo = Expediente.DiasDePlazoDeRevalidacionPorOmision;
 
     /// <summary>
     /// Abre la actualización si hace falta (idempotente: con un expediente abierto o sin cambios no hace nada; con una actualización
@@ -56,7 +60,7 @@ public static class Revalidacion
         if (expediente.EstaAbierto && certificado.Aggregate?.MarcarConPendientes(MotivoDePendientes(cambios.Nombres), expediente.Id, ahora) is { } pendientes)
             certificado.AppendOne(pendientes);
         if (expediente.EstaAbierto && mensajes is not null && Guid.TryParse(sesion.TenantId, out var tenantId))
-            await mensajes.ScheduleAsync(new VencerPlazoDeRevalidacion(tenantId, vinculoId, expediente.Id), ahora.AddDays(DiasDePlazo));
+            await mensajes.ScheduleAsync(new VencerPlazoDeRevalidacion(tenantId, vinculoId, expediente.Id), expediente.PlazoDeRevalidacionHasta);
         return expediente;
     }
 
@@ -191,8 +195,8 @@ public static class Revalidacion
                 .FirstOrDefault()
             : AprobadoEn(aprobado, requisito.TipoDocumentoTenantId, requisito.TipoCanonico, requisito.Ambito);
 
-    /// <summary>Hasta cuándo puede resolverse la revalidación antes de que sus pendientes bloqueen (RV-4).</summary>
-    public static DateTimeOffset PlazoHasta(Expediente actualizacion) => actualizacion.AbiertoEn.AddDays(DiasDePlazo);
+    /// <summary>Hasta cuándo puede resolverse la revalidación antes de que sus pendientes bloqueen (RV-4): el menor plazo de sus requisitos.</summary>
+    public static DateTimeOffset PlazoHasta(Expediente actualizacion) => actualizacion.PlazoDeRevalidacionHasta;
 
     /// <summary>
     /// ¿Se puede aprobar en lote (A-18)? Solo si la bóveda no ve cambios frente a la anterior: <c>Identica</c> por hash o

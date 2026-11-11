@@ -33,7 +33,8 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
     /// Emite (o reemite, si el vínculo ya tenía certificado de otro expediente) con el estado del expediente recién aprobado.
     /// Idempotente: si el certificado ya tiene una emisión de ese expediente no hace nada.
     /// </summary>
-    public async Task EmitirAsync(IDocumentSession sesion, Expediente expediente, Vinculo vinculo, DateTimeOffset ahora, CancellationToken ct)
+    public async Task EmitirAsync(IDocumentSession sesion, Expediente expediente, Vinculo vinculo, DateTimeOffset ahora, CancellationToken ct,
+        DateOnly? vigenteHastaDelVinculo = null)
     {
         var stream = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculo.Id), ct);
         if (stream.Aggregate is { } existente && existente.Emisiones.Any(e => e.ExpedienteId == expediente.Id))
@@ -41,7 +42,7 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
 
         var empresa = await sesion.LoadAsync<Empresa>(vinculo.EmpresaId, ct)
                       ?? throw ReglaDeNegocioException.NoEncontrado("empresa-no-encontrada", "La empresa del vínculo no existe.");
-        var plantilla = await ContenidoAsync(sesion, expediente, vinculo, empresa, ahora, ct);
+        var plantilla = await ContenidoAsync(sesion, expediente, vinculo, empresa, ahora, vigenteHastaDelVinculo, ct);
         var origen = new OrigenDeEmision(empresa.TenantId, empresa.Id, vinculo.Id, vinculo.TerceroId, expediente.Id, expediente.Folio);
 
         if (stream.Aggregate is { } certificado)
@@ -60,7 +61,7 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
     /// el origen de su aprobación. Sin revisores ni contactos.
     /// </summary>
     private async Task<ContenidoDeCertificado> ContenidoAsync(IDocumentSession sesion, Expediente expediente, Vinculo vinculo, Empresa empresa,
-        DateTimeOffset ahora, CancellationToken ct)
+        DateTimeOffset ahora, DateOnly? vigenteHastaDelVinculo, CancellationToken ct)
     {
         var tercero = await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
                       ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "El tercero del vínculo no existe.");
@@ -102,7 +103,8 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
             ],
             areas,
             ahora,
-            null);
+            // La vigencia del certificado es la menor entre la de sus documentos y la del vínculo (VV-1); Sellar la combina.
+            vigenteHastaDelVinculo);
     }
 
     /// <summary>

@@ -366,7 +366,8 @@ public sealed class Certificado
             Folio = folio,
             Emision = emision,
             EmitidoEn = ahora,
-            VigenteHasta = VigenciaMinima(plantilla.Requisitos)
+            // La menor entre la de los documentos y la del vínculo (VV-1), que llega en la plantilla.
+            VigenteHasta = MenorFecha(VigenciaMinima(plantilla.Requisitos), plantilla.VigenteHasta)
         };
         var canonico = contenido.Canonico();
         var hash = HuellaDeCertificado.Hash(canonico);
@@ -376,6 +377,8 @@ public sealed class Certificado
             origen.ExpedienteFolio, folioRaiz, emision, folio, canonico, hash, sello, sellador.Kid, contenido.VigenteHasta,
             UrlDeVerificacion(urlPublica, folio, hash), ahora);
     }
+
+    private static DateOnly? MenorFecha(DateOnly? a, DateOnly? b) => a is null ? b : b is null ? a : a < b ? a : b;
 
     private static string Requerido(string? valor, string codigo, string mensaje) =>
         string.IsNullOrWhiteSpace(valor) ? throw ReglaDeNegocioException.Validacion(codigo, mensaje) : valor.Trim();

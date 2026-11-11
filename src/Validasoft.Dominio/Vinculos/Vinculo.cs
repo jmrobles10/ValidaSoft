@@ -386,6 +386,9 @@ public sealed partial class Vinculo
         ExpedienteAbiertoId = e.ExpedienteId;
         if (Estado == EstadoVinculo.Invitado)
             Estado = EstadoVinculo.EnValidacion;
+        if (e.Tipo == TipoExpediente.Renovacion)
+            RenovacionPorVigenciaPendiente = false;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -396,6 +399,7 @@ public sealed partial class Vinculo
         UltimoResultado = e.Resultado;
         if (e.Resultado != ResultadoExpediente.Aprobado && Estado == EstadoVinculo.EnValidacion)
             Estado = EstadoVinculo.Invitado;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -403,12 +407,17 @@ public sealed partial class Vinculo
     {
         Estado = EstadoVinculo.Activo;
         TuvoAprobacion = true;
+        UltimaAprobacionEn = e.Fecha;
+        RenovacionPorVigenciaPendiente = false;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
     public void Apply(VinculoVencido e)
     {
         Estado = EstadoVinculo.Vencido;
+        RenovacionPorVigenciaPendiente = e.Causa == CausaDeVencimiento.Vigencia;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -417,6 +426,7 @@ public sealed partial class Vinculo
         EstadoPrevioAlBloqueo = e.EstadoPrevio;
         Estado = EstadoVinculo.Bloqueado;
         Bloqueo = new Bloqueo(e.Motivo, e.Fecha, e.Hasta);
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -425,6 +435,7 @@ public sealed partial class Vinculo
         Estado = e.EstadoRestituido;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -434,6 +445,7 @@ public sealed partial class Vinculo
         Estado = EstadoVinculo.Desvinculado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -446,6 +458,7 @@ public sealed partial class Vinculo
             InvitacionAceptadaEn = null;
         }
 
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 
@@ -455,6 +468,7 @@ public sealed partial class Vinculo
         Estado = EstadoVinculo.Anulado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
+        RecalcularProximaRevision();
         ActualizadoEn = e.Fecha;
     }
 

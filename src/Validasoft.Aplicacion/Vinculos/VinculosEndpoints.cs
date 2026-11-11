@@ -238,16 +238,22 @@ public static class VinculosEndpoints
             guardado.Invitacion ?? new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, 1));
     }
 
-    /// <summary>Bloquear suspende el certificado en la misma transacción (B-5); no lo revoca.</summary>
+    /// <summary>
+    /// Bloquear suspende el certificado en la misma transacción (B-5); no lo revoca. Con fecha de fin programa en la misma
+    /// transacción el desbloqueo automático (<see cref="DesbloquearAlLlegarLaFecha"/>, VV-5), que hace lo mismo que el manual.
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/bloquear")]
     [Authorize(Policy = Permisos.VinculosBloquear)]
     public static async Task<VinculoDto> Bloquear(Guid id, BloquearVinculoDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
+        empresa.UsarMensajeria(mensajes);
         var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
         var evento = stream.Aggregate!.Bloquear(dto.Motivo, dto.Hasta, ahora);
         await CicloDeCertificados.AlBloquearAsync(empresa.Sesion, id, evento.Motivo, ahora, ct);
+        if (evento.Hasta is { } hasta)
+            await mensajes.ScheduleAsync(new DesbloquearAlLlegarLaFecha(contexto.TenantRequerido(), id, hasta), hasta);
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 

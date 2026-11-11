@@ -245,7 +245,8 @@ public sealed record VinculoDto(
     DateTimeOffset ActualizadoEn,
     long Version,
     Guid? ExpedienteAbiertoId = null,
-    bool AperturaDeExpedientePendiente = false);
+    bool AperturaDeExpedientePendiente = false,
+    DateOnly? VigenteHasta = null);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -298,7 +299,7 @@ public sealed record VerificarOtpDto(string Codigo);
 /// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
-    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null);
+    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, DateOnly? VigenteHasta = null);
 
 public sealed record TextoLegalPublicoDto(string Tipo, int TextoVersion, string HashTexto, string Contenido, DateTimeOffset PublicadoEn);
 

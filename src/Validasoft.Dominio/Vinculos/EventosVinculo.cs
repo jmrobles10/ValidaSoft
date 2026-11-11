@@ -119,6 +119,8 @@ public sealed record VinculoActivado(Guid ExpedienteId, DateTimeOffset Fecha);
 
 /// <summary>
 /// Venció para el vínculo un documento obligatorio (RN-1, docs/02 §8.2): el vínculo pasa a <c>Vencido</c> hasta que una
-/// renovación aprobada lo vuelva a activar (I-15). <see cref="Documento"/> es el nombre del tipo que venció.
+/// renovación aprobada lo vuelva a activar (I-15). <see cref="Documento"/> es el nombre del tipo que venció. Con
+/// <see cref="CausaDeVencimiento.Vigencia"/> venció la vigencia periódica del vínculo o la de una de sus secciones (VV-1) y
+/// <see cref="Documento"/> lo dice en palabras.
 /// </summary>
-public sealed record VinculoVencido(string Documento, DateTimeOffset Fecha);
+public sealed record VinculoVencido(string Documento, DateTimeOffset Fecha, CausaDeVencimiento Causa = CausaDeVencimiento.Documento);

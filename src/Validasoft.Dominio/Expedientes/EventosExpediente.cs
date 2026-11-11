@@ -156,7 +156,9 @@ public sealed record VersionDeRequisito(Guid DocumentoId, int Numero, string Sha
 /// pide una sección de la ficha (<see cref="Seccion"/>, <see cref="Periodo"/>): la versión es la de la sección
 /// (<c>DocumentoId</c> = id del stream, <c>Sha256</c> = huella) y solo la cubre si es completa para la empresa
 /// (<see cref="Completitud"/>, que se guarda); <see cref="Aceptada"/> es la que la empresa ya había aceptado en el vínculo (base
-/// de la comparación anterior → nuevo de una actualización).
+/// de la comparación anterior → nuevo de una actualización). <see cref="ExigeRatificacion"/>: en una renovación periódica del
+/// vínculo (VV-1) la sección nace pendiente aunque la versión vigente sea completa: el tercero debe ratificarla (confirmar que sigue
+/// igual) o actualizarla; <see cref="DiasRevalidacion"/> es el plazo para resolver una revalidación que incluya el requisito (RV-4).
 /// </summary>
 public sealed record RequisitoCalculado(
     Guid RequisitoId,
@@ -175,7 +177,9 @@ public sealed record RequisitoCalculado(
     int? Periodo = null,
     bool ExigeSoporte = false,
     VersionDeRequisito? Aceptada = null,
-    CompletitudParaEmpresa? Completitud = null);
+    CompletitudParaEmpresa? Completitud = null,
+    bool ExigeRatificacion = false,
+    int? DiasRevalidacion = null);
 
 /// <summary>
 /// La misma empresa ya aprobó esa misma versión del documento en otro expediente del mismo tercero (otro tipo de vínculo,

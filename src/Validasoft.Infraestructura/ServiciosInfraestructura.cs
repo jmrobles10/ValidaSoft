@@ -149,6 +149,8 @@ public static class ServiciosInfraestructura
         servicios.AddHttpClient(Verificaciones.VerificadorCompliance.Cliente);
         // Plazos de cargue del expediente inicial (P-4-2, LT-4): barrido periódico (Validasoft:PlazosDeCargue:Intervalo).
         servicios.AddHostedService<ProgramadorDePlazosDeCargue>();
+        // Vigencia periódica del vínculo y fin de los bloqueos con fecha (VV-1…VV-5): barrido periódico (Validasoft:VigenciasDeVinculos:Intervalo).
+        servicios.AddHostedService<Aplicacion.Vinculos.ProgramadorDeVigenciasDeVinculos>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
         servicios.AddScoped<CupoDeIa>();
@@ -241,6 +243,10 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.RevisarVigenciasDeVinculos>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.RevisarVigenciaDeVinculo>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.DesbloquearAlLlegarLaFecha>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.CorreoDeVigenciaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

@@ -142,7 +142,9 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_vinculo_natural", TenancyScope.PerTenant,
                         x => x.EmpresaId, x => x.TerceroId, x => x.TipoVinculoId)
                     .Index(x => x.EmpresaId)
-                    .Index(x => x.CreadoEn);
+                    .Index(x => x.CreadoEn)
+                    // Barrido del job de vigencias de vínculos (VV-1): solo los que tienen algo pendiente llevan valor.
+                    .Index(x => x.ProximaRevisionDeVigencia);
 
                 // Motivos propios del tenant (los de la plataforma viven en código) y flujos aprobatorios versionados.
                 opts.Schema.For<Motivo>().MultiTenanted()

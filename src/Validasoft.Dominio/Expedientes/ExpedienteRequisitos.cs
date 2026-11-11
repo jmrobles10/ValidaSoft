@@ -80,6 +80,15 @@ public sealed class RequisitoDeExpediente
     /// <summary>Versión que la empresa ya había aceptado en el vínculo al abrir el expediente (base de la comparación).</summary>
     public VersionDeRequisito? VersionAceptadaPrevia { get; set; }
 
+    /// <summary>
+    /// Renovación periódica del vínculo (VV-1): la sección no queda cubierta por la versión que la empresa ya había aceptado; hace falta
+    /// una versión nueva o que el tercero ratifique que sigue igual (<see cref="RatificacionDeRequisito"/>).
+    /// </summary>
+    public bool ExigeRatificacion { get; set; }
+
+    /// <summary>Días del plazo para resolver una revalidación que incluya el requisito (RV-4); nulo = el de por omisión.</summary>
+    public int? DiasRevalidacion { get; set; }
+
     /// <summary>Cuándo la empresa aceptó la versión actual (al aprobarse el expediente).</summary>
     public DateTimeOffset? AceptadaEn { get; set; }
 
@@ -167,8 +176,9 @@ public sealed partial class Expediente
     }
 
     /// <summary>
-    /// El tercero ratifica en una renovación que el documento no cambió (RN-2): solo en un expediente de
-    /// <c>Renovacion</c> abierto y sobre un requisito sin versión (el que venció). Las áreas lo aprueban solas.
+    /// El tercero ratifica en una renovación que el documento no cambió (RN-2) o que la sección de la ficha sigue igual (VV-1): solo
+    /// en un expediente de <c>Renovacion</c> abierto y sobre un requisito sin versión (el que venció o la sección que se renueva).
+    /// Las áreas lo aprueban solas.
     /// </summary>
     public IReadOnlyList<object> RatificarRequisito(Guid requisitoId, VersionDeRequisito version, string por, DateTimeOffset ahora)
     {
@@ -247,6 +257,10 @@ public sealed partial class Expediente
             if (requisito.Eximido || !todas.TryGetValue(requisito.Id, out var version))
                 continue;
             if (requisito.VersionActual is { } actual && actual.DocumentoId == version.DocumentoId && actual.Numero == version.Numero)
+                continue;
+            // Renovación periódica (VV-1): la versión que la empresa ya aceptó no cubre la sección; solo una nueva o la ratificación.
+            if (requisito is { ExigeRatificacion: true, VersionActual: null, VersionAceptadaPrevia: { } aceptada } &&
+                aceptada.DocumentoId == version.DocumentoId && aceptada.Numero == version.Numero)
                 continue;
             if (requisito.AreasQueRevisan.All(EtapaCerrada))
                 continue;
@@ -344,6 +358,8 @@ public sealed partial class Expediente
         Periodo = r.Periodo,
         ExigeSoporte = r.ExigeSoporte,
         Completitud = r.Completitud,
+        ExigeRatificacion = r.ExigeRatificacion,
+        DiasRevalidacion = r.DiasRevalidacion,
         VersionAceptadaPrevia = r.Aceptada,
         TipoDocumentoTenantId = r.TipoDocumentoTenantId,
         Codigo = r.Codigo,
@@ -564,7 +580,7 @@ public sealed partial class Expediente
                 if (!area.Automatica && !reutiliza && !ratificado)
                     continue;
                 var nota = ratificado && requisito.Ratificacion is { } ratificacion
-                    ? $"El tercero ratificó el {ratificacion.Fecha:dd/MM/yyyy} que el documento no cambió."
+                    ? $"El tercero ratificó el {ratificacion.Fecha:dd/MM/yyyy} que {(requisito.EsSeccion ? "la información" : "el documento")} no cambió."
                     : reutiliza && requisito.AprobacionPrevia is { } previa
                         ? $"La empresa ya aprobó esta versión en el expediente {previa.Folio} ({previa.TipoVinculo})."
                         : null;

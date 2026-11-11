@@ -132,6 +132,12 @@ public static class CalculadoraDeVigencia
 
     public static DateOnly? FinDeGracia(DateOnly? vigenteHasta, int diasGracia) => vigenteHasta?.AddDays(Math.Max(0, diasGracia));
 
+    /// <summary>Cuándo se dispara el aviso de una fecha: 13:00 UTC (8:00 en Colombia). Lo usan los documentos y la vigencia del vínculo.</summary>
+    public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => new(fecha.ToDateTime(new TimeOnly(13, 0)), TimeSpan.Zero);
+
+    /// <summary>Cuándo vence lo que terminó su gracia el día <paramref name="finDeGracia"/>: 05:00 UTC del día siguiente.</summary>
+    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia) => new(finDeGracia.AddDays(1).ToDateTime(new TimeOnly(5, 0)), TimeSpan.Zero);
+
     /// <summary>Días de aviso convertidos en fechas (sin repetir, de la más próxima a la más lejana del vencimiento).</summary>
     public static IReadOnlyList<DateOnly> FechasDeAviso(DateOnly vigenteHasta, IEnumerable<int> diasAviso) =>
         [.. diasAviso.Where(d => d > 0).Distinct().Select(d => vigenteHasta.AddDays(-d)).Order()];

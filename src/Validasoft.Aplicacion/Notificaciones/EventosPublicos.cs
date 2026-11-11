@@ -94,6 +94,8 @@ public static class CatalogoEventosPublicos
         new("vinculo.activado", "El vínculo quedó Activo al aprobarse su expediente."),
         new("vinculo.bloqueado", "El vínculo se bloqueó."),
         new("vinculo.desbloqueado", "El vínculo se desbloqueó."),
+        new("vinculo.por_vencer", "Llegó un aviso de la vigencia del vínculo: vence pronto y el tercero deberá ratificar su información."),
+        new("vinculo.vencido", "El vínculo venció (por su vigencia o por un documento obligatorio) y se abrió su renovación."),
         new("vinculo.desvinculado", "El vínculo terminó (desvinculación)."),
         new("vinculo.anulado", "El vínculo se anuló."),
         new("vinculo.referencia_agregada", "Otro sistema integrado comparte el vínculo."),
@@ -128,7 +130,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
                 or VinculoDesvinculado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
-                or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
+                or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
                 or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto => await DeExpedienteAsync(evento, contexto, ct),
             VersionCompartida or VencimientoAvisado or VersionVencida => await DeDocumentoAsync(evento, contexto, ct),
@@ -163,6 +165,9 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoActivado a => Estado(id, referencias, EstadoVinculo.Activo, null, null, null, a.ExpedienteId),
             VinculoBloqueado b => Estado(id, referencias, EstadoVinculo.Bloqueado, b.EstadoPrevio, b.Motivo, b.Hasta, null),
             VinculoDesbloqueado d => Estado(id, referencias, d.EstadoRestituido, EstadoVinculo.Bloqueado, d.Justificacion, null, null),
+            VinculoPorVencer p => Estado(id, referencias, EstadoVinculo.PorVencer, EstadoVinculo.Activo, null,
+                new DateTimeOffset(p.VigenteHasta.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero), null),
+            VinculoVencido v => Estado(id, referencias, EstadoVinculo.Vencido, null, v.Documento, null, null),
             VinculoDesvinculado d => Estado(id, referencias, EstadoVinculo.Desvinculado, d.EstadoPrevio, d.Motivo, null, null),
             VinculoAnulado a => Estado(id, referencias, EstadoVinculo.Anulado, a.EstadoPrevio, a.Motivo, null, null),
             ReferenciaExternaAgregada r => new DatosReferenciaAgregadaDto(id, referencias, new ReferenciaExternaDto(r.Sistema, r.Id)),
@@ -184,6 +189,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoActivado => "vinculo.activado",
             VinculoBloqueado => "vinculo.bloqueado",
             VinculoDesbloqueado => "vinculo.desbloqueado",
+            VinculoPorVencer => "vinculo.por_vencer",
+            VinculoVencido => "vinculo.vencido",
             VinculoDesvinculado => "vinculo.desvinculado",
             VinculoAnulado => "vinculo.anulado",
             CuentaDesignadaPropuesta => "vinculo.cuenta_designada_propuesta",

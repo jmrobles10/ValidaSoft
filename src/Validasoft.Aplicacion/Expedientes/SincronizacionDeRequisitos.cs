@@ -66,6 +66,11 @@ public static class SincronizarRequisitosDelVinculoHandler
             var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(expediente.VinculoId), ct);
             if (certificado.Aggregate?.ActualizarMotivoDePendientes(ampliacion.Motivo, expediente.Id, ahora) is { } pendientes)
                 certificado.AppendOne(pendientes);
+            // Un requisito con un plazo de revalidación menor acorta el de toda la actualización (RV-4): el mensaje de la apertura
+            // llegaría tarde, así que se programa también uno al nuevo plazo (idempotente, como el primero).
+            var ampliado = Expediente.Reproducir(expediente, eventos);
+            if (ampliado.PlazoDeRevalidacionHasta < expediente.PlazoDeRevalidacionHasta)
+                await mensajes.ScheduleAsync(new VencerPlazoDeRevalidacion(mensaje.TenantId, expediente.VinculoId, expediente.Id), ampliado.PlazoDeRevalidacionHasta);
         }
 
         await sesion.SaveChangesAsync(ct);
