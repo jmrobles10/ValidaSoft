@@ -271,12 +271,22 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
 ### 4.7 H8 restante
 - Campañas de renovación.
 - Delegación de revisión.
-- Habeas Data y supresión.
-- ZIP firmado de la bóveda.
-- Plan y límites por tenant.
-- Dominio de correo propio.
 - SLAs con alertas.
-- Rendimiento de un lote de 1.000 filas.
+
+**Hecho en la rama `feature/derechos-plan-correo` (OD-1…OD-24, [registro §5-quinquagies](decisiones/registro.md),
+[docs/11](11-trazabilidad-por-hito.md)):**
+- Habeas data: solicitudes del tercero (consulta, corrección, supresión) a la plataforma o a una empresa, plazos de 10 y
+  15 días hábiles con alertas, supresión con plan previo y retención por ley, crypto-shredding del texto personal y
+  constancia sellada.
+- ZIP firmado de la bóveda del tercero (manifiesto con SHA-256 y firma Ed25519), generado en segundo plano.
+- Plan y límites por grupo (usuarios, empresas, vínculos activos, almacenamiento y llamadas), avisos al 80 % y al 100 %
+  y bloqueo suave configurable; pantalla en Plataforma y «Plan del grupo» en Configuración.
+- Dominio de correo propio por empresa con SPF, DKIM y DMARC verificados (proveedor simulado) y remitente de respaldo.
+- Prueba de rendimiento de 1.000 filas: 12 s de procesamiento, 0 reintentos, +57 MB de memoria; sin cuellos de botella.
+
+**Pendiente de esto (OD-12, OD-22):** prórroga de los plazos del habeas data; portabilidad más allá del ZIP; proveedor de
+dominios y DNS real con revalidación periódica; facturación por plan; el almacenamiento solo bloquea los documentos propios
+de un vínculo; el crypto-shredding cubre el texto de la solicitud, no lo declarado en los eventos de un documento retenido.
 
 ### 4.8 Piloto y producción (H10, H11)
 - **H10:** piloto con un tenant real. El importador existe (F4), pero `OrigenPortalSqlServer` no se ha probado contra
