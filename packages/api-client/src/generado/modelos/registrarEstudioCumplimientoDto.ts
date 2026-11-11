@@ -7,9 +7,11 @@
 import type { ConceptoCumplimiento } from './conceptoCumplimiento';
 import type { DebidaDiligencia } from './debidaDiligencia';
 import type { EvidenciaEstudioDto } from './evidenciaEstudioDto';
+import type { RespuestaDeMatrizDto } from './respuestaDeMatrizDto';
 
 export interface RegistrarEstudioCumplimientoDto {
-  nivelRiesgo: number;
+  /** @nullable */
+  nivelRiesgo: number | null;
   conflictoDeInteres: boolean;
   debidaDiligencia: DebidaDiligencia;
   concepto: ConceptoCumplimiento;
@@ -17,4 +19,10 @@ export interface RegistrarEstudioCumplimientoDto {
   observaciones?: string | null;
   /** @nullable */
   evidencias?: EvidenciaEstudioDto[] | null;
+  /** @nullable */
+  respuestas?: RespuestaDeMatrizDto[] | null;
+  /** @nullable */
+  justificacionDeNivel?: string | null;
+  /** @nullable */
+  adjuntos?: string[] | null;
 }

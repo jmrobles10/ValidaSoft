@@ -10,5 +10,6 @@ export type DebidaDiligencia = typeof DebidaDiligencia[keyof typeof DebidaDilige
 
 export const DebidaDiligencia = {
   Simple: 'Simple',
+  Ordinaria: 'Ordinaria',
   Ampliada: 'Ampliada',
 } as const;

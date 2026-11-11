@@ -11,4 +11,6 @@ export interface RechazoDto {
   motivos: string[];
   justificacion: string;
   fecha: string;
+  /** @nullable */
+  origen?: string | null;
 }
