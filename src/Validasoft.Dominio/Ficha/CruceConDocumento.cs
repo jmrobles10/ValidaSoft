@@ -60,7 +60,11 @@ public sealed record CruceDeSeccionRegistrado(int Numero, CruceDeSeccion Cruce);
 
 /// <summary>
 /// Mapa de plataforma (FM-13, docs/14 §5.1): qué secciones respalda cada tipo canónico de documento. Es el mismo que usan el
-/// cruce, la opción «Usar como soporte» de los requisitos de documento y la actualización desde el documento.
+/// cruce, la opción «Usar como soporte» de los requisitos de documento y la actualización desde el documento. La cédula respalda la
+/// General de la persona natural y, en la jurídica, las personas de la Legal (el representante; FD-6); la certificación bancaria
+/// respalda las <b>cuentas bancarias</b> del tercero (FD-5), que no son una sección de la ficha sino su propia sección de cuentas
+/// (<see cref="CodigosDeSeccion.CuentasBancarias"/>): por eso <see cref="Secciones"/> solo devuelve secciones de la ficha y la de
+/// cuentas va aparte (<see cref="RespaldaCuentas"/>).
 /// </summary>
 public static class MapaDeRespaldo
 {
@@ -69,18 +73,28 @@ public static class MapaDeRespaldo
         ["RUT"] = [CodigosDeSeccion.General, CodigosDeSeccion.Tributaria, CodigosDeSeccion.Legal],
         ["CAMARA_COMERCIO"] = [CodigosDeSeccion.General, CodigosDeSeccion.Legal],
         ["ESTADOS_FINANCIEROS"] = [CodigosDeSeccion.Financiera],
-        ["CEDULA"] = [CodigosDeSeccion.General]
+        ["CEDULA"] = [CodigosDeSeccion.General, CodigosDeSeccion.Legal]
     };
 
+    /// <summary>Tipos de documento que respaldan las cuentas bancarias del tercero (docs/14 §5.1: la certificación, CB-1).</summary>
+    private static readonly string[] TiposDeCuentas = ["CERTIFICACION_BANCARIA"];
+
+    /// <summary>Secciones de la ficha que respalda el tipo de documento (sin la de cuentas).</summary>
     public static IReadOnlyList<string> Secciones(string? tipoCanonico) =>
         tipoCanonico is not null && PorTipo.TryGetValue(tipoCanonico, out var secciones) ? secciones : [];
 
-    public static bool RespaldaAlguna(string? tipoCanonico) => Secciones(tipoCanonico).Count > 0;
+    /// <summary>¿El tipo respalda las cuentas bancarias del tercero (certificación bancaria)?</summary>
+    public static bool RespaldaCuentas(string? tipoCanonico) =>
+        tipoCanonico is not null && TiposDeCuentas.Contains(tipoCanonico, StringComparer.OrdinalIgnoreCase);
 
-    public static bool Respalda(string? tipoCanonico, string seccion) => Secciones(tipoCanonico).Contains(seccion, StringComparer.Ordinal);
+    public static bool RespaldaAlguna(string? tipoCanonico) => Secciones(tipoCanonico).Count > 0 || RespaldaCuentas(tipoCanonico);
+
+    public static bool Respalda(string? tipoCanonico, string seccion) =>
+        seccion == CodigosDeSeccion.CuentasBancarias ? RespaldaCuentas(tipoCanonico) : Secciones(tipoCanonico).Contains(seccion, StringComparer.Ordinal);
 
     /// <summary>Tipos de documento que respaldan la sección.</summary>
-    public static IReadOnlyList<string> TiposPara(string seccion) => [.. PorTipo.Where(p => p.Value.Contains(seccion)).Select(p => p.Key)];
+    public static IReadOnlyList<string> TiposPara(string seccion) =>
+        seccion == CodigosDeSeccion.CuentasBancarias ? TiposDeCuentas : [.. PorTipo.Where(p => p.Value.Contains(seccion)).Select(p => p.Key)];
 
     /// <summary>
     /// Periodo que cubre el documento (los estados financieros dicen de qué año son); nulo si no aplica o no se leyó. Con él se
@@ -172,6 +186,10 @@ public static class CruceConDocumento
                 Agregar(campos, "numero", "Número de identificación", g.Numero, LecturaDeHechos.Texto(x, "numero"), Comparador.Identificacion, true);
                 Agregar(campos, "nombres", "Nombres", g.Nombres, LecturaDeHechos.Texto(x, "nombres"), Comparador.Nombre, true);
                 Agregar(campos, "apellidos", "Apellidos", g.Apellidos, LecturaDeHechos.Texto(x, "apellidos"), Comparador.Nombre, true);
+                // La fecha de expedición solo se compara si el tercero la declaró (FD-8): la propuesta desde la cédula es la que invita a llenarla.
+                if (g.FechaExpedicion is { } expedicion)
+                    Agregar(campos, "fecha_expedicion", "Fecha de expedición", expedicion.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                        LecturaDeHechos.Texto(x, "fechaExpedicion"), Comparador.Texto, false);
                 break;
         }
 
@@ -209,6 +227,10 @@ public static class CruceConDocumento
                 : principal is null ? "La sección no tiene representante legal." : null));
             return campos;
         }
+
+        // La cédula respalda a la persona de la legal a la que pertenece (el representante; FD-6): se cruza con esa fila.
+        if (tipo == "CEDULA")
+            return LegalConCedula(personas, x);
 
         if (tipo != "CAMARA_COMERCIO")
             return campos;
@@ -280,6 +302,165 @@ public static class CruceConDocumento
         Agregar(campos, "fecha_corte", "Fecha de corte", f.FechaCorte?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             LecturaDeHechos.Texto(x, "fechaCorte"), Comparador.Texto, false);
         return campos;
+    }
+
+    /// <summary>
+    /// La cédula frente a las personas de la información legal (FD-6): se busca la persona a la que pertenece (por número; si alguno no
+    /// lo trae, por nombre) y se cruzan su número y nombre (críticos) y, si la persona los declaró, las fechas de expedición y de
+    /// nacimiento. Si no corresponde a ninguna persona, discrepa en un solo campo (la cédula es de alguien que no figura).
+    /// </summary>
+    private static List<CampoCruzado> LegalConCedula(IReadOnlyList<PersonaRelacionada> personas, IReadOnlyDictionary<string, JsonElement> x)
+    {
+        var campos = new List<CampoCruzado>();
+        var numero = LecturaDeHechos.Texto(x, "numero");
+        var nombreCedula = NombreCompleto(LecturaDeHechos.Texto(x, "nombres"), LecturaDeHechos.Texto(x, "apellidos"));
+        if (numero is null && nombreCedula is null)
+            return campos;
+
+        var encontrada = personas.Select((p, i) => (Persona: p, Indice: i))
+            .FirstOrDefault(d => MismaPersona(NombreCompleto(d.Persona.Nombres, d.Persona.Apellidos), d.Persona.Numero, nombreCedula, numero));
+        if (encontrada.Persona is null)
+        {
+            campos.Add(new CampoCruzado("personas", "Persona de la cédula", null, Resumen(nombreCedula, numero), ResultadoDeCruce.Discrepa, true,
+                "La cédula no corresponde a ninguna persona de la información legal."));
+            return campos;
+        }
+
+        var (persona, indice) = encontrada;
+        var rol = persona.Rol is { } r ? RolLegible(r) : "Persona";
+        Agregar(campos, $"personas[{indice}].numero", $"{rol} · Número de identificación", persona.Numero, numero, Comparador.Identificacion, true);
+        Agregar(campos, $"personas[{indice}]", $"{rol} · Nombre", NombreCompleto(persona.Nombres, persona.Apellidos), nombreCedula, Comparador.Nombre, true);
+        if (persona.FechaExpedicion is { } expedicion)
+            Agregar(campos, $"personas[{indice}].fecha_expedicion", $"{rol} · Fecha de expedición", expedicion.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                LecturaDeHechos.Texto(x, "fechaExpedicion"), Comparador.Texto, false);
+        if (persona.FechaNacimiento is { } nacimiento)
+            Agregar(campos, $"personas[{indice}].fecha_nacimiento", $"{rol} · Fecha de nacimiento", nacimiento.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                LecturaDeHechos.Texto(x, "fechaNacimiento"), Comparador.Texto, false);
+        return campos;
+    }
+
+    private static string RolLegible(RolPersonaRelacionada rol) => rol switch
+    {
+        RolPersonaRelacionada.RepresentanteLegal => "Representante legal",
+        RolPersonaRelacionada.Suplente => "Suplente",
+        RolPersonaRelacionada.Apoderado => "Apoderado",
+        RolPersonaRelacionada.Socio => "Socio",
+        RolPersonaRelacionada.JuntaDirectiva => "Junta directiva",
+        RolPersonaRelacionada.RevisorFiscal => "Revisor fiscal",
+        _ => "Contador"
+    };
+
+    // ---------- Cuentas bancarias contra la certificación (FD-5, docs/14 §6) ----------
+
+    /// <summary>
+    /// Cruza una cuenta bancaria del tercero con lo que dice su certificación bancaria (docs/14 §6, fila «Bancaria»): el número debe
+    /// ser exacto, el titular debe ser el tercero y la cuenta debe estar activa (críticos); el banco y el tipo de cuenta son evidencia.
+    /// El número completo solo existe en memoria: en el resultado va <b>siempre enmascarado</b> (CB-2). Función pura.
+    /// </summary>
+    public static CruceDeSeccion CruzarCuenta(DatosDeCuentaParaCruce cuenta, string terceroNombre, string terceroIdentificacion, Guid documentoId,
+        int versionDocumento, IReadOnlyDictionary<string, JsonElement> extraidos, decimal confianza, bool legible, DateTimeOffset fecha)
+    {
+        var campos = new List<CampoCruzado>();
+        var numeroDocumento = LecturaDeHechos.Texto(extraidos, "numeroCuenta");
+        var enmascarado = Enmascarar(cuenta.Numero);
+
+        if (numeroDocumento is null)
+            campos.Add(new CampoCruzado("numero", "Número de la cuenta", enmascarado, null, ResultadoDeCruce.NoVerificable, true, "El documento no trae el dato."));
+        else
+            campos.Add(new CampoCruzado("numero", "Número de la cuenta", enmascarado, Enmascarar(numeroDocumento),
+                Normalizacion.Identificacion(cuenta.Numero) == Normalizacion.Identificacion(numeroDocumento) ? ResultadoDeCruce.Coincide : ResultadoDeCruce.Discrepa,
+                true));
+
+        Agregar(campos, "titular", "Titular de la cuenta", cuenta.Titular, LecturaDeHechos.Texto(extraidos, "titular"), Comparador.Nombre, true);
+        var identificacionDocumento = LecturaDeHechos.Texto(extraidos, "identificacionTitular");
+        if (identificacionDocumento is null)
+        {
+            campos.Add(new CampoCruzado("identificacion_titular", "Identificación del titular", cuenta.IdentificacionTitular, null, ResultadoDeCruce.NoVerificable, true,
+                "El documento no trae el dato."));
+        }
+        else
+        {
+            campos.Add(new CampoCruzado("identificacion_titular", "Identificación del titular", cuenta.IdentificacionTitular, identificacionDocumento,
+                MismaIdentificacion(cuenta.IdentificacionTitular, identificacionDocumento) ? ResultadoDeCruce.Coincide : ResultadoDeCruce.Discrepa, true));
+            // El titular debe ser el propio tercero: la certificación dice de quién es la cuenta, no lo que el tercero declaró de ella.
+            var esDelTercero = MismaIdentificacion(terceroIdentificacion, identificacionDocumento);
+            campos.Add(new CampoCruzado("titular_es_el_tercero", "El titular es el tercero", $"{terceroNombre} ({terceroIdentificacion})", identificacionDocumento,
+                esDelTercero ? ResultadoDeCruce.Coincide : ResultadoDeCruce.Discrepa, true,
+                esDelTercero ? null : "La cuenta que certifica el banco no es del tercero."));
+        }
+
+        var estado = LecturaDeHechos.Texto(extraidos, "estadoCuenta");
+        var activa = estado is null ? (bool?)null : EstaActiva(estado);
+        campos.Add(new CampoCruzado("estado_cuenta", "Estado de la cuenta", "Activa", estado,
+            activa switch { null => ResultadoDeCruce.NoVerificable, true => ResultadoDeCruce.Coincide, false => ResultadoDeCruce.Discrepa }, true,
+            activa == false ? "La cuenta no está activa." : null));
+
+        AgregarBanco(campos, cuenta.Banco, LecturaDeHechos.Texto(extraidos, "banco"));
+        AgregarTipoDeCuenta(campos, cuenta.TipoCuenta, LecturaDeHechos.Texto(extraidos, "tipoCuenta"));
+
+        if (!legible)
+            campos = [.. campos.Select(c => c with { Resultado = ResultadoDeCruce.NoVerificable, Detalle = "El documento no se lee con seguridad." })];
+        return new CruceDeSeccion(documentoId, versionDocumento, "CERTIFICACION_BANCARIA", confianza, legible, campos, fecha);
+    }
+
+    /// <summary>«****1234»: del número completo solo se muestran los últimos cuatro dígitos (CB-2).</summary>
+    public static string Enmascarar(string numero)
+    {
+        var digitos = new string(numero.Where(char.IsDigit).ToArray());
+        return $"****{(digitos.Length <= 4 ? digitos : digitos[^4..])}";
+    }
+
+    /// <summary>
+    /// La misma identificación, con o sin el dígito de verificación («900123456» y «900.123.456-1») y con o sin el tipo escrito delante
+    /// («NIT 900123456»): se comparan los dígitos; si alguna no tiene (un pasaporte), los caracteres.
+    /// </summary>
+    private static bool MismaIdentificacion(string a, string b)
+    {
+        var x = Normalizacion.Identificacion(new string(a.Where(char.IsDigit).ToArray()));
+        var y = Normalizacion.Identificacion(new string(b.Where(char.IsDigit).ToArray()));
+        if (x.Length == 0 || y.Length == 0)
+        {
+            x = Normalizacion.Identificacion(a);
+            y = Normalizacion.Identificacion(b);
+        }
+
+        return x.Length > 0 && y.Length > 0 && (x == y || (y.Length == x.Length + 1 && y.StartsWith(x, StringComparison.Ordinal)) ||
+                                              (x.Length == y.Length + 1 && x.StartsWith(y, StringComparison.Ordinal)));
+    }
+
+    private static bool EstaActiva(string estado)
+    {
+        var texto = Normalizacion.Texto(estado);
+        return texto.Contains("ACTIV", StringComparison.Ordinal) &&
+               !new[] { "INACTIV", "CANCEL", "CERRAD", "BLOQUE", "EMBARG" }.Any(m => texto.Contains(m, StringComparison.Ordinal));
+    }
+
+    /// <summary>El banco: el nombre más corto está en el más largo («Bancolombia» y «Bancolombia S.A.»). Evidencia, no crítico.</summary>
+    private static void AgregarBanco(List<CampoCruzado> campos, string declarado, string? extraido)
+    {
+        if (extraido is null)
+        {
+            campos.Add(new CampoCruzado("banco", "Banco", declarado, null, ResultadoDeCruce.NoVerificable, false, "El documento no trae el dato."));
+            return;
+        }
+
+        var a = Normalizacion.Palabras(declarado).Where(p => p.Length > 1).ToHashSet();
+        var b = Normalizacion.Palabras(extraido).Where(p => p.Length > 1).ToHashSet();
+        var coincide = a.Count > 0 && b.Count > 0 && (a.IsSubsetOf(b) || b.IsSubsetOf(a));
+        campos.Add(new CampoCruzado("banco", "Banco", declarado, extraido, coincide ? ResultadoDeCruce.Coincide : ResultadoDeCruce.Discrepa, false));
+    }
+
+    /// <summary>El tipo de cuenta: «Ahorros» está en «Cuenta de ahorros». Evidencia, no crítico.</summary>
+    private static void AgregarTipoDeCuenta(List<CampoCruzado> campos, string declarado, string? extraido)
+    {
+        if (extraido is null)
+        {
+            campos.Add(new CampoCruzado("tipo_cuenta", "Tipo de cuenta", declarado, null, ResultadoDeCruce.NoVerificable, false, "El documento no trae el dato."));
+            return;
+        }
+
+        var coincide = Normalizacion.Texto(extraido).Contains(Normalizacion.Texto(declarado), StringComparison.Ordinal);
+        campos.Add(new CampoCruzado("tipo_cuenta", "Tipo de cuenta", declarado, extraido, coincide ? ResultadoDeCruce.Coincide : ResultadoDeCruce.Discrepa, false));
     }
 
     // ---------- Comparación de un campo ----------
@@ -595,3 +776,6 @@ public static class Normalizacion
         decimal.TryParse((texto ?? string.Empty).Replace(",", string.Empty, StringComparison.Ordinal).Replace("$", string.Empty, StringComparison.Ordinal)
             .Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out valor);
 }
+
+/// <summary>Lo declarado de una cuenta bancaria para cruzarla con su certificación; el número va en claro y solo en memoria (FD-5).</summary>
+public sealed record DatosDeCuentaParaCruce(string Banco, string TipoCuenta, string Numero, string Titular, string IdentificacionTitular);

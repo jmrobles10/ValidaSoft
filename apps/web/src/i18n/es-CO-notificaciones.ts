@@ -106,6 +106,10 @@ export const notificaciones = {
       titulo: 'Límite del plan',
       explicacion: 'A los administradores, cuando el grupo llega al 80 % y al 100 % de un límite de su plan: usuarios, empresas, vínculos, almacenamiento o llamadas a la API.',
     },
+    cuentaPropuesta: {
+      titulo: 'Cuenta bancaria por aprobar',
+      explicacion: 'A quienes pueden aprobar cuentas, cuando el tercero propone la cuenta con la que le cobra a la empresa. Solo aparece en la campana.',
+    },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',
       explicacion: 'A los administradores, cuando una suscripción de webhooks se deshabilita por entregas fallidas seguidas.',

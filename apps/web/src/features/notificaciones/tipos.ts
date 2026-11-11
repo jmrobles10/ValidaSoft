@@ -24,6 +24,7 @@ export const CLAVES_TIPO = {
   'habeas.solicitud': 'habeasSolicitud',
   'habeas.plazo': 'habeasPlazo',
   'plan.limite': 'planLimite',
+  'vinculo.cuenta_propuesta': 'cuentaPropuesta',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];

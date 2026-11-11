@@ -37,7 +37,14 @@ export const webhooks = {
     todasLasEmpresas: 'Todas las empresas del grupo',
     algunasEmpresas: 'Solo algunas empresas',
   },
-  grupos: { vinculo: 'Vínculos', expediente: 'Expedientes', documento: 'Documentos', certificado: 'Certificados' },
+  grupos: {
+    vinculo: 'Vínculos',
+    expediente: 'Expedientes',
+    documento: 'Documentos',
+    certificado: 'Certificados',
+    seccion: 'Información del tercero',
+    invitaciones: 'Invitaciones',
+  },
   errores: {
     'url-requerida': 'Escribe la dirección.',
     'url-invalida': 'La dirección no es válida.',

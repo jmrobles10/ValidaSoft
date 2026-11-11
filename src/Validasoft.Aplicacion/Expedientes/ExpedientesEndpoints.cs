@@ -32,12 +32,13 @@ public static class ExpedientesEndpoints
     [WolverinePost("/api/v1/vinculos/{id}/expedientes")]
     [Authorize(Policy = Permisos.ExpedientesAdministrar)]
     public static async Task<IResult> Abrir(Guid id, AbrirExpedienteDto dto, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http,
-        IMessageBus mensajes, ReglasDeCarga reglas, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, ReglasDeCarga reglas, Certificados.EmisorDeCertificados certificados, IProtectorDeSecretos protector, TimeProvider reloj,
+        CancellationToken ct)
     {
         var version = Peticiones.VersionEsperada(http);
         var resultado = await Peticiones.ConReintentosAsync(async () =>
         {
-            await using var empresa = new SesionDeEmpresa(sesiones, contexto, reglas, reloj, certificados);
+            await using var empresa = new SesionDeEmpresa(sesiones, contexto, reglas, reloj, certificados, protector);
             var ahora = reloj.GetUtcNow();
             var vinculoStream = await empresa.VinculoParaEscribirAsync(id, version, ct);
             var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(empresa.Sesion, vinculoStream.Aggregate!, dto.FlujoId, ct)
@@ -407,7 +408,7 @@ public static class ExpedientesEndpoints
     internal static async Task<IReadOnlySet<Guid>> DiscrepanciasAsync(SesionDeEmpresa empresa, Expediente expediente, CancellationToken ct)
     {
         await using var boveda = empresa.ConsultaBoveda();
-        return (await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, ct)).ConDiscrepanciaCritica;
+        return (await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, empresa.Protector, ct)).ConDiscrepanciaCritica;
     }
 
     /// <summary>Detalle con las áreas y, por requisito, el tipo (campos, reglas, plantilla) y la versión con sus datos y vigencia.</summary>
@@ -418,7 +419,7 @@ public static class ExpedientesEndpoints
         await using var boveda = empresa.ConsultaBoveda();
         var documentacion = await DocumentacionDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.Reglas, empresa.Hoy, ct) with
         {
-            Cruces = await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, ct)
+            Cruces = await CrucesDelExpediente.CargarAsync(empresa.Sesion, boveda, expediente, empresa.EmpresaId, empresa.Protector, ct)
         };
         // Quien tiene una delegación vigente de un miembro del área también decide por ella (OP-8): el detalle lo trata como miembro.
         var empresaId = empresa.EmpresaId;

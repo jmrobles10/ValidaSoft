@@ -1,21 +1,11 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { reiniciarCliente, type VinculoPublicoDto } from '@validasoft/api-client';
+import { reiniciarCliente, type ObservacionDeSeccionDto } from '@validasoft/api-client';
 import { afterEach, describe, expect, it } from 'vitest';
-import { expedienteConSecciones, FINANCIERA_PENDIENTE, GENERAL_OBSERVADA } from '../expediente/pruebasSeccion';
+import { observacionesDeSeccion } from './useObservacionesDeSeccion';
 import { escribir, estadoFicha, montarFicha, seccion } from './pruebas/montar';
 
 afterEach(() => reiniciarCliente());
-
-const VINCULO: VinculoPublicoDto = {
-  id: 'v1',
-  empresa: { id: 'emp', nombre: 'Constructora Norte', logoUrl: null },
-  tipoVinculo: { id: 'tv', codigo: 'PROVEEDOR', nombre: 'Proveedor' },
-  estado: 'EnValidacion',
-  invitacionAceptada: true,
-  invitacionAceptadaEn: '2026-11-01T15:00:00Z',
-  expedienteId: 'e1',
-};
 
 const GENERAL = seccion('FICHA_GENERAL', {
   version: 2,
@@ -24,18 +14,27 @@ const GENERAL = seccion('FICHA_GENERAL', {
   completitud: { completa: true, faltantes: [], reglaVersion: 1 },
 });
 
-describe('Mi información: la observación de una empresa (F2)', () => {
-  it('se muestra arriba del formulario y marca los campos señalados hasta que el tercero los toca', async () => {
-    const usuario = userEvent.setup();
-    montarFicha('/ficha/general', {
-      estado: estadoFicha(),
-      secciones: { FICHA_GENERAL: GENERAL },
-      vinculos: [VINCULO],
-      expedientes: { e1: expedienteConSecciones([GENERAL_OBSERVADA, FINANCIERA_PENDIENTE]) },
-    });
+/** Lo que llega en `observaciones` del estado de la ficha (FD-2): una empresa observó la información general. */
+const OBSERVACION_GENERAL: ObservacionDeSeccionDto = {
+  empresa: 'Constructora Norte',
+  expedienteId: 'e1',
+  seccion: 'FICHA_GENERAL',
+  periodo: null,
+  observacion: {
+    motivos: [{ codigo: 'dato-incorrecto', texto: 'Un dato no coincide con el soporte.' }],
+    observacion: 'La razón social no coincide con el RUT.',
+    fecha: '2026-11-08T15:00:00Z',
+    requisito: 'FICHA_GENERAL',
+    campos: ['razon_social', 'direccion'],
+  },
+};
 
-    // Llega tras el vínculo y su expediente: con la suite en paralelo puede tardar más del segundo por omisión.
-    const aviso = await screen.findByRole('alert', { name: 'Constructora Norte pidió corregir esta sección' }, { timeout: 15_000 });
+describe('Mi información: la observación de una empresa (F2)', () => {
+  it('llega con el estado de la ficha, se muestra arriba del formulario y marca los campos señalados hasta que el tercero los toca', async () => {
+    const usuario = userEvent.setup();
+    montarFicha('/ficha/general', { estado: estadoFicha({ observaciones: [OBSERVACION_GENERAL] }), secciones: { FICHA_GENERAL: GENERAL } });
+
+    const aviso = await screen.findByRole('alert', { name: 'Constructora Norte pidió corregir esta sección' });
     expect(aviso).toHaveTextContent('Un dato no coincide con el soporte.');
     expect(aviso).toHaveTextContent('“La razón social no coincide con el RUT.”');
     expect(aviso).toHaveTextContent('Datos por corregir: Razón social, Dirección');
@@ -49,15 +48,29 @@ describe('Mi información: la observación de una empresa (F2)', () => {
     await usuario.clear(razonSocial);
     await escribir(usuario, razonSocial, 'Aceros del Norte S.A.S.');
     expect(razonSocial).not.toHaveAttribute('aria-invalid', 'true');
+
   });
 
   it('sin observaciones abiertas de esta sección no muestra nada', async () => {
-    montarFicha('/ficha/tributaria', {
-      estado: estadoFicha(),
-      vinculos: [VINCULO],
-      expedientes: { e1: expedienteConSecciones([GENERAL_OBSERVADA]) },
-    });
+    montarFicha('/ficha/tributaria', { estado: estadoFicha({ observaciones: [OBSERVACION_GENERAL] }) });
     expect(await screen.findByRole('form', { name: 'Información tributaria' })).toBeInTheDocument();
     expect(screen.queryByRole('alert', { name: /pidió corregir/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('observacionesDeSeccion', () => {
+  const FINANCIERA_2025: ObservacionDeSeccionDto = { ...OBSERVACION_GENERAL, seccion: 'FICHA_FINANCIERA', periodo: 2025 };
+
+  it('filtra por sección y, en la financiera, por periodo', () => {
+    const estado = { observaciones: [OBSERVACION_GENERAL, FINANCIERA_2025] };
+    expect(observacionesDeSeccion(estado, 'FICHA_GENERAL', null).map((o) => o.empresa)).toEqual(['Constructora Norte']);
+    expect(observacionesDeSeccion(estado, 'FICHA_FINANCIERA', 2025)).toHaveLength(1);
+    expect(observacionesDeSeccion(estado, 'FICHA_FINANCIERA', 2024)).toEqual([]);
+    expect(observacionesDeSeccion(estado, 'FICHA_LEGAL', null)).toEqual([]);
+  });
+
+  it('un estado sin observaciones (o de una API anterior) no tiene ninguna', () => {
+    expect(observacionesDeSeccion({}, 'FICHA_GENERAL', null)).toEqual([]);
+    expect(observacionesDeSeccion({ observaciones: null }, 'FICHA_GENERAL', null)).toEqual([]);
   });
 });

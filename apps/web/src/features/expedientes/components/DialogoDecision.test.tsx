@@ -184,7 +184,7 @@ describe('DialogoDecision: aprobar un requisito con una discrepancia crítica en
 
     const confirmar = await screen.findByRole('button', { name: 'Aprobar' });
     expect(confirmar).toBeDisabled();
-    expect(screen.getByRole('alert')).toHaveTextContent('difiere en campos críticos de Información general');
+    expect(screen.getByRole('alert')).toHaveTextContent('no tienen soporte: el cruce con el documento difiere');
     expect(screen.getByRole('status')).toHaveTextContent('Escribe la justificación de la aprobación');
 
     await usuario.type(screen.getByRole('textbox', { name: /Justificación de la aprobación/ }), 'corto');

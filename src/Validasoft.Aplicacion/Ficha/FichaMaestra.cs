@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
+using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
@@ -33,12 +34,16 @@ public static class MapeosFicha
             ? new SoporteSeccionDto(s.DocumentoId, s.Version, s.TipoDocumento, documento.Buscar(s.Version)?.Estado == EstadoVersion.Retirada, documento.NombreTipo)
             : new SoporteSeccionDto(s.DocumentoId, s.Version, s.TipoDocumento);
 
+    /// <summary>Los campos que cambiaron sin un documento nuevo, para el DTO (FD-4).</summary>
+    public static SinSoporteDto ADto(this SinSoporteDelCambio s) =>
+        new(s.Critico, [.. s.Cambios.Select(c => new CambioDeCampoDto(c.Campo, c.Etiqueta, c.Anterior, c.Nuevo, c.TipoCambio.ToString()))]);
+
     /// <summary>Versión vigente de la sección (o vacía si aún no tiene).</summary>
     public static SeccionFichaDto ADto(this SeccionDeFicha? seccion, DefinicionDeSeccion definicion, int? periodo,
         IReadOnlyDictionary<Guid, Documento>? documentos = null) =>
         seccion?.Vigente is { } v
             ? new SeccionFichaDto(definicion.Codigo, definicion.Nombre, seccion.Periodo, v.Numero, v.Datos, [.. v.Soportes.Select(s => s.ADto(documentos))],
-                v.Completitud.ADto(), v.Huella, v.Origen.ToString(), v.Fecha, seccion.Versiones.Count, v.EsquemaVersion)
+                v.Completitud.ADto(), v.Huella, v.Origen.ToString(), v.Fecha, seccion.Versiones.Count, v.EsquemaVersion, SinSoporte: seccion.SinSoporte(v.Numero)?.ADto())
             : new SeccionFichaDto(definicion.Codigo, definicion.Nombre, periodo, null, null, [], null, null, null, null, seccion?.Versiones.Count ?? 0,
                 definicion.VersionEsquema);
 
@@ -279,7 +284,7 @@ public static class FichaMaestraEndpoints
         var tercero = await GuardadoDeSecciones.TerceroAsync(sesiones, terceroId, ct);
         await using var boveda = sesiones.ConsultaBoveda();
         var estado = await boveda.LoadAsync<EstadoDeFicha>(terceroId, ct) ?? EstadoDeFicha.Nuevo(terceroId);
-        var dto = estado.ADto(tercero.TipoPersona);
+        var dto = estado.ADto(tercero.TipoPersona) with { Observaciones = await ObservacionesDeEmpresasAsync(sesiones, SesionDeTercero.De(http.User), ct) };
 
         // Una sección cuyo soporte el tercero retiró lo ve como advertencia en su fila (RT-4): se lee de la bóveda, no se recalcula.
         var secciones = await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct);
@@ -294,6 +299,36 @@ public static class FichaMaestraEndpoints
             };
     }
 
+    /// <summary>
+    /// Lo que las empresas observaron de las secciones del tercero (FD-2): una observación por cada requisito de sección «Observado» en los
+    /// expedientes devueltos a él, de los vínculos de su sesión. Es lo mismo que leer cada expediente público, en una sola consulta: así
+    /// el portal no pide un expediente por vínculo para pintar el wizard.
+    /// </summary>
+    internal static async Task<IReadOnlyList<ObservacionDeSeccionDto>> ObservacionesDeEmpresasAsync(ISesiones sesiones, SesionDeTercero tercero,
+        CancellationToken ct)
+    {
+        var vinculos = tercero.Vinculos.Select(v => v.VinculoId).ToArray();
+        if (vinculos.Length == 0)
+            return [];
+
+        await using var consulta = sesiones.ConsultaGlobal();
+        var expedientes = await consulta.Query<Expediente>()
+            .Where(e => e.AnyTenant() && e.TerceroId == tercero.TerceroId && e.VinculoId.IsOneOf(vinculos) && e.Estado == EstadoExpediente.Observado)
+            .ToListAsync(ct);
+        if (expedientes.Count == 0)
+            return [];
+
+        var empresas = (await consulta.LoadManyAsync<Empresa>(ct, expedientes.Select(e => e.EmpresaId).Distinct().ToArray())).ToDictionary(e => e.Id);
+        return
+        [
+            .. expedientes.OrderBy(e => e.ActualizadoEn).SelectMany(e => e.Requisitos
+                .Where(r => r.EsSeccion && r.Seccion is not null && r.Estado == EstadoRequisito.Observado)
+                .SelectMany(r => r.Veredictos.Where(v => v.Vigente && v.Veredicto == Dominio.Expedientes.Veredicto.Observado).OrderBy(v => v.Fecha)
+                    .Select(v => new ObservacionDeSeccionDto(empresas.GetValueOrDefault(e.EmpresaId)?.Nombre ?? string.Empty, e.Id, r.Seccion!, r.Periodo,
+                        v.APublica(r.Codigo)))))
+        ];
+    }
+
     /// <summary>Versión vigente de la sección (datos, soportes y completitud) o vacía. 404 <c>seccion-no-encontrada</c>; la financiera exige <c>?periodo=</c>.</summary>
     [WolverineGet("/public/v1/ficha/{seccion}")]
     [Authorize(Policy = ReclamosTercero.Politica)]
@@ -305,7 +340,16 @@ public static class FichaMaestraEndpoints
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, reloj.Hoy());
         await using var boveda = sesiones.ConsultaBoveda();
         var actual = await boveda.LoadAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(terceroId, definicion.Codigo, periodoValido), ct);
-        return actual.ADto(definicion, periodoValido, await SoportesDeSeccion.DocumentosAsync(boveda, [actual], ct));
+        var dto = actual.ADto(definicion, periodoValido, await SoportesDeSeccion.DocumentosAsync(boveda, [actual], ct));
+        // Sin ninguna versión guardada, la General se ofrece prellenada con lo que ya se sabe del tercero (FD-1).
+        if (dto.Version is null && definicion.Codigo == CodigosDeSeccion.General)
+        {
+            var tercero = await GuardadoDeSecciones.TerceroAsync(sesiones, terceroId, ct);
+            var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, null, reloj.Hoy());
+            dto = dto with { Prellenado = PrellenadoDeGeneral.Armar(tercero, SesionDeTercero.De(http.User).Correo, contexto) };
+        }
+
+        return dto;
     }
 
     /// <summary>

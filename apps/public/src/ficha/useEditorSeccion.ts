@@ -11,6 +11,12 @@ export interface ErrorDeCampo {
   mensaje: string;
 }
 
+/** La sugerencia de una sección vacía (FD-1): solo si no hay ninguna versión guardada y es un objeto. */
+export function prellenadoDe(inicial: Pick<SeccionFichaDto, 'version' | 'datos' | 'prellenado'>): object | null {
+  const sugerido = inicial.prellenado;
+  return inicial.version === null && !inicial.datos && typeof sugerido === 'object' && sugerido !== null && !Array.isArray(sugerido) ? sugerido : null;
+}
+
 /** Lo que no edita el tercero (lo fija la API con su registro, FM-19) no se envía. */
 export function datosParaEnviar(codigo: CodigoSeccion, datos: object): JsonElement {
   const copia: Record<string, unknown> = { ...datos };
@@ -43,7 +49,10 @@ export interface Senalados {
  * que el tercero vuelve a tocar deja de marcarse hasta el siguiente guardado. La completitud nunca se calcula aquí.
  */
 export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, inicial: SeccionFichaDto, senalados: Senalados | null = null) {
-  const [datos, setDatos] = useState<object>(() => inicial.datos ?? {});
+  // La General vacía arranca con lo que ya se sabe del tercero (FD-1): hasta guardar, «Guardar» queda habilitado aunque no haya tocado nada.
+  const sugerido = prellenadoDe(inicial);
+  const [conPrellenado, setConPrellenado] = useState(sugerido !== null);
+  const [datos, setDatos] = useState<object>(() => inicial.datos ?? sugerido ?? {});
   // Un soporte que el tercero retiró de su bóveda no se puede volver a enviar (422): queda fuera de lo editable y se avisa aparte (RT-4).
   const [soportes, setSoportes] = useState<SoporteSeccionDto[]>(() => inicial.soportes.filter((s) => !s.retirado));
   const [soportesRetirados, setSoportesRetirados] = useState<SoporteSeccionDto[]>(() => inicial.soportes.filter((s) => s.retirado));
@@ -99,6 +108,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
           setErroresCampo([]);
           setEditados(new Set());
           setSinGuardar(false);
+          setConPrellenado(false);
           alGuardar(respuesta);
         },
         onError: (error) => {
@@ -112,7 +122,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   // Un error que no es de un campo (sesión, red, 5xx…) va arriba del formulario.
   const errorGeneral = guardado.isError && !errorCampo ? guardado.error : null;
 
-  return { datos, cambiar, soportes, soportesRetirados, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
+  return { datos, conPrellenado, cambiar, soportes, soportesRetirados, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
 }
 
 export type EditorSeccion = ReturnType<typeof useEditorSeccion>;

@@ -9,6 +9,9 @@ import { etiquetaCampo } from './formato';
 
 export type CodigoSeccionFicha = 'FICHA_GENERAL' | 'FICHA_TRIBUTARIA' | 'FICHA_FINANCIERA' | 'FICHA_LEGAL' | 'FICHA_SST' | 'FICHA_ESPECIALIDADES';
 
+/** Lo que respalda un documento en el mapa de plataforma: una sección de la ficha o las cuentas bancarias del tercero (FD-5). */
+export type CodigoRespaldo = CodigoSeccionFicha | 'CUENTAS_BANCARIAS';
+
 export interface DefinicionSeccionFicha {
   codigo: CodigoSeccionFicha;
   porPeriodo: boolean;
@@ -58,7 +61,7 @@ export function seccionFicha(codigo: string | null | undefined): DefinicionSecci
 }
 
 /** Nombre legible de una sección del catálogo. */
-export function nombreSeccion(codigo: CodigoSeccionFicha, t: TFunction): string {
+export function nombreSeccion(codigo: CodigoRespaldo, t: TFunction): string {
   return t(`fichaEmpresa.secciones.${codigo}`);
 }
 

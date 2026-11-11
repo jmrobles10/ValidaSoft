@@ -82,7 +82,7 @@ Esquemas base de plataforma. Las empresas pueden agregar **campos privados** por
 
 | Código | Campos (resumen) | Varias filas | Respaldo |
 |---|---|---|---|
-| `FICHA_GENERAL` | razon_social / nombres + apellidos, tipo_persona, tipo_identificacion, numero, dv (calculado DIAN módulo 11; no editable), correo, telefono, pais (ISO), ciudad (DANE), direccion (+ estructura AyF), ciiu_principal, ciiu_secundarias, pagina_web, certificado_iso, anio_inicio | — | RUT, Cámara |
+| `FICHA_GENERAL` | razon_social / nombres + apellidos, tipo_persona, tipo_identificacion, numero, dv (calculado DIAN módulo 11; no editable), correo, telefono, pais (ISO), ciudad (DANE), direccion (+ estructura AyF), ciiu_principal, ciiu_secundarias, pagina_web, certificado_iso, anio_inicio. **Solo persona natural** (opcionales, FD-8): pep, vinculo_pep, fecha_expedicion, lugar_expedicion; lo que no aplica al tipo de persona se rechaza (`campo-no-aplica`) | — | RUT, Cámara, cédula |
 | `FICHA_TRIBUTARIA` | responsabilidades (códigos DIAN de la casilla 53 del RUT), resoluciones de gran contribuyente y autorretenedor (número, fecha), ica[] (municipio DANE, CIIU); las 13 calidades del Portal **se derivan** de los códigos | ica[] | RUT |
 | `FICHA_FINANCIERA` | periodo (año), fecha_corte, activos, pasivos, patrimonio, ingresos_brutos, ingresos_netos, gastos_operacionales, gastos_no_operacionales, otros_ingresos; validación activos = pasivos + patrimonio (con tolerancia); moneda_extranjera { realiza, tipos[], paises[] } | una versión por periodo | Estados financieros del periodo |
 | `FICHA_LEGAL` | personas[] { rol, tipo_representacion, tipo_identificacion, numero, nombres, apellidos, cargo, porcentaje (0–100, suma de socios ≤ 100), pep, vinculo_pep, fecha_expedicion, fecha_nacimiento, nacionalidad, residencia }; revisor_fiscal_firma? | personas[] | Cámara; RUT (representantes) |
@@ -129,8 +129,8 @@ El catálogo canónico declara, por tipo de documento, **qué campos de qué sec
 | RUT | `FICHA_GENERAL`: identificación + DV, razón social / nombres, tipo de persona, dirección, ciudad, CIIU principal y secundarias, correo, teléfono. `FICHA_TRIBUTARIA`: responsabilidades (casilla 53). `FICHA_LEGAL`: representantes inscritos en el RUT |
 | Cámara de comercio | `FICHA_LEGAL`: representantes legales y suplentes, revisor fiscal, socios y junta cuando aparecen, estado de la matrícula. `FICHA_GENERAL`: razón social, NIT, domicilio |
 | Estados financieros | `FICHA_FINANCIERA` del periodo: las cifras |
-| Certificación bancaria | La cuenta (banco, tipo, número, titular), CB-1 |
-| Cédula | La identificación de la persona natural o del representante (`FICHA_GENERAL` o la persona de `FICHA_LEGAL`) |
+| Certificación bancaria | Las **cuentas bancarias** del tercero (banco, tipo, número, titular y que esté activa), CB-1: no es una sección de la ficha sino su propia sección de cuentas (`CUENTAS_BANCARIAS`, FD-5) |
+| Cédula | La identificación de la persona natural (`FICHA_GENERAL`) o del representante (la persona de `FICHA_LEGAL`, FD-6) |
 
 ### 5.2 Requerido como documento **y** usado como soporte (FM-13)
 Hoy la constructora exige el RUT, pero el RUT no sirve para validar lo que el proveedor diligenció en el wizard. En Validasoft, cada requisito de documento del flujo tiene la opción **«Usar como soporte de las secciones»**, activa por omisión cuando el tipo canónico respalda alguna sección. Con la opción activa:
@@ -156,9 +156,11 @@ Simplifica lo que hoy es la feature de **Actualizaciones** del SRM (`Actualizaci
 
 **Construido en F5 (FM-48, FM-54):** `GET /public/v1/ficha/propuestas` y `GET /public/v1/ficha/{seccion}/propuestas`; en el portal, «Actualizar desde mi RUT / Cámara…» con la propuesta campo por campo, que el tercero confirma o corrige (nunca se guarda sola). Si ya había una actualización abierta (el RUT nuevo abre la suya), la sección cambiada **entra a esa misma actualización** en lugar de esperar a que se cierre: así cada empresa recibe **una sola actualización** con el documento y las secciones que cambiaron. El aviso al tercero es uno por documento (UI-6): en Mi información, una fila por documento con las secciones que afecta como chips; en el wizard, un solo aviso con una línea por documento y los cambios campo por campo a pedido.
 
-Si el tercero cambia una sección **sin** documento nuevo (FM-15), la versión queda marcada **«sin respaldo»** frente a los campos que el documento vigente no confirma. La empresa configura qué pasa entonces:
+Si el tercero cambia una sección **sin** documento nuevo (FM-15), la versión queda marcada **«sin soporte»** frente a los campos que el documento vigente no confirma. La empresa configura qué pasa entonces:
 - se exige un documento nuevo para aceptarla (por omisión en los campos críticos);
 - o se permite aceptarla con justificación.
+
+**Construido (FD-4, [registro](decisiones/registro.md)):** la marca se llama **«sin soporte»** (un solo término: el documento que respalda una sección es su *soporte*) y es un hecho que se calcula de las versiones inmutables: los datos cambian respecto de la última versión completa (o de lo que la empresa aceptó) y la versión no trae ningún soporte nuevo. Si lo cambiado es crítico (razón social o nombres de la General, representante legal o suplente de la Legal), aprobarlo pide una justificación y no va en lote; la empresa que quiere el documento nuevo observa la sección señalando el soporte. La configuración por flujo («exigir siempre documento nuevo») queda pendiente.
 
 ## 6. Cruce sección ↔ documento
 Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma compara campo por campo (FM-8):
@@ -181,6 +183,8 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
 - **API para el Portal, el SRM y Marco:**
   - `GET /api/v1/vinculos/{id}/ficha`: lo **aceptado** por esa empresa, sección por sección.
   - `GET /api/v1/terceros/{id}/ficha`: se amplía Tercero 360 con las secciones.
+  - `GET /api/v1/vinculos/{id}/ficha-aceptada` (FD-3): lo aceptado por la empresa **para leerlo en la web** (datos tal como los guardó el tercero, versión, expediente y soporte), con la versión nueva del tercero aparte (`cambioPosterior`) y su marca «sin soporte».
+  - `GET /public/v1/ficha` trae las observaciones de las empresas (FD-2) y `GET /public/v1/ficha/FICHA_GENERAL` la sugerencia `prellenado` mientras no haya versión (FD-1).
 
 ## 8. Migración y coexistencia
 - **Importador (H10):** cada tabla `Ter*` del Portal se carga como la **versión 1** de su sección, con origen `Importada`. En cada empresa donde el tercero estaba `Completada` o en actualización, queda **aceptada** con su vigencia. Mientras se importa se aplican estas correcciones:
@@ -204,7 +208,7 @@ Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sect
 | F2 | **Validación por empresa en paridad con el SRM.** Las secciones son requisitos del flujo, con completitud y su motivo legible. Cada empresa acepta u observa cada sección por área, con motivos. Al cambiar una sección aceptada, se revalida **solo esa sección**, con comparación anterior → nuevo y su soporte: son las Actualizaciones del SRM, con un responsable por sección configurado como áreas que revisan. La empresa ve la ficha en Tercero 360 y en el expediente. |
 | F3 | **Integración con el SRM:** evento `seccion.aceptada` y `GET /api/v1/vinculos/{id}/ficha`, para que el SRM aplique en AyF lo aceptado (General, Tributaria, representante legal y cuenta designada). |
 | F4 | **Importador** desde las tablas `Ter*` del Portal y **sincronizador** de coexistencia. |
-| F5 | **IA:** cruce sección ↔ documento, la opción «Usar como soporte» con cruce automático en los requisitos de documento y la **actualización desde el documento** (§5.2, §5.3, §6). **Terminada (2026-11-10, FM-48…FM-55):** además de lo anterior, la actualización abierta se amplía con lo que cambia después. |
+| F5 | **IA:** cruce sección ↔ documento, la opción «Usar como soporte» con cruce automático en los requisitos de documento y la **actualización desde el documento** (§5.2, §5.3, §6). **Terminada (2026-11-10, FM-48…FM-55):** además de lo anterior, la actualización abierta se amplía con lo que cambia después. **Pendientes cerrados el 2026-11-11 (FD-1…FD-9):** la cédula respalda también la Legal, la certificación bancaria respalda las cuentas y un cambio sin documento nuevo se marca «sin soporte». |
 | F6 | Personas relacionadas con bóveda propia (fase 2) y cargo de los contactos por empresa. |
 
 ## Decisiones abiertas

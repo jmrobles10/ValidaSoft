@@ -23,6 +23,7 @@ describe('claveDeTipo', () => {
     expect(claveDeTipo('expediente.sla_incumplido')).toBe('slaIncumplido');
     expect(claveDeTipo('habeas.plazo')).toBe('habeasPlazo');
     expect(claveDeTipo('plan.limite')).toBe('planLimite');
+    expect(claveDeTipo('vinculo.cuenta_propuesta')).toBe('cuentaPropuesta');
     expect(claveDeTipo('constructor')).toBeNull();
     expect(claveDeTipo('otro.tipo')).toBeNull();
   });

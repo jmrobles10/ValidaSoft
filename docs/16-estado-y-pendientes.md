@@ -203,15 +203,18 @@ al cambio se indexan con su próximo evento (o reconstruyendo la proyección del
 - ~~**Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.~~ Resuelto en `feature/integracion-abierta` (IO-4): contactos por vínculo con cargo, correo, teléfono y rol.
 
 ### 4.3 Ficha — pendientes (FM-38, FM-55)
-- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`. Pendiente: el lugar y la fecha de expedición cuando el representante es el propio tercero (persona natural).
-- Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).
-- Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.
-- La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.
-- Tras F5:
-  - la revisión automática de H7 ya usa el cruce (CU-19);
-  - la certificación bancaria no está en el mapa de respaldo;
-  - una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15);
-  - la cédula respalda solo la General.
+- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`.
+- ~~Lugar y fecha de expedición cuando el representante es el propio tercero (persona natural).~~ Resuelto en FD-8: la General de la persona natural los captura (opcionales) y salen en el representante del ERP.
+- ~~Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).~~ Resuelto en FD-1.
+- ~~Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.~~ Resuelto en FD-2.
+- ~~La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.~~ Resuelto en FD-3 (ficha aceptada del vínculo) y FD-7 (grupos del catálogo de webhooks).
+- ~~Tras F5: la certificación bancaria no está en el mapa de respaldo; una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15); la cédula respalda solo la General.~~ Resueltos en FD-5, FD-4 y FD-6.
+- Persona natural frente a jurídica: ajustada con su tabla en FD-8. **Abiertas para Producto:** ¿el PEP de la natural es obligatorio?; ¿se capturan primer y segundo nombre y apellido por separado?
+- Sigue pendiente:
+  - la revisión automática de H7 ya usa el cruce (CU-19); falta que lea también el cruce de las cuentas y el «sin soporte» (se ven en la revisión manual);
+  - el cruce de las cuentas con la certificación solo se ve en el requisito de la certificación: falta mostrarlo en la tarjeta de la **cuenta designada** para quien la aprueba (CB-2) y que no se guarde como hecho compartido;
+  - la configuración por flujo de FM-15 («exigir siempre un documento nuevo»): hoy se cubre observando la sección y señalando el soporte;
+  - sin plan de IA (o sin cupo) ningún tercero recibe valores propuestos ni cruce: queda la revisión manual.
 
 ### 4.4 H7 — cumplimiento completo (rama `feature/cumplimiento-h7`, decisiones CU-1..CU-22)
 

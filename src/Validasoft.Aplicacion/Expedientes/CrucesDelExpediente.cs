@@ -1,4 +1,5 @@
 using Marten;
+using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Ficha;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Documentos;
@@ -25,6 +26,7 @@ public sealed class CrucesDelExpediente
 
     private readonly Dictionary<Guid, CruceDeRequisitoDto> _secciones = [];
     private readonly Dictionary<Guid, SoporteDeSeccionesDto> _documentos = [];
+    private readonly HashSet<Guid> _sinSoporteCritico = [];
 
     public static readonly CrucesDelExpediente Vacio = new();
 
@@ -32,15 +34,18 @@ public sealed class CrucesDelExpediente
 
     public SoporteDeSeccionesDto? DeDocumento(Guid requisitoId) => _documentos.GetValueOrDefault(requisitoId);
 
-    /// <summary>Requisitos (de sección o de documento) con una discrepancia crítica que la empresa ve: no se aprueban sin justificación.</summary>
+    /// <summary>
+    /// Requisitos que no se aprueban sin justificación (FM-13, FD-4): con una discrepancia crítica en el cruce que la empresa ve (de sección,
+    /// de documento o de las cuentas contra su certificación) o de una sección cuyo cambio crítico no trae un documento nuevo (FM-15).
+    /// </summary>
     public IReadOnlySet<Guid> ConDiscrepanciaCritica =>
         _secciones.Where(s => s.Value.DiscrepanciaCritica).Select(s => s.Key)
-            .Concat(_documentos.Where(d => d.Value.DiscrepanciaCritica).Select(d => d.Key)).ToHashSet();
+            .Concat(_documentos.Where(d => d.Value.DiscrepanciaCritica).Select(d => d.Key)).Concat(_sinSoporteCritico).ToHashSet();
 
     /// <param name="sesionDelTenant">Sesión del tenant de la empresa (validaciones consumidas, flujo, tercero).</param>
     /// <param name="boveda">Consulta del tenant técnico <c>boveda</c> (secciones y documentos del tercero).</param>
     public static async Task<CrucesDelExpediente> CargarAsync(IQuerySession sesionDelTenant, IQuerySession boveda, Expediente expediente, Guid empresaId,
-        CancellationToken ct)
+        IProtectorDeSecretos protector, CancellationToken ct)
     {
         if (!expediente.ConRequisitos)
             return Vacio;
@@ -53,6 +58,10 @@ public sealed class CrucesDelExpediente
         var tercero = await sesionDelTenant.LoadAsync<Tercero>(terceroId, ct);
         var secciones = (await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct)).ToDictionary(s => s.Id);
         var documentos = (await boveda.Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct)).ToList();
+        var cuentas = porDocumento.Any(r => MapaDeRespaldo.RespaldaCuentas(r.TipoCanonico))
+            ? (IReadOnlyList<CuentaBancaria>)await boveda.Query<CuentaBancaria>().Where(c => c.TerceroId == terceroId && c.Estado == EstadoCuentaBancaria.Activa)
+                .OrderBy(c => c.RegistradaEn).ToListAsync(ct)
+            : [];
         var ids = documentos.Select(d => d.Id).ToArray();
         var consumidas = ids.Length == 0
             ? new HashSet<(Guid, int)>()
@@ -83,6 +92,10 @@ public sealed class CrucesDelExpediente
                 : seccion?.Vigente;
             if (seccion is null || versionSeccion is null)
                 continue;
+
+            // Un cambio crítico sin un documento nuevo (FM-15) tampoco se aprueba sin justificación.
+            if (seccion.SinSoporte(versionSeccion.Numero, requisito.VersionAceptadaPrevia?.Numero) is { Critico: true })
+                resultado._sinSoporteCritico.Add(requisito.Id);
 
             var respaldos = CrucesDeFicha.Respaldos(seccion, versionSeccion, documentos).Where(r => !apagados.Contains(r.Documento.TipoCanonico!)).ToList();
             var visibles = versionSeccion.Cruces
@@ -127,10 +140,56 @@ public sealed class CrucesDelExpediente
                 }
             }
 
+            // La certificación bancaria respalda las cuentas del tercero (FD-5): cada cuenta activa frente a lo que dice el documento.
+            if (MapaDeRespaldo.RespaldaCuentas(requisito.TipoCanonico) && tercero is not null)
+                filas.AddRange(FilasDeCuentas(cuentas, tercero, documentos.FirstOrDefault(d => d.Id == v.DocumentoId), v.Numero, visible, protector, nombres));
+
             resultado._documentos[requisito.Id] = new SoporteDeSeccionesDto(!visible, filas.Any(f => f.Cruce?.DiscrepanciaCritica == true), filas);
         }
 
         return resultado;
+    }
+
+    /// <summary>
+    /// Las cuentas activas del tercero frente a su certificación bancaria (FD-5): una fila por cuenta, con su cruce si la empresa recibió el
+    /// análisis de esa versión del documento. El número completo solo se descifra para comparar y nunca sale: el cruce lo muestra
+    /// enmascarado (CB-2). Sin cuentas, una sola fila sin cruce dice que no hay nada que respaldar todavía.
+    /// </summary>
+    private static IEnumerable<SeccionRespaldadaDto> FilasDeCuentas(IReadOnlyList<CuentaBancaria> cuentas, Tercero tercero, Documento? certificacion, int version,
+        bool visible, IProtectorDeSecretos protector, IReadOnlyDictionary<Guid, string> nombres)
+    {
+        if (cuentas.Count == 0)
+        {
+            yield return new SeccionRespaldadaDto(CodigosDeSeccion.CuentasBancarias, "Cuentas bancarias (ninguna registrada)", null, null, null);
+            yield break;
+        }
+
+        var documento = certificacion?.Buscar(version);
+        foreach (var cuenta in cuentas)
+        {
+            CruceDeSeccionDto? cruce = null;
+            if (visible && certificacion is not null && documento?.Ia is { } ia && Descifrar(protector, cuenta) is { } numero)
+            {
+                cruce = ADto(CruceConDocumento.CruzarCuenta(
+                    new DatosDeCuentaParaCruce(cuenta.Banco, cuenta.TipoCuenta.ToString(), numero, cuenta.Titular, cuenta.IdentificacionTitular),
+                    tercero.Nombre, tercero.Identificacion.Numero, certificacion.Id, version, ia.Campos, ia.Confianza, ia.Legible, documento.CargadaEn), nombres);
+            }
+
+            yield return new SeccionRespaldadaDto(CodigosDeSeccion.CuentasBancarias, $"Cuenta de {cuenta.Banco} {cuenta.NumeroEnmascarado}", null, null, cruce);
+        }
+    }
+
+    /// <summary>El número de la cuenta para compararlo en memoria; si no se puede descifrar (clave retirada), la cuenta queda sin cruce.</summary>
+    private static string? Descifrar(IProtectorDeSecretos protector, CuentaBancaria cuenta)
+    {
+        try
+        {
+            return protector.Desproteger(cuenta.NumeroProtegido);
+        }
+        catch (Exception e) when (e is System.Security.Cryptography.CryptographicException or FormatException or ArgumentException)
+        {
+            return null;
+        }
     }
 
     public static CruceDeSeccionDto ADto(CruceDeSeccion c, IReadOnlyDictionary<Guid, string> nombres) =>

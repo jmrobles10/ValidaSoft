@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EstadoSeccionFichaDto } from './estadoSeccionFichaDto';
+import type { ObservacionDeSeccionDto } from './observacionDeSeccionDto';
 
 export interface EstadoFichaDto {
   terceroId: string;
@@ -14,4 +15,6 @@ export interface EstadoFichaDto {
   siguienteSeccion: string | null;
   completa: boolean;
   secciones: EstadoSeccionFichaDto[];
+  /** @nullable */
+  observaciones?: ObservacionDeSeccionDto[] | null;
 }

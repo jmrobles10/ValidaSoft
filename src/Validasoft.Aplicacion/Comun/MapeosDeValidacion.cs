@@ -280,7 +280,7 @@ public static class MapeosDeValidacion
             ? r.ExigeRatificacion && r.VersionAceptadaPrevia is not null
             : r.Ambito == AmbitoDocumento.Global && Dominio.Documentos.CatalogoCanonico.Buscar(r.TipoCanonico)?.PermiteRatificacion == true);
 
-    private static ObservacionPublicaDto APublica(this VeredictoRegistrado v, string? requisito) =>
+    internal static ObservacionPublicaDto APublica(this VeredictoRegistrado v, string? requisito) =>
         new([.. v.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))], v.Observacion, v.Fecha, requisito,
             v.Campos.Count > 0 ? [.. v.Campos] : null);
 }
