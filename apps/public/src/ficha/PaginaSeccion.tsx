@@ -2,6 +2,7 @@ import { Box, Button } from '@mui/material';
 import type { EstadoFichaDto } from '@validasoft/api-client';
 import { PaginaEstado } from '@validasoft/ui';
 import { ClipboardX } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams, useSearchParams } from 'react-router';
 import { ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -49,7 +50,9 @@ export function PaginaSeccion() {
 
 function CargaSeccion({ definicion, periodo, estado }: { definicion: DefinicionSeccion; periodo: number | null; estado: EstadoFichaDto }) {
   const consulta = useSeccionFicha(definicion.codigo, periodo);
+  // «Actualizar» ante un cambio nuevo con lo escrito sin guardar: el formulario se arma de nuevo con lo del servidor.
+  const [reinicios, setReinicios] = useState(0);
   if (consulta.isPending) return <EsqueletoTarjetas cantidad={3} />;
   if (consulta.isError) return <ErrorRecuperable error={consulta.error} onReintentar={() => void consulta.refetch()} />;
-  return <EditorSeccion definicion={definicion} periodo={periodo} estado={estado} inicial={consulta.data} />;
+  return <EditorSeccion key={reinicios} definicion={definicion} periodo={periodo} estado={estado} inicial={consulta.data} onReiniciar={() => setReinicios((n) => n + 1)} />;
 }

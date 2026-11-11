@@ -60,3 +60,4 @@ export * from './generado/endpoints/exportacion-de-expediente/exportacion-de-exp
 export * from './generado/endpoints/recordatorios-de-observaciones/recordatorios-de-observaciones';
 export * from './generado/endpoints/configuracion-de-recordatorios/configuracion-de-recordatorios';
 export * from './generado/endpoints/recordatorios-automaticos/recordatorios-automaticos';
+export * from './tiempoReal';

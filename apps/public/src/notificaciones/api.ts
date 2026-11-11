@@ -16,15 +16,16 @@ import { marcarLeidaEnBandeja, marcarTodasEnBandeja } from './bandeja';
 /** Página de la campana: las 30 más recientes (el total de no leídas, de todas las empresas, viene aparte en `noLeidas`). */
 export const PARAMETROS_BANDEJA: ListarNotificacionesTerceroParams = { limite: 30 };
 
-/** La campana se refresca cada tanto mientras la pestaña está a la vista (y al volver a ella). */
+/** Sin stream (proxys, el iframe del SRM) la campana se refresca cada tanto mientras la pestaña está a la vista. */
 export const INTERVALO_REFRESCO = 30_000;
 
-const claveBandeja = getListarNotificacionesTerceroQueryKey(PARAMETROS_BANDEJA);
+export const claveBandeja = getListarNotificacionesTerceroQueryKey(PARAMETROS_BANDEJA);
 
-export function useBandejaDelTercero() {
+/** Con el stream conectado la bandeja se actualiza sola (`useStreamDelTercero`); en `respaldo` se pide cada 30 s. */
+export function useBandejaDelTercero(respaldo: boolean) {
   return useQuery({
     ...getListarNotificacionesTerceroQueryOptions(PARAMETROS_BANDEJA),
-    refetchInterval: INTERVALO_REFRESCO,
+    refetchInterval: respaldo ? INTERVALO_REFRESCO : false,
     refetchOnWindowFocus: true,
     staleTime: 10_000,
   });

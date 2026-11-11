@@ -1,4 +1,4 @@
-import type { BandejaNotificacionesTerceroDto, NotificacionTerceroDto } from '@validasoft/api-client';
+import type { BandejaNotificacionesTerceroDto, EventoSse, NotificacionTerceroDto } from '@validasoft/api-client';
 
 /**
  * Cambios puros sobre la bandeja en caché (`GET /public/v1/notificaciones`): vienen de las acciones de la campana y el total de
@@ -92,4 +92,64 @@ export function haceCuanto(fecha: string, ahora: number): string {
     if (segundos >= tamano) return TIEMPO.format(-Math.floor(segundos / tamano), unidad);
   }
   return TIEMPO.format(0, 'second');
+}
+
+/** Agrega una notificación nueva arriba (más reciente primero); si ya estaba, la reemplaza sin tocar el contador. */
+export function agregarNotificacion(bandeja: BandejaNotificacionesTerceroDto, notificacion: NotificacionTerceroDto): BandejaNotificacionesTerceroDto {
+  if (bandeja.datos.some((n) => n.id === notificacion.id)) return { ...bandeja, datos: bandeja.datos.map((n) => (n.id === notificacion.id ? notificacion : n)) };
+  return { ...bandeja, datos: [notificacion, ...bandeja.datos], noLeidas: bandeja.noLeidas + (notificacion.leidaEn ? 0 : 1) };
+}
+
+export type EventoDelTercero = { tipo: 'notificacion'; notificacion: NotificacionTerceroDto } | { tipo: 'no_leidas'; total: number };
+
+function esTextoONulo(valor: unknown): valor is string | null {
+  return valor === null || valor === undefined || typeof valor === 'string';
+}
+
+/** Valida lo que llega por el stream: no se confía en la forma del JSON. */
+export function esNotificacionDelTercero(valor: unknown): valor is NotificacionTerceroDto {
+  if (typeof valor !== 'object' || valor === null) return false;
+  const v = valor as Record<string, unknown>;
+  const empresaValida = v.empresa === null || v.empresa === undefined || (typeof v.empresa === 'object' && typeof (v.empresa as Record<string, unknown>).nombre === 'string');
+  return (
+    typeof v.id === 'string' &&
+    typeof v.tipo === 'string' &&
+    typeof v.titulo === 'string' &&
+    typeof v.mensaje === 'string' &&
+    typeof v.creadaEn === 'string' &&
+    empresaValida &&
+    esTextoONulo(v.leidaEn) &&
+    esTextoONulo(v.enlace) &&
+    esTextoONulo(v.expedienteId) &&
+    esTextoONulo(v.vinculoId) &&
+    esTextoONulo(v.folio)
+  );
+}
+
+/** `event: notificacion` (`data` = `NotificacionTerceroDto`) y `event: no_leidas` (`data` = el total); lo demás se ignora. */
+export function interpretarEvento(evento: EventoSse): EventoDelTercero | null {
+  if (evento.evento === 'no_leidas') {
+    const total = Number(evento.datos.trim());
+    return Number.isInteger(total) && total >= 0 ? { tipo: 'no_leidas', total } : null;
+  }
+  if (evento.evento !== 'notificacion') return null;
+  try {
+    const datos: unknown = JSON.parse(evento.datos);
+    if (!esNotificacionDelTercero(datos)) return null;
+    // El servidor omite o manda `null` en los opcionales; la caché los guarda siempre como `null`.
+    return {
+      tipo: 'notificacion',
+      notificacion: {
+        ...datos,
+        empresa: datos.empresa ?? null,
+        expedienteId: datos.expedienteId ?? null,
+        vinculoId: datos.vinculoId ?? null,
+        folio: datos.folio ?? null,
+        enlace: datos.enlace ?? null,
+        leidaEn: datos.leidaEn ?? null,
+      },
+    };
+  } catch {
+    return null;
+  }
 }

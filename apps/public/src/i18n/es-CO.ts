@@ -5,6 +5,12 @@ import { notificaciones } from './es-CO-notificaciones';
 /** Textos de la app del tercero (es-CO, tuteo, siguiente paso en cada error: docs/06 §2.3). */
 export const esCO = {
   comun: {
+    cambiosNuevos: {
+      titulo: 'Hay cambios nuevos.',
+      texto: 'Esta información cambió mientras la editabas. Actualiza para verla; lo que no guardaste se pierde.',
+      textoRespuesta: 'Esta revisión cambió mientras escribías tu respuesta. Actualiza para verlo; lo que escribiste se conserva.',
+      accion: 'Actualizar',
+    },
     marca: 'Validasoft',
     misDocumentos: 'Mis documentos',
     cargando: 'Cargando…',

@@ -1,5 +1,4 @@
-import type { BandejaNotificacionesDto, NotificacionDto } from '@validasoft/api-client';
-import type { EventoSse } from './sse';
+import type { BandejaNotificacionesDto, EventoSse, NotificacionDto } from '@validasoft/api-client';
 
 /**
  * Cambios puros sobre la bandeja en caché (`GET /api/v1/notificaciones`): llegan por el stream o por las acciones de la

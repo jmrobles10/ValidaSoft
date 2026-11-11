@@ -1,10 +1,12 @@
 import { Alert, AlertTitle, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
-import { esErrorApi } from '@validasoft/api-client';
-import { ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
+import { useQueryClient } from '@tanstack/react-query';
+import { aplicarCambiosPendientes, esErrorApi, useCambiosPendientes, useEdicionEnCurso } from '@validasoft/api-client';
+import { AvisoCambiosNuevos, ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { SearchX, Upload } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
+import { ALCANCES_PUBLICO } from '../notificaciones/tiempoReal';
 import { useExpedientePublico, useReenviarExpediente, useVinculosPublicos } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -34,6 +36,10 @@ export function PaginaExpediente() {
   const mostrar = useAvisos((s) => s.mostrar);
   const textoAvance = useTextoAvance();
   const [respuesta, setRespuesta] = useState('');
+  const cliente = useQueryClient();
+  // Con una respuesta a medio escribir, el tiempo real avisa de los cambios en vez de refrescar la revisión (NT-12).
+  useEdicionEnCurso(ALCANCES_PUBLICO.expedientes, respuesta.trim().length > 0);
+  const hayCambiosNuevos = useCambiosPendientes(ALCANCES_PUBLICO.expedientes);
 
   if (consulta.isPending) return <EsqueletoTarjetas />;
   if (consulta.isError) {
@@ -68,6 +74,15 @@ export function PaginaExpediente() {
 
   return (
     <MarcaDeEmpresa empresa={expediente.empresa}>
+      {hayCambiosNuevos && (
+        <AvisoCambiosNuevos
+          sx={{ mb: 2 }}
+          titulo={t('comun.cambiosNuevos.titulo')}
+          texto={t('comun.cambiosNuevos.textoRespuesta')}
+          accion={t('comun.cambiosNuevos.accion')}
+          onActualizar={() => void aplicarCambiosPendientes(cliente, ALCANCES_PUBLICO.expedientes)}
+        />
+      )}
       <CabeceraPagina
         titulo={t('expediente.titulo', { empresa })}
         sub={

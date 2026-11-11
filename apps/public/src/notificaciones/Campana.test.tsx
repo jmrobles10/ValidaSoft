@@ -5,7 +5,9 @@ import userEvent from '@testing-library/user-event';
 import { configurarCliente, reiniciarCliente, type BandejaNotificacionesTerceroDto, type NotificacionTerceroDto, type PreferenciasNotificacionDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { crearCuerpoSse } from '../pruebas/sse';
+import { useSesionTercero } from '../sesion/sesionTercero';
 import { useAvisos } from '../shared/useAvisos';
 import { Campana } from './Campana';
 
@@ -61,6 +63,8 @@ function montar(bandeja: BandejaNotificacionesTerceroDto) {
       const direccion = new URL(url instanceof Request ? url.url : url.toString(), 'http://localhost');
       const metodo = init?.method ?? 'GET';
       peticiones.push({ metodo, ruta: direccion.pathname, cuerpo: typeof init?.body === 'string' ? JSON.parse(init.body) : null });
+      // El stream en tiempo real queda abierto y en silencio (lo prueba tiempoReal.test.tsx).
+      if (direccion.pathname.endsWith('/stream')) return Promise.resolve(crearCuerpoSse(init?.signal).respuesta);
       if (direccion.pathname === '/public/v1/notificaciones' && metodo === 'GET') return Promise.resolve(json(200, bandeja));
       if (direccion.pathname === '/public/v1/notificaciones/leidas') return Promise.resolve(json(200, { marcadas: bandeja.noLeidas }));
       if (direccion.pathname.endsWith('/leida')) return Promise.resolve(json(200, { ...SIN_LEER, leidaEn: new Date().toISOString() }));
@@ -84,9 +88,14 @@ function montar(bandeja: BandejaNotificacionesTerceroDto) {
   return peticiones;
 }
 
+beforeEach(() => {
+  useSesionTercero.setState({ sesion: { accessToken: 'tok', terceroId: 't1' } as never, estado: 'activa' });
+});
+
 afterEach(() => {
   reiniciarCliente();
   useAvisos.setState({ actual: null });
+  useSesionTercero.setState({ sesion: null, estado: 'sin-sesion' });
 });
 
 describe('campana del tercero', () => {

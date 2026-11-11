@@ -1,10 +1,21 @@
 import { Alert, Box, MenuItem, Stack, TextField } from '@mui/material';
-import { esErrorApi, type EstadoFichaDto, type SeccionFichaDto, type SeccionGuardadaDto } from '@validasoft/api-client';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  aplicarCambiosPendientes,
+  esErrorApi,
+  useCambiosPendientes,
+  useEdicionEnCurso,
+  type EstadoFichaDto,
+  type SeccionFichaDto,
+  type SeccionGuardadaDto,
+} from '@validasoft/api-client';
+import { AvisoCambiosNuevos } from '@validasoft/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { CabeceraPagina } from '../shared/componentes';
 import { mensajeDeError } from '../shared/errores';
+import { ALCANCES_PUBLICO } from '../notificaciones/tiempoReal';
 import { useAvisos } from '../shared/useAvisos';
 import { useEvaluacionSeccion } from './api';
 import { BarraDeAcciones } from './BarraDeAcciones';
@@ -25,6 +36,8 @@ interface Props {
   periodo: number | null;
   estado: EstadoFichaDto;
   inicial: SeccionFichaDto;
+  /** «Actualizar» ante un cambio nuevo con cambios sin guardar: vuelve a armar el formulario con lo que hay en el servidor. */
+  onReiniciar?: () => void;
 }
 
 /**
@@ -34,8 +47,9 @@ interface Props {
  * sección quedaría completa (FM-46) y avanza solo si el guardado lo confirma (FM-16, FM-17). Nunca calcula la completitud.
  * Entra con una animación corta cada vez que se cambia de sección.
  */
-export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
+export function EditorSeccion({ definicion, periodo, estado, inicial, onReiniciar }: Props) {
   const { t } = useTranslation();
+  const cliente = useQueryClient();
   const navegar = useNavigate();
   const mostrar = useAvisos((s) => s.mostrar);
   // Lo que alguna empresa observó de esta sección (F2): arriba del formulario, con sus campos marcados.
@@ -48,6 +62,9 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
   const paso = estado.orden.indexOf(definicion.codigo) + 1;
   const rutaActual = enlaceSeccion(definicion.codigo, periodo);
   const salida = useSalidaSinGuardar(editor.sinGuardar);
+  // Con cambios sin guardar, el tiempo real no pisa lo escrito: avisa y deja elegir (NT-12).
+  useEdicionEnCurso(ALCANCES_PUBLICO.ficha, editor.sinGuardar);
+  const hayCambiosNuevos = useCambiosPendientes(ALCANCES_PUBLICO.ficha);
   const evaluacion = useEvaluacionSeccion(definicion.codigo, periodo, editor.cuerpo);
 
   const alGuardar = (continuar: boolean) => (respuesta: SeccionGuardadaDto) => {
@@ -117,6 +134,14 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
           <CabeceraPagina titulo={nombre} sub={paso > 0 ? t('ficha.paso', { n: String(paso), total: String(estado.orden.length) }) : undefined} />
         </Box>
         <Stack spacing={2.5} component="form" noValidate aria-label={nombre} onSubmit={(e) => e.preventDefault()}>
+          {hayCambiosNuevos && (
+            <AvisoCambiosNuevos
+              titulo={t('comun.cambiosNuevos.titulo')}
+              texto={t('comun.cambiosNuevos.texto')}
+              accion={t('comun.cambiosNuevos.accion')}
+              onActualizar={() => void aplicarCambiosPendientes(cliente, ALCANCES_PUBLICO.ficha).then(() => onReiniciar?.())}
+            />
+          )}
           <ObservacionesDeEmpresas observaciones={observaciones} />
           {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
           <PropuestaDesdeDocumento

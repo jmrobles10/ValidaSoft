@@ -10,11 +10,13 @@ import { useBandejaDelTercero, useMarcarLeida, useMarcarTodas } from './api';
 import { destinoDeNotificacion, textoContador } from './bandeja';
 import { DialogoPreferencias } from './DialogoPreferencias';
 import { PanelNotificaciones } from './PanelNotificaciones';
+import { useStreamDelTercero } from './tiempoReal';
 
 /**
  * Campana del tercero en la cabecera: contador de no leídas (de todas sus empresas), panel con la lista —cada aviso con la marca de
- * su empresa— y preferencias de correo. Se refresca cada 30 segundos mientras la pestaña está a la vista. Un clic marca el aviso
- * como leído y lleva a lo que hay que hacer (el expediente observado, la bóveda, «Mi información»…).
+ * su empresa— y preferencias de correo. Un clic marca el aviso
+ * como leído y lleva a lo que hay que hacer (el expediente observado, la bóveda, «Mi información»…). Mantiene el stream en tiempo real
+ * del portal (notificaciones y avisos de cambio, NT-12); si no logra conectar, refresca cada 30 s.
  */
 export function Campana() {
   const { t } = useTranslation();
@@ -22,7 +24,8 @@ export function Campana() {
   const mostrar = useAvisos((s) => s.mostrar);
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
   const [preferencias, setPreferencias] = useState(false);
-  const consulta = useBandejaDelTercero();
+  const estado = useStreamDelTercero();
+  const consulta = useBandejaDelTercero(estado === 'respaldo');
   const marcarLeida = useMarcarLeida();
   const marcarTodas = useMarcarTodas();
   const noLeidas = consulta.data?.noLeidas ?? 0;
