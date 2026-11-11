@@ -6,6 +6,8 @@ export interface Correo {
   asunto: string;
   texto: string;
   html: string;
+  /** Dirección del remitente (`From`). */
+  desde: string;
 }
 
 interface ResumenMailpit {
@@ -30,8 +32,8 @@ export async function esperarCorreo(destinatario: string, asunto: RegExp, { excl
         .filter((m) => asunto.test(m.Subject) && !excluir.includes(m.ID))
         .sort((a, b) => b.Created.localeCompare(a.Created))[0];
       if (candidato) {
-        const detalle = (await (await fetch(`${MAILPIT}/api/v1/message/${candidato.ID}`)).json()) as { Text: string; HTML: string; Subject: string };
-        return { id: candidato.ID, asunto: detalle.Subject, texto: detalle.Text, html: detalle.HTML };
+        const detalle = (await (await fetch(`${MAILPIT}/api/v1/message/${candidato.ID}`)).json()) as { Text: string; HTML: string; Subject: string; From?: { Address: string } };
+        return { id: candidato.ID, asunto: detalle.Subject, texto: detalle.Text, html: detalle.HTML, desde: detalle.From?.Address ?? '' };
       }
     }
     await new Promise((r) => setTimeout(r, 500));
