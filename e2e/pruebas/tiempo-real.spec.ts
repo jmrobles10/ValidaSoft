@@ -31,7 +31,7 @@ async function sigueSinRecargar(destino: Page | Frame): Promise<boolean> {
 
 /** La ventana (frame) de Validasoft embebido, para sellarla y revisarla. */
 async function marcoDe(app: FrameLocator): Promise<Frame> {
-  const frame = await (await app.owner().elementHandle())?.contentFrame();
+  const frame = await (await app.owner().elementHandle()).contentFrame();
   if (!frame) throw new Error('No se encontró la ventana de Validasoft embebido.');
   return frame;
 }
