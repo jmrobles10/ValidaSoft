@@ -23,7 +23,7 @@ public sealed record PaisDto(string Codigo, string Nombre, IReadOnlyList<TipoIde
 /// </summary>
 public sealed record CrearTenantDto(
     string Slug, string Nombre, string? Region, string? ZonaHoraria, CrearEmpresaDto? Empresa = null, AdministradorInicialDto? Administrador = null,
-    CrearSistemaIntegradoDto? Sistema = null);
+    CrearSistemaIntegradoDto? Sistema = null, ConfiguracionDeIngresoDto? Ingreso = null);
 
 /// <summary>
 /// Administrador inicial del grupo (rol <c>Administrador</c> de todo el tenant). <see cref="IdExterno"/> es su <c>sub</c> en el
@@ -32,7 +32,8 @@ public sealed record CrearTenantDto(
 public sealed record AdministradorInicialDto(string Nombre, string Correo, string? IdExterno = null);
 
 public sealed record TenantDto(
-    Guid Id, string Slug, string Nombre, string Region, string Plan, string ZonaHoraria, string Idioma, bool Activo, DateTimeOffset CreadoEn);
+    Guid Id, string Slug, string Nombre, string Region, string Plan, string ZonaHoraria, string Idioma, bool Activo, DateTimeOffset CreadoEn,
+    ConfiguracionDeIngresoDto? Ingreso = null);
 
 /// <summary>
 /// Respuesta del alta de tenant: incluye la primera API key de administración y, si se pidió el sistema integrado, su API
@@ -116,17 +117,22 @@ public sealed record RolAsignadoDto(string Rol, Guid? EmpresaId);
 
 public sealed record IdentidadExternaDto(Guid SistemaId, string IdExterno);
 
-/// <summary>Alta anticipada: permite asignar roles antes del primer acceso; la aserción delegada lo enlaza por correo.</summary>
+/// <summary>
+/// Alta anticipada: permite asignar roles antes del primer acceso; la aserción delegada lo enlaza por correo. Con
+/// <see cref="Invitar"/> (y un grupo que admita el ingreso directo) se le envía un correo para que entre con el suyo (ING-5).
+/// </summary>
 public sealed record CrearUsuarioDto(
     string Nombre, string Correo, IdentificacionDto? Identificacion, IReadOnlyList<RolAsignadoDto>? Roles,
-    IReadOnlyList<IdentidadExternaDto>? Identidades);
+    IReadOnlyList<IdentidadExternaDto>? Identidades, bool? Invitar = null);
 
 public sealed record AsignarRolesDto(IReadOnlyList<RolAsignadoDto> Roles);
 
+/// <param name="ExigePasskey">Un rol suyo (o el grupo) le exige passkey para entrar directo.</param>
+/// <param name="Passkeys">Passkeys activas que tiene registradas.</param>
 public sealed record UsuarioDto(
     Guid Id, string Nombre, string Correo, IdentificacionDto? Identificacion, bool Activo,
     IReadOnlyList<IdentidadExternaDto> Identidades, IReadOnlyList<RolAsignadoDto> Roles, DateTimeOffset CreadoEn,
-    DateTimeOffset? UltimoAcceso);
+    DateTimeOffset? UltimoAcceso, bool ExigePasskey = false, int Passkeys = 0, DateTimeOffset? InvitadoEn = null);
 
 /// <summary>Sesión corta de Validasoft para pantallas embebidas: se envía como <c>Authorization: Bearer {token}</c>.</summary>
 public sealed record SesionUsuarioDto(string Token, DateTimeOffset Expira);

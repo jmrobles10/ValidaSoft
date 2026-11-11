@@ -64,3 +64,7 @@ export * from './generado/endpoints/recordatorios-de-observaciones/recordatorios
 export * from './generado/endpoints/configuracion-de-recordatorios/configuracion-de-recordatorios';
 export * from './generado/endpoints/recordatorios-automaticos/recordatorios-automaticos';
 export * from './tiempoReal';
+export * from './generado/endpoints/ingreso/ingreso';
+export * from './generado/endpoints/mi-cuenta/mi-cuenta';
+export * from './generado/endpoints/gestion-de-ingreso/gestion-de-ingreso';
+export * from './generado/endpoints/operadores-directos/operadores-directos';

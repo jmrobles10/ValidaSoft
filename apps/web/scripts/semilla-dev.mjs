@@ -80,7 +80,14 @@ console.log(`Creando tenant ${slug} en ${API}…`);
 
 const creado = await llamar('POST', '/api/v1/plataforma/tenants', {
   llave: CLAVE_PLATAFORMA,
-  cuerpo: { slug, nombre: 'Grupo Constructor Demo', region: 'co', zonaHoraria: 'America/Bogota' },
+  // Ambos modos de ingreso (ING-8): la sesión simulada (identidad delegada) y el ingreso directo con el código de Mailpit.
+  cuerpo: {
+    slug,
+    nombre: 'Grupo Constructor Demo',
+    region: 'co',
+    zonaHoraria: 'America/Bogota',
+    ingreso: { modos: ['Delegado', 'Directo'], sesionHoras: 8, inactividadMinutos: 30, passkeyParaTodos: false },
+  },
 });
 const admin = creado.apiKeyAdministrador.valor;
 
@@ -420,5 +427,6 @@ const salida = {
 await writeFile(new URL('../.semilla.local.json', import.meta.url), JSON.stringify(salida, null, 2) + '\n', 'utf8');
 
 console.log(`Listo: ${vinculos.length + 1} vínculos, ${usuarios.length} usuarios, sistema ${SISTEMA} y operador de Plataforma ${operador.nombre}.`);
+console.log(`Ingreso directo (sin contraseña): abre la app, escribe el correo de una persona (p. ej. ${usuarios[1].correo}) y lee el código en Mailpit. Ana, Olga y Aurelio deberán registrar una passkey.`);
 console.log('Credenciales en apps/web/.semilla.local.json (solo desarrollo; no se versiona).');
 console.log('Invitaciones (enlace del tercero y código OTP) en Mailpit: http://localhost:8025, o en apps/public: /dev/correos.');

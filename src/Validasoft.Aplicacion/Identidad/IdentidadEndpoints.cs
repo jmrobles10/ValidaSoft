@@ -7,6 +7,7 @@ using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Identidad;
@@ -121,16 +122,23 @@ public static class UsuariosEndpoints
 {
     [WolverinePost("/api/v1/usuarios")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
-    public static async Task<IResult> Crear(CrearUsuarioDto dto, ISesiones sesiones, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Crear(CrearUsuarioDto dto, ISesiones sesiones, IContextoSolicitud contexto, IMessageBus mensajes,
+        IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
-        var usuario = Usuario.Crear(dto.Nombre, dto.Correo, dto.Identificacion?.ADominio(), ahora);
+        var tenantId = contexto.TenantRequerido();
+        var usuario = Usuario.Crear(dto.Nombre, dto.Correo, dto.Identificacion?.ADominio(), ahora, tenantId);
         var roles = (dto.Roles ?? []).Select(r => r.ADominio()).ToList();
         await ValidarRolesAsync(roles, [], sesiones, contexto, ct);
         usuario.AsignarRoles(roles);
 
-        await using var sesion = sesiones.DelTenant();
+        Tenant? tenant = null;
+        await using (var global = sesiones.ConsultaGlobal())
+            tenant = await global.LoadAsync<Tenant>(tenantId, ct);
+        if (dto.Invitar == true && tenant is not null && !tenant.ModosDeIngreso.HasFlag(ModoDeIngreso.Directo))
+            throw ReglaDeNegocioException.Validacion("ingreso-directo-apagado", "Este grupo no admite el ingreso directo: actívalo en Configuración › Ingreso para invitar por correo.");
+
+        await using var sesion = sesiones.DelTenant(mensajes);
         var correo = usuario.Correo;
         if (await sesion.Query<Usuario>().AnyAsync(u => u.Correo == correo, ct))
             throw ReglaDeNegocioException.Conflicto("usuario-duplicado", $"Ya existe un usuario con el correo {correo}.");
@@ -147,15 +155,18 @@ public static class UsuariosEndpoints
             sesion.Insert(new IndiceIdentidadExterna { Id = clave, UsuarioId = usuario.Id });
         }
 
+        if (dto.Invitar == true && tenant is not null)
+            await InvitacionesDeUsuarios.EnviarAsync(mensajes, protector, tenant, usuario, ahora);
+
         sesion.Store(usuario);
         Auditoria.Registrar(sesion, contexto, "Usuario", usuario.Id.ToString(), AccionConfiguracion.Creado, null, usuario.ADto(), ahora);
         await sesion.SaveChangesAsync(ct);
-        return Results.Created($"/api/v1/usuarios/{usuario.Id}", usuario.ADto());
+        return Results.Created($"/api/v1/usuarios/{usuario.Id}", usuario.ADto(tenant?.PasskeyParaTodos ?? false));
     }
 
     [WolverineGet("/api/v1/usuarios")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
-    public static async Task<IReadOnlyList<UsuarioDto>> Listar(string? correo, ISesiones sesiones, CancellationToken ct)
+    public static async Task<IReadOnlyList<UsuarioDto>> Listar(string? correo, ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct)
     {
         await using var sesion = sesiones.DelTenant();
         IQueryable<Usuario> consulta = sesion.Query<Usuario>();
@@ -166,15 +177,31 @@ public static class UsuariosEndpoints
         }
 
         var usuarios = await consulta.OrderBy(u => u.Nombre).ToListAsync(ct);
-        return [.. usuarios.Select(u => u.ADto())];
+        var (paraTodos, activas) = await IngresoDelGrupoAsync(sesiones, contexto, usuarios, ct);
+        return [.. usuarios.Select(u => u.ADto(paraTodos, activas.GetValueOrDefault(u.Id.ToString())))];
+    }
+
+    /// <summary>Si el grupo exige passkey a todos y cuántas passkeys activas tiene cada usuario (para la lista y el detalle).</summary>
+    private static async Task<(bool ParaTodos, Dictionary<string, int> Activas)> IngresoDelGrupoAsync(ISesiones sesiones, IContextoSolicitud contexto,
+        IReadOnlyList<Usuario> usuarios, CancellationToken ct)
+    {
+        await using var global = sesiones.ConsultaGlobal();
+        var paraTodos = (await global.LoadAsync<Tenant>(contexto.TenantRequerido(), ct))?.PasskeyParaTodos ?? false;
+        var ids = usuarios.Select(u => u.Id.ToString()).ToArray();
+        if (ids.Length == 0)
+            return (paraTodos, []);
+        var passkeys = await global.Query<Passkey>().Where(p => p.Propietario == TipoDePropietario.Usuario && p.RevocadaEn == null && p.SujetoId.IsOneOf(ids)).ToListAsync(ct);
+        return (paraTodos, passkeys.GroupBy(p => p.SujetoId).ToDictionary(g => g.Key, g => g.Count()));
     }
 
     [WolverineGet("/api/v1/usuarios/{id}")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
-    public static async Task<UsuarioDto> Obtener(Guid id, ISesiones sesiones, CancellationToken ct)
+    public static async Task<UsuarioDto> Obtener(Guid id, ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct)
     {
         await using var sesion = sesiones.DelTenant();
-        return (await CargarAsync(sesion, id, ct)).ADto();
+        var usuario = await CargarAsync(sesion, id, ct);
+        var (paraTodos, activas) = await IngresoDelGrupoAsync(sesiones, contexto, [usuario], ct);
+        return usuario.ADto(paraTodos, activas.GetValueOrDefault(usuario.Id.ToString()));
     }
 
     /// <summary>Reemplaza los roles del usuario. Cada empresa debe ser del tenant y estar al alcance de quien asigna.</summary>
@@ -199,17 +226,28 @@ public static class UsuariosEndpoints
     /// <summary>Un usuario desactivado no puede actuar por delegación (401) aunque su sistema lo autentique.</summary>
     [WolverinePost("/api/v1/usuarios/{id}/desactivar")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
-    public static async Task<UsuarioDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+    public static async Task<UsuarioDto> Desactivar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeSesionesDirectas cache,
+        TimeProvider reloj, CancellationToken ct)
     {
         await using var sesion = sesiones.DelTenant();
         var usuario = await CargarAsync(sesion, id, ct);
         await ValidarRolesAsync([], usuario.Roles, sesiones, contexto, ct);
 
+        var ahora = reloj.GetUtcNow();
         var antes = usuario.ADto();
         usuario.Desactivar();
         sesion.Store(usuario);
-        Auditoria.Registrar(sesion, contexto, "Usuario", usuario.Id.ToString(), AccionConfiguracion.Desactivado, antes, usuario.ADto(), reloj.GetUtcNow());
+        Auditoria.Registrar(sesion, contexto, "Usuario", usuario.Id.ToString(), AccionConfiguracion.Desactivado, antes, usuario.ADto(), ahora);
         await sesion.SaveChangesAsync(ct);
+
+        // Desactivada la cuenta, sus sesiones directas dejan de valer de inmediato (ING-5).
+        await using var global = sesiones.Global();
+        var cerradas = await GestionDeSesiones.CerrarTodasAsync(global, TipoDePropietario.Usuario, usuario.Id.ToString(), SesionDeUsuario.MotivoUsuarioDesactivado,
+            $"{contexto.ActorTipo}:{contexto.ActorId}", ContextoDeCliente.De(http, contexto.CorrelationId), contexto.ActorTipo, contexto.ActorId, ahora, ct);
+        if (cerradas.Count > 0)
+            await global.SaveChangesAsync(ct);
+        foreach (var cerrada in cerradas)
+            cache.Olvidar(cerrada);
         return usuario.ADto();
     }
 

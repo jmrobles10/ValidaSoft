@@ -22,6 +22,9 @@ export const ALTO_ESTIMADO_GRUPO = 200;
 /** Espera (ms) tras dejar de escribir en el buscador antes de pedir al servidor. */
 export const ESPERA_BUSQUEDA_GRUPOS_MS = 300;
 export const MAXIMO_VALIDACIONES = 1_000_000;
+/** Duración de la sesión directa y cierre por inactividad con los que nace un grupo (el administrador del grupo los cambia en Configuración › Ingreso). */
+export const SESION_HORAS_POR_DEFECTO = 8;
+export const INACTIVIDAD_POR_DEFECTO = 30;
 
 // ---------- Alta de grupo ----------
 
@@ -41,6 +44,9 @@ export interface BorradorGrupo {
   sistemaClave: string;
   /** Uno por línea (o separados por coma). */
   sistemaOrigenes: string;
+  /** Cómo entran las personas del grupo (ING-1): desde el sistema integrado (identidad delegada), directo a Validasoft, o ambos. */
+  ingresoDelegado: boolean;
+  ingresoDirecto: boolean;
 }
 
 export type ErrorGrupo =
@@ -49,6 +55,7 @@ export type ErrorGrupo =
   | `empresa-${ErrorEmpresa}`
   | 'admin-nombre-requerido'
   | 'admin-correo-invalido'
+  | 'modos-requeridos'
   | 'sistema-codigo-invalido'
   | 'sistema-nombre-requerido'
   | 'clave-publica-requerida'
@@ -68,6 +75,8 @@ export function borradorGrupoNuevo(empresa: BorradorEmpresa): BorradorGrupo {
     sistemaNombre: '',
     sistemaClave: '',
     sistemaOrigenes: '',
+    ingresoDelegado: true,
+    ingresoDirecto: false,
   };
 }
 
@@ -107,10 +116,14 @@ export function validarGrupo(b: BorradorGrupo, tipo: TipoIdentificacionDto | und
   errores.push(...validarEmpresa(b.empresa, tipo).map((e) => `empresa-${e}` as const));
   if (!b.adminNombre.trim()) errores.push('admin-nombre-requerido');
   if (!correoValido(b.adminCorreo)) errores.push('admin-correo-invalido');
-  if (!codigoSistemaValido(b.sistemaCodigo)) errores.push('sistema-codigo-invalido');
-  if (!b.sistemaNombre.trim()) errores.push('sistema-nombre-requerido');
-  if (!clavePublicaPresente(b.sistemaClave)) errores.push('clave-publica-requerida');
-  if (origenesDeTexto(b.sistemaOrigenes).error) errores.push('origen-invalido');
+  if (!b.ingresoDelegado && !b.ingresoDirecto) errores.push('modos-requeridos');
+  // El sistema integrado solo hace falta si las personas entran desde él (identidad delegada).
+  if (b.ingresoDelegado) {
+    if (!codigoSistemaValido(b.sistemaCodigo)) errores.push('sistema-codigo-invalido');
+    if (!b.sistemaNombre.trim()) errores.push('sistema-nombre-requerido');
+    if (!clavePublicaPresente(b.sistemaClave)) errores.push('clave-publica-requerida');
+    if (origenesDeTexto(b.sistemaOrigenes).error) errores.push('origen-invalido');
+  }
   return errores;
 }
 
@@ -121,12 +134,20 @@ export function cuerpoAltaGrupo(b: BorradorGrupo): CrearTenantDto {
     region: 'co',
     zonaHoraria: b.zonaHoraria.trim() || ZONA_POR_DEFECTO,
     empresa: { ...cuerpoCrearEmpresa(b.empresa), replyTo: null },
-    administrador: { nombre: b.adminNombre.trim(), correo: b.adminCorreo.trim(), idExterno: b.adminIdExterno.trim() || null },
-    sistema: {
-      codigo: b.sistemaCodigo.trim().toUpperCase(),
-      nombre: b.sistemaNombre.trim(),
-      clavePublicaPem: b.sistemaClave.trim(),
-      origenesPermitidos: origenesDeTexto(b.sistemaOrigenes).origenes,
+    administrador: { nombre: b.adminNombre.trim(), correo: b.adminCorreo.trim(), idExterno: b.ingresoDelegado ? b.adminIdExterno.trim() || null : null },
+    sistema: b.ingresoDelegado
+      ? {
+          codigo: b.sistemaCodigo.trim().toUpperCase(),
+          nombre: b.sistemaNombre.trim(),
+          clavePublicaPem: b.sistemaClave.trim(),
+          origenesPermitidos: origenesDeTexto(b.sistemaOrigenes).origenes,
+        }
+      : null,
+    ingreso: {
+      modos: [...(b.ingresoDelegado ? ['Delegado'] : []), ...(b.ingresoDirecto ? ['Directo'] : [])],
+      sesionHoras: SESION_HORAS_POR_DEFECTO,
+      inactividadMinutos: INACTIVIDAD_POR_DEFECTO,
+      passkeyParaTodos: false,
     },
   };
 }

@@ -1,8 +1,18 @@
 import { Box, Button, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { asignarRolesUsuario, crearUsuario, desactivarUsuario, getListarSistemasQueryOptions, SCOPES, type RolAsignadoDto, type UsuarioDto } from '@validasoft/api-client';
+import {
+  asignarRolesUsuario,
+  crearUsuario,
+  desactivarUsuario,
+  getListarSistemasQueryOptions,
+  getObtenerConfiguracionIngresoQueryOptions,
+  invitarUsuario,
+  SCOPES,
+  type RolAsignadoDto,
+  type UsuarioDto,
+} from '@validasoft/api-client';
 import { AvatarActor, BarraFiltros, CampoBusqueda, EstadoVacio, FiltroMenu, FilasEsqueleto, formatearFechaHora, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
-import { Ban, CircleCheck, Pencil, Plus, UserX } from 'lucide-react';
+import { Ban, CircleCheck, KeyRound, Mail, Pencil, Plus, UserX } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DialogoConfirmacion, EncabezadoPagina, ErrorRecuperable, SinPermiso } from '../../../shared/componentes';
@@ -13,9 +23,10 @@ import { usePermisos } from '../../../shared/usePermisos';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { useUsuarios } from './api';
+import { DrawerAcceso } from './DrawerAcceso';
 import { DrawerRoles } from './DrawerRoles';
 
-type Edicion = { tipo: 'crear'; clave: string } | { tipo: 'roles'; usuario: UsuarioDto };
+type Edicion = { tipo: 'crear'; clave: string } | { tipo: 'roles'; usuario: UsuarioDto } | { tipo: 'acceso'; usuario: UsuarioDto };
 
 /** Estado de la cuenta: texto con ícono (no es un estado canónico del dominio, así que no usa ChipEstado). */
 function EstadoCuenta({ activa }: { activa: boolean }) {
@@ -35,6 +46,9 @@ export function PaginaUsuarios() {
   const puede = permisos.puede(SCOPES.usuariosAdministrar);
   const consulta = useUsuarios(puede);
   const sistemas = useQuery({ ...getListarSistemasQueryOptions({ request: { empresa: null } }), enabled: permisos.puede(SCOPES.sistemasAdministrar) });
+  // Si el grupo admite el ingreso directo se puede invitar por correo y se ven las passkeys y sesiones de cada persona (ING-5).
+  const ingreso = useQuery({ ...getObtenerConfiguracionIngresoQueryOptions({ request: { empresa: null } }), enabled: puede });
+  const admiteDirecto = ingreso.data?.modos.includes('Directo') ?? false;
   const cliente = useQueryClient();
   const mostrar = useAvisos((s) => s.mostrar);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
@@ -43,9 +57,9 @@ export function PaginaUsuarios() {
   const [estado, setEstado] = useState('activas');
 
   const guardar = useMutation({
-    mutationFn: ({ nombre, correo, roles }: { nombre: string; correo: string; roles: RolAsignadoDto[] }) => {
+    mutationFn: ({ nombre, correo, roles, invitar }: { nombre: string; correo: string; roles: RolAsignadoDto[]; invitar: boolean }) => {
       if (edicion?.tipo === 'roles') return asignarRolesUsuario(edicion.usuario.id, { roles }, { empresa: null });
-      return crearUsuario({ nombre, correo, identificacion: null, roles, identidades: null }, { empresa: null, idempotencyKey: edicion?.clave });
+      return crearUsuario({ nombre, correo, identificacion: null, roles, identidades: null, invitar }, { empresa: null, idempotencyKey: edicion?.tipo === 'crear' ? edicion.clave : undefined });
     },
     onSuccess: () => {
       mostrar(edicion?.tipo === 'roles' ? t('usuarios.rolesGuardados') : t('usuarios.creado'));
@@ -65,6 +79,13 @@ export function PaginaUsuarios() {
       setPorDesactivar(null);
       return invalidarRuta(cliente, '/api/v1/usuarios');
     },
+  });
+
+  const reinvitar = useMutation({
+    mutationFn: (usuario: UsuarioDto) => invitarUsuario(usuario.id, { empresa: null }),
+    onSuccess: () => mostrar(t('accesoUsuario.invitada')),
+    onError: (error) => mostrar(mensajeDeError(error, t), 'error'),
+    onSettled: () => invalidarRuta(cliente, '/api/v1/usuarios'),
   });
 
   const codigoSistema = useMemo(() => new Map((sistemas.data ?? []).map((s) => [s.id, s.codigo])), [sistemas.data]);
@@ -127,6 +148,7 @@ export function PaginaUsuarios() {
                 <TableCell>{t('usuarios.columnas.persona')}</TableCell>
                 <TableCell>{t('usuarios.columnas.roles')}</TableCell>
                 <TableCell sx={{ width: 120 }}>{t('usuarios.columnas.entraDesde')}</TableCell>
+                {admiteDirecto && <TableCell sx={{ width: 130 }}>{t('usuariosIngreso.columnas.passkeys')}</TableCell>}
                 <TableCell sx={{ width: 170 }}>{t('usuarios.columnas.ultimoAcceso')}</TableCell>
                 <TableCell sx={{ width: 130 }}>{t('usuarios.columnas.estado')}</TableCell>
                 <TableCell sx={{ width: 48 }}>
@@ -137,10 +159,10 @@ export function PaginaUsuarios() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {consulta.isPending && <FilasEsqueleto columnas={6} alto={48} />}
+              {consulta.isPending && <FilasEsqueleto columnas={admiteDirecto ? 7 : 6} alto={48} />}
               {consulta.data && visibles.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ borderBottom: 0 }}>
+                  <TableCell colSpan={admiteDirecto ? 7 : 6} sx={{ borderBottom: 0 }}>
                     <EstadoVacio compacto titulo={consulta.data.length === 0 ? t('usuarios.vacio') : t('usuarios.sinCoincidencias')} />
                   </TableCell>
                 </TableRow>
@@ -179,6 +201,14 @@ export function PaginaUsuarios() {
                     )}
                   </TableCell>
                   <TableCell>{u.identidades.map((i) => codigoSistema.get(i.sistemaId) ?? '—').join(', ') || '—'}</TableCell>
+                  {admiteDirecto && (
+                    <TableCell>
+                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 13 }}>
+                        <KeyRound size={14} strokeWidth={1.75} aria-hidden />
+                        {(u.passkeys ?? 0) > 0 ? t('usuariosIngreso.passkeysCuenta', { count: u.passkeys ?? 0 }) : u.exigePasskey ? t('usuariosIngreso.exigida') : t('usuariosIngreso.sinPasskeys')}
+                      </Box>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Typography variant="monoTabla">{u.ultimoAcceso ? formatearFechaHora(u.ultimoAcceso) : t('usuarios.nunca')}</Typography>
                   </TableCell>
@@ -192,6 +222,12 @@ export function PaginaUsuarios() {
                         u.activo
                           ? [
                               { etiqueta: t('usuarios.editarRoles'), icono: Pencil, onClick: () => abrirRoles(u) },
+                              ...(admiteDirecto
+                                ? [
+                                    { etiqueta: t('accesoUsuario.menu'), icono: KeyRound, onClick: () => setEdicion({ tipo: 'acceso' as const, usuario: u }) },
+                                    { etiqueta: t('accesoUsuario.invitar'), icono: Mail, onClick: () => reinvitar.mutate(u) },
+                                  ]
+                                : []),
                               { etiqueta: t('comun.desactivar'), icono: UserX, destructiva: true, onClick: () => setPorDesactivar(u) },
                             ]
                           : []
@@ -218,18 +254,20 @@ export function PaginaUsuarios() {
         />
       )}
 
-      {edicion && (
+      {edicion && edicion.tipo !== 'acceso' && (
         <DrawerRoles
           key={edicion.tipo === 'roles' ? edicion.usuario.id : edicion.clave}
           usuario={edicion.tipo === 'roles' ? edicion.usuario : null}
           empresas={empresas}
           guardando={guardar.isPending}
           error={guardar.error}
+          puedeInvitar={admiteDirecto}
           onGuardar={(datos) => guardar.mutate(datos)}
           onDesactivar={edicion.tipo === 'roles' ? () => setPorDesactivar(edicion.usuario) : undefined}
           onCerrar={() => setEdicion(null)}
         />
       )}
+      {edicion?.tipo === 'acceso' && <DrawerAcceso key={edicion.usuario.id} usuario={edicion.usuario} onCerrar={() => setEdicion(null)} />}
     </>
   );
 }

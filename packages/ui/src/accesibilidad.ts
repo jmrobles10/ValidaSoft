@@ -12,3 +12,11 @@ export const visualmenteOculto = {
   clip: 'rect(0 0 0 0)',
   whiteSpace: 'nowrap',
 } as const;
+
+/**
+ * `ref` estable para enfocar un campo al montarlo (reemplaza `autoFocus`, que la regla de accesibilidad prohíbe): como la función
+ * no cambia entre renderizados, React la llama una sola vez, al insertar el nodo.
+ */
+export function enfocarNodo(nodo: HTMLElement | null): void {
+  nodo?.focus();
+}

@@ -303,15 +303,24 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
 /// </summary>
 public static class LimiteDePeticionesPublicas
 {
+    /// <summary>Rutas del ingreso directo: anónimas, con su propio límite por IP.</summary>
+    public const string RutaIngreso = "/api/v1/ingreso";
+
     public static IServiceCollection AgregarLimiteDePeticionesPublicas(this IServiceCollection servicios, IConfiguration configuracion)
     {
         var peticiones = Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:Peticiones", 60));
         var ventana = TimeSpan.FromSeconds(Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:VentanaSegundos", 60)));
+        // El ingreso directo (/api/v1/ingreso, ING-1) tiene su propio cupo por IP: 30 peticiones por minuto por omisión.
+        var peticionesIngreso = Math.Max(1, configuracion.GetValue("Validasoft:LimiteIngreso:Peticiones", 30));
+        var ventanaIngreso = TimeSpan.FromSeconds(Math.Max(1, configuracion.GetValue("Validasoft:LimiteIngreso:VentanaSegundos", 60)));
 
         return servicios.AddRateLimiter(opciones =>
         {
             opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
             {
+                if (http.Request.Path.StartsWithSegments(RutaIngreso, StringComparison.OrdinalIgnoreCase))
+                    return RateLimitPartition.GetFixedWindowLimiter("ingreso:" + (http.Connection.RemoteIpAddress?.ToString() ?? "desconocida"),
+                        _ => new FixedWindowRateLimiterOptions { PermitLimit = peticionesIngreso, Window = ventanaIngreso, QueueLimit = 0 });
                 if (!http.Request.Path.StartsWithSegments(ServiciosInfraestructura.RutaPublica, StringComparison.OrdinalIgnoreCase))
                     return RateLimitPartition.GetNoLimiter("sin-limite");
                 var ip = http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";

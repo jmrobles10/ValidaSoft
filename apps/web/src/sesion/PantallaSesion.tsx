@@ -1,31 +1,15 @@
-import { Box, Skeleton, Stack, Typography } from '@mui/material';
-import { EsqueletoFormulario, Isotipo, PaginaEstado } from '@validasoft/ui';
+import { Box, Button, Skeleton, Stack } from '@mui/material';
+import { EsqueletoFormulario, PaginaEstado } from '@validasoft/ui';
 import { Clock, Link2, LogOut, ShieldAlert } from 'lucide-react';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { IconoCarga } from '../shared/componentes';
+import { PantallaIngreso } from '../ingreso/PantallaIngreso';
+import { MarcoMinimo } from './MarcoMinimo';
+import { marcarFallo, renovarSesionDirecta } from './sesionDirecta';
 import type { EstadoSesion } from './sesionStore';
-
-// En el build de producción esta rama se elimina y el formulario (con la firma de aserciones) no se empaqueta.
-const FormularioSesionDev = import.meta.env.DEV ? lazy(() => import('./FormularioSesionDev').then((m) => ({ default: m.FormularioSesionDev }))) : null;
-
-/** Cabecera mínima (sin empresa ni secciones) mientras no hay sesión. */
-function MarcoMinimo({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
-  return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Box
-        component="header"
-        sx={{ display: 'flex', alignItems: 'center', gap: 1, height: (th) => th.densidad.cabeceraEmbebida, px: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
-      >
-        <Isotipo />
-        <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>
-          {t('app.nombre')}
-        </Typography>
-      </Box>
-      {children}
-    </Box>
-  );
-}
+import { useMutation } from '@tanstack/react-query';
+import { useSesion } from './sesionStore';
 
 /** Esperando la sesión: esqueleto con la forma de la pantalla y qué hacer si tarda. Nunca un spinner a pantalla completa. */
 function Esperando() {
@@ -47,24 +31,70 @@ function Esperando() {
   );
 }
 
-/** Lo que se ve mientras no hay una sesión válida. */
-export function PantallaSesion({ estado, embebida }: { estado: EstadoSesion; embebida: boolean }) {
+/** Buscando la sesión de la cookie al abrir la app: esqueleto con la forma de la tarjeta de ingreso. */
+function Restaurando() {
   const { t } = useTranslation();
+  return (
+    <MarcoMinimo>
+      <Box sx={{ display: 'flex', justifyContent: 'center', px: 2, pt: { xs: 4, sm: 10 } }}>
+        <EsqueletoFormulario campos={2} conTarjeta etiqueta={t('ingreso.restaurando')} sx={{ width: '100%', maxWidth: 420 }} />
+      </Box>
+    </MarcoMinimo>
+  );
+}
 
-  if (!embebida && FormularioSesionDev) {
-    return (
-      <Suspense fallback={<EsqueletoFormulario campos={3} conTarjeta sx={{ maxWidth: 420, mx: 'auto', mt: 4 }} />}>
-        <FormularioSesionDev vencida={estado === 'vencida'} />
-      </Suspense>
-    );
-  }
+/**
+ * El token de acceso venció mientras la persona usaba la app (la API respondió 401): se intenta renovar una vez con la cookie y, si ya no sirve, se
+ * muestra el ingreso con el motivo.
+ */
+function RenovandoSesion() {
+  const intentada = useRef(false);
+  useEffect(() => {
+    if (intentada.current) return;
+    intentada.current = true;
+    void renovarSesionDirecta().then((resultado) => {
+      if (resultado !== 'renovada') marcarFallo(resultado);
+    });
+  }, []);
+  return <Restaurando />;
+}
+
+/** La sesión quedó en pausa por inactividad: «Continuar» la reanuda mientras el servidor la siga aceptando. */
+function SesionInactiva() {
+  const { t } = useTranslation();
+  const continuar = useMutation({
+    mutationFn: renovarSesionDirecta,
+    onSuccess: (resultado) => {
+      if (resultado !== 'renovada') marcarFallo(resultado === 'sin-sesion' ? 'terminada' : resultado);
+    },
+  });
+  return (
+    <MarcoMinimo>
+      <PaginaEstado
+        icono={Clock}
+        titulo={t('ingreso.inactivaTitulo')}
+        texto={t('ingreso.inactivaTexto')}
+        rol="alert"
+        acciones={
+          <Button variant="contained" size="large" onClick={() => continuar.mutate()} disabled={continuar.isPending} startIcon={continuar.isPending ? <IconoCarga /> : undefined}>
+            {t('ingreso.continuarSesion')}
+          </Button>
+        }
+      />
+    </MarcoMinimo>
+  );
+}
+
+/** Lo que se ve mientras no hay una sesión válida. */
+export function PantallaSesion({ estado, embebida, restaurando = false }: { estado: EstadoSesion; embebida: boolean; restaurando?: boolean }) {
+  const { t } = useTranslation();
+  const sesion = useSesion((s) => s.sesion);
 
   if (!embebida) {
-    return (
-      <MarcoMinimo>
-        <PaginaEstado icono={Link2} titulo={t('sesion.soloEmbebidaTitulo')} texto={t('sesion.soloEmbebida')} />
-      </MarcoMinimo>
-    );
+    if (restaurando) return <Restaurando />;
+    if (estado === 'inactiva') return <SesionInactiva />;
+    if (estado === 'vencida' && sesion === null) return <RenovandoSesion />;
+    return <PantallaIngreso estado={estado} />;
   }
 
   return (

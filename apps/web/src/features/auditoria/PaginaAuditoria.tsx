@@ -53,7 +53,12 @@ export function PaginaAuditoria() {
 
   const conFiltros = hayFiltros(filtros);
   const limpiar = () => setParametros(tipo === TIPO_POR_DEFECTO ? new URLSearchParams() : new URLSearchParams({ tipo }), { replace: true });
-  const ayudaVacio = tipo === 'Acceso' ? t('auditoria.vacioAyudaAcceso', { empresa: empresa.nombre }) : t('auditoria.vacioAyudaConfiguracion', { empresa: empresa.nombre });
+  const ayudaVacio =
+    tipo === 'Acceso'
+      ? t('auditoria.vacioAyudaAcceso', { empresa: empresa.nombre })
+      : tipo === 'Identidad'
+        ? t('auditoria.vacioAyudaIdentidad')
+        : t('auditoria.vacioAyudaConfiguracion', { empresa: empresa.nombre });
   // La exportación lleva los filtros de la pantalla, sin la paginación (IF-4).
   const exportar = () =>
     descarga.mutate(

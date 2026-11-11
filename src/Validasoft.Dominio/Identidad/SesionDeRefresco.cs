@@ -139,21 +139,28 @@ public sealed class LimiteDeAccesoPorCorreo
     public const int Maximo = 3;
     public static readonly TimeSpan Ventana = TimeSpan.FromHours(1);
 
+    /// <summary>Códigos de ingreso directo por correo y hora (ING-1): más holgado que el enlace del tercero, que llega a su vínculo.</summary>
+    public const int MaximoDeIngreso = 5;
+
     public string Id { get; set; } = string.Empty;
 
     /// <summary>Envíos dentro de la ventana (los más viejos se descartan al registrar uno nuevo).</summary>
     public List<DateTimeOffset> Envios { get; set; } = [];
 
-    public static string IdDe(string correo) =>
-        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes((correo ?? string.Empty).Trim().ToLowerInvariant())));
+    /// <summary>Con <paramref name="uso"/> el contador es otro (p. ej. <c>ingreso</c>): el mismo correo tiene un cupo por cada uso.</summary>
+    public static string IdDe(string correo, string? uso = null) =>
+        Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes((uso is null ? string.Empty : uso + ":") + (correo ?? string.Empty).Trim().ToLowerInvariant())));
 
-    public static LimiteDeAccesoPorCorreo Nuevo(string correo) => new() { Id = IdDe(correo) };
+    public static LimiteDeAccesoPorCorreo Nuevo(string correo, string? uso = null) => new() { Id = IdDe(correo, uso) };
 
-    /// <summary>Registra un envío si cabe en la ventana; <c>false</c> si ya se enviaron <see cref="Maximo"/> en la última hora.</summary>
-    public bool IntentarRegistrar(DateTimeOffset ahora)
+    /// <summary>
+    /// Registra un envío si cabe en la ventana; <c>false</c> si ya se enviaron <paramref name="maximo"/> (por omisión
+    /// <see cref="Maximo"/>) en la última hora.
+    /// </summary>
+    public bool IntentarRegistrar(DateTimeOffset ahora, int maximo = Maximo)
     {
         Envios.RemoveAll(e => e <= ahora - Ventana);
-        if (Envios.Count >= Maximo)
+        if (Envios.Count >= maximo)
             return false;
 
         Envios.Add(ahora);

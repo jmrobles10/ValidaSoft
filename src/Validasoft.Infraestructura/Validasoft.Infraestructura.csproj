@@ -9,6 +9,8 @@
     <PackageReference Include="WolverineFx.Marten" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="MailKit" />
+    <!-- Passkeys (WebAuthn) del ingreso sin contraseñas (ING-2). -->
+    <PackageReference Include="Fido2" />
     <PackageReference Include="AWSSDK.S3" />
     <!-- QR de la URL de verificación en el PDF del certificado (CE-6). -->
     <PackageReference Include="QRCoder" />

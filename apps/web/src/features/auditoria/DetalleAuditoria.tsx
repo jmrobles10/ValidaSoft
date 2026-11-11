@@ -63,11 +63,29 @@ function DatosAcceso({ registro, empresaId }: { registro: RegistroAuditoriaDto; 
   );
 }
 
+/** Lo propio de un ingreso, una passkey o una sesión (ING-6): qué pasó, desde qué IP y con qué navegador. */
+function DatosIdentidad({ registro }: { registro: RegistroAuditoriaDto }) {
+  const { t } = useTranslation();
+  const noRegistrado = t('auditoria.detalle.noRegistrado');
+  return (
+    <RejillaDatos columnas={2}>
+      <Dato etiqueta={t('auditoria.detalle.queSePaso')} ancho>
+        {registro.detalle ?? t('auditoria.detalle.sinMotivo')}
+      </Dato>
+      <Dato etiqueta={t('auditoria.detalle.ip')}>{registro.ip ? <Mono>{registro.ip}</Mono> : noRegistrado}</Dato>
+      <Dato etiqueta={t('auditoria.detalle.navegador')} ancho>
+        {registro.userAgent ? <Mono>{registro.userAgent}</Mono> : noRegistrado}
+      </Dato>
+    </RejillaDatos>
+  );
+}
+
 /** Panel lateral con el detalle de un registro de auditoría. */
 export function DetalleAuditoria({ registro, empresaId, onCerrar }: { registro: RegistroAuditoriaDto; empresaId: string; onCerrar: () => void }) {
   const { t } = useTranslation();
   const entidad = textoEntidad(registro.entidad.tipo, t);
   const esAcceso = registro.tipo === 'Acceso';
+  const esIdentidad = registro.tipo === 'Identidad';
   return (
     <Drawer
       anchor="right"
@@ -105,6 +123,8 @@ export function DetalleAuditoria({ registro, empresaId, onCerrar }: { registro: 
 
         {esAcceso ? (
           <DatosAcceso registro={registro} empresaId={empresaId} />
+        ) : esIdentidad ? (
+          <DatosIdentidad registro={registro} />
         ) : (
           <Box component="section" aria-labelledby="titulo-cambios">
             <Typography id="titulo-cambios" variant="h5" component="h3" sx={{ mb: 1 }}>

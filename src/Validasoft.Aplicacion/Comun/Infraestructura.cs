@@ -73,6 +73,15 @@ public interface IEmisorDeSesiones
 
     /// <summary>Sesión de la consola de Plataforma para un operador ya verificado (PT-4): sin tenant, solo <c>plataforma:tenants</c>.</summary>
     Contratos.SesionUsuarioDto EmitirPlataforma(OperadorDePlataforma operador, DateTimeOffset ahora);
+
+    /// <summary>
+    /// Token de acceso de un usuario que entró directo (ING-1): los mismos reclamos que la sesión delegada (tenant, scopes efectivos de sus
+    /// roles, empresas) más la familia de su sesión y cómo se autenticó. Vence en minutos; se renueva con la cookie de refresco.
+    /// </summary>
+    Contratos.SesionUsuarioDto EmitirDeUsuario(Usuario usuario, Guid tenantId, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora);
+
+    /// <summary>Token de acceso de un operador de Plataforma de ingreso directo (ING-4): sin tenant, solo <c>plataforma:tenants</c>.</summary>
+    Contratos.SesionUsuarioDto EmitirDeOperador(OperadorDePlataforma operador, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora);
 }
 
 /// <summary>

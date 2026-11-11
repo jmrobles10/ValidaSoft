@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Identificaciones;
 
 namespace Validasoft.Dominio.Plataforma;
@@ -42,6 +43,28 @@ public sealed class Tenant
     [JsonIgnore]
     public bool EsSandbox => TenantDeProduccionId is not null;
 
+    /// <summary>
+    /// Cómo entran las personas del grupo (ING-1). Por omisión solo la identidad delegada del sistema integrado, como antes del
+    /// ingreso directo (los grupos existentes no cambian).
+    /// </summary>
+    public ModoDeIngreso ModosDeIngreso { get; set; } = ModoDeIngreso.Delegado;
+
+    /// <summary>Duración máxima (horas) de una sesión de ingreso directo; no se extiende al renovarla.</summary>
+    public int SesionHoras { get; set; } = SesionHorasPorDefecto;
+
+    /// <summary>Minutos sin renovar tras los cuales una sesión de ingreso directo se cierra.</summary>
+    public int InactividadMinutos { get; set; } = InactividadMinutosPorDefecto;
+
+    /// <summary>Todas las personas del grupo deben tener passkey, no solo los roles que la exigen (P-14-4).</summary>
+    public bool PasskeyParaTodos { get; set; }
+
+    public const int SesionHorasPorDefecto = 8;
+    public const int InactividadMinutosPorDefecto = 30;
+    public const int MinimoSesionHoras = 1;
+    public const int MaximoSesionHoras = 24;
+    public const int MinimoInactividadMinutos = 5;
+    public const int MaximoInactividadMinutos = 480;
+
     public string IdentificadorMarten => Id.ToString("N");
 
     /// <summary>
@@ -66,6 +89,26 @@ public sealed class Tenant
             TenantDeProduccionId = produccion.Id,
             CreadoEn = ahora
         };
+    }
+
+    /// <summary>
+    /// Política de ingreso del grupo: al menos un modo, sesión de 1 a 24 horas e inactividad de 5 a 480 minutos (sin pasar de la
+    /// duración de la sesión).
+    /// </summary>
+    public void FijarIngreso(ModoDeIngreso modos, int sesionHoras, int inactividadMinutos, bool passkeyParaTodos)
+    {
+        if (modos == ModoDeIngreso.Ninguno || (modos & ~(ModoDeIngreso.Delegado | ModoDeIngreso.Directo)) != 0)
+            throw ReglaDeNegocioException.Validacion("modos-de-ingreso-invalidos", "Elige al menos un modo de ingreso: Delegado, Directo o ambos.");
+        if (sesionHoras is < MinimoSesionHoras or > MaximoSesionHoras)
+            throw ReglaDeNegocioException.Validacion("sesion-invalida", $"La sesión dura entre {MinimoSesionHoras} y {MaximoSesionHoras} horas.");
+        if (inactividadMinutos is < MinimoInactividadMinutos or > MaximoInactividadMinutos || inactividadMinutos > sesionHoras * 60)
+            throw ReglaDeNegocioException.Validacion("inactividad-invalida",
+                $"El cierre por inactividad va de {MinimoInactividadMinutos} a {MaximoInactividadMinutos} minutos y no puede superar la duración de la sesión.");
+
+        ModosDeIngreso = modos;
+        SesionHoras = sesionHoras;
+        InactividadMinutos = inactividadMinutos;
+        PasskeyParaTodos = passkeyParaTodos;
     }
 
     public static Tenant Crear(string slug, string nombre, string? region, string? zonaHoraria, DateTimeOffset ahora)

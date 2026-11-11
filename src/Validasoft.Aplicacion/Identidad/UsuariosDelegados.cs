@@ -64,8 +64,10 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, IEntornos 
             AsegurarActivo(usuario);
             var antes = usuario.ADto();
             var cambioDatos = await ActualizarDatosAsync(sesion, usuario, nombre, correo, ct);
+            var completarGrupo = usuario.TenantId is null;
+            usuario.TenantId ??= contexto.TenantId;
             var registrarAcceso = usuario.UltimoAcceso is null || ahora - usuario.UltimoAcceso >= IntervaloUltimoAcceso;
-            if (!cambioDatos && !registrarAcceso)
+            if (!cambioDatos && !registrarAcceso && !completarGrupo)
                 return usuario;
 
             usuario.UltimoAcceso = ahora;
@@ -83,6 +85,7 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, IEntornos 
             AsegurarActivo(porCorreo);
             var antes = porCorreo.ADto();
             porCorreo.EnlazarIdentidad(sistema.Id, asercion.IdExterno);
+            porCorreo.TenantId ??= contexto.TenantId;
             porCorreo.Nombre = string.IsNullOrWhiteSpace(nombre) ? porCorreo.Nombre : nombre;
             porCorreo.UltimoAcceso = ahora;
             usuario = porCorreo;
@@ -90,7 +93,7 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, IEntornos 
         }
         else
         {
-            usuario = Usuario.CrearDesdeSistema(sistema.Id, asercion.IdExterno, nombre, correo, ahora);
+            usuario = Usuario.CrearDesdeSistema(sistema.Id, asercion.IdExterno, nombre, correo, ahora, contexto.TenantId);
 
             // En el sandbox (SB-3) quien llega por identidad delegada nace administrador del grupo de pruebas: no hay a quién pedirle los
             // roles. El permiso efectivo sigue siendo la intersección con los scopes de la llave, así que la llave lo acota.

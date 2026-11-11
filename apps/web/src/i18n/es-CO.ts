@@ -9,6 +9,7 @@ import { fichaMaestra } from './es-CO-ficha';
 import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { informes } from './es-CO-informes';
+import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
@@ -56,6 +57,8 @@ export const esCO = {
     'accesos-soporte': 'Accesos de soporte',
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
+    ingreso: 'Ingreso',
+    'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
     mas: 'Más',
@@ -304,6 +307,13 @@ export const esCO = {
   tiposVinculo,
   certificados: { ...certificados, lista: certificadosLista },
   cuentas,
+  ingreso,
+  cuenta,
+  ingresoGrupo,
+  accesoUsuario,
+  usuariosIngreso,
+  operadores,
+  ingresoPlataforma,
   terceros,
   fichaMaestra,
   fichaEmpresa,
@@ -650,6 +660,7 @@ export const esCO = {
     ...erroresVigencias,
     ...erroresCruce,
     ...erroresRecordatorios,
+    ...erroresIngreso,
   },
 } as const;
 

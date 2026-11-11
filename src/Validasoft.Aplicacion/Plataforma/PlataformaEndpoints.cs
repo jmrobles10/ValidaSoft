@@ -13,6 +13,7 @@ using Validasoft.Dominio.Ia;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Identificaciones;
 using Validasoft.Dominio.Plataforma;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Plataforma;
@@ -31,10 +32,13 @@ public static class TenantsEndpoints
     [WolverinePost("/api/v1/plataforma/tenants")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
     public static async Task<IResult> Crear(CrearTenantDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves, IContextoSolicitud contexto,
-        OrigenesDeEmbebido embebido, TimeProvider reloj, CancellationToken ct)
+        OrigenesDeEmbebido embebido, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         var tenant = Tenant.Crear(dto.Slug, dto.Nombre, dto.Region, dto.ZonaHoraria, ahora);
+        // Cómo entran las personas del grupo (ING-1): por omisión solo la identidad delegada, como antes del ingreso directo.
+        if (dto.Ingreso is { } ingreso)
+            tenant.FijarIngreso(Mapeos.ModosADominio(ingreso.Modos), ingreso.SesionHoras, ingreso.InactividadMinutos, ingreso.PasskeyParaTodos);
         if (dto.Administrador?.IdExterno is { Length: > 0 } && dto.Sistema is null)
             throw ReglaDeNegocioException.Validacion("sistema-requerido",
                 "El id externo del administrador es su usuario en el sistema integrado: envía también el sistema, o quita el id externo.");
@@ -54,7 +58,7 @@ public static class TenantsEndpoints
         Usuario? administrador = null;
         if (dto.Administrador is { } datosAdmin)
         {
-            administrador = Usuario.Crear(datosAdmin.Nombre, datosAdmin.Correo, null, ahora);
+            administrador = Usuario.Crear(datosAdmin.Nombre, datosAdmin.Correo, null, ahora, tenant.Id);
             administrador.AsignarRoles([new RolAsignado(Rol.Administrador, null)]);
             if (datosAdmin.IdExterno is { Length: > 0 } sub && sistema is not null)
                 administrador.EnlazarIdentidad(sistema.Id, sub.Trim());
@@ -66,7 +70,7 @@ public static class TenantsEndpoints
                 throw ReglaDeNegocioException.Conflicto("slug-duplicado", $"Ya existe un tenant con el slug '{tenant.Slug}'.");
         }
 
-        await using var sesion = sesiones.ParaTenant(tenant.Id);
+        await using var sesion = sesiones.ParaTenant(tenant.Id, mensajes);
         sesion.Store(tenant);
         Auditoria.Registrar(sesion, contexto, "Tenant", tenant.Id.ToString(), AccionConfiguracion.Creado, null, tenant.ADto(), ahora);
 
@@ -113,6 +117,10 @@ public static class TenantsEndpoints
                 var clave = IndiceIdentidadExterna.Clave(identidad.SistemaId, identidad.IdExterno);
                 sesion.Insert(new IndiceIdentidadExterna { Id = clave, UsuarioId = administrador.Id });
             }
+
+            // Con el modo directo, el administrador recibe el correo para entrar con el suyo (ING-5).
+            if (tenant.ModosDeIngreso.HasFlag(ModoDeIngreso.Directo))
+                await InvitacionesDeUsuarios.EnviarAsync(mensajes, protector, tenant, administrador, ahora);
 
             sesion.Store(administrador);
             Auditoria.Registrar(sesion, contexto, "Usuario", administrador.Id.ToString(), AccionConfiguracion.Creado, null, administrador.ADto(), ahora);
