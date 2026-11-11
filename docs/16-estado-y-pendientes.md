@@ -72,6 +72,7 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 | `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones** que se abre en el primer aviso (**pre-vencimiento**); plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. **Terminada y verificada; falta su PR.** Registro VV- (sección «5-unquadragies») |
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | **Terminada, con la verificación completa (§4.10).** Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
 | `feature/integracion-abierta` | Principio de producto | **Integración abierta (IO-1…IO-10).** El núcleo no nombra ni asume el SRM, el Portal ni AyF: importador genérico con adaptador de origen (el Portal es un adaptador opcional), referencias externas por sistema (tercero y vínculo, idempotentes y privadas de cada tenant), contactos por empresa (nombre, cargo, correo, teléfono, rol), datos de pago genéricos (banco del catálogo con código de compensación y SWIFT, contacto de pagos, lugar de expedición, `ExentoReteCree`) y embebido genérico del tercero (`POST /sesiones-tercero`, `/embed/:componente`, `montarEmbebido`). Guía «integrar un sistema nuevo en 5 pasos» y contrato del interruptor en [integracion.md](integracion.md) §1.1 y §8.1 y en [08](08-integracion-y-migracion.md) §3.4; auditoría de acoplamiento en §9 |
+| `feature/cumplimiento-h7` | H7 completo | **Terminada, a la espera de su PR (§4.4).** Matriz de riesgo, archivos del oficial, consulta de listas por fuera, rechazo directo, expiración por cambio de personas, correo de cierre, claves por grupo, Infolaft configurable, informe SAGRILAFT completo y revisión automática con IA con su bandeja `/excepciones`. Registro CU- |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
 ### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
@@ -199,21 +200,51 @@ al cambio se indexan con su próximo evento (o reconstruyendo la proyección del
 - Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.
 - La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.
 - Tras F5:
-  - la revisión automática de H7 aún no usa el cruce;
+  - la revisión automática de H7 ya usa el cruce (CU-19);
   - la certificación bancaria no está en el mapa de respaldo;
   - una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15);
   - la cédula respalda solo la General.
 
-### 4.4 H7 — pendientes
-- Revisión automática con IA (motor de decisión, excepciones, presupuesto y revisión humana) y la cola `/excepciones`.
-- Expirar las verificaciones al cambiar el representante.
-- Evidencia manual: subir el PDF de una consulta hecha por fuera y que el oficial adjunte archivos al estudio.
-- Matriz de riesgo.
-- Cifrar las credenciales con una clave por tenant (hoy usan la de la instalación).
-- Si el cierre lo provoca el procesador, al tercero no le llega el correo de resultado.
-- **Infolaft:**
-  - confirmar el formato de la respuesta, la búsqueda por documento y si hay PDF por API;
-  - pedir un usuario de pruebas;
+### 4.4 H7 — cumplimiento completo (rama `feature/cumplimiento-h7`, decisiones CU-1..CU-22)
+
+Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revisado solo en lectura: `BackEnd/SRM.Services.Proveedores/OficialCumplimiento`, `Integraciones/ApiSagrilaft`, `Frontend/React/src/pages/Provedores/OficialCumplimiento`):
+
+| Lo que el oficial hace en el SRM | En Validasoft |
+|---|---|
+| Bandeja por estado (pendiente, aprobado, rechazado, vencido) con filtros por proveedor y riesgo | Bandeja del oficial y, en el informe SAGRILAFT, una fila por tercero con filtros por estado y nivel. **Cubierto** (CU-12) |
+| Estadísticas: tiempos, % de cumplimiento, pendientes y vencidas | Tablero y tiempos del informe. **Cubierto** (CU-12) |
+| Iniciar el estudio (botón, automático o migración por Excel) | Automático al pasar a revisión según el flujo. **Cubierto**; la migración por Excel queda para H10 |
+| Consultar listas (un proveedor por constructora, el resultado es un PDF) | Proveedor por empresa con evidencia PDF y respuesta cruda con hash, cuota y reconsulta. **Mejorado** (VE-7..VE-11) y consulta hecha por fuera con su PDF (CU-6) |
+| Registrar coincidencias y descartar (texto libre) | Coincidencias estructuradas con decisión, justificación y vigencia. **Mejorado** (VE-17) |
+| Estudio: riesgo 1–3, conflicto de interés, debida diligencia, observaciones, vigencia | Estudio VE-9 y **matriz de riesgo** (el SRM no tiene: allí el nivel es una estrella a mano) (CU-2..CU-4) |
+| Adjuntar evidencias | Archivos del estudio, sin pisarse entre proveedores (CU-5) |
+| Aprobar | El estudio favorable satisface; el expediente cierra solo. **Cubierto** |
+| Rechazar (`RechazoOficial`, estado −11) | Rechazo directo ante un hallazgo, con motivos y justificación (CU-7) |
+| Bloquear o desbloquear | No es del oficial en el SRM; aquí el rol puede bloquear el vínculo. **Mejorado** |
+| Reintegrar un estudio vencido | El estudio expirado vuelve solo a la bandeja. **Cubierto** |
+| Informes: tablero, informe general y Excel (con información legal, PEP y beneficiario final) | Informe SAGRILAFT completo y Excel de tres hojas (CU-12) |
+| Alertas y recordatorios | Avisos de coincidencia, estudio pendiente y expiración (VE-13); el aviso previo a la próxima revisión queda pendiente (CU-22) |
+| Monitoreo periódico (solo recalcula estados; nunca vuelve a consultar) | Reconsulta periódica automática de los vínculos activos (VE-12) y expiración al cambiar las personas (CU-8). **Mejorado** |
+| PEP (banderas leídas del Portal) | PEP consultado en listas y factor automático de la matriz. **Mejorado** |
+| Cualquier usuario con sesión decide | Permisos, miembro del área, conflicto de intereses y separación de funciones. **Mejorado** |
+
+**Qué se agregó:**
+- Matriz de riesgo configurable por empresa (factores, pesos, pisos, niveles y debida diligencia simplificada, ordinaria o intensificada con su periodicidad).
+- Archivos del oficial y consulta de listas hecha por fuera.
+- Rechazo directo del oficial. **Decisión abierta 3, resuelta:** sí puede, solo ante un hallazgo (CU-7).
+- Expirar las listas al cambiar las personas relacionadas.
+- Correo de resultado al tercero también cuando cierra un procesador.
+- Credenciales de los proveedores de listas con una clave por grupo.
+- Adaptador de Infolaft configurable y listo para su respuesta real.
+- Informe SAGRILAFT completo.
+- **Revisión automática con IA** (CU-13..CU-21): niveles Manual, Asistido y Automático, excepciones, tope mensual, muestreo y revisión humana, uso del cruce ficha↔documento de F5, y la bandeja `/excepciones`.
+
+**Pendiente de H7:**
+- Aviso previo a la próxima revisión de un tercero activo y renovación del estudio sin abrir un expediente.
+- Medir la precisión del modo Automático con documentos reales (IA-7).
+- **Infolaft** (lo que falta confirmar está en [15 §5](15-infolaft.md)):
+  - formato de la respuesta, búsqueda por documento y si entrega PDF;
+  - un usuario de pruebas;
   - rotar la credencial expuesta en ADPRO ([15 §2](15-infolaft.md)).
 
 ### 4.5 H9 — pendientes
@@ -330,7 +361,7 @@ Pendiente:
 1. 2FA: ¿en Validasoft o en el sistema integrador? (§4.6)
 2. Infolaft: ¿proveedor único para los clientes de Sinco o uno por cliente? ¿Se usa desde el SRM durante la
    coexistencia? ([15](15-infolaft.md))
-3. ¿El oficial de cumplimiento puede rechazar el expediente directamente? (§4.4)
+3. ~~¿El oficial de cumplimiento puede rechazar el expediente directamente?~~ Resuelta en CU-7: sí, solo ante un hallazgo (§4.4).
 4. Señal entre empresas: hoy el bloqueo o rechazo de una empresa es privado y no se ve en otra. ¿Debe compartirse
    algún hecho grave (p. ej. una coincidencia confirmada en listas restrictivas) sin revelar quién decidió?
 5. Integración con el SRM (§3.2): cuándo se sube la rama, quién aporta la cuenta de servicio de AyF, y cómo se

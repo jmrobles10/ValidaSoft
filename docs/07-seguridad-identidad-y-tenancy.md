@@ -304,10 +304,12 @@ openssl rand -base64 32
 
 Se entrega como secreto de configuración: `VALIDASOFT__SECRETOS__CLAVEMAESTRA` (o `Validasoft__Secretos__ClaveMaestra`), archivo `_FILE` o Key Vault. Sin una clave válida la API **no arranca** (mensaje con el motivo, nunca con la clave). En desarrollo hay una de solo desarrollo en `appsettings.Development.json` y en `infra/compose/compose.yaml`: no hace falta configurar nada.
 
+**Una clave por grupo (CU-10).** Las credenciales de los proveedores de listas restrictivas de cada empresa se cifran con una clave **derivada** de la maestra vigente con el id del grupo (HKDF-SHA256, formato `vs2.{kid}.{cuerpo}`, el grupo va en los datos asociados): copiar el texto cifrado a otro grupo no lo abre. Lo guardado antes con la clave de la instalación se sigue leyendo y el re-cifrado (tipo `credenciales-listas`) lo pasa a la del grupo. Al rotar la maestra, las de los grupos se rotan con ella.
+
 **Rotarla:**
 
 1. Genera la nueva y pon la actual en `Validasoft:Secretos:ClavesAnteriores` (arreglo; solo descifra): `ClaveMaestra = nueva`, `ClavesAnteriores:0 = actual`. Despliega todas las réplicas con esa configuración.
-2. En la consola de Plataforma › Secretos (o `POST /api/v1/plataforma/secretos/recifrar`) re-cifra con la vigente las llaves de OpenAI, los secretos de webhook y los números de cuenta. Es idempotente; lo que quede con «Ilegibles» es porque su clave no está configurada.
+2. En la consola de Plataforma › Secretos (o `POST /api/v1/plataforma/secretos/recifrar`) re-cifra con la vigente las llaves de OpenAI, los secretos de webhook, los números de cuenta y las credenciales de los proveedores de listas (con la clave de su grupo). Es idempotente; lo que quede con «Ilegibles» es porque su clave no está configurada.
 3. Espera a que se vacíe el outbox de correo (los sobres viven minutos) y revisa `GET /api/v1/plataforma/secretos`: «Por re-cifrar» en cero.
 4. Mantén la anterior en `ClavesAnteriores` mientras existan **copias congeladas en eventos** con ella: la cuenta designada de un vínculo (`CuentaParaDesignar.NumeroProtegido`) no se reescribe porque los eventos son inmutables. Quitarla deja esas copias ilegibles para siempre.
 
