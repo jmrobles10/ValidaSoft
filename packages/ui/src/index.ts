@@ -18,3 +18,5 @@ export * from './LineaDeTiempo';
 export * from './PaginacionCursor';
 export * from './TablaConCursor';
 export * from './usePaginacionCursor';
+export * from './esqueletos';
+export * from './disposicion';
