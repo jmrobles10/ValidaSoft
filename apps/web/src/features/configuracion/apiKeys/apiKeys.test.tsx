@@ -86,7 +86,7 @@ describe('permisos de una API key', () => {
     expect(resumen.todos).toBe(false);
     expect(resumen.grupos).toEqual([
       { grupo: 'vinculos', cuantos: 2, total: 6 },
-      { grupo: 'integracion', cuantos: 1, total: 4 },
+      { grupo: 'integracion', cuantos: 1, total: 5 },
     ]);
     expect(resumen.desconocidos).toEqual(['nuevo:scope']);
   });
