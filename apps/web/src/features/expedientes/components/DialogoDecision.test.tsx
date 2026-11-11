@@ -229,10 +229,13 @@ describe('DialogoDecision: desaprobar (DS-1, DS-2)', () => {
   });
 
   /** El cuerpo y la ruta de la decisión (el POST), no las lecturas. */
-  const posts = (fetch: ReturnType<typeof vi.fn>) =>
+  const posts = (fetch: { mock: { calls: readonly (readonly [RequestInfo | URL, RequestInit?])[] } }) =>
     fetch.mock.calls
-      .filter(([, init]: [unknown, RequestInit | undefined]) => init?.method === 'POST')
-      .map(([url, init]: [unknown, RequestInit | undefined]) => ({ url: String(url), cuerpo: (typeof init?.body === 'string' ? JSON.parse(init.body) : null) as unknown }));
+      .filter(([, init]) => init?.method === 'POST')
+      .map(([url, init]) => ({
+        url: typeof url === 'string' ? url : url instanceof URL ? url.href : url.url,
+        cuerpo: (typeof init?.body === 'string' ? JSON.parse(init.body) : null) as unknown,
+      }));
 
   it('reabrir una etapa exige la justificación y la envía a la etapa elegida', async () => {
     const usuario = userEvent.setup();

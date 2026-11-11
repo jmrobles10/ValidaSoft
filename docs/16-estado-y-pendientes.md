@@ -70,7 +70,7 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 | Rama | Huecos | Contenido |
 |---|---|---|
 | `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones**; plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. Registro VV- |
-| `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
+| `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | **Terminada, con la verificación completa (§4.10).** Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
@@ -111,10 +111,13 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
 **Huecos** (los numerados están en curso, §3):
 1. **Aplicación en AyF:** en espera (§3.2).
 2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** en curso.
-3. **Desaprobar una etapa ya aprobada o volver a la fase inicial:** en curso.
+3. **Desaprobar una etapa ya aprobada o volver a la fase inicial:** resuelto en `feature/desaprobar-y-reintegrar`
+   (§4.10), a la espera de su PR.
 4. **Campana del tercero y recordatorio de observaciones:** en curso.
 5. **Plazo de revalidación configurable:** en curso.
-6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** en curso.
+6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** el desbloqueo sigue en curso
+   (`feature/vigencia-vinculo`); reintegrar sin revalidar y el reinicio tras un rechazo están resueltos en
+   `feature/desaprobar-y-reintegrar` (§4.10).
 
 ### 4.2 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre
@@ -190,6 +193,26 @@ La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del pro
 - **IA con el proveedor simulado:** cupo agotado y escalamiento.
 - **Aprobación de revalidaciones en lote** y eximir un requisito.
 - **Verificaciones:** coincidencia confirmada (rechazo), estudio vencido y monitoreo.
+
+### 4.10 Desaprobar, reintegrar sin revalidar y reinicio tras un rechazo (DS) — terminado en `feature/desaprobar-y-reintegrar`
+Cierra tres huecos frente al SRM (decisiones DS-1..DS-10 del [registro](decisiones/registro.md)):
+- **Desaprobar:** reabrir una etapa ya aprobada, volver a la fase inicial y desaprobar un expediente aprobado (el mismo
+  expediente vuelve a revisión, el vínculo a `EnValidacion` y el certificado se revoca; al aprobarse de nuevo sale la
+  emisión siguiente). Solo administradores, con justificación y con los veredictos revertidos en el historial.
+- **Reintegrar sin revalidar** (`documental = 0` del SRM) solo si lo aprobado sigue vigente; si no, la pantalla explica
+  por qué. Reintegrar revalidando ahora abre la renovación que el diseño prometía.
+- **Reinicio tras un rechazo:** el flujo permite (con días de espera) que el tercero vea los motivos y vuelva a
+  postularse; la empresa reabre cuando quiera desde el vínculo.
+- E2E nuevos de esta zona: anular veredicto, desvincular, reintegrar con y sin revalidar, anular expediente y vínculo,
+  varias etapas en secuencia, dos aprobadores y separación de funciones.
+
+Pendiente:
+- Correo y campana al tercero por una desaprobación o un reintegro (hoy solo se publican `expediente.desaprobado` y
+  `vinculo.reintegrado`).
+- El reintegro sin revalidar no compara contra requisitos que el flujo agregó después de aprobar.
+- La política de reintento se lee del flujo vigente del vínculo, no de la versión que rechazó, y no limita cuántas veces.
+- «Reintegrar sin revalidar» de un vínculo desvinculado antes de este cambio no tiene `EstadoAlDesvincular` guardado:
+  se trata como «no se sabe» y se pide revalidar.
 
 ## 5. Clave de OpenAI por empresa (lista para cargar)
 

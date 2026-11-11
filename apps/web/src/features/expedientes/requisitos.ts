@@ -132,6 +132,7 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
     for (const c of v.coincidencias) if (c.resueltaPor !== 'sistema') agregar(c.resueltaPor);
   }
   agregar(expediente.rechazo?.usuario);
+  agregar(expediente.ultimaDesaprobacion?.usuario);
   return [...ids].sort();
 }
 

@@ -443,6 +443,20 @@ Hacia atrás: cualquier atributo nuevo del tercero (H2) debe exponerse en el con
 - E2E Playwright (escenario **(a)+(b)+(c)**): solicitar (la bandeja muestra "cubriría 3 de 7") → correo en Mailpit → tercero canjea enlace, acepta la invitación y los consentimientos → la empresa ve ahora los 3 requisitos cubiertos desde la bóveda → sube RUT (fixture) → bandeja de Legal muestra "Pendiente" por SSE → Legal observa con motivo → tercero sube v2 → timeline muestra `VeredictosInvalidadosPorNuevaVersion` → todas las áreas aprueban → `ExpedienteAprobado`.
 - E2E: SLA de 1 minuto (reloj simulado) escala al responsable y luego al administrador sin auto-aprobar.
 
+#### 2.4.10-bis Desaprobar, reintegrar sin revalidar y reinicio tras un rechazo (DS, 2026-11-10)
+
+Paridad con el SRM (`DesaprobarTercero`, `DesaprobarAFlujo`, `DesaprobarAEstadoInicial`, `reintegrarProveedor` con `documental` 0/1). Decisiones DS-1…DS-10 del [registro](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Evento | `EtapaReabierta`, `ExpedienteDesaprobado` (stream `Expediente`); `VinculoDesaprobado`, `VinculoReintegrado(SinRevalidar)` (stream `Vinculo`); `VeredictoRegistrado.Revertido`; `Expediente.Desaprobaciones/UltimaDesaprobacion`; `Vinculo.EstadoAlDesvincular` | 03 §5.3, §6.3 |
+| Endpoint | `POST /expedientes/{id}/etapas/{orden}/reabrir`, `/fase-inicial`, `/desaprobar`; `GET /expedientes?desaprobados=`; `POST /vinculos/{id}/reintegrar` (`revalidar`), `GET /vinculos/{id}/reintegro`; `POST /public/v1/vinculos/{id}/reintentar` | 05 §2.4.3 |
+| Evento público | `expediente.desaprobado`, `vinculo.reintegrado` (y `certificado.revocado` al desaprobar un aprobado) | 05 §7 |
+| Regla | Justificación obligatoria; `expedientes:administrar`; desaprobar un aprobado ⇒ vínculo `EnValidacion` + certificado revocado + secciones aceptadas retiradas, en la misma transacción; solo el último aprobado del vínculo | 03 §5.3, §6.3 |
+| Configuración | `FlujoVersion.Reintento { Permitido, DiasEspera }` (editor de flujos «Después de un rechazo»; por omisión no permitido) | 03 §13 |
+| Pantalla | Web: detalle del expediente («Reabrir» por etapa, «Volver a la fase inicial», «Desaprobar expediente»), bandeja («Reabierto por un administrador»), reintegrar con revalidar o sin revalidar, editor de flujos. Tercero: rechazo con motivos y «Volver a postularme» en «Mis empresas» | 06 §3 |
+| Prueba | Dominio: `DesaprobacionTests`, `RequisitosExpedienteTests.Desaprobacion`, `ReintentoTrasRechazoTests`. Integración: `ExpedientesApiTests.Desaprobacion` (12 casos). Vitest: `desaprobacion.test.ts`, `DialogoDecision`, `DialogoAccion`, `reintento.test.ts`, `AvisoRechazo.test.tsx`. E2E: `desaprobacion`, `reintegro`, `ciclo-vinculo`, `secuencia` y `reintento` (`.spec.ts`) | — |
+
 #### 2.4.11 Efectos
 Hacia atrás: `BovedaTercero` (H2) incorpora `porEmpresa[]`; `FlujosResumen` (H3) obtiene `expedientesActivos`. Hacia adelante: `VersionAceptadaRegistrada` alimenta `VencimientoProgramado` (H6) y `EstadoCertificacionTercero` (H5/H9); el catálogo de eventos de expediente queda congelado como v1 en H5.
 

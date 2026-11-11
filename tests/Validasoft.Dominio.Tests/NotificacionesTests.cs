@@ -54,6 +54,7 @@ public class NotificacionesTests
             { new VinculoDesbloqueado(EstadoVinculo.Activo, "Levantada", Ahora), "vinculo.desbloqueado", VinculoId },
             { new VinculoDesvinculado(EstadoVinculo.Activo, "Fin del contrato", Ahora), "vinculo.desvinculado", VinculoId },
             { new VinculoAnulado(EstadoVinculo.Invitado, "Error de captura", Ahora), "vinculo.anulado", VinculoId },
+            { new VinculoReintegrado(EstadoVinculo.Activo, "Se renovó el contrato", Ahora, true), "vinculo.reintegrado", VinculoId },
             { new ReferenciaExternaAgregada("MARCO", "M-9", Ahora), "vinculo.referencia_agregada", VinculoId },
             { new ExpedienteAbierto(ExpedienteId, EmpresaId, VinculoId, TipoExpediente.Inicial, "NORTE-E-2026-000001", TerceroId, "Aceros del Norte",
                 "CO|NIT|900123456", TipoVinculoId, "PROVEEDOR", "Proveedor", new ActorDeExpediente(ActorTipo.Usuario, Revisor), [Revisor], Ahora),
@@ -63,6 +64,8 @@ public class NotificacionesTests
             { new ExpedienteObservado([Guid.NewGuid()], Ahora, [RequisitoId]), "expediente.observado", ExpedienteId },
             { new ExpedienteReenviado(OrigenReenvio.Tercero, "Adjunto el RUT", [Guid.NewGuid()], Ahora, [RequisitoId]), "expediente.reenviado", ExpedienteId },
             { new ExpedienteAprobado(Ahora), "expediente.aprobado", ExpedienteId },
+            { new ExpedienteDesaprobado(2, false, Revisor, "Apareció una inhabilidad.", Ahora), "expediente.desaprobado", ExpedienteId },
+            { new EtapaReabierta(1, true, Revisor, "Empezar de cero.", Ahora), "expediente.desaprobado", ExpedienteId },
             { new ExpedienteRechazado(Guid.NewGuid(), Revisor, [motivo], "Aparece en listas.", Ahora), "expediente.rechazado", ExpedienteId },
             { new VersionCompartida(2, Tenant, EmpresaId, VinculoId, OrigenComparticion.AlAceptarInvitacion, Ahora), "documento.compartido", DocumentoId },
             { new VencimientoAvisado(2, VinculoId, new DateOnly(2026, 12, 8), 30, Ahora), "documento.por_vencer", DocumentoId },
@@ -113,6 +116,23 @@ public class NotificacionesTests
         datosRechazo.Estado.ShouldBe("Rechazado");
         datosRechazo.Motivos!.ShouldHaveSingleItem().Codigo.ShouldBe("listas");
         datosRechazo.Justificacion.ShouldBe("Coincidencia confirmada.");
+
+        // Desaprobar (DS-1, DS-2): la causa dice hasta dónde se devolvió; nunca quién lo hizo.
+        var desaprobado = await mapeador.MapearAsync(Evento(new ExpedienteDesaprobado(2, false, Revisor, "Apareció una inhabilidad.", Ahora), ExpedienteId),
+            contexto, CancellationToken.None);
+        var datosDesaprobado = (Contratos.DatosExpedienteDto)desaprobado!.Datos;
+        datosDesaprobado.Estado.ShouldBe("EnRevision");
+        datosDesaprobado.Causa.ShouldBe("ExpedienteAprobado");
+        datosDesaprobado.Etapa.ShouldBe(2);
+        datosDesaprobado.Justificacion.ShouldBe("Apareció una inhabilidad.");
+        var reabierta = await mapeador.MapearAsync(Evento(new EtapaReabierta(1, true, Revisor, "Empezar de cero.", Ahora), ExpedienteId), contexto, CancellationToken.None);
+        ((Contratos.DatosExpedienteDto)reabierta!.Datos).Causa.ShouldBe("FaseInicial");
+
+        var reintegrado = await mapeador.MapearAsync(Evento(new VinculoReintegrado(EstadoVinculo.Activo, "Se renovó el contrato", Ahora, true), VinculoId),
+            contexto, CancellationToken.None);
+        var datosReintegro = (Contratos.DatosEstadoVinculoDto)reintegrado!.Datos;
+        datosReintegro.Estado.ShouldBe("Activo");
+        datosReintegro.EstadoAnterior.ShouldBe("Desvinculado");
 
         var observado = await mapeador.MapearAsync(Evento(new ExpedienteObservado([], Ahora, [RequisitoId]), ExpedienteId), contexto, CancellationToken.None);
         ((Contratos.DatosExpedienteDto)observado!.Datos).Requisitos!.ShouldHaveSingleItem().Codigo.ShouldBe("RUT");
