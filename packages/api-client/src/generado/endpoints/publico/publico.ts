@@ -45,6 +45,7 @@ import type {
   ExpedientePublicoDto,
   GuardarSeccionDto,
   GuardarSeccionFichaParams,
+  IResult,
   IniciarCargaDto,
   InvitacionAceptadaDto,
   InvitacionPublicaDto,
@@ -716,7 +717,92 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getActualizarPreferenciasNotificacionTerceroMutationOptions(options), queryClient);
     }
-    export const canjearEnlace = (
+    export const streamNotificacionesTercero = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<IResult>(
+      {url: `/public/v1/notificaciones/stream`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getStreamNotificacionesTerceroQueryKey = () => {
+    return [
+    `/public/v1/notificaciones/stream`
+    ] as const;
+    }
+
+
+export const getStreamNotificacionesTerceroQueryOptions = <TData = Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStreamNotificacionesTerceroQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof streamNotificacionesTercero>>> = ({ signal }) => streamNotificacionesTercero(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StreamNotificacionesTerceroQueryResult = NonNullable<Awaited<ReturnType<typeof streamNotificacionesTercero>>>
+export type StreamNotificacionesTerceroQueryError = ErrorType<void>
+
+
+export function useStreamNotificacionesTercero<TData = Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamNotificacionesTercero>>,
+          TError,
+          Awaited<ReturnType<typeof streamNotificacionesTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamNotificacionesTercero<TData = Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamNotificacionesTercero>>,
+          TError,
+          Awaited<ReturnType<typeof streamNotificacionesTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamNotificacionesTercero<TData = Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamNotificacionesTercero<TData = Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamNotificacionesTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getStreamNotificacionesTerceroQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const canjearEnlace = (
     token: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {

@@ -173,7 +173,8 @@ public static class RecordatoriosDeObservacionesEndpoints
 
     /// <summary>
     /// Recordatorio en lote: los <c>expedientes</c> elegidos (hasta 200) o, con <c>todos</c>, los de la empresa devueltos al
-    /// tercero (hasta 500, los observados hace más tiempo primero), opcionalmente solo los que observó el <c>area</c>. Un correo y
+    /// tercero (hasta 500, los observados hace más tiempo primero), opcionalmente solo aquellos por los que pasa el <c>area</c> (los que ve en su
+    /// bandeja, como el filtro de la pantalla). Un correo y
     /// un aviso por expediente; lo que no se puede recordar se omite y se informa con su motivo.
     /// </summary>
     [WolverinePost("/api/v1/expedientes/recordar-observaciones")]
@@ -221,7 +222,7 @@ public static class RecordatoriosDeObservacionesEndpoints
         [
             .. observados
                 .Where(e => e.SinRecordatorioPorque(ahora) is null)
-                .Where(e => area is not { } a || e.EtapaActiva?.Areas.Any(x => x.AreaId == a && x.Estado == EstadoAreaExpediente.Observada) == true)
+                .Where(e => area is not { } a || e.EtapaActiva?.Areas.Any(x => x.AreaId == a) == true)
                 .Take(RecordatoriosDeObservaciones.MaximoTodos)
                 .Select(e => e.Id)
         ];

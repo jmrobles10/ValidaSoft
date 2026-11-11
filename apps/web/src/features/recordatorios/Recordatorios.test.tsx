@@ -146,7 +146,7 @@ describe('recordatorio en lote desde la bandeja', () => {
     expect(screen.queryByRole('button', { name: /^Recordar \(/ })).not.toBeInTheDocument();
     await usuario.click(screen.getByRole('button', { name: 'Recordar a los observados' }));
     const dialogo = await screen.findByRole('dialog', { name: '¿Recordar a todos los terceros con observaciones pendientes?' });
-    expect(within(dialogo).getByText(/que observó el área Cumplimiento/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/que pasa por el área Cumplimiento/)).toBeInTheDocument();
     expect(within(dialogo).getByText(/A quien ya se le recordó hoy no se le vuelve a enviar/)).toBeInTheDocument();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Enviar recordatorios' }));
 

@@ -203,6 +203,8 @@ public static class ConfiguracionMarten
                 opts.Schema.For<EventoPublico>()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_evento_publico_cursor", x => x.TenantId, x => x.Cursor);
                 // Concurrencia optimista: el manejador de entregas (fallos, deshabilitación) y la administración no se pisan.
+                // Avisos de «cambió X» para las pantallas abiertas (NT-12): globales y de vida corta (se leen por orden y se borran por fecha).
+                opts.Schema.For<AvisoDeCambio>().Index(x => x.Orden).Index(x => x.CreadaEn);
                 opts.Schema.For<SuscripcionWebhook>().MultiTenanted().UseOptimisticConcurrency(true);
                 opts.Schema.For<EntregaWebhook>().MultiTenanted()
                     .Index(x => x.SuscripcionId)

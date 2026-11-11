@@ -62,6 +62,7 @@ test('la observación llega a la campana del tercero con su empresa: la abre y l
   await page.getByRole('link', { name: 'Mi bóveda' }).click();
   await expect(page).toHaveURL(/\/boveda$/);
   await esperarAvisoEnLaCampana(page, 'Tienes observaciones por corregir');
+  await page.screenshot({ path: 'test-results/novedades-tercero-campana.png' });
 
   const aviso = panelDelTercero(page).getByRole('listitem').filter({ hasText: 'Tienes observaciones por corregir' });
   await expect(aviso).toContainText(`${e.norte.nombre} revisó tu validación`);
@@ -93,6 +94,16 @@ test('la observación llega a la campana del tercero con su empresa: la abre y l
   await campanaDelTercero(page).click();
   await panelDelTercero(page).getByRole('button', { name: 'Preferencias de correo' }).click();
   await expect(page.getByRole('dialog', { name: 'Preferencias de correo' }).getByRole('switch', { name: /Observaciones de una empresa/ })).not.toBeChecked();
+  await page.screenshot({ path: 'test-results/novedades-tercero-preferencias.png' });
+
+  // En el celular la campana cabe en la cabecera y el panel no se sale de la pantalla.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await campanaDelTercero(page).click();
+  await expect(panelDelTercero(page)).toBeVisible();
+  const caja = await panelDelTercero(page).boundingBox();
+  expect(caja && caja.x >= 0 && caja.x + caja.width <= 375).toBe(true);
+  await page.screenshot({ path: 'test-results/novedades-tercero-campana-movil.png' });
 });
 
 test('el recordatorio de observaciones: individual desde el expediente y en lote desde la bandeja, uno al día, con correo y campana', async ({ page, browser }) => {
@@ -134,6 +145,7 @@ test('el recordatorio de observaciones: individual desde el expediente y en lote
   await irASeccion(ruben, 'Bandeja');
   await expect(ruben.getByRole('heading', { level: 1, name: 'Bandeja de revisión' })).toBeVisible();
   await ruben.getByRole('button', { name: 'Seleccionar observados' }).click();
+  await ruben.owner().page().screenshot({ path: 'test-results/novedades-tercero-bandeja.png' });
   await ruben.getByRole('button', { name: 'Recordar (2)' }).click();
   await ruben.getByRole('dialog', { name: '¿Recordar las observaciones de 2 expedientes?' }).getByRole('button', { name: 'Enviar recordatorios' }).click();
   await expect(ruben.getByText('Recordamos a 1 tercero. 1 omitido: 1 ya se les recordó hoy.')).toBeVisible();

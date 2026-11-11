@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using JasperFx.Events;
 using Marten;
 using Microsoft.AspNetCore.Authorization;
@@ -57,8 +58,11 @@ public static class TiposNotificacionTercero
     /// <summary>Una empresa lo invitó a validar su información.</summary>
     public const string Invitacion = "tercero.invitacion";
 
+    /// <summary>La empresa aprobó o rechazó la cuenta bancaria que designó para cobrarle (solo campana).</summary>
+    public const string Cuenta = "tercero.cuenta";
+
     public static readonly IReadOnlyList<string> Todos =
-        [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion];
+        [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion, Cuenta];
 
     /// <summary>Los que además de la campana van por correo (si el tercero no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
@@ -164,6 +168,12 @@ public static class PlanificadorDeNotificacionesDelTercero
                 return await DeCertificadoAsync(evento, contexto, suspendido.Emision, revocado: false, orden, ct);
             case InvitacionEnviada:
                 return await DeInvitacionAsync(evento, contexto, orden, ct);
+            case CuentaDesignadaAprobada aprobada:
+                return await DeLaCuentaAsync(evento, contexto, orden, ct, "Cuenta aprobada",
+                    empresa => $"{empresa} aprobó la cuenta {Descripcion(aprobada.Cuenta)} con la que le cobras.");
+            case CuentaDesignadaRechazada rechazada:
+                return await DeLaCuentaAsync(evento, contexto, orden, ct, "Cuenta rechazada",
+                    empresa => $"{empresa} rechazó la cuenta {Descripcion(rechazada.Cuenta)}: {rechazada.Motivo.TrimEnd('.')}. Elige otra cuenta para esta empresa.");
             case AnalisisDeIaRegistrado analisis:
                 return await PropuestaAsync(evento, analisis, contexto, orden, ct);
             default:
@@ -216,6 +226,22 @@ public static class PlanificadorDeNotificacionesDelTercero
         return Plan(Nueva(evento, tenantId, certificado.TerceroId, certificado.EmpresaId, certificado.VinculoId, emitida.ExpedienteId, folio,
             TiposNotificacionTercero.Certificado, titulo, mensaje, "/empresas", orden), tenantId);
     }
+
+    /// <summary>La empresa decidió la cuenta que el tercero designó (CB-2): aviso en la campana, que lleva a «Mis cuentas».</summary>
+    private static async Task<PlanDeNotificaciones> DeLaCuentaAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct, string titulo,
+        Func<string, string> mensaje)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo ||
+            vinculo.TerceroId == Guid.Empty)
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "La empresa";
+        return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, vinculo.Id, null, null, TiposNotificacionTercero.Cuenta, titulo,
+            mensaje(empresa), "/cuentas", orden), tenantId);
+    }
+
+    private static string Descripcion(CuentaParaDesignar? cuenta) =>
+        cuenta is null ? "designada" : $"{cuenta.Banco} {Dominio.Terceros.CuentaBancaria.Enmascarar(cuenta.Ultimos4)}";
 
     private static async Task<PlanDeNotificaciones> DeInvitacionAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)
     {
@@ -433,6 +459,61 @@ public static class NotificacionesDelTerceroEndpoints
         sesion.Store(preferencias);
         await sesion.SaveChangesAsync(ct);
         return ADto(preferencias);
+    }
+
+    /// <summary>
+    /// SSE del portal del tercero (NT-12), con su sesión (<c>Authorization: Bearer</c>): <c>event: notificacion</c> con cada
+    /// <see cref="NotificacionTerceroDto"/> nueva (id = su orden), <c>event: no_leidas</c> con el total cuando cambia y
+    /// <c>event: cambio</c> (<see cref="CambioEnVivoDto"/>) cuando cambia algo de lo suyo —un expediente, un vínculo, una cuenta, un
+    /// documento, su ficha, un certificado— para que lo que tiene abierto se refresque solo. Solo lo de los vínculos de su sesión.
+    /// El stream se cierra cuando vence el token de la sesión: el cliente reconecta con el renovado. Consulta cada 2 s.
+    /// </summary>
+    [WolverineGet("/public/v1/notificaciones/stream")]
+    [Authorize(Policy = ReclamosTercero.Politica)]
+    public static async Task<IResult> Stream(HttpContext http, ISesiones sesiones, TimeProvider reloj)
+    {
+        var tercero = SesionDeTercero.De(http.User);
+        var alcance = AlcanceDelStream.De(http.User);
+        var ct = http.RequestAborted;
+        var ultimo = http.Request.Headers["Last-Event-ID"].ToString() is { Length: > 0 } reanudar ? EventosEndpoints.LeerCursor(reanudar) : reloj.GetUtcNow().UtcTicks;
+        var cambios = new CursorDeCambios(CambiosEnVivo.InicioDeUnStream(reloj));
+        await Sse.IniciarAsync(http);
+
+        int? noLeidasAnterior = null;
+        var ultimoLatido = reloj.GetUtcNow();
+        while (!ct.IsCancellationRequested && (alcance.Vence is null || reloj.GetUtcNow() < alcance.Vence))
+        {
+            await using (var consulta = sesiones.ConsultaGlobal())
+            {
+                await CambiosEnVivo.EscribirAsync(http, cambios.Nuevos(await CambiosEnVivo.DelTerceroAsync(consulta, alcance, cambios.Desde, ct)));
+
+                var desde = ultimo;
+                var nuevas = await Visibles(consulta, tercero).Where(n => n.Orden > desde).OrderBy(n => n.Orden).Take(100).ToListAsync(ct);
+                if (nuevas.Count > 0)
+                {
+                    var empresaIds = nuevas.Select(n => n.EmpresaId).OfType<Guid>().Distinct().ToArray();
+                    var empresas = empresaIds.Length == 0 ? [] : (await consulta.LoadManyAsync<Empresa>(ct, empresaIds)).ToDictionary(e => e.Id);
+                    foreach (var notificacion in nuevas)
+                    {
+                        await Sse.EscribirAsync(http, notificacion.Orden.ToString(CultureInfo.InvariantCulture), "notificacion",
+                            JsonSerializer.Serialize(ADto(notificacion, empresas), JsonEventos.Opciones));
+                        ultimo = notificacion.Orden;
+                    }
+                }
+
+                var noLeidas = await Visibles(consulta, tercero).Where(n => !n.Leida).CountAsync(ct);
+                if (noLeidas != noLeidasAnterior)
+                {
+                    await Sse.EscribirAsync(http, ultimo.ToString(CultureInfo.InvariantCulture), "no_leidas", noLeidas.ToString(CultureInfo.InvariantCulture));
+                    noLeidasAnterior = noLeidas;
+                }
+            }
+
+            ultimoLatido = await Sse.LatidoAsync(http, ultimoLatido, reloj);
+            await Sse.EsperarAsync(ct);
+        }
+
+        return Sse.Fin;
     }
 
     /// <summary>Lo del tercero entre todos los tenants, solo de los vínculos de su sesión (o sin vínculo).</summary>

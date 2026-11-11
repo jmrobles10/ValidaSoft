@@ -52,6 +52,9 @@ public interface IContextoDeEventos
 
     Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct);
 
+    /// <summary>Los vínculos de un tercero con todas las empresas (de cualquier tenant): a quiénes les cambia su ficha (NT-12).</summary>
+    Task<IReadOnlyList<Vinculo>> VinculosDelTerceroAsync(Guid terceroId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Vinculo>>([]);
+
     /// <summary>Usuarios activos del tenant (los avisos de cumplimiento van por rol, VE-13).</summary>
     Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Usuario>>([]);
 
@@ -124,6 +127,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public async Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) =>
         [.. await Sesion(Tenant(tenantId)).Query<Usuario>().Where(u => u.Activo).ToListAsync(ct)];
+
+    public async Task<IReadOnlyList<Vinculo>> VinculosDelTerceroAsync(Guid terceroId, CancellationToken ct) =>
+        [.. await Sesion(null).Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId).ToListAsync(ct)];
 
     public Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct) =>
         CargarAsync<PreferenciasNotificacion>(Tenant(tenantId), usuarioId, ct);

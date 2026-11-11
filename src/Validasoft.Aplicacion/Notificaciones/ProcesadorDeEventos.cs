@@ -51,6 +51,7 @@ public sealed class ProcesadorDeEventos(CatalogoDeEventos catalogo, Planificador
         var entregas = new List<(Guid TenantId, EntregaWebhook Entrega)>();
         var notificaciones = new List<(Guid TenantId, Notificacion Notificacion)>();
         var correos = new List<object>();
+        var cambios = new List<AvisoDeCambio>();
 
         foreach (var evento in eventos)
         {
@@ -68,6 +69,7 @@ public sealed class ProcesadorDeEventos(CatalogoDeEventos catalogo, Planificador
                 var plan = await planificador.PlanearAsync(evento, contexto, evento.Timestamp.UtcTicks + (evento.Sequence % 10_000), ct);
                 notificaciones.AddRange(plan.Campana);
                 correos.AddRange(plan.Correos);
+                cambios.AddRange(plan.Cambios ?? []);
             }
         }
 
@@ -89,6 +91,13 @@ public sealed class ProcesadorDeEventos(CatalogoDeEventos catalogo, Planificador
             foreach (var (_, notificacion) in grupo.Where(n => !existentes.Contains(n.Notificacion.Id)))
                 delTenant.Store(notificacion);
         }
+
+        // Avisos de «cambió X» para las pantallas abiertas (NT-12): uno por destinatario y recurso del lote; solo los recientes (un
+        // stream que se conecta ahora empieza desde ahora) y se borran los viejos, que ya nadie leerá.
+        foreach (var aviso in PlanificadorDeCambios.Coalescer(cambios).Where(a => ahora - a.CreadaEn <= AvisoDeCambio.Vida))
+            operaciones.Store(aviso);
+        var vencidos = ahora - AvisoDeCambio.Vida;
+        operaciones.DeleteWhere<AvisoDeCambio>(a => a.CreadaEn < vencidos);
 
         foreach (var correo in correos)
             await bus.PublishAsync(correo);

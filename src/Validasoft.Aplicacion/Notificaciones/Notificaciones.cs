@@ -99,9 +99,12 @@ public static class TiposNotificacion
     /// <summary>Venció una verificación con el expediente abierto (plantilla <c>verificacion-expirada</c>, solo campana).</summary>
     public const string VerificacionExpirada = "verificacion.expirada";
 
+    /// <summary>El tercero propuso la cuenta bancaria con la que le cobra a la empresa: a quienes pueden aprobarla (<c>cuentas:aprobar</c>), solo campana (NT-12).</summary>
+    public const string CuentaPropuesta = "vinculo.cuenta_propuesta";
+
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
-            CoincidenciaListas, EstudioPendiente, VerificacionExpirada];
+            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
@@ -128,7 +131,8 @@ public sealed record CorreoDeConstanciaPendiente(string Para, string Empresa, IR
     Guid? TenantId = null, Guid? EmpresaId = null);
 
 /// <summary>Lo que un evento de dominio produce para las personas: notificaciones de la campana y correos.</summary>
-public sealed record PlanDeNotificaciones(IReadOnlyList<(Guid TenantId, Notificacion Notificacion)> Campana, IReadOnlyList<object> Correos)
+public sealed record PlanDeNotificaciones(IReadOnlyList<(Guid TenantId, Notificacion Notificacion)> Campana, IReadOnlyList<object> Correos,
+    IReadOnlyList<AvisoDeCambio>? Cambios = null)
 {
     public static readonly PlanDeNotificaciones Vacio = new([], []);
 }
@@ -148,9 +152,11 @@ public sealed class PlanificadorDeNotificaciones
     {
         var personas = await PlanearParaPersonasAsync(evento, contexto, orden, ct);
         var tercero = await PlanificadorDeNotificacionesDelTercero.PlanearAsync(evento, contexto, orden, ct);
-        return tercero.Campana.Count == 0 && tercero.Correos.Count == 0
+        // Y lo que cambió para quien tiene la pantalla abierta (NT-12): el SSE lo manda aparte de la notificación.
+        var cambios = await PlanificadorDeCambios.PlanearAsync(evento, contexto, orden, ct);
+        return tercero.Campana.Count == 0 && tercero.Correos.Count == 0 && cambios.Count == 0
             ? personas
-            : new PlanDeNotificaciones([.. personas.Campana, .. tercero.Campana], [.. personas.Correos, .. tercero.Correos]);
+            : new PlanDeNotificaciones([.. personas.Campana, .. tercero.Campana], [.. personas.Correos, .. tercero.Correos], cambios);
     }
 
     private async Task<PlanDeNotificaciones> PlanearParaPersonasAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)
@@ -189,6 +195,8 @@ public sealed class PlanificadorDeNotificaciones
                     t => $"La consulta de listas de {t} encontró {registrada.Coincidencias.Count(c => c.Heredada is null)} coincidencia(s) por analizar.", orden, ct);
             case ExpedienteEnviadoARevision:
                 return await EstudioPendienteAsync(evento, contexto, orden, ct);
+            case CuentaDesignadaPropuesta propuesta:
+                return await CuentaPropuestaAsync(evento, propuesta, contexto, orden, ct);
             case VerificacionExpirada expirada:
                 return await ACumplimientoAsync(evento, contexto, TiposNotificacion.VerificacionExpirada, "Verificación vencida",
                     t => expirada.Tipo == TipoVerificacion.ListasRestrictivas
@@ -197,6 +205,43 @@ public sealed class PlanificadorDeNotificaciones
             default:
                 return PlanDeNotificaciones.Vacio;
         }
+    }
+
+    /// <summary>
+    /// El tercero propuso la cuenta con la que le cobra a la empresa (CB-2): campana a las personas con <c>cuentas:aprobar</c> en esa empresa,
+    /// que son quienes deben aprobarla (dos distintas). Antes no se enteraba nadie hasta abrir la ficha del tercero y recargar.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> CuentaPropuestaAsync(IEvent evento, CuentaDesignadaPropuesta propuesta, IContextoDeEventos contexto,
+        long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo)
+            return PlanDeNotificaciones.Vacio;
+
+        var aprobadores = (await contexto.UsuariosDelTenantAsync(tenantId, ct))
+            .Where(u => u.Activo && u.Roles.Any(r => (r.EmpresaId is null || r.EmpresaId == vinculo.EmpresaId) && Comun.Permisos.DeRol(r.Rol).Contains(Comun.Permisos.CuentasAprobar)))
+            .OrderBy(u => u.Id)
+            .ToList();
+        if (aprobadores.Count == 0)
+            return PlanDeNotificaciones.Vacio;
+
+        var tercero = (await contexto.TerceroAsync(vinculo.TerceroId, ct))?.Nombre ?? "El tercero";
+        var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "la empresa";
+        var cuenta = $"{propuesta.Cuenta.Banco} {Dominio.Terceros.CuentaBancaria.Enmascarar(propuesta.Cuenta.Ultimos4)}";
+        var mensaje = $"{tercero} propuso la cuenta {cuenta} para cobrarle a {ConPunto(empresa)} La aprueban {Vinculo.AprobadoresDeCuenta} personas distintas.";
+        var ruta = $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}";
+        return new PlanDeNotificaciones([.. aprobadores.Select(u => (tenantId, new Notificacion
+        {
+            Id = Deterministas.Guid($"notificacion:{evento.Id:N}:{u.Id:N}:{TiposNotificacion.CuentaPropuesta}"),
+            UsuarioId = u.Id,
+            EmpresaId = vinculo.EmpresaId,
+            Tipo = TiposNotificacion.CuentaPropuesta,
+            Titulo = "Cuenta bancaria por aprobar",
+            Mensaje = mensaje,
+            VinculoId = vinculo.Id,
+            Enlace = ruta,
+            CreadaEn = evento.Timestamp,
+            Orden = orden
+        }))], []);
     }
 
     /// <summary>El expediente entró a revisión y pide el estudio de cumplimiento: aviso a los oficiales (VE-13).</summary>

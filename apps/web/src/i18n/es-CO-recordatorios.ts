@@ -26,7 +26,7 @@ export const recordatorios = {
     confirmarTituloSeleccion_other: '¿Recordar las observaciones de {{count}} expedientes?',
     confirmarTituloTodos: '¿Recordar a todos los terceros con observaciones pendientes?',
     confirmarTextoTodos: 'Se le recuerda a cada tercero con un expediente devuelto en {{empresa}}, uno por expediente.',
-    confirmarTextoTodosArea: 'Se le recuerda a cada tercero con un expediente que observó el área {{area}}, uno por expediente.',
+    confirmarTextoTodosArea: 'Se le recuerda a cada tercero con un expediente devuelto que pasa por el área {{area}}, uno por expediente.',
     confirmarTextoComun:
       'Cada uno recibe un correo con lo que falta corregir y un aviso en su portal. A quien ya se le recordó hoy no se le vuelve a enviar.',
     confirmarSeleccion: 'Enviar recordatorios',

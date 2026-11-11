@@ -22,7 +22,7 @@ public sealed record BandejaNotificacionesTerceroDto(IReadOnlyList<NotificacionT
 
 /// <summary>
 /// Recordatorio masivo: <see cref="Expedientes"/> (hasta 200) o, con <see cref="Todos"/>, todos los expedientes de la empresa que
-/// están devueltos al tercero (hasta 500), opcionalmente solo los que observó el <see cref="Area"/>. Lo que no se puede recordar
+/// están devueltos al tercero (hasta 500), opcionalmente solo aquellos por los que pasa el <see cref="Area"/> (los que ve en su bandeja). Lo que no se puede recordar
 /// (no está observado, ya se recordó hoy, sin correo) se omite y se informa por expediente.
 /// </summary>
 public sealed record RecordarObservacionesDto(IReadOnlyList<Guid>? Expedientes = null, bool Todos = false, Guid? Area = null);

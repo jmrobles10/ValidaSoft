@@ -284,6 +284,7 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/plataforma/plazos-de-cargue/revisar': 'revisarPlazosDeCargue',
   // Campana del tercero y recordatorio de observaciones pendientes (NT-1…NT-3).
   'GET /public/v1/notificaciones': 'listarNotificacionesTercero',
+  'GET /public/v1/notificaciones/stream': 'streamNotificacionesTercero',
   'POST /public/v1/notificaciones/{id}/leida': 'marcarNotificacionTerceroLeida',
   'POST /public/v1/notificaciones/leidas': 'marcarNotificacionesTerceroLeidas',
   'GET /public/v1/preferencias-notificacion': 'obtenerPreferenciasNotificacionTercero',

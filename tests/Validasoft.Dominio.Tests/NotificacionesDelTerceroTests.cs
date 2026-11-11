@@ -327,6 +327,141 @@ public class NotificacionesDelTerceroTests
         plan.Campana.Where(c => c.Notificacion.UsuarioId != TerceroId).ShouldAllBe(c => c.Notificacion.TenantId == null);
     }
 
+    // ---------- cuenta designada (NT-12) ----------
+
+    [Fact]
+    public async Task La_cuenta_propuesta_avisa_solo_a_quienes_la_aprueban_en_esa_empresa()
+    {
+        var contexto = new ContextoFalso();
+        var cuenta = new CuentaParaDesignar(Guid.NewGuid(), "Bancolombia", "Ahorros", "protegido", "5678", "Aceros del Norte", "NIT 900123456", "COP");
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(Evento(new CuentaDesignadaPropuesta(cuenta, null, Ahora), VinculoA), contexto, 9, CancellationToken.None);
+
+        // Oficial de la empresa y administrador de todo el grupo; no el revisor, ni el inactivo, ni el oficial de otra empresa.
+        var deLaCuenta = plan.Campana.Where(c => c.Notificacion.Tipo == TiposNotificacion.CuentaPropuesta).ToList();
+        deLaCuenta.Select(c => c.Notificacion.UsuarioId).ShouldBe([contexto.Oficial.Id, contexto.Administrador.Id], ignoreOrder: true);
+        deLaCuenta.ShouldAllBe(c => c.TenantId == TenantA);
+        var n = deLaCuenta[0].Notificacion;
+        n.Titulo.ShouldBe("Cuenta bancaria por aprobar");
+        n.Mensaje.ShouldBe("Aceros del Norte propuso la cuenta Bancolombia ****5678 para cobrarle a Norte S.A.S. La aprueban 2 personas distintas.");
+        n.Enlace.ShouldBe($"/e/{EmpresaA}/vinculos/{VinculoA}");
+        n.VinculoId.ShouldBe(VinculoA);
+        plan.Correos.ShouldBeEmpty();
+        plan.Campana.Where(c => c.Notificacion.UsuarioId == TerceroId).ShouldBeEmpty(); // el tercero propuso: no necesita aviso
+    }
+
+    [Fact]
+    public async Task La_cuenta_aprobada_o_rechazada_avisa_al_tercero_con_su_empresa_y_lo_lleva_a_sus_cuentas()
+    {
+        var contexto = new ContextoFalso();
+        var cuenta = new CuentaParaDesignar(Guid.NewGuid(), "Bancolombia", "Ahorros", "protegido", "5678", "Aceros del Norte", "NIT 900123456", "COP");
+
+        var aprobada = Unica(await PlanearAsync(new CuentaDesignadaAprobada(cuenta.CuentaId, ["a", "b"], Ahora, cuenta), VinculoA, contexto));
+        aprobada.Tipo.ShouldBe(TiposNotificacionTercero.Cuenta);
+        aprobada.Titulo.ShouldBe("Cuenta aprobada");
+        aprobada.Mensaje.ShouldBe("Norte S.A.S. aprobó la cuenta Bancolombia ****5678 con la que le cobras.");
+        aprobada.Enlace.ShouldBe("/cuentas");
+
+        var rechazada = Unica(await PlanearAsync(new CuentaDesignadaRechazada(cuenta.CuentaId, "usuario-7f3a", "El titular no coincide.", Ahora, cuenta), VinculoA, contexto));
+        rechazada.Titulo.ShouldBe("Cuenta rechazada");
+        rechazada.Mensaje.ShouldBe("Norte S.A.S. rechazó la cuenta Bancolombia ****5678: El titular no coincide. Elige otra cuenta para esta empresa.");
+        rechazada.Mensaje.ShouldNotContain("usuario-7f3a");
+    }
+
+    // ---------- avisos de cambio para las pantallas abiertas (NT-12) ----------
+
+    private static async Task<IReadOnlyList<AvisoDeCambio>> CambiosAsync(object datos, Guid stream, ContextoFalso contexto, string? tenant = null) =>
+        await PlanificadorDeCambios.PlanearAsync(Evento(datos, stream, tenant ?? TenantA.ToString("N")), contexto, 11, CancellationToken.None);
+
+    [Fact]
+    public async Task Un_hecho_del_expediente_avisa_a_su_empresa_y_a_su_tercero_y_a_nadie_mas()
+    {
+        var avisos = await CambiosAsync(new ExpedienteObservado([AreaCumplimiento], Ahora, [RequisitoId]), ExpedienteId, new ContextoFalso());
+
+        var deLaEmpresa = avisos.Single(a => a.Destino == DestinoDeCambio.Empresa);
+        deLaEmpresa.TenantId.ShouldBe(TenantA);
+        deLaEmpresa.EmpresaId.ShouldBe(EmpresaA);
+        deLaEmpresa.VinculoId.ShouldBe(VinculoA);
+        deLaEmpresa.TerceroId.ShouldBeNull();
+        var delTercero = avisos.Single(a => a.Destino == DestinoDeCambio.Tercero);
+        delTercero.TerceroId.ShouldBe(TerceroId);
+        delTercero.VinculoId.ShouldBe(VinculoA);
+        avisos.ShouldAllBe(a => a.Recurso == RecursosDeCambio.Expediente && a.RecursoId == ExpedienteId && a.Orden == 11);
+        avisos.Select(a => a.Id).Distinct().Count().ShouldBe(2);
+        avisos.ShouldAllBe(a => a.ADto().Id == ExpedienteId); // el aviso no lleva datos: solo tipo, id y vínculo
+    }
+
+    [Fact]
+    public async Task Los_hechos_del_vinculo_y_de_su_cuenta_avisan_del_vinculo_y_de_la_cuenta()
+    {
+        var cuenta = new CuentaParaDesignar(Guid.NewGuid(), "Bancolombia", "Ahorros", "protegido", "5678", "Aceros", "NIT 9", "COP");
+        var avisos = await CambiosAsync(new CuentaDesignadaPropuesta(cuenta, null, Ahora), VinculoA, new ContextoFalso());
+
+        avisos.Where(a => a.Recurso == RecursosDeCambio.Vinculo).Select(a => a.Destino).ShouldBe([DestinoDeCambio.Empresa, DestinoDeCambio.Tercero], ignoreOrder: true);
+        avisos.Where(a => a.Recurso == RecursosDeCambio.Cuenta).Select(a => (a.Destino, a.RecursoId)).ShouldBe(
+            [(DestinoDeCambio.Empresa, cuenta.CuentaId), (DestinoDeCambio.Tercero, cuenta.CuentaId)], ignoreOrder: true);
+        avisos.ShouldAllBe(a => a.VinculoId == VinculoA);
+        (await CambiosAsync(new VinculoActivado(ExpedienteId, Ahora), VinculoA, new ContextoFalso())).Select(a => a.Recurso).Distinct().ShouldBe([RecursosDeCambio.Vinculo]);
+    }
+
+    [Fact]
+    public async Task Un_documento_avisa_al_tercero_y_a_cada_empresa_con_la_que_se_compartio_en_su_tenant()
+    {
+        var avisos = await CambiosAsync(new VersionVencida(2, VinculoA, new DateOnly(2026, 11, 1), 5, Ahora), DocumentoId, new ContextoFalso(), TenantsTecnicos.Boveda);
+
+        avisos.ShouldAllBe(a => a.Recurso == RecursosDeCambio.Documento && a.RecursoId == DocumentoId);
+        avisos.Single(a => a.Destino == DestinoDeCambio.Tercero).TerceroId.ShouldBe(TerceroId);
+        var empresas = avisos.Where(a => a.Destino == DestinoDeCambio.Empresa).Select(a => (a.TenantId, a.EmpresaId, a.VinculoId)).ToList();
+        empresas.ShouldBe([(TenantA, EmpresaA, VinculoA), (TenantB, EmpresaB, VinculoB)], ignoreOrder: true);
+    }
+
+    [Fact]
+    public async Task La_ficha_del_tercero_avisa_a_todas_las_empresas_con_las_que_tiene_un_vinculo()
+    {
+        var seccionId = SeccionDeFicha.IdPara(TerceroId, "general", null);
+        var contexto = new ContextoFalso { Seccion = new SeccionDeFicha { Id = seccionId, TerceroId = TerceroId, Seccion = "general" } };
+        var avisos = await CambiosAsync(new SeccionDeFichaIniciada(seccionId, TerceroId, "general", null, Ahora), seccionId, contexto, TenantsTecnicos.Boveda);
+
+        avisos.ShouldAllBe(a => a.Recurso == RecursosDeCambio.Ficha);
+        avisos.Single(a => a.Destino == DestinoDeCambio.Tercero).TerceroId.ShouldBe(TerceroId);
+        avisos.Where(a => a.Destino == DestinoDeCambio.Empresa).Select(a => (a.TenantId, a.EmpresaId)).ShouldBe([(TenantA, EmpresaA), (TenantB, EmpresaB)], ignoreOrder: true);
+
+        // Sin la sección (o con otra), no hay a quién avisar.
+        (await CambiosAsync(new SeccionDeFichaIniciada(seccionId, TerceroId, "general", null, Ahora), Guid.NewGuid(), contexto, TenantsTecnicos.Boveda)).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Lo_que_no_cambia_una_pantalla_de_datos_no_produce_avisos()
+    {
+        var contexto = new ContextoFalso();
+        (await CambiosAsync(new FolioConsumido(1, Ahora), Guid.NewGuid(), contexto)).ShouldBeEmpty();
+        (await CambiosAsync(new Dominio.Invitaciones.LoteTerminado(Dominio.Invitaciones.EstadoLote.Completado, new Dominio.Invitaciones.TotalesDeLote(0, 0, 0, 0, 0, 0), Ahora), Guid.NewGuid(), contexto)).ShouldBeEmpty();
+        (await CambiosAsync(new ExpedienteObservado([], Ahora), Guid.NewGuid(), contexto)).ShouldBeEmpty(); // expediente que el contexto no conoce
+    }
+
+    [Fact]
+    public void Un_lote_avisa_una_sola_vez_cada_recurso_a_cada_destinatario_y_el_cursor_no_repite_lo_que_ya_mando()
+    {
+        AvisoDeCambio Aviso(long orden, Guid? id = null) => new()
+        {
+            Id = id ?? Guid.NewGuid(), Orden = orden, Destino = DestinoDeCambio.Empresa, TenantId = TenantA, EmpresaId = EmpresaA, Recurso = RecursosDeCambio.Expediente, RecursoId = ExpedienteId
+        };
+
+        PlanificadorDeCambios.Coalescer([Aviso(1), Aviso(3), Aviso(2)]).ShouldHaveSingleItem().Orden.ShouldBe(3);
+        var otroRecurso = Aviso(4);
+        otroRecurso.Recurso = RecursosDeCambio.Vinculo;
+        PlanificadorDeCambios.Coalescer([Aviso(1), otroRecurso]).Count.ShouldBe(2);
+
+        var cursor = new CursorDeCambios(Ahora);
+        var primero = Aviso(Ahora.UtcTicks + 10);
+        cursor.Nuevos([primero]).ShouldHaveSingleItem();
+        cursor.Nuevos([primero]).ShouldBeEmpty(); // el solape lo vuelve a leer: no se repite
+        // Un aviso que llegó con un orden algo menor que el último mandado (el procesador escribe por secuencia) sí se manda.
+        var tarde = Aviso(Ahora.UtcTicks + 5);
+        cursor.Desde.ShouldBeLessThan(tarde.Orden);
+        cursor.Nuevos([primero, tarde]).ShouldHaveSingleItem().ShouldBe(tarde);
+        cursor.Desde.ShouldBe(primero.Orden - CursorDeCambios.Solape.Ticks);
+    }
+
     // ---------- utilidades ----------
 
     private static ExpedienteAbierto AperturaDe(TipoExpediente tipo) =>
@@ -353,9 +488,15 @@ public class NotificacionesDelTerceroTests
     {
         public Usuario Laura { get; } = Persona("Laura Compras");
         public Usuario Carlos { get; } = Persona("Carlos Cumplimiento");
+        public Usuario Oficial { get; } = Persona("Olga Oficial", Rol.OficialCumplimiento);
+        public Usuario Administrador { get; } = Persona("Ana Administradora", Rol.Administrador, empresa: null, todoElTenant: true);
+        private Usuario OficialDeOtra { get; } = Persona("Otto Otra", Rol.OficialCumplimiento, empresa: Guid.NewGuid());
+        private Usuario Inactiva { get; } = Persona("Ines Inactiva", Rol.OficialCumplimiento, activo: false);
         public Area Compras { get; }
         public Area Cumplimiento { get; }
         public Certificado? Certificado { get; set; }
+
+        public SeccionDeFicha? Seccion { get; set; }
         public TipoExpediente TipoDeExpediente { get; set; } = TipoExpediente.Inicial;
         public string TipoCanonico { get; set; } = "RUT";
 
@@ -365,10 +506,11 @@ public class NotificacionesDelTerceroTests
             Cumplimiento = new Area { Id = AreaCumplimiento, EmpresaId = EmpresaA, Codigo = "CUMPLIMIENTO", Nombre = "Cumplimiento", Miembros = [Carlos.Id] };
         }
 
-        private static Usuario Persona(string nombre)
+        private static Usuario Persona(string nombre, Rol rol = Rol.Revisor, bool activo = true, Guid? empresa = null, bool todoElTenant = false)
         {
             var usuario = Usuario.Crear(nombre, nombre.Split(' ')[0].ToLowerInvariant() + "@norte.co", null, Ahora);
-            usuario.Roles = [new RolAsignado(Rol.Revisor, EmpresaA)];
+            usuario.Roles = [new RolAsignado(rol, todoElTenant ? null : empresa ?? EmpresaA)];
+            usuario.Activo = activo;
             return usuario;
         }
 
@@ -443,7 +585,7 @@ public class NotificacionesDelTerceroTests
             });
         }
 
-        public Task<SeccionDeFicha?> SeccionDeFichaAsync(Guid id, CancellationToken ct) => Task.FromResult<SeccionDeFicha?>(null);
+        public Task<SeccionDeFicha?> SeccionDeFichaAsync(Guid id, CancellationToken ct) => Task.FromResult(Seccion?.Id == id ? Seccion : null);
 
         public Task<ICatalogosDeFicha> CatalogosDeFichaAsync(IEnumerable<ReferenciaACatalogo> referencias, CancellationToken ct) =>
             Task.FromResult<ICatalogosDeFicha>(CatalogosEnMemoria.Vacios);
@@ -461,6 +603,12 @@ public class NotificacionesDelTerceroTests
 
         public Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<Usuario>>([.. new[] { Laura, Carlos }.Where(u => ids.Contains(u.Id))]);
+
+        public Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Usuario>>([.. new[] { Laura, Carlos, Oficial, Administrador, OficialDeOtra, Inactiva }.Where(u => u.Activo)]);
+
+        public Task<IReadOnlyList<Vinculo>> VinculosDelTerceroAsync(Guid terceroId, CancellationToken ct) =>
+            Task.FromResult<IReadOnlyList<Vinculo>>([.. new[] { VinculoA, VinculoB }.Select(id => VinculoAsync(id == VinculoA ? TenantA : TenantB, id, ct).Result!)]);
 
         public Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct) => Task.FromResult<PreferenciasNotificacion?>(null);
 

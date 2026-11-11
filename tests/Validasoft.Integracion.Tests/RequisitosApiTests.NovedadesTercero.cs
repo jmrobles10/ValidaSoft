@@ -307,10 +307,12 @@ public sealed partial class RequisitosApiTests
         correoA.Texto.ShouldStartWith("Hola desde Norte S.A.S.");
         fixture.Correos.Para(enRevision.Correo).ShouldNotContain(m => m.Asunto.Contains("recuerda"));
 
-        // «Todos los observados» con el área que no observó: nada. Con la que sí: solo el que no se recordó hoy (b), nunca a (límite diario).
-        var deCompras = await ApiAsync<RecordatoriosEnviadosDto>("POST", ruta, Admin(e.Norte), new RecordarObservacionesDto(Todos: true, Area: e.Compras.Id), 200);
-        deCompras.Detalle.ShouldBeEmpty();
-        var todos = await ApiAsync<RecordatoriosEnviadosDto>("POST", ruta, Admin(e.Norte), new RecordarObservacionesDto(Todos: true, Area: e.Cumplimiento.Id), 200);
+        // «Todos los observados» con un área por la que no pasan (una nueva, fuera del flujo): nada. Con una por la que sí pasan: solo el que
+        // no se recordó hoy (b), nunca a (límite diario).
+        var legal = await ApiAsync<AreaDto>("POST", "/api/v1/areas", Admin(e.Norte), new CrearAreaDto("LEGAL", "Legal"), 201);
+        var deLegal = await ApiAsync<RecordatoriosEnviadosDto>("POST", ruta, Admin(e.Norte), new RecordarObservacionesDto(Todos: true, Area: legal.Id), 200);
+        deLegal.Detalle.ShouldBeEmpty();
+        var todos = await ApiAsync<RecordatoriosEnviadosDto>("POST", ruta, Admin(e.Norte), new RecordarObservacionesDto(Todos: true, Area: e.Compras.Id), 200);
         todos.Enviados.ShouldBe(1);
         todos.Detalle.ShouldHaveSingleItem().ExpedienteId.ShouldBe(b.Expediente);
         await fixture.Correos.EsperarAsync(b.Correo, m => m.Asunto.StartsWith("Norte S.A.S.: pendiente NORTE-E-", StringComparison.Ordinal));
