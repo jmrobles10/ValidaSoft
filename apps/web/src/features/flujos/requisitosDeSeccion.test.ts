@@ -92,6 +92,8 @@ describe('requisitos de sección en el editor de flujos (FM-25)', () => {
     expect(seccionesQueRespalda('RUT')).toEqual(['FICHA_GENERAL', 'FICHA_TRIBUTARIA', 'FICHA_LEGAL']);
     expect(seccionesQueRespalda('camara_comercio')).toEqual(['FICHA_GENERAL', 'FICHA_LEGAL']);
     expect(seccionesQueRespalda('ESTADOS_FINANCIEROS')).toEqual(['FICHA_FINANCIERA']);
+    expect(seccionesQueRespalda('CEDULA')).toEqual(['FICHA_GENERAL', 'FICHA_LEGAL']);
+    expect(seccionesQueRespalda('certificacion_bancaria')).toEqual(['CUENTAS_BANCARIAS']);
     expect(seccionesQueRespalda(null)).toEqual([]);
     expect(seccionesQueRespalda('SARLAFT')).toEqual([]);
   });

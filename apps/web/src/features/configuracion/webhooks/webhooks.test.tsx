@@ -9,12 +9,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DetalleWebhook } from './DetalleWebhook';
 import { DialogoSecreto } from './DialogoSecreto';
 import { DrawerWebhook } from './DrawerWebhook';
-import { agruparTipos, alternarTipo, estadoWebhook, TODOS, validarUrl, validarWebhook } from './modelo';
+import { agruparTipos, alternarTipo, esGrupoConocido, estadoWebhook, TODOS, validarUrl, validarWebhook } from './modelo';
 
 const CATALOGO = [
   { tipo: 'vinculo.activado', descripcion: 'El vínculo quedó Activo.' },
   { tipo: 'expediente.aprobado', descripcion: 'El expediente se aprobó.' },
   { tipo: 'certificado.emitido', descripcion: 'Se emitió el certificado.' },
+];
+
+/** Los otros dos grupos del catálogo público: la ficha del tercero (FD-7) y los lotes de invitación. */
+const EVENTOS_NUEVOS = [
+  { tipo: 'seccion.aceptada', descripcion: 'Una empresa aceptó una versión de una sección de la información del tercero.' },
+  { tipo: 'invitaciones.lote_terminado', descripcion: 'Terminó un lote de invitación masiva.' },
 ];
 const EMPRESAS = [{ id: 'e1', nombre: 'Constructora Norte' }, { id: 'e2', nombre: 'Logística Sur' }] as unknown as EmpresaDto[];
 
@@ -124,6 +130,31 @@ describe('crear un webhook', () => {
       cuerpo: { url: 'https://srm.cliente.co/hook', tipos: ['vinculo.activado', 'certificado.emitido'], empresas: ['e2'] },
     });
   }, 20_000);
+});
+
+describe('eventos de la información del tercero (FD-7)', () => {
+  it('muestra seccion.aceptada y los de invitaciones bajo un grupo con nombre en español, y se puede elegir', async () => {
+    const usuario = userEvent.setup();
+    montar(<DrawerWebhook webhook={null} catalogo={[...CATALOGO, ...EVENTOS_NUEVOS]} empresas={EMPRESAS} onCerrar={() => undefined} onCreado={() => undefined} />, () => json(WEBHOOK, 201));
+    // Cada grupo tiene su título: ninguno sale con el prefijo crudo del tipo.
+    expect(screen.getByText('Información del tercero')).toBeInTheDocument();
+    expect(screen.getByText('Invitaciones')).toBeInTheDocument();
+    expect(screen.queryByText('seccion')).not.toBeInTheDocument();
+    expect(screen.queryByText('invitaciones')).not.toBeInTheDocument();
+    const evento = screen.getByRole('checkbox', { name: /seccion.aceptada/ });
+    expect(evento).toHaveAccessibleName(/Una empresa aceptó una versión de una sección/);
+    // Por omisión recibe todos los eventos, también los nuevos; al elegir de uno en uno se deja el que se quiere.
+    expect(evento).toBeChecked();
+    await usuario.click(screen.getByRole('checkbox', { name: /Todos los eventos/ }));
+    expect(evento).not.toBeChecked();
+    await usuario.click(evento);
+    expect(evento).toBeChecked();
+  });
+
+  it('esGrupoConocido reconoce los seis grupos del catálogo público', () => {
+    for (const grupo of ['vinculo', 'expediente', 'documento', 'certificado', 'seccion', 'invitaciones']) expect(esGrupoConocido(grupo)).toBe(true);
+    expect(esGrupoConocido('webhook')).toBe(false);
+  });
 });
 
 describe('detalle de un webhook', () => {

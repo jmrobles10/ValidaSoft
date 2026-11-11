@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import { DatosDeSeccion } from '../../terceros/ficha/DatosDeSeccion';
 import { esObjeto } from '../../terceros/ficha/formato';
+import { SinSoporte } from '../../terceros/ficha/SinSoporte';
 import { SeccionFicha } from '../../terceros/SeccionesVinculo';
 import { soporteEnVisor } from '../secciones';
 import { ComparacionSeccion } from './ComparacionSeccion';
@@ -33,6 +34,7 @@ export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeV
   return (
     <Stack spacing={1.5} sx={{ mt: 1 }}>
       <Completitud seccion={seccion} actual={actual} />
+      {seccion.sinSoporte && <SinSoporte sinSoporte={seccion.sinSoporte} />}
       {actualizacion && seccion.versionAceptada !== null && (
         <SeccionFicha titulo={t('fichaEmpresa.comparacion.titulo', { n: String(seccion.versionAceptada) })}>
           <ComparacionSeccion cambios={seccion.cambios} versionAceptada={seccion.versionAceptada} />

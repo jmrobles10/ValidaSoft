@@ -209,7 +209,8 @@ public sealed record CambioDeCampoDto(string Campo, string Etiqueta, string? Ant
 /// </summary>
 public sealed record SeccionDeRequisitoDto(
     string Seccion, string Nombre, int? Periodo, bool ExigeSoporte, CompletitudSeccionDto? Completitud, int? VersionEvaluada, JsonElement? Datos,
-    IReadOnlyList<SoporteSeccionDto> Soportes, int? VersionAceptada, IReadOnlyList<CambioDeCampoDto> Cambios, CruceDeRequisitoDto? Cruce = null);
+    IReadOnlyList<SoporteSeccionDto> Soportes, int? VersionAceptada, IReadOnlyList<CambioDeCampoDto> Cambios, CruceDeRequisitoDto? Cruce = null,
+    SinSoporteDto? SinSoporte = null);
 
 public sealed record EtapaExpedienteDto(int Orden, string Estado, DateTimeOffset? ActivadaEn, DateTimeOffset? AprobadaEn,
     IReadOnlyList<AreaExpedienteDto> Areas);

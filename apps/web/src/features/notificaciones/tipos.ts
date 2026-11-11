@@ -18,6 +18,7 @@ export const CLAVES_TIPO = {
   'verificacion.coincidencia': 'coincidenciaListas',
   'verificacion.estudio_pendiente': 'estudioPendiente',
   'verificacion.expirada': 'verificacionExpirada',
+  'vinculo.cuenta_propuesta': 'cuentaPropuesta',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];

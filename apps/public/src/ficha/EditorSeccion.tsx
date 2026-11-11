@@ -1,4 +1,4 @@
-import { Alert, Box, MenuItem, Stack, TextField } from '@mui/material';
+import { Alert, AlertTitle, Box, MenuItem, Stack, TextField } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   aplicarCambiosPendientes,
@@ -29,7 +29,7 @@ import { DialogoSalidaSinGuardar } from './SalidaSinGuardar';
 import { enlaceSeccion, esFaltanteDeSoporte, periodosElegibles, type DefinicionSeccion } from './secciones';
 import { SelectorSoporte } from './SelectorSoporte';
 import { useEditorSeccion } from './useEditorSeccion';
-import { useObservacionesDeSeccion } from './useObservacionesDeSeccion';
+import { observacionesDeSeccion } from './useObservacionesDeSeccion';
 import { deLaSeccion, useRatificacionesPendientes } from './useRatificacionesPendientes';
 import { useSalidaSinGuardar } from './useSalidaSinGuardar';
 
@@ -54,8 +54,8 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
   const cliente = useQueryClient();
   const navegar = useNavigate();
   const mostrar = useAvisos((s) => s.mostrar);
-  // Lo que alguna empresa observó de esta sección (F2): arriba del formulario, con sus campos marcados.
-  const observaciones = useObservacionesDeSeccion(definicion.codigo, periodo);
+  // Lo que alguna empresa observó de esta sección (F2): llega con el estado de la ficha; va arriba del formulario, con sus campos marcados.
+  const observaciones = observacionesDeSeccion(estado, definicion.codigo, periodo);
   const senalados = observaciones.flatMap((o) => o.observacion.campos ?? []);
   // Lo que alguna empresa le pide ratificar de esta sección en la renovación de su vínculo (VV-3).
   const ratificaciones = deLaSeccion(useRatificacionesPendientes(), definicion.codigo, periodo);
@@ -113,6 +113,8 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
       ? mensajeDeError(editor.errorGeneral, t)
       : null;
   const faltaSoporte = editor.faltantes.find(esFaltanteDeSoporte)?.mensaje ?? null;
+  // La última versión guardada cambió datos con el mismo documento de antes (FM-15, FD-4): se avisa mientras no haya nada sin guardar.
+  const sinSoporte = inicial.sinSoporte ?? null;
 
   return (
     <>
@@ -147,6 +149,18 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
             />
           )}
           <ObservacionesDeEmpresas observaciones={observaciones} />
+          {editor.conPrellenado && (
+            <Alert severity="info">
+              <AlertTitle>{t('ficha.prellenado.titulo')}</AlertTitle>
+              {t('ficha.prellenado.texto')}
+            </Alert>
+          )}
+          {sinSoporte && !editor.sinGuardar && (
+            <Alert severity="warning">
+              <AlertTitle>{t('ficha.sinSoporte.titulo')}</AlertTitle>
+              {t('ficha.sinSoporte.texto', { campos: sinSoporte.cambios.map((c) => c.etiqueta).join(', ') })}
+            </Alert>
+          )}
           <RatificacionesDeSeccion pendientes={ratificaciones} />
           {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
           <PropuestaDesdeDocumento
@@ -176,7 +190,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
         errorPrevista={esErrorApi(evaluacion.error) && evaluacion.error.esValidacion ? evaluacion.error : null}
         sinRevision={evaluacion.isError && !(esErrorApi(evaluacion.error) && evaluacion.error.esValidacion)}
         pendiente={evaluacion.pendiente}
-        sinGuardar={editor.sinGuardar}
+        sinGuardar={editor.sinGuardar || editor.conPrellenado}
         guardando={editor.guardando}
         onGuardar={() => editor.guardar(alGuardar(false))}
         onContinuar={() => editor.guardar(alGuardar(true))}

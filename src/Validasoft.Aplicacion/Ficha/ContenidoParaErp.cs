@@ -46,7 +46,7 @@ public static class ContenidoParaErp
         ? null
         : new RepresentanteLegalErpDto(r.Origen == OrigenDelRepresentante.General ? CodigosDeSeccion.General : CodigosDeSeccion.Legal, r.Indice, r.Nombre,
             r.Persona.Nombres, r.Persona.Apellidos, r.Persona.TipoIdentificacion, r.Persona.Numero, r.Persona.Dv, r.Persona.TipoRepresentacion,
-            r.Persona.Cargo, r.Persona.FechaExpedicion, r.Persona.Correo, r.Persona.Telefono, r.Persona.LugarExpedicion);
+            r.Persona.Cargo, r.Persona.FechaExpedicion, r.Persona.Correo, r.Persona.Telefono, r.Persona.LugarExpedicion, r.Persona.Pep, r.Persona.VinculoPep);
 
     private static ContenidoGeneralDto General(DatosGenerales g, ICatalogosDeFicha catalogos)
     {
@@ -62,7 +62,7 @@ public static class ContenidoParaErp
                 d.Complemento),
             Ciudad(catalogos, g.Ciudad), g.Pais, g.Telefono, g.Correo, Codigo(catalogos, CatalogoDePlataforma.ActividadesEconomicas, g.CiiuPrincipal),
             [.. (g.CiiuSecundarias ?? []).Select(c => Codigo(catalogos, CatalogoDePlataforma.ActividadesEconomicas, c)!)], g.PaginaWeb, g.CertificadoIso,
-            g.AnioInicio, representante);
+            g.AnioInicio, representante, g.Pep, g.VinculoPep, g.FechaExpedicion, g.LugarExpedicion);
     }
 
     private static ContenidoTributarioDto Tributaria(DatosTributarios t, ICatalogosDeFicha catalogos)

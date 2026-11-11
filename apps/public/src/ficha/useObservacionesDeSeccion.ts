@@ -1,7 +1,4 @@
-import { useQueries } from '@tanstack/react-query';
-import { getObtenerExpedientePublicoQueryOptions, type ExpedientePublicoDto, type ObservacionPublicaDto } from '@validasoft/api-client';
-import { observacionesDeRequisito } from '../expediente/requisitos';
-import { useVinculosPublicos } from '../shared/api';
+import type { EstadoFichaDto, ObservacionPublicaDto } from '@validasoft/api-client';
 
 /** Lo que una empresa observó de la sección, con los campos que señaló. */
 export interface ObservacionDeEmpresa {
@@ -11,19 +8,12 @@ export interface ObservacionDeEmpresa {
 }
 
 /**
- * Observaciones abiertas de la sección en los expedientes del tercero (F2, FM-28): un requisito de esa sección (y ese
- * periodo, en la financiera) que alguna empresa tiene «Observado». Lee los expedientes públicos de sus vínculos (los
- * mismos que ve en «Mis empresas»); el DTO de la ficha no trae observaciones.
+ * Observaciones abiertas de la sección (F2, FM-28; FD-2): las que alguna empresa dejó sobre esa sección (y ese periodo, en la
+ * financiera) en un expediente devuelto al tercero. Llegan con el estado de la ficha, que ya las trae agrupadas: el portal no pide un
+ * expediente por cada vínculo para pintar el formulario.
  */
-export function observacionesDeSeccion(expediente: ExpedientePublicoDto, codigo: string, periodo: number | null): ObservacionDeEmpresa[] {
-  return (expediente.requisitos ?? [])
-    .filter((r) => r.estado === 'Observado' && r.seccion?.seccion === codigo && (periodo === null || r.seccion.periodo === null || r.seccion.periodo === periodo))
-    .flatMap((r) => observacionesDeRequisito(r, expediente).map((observacion) => ({ empresa: expediente.empresa.nombre, expedienteId: expediente.id, observacion })));
-}
-
-export function useObservacionesDeSeccion(codigo: string, periodo: number | null): ObservacionDeEmpresa[] {
-  const vinculos = useVinculosPublicos();
-  const ids = [...new Set((vinculos.data ?? []).flatMap((v) => (v.expedienteId ? [v.expedienteId] : [])))];
-  const expedientes = useQueries({ queries: ids.map((id) => getObtenerExpedientePublicoQueryOptions(id)) });
-  return expedientes.flatMap((consulta) => (consulta.data ? observacionesDeSeccion(consulta.data, codigo, periodo) : []));
+export function observacionesDeSeccion(estado: Pick<EstadoFichaDto, 'observaciones'>, codigo: string, periodo: number | null): ObservacionDeEmpresa[] {
+  return (estado.observaciones ?? [])
+    .filter((o) => o.seccion === codigo && (periodo === null || o.periodo === null || o.periodo === periodo))
+    .map((o) => ({ empresa: o.empresa, expedienteId: o.expedienteId, observacion: o.observacion }));
 }

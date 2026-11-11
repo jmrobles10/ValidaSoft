@@ -82,6 +82,10 @@ export const notificaciones = {
       titulo: 'Cupo de revisión automática',
       explicacion: 'A los administradores, cuando la empresa llega al 80 % y al 100 % de las validaciones con IA incluidas en su plan del mes.',
     },
+    cuentaPropuesta: {
+      titulo: 'Cuenta bancaria por aprobar',
+      explicacion: 'A quienes pueden aprobar cuentas, cuando el tercero propone la cuenta con la que le cobra a la empresa. Solo aparece en la campana.',
+    },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',
       explicacion: 'A los administradores, cuando una suscripción de webhooks se deshabilita por entregas fallidas seguidas.',

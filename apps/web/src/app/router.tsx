@@ -107,6 +107,10 @@ export function crearRouter() {
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
             },
             {
+              path: 'vinculos/:vinculoId/ficha',
+              lazy: () => import('../features/terceros/fichaAceptada/PaginaFichaAceptada').then((m) => ({ Component: m.PaginaFichaAceptada })),
+            },
+            {
               path: 'invitaciones/lotes',
               lazy: () => import('../features/lotes/PaginaLotes').then((m) => ({ Component: m.PaginaLotes })),
             },

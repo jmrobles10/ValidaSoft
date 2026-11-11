@@ -65,7 +65,9 @@ public sealed record SeccionFichaDto(
     DateTimeOffset? Fecha,
     int Versiones,
     int EsquemaVersion,
-    IReadOnlyList<AceptacionDeSeccionDto>? Aceptaciones = null);
+    IReadOnlyList<AceptacionDeSeccionDto>? Aceptaciones = null,
+    JsonElement? Prellenado = null,
+    SinSoporteDto? SinSoporte = null);
 
 /// <summary>
 /// Lo que un vínculo de la empresa activa tiene aceptado de la sección (F2, FM-29): versión, fecha y expediente en que se aceptó
@@ -100,7 +102,48 @@ public sealed record EstadoSeccionFichaDto(
 /// <summary>Ficha del tercero para el wizard: orden por tipo de persona, la siguiente sección incompleta y el estado de cada una.</summary>
 public sealed record EstadoFichaDto(
     Guid TerceroId, string TipoPersona, IReadOnlyList<string> Orden, string? SiguienteSeccion, bool Completa,
-    IReadOnlyList<EstadoSeccionFichaDto> Secciones);
+    IReadOnlyList<EstadoSeccionFichaDto> Secciones, IReadOnlyList<ObservacionDeSeccionDto>? Observaciones = null);
+
+/// <summary>
+/// Cambio de la sección sin un documento nuevo que lo respalde (FM-15, FD-4): los campos que cambiaron respecto de la última versión
+/// completa. <see cref="Critico"/>: toca la identidad (razón social, nombres, apellidos) o a un representante legal o suplente, y aprobarlo
+/// exige una justificación.
+/// </summary>
+public sealed record SinSoporteDto(bool Critico, IReadOnlyList<CambioDeCampoDto> Cambios);
+
+/// <summary>
+/// Lo que una empresa observó de una sección del tercero (FD-2): la empresa, el expediente y la observación con sus motivos y los campos
+/// que señaló. El tercero las recibe con el estado de su ficha, en vez de pedir cada expediente por separado.
+/// </summary>
+public sealed record ObservacionDeSeccionDto(string Empresa, Guid ExpedienteId, string Seccion, int? Periodo, ObservacionPublicaDto Observacion);
+
+// ---------- La ficha aceptada de un vínculo, vista por la empresa (FD-3) ----------
+
+/// <summary>
+/// Lo que la empresa aceptó de una sección en un vínculo: la versión, cuándo y en qué expediente (o si viene de la importación), los
+/// datos de esa versión (inmutables) y el soporte con que se aceptó.
+/// </summary>
+public sealed record LoAceptadoDeSeccionDto(
+    int Version, DateTimeOffset AceptadaEn, Guid? ExpedienteId, string? Folio, string? Origen, JsonElement Datos, IReadOnlyList<SoporteSeccionDto> Soportes);
+
+/// <summary>
+/// Lo que el tercero cambió de la sección <b>después</b> de que la empresa la aceptó (aún no aceptado): la versión nueva, los campos que
+/// cambian respecto de lo aceptado, su soporte, si el cambio no trae un documento nuevo (<see cref="SinSoporte"/>) y la revalidación
+/// abierta que lo revisa.
+/// </summary>
+public sealed record CambioPosteriorDelTerceroDto(
+    int Version, DateTimeOffset Fecha, IReadOnlyList<CambioDeCampoDto> Cambios, IReadOnlyList<SoporteSeccionDto> Soportes, SinSoporteDto? SinSoporte,
+    RevalidacionDeSeccionDto? Revalidacion);
+
+/// <summary>Una sección aceptada por la empresa y, aparte, el cambio posterior del tercero si lo hay.</summary>
+public sealed record SeccionAceptadaVistaDto(
+    string Seccion, string Nombre, int? Periodo, LoAceptadoDeSeccionDto Aceptada, CambioPosteriorDelTerceroDto? CambioPosterior);
+
+/// <summary>
+/// La ficha aceptada de un vínculo para la web de la empresa (FD-3): solo lo que esta empresa aceptó, sección por sección, con su
+/// versión y su soporte, separado de lo que el tercero cambió después. Lo que la empresa no aceptó no aparece (FM-3).
+/// </summary>
+public sealed record FichaAceptadaDelVinculoDto(Guid VinculoId, Guid TerceroId, string TipoPersona, IReadOnlyList<SeccionAceptadaVistaDto> Secciones);
 
 /// <summary>Versión vigente de reglas y esquema de cada sección.</summary>
 public sealed record ReglaSeccionDto(string Seccion, int ReglaVersion, int EsquemaVersion);
@@ -128,14 +171,16 @@ public sealed record DireccionEstructuradaDto(
 /// </summary>
 public sealed record RepresentanteLegalErpDto(
     string Origen, int? Indice, string Nombre, string? Nombres, string? Apellidos, string? TipoIdentificacion, string? Numero, string? Dv,
-    string? TipoRepresentacion, string? Cargo, DateOnly? FechaExpedicion, string? Correo, string? Telefono, string? LugarExpedicion = null);
+    string? TipoRepresentacion, string? Cargo, DateOnly? FechaExpedicion, string? Correo, string? Telefono, string? LugarExpedicion = null,
+    bool? Pep = null, bool? VinculoPep = null);
 
 /// <summary><c>FICHA_GENERAL</c> aceptada. <see cref="Nombre"/> = razón social o nombres y apellidos; el representante solo en persona natural.</summary>
 public sealed record ContenidoGeneralDto(
     string? TipoPersona, string? TipoIdentificacion, string? NumeroIdentificacion, string? Dv, string? Nombre, string? RazonSocial, string? Nombres,
     string? Apellidos, string? Direccion, DireccionEstructuradaDto? DireccionEstructurada, CiudadErpDto? Ciudad, string? Pais, string? Telefono,
     string? Correo, CodigoNombreDto? CiiuPrincipal, IReadOnlyList<CodigoNombreDto> CiiuSecundarias, string? PaginaWeb, bool? CertificadoIso,
-    int? AnioInicio, RepresentanteLegalErpDto? RepresentanteLegal);
+    int? AnioInicio, RepresentanteLegalErpDto? RepresentanteLegal, bool? Pep = null, bool? VinculoPep = null, DateOnly? FechaExpedicion = null,
+    string? LugarExpedicion = null);
 
 /// <summary>
 /// Calidades tributarias sí/no de un tercero en Colombia (FM-33), derivadas de los códigos DIAN y de lo declarado en la sección

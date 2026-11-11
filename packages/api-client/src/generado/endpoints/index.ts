@@ -17,6 +17,7 @@ export * from './empresas/empresas';
 export * from './eventos/eventos';
 export * from './expedientes/expedientes';
 export * from './exportacion-de-expediente/exportacion-de-expediente';
+export * from './ficha-aceptada-del-vinculo/ficha-aceptada-del-vinculo';
 export * from './ficha-del-vinculo/ficha-del-vinculo';
 export * from './ficha-tercero/ficha-tercero';
 export * from './flujos/flujos';

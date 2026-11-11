@@ -67,7 +67,7 @@ test('el tercero sube un RUT nuevo, acepta la propuesta en el wizard y la empres
     await expect(cruceInicial).toContainText('Confianza de la lectura', { timeout: 1500 });
   }).toPass({ timeout: 45_000 });
   await expect(cruceInicial.getByRole('table', { name: /^Cruce con Registro Único Tributario · versión 1/ })).toBeVisible();
-  await expect(sofia.getByRole('region', { name: 'Respaldo de la información' })).toContainText('Información general (versión 1)');
+  await expect(sofia.getByRole('region', { name: 'Soporte de la información' })).toContainText('Información general (versión 1)');
   await aprobarArea(sofia, 'Revisión');
 
   // El tercero sube un RUT nuevo (otra dirección): la plataforma le ofrece actualizar su información desde él.
@@ -112,7 +112,7 @@ test('el tercero sube un RUT nuevo, acepta la propuesta en el wizard y la empres
   const cruce = sofia.getByRole('region', { name: 'Cruce con el documento' });
   await expect(cruce.getByRole('table', { name: /^Cruce con Registro Único Tributario · versión 2/ })).toBeVisible({ timeout: 30_000 });
   await expect(cruce.getByRole('row', { name: /^Dirección: Coincide/ })).toBeVisible();
-  await expect(sofia.getByRole('region', { name: 'Respaldo de la información' })).toContainText('Información general (versión 2)');
+  await expect(sofia.getByRole('region', { name: 'Soporte de la información' })).toContainText('Información general (versión 2)');
   await paginaSofia.screenshot({ path: 'test-results/ficha-f5-actualizacion.png', fullPage: true });
 
   // Sofía decide las dos de una vez: la actualización se aprueba y el vínculo sigue activo.

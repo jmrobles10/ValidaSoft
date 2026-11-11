@@ -30,14 +30,20 @@ export function SoporteDeSecciones({ soporte }: { soporte: SoporteDeSeccionesDto
 function FilaDeSeccion({ respaldada }: { respaldada: SeccionRespaldadaDto }) {
   const { t } = useTranslation();
   const { cruce } = respaldada;
-  const nombre = respaldada.version === null ? t('cruce.soporte.seccionSinDiligenciar', { seccion: respaldada.nombre }) : t('cruce.soporte.seccion', { seccion: respaldada.nombre, n: String(respaldada.version) });
+  // Las cuentas no son una sección con versiones: su nombre ya dice cuál es («Cuenta de Bancolombia ****5678», FD-5).
+  const esCuenta = respaldada.seccion === 'CUENTAS_BANCARIAS';
+  const nombre = esCuenta
+    ? respaldada.nombre
+    : respaldada.version === null
+      ? t('cruce.soporte.seccionSinDiligenciar', { seccion: respaldada.nombre })
+      : t('cruce.soporte.seccion', { seccion: respaldada.nombre, n: String(respaldada.version) });
   return (
     <Stack component="li" spacing={0.75} sx={{ minWidth: 0 }}>
       <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
         <Typography variant="body2" sx={{ fontWeight: 500 }}>
           {nombre}
         </Typography>
-        {cruce === null && respaldada.version !== null && (
+        {cruce === null && (respaldada.version !== null || esCuenta) && (
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {t('cruce.soporte.sinCruce')}
           </Typography>

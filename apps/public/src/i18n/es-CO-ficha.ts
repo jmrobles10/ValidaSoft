@@ -46,6 +46,16 @@ export const ficha = {
   guardadaCompleta: 'Guardaste {{seccion}}: está completa.',
   guardadaBorrador: 'Guardaste {{seccion}} como borrador.',
   sinCambios: 'No había cambios: {{seccion}} sigue igual.',
+  // La información general se ofrece prellenada con lo que ya sabemos del tercero (FD-1).
+  prellenado: {
+    titulo: 'Prellenamos tu información',
+    texto: 'Usamos lo que ya sabemos de ti: tu nombre o razón social, tu identificación y el correo de tu invitación. Revísalo y guárdalo.',
+  },
+  // Un cambio sin un documento nuevo que lo respalde (FM-15, FD-4).
+  sinSoporte: {
+    titulo: 'Tu último cambio no trae un documento nuevo',
+    texto: 'Cambiaste {{campos}} con el mismo documento de antes. Las empresas pueden pedirte uno nuevo para aceptarlo.',
+  },
   faltantesTitulo_one: 'Para completar esta sección falta {{count}} dato',
   faltantesTitulo_other: 'Para completar esta sección faltan {{count}} datos',
   faltantesAyuda: 'Puedes guardar como borrador y terminar después.',
@@ -114,6 +124,11 @@ export const ficha = {
     razonSocial: 'Razón social',
     nombres: 'Nombres',
     apellidos: 'Apellidos',
+    fechaExpedicion: 'Fecha de expedición de tu documento',
+    fechaExpedicionAyuda: 'Opcional. La piden algunas consultas, como la de listas del extranjero.',
+    lugarExpedicion: 'Lugar de expedición',
+    pep: '¿Eres una persona expuesta políticamente (PEP)?',
+    vinculoPep: '¿Tienes vínculo con una persona expuesta políticamente?',
     correo: 'Correo electrónico',
     telefono: 'Teléfono',
     pais: 'País',

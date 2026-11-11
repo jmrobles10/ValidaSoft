@@ -13,6 +13,7 @@ import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { TarjetaCertificado } from '../../certificados/TarjetaCertificado';
 import { EnlaceFichaTercero } from '../../terceros/EnlaceFichaTercero';
+import { TarjetaFichaAceptadaEnVinculo } from '../../terceros/fichaAceptada/TarjetaFichaAceptadaEnVinculo';
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { formatearFechaDeclarada } from '../../documentos/formatoDatos';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
@@ -92,6 +93,7 @@ export function DetalleVinculo() {
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} conFicha={permisos.puede(SCOPES.tercerosLeer)} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
+          <TarjetaFichaAceptadaEnVinculo vinculo={vinculo} />
           <TarjetaCertificado vinculo={vinculo} />
           <TarjetaContactos vinculo={vinculo} />
           <TarjetaCuentaDesignada vinculo={vinculo} />

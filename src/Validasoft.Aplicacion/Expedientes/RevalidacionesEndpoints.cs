@@ -155,7 +155,7 @@ public static class RevalidacionesEndpoints
         // FM-13: con discrepancias críticas en el cruce con las secciones, nunca en lote.
         if ((await ExpedientesEndpoints.DiscrepanciasAsync(empresa, expediente, ct)).Contains(requisito.Id))
             throw ReglaDeNegocioException.Validacion("cruce-con-discrepancias",
-                $"{requisito.Nombre} discrepa con la información de la ficha en campos críticos: revísalo en su expediente.");
+                $"{requisito.Nombre} tiene campos críticos sin soporte (el cruce discrepa o el cambio no trae un documento nuevo): revísalo en su expediente.");
 
         var areas = requisito.AreasQueRevisan.Where(mias.Contains).ToList();
         if (areas.Count == 0)

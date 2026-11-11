@@ -8,7 +8,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { ResumenVersion } from '../../documentos/ResumenVersion';
 import { useAccionExpediente, type EntradaExpediente } from '../api';
-import { justificacionSuficiente, tieneDiscrepanciaCritica } from '../cruce';
+import { justificacionSuficiente, requiereJustificacion } from '../cruce';
 import { areasQueVuelvenARevisar, MAXIMO_TEXTO_EXPEDIENTE, motivosPara, veredictosVigentes, type DialogoDeArea, type DialogoExpediente } from '../reglas';
 import { documentoEnVisor, versionVigente } from '../requisitos';
 import { SelectorCamposSeccion } from './SelectorCamposSeccion';
@@ -65,7 +65,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const faltanMotivos = conMotivos && elegidos.length === 0;
   const faltaTexto = !textoOpcional && !texto.trim();
   // Aprobar un documento o una sección cuyo cruce difiere en campos críticos exige dejar escrito por qué (F5, FM-13).
-  const pideJustificacion = dialogo.tipo === 'veredictoRequisito' && !observando && requisito !== null && tieneDiscrepanciaCritica(requisito);
+  const pideJustificacion = dialogo.tipo === 'veredictoRequisito' && !observando && requisito !== null && requiereJustificacion(requisito);
   const faltaJustificacion = pideJustificacion && !justificacionSuficiente(justificacionCruce);
   const disponibles = motivosPara(motivos, dialogo.tipo === 'rechazar' ? 'Rechazo' : 'Observacion');
   const incompleto = faltanMotivos || faltaTexto || faltaJustificacion;

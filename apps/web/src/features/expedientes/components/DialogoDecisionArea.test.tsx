@@ -93,7 +93,7 @@ describe('DialogoDecisionArea: aprobar con una discrepancia crítica en el cruce
     const usuario = userEvent.setup();
     const fetch = abrir({ tipo: 'aprobarArea', area: area(), documentos: POR_DECIDIR }, [GENERAL(true), requisito()]);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('difiere en campos críticos de Información general');
+    expect(screen.getByRole('alert')).toHaveTextContent('no tienen soporte: el cruce con el documento difiere');
     const boton = screen.getByRole('button', { name: 'Aprobar área (2 documentos)' });
     expect(boton).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent('Escribe la justificación de la aprobación');

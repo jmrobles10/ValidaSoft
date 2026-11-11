@@ -178,7 +178,7 @@ describe('Cruce con el documento en el requisito (F5)', () => {
       }),
     );
 
-    const soporte = tarjeta.getByRole('region', { name: 'Respaldo de la información' });
+    const soporte = tarjeta.getByRole('region', { name: 'Soporte de la información' });
     expect(within(soporte).getByRole('alert')).toHaveTextContent('Hay diferencias en campos críticos');
     const filas = within(soporte).getAllByRole('listitem');
     expect(filas[0]).toHaveTextContent('Información general (versión 3)');
@@ -198,8 +198,77 @@ describe('Cruce con el documento en el requisito (F5)', () => {
         },
       }),
     );
-    const soporte = tarjeta.getByRole('region', { name: 'Respaldo de la información' });
+    const soporte = tarjeta.getByRole('region', { name: 'Soporte de la información' });
     expect(soporte).toHaveTextContent('Tu empresa no recibió la lectura automática de esta versión: compara a mano con las secciones.');
     expect(within(soporte).queryByText(/Hay diferencias en campos críticos/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Requisito de sección: un cambio sin soporte (FM-15, FD-4)', () => {
+  const CAMBIOS = [{ campo: 'razon_social', etiqueta: 'Razón social', anterior: 'Aceros del Norte S.A.S.', nuevo: 'Aceros del Sur S.A.S.', tipoCambio: 'Modificado' }];
+
+  it('lo marca con los campos que cambiaron y avisa que aprobarlo pide una justificación si es crítico', () => {
+    const tarjeta = montar(requisitoSeccion({}, { sinSoporte: { critico: true, cambios: CAMBIOS } }));
+    const aviso = tarjeta.getByRole('alert', { name: 'Cambio sin soporte' });
+    expect(aviso).toHaveTextContent('El tercero cambió datos críticos sin un documento nuevo que los respalde.');
+    expect(aviso).toHaveTextContent('Razón social');
+    expect(aviso).toHaveTextContent('escribe una justificación');
+  });
+
+  it('uno que no es crítico solo se marca, sin pedir justificación', () => {
+    const tarjeta = montar(requisitoSeccion({}, { sinSoporte: { critico: false, cambios: [{ ...CAMBIOS[0]!, campo: 'direccion', etiqueta: 'Dirección' }] } }));
+    const aviso = tarjeta.getByRole('alert', { name: 'Cambio sin soporte' });
+    expect(aviso).toHaveTextContent('El tercero cambió estos datos sin un documento nuevo que los respalde.');
+    expect(aviso).not.toHaveTextContent('justificación');
+  });
+
+  it('sin marca de la API no hay aviso', () => {
+    const tarjeta = montar(requisitoSeccion());
+    expect(tarjeta.queryByRole('alert', { name: 'Cambio sin soporte' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Documento que respalda las cuentas: la certificación bancaria (FD-5)', () => {
+  const CRUCE_CUENTA = {
+    documentoId: 'd-cert',
+    versionDocumento: 1,
+    tipoDocumento: 'CERTIFICACION_BANCARIA',
+    nombreDocumento: 'Certificación bancaria',
+    confianza: 0.93,
+    legible: true,
+    fecha: '2026-11-08T14:00:00Z',
+    coincidencias: 1,
+    discrepancias: 1,
+    noVerificables: 0,
+    discrepanciaCritica: true,
+    campos: [
+      { campo: 'numero', etiqueta: 'Número de la cuenta', declarado: '****5678', extraido: '****9999', resultado: 'Discrepa', critico: true, detalle: null },
+      { campo: 'banco', etiqueta: 'Banco', declarado: 'Bancolombia', extraido: 'Bancolombia S.A.', resultado: 'Coincide', critico: false, detalle: null },
+    ],
+  };
+
+  it('muestra cada cuenta con su nombre enmascarado y su cruce, sin llamarla «sección»', () => {
+    const tarjeta = montar(
+      requisito({
+        tipoDocumento: { id: 'tc', codigo: 'CERTIFICACION_BANCARIA', nombre: 'Certificación bancaria', tipoCanonico: 'CERTIFICACION_BANCARIA', ambito: 'Global', modo: 'Archivo' },
+        soporteDeSecciones: {
+          sinAnalisis: false,
+          discrepanciaCritica: true,
+          secciones: [
+            { seccion: 'CUENTAS_BANCARIAS', nombre: 'Cuenta de Bancolombia ****5678', periodo: null, version: null, cruce: CRUCE_CUENTA },
+            { seccion: 'CUENTAS_BANCARIAS', nombre: 'Cuenta de Davivienda ****1111', periodo: null, version: null, cruce: null },
+          ],
+        },
+      }),
+    );
+    const soporte = tarjeta.getByRole('region', { name: 'Soporte de la información' });
+    const filas = within(soporte).getAllByRole('listitem');
+    expect(filas[0]).toHaveTextContent('Cuenta de Bancolombia ****5678');
+    expect(filas[0]).not.toHaveTextContent('sin diligenciar');
+    expect(filas[0]).toHaveTextContent('Difiere en campos críticos');
+    expect(filas[0]).toHaveTextContent('****9999');
+    // Una cuenta sin análisis para la empresa dice que no hay cruce con esta versión, no que esté «sin diligenciar».
+    expect(filas[1]).toHaveTextContent('Cuenta de Davivienda ****1111Sin cruce con esta versión.');
+    expect(filas[1]).not.toHaveTextContent('sin diligenciar');
   });
 });

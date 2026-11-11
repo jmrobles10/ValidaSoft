@@ -18,6 +18,7 @@ describe('claveDeTipo', () => {
   it('traduce el código del tipo a su clave de textos y no confunde propiedades del prototipo', () => {
     expect(claveDeTipo('expediente.tercero_respondio')).toBe('terceroRespondio');
     expect(claveDeTipo('webhook.deshabilitado')).toBe('webhookDeshabilitado');
+    expect(claveDeTipo('vinculo.cuenta_propuesta')).toBe('cuentaPropuesta');
     expect(claveDeTipo('constructor')).toBeNull();
     expect(claveDeTipo('otro.tipo')).toBeNull();
   });

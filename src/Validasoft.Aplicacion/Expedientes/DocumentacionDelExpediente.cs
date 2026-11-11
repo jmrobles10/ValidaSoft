@@ -97,7 +97,9 @@ public sealed record DocumentacionDelExpediente(
             Datos = actual?.Datos,
             Soportes = actual is null ? [] : [.. actual.Soportes.Select(s => s.ADto())],
             Cambios = [.. cambios.Select(c => new CambioDeCampoDto(c.Campo, c.Etiqueta, c.Anterior, c.Nuevo, c.TipoCambio.ToString()))],
-            Cruce = Cruces?.DeSeccion(r.Id)
+            Cruce = Cruces?.DeSeccion(r.Id),
+            // El cambio de la versión que cubre el requisito sin un documento nuevo (FM-15, FD-4).
+            SinSoporte = actual is null ? null : seccion.SinSoporte(actual.Numero, aceptada?.Numero)?.ADto()
         };
     }
 

@@ -8,6 +8,7 @@ import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
 import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
+import { fichaAceptada } from './es-CO-ficha-aceptada';
 import { informes } from './es-CO-informes';
 import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
@@ -324,6 +325,7 @@ export const esCO = {
   terceros,
   fichaMaestra,
   fichaEmpresa,
+  fichaAceptada,
   cruce,
   auditoria,
   plantillas,

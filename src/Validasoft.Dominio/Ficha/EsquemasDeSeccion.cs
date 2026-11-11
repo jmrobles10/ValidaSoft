@@ -303,9 +303,12 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
                     ? $"{id.Tipo} no lleva dígito de verificación."
                     : $"El dígito de verificación lo calcula Validasoft (DIAN módulo 11): para {id.Numero} es {dv}.");
 
+        AsegurarCamposDelTipoDePersona(d, contexto);
+
         var principal = Codigo(CatalogoDePlataforma.ActividadesEconomicas, d.CiiuPrincipal);
         return d with
         {
+            LugarExpedicion = Texto(d.LugarExpedicion),
             RazonSocial = Texto(d.RazonSocial),
             Nombres = Texto(d.Nombres),
             Apellidos = Texto(d.Apellidos),
@@ -324,6 +327,37 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
             PaginaWeb = PaginaWeb(d.PaginaWeb)
         };
     }
+
+    /// <summary>
+    /// Campos de la General por tipo de persona (FD-8): la razón social es de la jurídica (y consorcio); nombres, apellidos y lo propio
+    /// de la persona natural (PEP, fecha y lugar de expedición de su documento) no aplican a una jurídica. Enviarlos es un 422
+    /// <c>campo-no-aplica</c>, no un dato que se guarda y se ignora.
+    /// </summary>
+    private static void AsegurarCamposDelTipoDePersona(DatosGenerales d, ContextoDeSeccion contexto)
+    {
+        if (contexto.EsJuridica)
+        {
+            if (Texto(d.Nombres) is not null)
+                throw NoAplica("nombres", "Nombres", "una persona jurídica: diligencia la razón social");
+            if (Texto(d.Apellidos) is not null)
+                throw NoAplica("apellidos", "Apellidos", "una persona jurídica: diligencia la razón social");
+            if (d.Pep is not null)
+                throw NoAplica("pep", "PEP", "una persona jurídica: se declara en cada persona de la información legal");
+            if (d.VinculoPep is not null)
+                throw NoAplica("vinculo_pep", "Vínculo con PEP", "una persona jurídica: se declara en cada persona de la información legal");
+            if (d.FechaExpedicion is not null)
+                throw NoAplica("fecha_expedicion", "Fecha de expedición", "una persona jurídica");
+            if (Texto(d.LugarExpedicion) is not null)
+                throw NoAplica("lugar_expedicion", "Lugar de expedición", "una persona jurídica");
+        }
+        else if (Texto(d.RazonSocial) is not null)
+        {
+            throw NoAplica("razon_social", "Razón social", "una persona natural: diligencia nombres y apellidos");
+        }
+    }
+
+    private static ReglaDeNegocioException NoAplica(string campo, string etiqueta, string aQuien) =>
+        JsonDeFicha.Error("campo-no-aplica", campo, $"«{etiqueta}» no aplica a {aQuien}.");
 
     private static DireccionEstructurada? NormalizarDireccion(DireccionEstructurada e)
     {
@@ -376,6 +410,8 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
         Longitud(r, d.RazonSocial, "razon_social", "Razón social");
         Longitud(r, d.Nombres, "nombres", "Nombres", 150);
         Longitud(r, d.Apellidos, "apellidos", "Apellidos", 150);
+        NoFutura(r, d.FechaExpedicion, contexto.Hoy, "fecha_expedicion", "Fecha de expedición");
+        Longitud(r, d.LugarExpedicion, "lugar_expedicion", "Lugar de expedición", 100);
 
         r.Requerido(d.Correo, "correo", "Correo electrónico");
         Correo(r, d.Correo, "correo");

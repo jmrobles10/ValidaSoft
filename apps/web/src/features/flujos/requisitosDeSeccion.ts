@@ -1,5 +1,5 @@
 import { esErrorApi, type RequisitoDelFlujoDto } from '@validasoft/api-client';
-import { MAXIMO_PERIODOS, seccionFicha, type CodigoSeccionFicha } from '../terceros/ficha/secciones';
+import { MAXIMO_PERIODOS, seccionFicha, type CodigoRespaldo } from '../terceros/ficha/secciones';
 import type { ErrorFlujo, RequisitoEnEditor } from './editor';
 import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from './vigencia';
 
@@ -81,14 +81,17 @@ export function errorDeApiEnRequisitos(error: unknown, requisitos: readonly Requ
  * Secciones que respalda cada tipo canónico de documento (`MapaDeRespaldo` de la plataforma, docs/14 §5.1): el mismo mapa que
  * usan el cruce, «Usar como soporte» y la actualización desde el documento.
  */
-const RESPALDA: Readonly<Record<string, readonly CodigoSeccionFicha[]>> = {
+const RESPALDA: Readonly<Record<string, readonly CodigoRespaldo[]>> = {
   RUT: ['FICHA_GENERAL', 'FICHA_TRIBUTARIA', 'FICHA_LEGAL'],
   CAMARA_COMERCIO: ['FICHA_GENERAL', 'FICHA_LEGAL'],
   ESTADOS_FINANCIEROS: ['FICHA_FINANCIERA'],
-  CEDULA: ['FICHA_GENERAL'],
+  // La cédula respalda la General de la persona natural y las personas de la Legal en la jurídica (FD-6).
+  CEDULA: ['FICHA_GENERAL', 'FICHA_LEGAL'],
+  // La certificación bancaria respalda las cuentas del tercero (FD-5): no son una sección de la ficha.
+  CERTIFICACION_BANCARIA: ['CUENTAS_BANCARIAS'],
 };
 
 /** Secciones de la ficha que respalda un documento de ese tipo canónico (vacío = no respalda ninguna). */
-export function seccionesQueRespalda(tipoCanonico: string | null | undefined): readonly CodigoSeccionFicha[] {
+export function seccionesQueRespalda(tipoCanonico: string | null | undefined): readonly CodigoRespaldo[] {
   return tipoCanonico ? (RESPALDA[tipoCanonico.toUpperCase()] ?? []) : [];
 }

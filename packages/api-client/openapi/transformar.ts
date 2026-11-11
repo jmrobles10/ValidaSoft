@@ -285,6 +285,8 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/vinculos/{id}/reintentar': 'reintentarPostulacion',
   'GET /api/v1/vinculos/{id}/cuenta-designada': 'obtenerCuentaDesignada',
   'GET /api/v1/vinculos/{id}/ficha': 'obtenerFichaDelVinculo',
+  // La ficha aceptada por la empresa en un vínculo, para leerla en la web (FD-3).
+  'GET /api/v1/vinculos/{id}/ficha-aceptada': 'obtenerFichaAceptadaDelVinculo',
   'POST /api/v1/vinculos/{id}/cuenta-designada/aprobar': 'aprobarCuentaDesignada',
   'POST /api/v1/vinculos/{id}/cuenta-designada/rechazar': 'rechazarCuentaDesignada',
   'GET /public/v1/boveda': 'obtenerBoveda',

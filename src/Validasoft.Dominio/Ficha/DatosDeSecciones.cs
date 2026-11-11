@@ -46,6 +46,20 @@ public sealed record DatosGenerales
     public bool? CertificadoIso { get; init; }
 
     public int? AnioInicio { get; init; }
+
+    // Solo persona natural (FD-8): la jurídica no los lleva (sus personas relacionadas los declaran fila por fila en la legal).
+
+    /// <summary>¿El propio tercero es una persona expuesta políticamente? Solo persona natural; opcional.</summary>
+    public bool? Pep { get; init; }
+
+    /// <summary>¿Tiene vínculo con una persona expuesta políticamente (familiar, socio, administra recursos públicos)? Solo persona natural; opcional.</summary>
+    public bool? VinculoPep { get; init; }
+
+    /// <summary>Fecha de expedición del documento de identidad del propio tercero. Solo persona natural; opcional (la pide la consulta en listas del extranjero).</summary>
+    public DateOnly? FechaExpedicion { get; init; }
+
+    /// <summary>Lugar (ciudad) de expedición del documento de identidad. Solo persona natural; texto libre de hasta 100 caracteres.</summary>
+    public string? LugarExpedicion { get; init; }
 }
 
 /// <summary>Dirección en el formato estructurado colombiano (opcional): «Calle 45 # 12 - 08, Oficina 301».</summary>

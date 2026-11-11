@@ -388,7 +388,13 @@ public class TraductorDelPortalTests
                 null, false, null, "Colombia"),
             InfoTributaria: new TerInfoTributaria(),
             InfoFinanciera: [new TerInfoFinanciera(1, 2025, 10, 5, 5, 1, 1, 1, 1, 1)],
-            CamaraComercio: [new TerCamaraComercio(1, 1, "CC", "52987654", "María", "López")],
+            CamaraComercio:
+            [
+                // Su fila propia (la que crea la invitación del SRM): lleva su PEP y la expedición de su documento (FD-8).
+                new TerCamaraComercio(1, 1, "CC", "52987654", "María", "López", TerCamEsPep: false, TerCamVinculoPep: true, TerFechaExpedicion: "20/05/2001",
+                    TerLugarExpedicion: "Medellín"),
+                new TerCamaraComercio(2, 2, "CC", "80111222", "Luis", "Ruiz", TerCamPorParticipa: "100")
+            ],
             Siso: new TerSISO());
 
         var r = Traducir(natural);

@@ -7,6 +7,7 @@
 import type { AceptacionDeSeccionDto } from './aceptacionDeSeccionDto';
 import type { CompletitudSeccionDto } from './completitudSeccionDto';
 import type { JsonElement } from './jsonElement';
+import type { SinSoporteDto } from './sinSoporteDto';
 import type { SoporteSeccionDto } from './soporteSeccionDto';
 
 export interface SeccionFichaDto {
@@ -29,4 +30,6 @@ export interface SeccionFichaDto {
   esquemaVersion: number;
   /** @nullable */
   aceptaciones?: AceptacionDeSeccionDto[] | null;
+  prellenado?: unknown;
+  sinSoporte?: null | SinSoporteDto;
 }

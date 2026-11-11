@@ -230,6 +230,56 @@ public sealed class SeccionDeFicha
             ? new CruceDeSeccionRegistrado(numero, cruce)
             : null;
 
+    /// <summary>
+    /// ¿La versión <paramref name="numero"/> cambió datos sin un documento nuevo que la respalde? (FM-15, FD-4.) Se compara con la última
+    /// versión completa anterior (la misma referencia del soporte del cambio): si los datos difieren y la versión no trae ningún soporte
+    /// (documento o versión de documento) que esa referencia no tuviera, es un cambio <b>sin soporte</b>. Es un hecho que se calcula de las
+    /// versiones inmutables, no se guarda aparte: nulo si es la primera versión, no cambió nada, el cambio no es del tercero (viene de un
+    /// sistema de origen, FM-41) o sí trae un soporte nuevo. <see cref="SinSoporteDelCambio.Critico"/>: toca la identidad
+    /// (razón social, nombres y apellidos) o a un representante legal o suplente (docs/14 §5.2).
+    /// </summary>
+    public SinSoporteDelCambio? SinSoporte(int numero, int? desdeVersion = null)
+    {
+        if (Versiones.FirstOrDefault(v => v.Numero == numero) is not { } version || !ExigeSoporteDelCambio(version.Origen))
+            return null;
+        var referencia = desdeVersion is { } desde
+            ? Versiones.FirstOrDefault(v => v.Numero == desde && v.Numero < numero)
+            : Versiones.Where(v => v.Numero < numero && v.Completitud.Completa).MaxBy(v => v.Numero);
+        if (referencia is null || referencia.HuellaDatos == version.HuellaDatos)
+            return null;
+        if (version.Soportes.Any(s => !referencia.Soportes.Any(r => r.DocumentoId == s.DocumentoId && r.Version == s.Version)))
+            return null;
+
+        var cambios = ComparacionDeSecciones.Comparar(referencia.Datos, version.Datos);
+        return cambios.Count == 0 ? null : new SinSoporteDelCambio(cambios.Any(c => EsCambioCritico(c, referencia.Datos, version.Datos)), cambios);
+    }
+
+    private bool EsCambioCritico(CambioDeCampo cambio, JsonElement anterior, JsonElement nuevo) => Seccion switch
+    {
+        CodigosDeSeccion.General => cambio.Campo is "razon_social" or "nombres" or "apellidos",
+        // Una fila quitada se busca en los datos anteriores (su índice es el de allá); las demás, en los nuevos.
+        CodigosDeSeccion.Legal => EsRepresentante(cambio.Campo, cambio.TipoCambio == TipoDeCambio.Quitado ? anterior : nuevo),
+        _ => false
+    };
+
+    /// <summary>¿La ruta <c>personas[i]…</c> es de una persona con rol representante legal o suplente en esos datos?</summary>
+    private static bool EsRepresentante(string campo, JsonElement datos)
+    {
+        const string Prefijo = "personas[";
+        if (!campo.StartsWith(Prefijo, StringComparison.Ordinal))
+            return false;
+        var fin = campo.IndexOf(']', StringComparison.Ordinal);
+        if (fin <= Prefijo.Length ||
+            !int.TryParse(campo.AsSpan(Prefijo.Length, fin - Prefijo.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture,
+                out var indice))
+            return false;
+        if (datos.ValueKind != JsonValueKind.Object || !datos.TryGetProperty("personas", out var personas) || personas.ValueKind != JsonValueKind.Array ||
+            indice >= personas.GetArrayLength())
+            return false;
+        var rol = personas[indice].TryGetProperty("rol", out var r) && r.ValueKind == JsonValueKind.String ? r.GetString() : null;
+        return rol is nameof(RolPersonaRelacionada.RepresentanteLegal) or nameof(RolPersonaRelacionada.Suplente);
+    }
+
     /// <summary>Datos tipados de la versión vigente (para las referencias a catálogos al recalcular).</summary>
     public object? DatosVigentes(DefinicionDeSeccion seccion) => Vigente is { } v ? seccion.Esquema.Deserializar(v.Datos) : null;
 
@@ -390,3 +440,9 @@ public sealed class EstadoDeFicha
         return siguientes.FirstOrDefault(s => !Completa(s))?.Codigo;
     }
 }
+
+/// <summary>
+/// Un cambio de la sección sin un documento nuevo que lo respalde (FM-15, FD-4): los campos que cambiaron respecto de la última
+/// versión completa y si alguno es crítico (identidad o representante legal), caso en que aprobarlo exige una justificación.
+/// </summary>
+public sealed record SinSoporteDelCambio(bool Critico, IReadOnlyList<CambioDeCampo> Cambios);
