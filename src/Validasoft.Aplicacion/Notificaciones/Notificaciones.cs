@@ -403,7 +403,6 @@ public sealed class PlanificadorDeNotificaciones
             documento: string.Join(", ", retiros.Select(r => r.Documento)));
     }
 
-
     private static async Task<PlanDeNotificaciones> PorVencerAsync(IEvent evento, VencimientoAvisado aviso, IContextoDeEventos contexto, long orden,
         CancellationToken ct)
     {
