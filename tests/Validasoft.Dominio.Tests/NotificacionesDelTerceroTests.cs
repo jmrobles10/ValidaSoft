@@ -367,6 +367,114 @@ public class NotificacionesDelTerceroTests
         rechazada.Mensaje.ShouldNotContain("usuario-7f3a");
     }
 
+    // ---------- desaprobar y reintegrar (DS-10) ----------
+
+    [Fact]
+    public async Task Desaprobar_un_expediente_aprobado_avisa_al_tercero_en_la_campana_y_por_correo_sin_la_justificacion_interna()
+    {
+        var contexto = new ContextoFalso();
+        var desaprobado = new ExpedienteDesaprobado(1, false, "usuario-admin-9d", "Interno: el RUT no cuadra con la Cámara.", Ahora);
+
+        var n = Unica(await PlanearAsync(desaprobado, ExpedienteId, contexto));
+        n.Tipo.ShouldBe(TiposNotificacionTercero.Desaprobado);
+        n.Titulo.ShouldBe("Tu validación volvió a revisión");
+        n.Mensaje.ShouldBe("Norte S.A.S. volvió a revisar tu validación NORTE-E-2026-000001: tu vínculo queda en validación mientras la revisa y te avisamos cuando termine.");
+        n.EmpresaId.ShouldBe(EmpresaA);
+        n.VinculoId.ShouldBe(VinculoA);
+        n.Enlace.ShouldBe($"/expediente/{ExpedienteId}");
+        foreach (var interno in new[] { "usuario-admin-9d", "Interno", "RUT no cuadra" })
+            (n.Titulo + n.Mensaje).ShouldNotContain(interno);
+
+        // El correo (plantilla `desaprobacion`) lo planifica el planificador de las personas: al correo de la invitación, de esa empresa.
+        var plan = await new PlanificadorDeNotificaciones().PlanearAsync(Evento(desaprobado, ExpedienteId), contexto, 9, CancellationToken.None);
+        var correo = plan.Correos.OfType<CorreoDeDesaprobacionPendiente>().ShouldHaveSingleItem();
+        (correo.Para, correo.Empresa, correo.Folio).ShouldBe(("ana@aceros.co", "Norte S.A.S.", "NORTE-E-2026-000001"));
+        (correo.TenantId, correo.EmpresaId, correo.TerceroId).ShouldBe((TenantA, EmpresaA, TerceroId));
+        plan.Campana.Count(c => c.Notificacion.UsuarioId == TerceroId).ShouldBe(1);
+
+        var redactor = new RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+        var mensaje = redactor.RedactarDesaprobacion(correo);
+        mensaje.Asunto.ShouldBe("Norte S.A.S. volvió a revisar tu validación NORTE-E-2026-000001");
+        mensaje.Texto.ShouldContain("que ya estaba aprobada");
+        mensaje.Texto.ShouldContain("no tienes que hacer nada por ahora");
+        (mensaje.Texto + mensaje.Html).ShouldNotContain("usuario-admin-9d");
+        (mensaje.Texto + mensaje.Html).ShouldNotContain("Interno");
+    }
+
+    [Fact]
+    public async Task Reintegrar_avisa_al_tercero_segun_el_modo_con_el_enlace_a_lo_que_sigue_y_sin_la_justificacion()
+    {
+        var contexto = new ContextoFalso { ExpedienteDelVinculo = ExpedienteId };
+        var planificador = new PlanificadorDeNotificaciones();
+        var redactor = new RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+
+        // Sin revalidar: queda como estaba y su certificado se emitió de nuevo; no hay nada que hacer.
+        var sin = new VinculoReintegrado(EstadoVinculo.Activo, "Interno: lo pidió gerencia.", Ahora, SinRevalidar: true);
+        var n = Unica(await PlanearAsync(sin, VinculoA, contexto));
+        n.Tipo.ShouldBe(TiposNotificacionTercero.Reintegrado);
+        n.Titulo.ShouldBe("Tu vínculo se reintegró");
+        n.Mensaje.ShouldBe("Norte S.A.S. reintegró tu vínculo sin pedirte documentos nuevos: quedó como estaba antes y tu certificado se emitió de nuevo.");
+        n.Enlace.ShouldBe("/empresas");
+        n.VinculoId.ShouldBe(VinculoA);
+        (n.Titulo + n.Mensaje).ShouldNotContain("Interno");
+        var correoSin = (await planificador.PlanearAsync(Evento(sin, VinculoA), contexto, 9, CancellationToken.None)).Correos
+            .OfType<CorreoDeReintegroPendiente>().ShouldHaveSingleItem();
+        (correoSin.Para, correoSin.Modo, correoSin.Folio).ShouldBe(("ana@aceros.co", ModoDeReintegro.SinRevalidar, "NORTE-E-2026-000001"));
+        var textoSin = redactor.RedactarReintegro(correoSin);
+        textoSin.Asunto.ShouldBe("Norte S.A.S. reintegró tu vínculo");
+        textoSin.Texto.ShouldContain("tu certificado se emitió de nuevo");
+        (textoSin.Texto + textoSin.Html).ShouldNotContain("Interno");
+
+        // Revalidando con una renovación abierta: hay que subir o confirmar los documentos; el enlace va a esa validación.
+        var con = new VinculoReintegrado(EstadoVinculo.EnValidacion, "Interno: renovó el contrato.", Ahora);
+        var nCon = Unica(await PlanearAsync(con, VinculoA, contexto));
+        nCon.Titulo.ShouldBe("Tu vínculo se reintegró: falta validar");
+        nCon.Mensaje.ShouldBe("Norte S.A.S. reintegró tu vínculo y abrió una nueva validación (NORTE-E-2026-000001): sube o confirma tus documentos para completarla.");
+        nCon.Enlace.ShouldBe($"/expediente/{ExpedienteId}");
+        nCon.ExpedienteId.ShouldBe(ExpedienteId);
+        var correoCon = (await planificador.PlanearAsync(Evento(con, VinculoA), contexto, 9, CancellationToken.None)).Correos
+            .OfType<CorreoDeReintegroPendiente>().ShouldHaveSingleItem();
+        correoCon.Modo.ShouldBe(ModoDeReintegro.ConRenovacion);
+        redactor.RedactarReintegro(correoCon).Texto.ShouldContain("abrió una nueva validación (NORTE-E-2026-000001)");
+
+        // Revalidando un vínculo que nunca se aprobó: vuelve a la invitación y hay que completar la validación.
+        var sinExpediente = new ContextoFalso();
+        var nuevo = new VinculoReintegrado(EstadoVinculo.Invitado, "Interno.", Ahora);
+        var nNuevo = Unica(await PlanearAsync(nuevo, VinculoA, sinExpediente));
+        nNuevo.Mensaje.ShouldBe("Norte S.A.S. reintegró tu vínculo: completa la validación de tu información para dejarlo activo.");
+        nNuevo.Enlace.ShouldBe($"/empresas/{VinculoA}");
+        var correoNuevo = (await planificador.PlanearAsync(Evento(nuevo, VinculoA), sinExpediente, 9, CancellationToken.None)).Correos
+            .OfType<CorreoDeReintegroPendiente>().ShouldHaveSingleItem();
+        (correoNuevo.Modo, correoNuevo.Folio).ShouldBe((ModoDeReintegro.PorValidar, (string?)null));
+        redactor.RedactarReintegro(correoNuevo).Texto.ShouldContain("falta que completes la validación");
+
+        // Un vínculo sin correo de invitación no recibe correo (la campana sí).
+        sinExpediente.SinCorreo = true;
+        (await planificador.PlanearAsync(Evento(nuevo, VinculoA), sinExpediente, 9, CancellationToken.None)).Correos.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Los_correos_de_desaprobar_y_reintegrar_se_apagan_por_tipo_y_tienen_su_plantilla_con_ejemplo()
+    {
+        foreach (var tipo in new[] { TiposNotificacionTercero.Desaprobado, TiposNotificacionTercero.Reintegrado })
+        {
+            TiposNotificacionTercero.ConCorreo.ShouldContain(tipo);
+            TiposNotificacionTercero.QuiereCorreo(null, tipo).ShouldBeTrue();
+            var apagado = new PreferenciasDelTercero { Id = TerceroId, Correo = new() { [tipo] = false } };
+            TiposNotificacionTercero.QuiereCorreo(apagado, tipo).ShouldBeFalse();
+            TiposNotificacionTercero.QuiereCorreo(apagado, TiposNotificacionTercero.Observado).ShouldBeTrue();
+        }
+
+        CatalogoDePlantillas.Buscar("desaprobacion")!.Variables.ShouldBe(["empresa", "folio"]);
+        CatalogoDePlantillas.Buscar("reintegro")!.Variables.ShouldBe(["empresa", "folio"]);
+        // Cada evento del catálogo se puede redactar con datos de ejemplo (el asunto por defecto y la vista previa de Plantillas).
+        var redactor = new RedactorDeCorreos(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+        foreach (var evento in CatalogoDePlantillas.Eventos)
+            EjemplosDeCorreo.Redactar(redactor, evento.Evento, "Norte S.A.S.", "NORTE", Ahora).Mensaje.Asunto.ShouldNotBeNullOrWhiteSpace();
+        EjemplosDeCorreo.Redactar(redactor, CatalogoDePlantillas.Desaprobacion, "Norte S.A.S.", "NORTE", Ahora).Mensaje.Asunto
+            .ShouldBe("Norte S.A.S. volvió a revisar tu validación NORTE-E-2026-000001");
+    }
+
     // ---------- avisos de cambio para las pantallas abiertas (NT-12) ----------
 
     private static async Task<IReadOnlyList<AvisoDeCambio>> CambiosAsync(object datos, Guid stream, ContextoFalso contexto, string? tenant = null) =>
@@ -497,6 +605,12 @@ public class NotificacionesDelTerceroTests
         public Certificado? Certificado { get; set; }
 
         public SeccionDeFicha? Seccion { get; set; }
+
+        /// <summary>Expediente que el vínculo de Norte tiene abierto y como último (reintegrar, DS-10); ninguno por omisión.</summary>
+        public Guid? ExpedienteDelVinculo { get; set; }
+
+        /// <summary>El vínculo de Norte no tiene correo de invitación.</summary>
+        public bool SinCorreo { get; set; }
         public TipoExpediente TipoDeExpediente { get; set; } = TipoExpediente.Inicial;
         public string TipoCanonico { get; set; } = "RUT";
 
@@ -545,7 +659,7 @@ public class NotificacionesDelTerceroTests
                 _ when tenantId == TenantA && id == VinculoA => new Vinculo
                 {
                     Id = VinculoA, EmpresaId = EmpresaA, TerceroId = TerceroId, TipoVinculoId = Guid.NewGuid(), Estado = EstadoVinculo.EnValidacion,
-                    CorreoTercero = "ana@aceros.co"
+                    CorreoTercero = SinCorreo ? string.Empty : "ana@aceros.co", ExpedienteAbiertoId = ExpedienteDelVinculo, UltimoExpedienteId = ExpedienteDelVinculo
                 },
                 _ when tenantId == TenantB && id == VinculoB => new Vinculo
                 {

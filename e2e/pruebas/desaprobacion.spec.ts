@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type FrameLocator } from '@playwright/test';
+import { esperarCorreo } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja } from '../soporte/empresa';
 import { accionDeExpediente, emitirAprobacion, etapa, reabrirEtapa, tarjetaDeArea } from '../soporte/devolucion';
@@ -106,6 +107,11 @@ test('desaprobar un expediente aprobado: vuelve a revisión, el vínculo a valid
   expect(await leerVinculo(c.e, c.invitacion)).toMatchObject({ estado: 'EnValidacion', expedienteAbiertoId: c.expedienteId });
   const revocado = await leerCertificado(c.e, c.invitacion);
   expect(revocado.actual).toMatchObject({ emision: 1, estado: 'Revocado', bloqueante: true });
+
+  // El tercero se entera por correo (DS-10): que la empresa volvió a revisar su validación, sin la justificación, que es interna.
+  const aviso = await esperarCorreo(c.invitacion.correo, /volvió a revisar tu validación/);
+  expect(aviso.texto).toContain('que ya estaba aprobada');
+  expect(aviso.texto).not.toContain('inhabilidad');
 
   // Cumplimiento aprueba de nuevo: el vínculo vuelve a Activo y se emite un certificado nuevo (emisión 2).
   const ventana = await (await browser.newContext()).newPage();

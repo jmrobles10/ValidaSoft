@@ -218,6 +218,45 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
     }
 
     /// <summary>
+    /// La empresa devolvió a revisión una validación ya aprobada (plantilla <c>desaprobacion</c>, DS-2): el vínculo queda en validación
+    /// mientras la revisa y no hay nada que hacer por ahora. Sin la justificación (interna) ni nombres de revisores o áreas.
+    /// </summary>
+    public MensajeDeCorreo RedactarDesaprobacion(Notificaciones.CorreoDeDesaprobacionPendiente correo)
+    {
+        var asunto = $"{correo.Empresa} volvió a revisar tu validación {correo.Folio}";
+        var parrafo = $"{correo.Empresa} devolvió a revisión tu validación {correo.Folio}, que ya estaba aprobada. Tu vínculo queda en validación mientras la revisa; " +
+                      "no tienes que hacer nada por ahora y te avisamos cuando termine.";
+        var texto = parrafo + $"\n\nPuedes ver el estado en Validasoft ({UrlPublica}) entrando con tu correo.";
+        var html = $"<p>{WebUtility.HtmlEncode(parrafo)}</p>" +
+                   $"<p>Puedes ver el estado en <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> entrando con tu correo.</p>";
+        return new MensajeDeCorreo(correo.Para, asunto, texto, html);
+    }
+
+    /// <summary>
+    /// La empresa reintegró el vínculo del tercero (plantilla <c>reintegro</c>, DS-5): según el modo, no hay nada que hacer, hay una
+    /// validación abierta con documentos por subir o falta completar la validación. Sin la justificación (interna).
+    /// </summary>
+    public MensajeDeCorreo RedactarReintegro(Notificaciones.CorreoDeReintegroPendiente correo)
+    {
+        var asunto = $"{correo.Empresa} reintegró tu vínculo";
+        var folio = string.IsNullOrWhiteSpace(correo.Folio) ? string.Empty : $" ({correo.Folio})";
+        var (parrafo, siguiente) = correo.Modo switch
+        {
+            Notificaciones.ModoDeReintegro.SinRevalidar => (
+                $"{correo.Empresa} reintegró tu vínculo sin pedirte documentos nuevos: quedó como estaba antes y tu certificado se emitió de nuevo.",
+                $"Puedes verlo y compartirlo en Validasoft ({UrlPublica}) entrando con tu correo."),
+            Notificaciones.ModoDeReintegro.ConRenovacion => (
+                $"{correo.Empresa} reintegró tu vínculo y abrió una nueva validación{folio}.",
+                $"Entra a Validasoft ({UrlPublica}) con tu correo, sube o confirma tus documentos y completa la validación."),
+            _ => (
+                $"{correo.Empresa} reintegró tu vínculo: falta que completes la validación de tu información para dejarlo activo.",
+                $"Entra a Validasoft ({UrlPublica}) con tu correo para completarla.")
+        };
+        return new MensajeDeCorreo(correo.Para, asunto, parrafo + "\n\n" + siguiente,
+            $"<p>{WebUtility.HtmlEncode(parrafo)}</p><p>{WebUtility.HtmlEncode(siguiente)}</p>");
+    }
+
+    /// <summary>
     /// Un documento venció para una empresa (plantilla <c>vencido</c>, docs/05 §8): sin enlace de acceso, remite a pedir uno
     /// con el correo para subir la versión nueva.
     /// </summary>

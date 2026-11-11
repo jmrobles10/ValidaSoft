@@ -96,7 +96,7 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
 Sale de `main` y cierra los huecos con el SRM + Portal sobre las novedades del tercero. **No tiene PR.** Detalle en el
-[registro](decisiones/registro.md#5-unquadragies-novedades-del-tercero-campana-recordatorio-de-observaciones-y-tiempo-real-2026-11-10)
+[registro](decisiones/registro.md#5-septquadragies-novedades-del-tercero-y-tiempo-real-2026-11-11)
 (NT-1..NT-17) y en [docs/05 §2.7.2](05-api-contratos-y-webhooks.md).
 
 | Bloque | Estado | Registro |
@@ -105,6 +105,7 @@ Sale de `main` y cierra los huecos con el SRM + Portal sobre las novedades del t
 | **Recordatorio de observaciones pendientes**: desde el expediente, en lote desde la bandeja (seleccionados o «todos los observados» con filtro de área), uno por día, plantilla editable y aviso en la campana | Terminado | NT-7, NT-8 |
 | **Recordatorio automático** cada N días mientras siga observado | Terminado, **por empresa** (no por flujo) | NT-9 |
 | **Aviso a las áreas cuando el tercero responde**: también a las que revisan los documentos reabiertos | Terminado y cubierto con e2e | NT-4 |
+| **Avisos al tercero al desaprobar y reintegrar** (DS-10): campana y correo con plantilla editable, según preferencias, sin la justificación interna | Terminado, con integración y e2e | NT-18 |
 | **Tiempo real** entre la empresa y el tercero (SSE de «cambió X» en la web y en el portal, campana del tercero al instante, aviso cuando se designa una cuenta, «Hay cambios nuevos» sin pisar lo que se escribe, reconexión y respaldo) | Terminado y cubierto con e2e de dos navegadores | NT-12…NT-16 |
 
 Pendiente de esta rama: pasar el recordatorio automático a **por flujo** (cuando se integre el plazo de cargue por flujo

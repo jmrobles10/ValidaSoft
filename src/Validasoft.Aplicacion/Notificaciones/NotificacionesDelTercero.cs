@@ -61,12 +61,19 @@ public static class TiposNotificacionTercero
     /// <summary>La empresa aprobó o rechazó la cuenta bancaria que designó para cobrarle (solo campana).</summary>
     public const string Cuenta = "tercero.cuenta";
 
+    /// <summary>La empresa devolvió a revisión una validación que ya estaba aprobada (desaprobar, DS-2).</summary>
+    public const string Desaprobado = "tercero.desaprobado";
+
+    /// <summary>La empresa reintegró su vínculo, con o sin validar de nuevo (DS-5).</summary>
+    public const string Reintegrado = "tercero.reintegrado";
+
     public static readonly IReadOnlyList<string> Todos =
-        [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion, Cuenta];
+        [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion, Cuenta,
+            Desaprobado, Reintegrado];
 
     /// <summary>Los que además de la campana van por correo (si el tercero no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [Observado, Recordatorio, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue];
+        [Observado, Recordatorio, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Desaprobado, Reintegrado];
 
     public static bool QuiereCorreo(PreferenciasDelTercero? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -135,6 +142,12 @@ public static class PlanificadorDeNotificacionesDelTercero
             case ExpedienteAprobado:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Resultado,
                     "Validación aprobada", $"{empresa} aprobó tu validación {e.Folio}: tu vínculo está activo y ya tienes tu certificado."));
+            case ExpedienteDesaprobado:
+                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Desaprobado,
+                    "Tu validación volvió a revisión",
+                    $"{empresa} volvió a revisar tu validación {e.Folio}: tu vínculo queda en validación mientras la revisa y te avisamos cuando termine."));
+            case VinculoReintegrado reintegrado:
+                return await DeReintegroAsync(evento, reintegrado, contexto, orden, ct);
             case ExpedienteRechazado rechazado:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) =>
                 {
@@ -193,6 +206,35 @@ public static class PlanificadorDeNotificacionesDelTercero
         var (tipo, titulo, mensaje) = redactar(expediente, empresa);
         return Plan(Nueva(evento, tenantId, expediente.TerceroId, expediente.EmpresaId, expediente.VinculoId, expediente.Id, expediente.Folio, tipo, titulo,
             mensaje, $"/expediente/{expediente.Id}", orden), tenantId);
+    }
+
+    /// <summary>
+    /// La empresa reintegró el vínculo (DS-5): sin revalidar queda como estaba y su certificado se emite de nuevo; revalidando, vuelve a
+    /// validación con una renovación abierta (hay que subir los documentos) o, si nunca se aprobó, a la invitación. El enlace lleva a
+    /// lo que hay que hacer. Nunca lleva la justificación (es interna).
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> DeReintegroAsync(IEvent evento, VinculoReintegrado reintegrado, IContextoDeEventos contexto, long orden,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo ||
+            vinculo.TerceroId == Guid.Empty)
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "La empresa";
+        var expedienteId = reintegrado.SinRevalidar ? vinculo.UltimoExpedienteId : vinculo.ExpedienteAbiertoId;
+        var expediente = expedienteId is { } id ? await contexto.ExpedienteAsync(tenantId, id, ct) : null;
+        var (titulo, mensaje, enlace) = (reintegrado.SinRevalidar, reintegrado.EstadoResultante, expediente) switch
+        {
+            (true, _, _) => ("Tu vínculo se reintegró",
+                $"{empresa} reintegró tu vínculo sin pedirte documentos nuevos: quedó como estaba antes y tu certificado se emitió de nuevo.", "/empresas"),
+            (false, EstadoVinculo.EnValidacion, { } abierto) => ("Tu vínculo se reintegró: falta validar",
+                $"{empresa} reintegró tu vínculo y abrió una nueva validación ({abierto.Folio}): sube o confirma tus documentos para completarla.",
+                $"/expediente/{abierto.Id}"),
+            _ => ("Tu vínculo se reintegró: falta validar",
+                $"{empresa} reintegró tu vínculo: completa la validación de tu información para dejarlo activo.", $"/empresas/{vinculo.Id}")
+        };
+        return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, vinculo.Id, expediente?.Id, expediente?.Folio, TiposNotificacionTercero.Reintegrado,
+            titulo, mensaje, enlace, orden), tenantId);
     }
 
     /// <summary>Notificación de un hecho de un documento de la bóveda para uno de sus vínculos: va al tenant de ese vínculo.</summary>

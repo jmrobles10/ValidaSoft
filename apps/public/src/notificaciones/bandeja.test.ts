@@ -51,6 +51,8 @@ describe('bandeja de la campana del tercero', () => {
 
   it('los tipos que van por correo tienen su texto y los demás (o los desconocidos) no se ofrecen para apagar', () => {
     expect(claveDeTipo('tercero.plazo_de_cargue')).toBe('plazoDeCargue');
+    expect(claveDeTipo('tercero.desaprobado')).toBe('desaprobado');
+    expect(claveDeTipo('tercero.reintegrado')).toBe('reintegrado');
     expect(claveDeTipo('tercero.invitacion')).toBeNull();
     expect(claveDeTipo('constructor')).toBeNull();
     expect(tiposConCorreo(['tercero.observado', 'tercero.futuro', 'tercero.certificado']).map((t) => t.clave)).toEqual(['observado', 'certificado']);

@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type FrameLocator } from '@playwright/test';
+import { esperarCorreo } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { accionDeVinculo } from '../soporte/devolucion';
 import {
@@ -61,6 +62,11 @@ test('desvincular y reintegrar sin revalidar: el vínculo vuelve a Activo y el c
   await accionDeVinculo(ana, 'Reintegrar', 'Se renovó el contrato marco.', { sinRevalidar: true });
   await expect(ana.getByText('Vínculo reintegrado.')).toBeVisible();
 
+  // El tercero se entera por correo (DS-10): quedó como estaba, sin documentos nuevos, y no se le muestra la justificación.
+  const aviso = await esperarCorreo(c.invitacion.correo, /reintegró tu vínculo$/);
+  expect(aviso.texto).toContain('sin pedirte documentos nuevos');
+  expect(aviso.texto).not.toContain('Se renovó el contrato marco');
+
   expect(await leerVinculo(c.e, c.invitacion)).toMatchObject({ estado: 'Activo', expedienteAbiertoId: null });
   const certificados = await leerCertificado(c.e, c.invitacion);
   expect(certificados.actual).toMatchObject({ emision: 2, estado: 'Vigente', expedienteId: c.expedienteId });
@@ -84,6 +90,8 @@ test('reintegrar revalidando abre una renovación y, al aprobarse, el vínculo v
   const renovacionId = vinculo.expedienteAbiertoId;
   expect(renovacionId).not.toBeNull();
   expect(renovacionId).not.toBe(c.expedienteId);
+  // Y por correo, que se abrió una nueva validación (DS-10).
+  expect((await esperarCorreo(c.invitacion.correo, /reintegró tu vínculo$/)).texto).toContain('abrió una nueva validación (');
   // La tarjeta del vínculo muestra el expediente en curso: es la renovación abierta al reintegrar.
   await expect(ana.getByText('Expediente en curso')).toBeVisible();
 

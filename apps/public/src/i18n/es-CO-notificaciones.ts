@@ -54,5 +54,13 @@ export const notificaciones = {
       titulo: 'Plazo para completar tu validación',
       explicacion: 'Cuando se acerca el plazo, cuando caduca tu validación o cuando la empresa la reabre.',
     },
+    desaprobado: {
+      titulo: 'Tu validación volvió a revisión',
+      explicacion: 'Cuando una empresa devuelve a revisión una validación que ya había aprobado.',
+    },
+    reintegrado: {
+      titulo: 'Tu vínculo se reintegró',
+      explicacion: 'Cuando una empresa reintegra tu vínculo, con o sin pedirte documentos nuevos.',
+    },
   },
 } as const;

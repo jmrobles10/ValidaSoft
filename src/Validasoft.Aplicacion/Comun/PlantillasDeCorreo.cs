@@ -90,6 +90,10 @@ public static class EjemplosDeCorreo
                 redactor.RedactarRecordatorioDeObservaciones(new Expedientes.CorreoDeRecordatorioDeObservacionesPendiente(Para, empresa, folio,
                     [new ObservacionParaCorreo(["El documento está vencido."], "Adjunta el RUT actualizado.", Documento)], 3), "enlace-de-ejemplo"),
                 VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.Desaprobacion => new(
+                redactor.RedactarDesaprobacion(new CorreoDeDesaprobacionPendiente(Para, empresa, folio)), VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.Reintegro => new(
+                redactor.RedactarReintegro(new CorreoDeReintegroPendiente(Para, empresa, folio, ModoDeReintegro.ConRenovacion)), VariablesDe(empresa, folio)),
             _ => throw new ArgumentOutOfRangeException(nameof(evento), evento, "Evento sin plantilla.")
         };
     }

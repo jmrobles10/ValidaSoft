@@ -25,6 +25,8 @@ public static class CatalogoDePlantillas
     public const string Certificado = "certificado";
     public const string Caducidad = "caducidad";
     public const string RecordatorioObservaciones = "recordatorio-observaciones";
+    public const string Desaprobacion = "desaprobacion";
+    public const string Reintegro = "reintegro";
 
     public static readonly IReadOnlyList<EventoDePlantilla> Eventos =
     [
@@ -36,7 +38,9 @@ public static class CatalogoDePlantillas
         new(Certificado, "Certificado revocado o suspendido", "El certificado del tercero dejó de valer.", ["empresa", "folio"]),
         new(Caducidad, "Plazo de cargue", "Recordatorio del plazo para completar el expediente, su caducidad y su reapertura.", ["empresa", "folio"]),
         new(RecordatorioObservaciones, "Recordatorio de observaciones", "La empresa le recuerda al tercero las observaciones que sigue teniendo pendientes.",
-            ["empresa", "folio"])
+            ["empresa", "folio"]),
+        new(Desaprobacion, "Validación devuelta a revisión", "La empresa devolvió a revisión una validación que ya estaba aprobada.", ["empresa", "folio"]),
+        new(Reintegro, "Vínculo reintegrado", "La empresa reintegró el vínculo del tercero, con o sin validar de nuevo.", ["empresa", "folio"])
     ];
 
     public static EventoDePlantilla? Buscar(string? evento) =>

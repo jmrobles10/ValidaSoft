@@ -178,7 +178,7 @@ public sealed partial class RequisitosApiTests
 
         var inicial = await TerceroAsync<PreferenciasNotificacionDto>("GET", "/public/v1/preferencias-notificacion", sesion.AccessToken, null, 200);
         inicial.TiposConCorreo.ShouldBe(["tercero.observado", "tercero.recordatorio", "tercero.resultado", "tercero.documento_por_vencer", "tercero.documento_vencido",
-            "tercero.certificado", "tercero.plazo_de_cargue"]);
+            "tercero.certificado", "tercero.plazo_de_cargue", "tercero.desaprobado", "tercero.reintegrado"]);
         inicial.Correo.Values.ShouldAllBe(v => v);
         (await CodigoAsync(await TerceroAsync("PUT", "/public/v1/preferencias-notificacion", sesion.AccessToken,
             new ActualizarPreferenciasNotificacionDto(new Dictionary<string, bool> { ["tercero.invitacion"] = false }), 422))).ShouldBe("tipo-notificacion-invalido");
@@ -415,5 +415,97 @@ public sealed partial class RequisitosApiTests
         foreach (var persona in new[] { e.Laura, e.Carlos })
             (await EsperarCampanaDeAsync(e, persona, x => x.Datos.Any(n => n.Tipo == "expediente.tercero_respondio" && n.ExpedienteId == b.Expediente)))
                 .Datos.Count(n => n.Tipo == "expediente.tercero_respondio" && n.ExpedienteId == b.Expediente).ShouldBe(1);
+    }
+
+    // ---------- desaprobar y reintegrar (DS-10) ----------
+
+    private Task ApagarCorreoAsync(SesionTerceroDto sesion, string tipo) =>
+        TerceroAsync("PUT", "/public/v1/preferencias-notificacion", sesion.AccessToken,
+            new ActualizarPreferenciasNotificacionDto(new Dictionary<string, bool> { [tipo] = false }), 200);
+
+    private Task EncenderCorreoAsync(SesionTerceroDto sesion, string tipo) =>
+        TerceroAsync("PUT", "/public/v1/preferencias-notificacion", sesion.AccessToken,
+            new ActualizarPreferenciasNotificacionDto(new Dictionary<string, bool> { [tipo] = true }), 200);
+
+    [Fact]
+    public async Task Desaprobar_un_expediente_aprobado_avisa_al_tercero_en_la_campana_y_por_correo_con_la_plantilla_y_respeta_su_preferencia()
+    {
+        const string justificacion = "Interno: el RUT no cuadra con la Cámara.";
+
+        // A: con la plantilla de la empresa. La campana y el correo avisan, sin la justificación (es interna).
+        var a = await ProveedorAprobadoAsync();
+        await ApiAsync<PlantillaNotificacionDto>("PUT", $"{RutaPlantillas}/desaprobacion/correo", Admin(a.E.Norte),
+            new ActualizarPlantillaNotificacionDto("{{empresa}} · revisión de {{folio}}", "Hola desde {{empresa}}", null), 200);
+        await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{a.Expediente}/desaprobar", Admin(a.E.Norte), new DesaprobarExpedienteDto(justificacion), 200);
+
+        var bandeja = await EsperarBandejaAsync(a.Sesion, b => b.Datos.Any(n => n.Tipo == "tercero.desaprobado"));
+        var aviso = bandeja.Datos.Single(n => n.Tipo == "tercero.desaprobado");
+        aviso.Titulo.ShouldBe("Tu validación volvió a revisión");
+        aviso.Mensaje.ShouldContain("Norte S.A.S. volvió a revisar tu validación");
+        aviso.Empresa!.Id.ShouldBe(a.E.Norte.Datos.Id);
+        aviso.Enlace.ShouldBe($"/expediente/{a.Expediente}");
+        aviso.ExpedienteId.ShouldBe(a.Expediente);
+        aviso.LeidaEn.ShouldBeNull();
+        JsonSerializer.Serialize(bandeja, new JsonSerializerOptions(JsonSerializerDefaults.Web)).ShouldNotContain("Interno");
+
+        var correo = await fixture.Correos.EsperarAsync(a.Vinculo.CorreoTercero, m => m.Asunto.StartsWith("Norte S.A.S. · revisión de NORTE-E-", StringComparison.Ordinal));
+        correo.Texto.ShouldStartWith("Hola desde Norte S.A.S.");
+        correo.Texto.ShouldContain("que ya estaba aprobada");
+        correo.Texto.ShouldNotContain("Interno");
+        fixture.Correos.Para(a.Vinculo.CorreoTercero).Count(m => m.Asunto.Contains("revisión de NORTE-E-")).ShouldBe(1);
+
+        // B: el tercero apaga este correo; la campana avisa igual. Antes del correo de la revocación del certificado (el mismo hecho, que
+        // sale después) no llegó el de la desaprobación.
+        var b = await ProveedorAprobadoAsync();
+        await ApagarCorreoAsync(b.Sesion, "tercero.desaprobado");
+        await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{b.Expediente}/desaprobar", Admin(b.E.Norte), new DesaprobarExpedienteDto(justificacion), 200);
+        (await EsperarBandejaAsync(b.Sesion, x => x.Datos.Any(n => n.Tipo == "tercero.desaprobado") && x.Datos.Any(n => n.Tipo == "tercero.certificado")))
+            .Datos.Count(n => n.Tipo == "tercero.desaprobado").ShouldBe(1);
+        await fixture.Correos.EsperarAsync(b.Vinculo.CorreoTercero, m => m.Asunto.Contains("revocó tu certificado"));
+        await Task.Delay(TimeSpan.FromSeconds(2)); // la cola de correo no garantiza orden: se da tiempo a que saliera el otro si fuera a salir
+        fixture.Correos.Para(b.Vinculo.CorreoTercero).ShouldNotContain(m => m.Asunto.Contains("volvió a revisar tu validación"));
+    }
+
+    [Fact]
+    public async Task Reintegrar_avisa_al_tercero_segun_el_modo_en_la_campana_y_por_correo_con_la_plantilla_y_respeta_su_preferencia()
+    {
+        const string justificacion = "Interno: lo pidió gerencia.";
+        var a = await ProveedorAprobadoAsync();
+        var norte = a.E.Norte;
+        await ApiAsync<PlantillaNotificacionDto>("PUT", $"{RutaPlantillas}/reintegro/correo", Admin(norte),
+            new ActualizarPlantillaNotificacionDto("{{empresa}} · reintegro", "Hola desde {{empresa}}", null), 200);
+
+        // Sin revalidar, con el correo de este tipo apagado: la campana avisa que quedó como estaba y no sale correo.
+        await ApagarCorreoAsync(a.Sesion, "tercero.reintegrado");
+        await ApiAsync<VinculoDto>("POST", $"/api/v1/vinculos/{a.Vinculo.Id}/desvincular", Admin(norte), new MotivoDto("Fin del contrato"), 200);
+        await ApiAsync<VinculoDto>("POST", $"/api/v1/vinculos/{a.Vinculo.Id}/reintegrar", Admin(norte), new ReintegrarVinculoDto(justificacion, false), 200);
+        var primera = await EsperarBandejaAsync(a.Sesion, b => b.Datos.Any(n => n.Tipo == "tercero.reintegrado"));
+        var sinRevalidar = primera.Datos.Single(n => n.Tipo == "tercero.reintegrado");
+        sinRevalidar.Titulo.ShouldBe("Tu vínculo se reintegró");
+        sinRevalidar.Mensaje.ShouldContain("sin pedirte documentos nuevos");
+        sinRevalidar.Enlace.ShouldBe("/empresas");
+        sinRevalidar.VinculoId.ShouldBe(a.Vinculo.Id);
+        sinRevalidar.Empresa!.Id.ShouldBe(norte.Datos.Id);
+
+        // Revalidando, con el correo de nuevo encendido: renovación abierta, el aviso lleva a ella y sale el correo con la plantilla. El de la
+        // vez anterior (apagado) nunca salió: este es el único.
+        await EncenderCorreoAsync(a.Sesion, "tercero.reintegrado");
+        await ApiAsync<VinculoDto>("POST", $"/api/v1/vinculos/{a.Vinculo.Id}/desvincular", Admin(norte), new MotivoDto("Otra vez"), 200);
+        var reintegrado = await ApiAsync<VinculoDto>("POST", $"/api/v1/vinculos/{a.Vinculo.Id}/reintegrar", Admin(norte), new ReintegrarVinculoDto(justificacion), 200);
+        reintegrado.Estado.ShouldBe("EnValidacion");
+        var renovacion = reintegrado.ExpedienteAbiertoId.ShouldNotBeNull();
+        var segunda = await EsperarBandejaAsync(a.Sesion, b => b.Datos.Count(n => n.Tipo == "tercero.reintegrado") == 2);
+        var conRenovacion = segunda.Datos.Single(n => n.Tipo == "tercero.reintegrado" && n.Id != sinRevalidar.Id);
+        conRenovacion.Titulo.ShouldBe("Tu vínculo se reintegró: falta validar");
+        conRenovacion.Mensaje.ShouldContain("abrió una nueva validación");
+        conRenovacion.Enlace.ShouldBe($"/expediente/{renovacion}");
+        conRenovacion.ExpedienteId.ShouldBe(renovacion);
+        JsonSerializer.Serialize(segunda, new JsonSerializerOptions(JsonSerializerDefaults.Web)).ShouldNotContain("Interno");
+
+        var correo = await fixture.Correos.EsperarAsync(a.Vinculo.CorreoTercero, m => m.Asunto == "Norte S.A.S. · reintegro");
+        correo.Texto.ShouldStartWith("Hola desde Norte S.A.S.");
+        correo.Texto.ShouldContain("abrió una nueva validación (NORTE-E-");
+        correo.Texto.ShouldNotContain("Interno");
+        fixture.Correos.Para(a.Vinculo.CorreoTercero).Count(m => m.Asunto == "Norte S.A.S. · reintegro").ShouldBe(1);
     }
 }
