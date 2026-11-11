@@ -5,11 +5,32 @@ import { expect, type FrameLocator, type Locator } from '@playwright/test';
  * Los textos son los de apps/web/src/i18n (es-CO): si cambian, cambian aquí.
  */
 
+/**
+ * Va a una sección de la barra superior: su pestaña si cabe en el ancho del iframe, y si no, la opción del menú «Más»
+ * (las pestañas que no caben pasan allí, así que el mismo nombre puede ser un enlace de la barra o un ítem del menú).
+ */
+export async function irASeccion(app: FrameLocator, nombre: string): Promise<void> {
+  const barra = app.getByRole('navigation', { name: 'Secciones' });
+  await expect(barra).toBeVisible();
+  const pestana = barra.getByRole('link', { name: nombre, exact: true });
+  if ((await pestana.count()) > 0) {
+    try {
+      await pestana.click({ timeout: 3000 });
+      return;
+    } catch {
+      // Al terminar de cargar la tipografía la barra se midió de nuevo y la pestaña pasó a «Más»: se sigue por el menú.
+    }
+  }
+  // Con la sección activa en «Más», el botón lleva su nombre en lugar de «Más»: se reconoce por su menú.
+  await barra.locator('button[aria-haspopup="menu"]').click();
+  await app.getByRole('menuitem', { name: nombre, exact: true }).click();
+}
+
 /** Abre desde la bandeja el expediente del tercero para el área indicada. */
 export async function abrirDesdeBandeja(app: FrameLocator, tercero: string, area: string, tipoVinculo?: 'Proveedor' | 'Cliente'): Promise<void> {
   // Se pasa por «Vínculos» para que la bandeja se monte de nuevo y se pida otra vez (si ya estaba abierta, no se refresca).
-  await app.getByRole('link', { name: 'Vínculos' }).first().click();
-  await app.getByRole('link', { name: 'Bandeja' }).first().click();
+  await irASeccion(app, 'Vínculos');
+  await irASeccion(app, 'Bandeja');
   await expect(app.getByRole('heading', { level: 1, name: 'Bandeja de revisión' })).toBeVisible();
   let fila = app.getByRole('row', { name: new RegExp(`Abrir expediente .* de ${escapar(tercero)} \\(${escapar(area)}\\)`) });
   // El mismo tercero puede tener dos vínculos con la empresa (proveedor y cliente): la columna «Tipo» los separa.

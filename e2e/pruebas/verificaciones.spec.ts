@@ -2,7 +2,7 @@ import { expect, test, type Browser, type FrameLocator } from '@playwright/test'
 import { llamar } from '../soporte/api';
 import { pdf } from '../soporte/archivos';
 import { abrirEmbebido } from '../soporte/embebido';
-import { abrirDesdeBandeja, aprobarArea, regionDeArea } from '../soporte/empresa';
+import { abrirDesdeBandeja, aprobarArea, irASeccion, regionDeArea } from '../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, type Escenario, type Invitacion, type Persona } from '../soporte/semilla';
 
@@ -116,7 +116,7 @@ test('con coincidencia: el oficial la ve en su bandeja, la descarta con justific
   await esperarEstadoDelTercero(page, 'EnRevision');
 
   // Su bandeja de cumplimiento lo muestra como lo único que falta.
-  await olga.getByRole('link', { name: 'Cumplimiento' }).first().click();
+  await irASeccion(olga, 'Cumplimiento');
   const fila = olga.getByRole('row').filter({ hasText: nombre });
   await expect(fila).toContainText('Solo falta esto para aprobar');
   await fila.getByRole('link', { name: 'Abrir' }).click();
@@ -136,7 +136,7 @@ test('con coincidencia: el oficial la ve en su bandeja, la descarta con justific
   await esperarEstadoDelTercero(page, 'Aprobado');
 
   // El informe SAGRILAFT lo cuenta y se exporta a Excel.
-  await olga.getByRole('link', { name: 'Cumplimiento' }).first().click();
+  await irASeccion(olga, 'Cumplimiento');
   await olga.getByRole('tab', { name: 'Informe SAGRILAFT' }).click();
   await expect(olga.getByRole('table', { name: 'Informe SAGRILAFT' })).toContainText(nombre);
   const pagina = olga.owner().page();

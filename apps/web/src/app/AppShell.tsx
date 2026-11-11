@@ -3,10 +3,12 @@ import { SCOPES } from '@validasoft/api-client';
 import { Isotipo, SelectorEmpresa, VARIABLE_TOPE, visualmenteOculto } from '@validasoft/ui';
 import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
 import { Campana } from '../features/notificaciones/Campana';
 import { useAlturaFija } from '../sesion/alturaFija';
+import { BotonConfiguracion } from './BotonConfiguracion';
+import { NavegacionPrincipal, type Pestana } from './NavegacionPrincipal';
 import { RELLENO_CONTENIDO } from './rellenoContenido';
 import { useSesion } from '../sesion/sesionStore';
 import { useYo } from '../sesion/useYo';
@@ -14,16 +16,10 @@ import { usePreferencias } from '../shared/preferencias';
 import { usePermisos } from '../shared/usePermisos';
 import { SECCIONES_CONFIGURACION } from './secciones';
 
-interface Pestana {
-  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'cumplimiento' | 'certificados' | 'vinculos' | 'informes' | 'auditoria' | 'configuracion';
-  ruta: string;
-  /** Rutas que marcan la pestaña como activa. */
-  prefijos: readonly string[];
-}
-
 /**
  * AppShell embebido (dirección Registro): una sola fila de 48 px dentro del iframe del anfitrión, sin login ni menú
- * lateral propios. Isotipo, empresa activa, secciones y "Sesión desde SRM".
+ * lateral propios. Isotipo, empresa activa, secciones (pestañas con «Más» adaptativo), campana, Configuración (engranaje)
+ * y "Sesión desde SRM".
  */
 export function AppShell() {
   const { t } = useTranslation();
@@ -58,11 +54,13 @@ export function AppShell() {
   if (permisos.puede(SCOPES.expedientesLeer) || permisos.puede(SCOPES.vinculosLeer))
     pestanas.push({ clave: 'informes', ruta: permisos.puede(SCOPES.expedientesLeer) ? 'informes/estado-expedientes' : 'informes/vinculos', prefijos: ['informes'] });
   if (permisos.puede(SCOPES.auditoriaLeer)) pestanas.push({ clave: 'auditoria', ruta: 'auditoria', prefijos: ['auditoria'] });
-  const primera = configuracion[0];
-  if (primera) pestanas.push({ clave: 'configuracion', ruta: primera.ruta, prefijos: SECCIONES_CONFIGURACION.map((s) => s.ruta) });
+  // Configuración no es una pestaña: es el engranaje de la derecha, activo en cualquiera de sus secciones.
+  const primeraConfiguracion = configuracion[0];
 
   const relativa = pathname.slice(`/e/${empresa.id}/`.length);
-  const activa = pestanas.find((p) => p.prefijos.some((r) => relativa === r || relativa.startsWith(`${r}/`)));
+  const enRuta = (prefijo: string) => relativa === prefijo || relativa.startsWith(`${prefijo}/`);
+  const activa = pestanas.find((p) => p.prefijos.some(enRuta));
+  const enConfiguracion = SECCIONES_CONFIGURACION.some((s) => enRuta(s.ruta));
   // Al cambiar de empresa se conserva la sección, no el recurso (el expediente o flujo es de la otra empresa).
   const primerSegmento = relativa.split('/')[0] ?? '';
   // La ficha del tercero cuelga de Vínculos (no hay lista de terceros).
@@ -112,44 +110,14 @@ export function AppShell() {
           actual={empresa.id}
           onCambiar={(id) => void navegar(`/e/${id}/${seccionActual}`)}
         />
-        <Box component="nav" aria-label={t('nav.principal')} sx={{ display: 'flex', alignSelf: 'stretch', gap: '2px', ml: 1, minWidth: 0, overflowX: 'auto' }}>
-          {pestanas.map((p) => {
-            const actual = activa?.clave === p.clave;
-            return (
-              <Box
-                key={p.clave}
-                component={RouterLink}
-                to={`/e/${empresa.id}/${p.ruta}`}
-                aria-current={actual ? 'page' : undefined}
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  px: 1.25,
-                  borderBottom: 2,
-                  borderColor: actual ? 'acento.main' : 'transparent',
-                  color: actual ? 'text.primary' : 'text.secondary',
-                  fontSize: 14,
-                  lineHeight: '20px',
-                  fontWeight: actual ? 600 : 500,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  '&:hover': { color: 'text.primary' },
-                  '&:focus-visible': { outlineOffset: -2 },
-                }}
-              >
-                {t(`nav.${p.clave}`)}
-              </Box>
-            );
-          })}
-        </Box>
-        <Box sx={{ flex: 1 }} />
+        <NavegacionPrincipal pestanas={pestanas} empresaId={empresa.id} activa={activa?.clave ?? null} />
         {sistema && (
           // El texto completo solo cabe en pantallas anchas: en las demás queda el ícono con el texto en un tooltip (y
-          // oculto solo a la vista, para los lectores de pantalla), así las pestañas no se cortan.
+          // oculto solo a la vista, para los lectores de pantalla), así caben más pestañas antes de pasar a «Más».
           <Tooltip title={persona ? t('app.sesionDePersona', { persona, sistema }) : t('app.sesionDe', { sistema })}>
             <Typography
               component="span"
-              sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline-flex' }, alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
+              sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline-flex' }, flex: 'none', alignItems: 'center', gap: 0.5, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}
             >
               <Link2 size={14} strokeWidth={1.75} aria-hidden />
               <Box component="span" sx={{ display: 'inline', '@media (max-width: 1535.95px)': visualmenteOculto }}>
@@ -159,6 +127,7 @@ export function AppShell() {
           </Tooltip>
         )}
         <Campana empresaId={empresa.id} />
+        {primeraConfiguracion && <BotonConfiguracion destino={`/e/${empresa.id}/${primeraConfiguracion.ruta}`} activo={enConfiguracion} />}
         {!temaDelContenedor && (
           <Tooltip title={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')}>
             <IconButton aria-label={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')} onClick={() => fijarModo(modo === 'dark' ? 'light' : 'dark')}>

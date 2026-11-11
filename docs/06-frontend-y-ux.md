@@ -201,6 +201,21 @@ Todas las rutas de operación están **dentro de una empresa**; las de `/configu
 
 **Embed.** El host abre `<iframe src="https://public…/embed/expediente/{token}">` o el Web Component `<validasoft-expediente token>`. Eventos (origen validado contra la allowlist del tenant): `validasoft:ready`, `validasoft:documento-subido {requisitoId, version}`, `validasoft:expediente-completo`, `validasoft:resize {height}`. Entrada: `validasoft:tema {mode}`.
 
+### 3.3 Barra superior de la web de empresa (`apps/web`, NAV-1…NAV-7)
+
+Una sola fila de 48 px (también dentro del iframe del anfitrión): isotipo, `SelectorEmpresa`, **secciones**, y a la derecha «Sesión desde …», la campana, **Configuración** (engranaje) y el tema. Con las nueve secciones de un administrador (Inicio, Bandeja, Revalidaciones, Vencimientos, Cumplimiento, Certificados, Vínculos, Informes, Auditoría) las pestañas no caben en un iframe angosto, y una barra de scroll horizontal bajo ellas se veía mal: la barra **nunca se desplaza en horizontal**.
+
+| Elemento | Comportamiento |
+|---|---|
+| Pestañas con «Más» adaptativo (patrón «priority+») | Se muestran, en su orden, las pestañas que caben en el ancho que le sobra a la barra; las demás pasan a un botón **«Más ▾»** con un menú (MUI `Menu`). Si caben todas, no hay «Más». Se recalcula al cambiar el ancho de la ventana o del iframe (`ResizeObserver`), antes de pintar: sin parpadeo. |
+| Medición | Una sola vez por cambio de tamaño: los anchos de todas las pestañas y del botón se leen de una **fila oculta** (fuera del flujo, sin texto duplicado) y la función pura `cuantasPestanasCaben` (`app/pestanasAdaptativas.ts`) decide cuántas caben. La barra ocupa lo que sobra del encabezado (`flex: 1 1 0`), no lo que contiene, así que lo que se muestra no altera lo medido: no hay bucles. Sin layout (jsdom, contenedor oculto) se muestran todas. |
+| Sección activa dentro de «Más» | El botón se subraya como una pestaña activa, lleva el nombre de la sección («Auditoría ▾» en lugar de «Más ▾») y `aria-current="page"`; reservar ese ancho puede dejar fuera una pestaña más (nunca devuelve la activa a la fila). El menú la marca (`selected`, negrita y `aria-current`). |
+| Configuración | Engranaje (`Settings`) con tooltip «Configuración», enlace a su primera sección visible; activo (tinte y color de acento) en cualquiera de sus secciones, y entonces ninguna pestaña lo está. Conserva su barra lateral (`LayoutConfiguracion`). Sin permisos de configuración no aparece. |
+| Accesibilidad | `nav` con su nombre («Secciones»); «Más» es un botón con `aria-haspopup="menu"`, `aria-expanded` y `aria-controls`; los ítems del menú son **enlaces** (`role="menuitem"`, `aria-current="page"` en el activo) con la navegación por teclado de `MenuList` (Enter abre y enfoca el primero, flechas, Esc cierra y devuelve el foco). El menú no bloquea el scroll de la ventana, para que no cambie el ancho (y con él cuántas pestañas caben) mientras está abierto. |
+| Misma apariencia | Mismo alto, tipografía y subrayado de las pestañas anteriores, en modo claro y oscuro y en el modo embebido (altura fija, puente `postMessage`): el cambio es solo de distribución. |
+
+La consola de Plataforma (`ShellPlataforma`, dos pestañas) conserva su barra: no hay riesgo de desborde.
+
 ---
 
 ## 4. Flujos críticos (UI ↔ API)
