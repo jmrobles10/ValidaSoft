@@ -148,7 +148,7 @@ describe('Privacidad y mis datos', () => {
     await waitFor(() => expect(mutaciones).toHaveLength(1));
     expect(mutaciones[0]?.url.pathname).toBe('/public/v1/solicitudes-habeas');
     expect(mutaciones[0]?.cuerpo).toEqual({ tipo: 'Supresion', alcance: 'Documentos', empresaId: null, detalle: null });
-  }, 20_000);
+  });
 
   it('la corrección pide decir qué dato está mal y no envía sin eso', async () => {
     const usuario = userEvent.setup();
@@ -161,7 +161,7 @@ describe('Privacidad y mis datos', () => {
 
     expect(within(dialogo).getAllByText(/Cuéntanos qué dato quieres corregir/).length).toBeGreaterThan(0);
     expect(mutaciones).toHaveLength(0);
-  }, 20_000);
+  });
 
   it('una exportación lista dice cuántos archivos trae, cuánto pesa y hasta cuándo se puede bajar', async () => {
     montar([], [exportacion()]);
@@ -177,5 +177,5 @@ describe('Privacidad y mis datos', () => {
     await waitFor(() => expect(mutaciones).toHaveLength(1));
     expect(mutaciones[0]?.url.pathname).toBe('/public/v1/boveda/exportar');
     await waitFor(() => expect(useAvisos.getState().actual?.mensaje).toMatch(/Te avisamos por correo cuando esté lista/));
-  }, 20_000);
+  });
 });

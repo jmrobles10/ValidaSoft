@@ -129,7 +129,7 @@ describe('crear un webhook', () => {
       metodo: 'POST',
       cuerpo: { url: 'https://srm.cliente.co/hook', tipos: ['vinculo.activado', 'certificado.emitido'], empresas: ['e2'] },
     });
-  }, 20_000);
+  });
 });
 
 describe('eventos de la información del tercero (FD-7)', () => {
@@ -178,5 +178,5 @@ describe('detalle de un webhook', () => {
     const dialogo = await screen.findByRole('dialog');
     await usuario.click(within(dialogo).getByRole('button', { name: 'Rotar secreto' }));
     await waitFor(() => expect(onSecreto).toHaveBeenCalledWith(expect.objectContaining({ secreto: 'whsec_nuevo' })));
-  }, 20_000);
+  });
 });

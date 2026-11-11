@@ -181,7 +181,7 @@ describe('Plan y límites de un grupo (Plataforma)', () => {
       limites: { usuarios: null, empresas: 1012, vinculosActivos: 1000, almacenamientoMb: 2048, llamadasApiMes: 100000 },
       bloqueoSuave: false,
     });
-  }, 20_000);
+  });
 
   it('un código demasiado corto no se envía y dice por qué', async () => {
     const usuario = userEvent.setup();
@@ -195,5 +195,5 @@ describe('Plan y límites de un grupo (Plataforma)', () => {
 
     expect(await screen.findAllByText('El código del plan lleva de 2 a 40 caracteres.')).not.toHaveLength(0);
     expect(peticiones.some((p) => p.metodo === 'PUT')).toBe(false);
-  }, 20_000);
+  });
 });

@@ -169,7 +169,7 @@ describe('Habeas data de la empresa', () => {
     const envio = peticiones.find((p) => p.metodo === 'POST');
     expect(envio?.url.pathname).toBe('/api/v1/solicitudes-habeas/s1/resolver');
     expect(envio?.cuerpo).toEqual({ decision: 'Atender', respuesta: 'Tus datos son los de la ficha: nombre, NIT y contacto.', baseLegal: null });
-  }, 20_000);
+  });
 
   it('al rechazar pide citar la base legal y la envía con la respuesta', async () => {
     const usuario = userEvent.setup();
@@ -191,7 +191,7 @@ describe('Habeas data de la empresa', () => {
       respuesta: 'No podemos cambiar la razón social de un certificado ya emitido.',
       baseLegal: 'Código de Comercio, art. 28',
     });
-  }, 20_000);
+  });
 });
 
 describe('Habeas data de la plataforma', () => {
@@ -212,5 +212,5 @@ describe('Habeas data de la plataforma', () => {
     await usuario.click(within(dialogo).getByRole('radio', { name: 'Rechazar' }));
     expect(within(dialogo).queryByText('Se eliminan')).not.toBeInTheDocument();
     expect(within(dialogo).getByRole('button', { name: 'Responder al titular' })).toBeInTheDocument();
-  }, 20_000);
+  });
 });

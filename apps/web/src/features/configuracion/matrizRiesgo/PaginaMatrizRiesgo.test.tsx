@@ -151,7 +151,7 @@ describe('Configuración › Matriz de riesgo (CU-17)', () => {
     expect(screen.getByText('Los límites van de 1 a 100 y el de Bajo debe ser menor que el de Medio.')).toBeInTheDocument();
     expect(screen.getByText('Corrige 2 cosas para guardar.')).toBeInTheDocument();
     expect(guardar(llamadas)).toHaveLength(0);
-  }, 40_000);
+  });
 
   it('un error 422 de la API se muestra en español', async () => {
     montar(ADMIN, { [`PUT ${RUTA}`]: () => problema(422, 'niveles-invalidos') });
@@ -186,5 +186,5 @@ describe('Configuración › Matriz de riesgo (CU-17)', () => {
     await userEvent.click(prueba.getByRole('combobox', { name: 'Coincidencias en listas restrictivas' }));
     await userEvent.click(screen.getByRole('option', { name: 'Coincidencia confirmada' }));
     expect(resultado.getByText('3 · Alto')).toBeInTheDocument();
-  }, 40_000);
+  });
 });

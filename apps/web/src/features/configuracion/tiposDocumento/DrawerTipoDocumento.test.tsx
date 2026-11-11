@@ -98,7 +98,7 @@ describe('Tipo de documento: crear y editar', () => {
         { clave: 'origen_de_los_fondos', etiqueta: 'Origen de los fondos', tipo: 'Texto' },
       ],
     });
-  }, 20_000);
+  });
 
   it('editar: muestra lo que ve el proveedor y el 422 de la API con su detalle', async () => {
     const usuario = userEvent.setup();

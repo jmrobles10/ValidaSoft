@@ -157,7 +157,7 @@ describe('editor de tipos de vínculo', () => {
         atributosPermitidos: [{ clave: 'nivelriesgo', tipo: 'Opcion', obligatorio: false, opciones: ['Bajo', 'Alto'] }],
       },
     });
-  }, 20_000);
+  });
 
   it('al editar, el código queda fijo, avisa del efecto en los flujos y guarda con PUT', async () => {
     const usuario = userEvent.setup();
@@ -174,5 +174,5 @@ describe('editor de tipos de vínculo', () => {
       metodo: 'PUT',
       cuerpo: { codigo: 'PROVEEDOR', atributosPermitidos: [{ clave: 'nivelRiesgo', tipo: 'Opcion', obligatorio: false, opciones: ['Bajo', 'Medio', 'Alto'] }] },
     });
-  }, 20_000);
+  });
 });

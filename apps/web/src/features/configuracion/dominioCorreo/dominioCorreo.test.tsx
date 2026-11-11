@@ -181,7 +181,7 @@ describe('Dominio de correo de la empresa', () => {
     const envio = peticiones.find((p) => p.metodo === 'PUT');
     expect(envio?.url.pathname).toBe('/api/v1/empresas/emp/dominio-correo');
     expect(envio?.cuerpo).toEqual({ dominio: 'proveedores.norte.co', parteLocal: null, nombreRemitente: null });
-  }, 20_000);
+  });
 
   it('un dominio mal escrito no se envía y dice cómo escribirlo', async () => {
     const usuario = userEvent.setup();
@@ -194,7 +194,7 @@ describe('Dominio de correo de la empresa', () => {
 
     expect((await screen.findAllByText(/Escribe un dominio como proveedores.miempresa.com/)).length).toBeGreaterThan(0);
     expect(peticiones.some((p) => p.metodo === 'PUT')).toBe(false);
-  }, 20_000);
+  });
 
   it('muestra los tres registros con su valor y lo que halló la verificación en cada uno', async () => {
     permisos.scopes = new Set([SCOPES.empresasAdministrar]);
@@ -225,7 +225,7 @@ describe('Dominio de correo de la empresa', () => {
 
     await waitFor(() => expect(peticiones.some((p) => p.metodo === 'POST')).toBe(true));
     expect(peticiones.find((p) => p.metodo === 'POST')?.url.pathname).toBe('/api/v1/empresas/emp/dominio-correo/verificar');
-  }, 20_000);
+  });
 
   it('verificado muestra el remitente propio; quitarlo dice antes que el correo vuelve a salir desde la plataforma', async () => {
     const usuario = userEvent.setup();
@@ -243,5 +243,5 @@ describe('Dominio de correo de la empresa', () => {
 
     await waitFor(() => expect(peticiones.some((p) => p.metodo === 'DELETE')).toBe(true));
     expect(peticiones.find((p) => p.metodo === 'DELETE')?.url.pathname).toBe('/api/v1/empresas/emp/dominio-correo');
-  }, 20_000);
+  });
 });

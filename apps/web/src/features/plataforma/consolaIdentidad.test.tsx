@@ -278,7 +278,7 @@ describe('Agregar una empresa a un grupo desde la consola (PI-9)', () => {
     expect(peticion?.ruta).toBe('/api/v1/plataforma/tenants/t1/empresas');
     expect(peticion?.cuerpo).toMatchObject({ identificacion: { numero: '900123456-8' }, nombre: 'Constructora Norte', prefijoFolio: 'NORTE' });
     expect(peticion?.cabeceras.get('Idempotency-Key')).toBeTruthy();
-  }, 30_000);
+  });
 
   it('un grupo sin empresas ofrece agregarla aquí', () => {
     montarGrupo();
