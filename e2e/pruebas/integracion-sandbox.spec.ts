@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { ClienteValidasoft, validarWebhook } from '@validasoft/sdk';
 import { API, llamar, nitAleatorio } from '../soporte/api';
+import { mensajesDe } from '../soporte/correo';
 import { abrirEmbebidoCon, sesionDeUsuario } from '../soporte/embebido';
 import { Receptor } from '../soporte/receptor';
 import { crearEscenario, type Empresa, type Escenario } from '../soporte/semilla';
@@ -11,8 +12,6 @@ import { crearEscenario, type Empresa, type Escenario } from '../soporte/semilla
  * bloqueado) y embebe la pantalla de la empresa; todo sin enviar un correo real, sin tocar producción y con la posibilidad de
  * reiniciarlo. Es el recorrido que sigue un integrador externo leyendo la guía.
  */
-
-const MAILPIT = process.env.E2E_MAILPIT ?? 'http://localhost:8025';
 
 /** Lo que necesita un sistema como el SRM en el sandbox (la llave de prueba lleva los mismos permisos que llevaría en producción). */
 const SCOPES = [
@@ -91,8 +90,7 @@ test('el integrador prueba todo en el sandbox con el SDK: invitación, webhooks,
     expect(invitacion.asunto).toContain('Constructora Norte S.A.S. (sandbox)');
     const enlace = invitacion.enlaces.find((x) => x.includes('/e/'));
     expect(enlace).toBeDefined();
-    const enMailpit = (await (await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${correo}"`)}`)).json()) as { messages_count?: number; total?: number };
-    expect(enMailpit.messages_count ?? enMailpit.total ?? 0).toBe(0); // nada salió a un buzón real
+    expect(await mensajesDe(correo)).toHaveLength(0); // nada salió a un buzón real
 
     // El enlace del buzón abre la invitación del tercero de pruebas, con la empresa del sandbox.
     await page.goto(enlace ?? '');

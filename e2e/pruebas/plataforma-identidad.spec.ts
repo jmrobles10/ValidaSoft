@@ -1,9 +1,10 @@
-import { expect, test, type CDPSession, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { CLAVE_PLATAFORMA, clavesDeSistema, llamar, nitAleatorio } from '../soporte/api';
-import { codigo, esperarCorreo } from '../soporte/correo';
+import { autenticadorVirtual, type AutenticadorVirtual } from '../soporte/autenticador';
+import { codigo, esperarCorreo, mensajesDe } from '../soporte/correo';
 import { abrirConsolaDePlataforma } from '../soporte/plataforma';
 
 /**
@@ -29,19 +30,8 @@ const TEXTO_ASUNTO_CODIGO = 'Tu código para ingresar a Validasoft';
 const ASUNTO_CODIGO = new RegExp(TEXTO_ASUNTO_CODIGO);
 const barraDeSecciones = (page: Page) => page.getByRole('navigation', { name: 'Secciones' });
 
-async function autenticadorVirtual(page: Page): Promise<{ cdp: CDPSession; id: string }> {
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send('WebAuthn.enable');
-  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
-    options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
-  });
-  return { cdp, id: authenticatorId };
-}
-
 async function entrarConCodigo(page: Page, correo: string): Promise<void> {
-  const antes = await fetch(`${process.env.E2E_MAILPIT ?? 'http://localhost:8025'}/api/v1/search?query=${encodeURIComponent(`to:"${correo}"`)}`)
-    .then((r) => r.json() as Promise<{ messages: { ID: string; Subject: string }[] }>)
-    .then((r) => r.messages.filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).map((m) => m.ID));
+  const antes = (await mensajesDe(correo)).filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).map((m) => m.ID);
   await page.getByLabel('Correo').fill(correo);
   await page.getByRole('button', { name: 'Continuar' }).click();
   await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
@@ -81,7 +71,7 @@ async function crearGrupoDirecto(): Promise<Grupo> {
 }
 
 /** La primera entrada de una administradora: código y registro de su primera passkey. */
-async function entrarYRegistrarPasskey(page: Page, g: Grupo): Promise<{ cdp: CDPSession; id: string }> {
+async function entrarYRegistrarPasskey(page: Page, g: Grupo): Promise<AutenticadorVirtual> {
   const virtual = await autenticadorVirtual(page);
   await page.goto('/app/');
   await entrarConCodigo(page, g.correoAdmin);

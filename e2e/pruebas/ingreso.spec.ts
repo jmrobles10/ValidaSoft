@@ -3,7 +3,8 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { CLAVE_PLATAFORMA, llamar, nitAleatorio } from '../soporte/api';
-import { codigo, esperarCorreo } from '../soporte/correo';
+import { autenticadorVirtual } from '../soporte/autenticador';
+import { codigo, esperarCorreo, mensajesDe } from '../soporte/correo';
 
 /**
  * Ingreso directo sin contraseñas (ING-1…ING-4): correo → código → passkey, ingreso solo con passkey (autenticador virtual del navegador por CDP),
@@ -57,16 +58,6 @@ async function crearUsuario(g: Grupo, nombre: string, rol: string, correo: strin
   });
 }
 
-/** Autenticador virtual con huella simulada (CDP `WebAuthn`): credenciales detectables y verificación de usuario. */
-async function autenticadorVirtual(page: Page, sesionCdp?: CDPSession): Promise<{ cdp: CDPSession; id: string }> {
-  const cdp = sesionCdp ?? (await page.context().newCDPSession(page));
-  if (!sesionCdp) await cdp.send('WebAuthn.enable');
-  const { authenticatorId } = await cdp.send('WebAuthn.addVirtualAuthenticator', {
-    options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },
-  });
-  return { cdp, id: authenticatorId };
-}
-
 async function credenciales(a: { cdp: CDPSession; id: string }): Promise<number> {
   const { credentials } = await a.cdp.send('WebAuthn.getCredentials', { authenticatorId: a.id });
   return credentials.length;
@@ -74,9 +65,7 @@ async function credenciales(a: { cdp: CDPSession; id: string }): Promise<number>
 
 /** Pide el código con el correo y lo escribe en las seis casillas; devuelve cuántos correos de código había antes. */
 async function entrarConCodigo(page: Page, correo: string, capturaDelCodigo?: string): Promise<void> {
-  const antes = await fetch(`${process.env.E2E_MAILPIT ?? 'http://localhost:8025'}/api/v1/search?query=${encodeURIComponent(`to:"${correo}"`)}`)
-    .then((r) => r.json() as Promise<{ messages: { ID: string; Subject: string }[] }>)
-    .then((r) => r.messages.filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).map((m) => m.ID));
+  const antes = (await mensajesDe(correo)).filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).map((m) => m.ID);
   await page.getByLabel('Correo').fill(correo);
   await page.getByRole('button', { name: 'Continuar' }).click();
   await expect(page.getByRole('heading', { name: 'Revisa tu correo' })).toBeVisible();
@@ -164,14 +153,10 @@ test('un administrador registra su passkey en el primer ingreso y después entra
   await page.getByRole('button', { name: 'Menú de tu cuenta' }).click();
   await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
   await expect(page.getByRole('heading', { name: 'Ingresa a Validasoft' })).toBeVisible();
-  const codigosAntes = await fetch(`${process.env.E2E_MAILPIT ?? 'http://localhost:8025'}/api/v1/search?query=${encodeURIComponent(`to:"${g.correoAdmin}"`)}`)
-    .then((r) => r.json() as Promise<{ messages: { Subject: string }[] }>)
-    .then((r) => r.messages.filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).length);
+  const codigosAntes = (await mensajesDe(g.correoAdmin)).filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).length;
   await page.getByRole('button', { name: 'Entrar con una passkey' }).click();
   await expect(barraDeSecciones(page)).toBeVisible();
-  const codigosDespues = await fetch(`${process.env.E2E_MAILPIT ?? 'http://localhost:8025'}/api/v1/search?query=${encodeURIComponent(`to:"${g.correoAdmin}"`)}`)
-    .then((r) => r.json() as Promise<{ messages: { Subject: string }[] }>)
-    .then((r) => r.messages.filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).length);
+  const codigosDespues = (await mensajesDe(g.correoAdmin)).filter((m) => m.Subject.includes(TEXTO_ASUNTO_CODIGO)).length;
   expect(codigosDespues).toBe(codigosAntes);
 });
 

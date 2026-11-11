@@ -16,6 +16,41 @@ interface ResumenMailpit {
   Created: string;
 }
 
+const pausa = (ms: number) => new Promise((resolver) => setTimeout(resolver, ms));
+
+/**
+ * Los mensajes de la bandeja para `destinatario`, o `null` si Mailpit no contestó. Con la máquina cargada, el relevo de puertos de Docker corta alguna
+ * conexión (`fetch failed`): eso no es un fallo de la aplicación, así que quien consulta decide si reintenta.
+ */
+async function consultar(destinatario: string): Promise<ResumenMailpit[] | null> {
+  try {
+    const respuesta = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${destinatario}"`)}&limit=50`);
+    return respuesta.ok ? ((await respuesta.json()) as { messages: ResumenMailpit[] }).messages : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Lo que ya llegó a `destinatario` (sin esperar). Reintenta si un corte momentáneo de la conexión con Mailpit impide leer la bandeja. */
+export async function mensajesDe(destinatario: string): Promise<{ ID: string; Subject: string }[]> {
+  for (let intento = 0; intento < 20; intento += 1) {
+    const mensajes = await consultar(destinatario);
+    if (mensajes) return mensajes;
+    await pausa(500);
+  }
+  throw new Error(`No se pudo leer la bandeja de Mailpit (${MAILPIT}) para ${destinatario}.`);
+}
+
+/** El detalle de un mensaje, o `null` si Mailpit no contestó (un corte momentáneo de la conexión). */
+async function detalleDe(id: string): Promise<{ Text: string; HTML: string; Subject: string; From?: { Address: string } } | null> {
+  try {
+    const respuesta = await fetch(`${MAILPIT}/api/v1/message/${id}`);
+    return respuesta.ok ? ((await respuesta.json()) as { Text: string; HTML: string; Subject: string; From?: { Address: string } }) : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Espera el correo más reciente para `destinatario` cuyo asunto cumpla `asunto` (y que no esté en `excluir`, para
  * pedir «el siguiente»). Cada prueba usa direcciones únicas, así que no hace falta vaciar la bandeja.
@@ -24,19 +59,18 @@ export async function esperarCorreo(destinatario: string, asunto: RegExp, { excl
   const limite = Date.now() + segundos * 1000;
   let vistos: string[] = [];
   while (Date.now() < limite) {
-    const respuesta = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`to:"${destinatario}"`)}&limit=50`);
-    if (respuesta.ok) {
-      const { messages } = (await respuesta.json()) as { messages: ResumenMailpit[] };
+    const messages = await consultar(destinatario);
+    if (messages) {
       vistos = messages.map((m) => m.Subject);
       const candidato = messages
         .filter((m) => asunto.test(m.Subject) && !excluir.includes(m.ID))
         .sort((a, b) => b.Created.localeCompare(a.Created))[0];
-      if (candidato) {
-        const detalle = (await (await fetch(`${MAILPIT}/api/v1/message/${candidato.ID}`)).json()) as { Text: string; HTML: string; Subject: string; From?: { Address: string } };
+      const detalle = candidato ? await detalleDe(candidato.ID) : null;
+      if (candidato && detalle) {
         return { id: candidato.ID, asunto: detalle.Subject, texto: detalle.Text, html: detalle.HTML, desde: detalle.From?.Address ?? '' };
       }
     }
-    await new Promise((r) => setTimeout(r, 500));
+    await pausa(500);
   }
   throw new Error(`No llegó a ${destinatario} un correo con asunto ${String(asunto)}. Asuntos recibidos: ${vistos.join(' | ') || '(ninguno)'}`);
 }
