@@ -375,8 +375,9 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
         foreach (var ruta in new[] { "/api/v1/vinculos", "/api/v1/expedientes", "/api/v1/areas", "/api/v1/flujos" })
             (await CodigoAsync(await ApiAsync("GET", ruta, new Credencial(e.Admin), null, 422))).ShouldBe("empresa-requerida");
         // 23 del proceso de validación (3 de cuenta designada, CB-3; caducado y reabierto, LT-2/LT-3) + 7 del certificado (NW-13, RV-3)
-        // + seccion.aceptada (FM-32) + invitaciones.lote_terminado (LT-9) + 3 de verificaciones (VE-13).
-        tipos.Count.ShouldBe(35);
+        // + seccion.aceptada (FM-32) + invitaciones.lote_terminado (LT-9) + 3 de verificaciones (VE-13) + vinculo.por_vencer y
+        // vinculo.vencido (VV-6).
+        tipos.Count.ShouldBe(37);
     }
 
     // ---------- preparación ----------
