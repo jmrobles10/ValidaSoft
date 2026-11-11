@@ -3,6 +3,7 @@ import {
   Building2,
   ClipboardCheck,
   Gauge,
+  BookOpenText,
   Sparkles,
   FileText,
   KeyRound,
@@ -15,7 +16,9 @@ import {
   Plug,
   Route,
   ShieldCheck,
+  Timer,
   Users,
+  UsersRound,
   Webhook,
   Workflow,
   type LucideIcon,
@@ -40,7 +43,10 @@ export interface SeccionConfiguracion {
     | 'revision-automatica'
     | 'listas-restrictivas'
     | 'matriz-riesgo'
-    | 'accesos-soporte';
+    | 'accesos-soporte'
+    | 'delegaciones'
+    | 'plazos-de-revision'
+    | 'ayuda-de-documentos';
   scope: Scope;
   icono: LucideIcon;
   /** Datos y marca, plantillas de correo, plan y uso de IA, áreas y flujos son de la empresa activa; el resto (empresas, usuarios, sistemas, llaves, tipos, soporte…), del grupo. */
@@ -72,4 +78,8 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'matriz-riesgo', scope: SCOPES.configuracionLeer, icono: Gauge, alcance: 'empresa' },
   { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },
   { ruta: 'flujos', scope: SCOPES.flujosLeer, icono: Route, alcance: 'empresa' },
+  // Plazos de revisión (OP-10, OP-11), ayuda de cada documento por empresa (OP-15, OP-16) y delegación de la revisión por ausencias (OP-7…OP-9).
+  { ruta: 'plazos-de-revision', scope: SCOPES.configuracionLeer, icono: Timer, alcance: 'empresa' },
+  { ruta: 'ayuda-de-documentos', scope: SCOPES.configuracionLeer, icono: BookOpenText, alcance: 'empresa' },
+  { ruta: 'delegaciones', scope: SCOPES.expedientesRevisar, icono: UsersRound, alcance: 'empresa' },
 ];

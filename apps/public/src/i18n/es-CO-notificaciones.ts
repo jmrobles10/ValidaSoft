@@ -62,5 +62,9 @@ export const notificaciones = {
       titulo: 'Tu vínculo se reintegró',
       explicacion: 'Cuando una empresa reintegra tu vínculo, con o sin pedirte documentos nuevos.',
     },
+    vigencia: {
+      titulo: 'Vigencia de mi validación',
+      explicacion: 'Aviso cuando mi validación está por vencer, venció o la empresa abrió su renovación.',
+    },
   },
 } as const;

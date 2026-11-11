@@ -31,6 +31,7 @@ export const plantillas = {
     folio: 'Folio de la validación o del certificado',
     tipoVinculo: 'Tipo de vínculo (Proveedor, Cliente…)',
     documento: 'Nombre del documento',
+    fecha: 'Fecha de vencimiento de la validación',
   },
   vistaPrevia: 'Vista previa',
   vistaPreviaAyuda: 'Con datos de ejemplo. Se actualiza mientras escribes.',

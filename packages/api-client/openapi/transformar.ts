@@ -361,6 +361,7 @@ const NOMBRES: Record<string, string> = {
   'PUT /api/v1/configuracion/recordatorio-observaciones': 'actualizarRecordatorioAutomatico',
   'POST /api/v1/plataforma/recordatorios-observaciones/revisar': 'revisarRecordatoriosDeObservaciones',
   'POST /api/v1/plataforma/vigencias-de-vinculos/revisar': 'revisarVigenciasDeVinculos',
+  'POST /api/v1/plataforma/sla/revisar': 'revisarSlaDeRevision',
   // Invitación masiva por lote (H8, LT-5…LT-10).
   'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
   'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',
@@ -373,6 +374,27 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/invitaciones/lotes/{id}/cancelar': 'cancelarLote',
   'POST /api/v1/invitaciones/lotes/{id}/reintentar': 'reintentarLote',
   'GET /api/v1/invitaciones/lotes/{id}/informe': 'descargarInformeLote',
+  // Operación de la revisión (OP-1…OP-19): campañas de renovación, delegación, SLA y ayudas por empresa.
+  'POST /api/v1/campanias/vista-previa': 'previsualizarCampania',
+  'POST /api/v1/campanias': 'crearCampania',
+  'GET /api/v1/campanias': 'listarCampanias',
+  'GET /api/v1/campanias/{id}': 'obtenerCampania',
+  'GET /api/v1/campanias/{id}/filas': 'listarFilasCampania',
+  'POST /api/v1/campanias/{id}/pausar': 'pausarCampania',
+  'POST /api/v1/campanias/{id}/reanudar': 'reanudarCampania',
+  'POST /api/v1/campanias/{id}/cancelar': 'cancelarCampania',
+  'POST /api/v1/campanias/{id}/reintentar': 'reintentarCampania',
+  'GET /api/v1/campanias/{id}/informe': 'descargarInformeCampania',
+  'GET /api/v1/delegaciones/candidatos': 'listarCandidatosDeDelegacion',
+  'GET /api/v1/delegaciones': 'listarDelegaciones',
+  'POST /api/v1/delegaciones': 'crearDelegacion',
+  'POST /api/v1/delegaciones/{id}/revocar': 'revocarDelegacion',
+  'GET /api/v1/configuracion/sla': 'obtenerConfiguracionSla',
+  'PUT /api/v1/configuracion/sla': 'actualizarConfiguracionSla',
+  'GET /api/v1/informes/sla': 'obtenerInformeSla',
+  'GET /api/v1/informes/sla/excel': 'descargarInformeSlaExcel',
+  'GET /api/v1/ayudas-de-documentos': 'listarAyudasDeDocumentos',
+  'PUT /api/v1/ayudas-de-documentos/{tipoId}': 'actualizarAyudaDeDocumento',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -424,6 +446,8 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   importarPortal: { '202': 'CorridaImportacionPortalDto' },
   // 202: el lote queda en proceso; su avance se consulta con obtenerLote.
   crearLote: { '202': 'LoteDto' },
+  // 202: la campaña queda en proceso; su avance se consulta con obtenerCampania.
+  crearCampania: { '202': 'CampaniaDto' },
   reanudarImportacionPortal: { '202': 'CorridaImportacionPortalDto' },
 };
 
@@ -432,6 +456,10 @@ const ENUMS: Record<string, string[]> = {
   EstadoCorridaPortal: ['Encolada', 'EnCurso', 'Completada', 'Fallida'],
   EstadoLote: ['Procesando', 'Pausado', 'Completado', 'CompletadoConErrores', 'Cancelado'],
   EstadoFilaLote: ['Pendiente', 'Exitosa', 'Fallida', 'Duplicada', 'Invalida', 'Cancelada'],
+  EstadoCampania: ['Procesando', 'Pausada', 'Completada', 'CompletadaConErrores', 'Cancelada'],
+  EstadoFilaCampania: ['Pendiente', 'Exitosa', 'Fallida', 'Omitida', 'Cancelada'],
+  EstadoDeDelegacion: ['Programada', 'Vigente', 'Vencida', 'Revocada'],
+  EstadoDeSla: ['EnTiempo', 'PorVencer', 'Vencido'],
   OrigenDeAceptacion: ['Expediente', 'Importacion'],
   EstadoVinculo: ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'],
   OrigenVinculo: ['Invitacion', 'Autorregistro', 'Migracion', 'Api'],
@@ -501,6 +529,10 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'ExpedienteDto.estado': 'EstadoExpediente',
   'LoteDto.estado': 'EstadoLote',
   'FilaLoteDto.estado': 'EstadoFilaLote',
+  'CampaniaDto.estado': 'EstadoCampania',
+  'FilaCampaniaDto.estado': 'EstadoFilaCampania',
+  'DelegacionDto.estado': 'EstadoDeDelegacion',
+  'FilaBandejaDto.sla': 'EstadoDeSla',
   'ExpedienteDto.tipo': 'TipoExpediente',
   'ExpedienteDto.politicaDevolucion': 'PoliticaDevolucion',
   'EtapaExpedienteDto.estado': 'EstadoEtapa',

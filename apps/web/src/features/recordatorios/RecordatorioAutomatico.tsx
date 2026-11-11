@@ -21,8 +21,11 @@ export function RecordatorioAutomatico({ empresaId, puedeEscribir }: { empresaId
       <Typography id="titulo-recordatorio-automatico" component="h2" sx={{ fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>
         {t('recordatorios.automatico.titulo')}
       </Typography>
-      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25, mb: 1.5 }}>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
         {t('recordatorios.automatico.ayuda')}
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5, mb: 1.5 }}>
+        {t('recordatorios.automatico.porFlujo')}
       </Typography>
       {consulta.isPending ? (
         <Stack spacing={1} aria-busy>

@@ -73,3 +73,9 @@ export * from './generado/endpoints/adjuntos-de-cumplimiento/adjuntos-de-cumplim
 export * from './generado/endpoints/rechazo-de-cumplimiento/rechazo-de-cumplimiento';
 export * from './generado/endpoints/informe-sagrilaft/informe-sagrilaft';
 export * from './generado/endpoints/revision-automatica/revision-automatica';
+export * from './generado/endpoints/campanias/campanias';
+export * from './generado/endpoints/delegaciones/delegaciones';
+export * from './generado/endpoints/configuracion-de-sla/configuracion-de-sla';
+export * from './generado/endpoints/informe-sla/informe-sla';
+export * from './generado/endpoints/slas-de-revision/slas-de-revision';
+export * from './generado/endpoints/ayudas-de-documento/ayudas-de-documento';

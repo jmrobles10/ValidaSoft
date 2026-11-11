@@ -12,6 +12,7 @@ export const RUTAS = {
   estadoExcel: '/api/v1/informes/estado-expedientes/excel',
   estadoPdf: '/api/v1/informes/estado-expedientes/pdf',
   vinculosExcel: '/api/v1/informes/vinculos/excel',
+  slaExcel: '/api/v1/informes/sla/excel',
   auditoriaExcel: '/api/v1/auditoria/excel',
   expedienteZip: (id: string) => `/api/v1/expedientes/${id}/exportar`,
 } as const;

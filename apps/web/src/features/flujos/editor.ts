@@ -9,6 +9,7 @@ import type {
   TipoVerificacion,
   VerificacionRequeridaDto,
 } from '@validasoft/api-client';
+import { recordatorioADto, recordatorioDesdeVersion, validarRecordatorio, type ModoRecordatorio } from './recordatorio';
 import { requisitoDeSeccionADto, validarRequisitoDeSeccion } from './requisitosDeSeccion';
 import { VIGENCIA_POR_DEFECTO, validarVigenciaDelVinculo, vigenciaADto } from './vigencia';
 
@@ -100,6 +101,9 @@ export interface BorradorFlujo {
   /** Reintento del tercero tras un rechazo (DS-4): si puede volver a postularse por su cuenta y cuántos días espera (0 = de inmediato). */
   reintentoPermitido: boolean;
   reintentoDias: string;
+  /** Recordatorio automático de observaciones (OP-19): lo de la empresa, apagado o cada N días (como lo escribe la persona). */
+  recordatorioModo: ModoRecordatorio;
+  recordatorioDias: string;
   /**
    * Vigencia periódica del vínculo (VV-1), como la escribe la persona: días desde la última aprobación (0 = sin vencimiento
    * periódico), avisos «30, 15, 5» (días antes de vencer) y días de gracia.
@@ -142,13 +146,14 @@ export type CodigoErrorFlujo =
   | 'gracia-vigencia-invalida'
   | 'vigencia-sin-secciones'
   | 'vigencia-seccion-invalida'
-  | 'dias-revalidacion-invalidos';
+  | 'dias-revalidacion-invalidos'
+  | 'recordatorio-invalido';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
   /**
    * `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>`, `requisito.<k>`, `requisito.<k>.periodos`,
-   * `requisito.<k>.vigencia`, `requisito.<k>.revalidacion`, `vigencia.dias`, `vigencia.avisos` o `vigencia.gracia`.
+   * `requisito.<k>.vigencia`, `requisito.<k>.revalidacion`, `vigencia.dias`, `vigencia.avisos`, `vigencia.gracia` o `recordatorio.dias`.
    */
   campo: string;
   /** Es aviso: no impide guardar (la API lo acepta) pero el flujo no avanzaría. */
@@ -199,6 +204,7 @@ export function borradorVacio(): BorradorFlujo {
     plazoRecordatorios: PLAZO_POR_DEFECTO.recordatorios.join(', '),
     reintentoPermitido: false,
     reintentoDias: '0',
+    ...recordatorioDesdeVersion(null),
     vigenciaDias: String(VIGENCIA_POR_DEFECTO.dias),
     vigenciaAvisos: VIGENCIA_POR_DEFECTO.avisos.join(', '),
     vigenciaGracia: String(VIGENCIA_POR_DEFECTO.gracia),
@@ -218,6 +224,7 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
     plazoRecordatorios: (version.plazoCargue?.recordatorios ?? PLAZO_POR_DEFECTO.recordatorios).join(', '),
     reintentoPermitido: version.reintento?.permitido ?? false,
     reintentoDias: String(version.reintento?.diasEspera ?? 0),
+    ...recordatorioDesdeVersion(version.recordatorioObservaciones),
     vigenciaDias: String(version.vigenciaVinculo?.dias ?? VIGENCIA_POR_DEFECTO.dias),
     vigenciaAvisos: (version.vigenciaVinculo?.diasAviso ?? VIGENCIA_POR_DEFECTO.avisos).join(', '),
     vigenciaGracia: String(version.vigenciaVinculo?.diasGracia ?? VIGENCIA_POR_DEFECTO.gracia),
@@ -310,6 +317,7 @@ export function validarFlujo(
   errores.push(...validarRequisitos(borrador, tiposDocumento));
   errores.push(...validarVerificaciones(borrador.verificaciones));
   errores.push(...validarVigenciaDelVinculo(borrador));
+  errores.push(...validarRecordatorio(borrador));
   return errores;
 }
 
@@ -454,6 +462,7 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     separacion: borrador.separacionDeFunciones,
     plazo: plazoADto(borrador),
     reintento: reintentoADto(borrador),
+    recordatorio: recordatorioADto(borrador),
     vigencia: vigenciaADto(borrador),
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos),

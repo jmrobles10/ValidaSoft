@@ -46,6 +46,7 @@ export const CLAVES_TIPO = {
   'tercero.plazo_de_cargue': 'plazoDeCargue',
   'tercero.desaprobado': 'desaprobado',
   'tercero.reintegrado': 'reintegrado',
+  'tercero.vigencia': 'vigencia',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];

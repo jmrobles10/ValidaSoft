@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
 import { limpiarAreasDeRequisitos, type BorradorFlujo, type ErrorFlujo } from '../editor';
 import { EditorEtapas } from './EditorEtapas';
+import { EditorRecordatorioFlujo } from './EditorRecordatorioFlujo';
 import { EditorRequisitos } from './EditorRequisitos';
 import { EditorVerificaciones } from './EditorVerificaciones';
 import { EditorVigenciaVinculo } from './EditorVigenciaVinculo';
@@ -135,6 +136,8 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
               />
             </Box>
           </Box>
+
+          <EditorRecordatorioFlujo borrador={borrador} onCambiar={onCambiar} errores={errores} soloLectura={soloLectura} />
 
           <Box component="fieldset" disabled={soloLectura} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
             <Typography component="legend" sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>

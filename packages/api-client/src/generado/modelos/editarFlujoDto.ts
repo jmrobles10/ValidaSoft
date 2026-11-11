@@ -6,6 +6,7 @@
  */
 import type { EtapaDto } from './etapaDto';
 import type { PlazoCargueDto } from './plazoCargueDto';
+import type { RecordatorioDeFlujoDto } from './recordatorioDeFlujoDto';
 import type { ReintentoDto } from './reintentoDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
@@ -27,4 +28,5 @@ export interface EditarFlujoDto {
   plazoCargue?: null | PlazoCargueDto;
   reintento?: null | ReintentoDto;
   vigenciaVinculo?: null | VigenciaVinculoDto;
+  recordatorioObservaciones?: null | RecordatorioDeFlujoDto;
 }

@@ -558,6 +558,7 @@ export const flujos = {
       'vigencia-sin-secciones': 'Con vigencia, el flujo debe pedir al menos una sección de la información del tercero.',
       'vigencia-seccion-invalida': 'Entre 1 y 3650 días, o vacío si no vence.',
       'dias-revalidacion-invalidos': 'Entre 1 y 365 días, o vacío para 15.',
+      'recordatorio-invalido': 'Escribe un número entero de 1 a 60.',
     },
     verificaciones: {
       titulo: 'Verificaciones de cumplimiento',

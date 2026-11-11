@@ -77,6 +77,18 @@ export function crearRouter() {
               path: 'vencimientos',
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
+            {
+              path: 'vencimientos/campanias',
+              lazy: () => import('../features/campanias/PaginaCampanias').then((m) => ({ Component: m.PaginaCampanias })),
+            },
+            {
+              path: 'vencimientos/campanias/nueva',
+              lazy: () => import('../features/campanias/PaginaNuevaCampania').then((m) => ({ Component: m.PaginaNuevaCampania })),
+            },
+            {
+              path: 'vencimientos/campanias/:campaniaId',
+              lazy: () => import('../features/campanias/DetalleCampania').then((m) => ({ Component: m.DetalleCampania })),
+            },
             { path: 'informes', element: <Navigate to="estado-expedientes" replace /> },
             {
               path: 'informes/estado-expedientes',
@@ -85,6 +97,10 @@ export function crearRouter() {
             {
               path: 'informes/vinculos',
               lazy: () => import('../features/informes/PaginaInformeVinculos').then((m) => ({ Component: m.PaginaInformeVinculos })),
+            },
+            {
+              path: 'informes/sla',
+              lazy: () => import('../features/informes/PaginaInformeSla').then((m) => ({ Component: m.PaginaInformeSla })),
             },
             {
               path: 'cumplimiento',
@@ -210,6 +226,18 @@ export function crearRouter() {
                 {
                   path: 'ingreso',
                   lazy: () => import('../features/configuracion/ingreso/PaginaIngreso').then((m) => ({ Component: m.PaginaIngreso })),
+                },
+                {
+                  path: 'delegaciones',
+                  lazy: () => import('../features/configuracion/delegaciones/PaginaDelegaciones').then((m) => ({ Component: m.PaginaDelegaciones })),
+                },
+                {
+                  path: 'plazos-de-revision',
+                  lazy: () => import('../features/configuracion/plazos/PaginaPlazosDeRevision').then((m) => ({ Component: m.PaginaPlazosDeRevision })),
+                },
+                {
+                  path: 'ayuda-de-documentos',
+                  lazy: () => import('../features/configuracion/ayudas/PaginaAyudasDeDocumentos').then((m) => ({ Component: m.PaginaAyudasDeDocumentos })),
                 },
               ],
             },

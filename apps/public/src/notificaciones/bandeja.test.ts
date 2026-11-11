@@ -53,9 +53,11 @@ describe('bandeja de la campana del tercero', () => {
     expect(claveDeTipo('tercero.plazo_de_cargue')).toBe('plazoDeCargue');
     expect(claveDeTipo('tercero.desaprobado')).toBe('desaprobado');
     expect(claveDeTipo('tercero.reintegrado')).toBe('reintegrado');
+    expect(claveDeTipo('tercero.vigencia')).toBe('vigencia');
     expect(claveDeTipo('tercero.invitacion')).toBeNull();
     expect(claveDeTipo('constructor')).toBeNull();
     expect(tiposConCorreo(['tercero.observado', 'tercero.futuro', 'tercero.certificado']).map((t) => t.clave)).toEqual(['observado', 'certificado']);
+    expect(tiposConCorreo(['tercero.vigencia']).map((t) => t.clave)).toEqual(['vigencia']);
   });
 
   it('en preferencias solo se envía lo que cambió respecto de lo guardado (lo no guardado vale que sí)', () => {
