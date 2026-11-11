@@ -107,6 +107,12 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:PlazosDeCargue:Intervalo", "00:00:00");
             // Invitación masiva (LT-8): tandas pequeñas para ver el avance, la pausa y la reanudación.
             b.UseSetting("Validasoft:Lotes:TamanoTanda", "5");
+            // Plan del grupo (OD-14…OD-17): el conteo de llamadas se vuelca cada segundo, el almacenamiento se mide en cada lectura y los barridos
+            // periódicos del plan y del habeas data se apagan (las pruebas los disparan con los endpoints de Plataforma).
+            b.UseSetting("Validasoft:Plan:SegundosDeVolcado", "1");
+            b.UseSetting("Validasoft:Plan:MinutosMedicionAlmacenamiento", "0");
+            b.UseSetting("Validasoft:Plan:Intervalo", "00:00:00");
+            b.UseSetting("Validasoft:Habeas:Intervalo", "00:00:00");
             b.ConfigureTestServices(s =>
             {
                 // El transporte SMTP se reemplaza, no el enviador: el aislamiento del sandbox (SB-4) sigue activo en las pruebas y lo que
@@ -158,6 +164,9 @@ public sealed class CorreosCapturados : ITransporteDeCorreo, IEnviadorDeCorreo
         _mensajes.Enqueue(mensaje);
         return Task.CompletedTask;
     }
+
+    /// <summary>Cuántos correos han salido (para medir el avance de un envío masivo).</summary>
+    public int Total => _mensajes.Count;
 
     public IReadOnlyList<MensajeDeCorreo> Para(string correo) =>
         [.. _mensajes.Where(m => string.Equals(m.Para, correo, StringComparison.OrdinalIgnoreCase))];

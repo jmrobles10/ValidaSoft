@@ -1,6 +1,6 @@
 import { BottomNavigation, BottomNavigationAction, Box, Button, Stack, Typography } from '@mui/material';
 import { Isotipo } from '@validasoft/ui';
-import { Building2, FolderCheck, IdCard, Landmark, LogOut } from 'lucide-react';
+import { Building2, FolderCheck, IdCard, Landmark, LogOut, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
 import { Campana } from '../notificaciones/Campana';
@@ -13,6 +13,7 @@ const SECCIONES = [
   { ruta: '/empresas', clave: 'nav.empresas', icono: Building2 },
   { ruta: '/ficha', clave: 'nav.ficha', icono: IdCard },
   { ruta: '/cuentas', clave: 'nav.cuentas', icono: Landmark },
+  { ruta: '/privacidad', clave: 'nav.privacidad', icono: ShieldCheck },
 ] as const;
 
 /**

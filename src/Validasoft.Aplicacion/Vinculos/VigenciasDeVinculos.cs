@@ -87,7 +87,7 @@ public static class CorreoDeVigenciaPendienteHandler
             _ => CatalogoDePlantillas.Renovacion
         };
         await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, evento, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, fecha: FechaLarga(correo.VigenteHasta)), ct)).DeTenant(correo.TenantId), ct);
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, fecha: FechaLarga(correo.VigenteHasta)), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 
     internal static string FechaLarga(DateOnly fecha) => fecha.ToString("d 'de' MMMM 'de' yyyy", Cultura);

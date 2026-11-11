@@ -3,9 +3,12 @@
  * con su llave de OpenAI y secretos en reposo. Se integran en `es-CO.ts` como `plataforma`.
  */
 
+import { planPlataforma } from './es-CO-derechos-plan-correo';
+
 export const plataforma = {
   titulo: 'Plataforma',
-  nav: { grupos: 'Grupos y empresas', operadores: 'Operadores', secretos: 'Secretos' },
+  nav: { grupos: 'Grupos y empresas', habeas: 'Habeas data', operadores: 'Operadores', secretos: 'Secretos' },
+  plan: planPlataforma,
   sesion: '{{persona}} · operador de Plataforma desde {{sistema}}',
   grupos: {
     titulo: 'Grupos y empresas',
@@ -34,6 +37,8 @@ export const plataforma = {
     sinEmpresas: 'Este grupo aún no tiene empresas: su administrador puede crearlas en Configuración › Empresas del grupo.',
     columnas: { empresa: 'Empresa', identificacion: 'Identificación', prefijo: 'Prefijo', planIa: 'Plan de IA', acciones: 'Acciones' },
     configurarPlan: 'Plan de IA',
+    planDelGrupo: 'Plan y límites',
+    planDelGrupoDe: 'Plan y límites de {{grupo}}',
     configurarPlanDe: 'Plan de IA de {{empresa}}',
     estadoPlan: {
       'sin-plan': 'Sin plan',

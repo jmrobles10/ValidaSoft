@@ -395,6 +395,37 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/informes/sla/excel': 'descargarInformeSlaExcel',
   'GET /api/v1/ayudas-de-documentos': 'listarAyudasDeDocumentos',
   'PUT /api/v1/ayudas-de-documentos/{tipoId}': 'actualizarAyudaDeDocumento',
+  // Habeas data (Ley 1581): solicitudes del titular desde su portal, las que atiende la empresa y las que atiende la plataforma (OD-1…OD-8).
+  'POST /public/v1/solicitudes-habeas': 'crearSolicitudHabeas',
+  'GET /public/v1/solicitudes-habeas': 'listarSolicitudesHabeas',
+  'GET /public/v1/solicitudes-habeas/{id}': 'obtenerSolicitudHabeas',
+  'GET /public/v1/solicitudes-habeas/{id}/constancia': 'obtenerConstanciaHabeas',
+  'GET /api/v1/solicitudes-habeas': 'listarSolicitudesHabeasDeLaEmpresa',
+  'GET /api/v1/solicitudes-habeas/resumen': 'resumirSolicitudesHabeasDeLaEmpresa',
+  'GET /api/v1/solicitudes-habeas/{id}': 'obtenerSolicitudHabeasDeLaEmpresa',
+  'POST /api/v1/solicitudes-habeas/{id}/resolver': 'resolverSolicitudHabeasDeLaEmpresa',
+  'GET /api/v1/plataforma/solicitudes-habeas': 'listarSolicitudesHabeasDePlataforma',
+  'GET /api/v1/plataforma/solicitudes-habeas/resumen': 'resumirSolicitudesHabeasDePlataforma',
+  'GET /api/v1/plataforma/solicitudes-habeas/{id}': 'obtenerSolicitudHabeasDePlataforma',
+  'GET /api/v1/plataforma/solicitudes-habeas/{id}/plan': 'obtenerPlanDeSupresion',
+  'POST /api/v1/plataforma/solicitudes-habeas/{id}/resolver': 'resolverSolicitudHabeasDePlataforma',
+  'POST /api/v1/plataforma/habeas/revisar-plazos': 'revisarPlazosDeHabeas',
+  // Exportación firmada de la bóveda del tercero (OD-9, OD-10).
+  'POST /public/v1/boveda/exportar': 'exportarBoveda',
+  'GET /public/v1/exportaciones': 'listarExportacionesBoveda',
+  'GET /public/v1/exportaciones/{id}': 'obtenerExportacionBoveda',
+  'POST /public/v1/exportaciones/{id}/descarga': 'descargarExportacionBoveda',
+  // Plan y límites por grupo (OD-14…OD-17): Plataforma los fija; el grupo ve su plan y su uso.
+  'GET /api/v1/plataforma/tenants/{tenantId}/plan': 'obtenerPlanDeUnGrupo',
+  'PUT /api/v1/plataforma/tenants/{tenantId}/plan': 'actualizarPlanDeUnGrupo',
+  'POST /api/v1/plataforma/planes/revisar': 'revisarPlanesDeGrupos',
+  'GET /api/v1/tenant/plan': 'obtenerPlanDelGrupo',
+  'GET /api/v1/tenant/uso': 'obtenerUsoDelGrupo',
+  // Dominio de correo propio por empresa (OD-18…OD-22).
+  'GET /api/v1/empresas/{id}/dominio-correo': 'obtenerDominioDeCorreo',
+  'PUT /api/v1/empresas/{id}/dominio-correo': 'fijarDominioDeCorreo',
+  'POST /api/v1/empresas/{id}/dominio-correo/verificar': 'verificarDominioDeCorreo',
+  'DELETE /api/v1/empresas/{id}/dominio-correo': 'quitarDominioDeCorreo',
 };
 
 /** Prefijos del contrato que el cliente genera (el resto, como los health checks, no es parte del contrato). */
@@ -448,6 +479,9 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearLote: { '202': 'LoteDto' },
   // 202: la campaña queda en proceso; su avance se consulta con obtenerCampania.
   crearCampania: { '202': 'CampaniaDto' },
+  // 201 con la solicitud y su radicado; 202: la exportación queda encolada y su estado se consulta con obtenerExportacionBoveda.
+  crearSolicitudHabeas: { '201': 'SolicitudHabeasDto' },
+  exportarBoveda: { '202': 'ExportacionBovedaDto' },
   reanudarImportacionPortal: { '202': 'CorridaImportacionPortalDto' },
 };
 

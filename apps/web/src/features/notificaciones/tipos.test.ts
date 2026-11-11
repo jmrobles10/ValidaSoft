@@ -21,6 +21,8 @@ describe('claveDeTipo', () => {
     expect(claveDeTipo('campanias.terminada')).toBe('campaniaTerminada');
     expect(claveDeTipo('expediente.sla_por_vencer')).toBe('slaPorVencer');
     expect(claveDeTipo('expediente.sla_incumplido')).toBe('slaIncumplido');
+    expect(claveDeTipo('habeas.plazo')).toBe('habeasPlazo');
+    expect(claveDeTipo('plan.limite')).toBe('planLimite');
     expect(claveDeTipo('constructor')).toBeNull();
     expect(claveDeTipo('otro.tipo')).toBeNull();
   });

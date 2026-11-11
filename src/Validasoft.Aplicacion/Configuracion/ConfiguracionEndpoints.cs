@@ -19,9 +19,10 @@ public static class EmpresasEndpoints
     [WolverinePost("/api/v1/empresas")]
     [Authorize(Policy = Permisos.EmpresasAdministrar)]
     public static async Task<IResult> Crear(CrearEmpresaDto dto, ISesiones sesiones, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+        Validasoft.Aplicacion.Plataforma.ControlDePlan plan, TimeProvider reloj, CancellationToken ct)
     {
         var tenantId = contexto.TenantRequerido();
+        await plan.ExigirAsync(tenantId, Validasoft.Dominio.Plataforma.MetricaDePlan.Empresas, 1, ct); // límite de empresas del plan con bloqueo suave (OD-17)
         var ahora = reloj.GetUtcNow();
         var empresa = Empresa.Crear(tenantId, dto.Identificacion.ADominio(), dto.Nombre, dto.PrefijoFolio, dto.LogoUrl, dto.ReplyTo, ahora);
 

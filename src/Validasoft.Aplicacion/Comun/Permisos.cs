@@ -79,13 +79,20 @@ public static class Permisos
     /// <summary>Decidir como Cumplimiento: resolver coincidencias en listas y registrar el estudio SAGRILAFT (VE-15).</summary>
     public const string CumplimientoDecidir = "cumplimiento:decidir";
 
+    /// <summary>
+    /// Atender las solicitudes de habeas data (consulta, corrección y supresión) que los terceros dirigen a la empresa (OD-3, docs/07 §3.2):
+    /// el Administrador y el Oficial de cumplimiento. Las de la bóveda global las atiende la Plataforma.
+    /// </summary>
+    public const string SupresionesResolver = "supresiones:resolver";
+
     /// <summary>Todo lo que puede tener una credencial de tenant (la de Plataforma no entra aquí).</summary>
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, SesionesTerceroCrear, VerificacionesEscribir, CumplimientoDecidir, SandboxAdministrar
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, SesionesTerceroCrear, VerificacionesEscribir, CumplimientoDecidir, SandboxAdministrar,
+        SupresionesResolver
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -118,7 +125,7 @@ public static class Permisos
         Rol.Revisor => [.. Lecturas, VinculosEscribir, ExpedientesRevisar],
         Rol.OficialCumplimiento =>
             [.. Lecturas, VinculosEscribir, VinculosBloquear, CuentasAprobar, ExpedientesRevisar, ExpedientesExportar, VerificacionesEscribir,
-                CumplimientoDecidir, AuditoriaLeer],
+                CumplimientoDecidir, AuditoriaLeer, SupresionesResolver],
         Rol.Auditor => [.. Lecturas, AuditoriaLeer, AuditoriaExportar, ExpedientesExportar],
         _ => []
     };

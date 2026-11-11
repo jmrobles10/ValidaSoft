@@ -45,3 +45,13 @@ export function formatearDiaLargo(valor: string | Date, zonaHoraria = ZONA_HORAR
   );
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
+
+/**
+ * 28/09/2026 para un día de calendario (`aaaa-mm-dd`, un `DateOnly` del backend: plazos de ley, vigencias): se escribe tal cual, sin pasar por
+ * la zona horaria (como `Date` sería la medianoche UTC, que en Bogotá es el día anterior). Con una fecha con hora, igual que
+ * {@link formatearFecha}.
+ */
+export function formatearDiaCivil(valor: string, zonaHoraria = ZONA_HORARIA_POR_DEFECTO): string {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
+  return partes ? `${partes[3] ?? ''}/${partes[2] ?? ''}/${partes[1] ?? ''}` : formatearFecha(valor, zonaHoraria);
+}

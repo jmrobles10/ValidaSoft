@@ -94,6 +94,18 @@ export const notificaciones = {
       titulo: 'Cupo de revisión automática',
       explicacion: 'A los administradores, cuando la empresa llega al 80 % y al 100 % de las validaciones con IA incluidas en su plan del mes.',
     },
+    habeasSolicitud: {
+      titulo: 'Solicitud de habeas data',
+      explicacion: 'A quienes responden el habeas data, cuando un tercero pide consultar, corregir o suprimir sus datos: la ley da 10 o 15 días hábiles para responder.',
+    },
+    habeasPlazo: {
+      titulo: 'Plazo de habeas data por vencer',
+      explicacion: 'A quienes responden el habeas data, cuando a una solicitud le quedan dos días hábiles o menos y cuando vence.',
+    },
+    planLimite: {
+      titulo: 'Límite del plan',
+      explicacion: 'A los administradores, cuando el grupo llega al 80 % y al 100 % de un límite de su plan: usuarios, empresas, vínculos, almacenamiento o llamadas a la API.',
+    },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',
       explicacion: 'A los administradores, cuando una suscripción de webhooks se deshabilita por entregas fallidas seguidas.',

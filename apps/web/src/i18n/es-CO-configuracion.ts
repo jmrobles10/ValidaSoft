@@ -150,6 +150,7 @@ export const apiKeys = {
     sandboxAdministrar: 'Administrar el sandbox y leer su buzón de correo de pruebas',
     verificacionesEscribir: 'Consultar listas restrictivas',
     cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',
+    supresionesResolver: 'Responder las solicitudes de habeas data de los terceros',
     auditoriaLeer: 'Leer la auditoría',
     auditoriaExportar: 'Exportar la auditoría a Excel',
   },

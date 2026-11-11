@@ -37,6 +37,13 @@ public interface IAlmacenDeArchivos
     Task GuardarAsync(string bucket, string clave, byte[] contenido, string tipoContenido, IReadOnlyDictionary<string, string> metadatos,
         CancellationToken ct);
 
+    /// <summary>
+    /// Sube un archivo local sin cargarlo en memoria (la exportación de la bóveda, que puede pesar cientos de megabytes, OD-9); sobrescribe
+    /// si la clave existe.
+    /// </summary>
+    Task GuardarArchivoAsync(string bucket, string clave, string rutaLocal, string tipoContenido, IReadOnlyDictionary<string, string> metadatos,
+        CancellationToken ct);
+
     /// <summary>Elimina el objeto si existe (idempotente).</summary>
     Task EliminarAsync(string bucket, string clave, CancellationToken ct);
 
@@ -73,6 +80,9 @@ public static class ClavesDeAlmacen
 
     /// <summary>Archivo que sube el oficial de cumplimiento al expediente (CU-16): bucket del tenant, content-addressed.</summary>
     public static string AdjuntoDeCumplimiento(Guid empresaId, string sha256) => $"empresas/{empresaId:N}/cumplimiento/{sha256}";
+
+    /// <summary>ZIP de una exportación de la bóveda del tercero (OD-9): bucket global, por tercero y exportación.</summary>
+    public static string ExportacionDeBoveda(Guid terceroId, Guid exportacionId) => $"exportaciones/{terceroId:N}/{exportacionId:N}.zip";
 
     /// <summary>Versiones devueltas: nunca se comparten (docs/07 §6.1).</summary>
     public static string Cuarentena(Guid documentoId, int numero) => $"cuarentena/{documentoId:N}/v{numero}";

@@ -42,7 +42,7 @@ public static class CorreoDeRecordatorioDeObservacionesPendienteHandler
             return;
         var mensaje = redactor.RedactarRecordatorioDeObservaciones(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
         await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.RecordatorioObservaciones, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 

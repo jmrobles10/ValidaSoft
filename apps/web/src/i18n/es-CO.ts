@@ -4,6 +4,7 @@ import { ayudas } from './es-CO-ayudas';
 import { campanias, erroresCampanias } from './es-CO-campanias';
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { certificadosLista } from './es-CO-certificados-lista';
+import { dominioCorreo, habeas, plan } from './es-CO-derechos-plan-correo';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
 import { delegaciones, erroresDelegaciones } from './es-CO-delegaciones';
 import { cumplimiento, erroresCumplimiento } from './es-CO-cumplimiento';
@@ -64,6 +65,9 @@ export const esCO = {
     empresas: 'Empresas del grupo',
     'api-keys': 'API keys',
     'accesos-soporte': 'Accesos de soporte',
+    'plan-grupo': 'Plan del grupo',
+    'habeas-data': 'Habeas data',
+    'dominio-correo': 'Dominio de correo',
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
     ingreso: 'Ingreso',
@@ -343,6 +347,9 @@ export const esCO = {
   ia,
   revisionAutomatica,
   plataforma,
+  habeas,
+  plan,
+  dominioCorreo,
   motivos,
   flujos,
   historial: {

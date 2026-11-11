@@ -222,7 +222,8 @@ public class PermisosTests
         Permisos.DeRol(Rol.Revisor).ShouldBe([.. Lecturas, Permisos.VinculosEscribir, Permisos.ExpedientesRevisar], ignoreOrder: true);
         Permisos.DeRol(Rol.OficialCumplimiento).ShouldBe(
             [.. Lecturas, Permisos.VinculosEscribir, Permisos.VinculosBloquear, Permisos.CuentasAprobar, Permisos.ExpedientesRevisar,
-                Permisos.ExpedientesExportar, Permisos.VerificacionesEscribir, Permisos.CumplimientoDecidir, Permisos.AuditoriaLeer], ignoreOrder: true);
+                Permisos.ExpedientesExportar, Permisos.VerificacionesEscribir, Permisos.CumplimientoDecidir, Permisos.AuditoriaLeer, Permisos.SupresionesResolver],
+            ignoreOrder: true);
         Permisos.DeRol(Rol.Auditor).ShouldBe([.. Lecturas, Permisos.AuditoriaLeer, Permisos.AuditoriaExportar, Permisos.ExpedientesExportar], ignoreOrder: true);
         Permisos.DeRol(Rol.Revisor).ShouldNotContain(Permisos.ExpedientesExportar);
         Permisos.DeSoporte.ShouldNotContain(Permisos.ExpedientesExportar);

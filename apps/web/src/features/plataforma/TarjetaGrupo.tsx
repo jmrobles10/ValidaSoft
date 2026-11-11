@@ -1,7 +1,7 @@
 import { Box, Button, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import type { GrupoDto } from '@validasoft/api-client';
 import { formatearFecha, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
-import { ChevronDown, ChevronUp, CircleDashed, KeyRound, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, CircleDashed, Gauge, KeyRound, Sparkles } from 'lucide-react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
@@ -94,9 +94,22 @@ export function TarjetaGrupo({ grupo, expandido, onAlternar }: { grupo: GrupoDto
         </Stack>
       }
       acciones={
-        <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-          {t('plataforma.grupos.empresasCuenta', { count: grupo.empresas.length })} · {t('plataforma.grupos.creado', { fecha: formatearFecha(grupo.tenant.creadoEn) })}
-        </Typography>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'inline' } }}>
+            {t('plataforma.grupos.empresasCuenta', { count: grupo.empresas.length })} · {t('plataforma.grupos.creado', { fecha: formatearFecha(grupo.tenant.creadoEn) })}
+          </Typography>
+          <Button
+            component={RouterLink}
+            to={`/plataforma/grupos/${grupo.tenant.id}/plan`}
+            size="small"
+            variant="text"
+            startIcon={<Gauge size={14} aria-hidden />}
+            aria-label={t('plataforma.grupos.planDelGrupoDe', { grupo: grupo.tenant.nombre })}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            {t('plataforma.grupos.planDelGrupo')}
+          </Button>
+        </Stack>
       }
     >
       {grupo.empresas.length === 0 ? (

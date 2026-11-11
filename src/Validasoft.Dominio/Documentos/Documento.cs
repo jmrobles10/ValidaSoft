@@ -45,6 +45,22 @@ public sealed class VersionDocumento
     /// <summary>Alguna empresa emitió una descarga de esta versión: su binario ya no se elimina al retirarla (docs/02 §10.3).</summary>
     public bool AccedidaPorEmpresa { get; set; }
 
+    /// <summary>
+    /// El tercero pidió suprimirla (habeas data, OD-6) y no la referencia ninguna aceptación ni certificado: su binario, sus datos
+    /// declarados, el nombre original y el análisis de IA se eliminaron y queda solo el rastro técnico (hash, tamaño, fechas).
+    /// </summary>
+    public bool Suprimida { get; set; }
+
+    /// <summary>
+    /// Se conserva por obligación legal pese a una solicitud de supresión (OD-6): la referencia una aceptación o un certificado. No
+    /// se anonimiza ni se altera (rompería el hash) y no se vuelve a compartir.
+    /// </summary>
+    public bool RetenidaPorLey { get; set; }
+
+    public string? BaseLegalDeRetencion { get; set; }
+
+    public DateOnly? RetenidaHasta { get; set; }
+
     /// <summary>Huella de los datos declarados (TD-4); nula si la versión es solo archivo.</summary>
     public string? HashDatos { get; set; }
 
@@ -443,6 +459,31 @@ public sealed class Documento
     }
 
     /// <summary>
+    /// Suprime una versión por una solicitud de habeas data (OD-6): ya no hay binario, datos declarados ni análisis. Solo si no está
+    /// retenida por ley; una ya suprimida no repite el evento (nulo). La aplicación decide antes que ninguna aceptación ni certificado la
+    /// referencia.
+    /// </summary>
+    public VersionSuprimida? Suprimir(int numero, string motivo, DateTimeOffset ahora)
+    {
+        var version = VersionRequerida(numero);
+        if (version.RetenidaPorLey)
+            throw ReglaDeNegocioException.Conflicto("version-retenida-por-ley", "Esa versión se conserva por obligación legal y no se puede suprimir.");
+        return version.Suprimida ? null : new VersionSuprimida(numero, motivo, ahora);
+    }
+
+    /// <summary>
+    /// Marca una versión como retenida por ley (OD-6): una solicitud de supresión no la elimina porque la referencia una aceptación o un
+    /// certificado. Con la misma base y fecha no repite el evento (nulo); una retención más larga la reemplaza.
+    /// </summary>
+    public RetencionLegalMarcada? MarcarRetencion(int numero, string baseLegal, DateOnly? retenidaHasta, Guid solicitudId, DateTimeOffset ahora)
+    {
+        var version = VersionRequerida(numero);
+        return version.RetenidaPorLey && version.BaseLegalDeRetencion == baseLegal && version.RetenidaHasta == retenidaHasta
+            ? null
+            : new RetencionLegalMarcada(numero, baseLegal, retenidaHasta, solicitudId, ahora);
+    }
+
+    /// <summary>
     /// Comparte la versión actual con un vínculo si corresponde; nulo si no: sin versión actual, invitación no aceptada
     /// (B-1), compartición congelada, el flujo del vínculo no pide el tipo (globales) o es otro vínculo (<c>PorVinculo</c>), o ya
     /// estaba compartida (idempotente por <c>(vínculo, versión)</c>, invariante 8 de docs/02 §13).
@@ -453,6 +494,10 @@ public sealed class Documento
             throw new InvalidOperationException("El vínculo es de otro tercero.");
 
         if (VersionActual is not { } actual || !vinculo.InvitacionAceptada || vinculo.Congelado)
+            return null;
+
+        // Retenida por una solicitud de supresión (OD-6): se conserva, pero no se vuelve a compartir con nadie.
+        if (Buscar(actual) is { RetenidaPorLey: true })
             return null;
 
         var corresponde = Ambito == AmbitoDocumento.Global ? vinculo.ExigeElTipo : vinculo.VinculoId == VinculoId;
@@ -524,6 +569,8 @@ public sealed class Documento
             case VersionActualCambiada e: Apply(e); break;
             case VersionDevueltaAlTercero e: Apply(e); break;
             case VersionRetirada e: Apply(e); break;
+            case VersionSuprimida e: Apply(e); break;
+            case RetencionLegalMarcada e: Apply(e); break;
             case VersionActualRestituida e: Apply(e); break;
             case VersionCompartida e: Apply(e); break;
             case DocumentoAccedido e: Apply(e); break;
@@ -670,6 +717,34 @@ public sealed class Documento
         version.RetiradaEn = e.Fecha;
         if (VersionActual == e.Numero)
             VersionActual = null;
+        ActualizadoEn = e.Fecha;
+    }
+
+    /// <summary>La versión queda sin binario, datos declarados, nombre original ni análisis; pasa a retirada y deja de ser la actual.</summary>
+    public void Apply(VersionSuprimida e)
+    {
+        var version = VersionRequerida(e.Numero);
+        version.Suprimida = true;
+        version.Estado = EstadoVersion.Retirada;
+        version.MotivoRetiro = e.Motivo;
+        version.RetiradaEn = e.Fecha;
+        version.Bucket = string.Empty;
+        version.ClaveObjeto = string.Empty;
+        version.NombreOriginal = "(suprimido)";
+        version.Datos = null;
+        version.Ia = null;
+        version.Vigencias = [];
+        if (VersionActual == e.Numero)
+            VersionActual = null;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(RetencionLegalMarcada e)
+    {
+        var version = VersionRequerida(e.Numero);
+        version.RetenidaPorLey = true;
+        version.BaseLegalDeRetencion = e.BaseLegal;
+        version.RetenidaHasta = e.RetenidaHasta;
         ActualizadoEn = e.Fecha;
     }
 

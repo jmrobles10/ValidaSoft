@@ -156,6 +156,19 @@ public sealed record VersionDevueltaAlTercero(int Numero, string Motivo, string 
 
 public sealed record VersionRetirada(int Numero, string Motivo, DateTimeOffset Fecha);
 
+/// <summary>
+/// El titular pidió suprimir sus datos (habeas data, OD-6) y esta versión no la referencia ninguna aceptación ni certificado: se
+/// eliminó su binario y se limpiaron sus datos declarados, su nombre original y su análisis. El evento anterior no se reescribe.
+/// </summary>
+public sealed record VersionSuprimida(int Numero, string Motivo, DateTimeOffset Fecha);
+
+/// <summary>
+/// Una solicitud de supresión no pudo eliminar esta versión porque la referencia una aceptación o un certificado (OD-6): se conserva
+/// íntegra hasta <see cref="RetenidaHasta"/> (la retención más larga entre quienes la referencian), con su base legal, y no se vuelve
+/// a compartir.
+/// </summary>
+public sealed record RetencionLegalMarcada(int Numero, string BaseLegal, DateOnly? RetenidaHasta, Guid SolicitudId, DateTimeOffset Fecha);
+
 /// <summary>Se retiró la actual y la superada más reciente vuelve a serlo (I-11).</summary>
 public sealed record VersionActualRestituida(int Numero, int NumeroRetirado, DateTimeOffset Fecha);
 

@@ -955,6 +955,40 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | Permiso | `supresiones:resolver` (Administrador, Cumplimiento), `auditoria:exportar` (Administrador, Auditor) | 07 §3.2 |
 | Pantalla | `/auditoria` → exportación ZIP firmado | 06 §3 |
 
+#### H8 — Implementado: derechos del tercero, plan y correo (OD-1…OD-24, 2026-11-11)
+Cierra del H8 el habeas data, la exportación firmada de la bóveda, el plan por grupo, el dominio de correo propio y la prueba de rendimiento del lote. Lo construido **difiere de la tabla 2.8.2** en los nombres (`solicitudes-habeas`, no `solicitudes-supresion`; el uso del plan se mide en `/tenant/uso`; el dominio de correo no es solo DKIM sino SPF, DKIM y DMARC) y en que la empresa **responde**, no solo escala: decisiones en [el registro §5-quinquagies](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint (tercero) | `POST /public/v1/solicitudes-habeas` (201), `GET /public/v1/solicitudes-habeas[/{id}]`, `GET …/{id}/constancia`; `POST /public/v1/boveda/exportar` (202), `GET /public/v1/exportaciones[/{id}]`, `POST …/{id}/descarga` (URL prefirmada de 5 min) | 05 §2.9; registro OD-1, OD-9, OD-10 |
+| Endpoint (empresa) | `GET /solicitudes-habeas?estado=abiertas\|vencidas\|resueltas\|todas&cursor=`, `GET …/resumen`, `GET …/{id}`, `POST …/{id}/resolver` (`supresiones:resolver`); `GET/PUT/DELETE /empresas/{id}/dominio-correo`, `POST …/verificar` (`empresas:administrar`); `GET /tenant/plan`, `GET /tenant/uso` (`configuracion:leer`) | registro OD-3, OD-14, OD-18 |
+| Endpoint (Plataforma) | `GET /plataforma/solicitudes-habeas[/resumen\|/{id}\|/{id}/plan]`, `POST …/{id}/resolver`, `POST /plataforma/habeas/revisar-plazos`; `GET/PUT /plataforma/tenants/{id}/plan`, `POST /plataforma/planes/revisar` | registro OD-3, OD-6, OD-14, OD-16 |
+| DTO | `CrearSolicitudHabeasDto`, `SolicitudHabeasDto` (`Plazo`, `DiasHabilesRestantes`, `ContenidoSuprimido`, `Titular` solo para quien responde), `ResumenDeSolicitudesHabeasDto`, `ResolverSolicitudHabeasDto`, `PlanDeSupresionDto`/`ElementoDePlanDeSupresionDto`, `ConstanciaHabeasDto`, `ExportacionBovedaDto`, `LimitesDePlanDto`, `PlanDelGrupoDto`, `ActualizarPlanDelGrupoDto`, `MedicionDePlanDto`, `UsoDelGrupoDto`, `DominioDeCorreoDto`/`RegistroDnsDto`/`ComprobacionDeRegistroDnsDto`, `ActualizarDominioDeCorreoDto` | `Validasoft.Contratos` (`Habeas.cs`, `PlanYCorreo.cs`) |
+| Dominio | `SolicitudHabeas` (agregado de eventos: `SolicitudHabeasRecibida`, `AvisoDePlazoDeSolicitudEnviado`, `SolicitudHabeasResuelta`), `CalendarioHabil`, `LlaveDeDatosDelTercero` + `CifradoDePersonales` (AES-256-GCM), `ExportacionDeBoveda`, `Documento` (`VersionSuprimida`, `RetencionLegalMarcada`), `PlanDelGrupo`/`UsoMensualDelGrupo`/`MedicionDeMetrica`, `DominioDeCorreoEmpresa` | registro OD-2…OD-8, OD-14…OD-20 |
+| Notificaciones | `habeas.solicitud` y `habeas.plazo` (campana y correo a quienes tienen `supresiones:resolver`), `plan.limite` (campana y correo a los administradores); correos al titular: acuse, respuesta con su constancia y exportación lista | `TiposNotificacion` |
+| Jobs y colas | Colas durables `habeas` (`ProgramadorDeHabeas`), `exportaciones` (**secuencial**) y `plan` (`ProgramadorDePlanes`); `LimpiarExportacionesDeBoveda` | registro OD-3, OD-9, OD-16 |
+| Configuración | `Validasoft:Habeas:Intervalo`, `BaseLegalRetencion`, `AniosRetencion` (10), `ExportacionesPorDia` (5), `DiasDeVigenciaDeExportaciones` (7, de 1 a 30), `CorreosPlataforma` (correos, separados por coma, a los que avisan los plazos de las solicitudes dirigidas a la plataforma, que no tiene usuarios); `Validasoft:Plan:Intervalo` (00:15:00), `SegundosDeVolcado`, `MinutosMedicionAlmacenamiento` | registro OD-5, OD-10, OD-15 |
+| Permiso | `supresiones:resolver` ahora en `Permisos.DelTenant`, Administrador y OficialCumplimiento | registro OD-13; 07 §3.2 |
+| Pantallas | `public:/privacidad` (Privacidad y mis datos); `web:/e/{empresa}/habeas-data`, `…/plan-grupo`, `…/dominio-correo`; `web:/plataforma/habeas`, `/plataforma/grupos/{tenant}/plan` | registro OD-11, OD-21 |
+| Pruebas | Dominio (`HabeasDataTests`, `PlanYCorreoTests`), integración (`RequisitosApiTests.Habeas`, `.Exportacion`, `.Plan`, `.DominioCorreo`, `.RendimientoDeLotes`), web (`features/habeas`, `features/plan`, `features/configuracion/dominioCorreo`), public (`privacidad`), e2e (`e2e/pruebas/derechos-plan-correo.spec.ts`) | — |
+| Pendiente | Prórroga de plazos; portabilidad más allá del ZIP; proveedor de dominios real y revalidación periódica del dominio; facturación por plan; el almacenamiento solo bloquea documentos propios de un vínculo; SLAs con alertas, campañas de renovación y delegación de revisión (H8 restante) | registro OD-12, OD-22 |
+
+#### H8 — Rendimiento de la invitación masiva (OD-23, OD-24, 2026-11-11)
+`RequisitosApiTests.RendimientoDeLotes` (`[Trait("Categoria", "Rendimiento")]`, PostgreSQL y MinIO reales) corre **1.000 filas** (940 válidas, 20 repetidas y 40 con el correo mal escrito), con tandas de 100, y mide cada fase, los reintentos por carrera (`lotes.filas_reintentadas`) y la memoria del proceso. Escribe lo medido en `%TEMP%/validasoft-rendimiento-lote.txt`. Correrla sola: `dotnet test tests/Validasoft.Integracion.Tests --filter "Categoria=Rendimiento"`.
+
+| Fase | Presupuesto | Medido (máquina de desarrollo, sin otras cargas) |
+|---|---|---|
+| Vista previa de las 1.000 filas | 20 s | 0,42 s |
+| Creación del lote (guarda las filas y encola la primera tanda) | 30 s | 0,47 s |
+| Procesamiento (10 tandas; 940 vínculos, terceros y expedientes) | 240 s | **12,4 s (75,7 filas/s)**; 32 s con otras tres suites corriendo a la vez |
+| Los 940 correos de invitación (cola durable del outbox) | 300 s | listos al terminar el procesamiento (0,05 s después) |
+| Lectura paginada de las 1.000 filas / informe Excel | — / 30 s | 0,32 s / 0,18 s |
+| Reintentos por carrera | ≤ 5 % de las filas | **0** (0,0 %) |
+| Memoria: crecimiento del conjunto de trabajo | ≤ 800 MB | **+57 MB** (387 → 444 MB); montón gestionado +42 MB; 2 colecciones de generación 2 |
+| Duración de una fila | — | media 12,6 ms, máxima 140 ms |
+
+Conclusión: **no hubo nada que arreglar** para llegar a 1.000 filas (el límite de un lote es 10.000): el procesamiento es lineal, sin reintentos y con memoria acotada porque cada tanda se confirma por separado. Se instrumentó con `MetricasDeLotes` (`Meter` `Validasoft.Lotes`: `lotes.filas` por resultado, `lotes.filas_reintentadas`, `lotes.tandas`, `lotes.duracion_fila`) para vigilarlo en producción. Dos hallazgos de la propia prueba: (1) con la máquina cargada por otras suites el procesamiento sube a 30-60 s, por eso el presupuesto es de 240 s y no el de la máquina libre; (2) al barajar las filas, una repetida podía quedar **antes** de su original y ser la que se invita: la prueba deja las repetidas al final porque la primera aparición de un NIT es la que cuenta.
+
 ### H9 — SDKs e integración con SRM, Portal y Marco
 
 #### 2.9.1 Entidades y eventos

@@ -75,6 +75,15 @@ public static class ServiciosInfraestructura
     /// <summary>Cola local durable y <b>secuencial</b> de las campañas de renovación (OP-3): una tanda a la vez, cada una encola la siguiente.</summary>
     public const string ColaCampanias = "campanias";
 
+    /// <summary>Cola local durable del habeas data: barrido de plazos y revisión de cada solicitud (OD-3), y limpieza de exportaciones vencidas.</summary>
+    public const string ColaHabeas = "habeas";
+
+    /// <summary>Cola local durable y <b>secuencial</b> de las exportaciones de la bóveda (OD-9): un ZIP a la vez, para acotar la memoria y el disco.</summary>
+    public const string ColaExportaciones = "exportaciones";
+
+    /// <summary>Cola local durable de la revisión de los planes de los grupos (OD-16).</summary>
+    public const string ColaPlan = "plan";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -98,8 +107,25 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<CacheDeEmpresas>(); // la empresa de X-Empresa, 30 s por nodo
         servicios.AddSingleton<Aplicacion.Integracion.IndiceDeVinculosConsultados>(); // consulta de certificación en un solo viaje (CN-1)
         servicios.AddSingleton<ITransporteDeCorreo, EnviadorSmtp>();
+        // Dominio de correo propio por empresa (OD-19): hoy solo el proveedor simulado; uno real se conecta implementando la interfaz.
+        if (string.Equals(configuracion["Validasoft:Correo:Dominios:Proveedor"] ?? ProveedorSimuladoDeDominios.NombreDelProveedor, ProveedorSimuladoDeDominios.NombreDelProveedor,
+                StringComparison.OrdinalIgnoreCase))
+            servicios.AddSingleton<Aplicacion.Configuracion.IProveedorDeDominiosDeCorreo, ProveedorSimuladoDeDominios>();
+        else
+            servicios.AddSingleton<Aplicacion.Configuracion.IProveedorDeDominiosDeCorreo>(new ProveedorDeDominiosNoConfigurado(configuracion["Validasoft:Correo:Dominios:Proveedor"]!));
         servicios.AddSingleton<IEnviadorDeCorreo, Sandbox.EnviadorDeCorreo>();
         servicios.AddScoped<Aplicacion.Sandbox.ServicioDeSandbox>();
+        // Habeas data (Ley 1581): llave de datos por tercero para cifrar lo personal que va a eventos (crypto-shredding), retención y supresión de
+        // la bóveda, y el barrido de plazos con sus alertas (OD-1…OD-12).
+        servicios.AddScoped<Aplicacion.Habeas.IProtectorDeDatosDelTercero, Aplicacion.Habeas.ProtectorDeDatosDelTercero>();
+        servicios.AddScoped<Aplicacion.Habeas.RetencionDelTercero>();
+        servicios.AddHostedService<Aplicacion.Habeas.ProgramadorDeHabeas>();
+        // Plan y límites por grupo (OD-14…OD-17): medición de uso, bloqueo suave, avisos al 80 % y al 100 %.
+        servicios.AddSingleton<Aplicacion.Plataforma.MedidorDeLlamadasApi>();
+        servicios.AddHostedService(proveedor => proveedor.GetRequiredService<Aplicacion.Plataforma.MedidorDeLlamadasApi>());
+        servicios.AddSingleton<Aplicacion.Plataforma.ControlDePlan>();
+        servicios.AddScoped<Aplicacion.Plataforma.EvaluadorDePlan>();
+        servicios.AddHostedService<Aplicacion.Plataforma.ProgramadorDePlanes>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
@@ -254,6 +280,15 @@ public static class ServiciosInfraestructura
         opciones.Discovery.IncludeAssembly(typeof(Permisos).Assembly);
         opciones.Policies.AutoApplyTransactions();
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.CorreoDeSolicitudHabeasPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.CorreoDeExportacionListaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.RevisarSolicitudesHabeas>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.RevisarSolicitudHabeas>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.LimpiarExportacionesDeBoveda>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.GenerarExportacionDeBoveda>().ToLocalQueue(ColaExportaciones);
+        opciones.LocalQueue(ColaExportaciones).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Plataforma.EvaluarPlanesDeGrupos>().ToLocalQueue(ColaPlan).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Plataforma.EvaluarPlanDelGrupo>().ToLocalQueue(ColaPlan).UseDurableInbox();
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeResultadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();

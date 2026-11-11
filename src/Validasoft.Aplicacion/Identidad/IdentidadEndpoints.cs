@@ -123,10 +123,11 @@ public static class UsuariosEndpoints
     [WolverinePost("/api/v1/usuarios")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
     public static async Task<IResult> Crear(CrearUsuarioDto dto, ISesiones sesiones, IContextoSolicitud contexto, IMessageBus mensajes,
-        IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeSecretos protector, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         var tenantId = contexto.TenantRequerido();
+        await plan.ExigirAsync(tenantId, Validasoft.Dominio.Plataforma.MetricaDePlan.Usuarios, 1, ct); // límite de usuarios del plan con bloqueo suave (OD-17)
         var usuario = Usuario.Crear(dto.Nombre, dto.Correo, dto.Identificacion?.ADominio(), ahora, tenantId);
         var roles = (dto.Roles ?? []).Select(r => r.ADominio()).ToList();
         await ValidarRolesAsync(roles, [], sesiones, contexto, ct);

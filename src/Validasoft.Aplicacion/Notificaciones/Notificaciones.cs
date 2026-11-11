@@ -113,14 +113,24 @@ public static class TiposNotificacion
 
     public const string SlaIncumplido = "expediente.sla_incumplido";
 
+    /// <summary>Un tercero dirigió a la empresa una solicitud de habeas data (consulta, corrección o supresión): a quienes pueden atenderla (OD-3).</summary>
+    public const string HabeasSolicitud = "habeas.solicitud";
+
+    /// <summary>El plazo legal de una solicitud de habeas data vence en dos días hábiles o ya venció (OD-3).</summary>
+    public const string HabeasPlazo = "habeas.plazo";
+
+    /// <summary>El grupo llegó al 80 % o al 100 % de un límite de su plan (usuarios, empresas, vínculos, almacenamiento o llamadas a la API; OD-16).</summary>
+    public const string PlanLimite = "plan.limite";
+
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
-            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada];
+            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada, HabeasSolicitud, HabeasPlazo,
+            PlanLimite];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer, CampaniaTerminada,
-            SlaIncumplido];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer,
+            CampaniaTerminada, SlaIncumplido, HabeasSolicitud, HabeasPlazo, PlanLimite];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -729,7 +739,7 @@ public static class CorreoDeNotificacionPendienteHandler
         if (correo.Plantilla is { } evento)
             mensaje = await plantillas.AplicarAsync(mensaje, evento, correo.TenantId, correo.EmpresaId,
                 Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio, documento: correo.Documento), ct);
-        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId), ct);
+        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -756,7 +766,7 @@ public static class CorreoDeCertificadoPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Certificado, ct))
             return;
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -791,7 +801,7 @@ public static class CorreoDeDesaprobacionPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Desaprobado, ct))
             return;
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarDesaprobacion(correo), CatalogoDePlantillas.Desaprobacion,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -803,7 +813,7 @@ public static class CorreoDeReintegroPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Reintegrado, ct))
             return;
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarReintegro(correo), CatalogoDePlantillas.Reintegro,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -815,7 +825,7 @@ public static class CorreoDeVencidoPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.DocumentoVencido, ct))
             return;
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct)).DeTenant(correo.TenantId), ct);
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -824,5 +834,5 @@ public static class CorreoDeConstanciaPendienteHandler
     public static async Task Handle(CorreoDeConstanciaPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
         Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
         await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct)).DeTenant(correo.TenantId), ct);
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
 }
