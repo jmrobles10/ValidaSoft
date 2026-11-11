@@ -138,3 +138,30 @@ describe('Mi información: Información general', () => {
     expect(subir.getAttribute('href')).toContain('volver=%2Fficha%2Fgeneral');
   });
 });
+
+describe('Mi información: un soporte que el tercero retiró (RT-4)', () => {
+  it('avisa que el soporte fue retirado, no lo ofrece ni lo reenvía y conserva los datos', async () => {
+    const usuario = userEvent.setup();
+    const retirado = { documentoId: 'd-rut', version: 1, tipoDocumento: 'RUT', nombre: 'Registro Único Tributario', retirado: true };
+    const guardados = montarFicha('/ficha/general', {
+      estado: estadoFicha(),
+      secciones: { FICHA_GENERAL: { ...GENERAL, soportes: [retirado], completitud: { completa: true, faltantes: [], reglaVersion: 1 } } },
+      documentos: [documento('d-rut', 'RUT', 'Registro Único Tributario')],
+      alGuardar: () => json(200, guardada('FICHA_GENERAL', [], 'FICHA_TRIBUTARIA', GENERAL.datos ?? {})),
+    });
+
+    const selector = await screen.findByRole('group', { name: 'Documento que respalda esta información' });
+    expect(within(selector).getByText('Tu soporte (Registro Único Tributario, versión 1) fue retirado.')).toBeInTheDocument();
+    expect(within(selector).getByText(/Tus datos siguen guardados/)).toBeInTheDocument();
+    // El retirado no aparece como opción marcada; solo la versión vigente de la bóveda se puede elegir.
+    await within(selector).findByRole('checkbox', { name: 'Registro Único Tributario · versión 2 · cargada el 01/10/2026' });
+    expect(within(selector).getAllByRole('checkbox')).toHaveLength(1);
+    expect(within(selector).getByRole('checkbox')).not.toBeChecked();
+
+    // Al guardar no se envía (el servidor lo rechazaría): los datos se guardan sin ese soporte.
+    await escribir(usuario, screen.getByRole('textbox', { name: 'Teléfono' }), '601 555 9999');
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    await vi.waitFor(() => expect(guardados).toHaveLength(1));
+    expect(guardados[0]?.cuerpo).toMatchObject({ soportes: [] });
+  });
+});

@@ -157,6 +157,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
           <SelectorSoporte
             definicion={definicion}
             soportes={editor.soportes}
+            retirados={editor.soportesRetirados}
             onCambiar={editor.cambiarSoportes}
             faltaSoporte={faltaSoporte}
             error={editor.errorEn('soportes')}

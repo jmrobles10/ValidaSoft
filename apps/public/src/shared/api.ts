@@ -13,6 +13,7 @@ import {
   getObtenerBovedaQueryOptions,
   getObtenerDocumentoBovedaQueryOptions,
   getObtenerExpedientePublicoQueryOptions,
+  getObtenerImpactoDeRetiroQueryOptions,
   getObtenerInvitacionPublicaQueryOptions,
   ratificarRequisito,
   reenviarExpedientePublico,
@@ -67,6 +68,13 @@ export const useBoveda = () => useQuery(getObtenerBovedaQueryOptions());
 
 export const useDocumentoBoveda = (documentoId: string, habilitado: boolean) =>
   useQuery({ ...getObtenerDocumentoBovedaQueryOptions(documentoId), enabled: habilitado });
+
+/**
+ * Qué pasará si el tercero retira la versión (RT-1): se pide al abrir el diálogo, antes del motivo. Es solo lectura, así que no se
+ * guarda entre aperturas: cada vez se calcula con lo que las empresas tienen en ese momento.
+ */
+export const useImpactoDeRetiro = (documentoId: string, numero: number) =>
+  useQuery({ ...getObtenerImpactoDeRetiroQueryOptions(documentoId, numero), staleTime: 0, gcTime: 0 });
 
 export function useRetirarVersion(documentoId: string, numero: number) {
   const refrescar = useRefrescarTodo();

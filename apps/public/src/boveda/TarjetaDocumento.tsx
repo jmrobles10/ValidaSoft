@@ -7,10 +7,11 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { FilaEmpresa } from '../shared/componentes';
 import { requiereAtencion } from '../vigencia/vigencia';
-import { AvisoVigencia, ChipVigencia, LineaVigencia } from '../vigencia/ChipVigencia';
+import { AvisoVigencia, ChipVigencia } from '../vigencia/ChipVigencia';
+import { LineaDeVersionVigente } from './ChipDeVersion';
 import { DialogoRetirar } from './DialogoRetirar';
 import { useDescargar } from './useDescargar';
-import { detalleComparticion, enlaceSubirVersion, sePuedeDescargar, sePuedeRetirar, sePuedeSubirVersion } from './versiones';
+import { detalleComparticion, empresaConLaFechaMasProxima, enlaceSubirVersion, sePuedeDescargar, sePuedeRetirar, sePuedeSubirVersion, venceEnCabecera } from './versiones';
 import { VersionesDocumento } from './VersionesDocumento';
 
 /**
@@ -28,6 +29,9 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
   const titulo = documento.tipo.nombre;
   const subible = sePuedeSubirVersion(documento);
   const pie = documento.versiones > 1 || requiereAtencion(actual?.vigencia);
+  // Cada empresa cuenta la vigencia con su regla: si las fechas difieren, la cabecera dice la más próxima y por qué.
+  const referencia = venceEnCabecera(documento);
+  const masProxima = empresaConLaFechaMasProxima(documento);
 
   return (
     <Card component="article" aria-labelledby={`doc-${documento.id}`} sx={{ p: 0, overflow: 'hidden' }}>
@@ -44,7 +48,10 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
             {actual ? t('boveda.cargadaEl', { n: String(actual.n), fecha: formatearFecha(actual.cargadaEn) }) : t('boveda.sinVigente')}
           </Typography>
           {/* La vigencia más próxima entre las empresas; la de cada una va en su fila. */}
-          <LineaVigencia vigencia={actual?.vigencia} />
+          {actual && <LineaDeVersionVigente version={actual} />}
+          {masProxima && (
+            <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px', mt: 0.25 }}>{t('boveda.venceDistinto', { empresa: masProxima })}</Typography>
+          )}
         </Box>
         <Stack direction="row" sx={{ alignItems: 'center', ml: 'auto', flex: 'none' }}>
           {subible && (
@@ -114,7 +121,7 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
                   </>
                 ) : undefined
               }
-              detalle={detalleComparticion(c, t)}
+              detalle={detalleComparticion(c, t, referencia)}
             />
           ))
         )}
@@ -131,7 +138,15 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
           {verVersiones && <VersionesDocumento documentoId={documento.id} onRetirar={setRetirando} />}
         </Box>
       )}
-      {retirando && <DialogoRetirar documentoId={documento.id} tipo={titulo} version={retirando} onCerrar={() => setRetirando(null)} />}
+      {retirando && (
+        <DialogoRetirar
+          documentoId={documento.id}
+          tipo={titulo}
+          version={retirando}
+          enlaceSubir={subible ? enlaceSubirVersion(documento) : null}
+          onCerrar={() => setRetirando(null)}
+        />
+      )}
     </Card>
   );
 }

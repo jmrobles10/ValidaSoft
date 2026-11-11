@@ -1,7 +1,6 @@
 import type { ComparticionPublicaDto, DocumentoBovedaDto, VersionDocumentoDto } from '@validasoft/api-client';
-import { formatearFecha } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { textoVigencia } from '../vigencia/vigencia';
+import { estadoDeVigencia, formatearDia, textoVigencia } from '../vigencia/vigencia';
 import { MAXIMO_PAGINAS } from './subida';
 
 /** Por qué se devolvió una versión, en lenguaje del tercero y con qué hacer (BO-4). */
@@ -17,17 +16,67 @@ export function mensajeDevolucion(version: Pick<VersionDocumentoDto, 'motivoDevo
   }
 }
 
+const SITUACIONES = [
+  'NoRecibe',
+  'SinVigente',
+  'TieneVigente',
+  'AproboVigente',
+  'Revisando',
+  'Observada',
+  'RevalidaRetirada',
+  'Revalida',
+  'PorRevalidar',
+  'TieneOtra',
+] as const;
+
+type Situacion = (typeof SITUACIONES)[number];
+
+/** Una situación que la API agregue después se lee por lo que ya se sabe: la tiene o no la tiene. */
+function situacionDe(c: Pick<ComparticionPublicaDto, 'situacion' | 'compartido'>): Situacion {
+  return SITUACIONES.find((s) => s === c.situacion) ?? (c.compartido ? 'TieneVigente' : 'NoRecibe');
+}
+
+const BASES = ['FechaExpedicion', 'FechaCarga', 'Ratificacion', 'VencimientoPropio'] as const;
+
 /**
- * Qué tiene cada empresa de este documento: la versión vigente, una anterior o nada (no la exige o no aceptó), y hasta
- * cuándo le sirve («Vence el 28/09/2026»): cada empresa calcula su propia vigencia (TD-6).
+ * Qué tiene cada empresa de este documento y qué falta, en una sola frase que no contradice la versión vigente de la cabecera
+ * (RT-5): «Aprobó la versión 8, que retiraste. Debe revisar la versión 7: revalidación abierta.», «Tiene la versión 7, la
+ * vigente.», «Revisando la versión 7.». Su propio vencimiento solo se dice si difiere del de la cabecera
+ * (`venceEnCabecera`) y siempre con su porqué: cada empresa cuenta la vigencia con su regla (TD-6).
  */
-export function detalleComparticion(c: ComparticionPublicaDto, t: TFunction): string {
-  if (!c.compartido || c.version === null) return t('boveda.noCompartida');
-  const tiene = c.versionActualCompartida
-    ? t('boveda.compartidaActual', { fecha: c.compartidaEn ? formatearFecha(c.compartidaEn) : '—' })
-    : t('boveda.compartidaOtra', { n: String(c.version) });
-  const vence = c.vigencia ? textoVigencia(c.vigencia, t) : null;
-  return vence ? `${tiene} ${vence}.` : tiene;
+export function detalleComparticion(c: ComparticionPublicaDto, t: TFunction, venceEnCabecera: string | null = null): string {
+  const texto = t(`boveda.situacion.${situacionDe(c)}`, { version: String(c.version ?? ''), otra: String(c.otraVersion ?? '') });
+  const vence = venceAparte(c, venceEnCabecera, t);
+  return vence ? `${texto} ${vence}` : texto;
+}
+
+/** El vencimiento propio de la empresa para la versión vigente, solo si ya pasó o difiere del de la cabecera. */
+function venceAparte(c: ComparticionPublicaDto, venceEnCabecera: string | null, t: TFunction): string | null {
+  const vigencia = c.vigencia;
+  if (!c.versionActualCompartida || !vigencia?.vigenteHasta) return null;
+  const estado = estadoDeVigencia(vigencia);
+  if (estado === 'EnGracia' || estado === 'Vencida') return `${textoVigencia(vigencia, t) ?? ''}.`;
+  if (estado === 'SinVencimiento' || vigencia.vigenteHasta === venceEnCabecera) return null;
+  const fecha = formatearDia(vigencia.vigenteHasta);
+  const base = BASES.find((b) => b === vigencia.base);
+  return base ? t(`boveda.vence.${base}`, { fecha }) : t('boveda.vence.otra', { fecha });
+}
+
+/** La fecha de vencimiento que dice la cabecera (la más próxima entre las empresas); nula si la versión no vence. */
+export function venceEnCabecera(documento: Pick<DocumentoBovedaDto, 'versionActual'>): string | null {
+  return documento.versionActual?.vigencia?.vigenteHasta ?? null;
+}
+
+/**
+ * Si las empresas que tienen la versión vigente la vencen en fechas distintas, la empresa cuya fecha es la más próxima (la de la
+ * cabecera); nulo si todas coinciden. Explica por qué la cabecera y alguna fila no dicen lo mismo.
+ */
+export function empresaConLaFechaMasProxima(documento: Pick<DocumentoBovedaDto, 'porEmpresa'>): string | null {
+  const conFecha = documento.porEmpresa.filter((c) => c.versionActualCompartida && c.vigencia?.vigenteHasta);
+  const fechas = new Set(conFecha.map((c) => c.vigencia?.vigenteHasta));
+  if (fechas.size < 2) return null;
+  const primera = [...conFecha].sort((a, b) => (a.vigencia?.vigenteHasta ?? '').localeCompare(b.vigencia?.vigenteHasta ?? ''))[0];
+  return primera?.empresa.nombre ?? null;
 }
 
 /** Se puede retirar la vigente o una superada (BO-8); devueltas y retiradas no. */
