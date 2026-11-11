@@ -149,6 +149,26 @@ export async function completarInvitacion(page: Page, invitacion: Invitacion, do
   await esperarEstadoDelTercero(page, 'EnRevision');
 }
 
+/**
+ * Como {@link completarInvitacion}, pero sin exigir que el tercero vea «En revisión»: con la revisión automática en nivel
+ * Automático el expediente puede aprobarse al segundo de llegar a revisión (el procesador corre cada segundo), antes de que la
+ * página alcance a mostrar «En revisión». Espera a que se vea «En revisión» o ya «Aprobado».
+ */
+export async function completarInvitacionYEsperarRevisionOAprobacion(
+  page: Page,
+  invitacion: Invitacion,
+  documentos: { nombre: string; archivo: Archivo; campos?: Record<string, string> }[],
+): Promise<void> {
+  await entrarPorInvitacion(page, invitacion);
+  await aceptarInvitacion(page, invitacion);
+  for (const d of documentos) await subirDocumento(page, d.nombre, d.archivo, { campos: d.campos ?? {} });
+  await expect(async () => {
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1, name: /^Tu revisión con / })).toBeVisible();
+    await expect(fraseDeEstado(page, 'EnRevision').or(fraseDeEstado(page, 'Aprobado'))).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 45_000 });
+}
+
 function escapar(texto: string): string {
   return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -3,7 +3,7 @@ import { llamar } from '../soporte/api';
 import { pdf } from '../soporte/archivos';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja, irASeccion, regionDeArea } from '../soporte/empresa';
-import { completarInvitacion, esperarEstadoDelTercero } from '../soporte/proveedor';
+import { completarInvitacionYEsperarRevisionOAprobacion, esperarEstadoDelTercero } from '../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, type Escenario, type Tercero } from '../soporte/semilla';
 
 /**
@@ -63,7 +63,8 @@ async function terceroConDocumentos(e: Escenario, browser: Browser, nombre: stri
   const pagina = await (await browser.newContext()).newPage();
   const documentos = [{ nombre: RUT, archivo: rut(tercero, marcas) }];
   if (conBancaria) documentos.push({ nombre: BANCARIA, archivo: pdf(`Certificacion bancaria ${tercero.nombre}`) });
-  await completarInvitacion(pagina, invitacion, documentos);
+  // En Automático el limpio se aprueba solo y puede hacerlo antes de que la página alcance a mostrar «En revisión».
+  await completarInvitacionYEsperarRevisionOAprobacion(pagina, invitacion, documentos);
   return { tercero, pagina };
 }
 
