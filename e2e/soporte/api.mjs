@@ -53,6 +53,8 @@ const entorno = {
   Validasoft__Apps__Publica: join(raiz, 'apps', 'public', 'dist'),
   Validasoft__Correo__UrlPublica: origen,
   Validasoft__LimitePublico__Peticiones: '100000',
+  // El ingreso directo comparte la IP de la máquina entre todas las pruebas (ING-1).
+  Validasoft__LimiteIngreso__Peticiones: '100000',
   // El PDF del certificado se genera casi al instante (por defecto espera unos segundos entre pasadas).
   Validasoft__Certificados__SegundosProceso: '1',
   // Análisis con IA y «Probar llave» sin salir a OpenAI (PT-6): las pruebas nunca usan una llave real.
