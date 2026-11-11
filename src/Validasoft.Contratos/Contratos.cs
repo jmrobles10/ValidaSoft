@@ -245,7 +245,8 @@ public sealed record VinculoDto(
     DateTimeOffset ActualizadoEn,
     long Version,
     Guid? ExpedienteAbiertoId = null,
-    bool AperturaDeExpedientePendiente = false);
+    bool AperturaDeExpedientePendiente = false,
+    string? UltimoResultado = null);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 

@@ -15952,6 +15952,10 @@
             ],
             "format": "int32",
             "default": 0
+          },
+          "desaprobado": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -24262,6 +24266,12 @@
           "aperturaDeExpedientePendiente": {
             "type": "boolean",
             "default": false
+          },
+          "ultimoResultado": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Menu, MenuItem, ListItemIcon, ListItemText, Skeleton, Stack, Typography } from '@mui/material';
 import { esErrorApi, SCOPES, type AreaExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado, EsqueletoTarjeta, formatearFecha, PaginaEstado } from '@validasoft/ui';
-import { Ban, ChevronDown, Link2, Lock, SearchX, Send } from 'lucide-react';
+import { Ban, ChevronDown, Link2, Lock, RotateCcw, SearchX, Send, Undo2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
@@ -26,7 +26,10 @@ import { PanelRequisitos } from '../components/PanelRequisitos';
 import { AvisoPlazoCargue } from '../components/PlazoCargue';
 import { DatosExpediente, HistorialExpediente, UltimaRespuesta } from '../components/PanelesExpediente';
 import { usuariosDelExpediente } from '../requisitos';
-import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
+import { esDialogoDeArea, accionesDeExpediente, areasFrenadas, ESTADOS_ABIERTOS, areasQueVuelvenARevisar, dialogoAplica, type ContextoRevisor, type DialogoExpediente } from '../reglas';
+
+/** Hasta dónde devolvió a revisión el administrador (DS-1, DS-2): cada uno tiene su texto. */
+const ALCANCES_DE_DEVOLUCION = ['Etapa', 'FaseInicial', 'ExpedienteAprobado'] as const;
 
 export function DetalleExpediente() {
   const { t } = useTranslation();
@@ -90,6 +93,7 @@ export function DetalleExpediente() {
 
   const expediente = consulta.data;
   const acciones = accionesDeExpediente(expediente, permisos.scopes, vinculoBloqueado);
+  const masAcciones = acciones.includes('anular') || acciones.includes('faseInicial') || acciones.includes('desaprobar');
   const nombreDeArea = (id: string) => expediente.etapas.flatMap((e) => e.areas).find((a) => a.areaId === id)?.nombre ?? '—';
   const observadas = areasQueVuelvenARevisar(expediente);
   const frenadas = areasFrenadas(expediente);
@@ -125,24 +129,53 @@ export function DetalleExpediente() {
                 {t('expedientes.acciones.reenviar')}
               </Button>
             )}
-            {acciones.includes('anular') && (
+            {masAcciones && (
               <>
                 <Button variant="outlined" endIcon={<ChevronDown size={16} aria-hidden />} aria-haspopup="menu" onClick={(e) => setAncla(e.currentTarget)}>
                   {t('expedientes.acciones.mas')}
                 </Button>
                 <Menu anchorEl={ancla} open={Boolean(ancla)} onClose={() => setAncla(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
-                  <MenuItem
-                    onClick={() => {
-                      setAncla(null);
-                      setDialogo({ tipo: 'anular' });
-                    }}
-                    sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
-                  >
-                    <ListItemIcon>
-                      <Ban size={16} strokeWidth={1.75} aria-hidden />
-                    </ListItemIcon>
-                    <ListItemText primary={t('expedientes.acciones.anular')} />
-                  </MenuItem>
+                  {acciones.includes('faseInicial') && (
+                    <MenuItem
+                      onClick={() => {
+                        setAncla(null);
+                        setDialogo({ tipo: 'faseInicial' });
+                      }}
+                    >
+                      <ListItemIcon>
+                        <RotateCcw size={16} strokeWidth={1.75} aria-hidden />
+                      </ListItemIcon>
+                      <ListItemText primary={t('expedientes.acciones.faseInicial')} />
+                    </MenuItem>
+                  )}
+                  {acciones.includes('desaprobar') && (
+                    <MenuItem
+                      onClick={() => {
+                        setAncla(null);
+                        setDialogo({ tipo: 'desaprobar' });
+                      }}
+                      sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
+                    >
+                      <ListItemIcon>
+                        <Undo2 size={16} strokeWidth={1.75} aria-hidden />
+                      </ListItemIcon>
+                      <ListItemText primary={t('expedientes.acciones.desaprobar')} />
+                    </MenuItem>
+                  )}
+                  {acciones.includes('anular') && (
+                    <MenuItem
+                      onClick={() => {
+                        setAncla(null);
+                        setDialogo({ tipo: 'anular' });
+                      }}
+                      sx={{ color: 'estado.error.texto', '& .MuiListItemIcon-root': { color: 'estado.error.texto' } }}
+                    >
+                      <ListItemIcon>
+                        <Ban size={16} strokeWidth={1.75} aria-hidden />
+                      </ListItemIcon>
+                      <ListItemText primary={t('expedientes.acciones.anular')} />
+                    </MenuItem>
+                  )}
                 </Menu>
               </>
             )}
@@ -172,6 +205,17 @@ export function DetalleExpediente() {
               .map((v) => `${t(`cumplimiento.tipos.${v.tipo}`)} (${t(`cumplimiento.estados.${v.estado}`).toLowerCase()})`)
               .join(', '),
           })}
+        </Alert>
+      )}
+      {expediente.ultimaDesaprobacion && ESTADOS_ABIERTOS.includes(expediente.estado) && (
+        <Alert severity="info" icon={<Undo2 size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>
+          <AlertTitle>{t('expedientes.avisos.devueltoTitulo')}</AlertTitle>
+          {t(`expedientes.avisos.devuelto.${ALCANCES_DE_DEVOLUCION.find((a) => a === expediente.ultimaDesaprobacion?.alcance) ?? 'Etapa'}`, {
+            fecha: formatearFecha(expediente.ultimaDesaprobacion.fecha),
+            etapa: String(expediente.ultimaDesaprobacion.etapa),
+            persona: nombres.get(expediente.ultimaDesaprobacion.usuario) ?? t('expedientes.veredictos.administrador'),
+          })}{' '}
+          “{expediente.ultimaDesaprobacion.justificacion}”
         </Alert>
       )}
       {expediente.estado === 'Aprobado' && (

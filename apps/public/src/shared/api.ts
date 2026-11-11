@@ -16,6 +16,7 @@ import {
   getObtenerInvitacionPublicaQueryOptions,
   ratificarRequisito,
   reenviarExpedientePublico,
+  reintentarPostulacion,
   registrarCuentaBancaria,
   retirarCuentaBancaria,
   retirarVersionDocumento,
@@ -135,6 +136,12 @@ export const useExpedientePublico = (id: string, habilitado = true) =>
 export function useReenviarExpediente(id: string) {
   const refrescar = useRefrescarTodo();
   return useMutation({ mutationFn: (respuesta: string) => reenviarExpedientePublico(id, { respuesta: respuesta.trim() || null }), onSettled: refrescar });
+}
+
+/** «Volver a postularme» tras un rechazo (DS-4): abre un expediente inicial nuevo; vínculos y expedientes cambian. */
+export function useReintentarPostulacion(vinculoId: string) {
+  const refrescar = useRefrescarTodo();
+  return useMutation({ mutationFn: () => reintentarPostulacion(vinculoId), onSettled: refrescar });
 }
 
 /** Ratifica en una renovación que el documento no cambió (RN-2): expediente, bóveda y vínculos cambian. */

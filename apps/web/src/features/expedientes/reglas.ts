@@ -4,6 +4,7 @@ import {
   type AreaExpedienteDto,
   type EstadoAreaExpediente,
   type EstadoExpediente,
+  type EtapaExpedienteDto,
   type ExpedienteDto,
   type MotivoTipificadoDto,
   type RequisitoExpedienteDto,
@@ -95,19 +96,54 @@ export function puedeAnularVeredicto(expediente: Pick<ExpedienteDto, 'estado'>, 
   );
 }
 
-export type AccionExpediente = 'reenviar' | 'anular';
+export type AccionExpediente = 'reenviar' | 'anular' | 'desaprobar' | 'faseInicial';
+
+/** Lo que hace falta del expediente para saber si está en el comienzo del flujo. */
+type ExpedienteConEtapas = Pick<ExpedienteDto, 'estado'> & Partial<Pick<ExpedienteDto, 'etapas' | 'requisitos'>>;
+
+/**
+ * ¿Está en el comienzo del flujo (DS-1)? Primera etapa en curso, las demás esperando y nadie (salvo el sistema) ha decidido:
+ * volver a la fase inicial no cambiaría nada y la API responde 409 `ya-esta-en-fase-inicial`.
+ */
+export function enFaseInicial(expediente: Pick<ExpedienteDto, 'etapas'> & Partial<Pick<ExpedienteDto, 'requisitos'>>): boolean {
+  const etapas = [...expediente.etapas].sort((a, b) => a.orden - b.orden);
+  const [primera, ...demas] = etapas;
+  if (primera?.estado !== 'Activa' || demas.some((e) => e.estado !== 'Esperando')) return false;
+  const decidio = (v: VeredictoEmitidoDto) => v.vigente && v.origen !== 'Sistema';
+  return !(
+    etapas.some((e) => e.areas.some((a) => a.veredictos.some(decidio))) ||
+    (expediente.requisitos ?? []).some((r) => r.areas.some((a) => a.veredictos.some(decidio)))
+  );
+}
 
 /** Acciones de administración sobre el expediente completo. */
-export function accionesDeExpediente(
-  expediente: Pick<ExpedienteDto, 'estado'>,
-  scopes: ReadonlySet<string>,
-  vinculoBloqueado = false,
-): AccionExpediente[] {
+export function accionesDeExpediente(expediente: ExpedienteConEtapas, scopes: ReadonlySet<string>, vinculoBloqueado = false): AccionExpediente[] {
   if (!scopes.has(SCOPES.expedientesAdministrar)) return [];
   const acciones: AccionExpediente[] = [];
   if (expediente.estado === 'Observado' && !vinculoBloqueado) acciones.push('reenviar');
+  // Volver a la fase inicial repite todo el flujo (DS-1); en un expediente aprobado es además desaprobarlo (DS-2).
+  const devolvible = expediente.estado === 'Aprobado' || ((expediente.estado === 'EnRevision' || expediente.estado === 'Observado') && !vinculoBloqueado);
+  if (devolvible && (expediente.estado === 'Aprobado' || !expediente.etapas || !enFaseInicial({ etapas: expediente.etapas, requisitos: expediente.requisitos }))) {
+    acciones.push('faseInicial');
+  }
+  if (expediente.estado === 'Aprobado' && !vinculoBloqueado) acciones.push('desaprobar');
   if (ESTADOS_ABIERTOS.includes(expediente.estado)) acciones.push('anular');
   return acciones;
+}
+
+/** Reabrir una etapa ya aprobada de un expediente en revisión o devuelto (DS-1): ella y las posteriores vuelven a revisarse. */
+export function puedeReabrirEtapa(
+  expediente: Pick<ExpedienteDto, 'estado'>,
+  etapa: Pick<EtapaExpedienteDto, 'estado'>,
+  scopes: ReadonlySet<string>,
+  vinculoBloqueado = false,
+): boolean {
+  return (
+    scopes.has(SCOPES.expedientesAdministrar) &&
+    (expediente.estado === 'EnRevision' || expediente.estado === 'Observado') &&
+    etapa.estado === 'Aprobada' &&
+    !vinculoBloqueado
+  );
 }
 
 /** ¿Se puede abrir el expediente a mano desde el vínculo? (sin uno abierto y con el vínculo en `Invitado`). */
@@ -126,7 +162,9 @@ export type DialogoExpediente =
   // Decisión del área completa: «Aprobar área» con los documentos que vio, u «Observar» marcando documentos.
   | { tipo: 'aprobarArea'; area: AreaExpedienteDto; documentos: readonly DocumentoPorDecidir[] }
   | { tipo: 'observarArea'; area: AreaExpedienteDto }
-  | { tipo: 'reenviar' | 'anular' };
+  // Desaprobar (DS-1, DS-2): reabrir una etapa aprobada, volver a la fase inicial o desaprobar el expediente aprobado.
+  | { tipo: 'reabrirEtapa'; etapa: EtapaExpedienteDto }
+  | { tipo: 'reenviar' | 'anular' | 'desaprobar' | 'faseInicial' };
 
 /** Diálogos de decisión de área completa (tienen su propio componente, `DialogoDecisionArea`). */
 export type DialogoDeArea = Extract<DialogoExpediente, { tipo: 'aprobarArea' | 'observarArea' }>;
@@ -150,6 +188,11 @@ export function dialogoAplica(
     const areaRequisito = requisito.areas.find((a) => a.areaId === dialogo.areaRequisito.areaId);
     const area = expediente.etapas.flatMap((e) => e.areas).find((a) => a.areaId === dialogo.areaRequisito.areaId) ?? null;
     return areaRequisito ? bloqueoRequisito(expediente, requisito, areaRequisito, contexto(area)) === null : false;
+  }
+  if (dialogo.tipo === 'reabrirEtapa') {
+    const ctx = contexto(null);
+    const etapa = expediente.etapas.find((e) => e.orden === dialogo.etapa.orden);
+    return etapa ? puedeReabrirEtapa(expediente, etapa, ctx.scopes, ctx.vinculoBloqueado) : false;
   }
   if (!('area' in dialogo)) {
     const ctx = contexto(null);

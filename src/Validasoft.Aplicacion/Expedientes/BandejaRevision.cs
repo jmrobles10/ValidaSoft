@@ -50,6 +50,9 @@ public sealed class FilaBandeja
     /// <summary>Con requisitos: los del alcance del área que aún esperan su decisión.</summary>
     public int RequisitosPendientes { get; set; }
 
+    /// <summary>Veces que un administrador devolvió a revisión el expediente (DS-1, DS-2): la bandeja lo marca como reabierto.</summary>
+    public int Desaprobaciones { get; set; }
+
     /// <summary>Desde cuándo espera el área (activación de su etapa o reenvío del tercero).</summary>
     public DateTimeOffset? Desde { get; set; }
 
@@ -84,6 +87,7 @@ public static class ProyeccionBandejaRevision
             Aprobaciones = area.Aprobaciones,
             AprobadoresRequeridos = area.AprobadoresRequeridos,
             RequisitosPendientes = area.RequisitosPorDecidir,
+            Desaprobaciones = e.Desaprobaciones,
             Desde = area.PendienteDesde,
             ActualizadoEn = e.ActualizadoEn
         }));

@@ -160,6 +160,18 @@ export function eventoExpedienteATimeline(
       return { ...base, titulo: t('expedientes.historial.eximido', { documento: requisito(campo(datos, 'requisitoId')) }), motivo: texto(campo(datos, 'justificacion')) };
     case 'veredicto_anulado_por_administrador':
       return { ...base, detalle: area(campo(datos, 'areaId')), motivo: texto(campo(datos, 'justificacion')) };
+    // Desaprobar (DS-1, DS-2): desde qué etapa se revisa de nuevo y por qué.
+    case 'etapa_reabierta':
+    case 'expediente_desaprobado': {
+      const faseInicial = campo(datos, 'faseInicial') === true;
+      return {
+        ...base,
+        titulo: faseInicial ? t('expedientes.historial.faseInicial') : t('expedientes.historial.reabierta', { orden: numero(campo(datos, 'orden')) }),
+        antes: tipo === 'expediente_desaprobado' ? 'Aprobado' : undefined,
+        despues: tipo === 'expediente_desaprobado' ? 'EnRevision' : undefined,
+        motivo: texto(campo(datos, 'justificacion')),
+      };
+    }
     // Verificaciones externas (H7): sin nombres de personas en el título; el detalle está en el panel de verificaciones.
     case 'verificaciones_requeridas':
       return {

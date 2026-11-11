@@ -27,4 +27,5 @@ export interface FilaBandejaDto {
   desde: string | null;
   actualizadoEn: string;
   requisitosPendientes?: number;
+  desaprobado?: boolean;
 }

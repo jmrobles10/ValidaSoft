@@ -79,10 +79,10 @@ describe('rechazo y acciones de administrador', () => {
     expect(puedeAnularVeredicto(expediente('Observado', [observada]), observada, REVISOR)).toBe(false);
   });
 
-  it('reenvía solo un expediente devuelto y anula cualquiera abierto', () => {
+  it('reenvía solo un expediente devuelto y anula cualquiera abierto; uno aprobado se desaprueba (DS-2)', () => {
     expect(accionesDeExpediente(expediente('Observado'), ADMIN)).toEqual(['reenviar', 'anular']);
     expect(accionesDeExpediente(expediente('EnRevision'), ADMIN)).toEqual(['anular']);
-    expect(accionesDeExpediente(expediente('Aprobado'), ADMIN)).toEqual([]);
+    expect(accionesDeExpediente(expediente('Aprobado'), ADMIN)).toEqual(['faseInicial', 'desaprobar']);
     expect(accionesDeExpediente(expediente('Observado'), REVISOR)).toEqual([]);
     expect(accionesDeExpediente(expediente('Observado'), ADMIN, true)).toEqual(['anular']);
   });

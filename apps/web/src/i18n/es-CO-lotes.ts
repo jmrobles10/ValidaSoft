@@ -118,6 +118,15 @@ export const flujoPlazo = {
   resumen: '{{dias}} días · recordatorios a {{recordatorios}}',
 } as const;
 
+/** Reintento del tercero tras un rechazo (DS-4), en el editor de flujos. */
+export const flujoReintento = {
+  titulo: 'Después de un rechazo',
+  permitir: 'Permitir que el tercero rechazado vuelva a postularse',
+  ayuda: 'Ve los motivos en su portal y puede abrir un expediente nuevo por su cuenta. Si no lo permites, solo tú puedes abrirlo desde el vínculo.',
+  dias: 'Días de espera',
+  diasAyuda: 'Desde el rechazo. 0 = de inmediato.',
+} as const;
+
 export const erroresLotes = {
   'lote-sin-filas-validas': 'El lote no tiene filas válidas: corrige el archivo y vuelve a subirlo.',
   'lote-sin-filas': 'El archivo no tiene filas debajo del encabezado.',

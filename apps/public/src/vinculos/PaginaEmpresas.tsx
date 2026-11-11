@@ -7,6 +7,7 @@ import { Link as RouterLink } from 'react-router';
 import { useExpedientePublico, useVinculosPublicos } from '../shared/api';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas, LogoEmpresa } from '../shared/componentes';
 import { avanceDelTercero } from './avance';
+import { AvisoRechazo } from './AvisoRechazo';
 import { ChipAvance } from './ChipAvance';
 import { useTextoAvance } from './useTextoAvance';
 import { situacionDelVinculo } from './situacion';
@@ -63,24 +64,34 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
             {v.tipoVinculo.nombre}
           </Typography>
         </Box>
-        {avance ? <ChipAvance avance={avance} /> : !esperando && <ChipEstado estado={v.estado} size="medium" />}
+        {avance ? (
+          <ChipAvance avance={avance} />
+        ) : v.reintento ? (
+          <ChipEstado estado="Rechazado" size="medium" />
+        ) : (
+          !esperando && <ChipEstado estado={v.estado} size="medium" />
+        )}
       </Stack>
-      <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px', mt: 1.5 }}>
-        {situacion !== 'vigente'
-          ? t(`vinculoSituacion.${situacion}.corto`)
-          : avance
-            ? textoAvance(avance, v.empresa.nombre)
-            : v.invitacionAceptada && v.invitacionAceptadaEn
-              ? t('empresas.aceptada', { fecha: formatearFecha(v.invitacionAceptadaEn) })
-              : t('empresas.pendienteAceptar')}
-      </Typography>
+      {v.reintento ? (
+        <AvisoRechazo vinculo={v} />
+      ) : (
+        <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px', mt: 1.5 }}>
+          {situacion !== 'vigente'
+            ? t(`vinculoSituacion.${situacion}.corto`)
+            : avance
+              ? textoAvance(avance, v.empresa.nombre)
+              : v.invitacionAceptada && v.invitacionAceptadaEn
+                ? t('empresas.aceptada', { fecha: formatearFecha(v.invitacionAceptadaEn) })
+                : t('empresas.pendienteAceptar')}
+        </Typography>
+      )}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
         {situacion === 'vigente' && !v.invitacionAceptada && (
           <Button component={RouterLink} to={`/empresas/${v.id}`} variant="contained" endIcon={<ChevronRight size={18} aria-hidden />}>
             {t('empresas.aceptar')}
           </Button>
         )}
-        {v.expedienteId && situacion !== 'terminada' && (
+        {v.expedienteId && situacion !== 'terminada' && !v.reintento && (
           <Button
             component={RouterLink}
             to={`/expediente/${v.expedienteId}`}

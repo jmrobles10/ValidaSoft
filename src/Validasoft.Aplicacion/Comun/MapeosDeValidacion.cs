@@ -197,7 +197,7 @@ public static class MapeosDeValidacion
         new(f.ExpedienteId, f.Folio, f.VinculoId, new TerceroResumenDto(f.TerceroId, f.TerceroNombre, f.TerceroIdentificacion),
             new TipoVinculoResumenDto(f.TipoVinculoId, f.TipoVinculoCodigo, f.TipoVinculoNombre), f.AreaId, f.AreaCodigo, f.AreaNombre,
             f.Etapa, f.EstadoArea.ToString(), f.EstadoExpediente.ToString(), f.Aprobaciones, f.AprobadoresRequeridos, f.Desde, f.ActualizadoEn,
-            f.RequisitosPendientes);
+            f.RequisitosPendientes, f.Desaprobaciones > 0);
 
     /// <summary>
     /// Vista del tercero: estado, observaciones vigentes con el texto del motivo (y el documento observado) y los

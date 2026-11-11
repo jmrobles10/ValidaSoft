@@ -272,12 +272,13 @@ public sealed record AnularVeredictoDto(string Justificacion, Guid? VeredictoId 
 
 /// <summary>
 /// Fila de la bandeja <c>BandejaRevision</c>: un expediente × un área. <see cref="RequisitosPendientes"/>: requisitos del
-/// alcance del área que aún esperan su decisión (0 sin requisitos).
+/// alcance del área que aún esperan su decisión (0 sin requisitos). <see cref="Desaprobado"/>: un administrador lo devolvió a
+/// revisión alguna vez (DS-1, DS-2).
 /// </summary>
 public sealed record FilaBandejaDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, Guid AreaId,
     string AreaCodigo, string AreaNombre, int Etapa, string EstadoArea, string EstadoExpediente, int Aprobaciones, int AprobadoresRequeridos,
-    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0);
+    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0, bool Desaprobado = false);
 
 /// <summary>Número y fecha de carga de una versión de la bóveda.</summary>
 public sealed record VersionResumenDto(int Numero, DateTimeOffset Fecha);

@@ -24,6 +24,7 @@ import {
   firmaBorrador,
   normalizarCodigo,
   plazoADto,
+  reintentoADto,
   requisitosADto,
   validarFlujo,
   verificacionesADto,
@@ -114,6 +115,7 @@ export function EditorFlujo() {
       politicaDevolucion: borrador.politicaDevolucion,
       separacionDeFunciones: borrador.separacionDeFunciones,
       plazoCargue: plazoADto(borrador),
+      reintento: reintentoADto(borrador),
       requisitos: requisitosADto(borrador.requisitos),
       verificaciones: verificacionesADto(borrador.verificaciones),
     };

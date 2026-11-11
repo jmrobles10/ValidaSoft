@@ -4,6 +4,7 @@ import {
   anularExpediente,
   anularVeredicto,
   aprobarComoAdministrador,
+  desaprobarExpediente,
   emitirVeredicto,
   emitirVeredictoRequisito,
   eximirRequisito,
@@ -13,8 +14,10 @@ import {
   getObtenerExpedienteQueryKey,
   getObtenerExpedienteQueryOptions,
   getObtenerHistorialExpedienteQueryOptions,
+  reabrirEtapaExpediente,
   rechazarExpediente,
   reenviarExpediente,
+  volverAFaseInicialExpediente,
   type ExpedienteDto,
   type ListarBandejaParams,
   type Veredicto,
@@ -65,7 +68,11 @@ export type EntradaExpediente =
   | { tipo: 'aprobarComoAdministrador'; areaId: string; justificacion: string }
   | { tipo: 'anularVeredicto'; areaId: string; justificacion: string; veredictoId?: string }
   | { tipo: 'reenviar'; respuesta: string }
-  | { tipo: 'anular'; motivo: string };
+  | { tipo: 'anular'; motivo: string }
+  // Desaprobar (DS-1, DS-2): `etapa` ausente = desde la última (la que cerró el expediente aprobado).
+  | { tipo: 'reabrirEtapa'; orden: number; justificacion: string }
+  | { tipo: 'faseInicial'; justificacion: string }
+  | { tipo: 'desaprobar'; justificacion: string; etapa?: number };
 
 /**
  * Sin `If-Match`: las áreas deciden en paralelo y el servidor serializa las escrituras (FL-12); si el estado ya no
@@ -116,6 +123,12 @@ export function ejecutarEnExpediente(empresaId: string, expedienteId: string, en
       return reenviarExpediente(expedienteId, { respuesta: texto(entrada.respuesta) }, opciones);
     case 'anular':
       return anularExpediente(expedienteId, { motivo: entrada.motivo.trim() }, opciones);
+    case 'reabrirEtapa':
+      return reabrirEtapaExpediente(expedienteId, entrada.orden, { justificacion: entrada.justificacion.trim() }, opciones);
+    case 'faseInicial':
+      return volverAFaseInicialExpediente(expedienteId, { justificacion: entrada.justificacion.trim() }, opciones);
+    case 'desaprobar':
+      return desaprobarExpediente(expedienteId, { justificacion: entrada.justificacion.trim(), etapa: entrada.etapa ?? null }, opciones);
   }
 }
 
