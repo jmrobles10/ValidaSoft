@@ -6,10 +6,105 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5112/"
+      "url": "http://localhost:5141/"
     }
   ],
   "paths": {
+    "/api/v1/vinculos/{id}/contactos": {
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ContactosDeVinculoEndpoints"
+        ],
+        "summary": "PUT_api_v1_vinculos_id_contactos",
+        "description": "PUT_api_v1_vinculos_id_contactos",
+        "operationId": "PUT_api_v1_vinculos_id_contactos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContactosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/vinculos/{id}/contactos": {
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ContactosPublicosEndpoints"
+        ],
+        "summary": "PUT_public_v1_vinculos_id_contactos",
+        "description": "PUT_public_v1_vinculos_id_contactos",
+        "operationId": "PUT_public_v1_vinculos_id_contactos",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarContactosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactoDeEmpresaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/boveda/cuentas-bancarias": {
       "get": {
         "tags": [
@@ -330,6 +425,176 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FichaTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/terceros/{id}/referencias": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ReferenciasDeTerceroEndpoints"
+        ],
+        "summary": "GET_api_v1_terceros_id_referencias",
+        "description": "GET_api_v1_terceros_id_referencias",
+        "operationId": "GET_api_v1_terceros_id_referencias",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReferenciaExternaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ReferenciasDeTerceroEndpoints"
+        ],
+        "summary": "POST_api_v1_terceros_id_referencias",
+        "description": "POST_api_v1_terceros_id_referencias",
+        "operationId": "POST_api_v1_terceros_id_referencias",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenciaExternaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/terceros/por-referencia": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ReferenciasDeTerceroEndpoints"
+        ],
+        "summary": "GET_api_v1_terceros_por_referencia",
+        "description": "GET_api_v1_terceros_por_referencia",
+        "operationId": "GET_api_v1_terceros_por_referencia",
+        "parameters": [
+          {
+            "name": "sistema",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clave",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/referencias": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ReferenciasDeVinculoEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_referencias",
+        "description": "POST_api_v1_vinculos_id_referencias",
+        "operationId": "POST_api_v1_vinculos_id_referencias",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenciaExternaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinculoDto"
                 }
               }
             }
@@ -701,6 +966,13 @@
         "parameters": [
           {
             "name": "sistema",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clave",
             "in": "query",
             "schema": {
               "type": "string"
@@ -4264,6 +4536,226 @@
         }
       }
     },
+    "/api/v1/plataforma/importacion/{origen}": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_origen",
+        "description": "POST_api_v1_plataforma_importacion_origen",
+        "operationId": "POST_api_v1_plataforma_importacion_origen",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportarTercerosDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/{origen}/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_importacion_origen_id",
+        "description": "GET_api_v1_plataforma_importacion_origen_id",
+        "operationId": "GET_api_v1_plataforma_importacion_origen_id",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorridaImportacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/{origen}/{id}/rechazos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_importacion_origen_id_rechazos",
+        "description": "GET_api_v1_plataforma_importacion_origen_id_rechazos",
+        "operationId": "GET_api_v1_plataforma_importacion_origen_id_rechazos",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/{origen}/{id}/reanudar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_origen_id_reanudar",
+        "description": "POST_api_v1_plataforma_importacion_origen_id_reanudar",
+        "operationId": "POST_api_v1_plataforma_importacion_origen_id_reanudar",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/importacion/{origen}/terceros/{clave}/sincronizar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_importacion_origen_terceros_clave_sincronizar",
+        "description": "POST_api_v1_plataforma_importacion_origen_terceros_clave_sincronizar",
+        "operationId": "POST_api_v1_plataforma_importacion_origen_terceros_clave_sincronizar",
+        "parameters": [
+          {
+            "name": "origen",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "clave",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SincronizacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/sistemas": {
       "post": {
         "tags": [
@@ -4779,6 +5271,66 @@
                   "items": {
                     "$ref": "#/components/schemas/UsuarioResumenDto"
                   }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/sesiones-tercero": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SesionesTerceroEmbebidasEndpoints"
+        ],
+        "summary": "POST_api_v1_sesiones_tercero",
+        "description": "POST_api_v1_sesiones_tercero",
+        "operationId": "POST_api_v1_sesiones_tercero",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSesionEmbebidaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/sesion/actual": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SesionActualDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_sesion_actual",
+        "description": "GET_public_v1_sesion_actual",
+        "operationId": "GET_public_v1_sesion_actual",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SesionTerceroDto"
                 }
               }
             }
@@ -5666,189 +6218,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CompletitudSeccionDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/importacion/portal": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_importacion_portal",
-        "description": "POST_api_v1_plataforma_importacion_portal",
-        "operationId": "POST_api_v1_plataforma_importacion_portal",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ImportarPortalDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IResult"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/importacion/portal/{id}": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-        ],
-        "summary": "GET_api_v1_plataforma_importacion_portal_id",
-        "description": "GET_api_v1_plataforma_importacion_portal_id",
-        "operationId": "GET_api_v1_plataforma_importacion_portal_id",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CorridaImportacionPortalDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/importacion/portal/{id}/rechazos": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-        ],
-        "summary": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
-        "description": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
-        "operationId": "GET_api_v1_plataforma_importacion_portal_id_rechazos",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IResult"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/importacion/portal/{id}/reanudar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
-        "description": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
-        "operationId": "POST_api_v1_plataforma_importacion_portal_id_reanudar",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/IResult"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
-        "description": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
-        "operationId": "POST_api_v1_plataforma_importacion_portal_terceros_terid_sincronizar",
-        "parameters": [
-          {
-            "name": "terid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "pattern": "^-?(?:0|[1-9]\\d*)$",
-              "type": [
-                "integer",
-                "string"
-              ],
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SincronizacionPortalDto"
                 }
               }
             }
@@ -10247,6 +10616,20 @@
           }
         }
       },
+      "ActualizarContactosDto": {
+        "required": [
+          "contactos"
+        ],
+        "type": "object",
+        "properties": {
+          "contactos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactoDeEmpresaDto"
+            }
+          }
+        }
+      },
       "ActualizarEmpresaDto": {
         "type": "object",
         "properties": {
@@ -11050,7 +11433,7 @@
       "AvisoImportacionDto": {
         "required": [
           "claveLegado",
-          "terid",
+          "clave",
           "seccion",
           "periodo",
           "campo",
@@ -11064,13 +11447,8 @@
           "claveLegado": {
             "type": "string"
           },
-          "terid": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "clave": {
+            "type": "string"
           },
           "seccion": {
             "type": [
@@ -11330,6 +11708,12 @@
             ]
           },
           "obligadoAFacturar": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "exentoReteCree": {
             "type": [
               "null",
               "boolean"
@@ -12295,27 +12679,6 @@
           }
         }
       },
-      "ConstructoraEmpresaDto": {
-        "required": [
-          "constructora",
-          "empresaId"
-        ],
-        "type": "object",
-        "properties": {
-          "constructora": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          },
-          "empresaId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
-      },
       "ConsultaAnteriorDto": {
         "required": [
           "proveedor",
@@ -12470,6 +12833,61 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ContactoDeEmpresaDto": {
+        "required": [
+          "nombre",
+          "cargo",
+          "correo",
+          "telefono",
+          "rol"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "cargo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rol": {
+            "type": "string"
+          }
+        }
+      },
+      "ContactoDePagosDto": {
+        "required": [
+          "nombre",
+          "correo",
+          "telefono"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13047,15 +13465,16 @@
           }
         }
       },
-      "CorridaImportacionPortalDto": {
+      "CorridaImportacionDto": {
         "required": [
           "id",
+          "origen",
           "estado",
           "dryRun",
-          "origen",
+          "fuente",
           "tamanoLote",
           "importarCatalogos",
-          "constructoras",
+          "unidades",
           "cursor",
           "lotes",
           "creadaEn",
@@ -13070,13 +13489,16 @@
             "type": "string",
             "format": "uuid"
           },
+          "origen": {
+            "type": "string"
+          },
           "estado": {
             "type": "string"
           },
           "dryRun": {
             "type": "boolean"
           },
-          "origen": {
+          "fuente": {
             "type": "string"
           },
           "tamanoLote": {
@@ -13090,20 +13512,17 @@
           "importarCatalogos": {
             "type": "boolean"
           },
-          "constructoras": {
+          "unidades": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ConstructoraEmpresaDto"
+              "$ref": "#/components/schemas/UnidadEmpresaDto"
             }
           },
           "cursor": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "null",
-              "integer",
               "string"
-            ],
-            "format": "int32"
+            ]
           },
           "lotes": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
@@ -13135,7 +13554,7 @@
             ]
           },
           "resumen": {
-            "$ref": "#/components/schemas/ResumenImportacionPortalDto"
+            "$ref": "#/components/schemas/ResumenImportacionDto"
           }
         }
       },
@@ -13376,6 +13795,35 @@
           }
         }
       },
+      "CrearSesionEmbebidaDto": {
+        "required": [
+          "vinculoId",
+          "componente",
+          "origen"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "componente": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "minutos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "CrearSistemaIntegradoDto": {
         "required": [
           "codigo",
@@ -13496,6 +13944,16 @@
             "items": {
               "$ref": "#/components/schemas/ContactoDto"
             }
+          },
+          "referenciaExterna": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReferenciaExternaDto"
+              }
+            ]
           }
         }
       },
@@ -14024,6 +14482,28 @@
             "items": {
               "$ref": "#/components/schemas/DesignacionDeCuentaDto"
             }
+          },
+          "bancoCodigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bancoSwift": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactoPagos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactoDePagosDto"
+              }
+            ]
           }
         }
       },
@@ -14151,6 +14631,28 @@
               "null",
               "string"
             ]
+          },
+          "bancoCodigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bancoSwift": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactoPagos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactoDePagosDto"
+              }
+            ]
           }
         }
       },
@@ -14166,6 +14668,18 @@
           },
           "banco": {
             "type": "string"
+          },
+          "bancoCodigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bancoSwift": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15200,6 +15714,12 @@
           "activo": {
             "type": "boolean",
             "default": true
+          },
+          "swift": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -16202,6 +16722,24 @@
                 "$ref": "#/components/schemas/CuentaDesignadaDto"
               }
             ]
+          },
+          "contactos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactoDeEmpresaDto"
+            }
+          },
+          "referenciasDelTercero": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ReferenciaExternaDto"
+            }
           }
         }
       },
@@ -16430,6 +16968,12 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "swift": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -17765,7 +18309,7 @@
           }
         }
       },
-      "ImportarPortalDto": {
+      "ImportarTercerosDto": {
         "type": "object",
         "properties": {
           "dryRun": {
@@ -17774,20 +18318,20 @@
               "boolean"
             ]
           },
-          "origen": {
+          "fuente": {
             "type": [
               "null",
               "string"
             ]
           },
           "archivo": {},
-          "constructoras": {
+          "unidades": {
             "type": [
               "null",
               "array"
             ],
             "items": {
-              "$ref": "#/components/schemas/ConstructoraEmpresaDto"
+              "$ref": "#/components/schemas/UnidadEmpresaDto"
             }
           },
           "tamanoLote": {
@@ -19486,6 +20030,12 @@
               "null",
               "string"
             ]
+          },
+          "lugarExpedicion": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20417,6 +20967,28 @@
               "null",
               "string"
             ]
+          },
+          "bancoCodigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bancoSwift": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactoPagos": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactoDePagosDto"
+              }
+            ]
           }
         }
       },
@@ -20826,6 +21398,12 @@
             ]
           },
           "telefono": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lugarExpedicion": {
             "type": [
               "null",
               "string"
@@ -21498,7 +22076,7 @@
           }
         }
       },
-      "ResumenImportacionPortalDto": {
+      "ResumenImportacionDto": {
         "required": [
           "tercerosLeidos",
           "tercerosCreados",
@@ -22631,9 +23209,10 @@
           }
         }
       },
-      "SincronizacionPortalDto": {
+      "SincronizacionDto": {
         "required": [
-          "terid",
+          "origen",
+          "clave",
           "claveLegado",
           "terceroId",
           "terceroCreado",
@@ -22643,13 +23222,11 @@
         ],
         "type": "object",
         "properties": {
-          "terid": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
+          "origen": {
+            "type": "string"
+          },
+          "clave": {
+            "type": "string"
           },
           "claveLegado": {
             "type": "string"
@@ -23738,6 +24315,22 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "UnidadEmpresaDto": {
+        "required": [
+          "unidad",
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "unidad": {
+            "type": "string"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -24944,6 +25537,15 @@
               "null",
               "string"
             ]
+          },
+          "contactos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactoDeEmpresaDto"
+            }
           }
         }
       },
@@ -25049,6 +25651,15 @@
                 "$ref": "#/components/schemas/ReintentoPublicoDto"
               }
             ]
+          },
+          "contactos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactoDeEmpresaDto"
+            }
           }
         }
       },
@@ -25312,6 +25923,12 @@
   },
   "tags": [
     {
+      "name": "Validasoft.Aplicacion.Vinculos.ContactosDeVinculoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.ContactosPublicosEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Vinculos.CuentasPublicasEndpoints"
     },
     {
@@ -25322,6 +25939,12 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.FichaTerceroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.ReferenciasDeTerceroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.ReferenciasDeVinculoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
@@ -25396,6 +26019,9 @@
       "name": "Validasoft.Aplicacion.Informes.InformeVinculosEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Importacion.ImportacionEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Identidad.SistemasEndpoints"
     },
     {
@@ -25411,6 +26037,12 @@
       "name": "Validasoft.Aplicacion.Identidad.QuienSoyEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Identidad.SesionesTerceroEmbebidasEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Identidad.SesionActualDelTerceroEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Ia.PlanIaEndpoints"
     },
     {
@@ -25424,9 +26056,6 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"
-    },
-    {
-      "name": "Validasoft.Aplicacion.Ficha.ImportacionDePortalEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.PropuestasDeFichaEndpoints"
