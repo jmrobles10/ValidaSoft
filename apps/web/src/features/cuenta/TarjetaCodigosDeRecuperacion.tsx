@@ -80,7 +80,8 @@ export function TarjetaCodigosDeRecuperacion() {
   });
 
   const estado = consulta.data;
-  const tiene = estado !== undefined && estado.total > 0;
+  // La API da siempre el tamaño del juego (diez); que haya uno lo dice la fecha en que se generó.
+  const tiene = estado?.generadosEn != null;
   const pocos = tiene && estado.disponibles <= 2;
 
   return (

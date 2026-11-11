@@ -52,7 +52,13 @@ export function FormularioDeSso({ inicial }: { inicial: ConfiguracionDeSsoDto })
 
   const guardar = useMutation({
     mutationFn: () => actualizarConfiguracionSso(cuerpoDeSso(formulario, aEnviar), { empresa: null }),
-    onSuccess: () => mostrar(t('sso.guardado')),
+    onSuccess: (guardado) => {
+      mostrar(t('sso.guardado'));
+      // Lo guardado es ahora lo original: el secreto escrito ya no se conserva en pantalla.
+      setFormulario(formularioDesde(guardado));
+      setAccion('conservar');
+      setSecreto('');
+    },
     onSettled: () => invalidarRuta(cliente, '/api/v1/configuracion/sso'),
   });
 

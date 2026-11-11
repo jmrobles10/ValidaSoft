@@ -27,6 +27,6 @@ export function PaginaSso() {
       </Stack>
     );
 
-  // La clave reinicia el formulario cuando la configuración cambia en el servidor (tras guardar). Los dominios no la reinician: se verifican aparte y no deben borrar lo que se está editando.
-  return <FormularioDeSso key={JSON.stringify({ ...consulta.data, dominios: [] })} inicial={consulta.data} />;
+  // El formulario guarda lo que se escribe y se rehace solo al guardar (con lo que devolvió el servidor): agregar o verificar un dominio no lo reinicia.
+  return <FormularioDeSso inicial={consulta.data} />;
 }

@@ -145,7 +145,7 @@ test('Plataforma: agregar una empresa a un grupo y desactivar y reactivar uno de
     (await llamar<{ id: string; activo: boolean }[]>('GET', `/api/v1/plataforma/tenants/${g.tenantId}/sistemas`, { llave: CLAVE_PLATAFORMA })).find((s) => s.id === sistema.id)?.activo;
 
   const consola = await abrirConsolaDePlataforma(page);
-  await consola.getByRole('textbox', { name: /Buscar por grupo, empresa o NIT/ }).fill(g.slug);
+  await consola.getByRole('searchbox', { name: 'Buscar por grupo, empresa o NIT' }).fill(g.slug);
   await expect(consola.getByRole('region', { name: g.nombre })).toBeVisible();
 
   // Agregar una empresa: el mismo formulario del grupo, ya para ese grupo.
@@ -229,8 +229,10 @@ test('Mi cuenta: generar códigos de recuperación pide la passkey y uno de ello
   // Y el mismo código no sirve dos veces.
   await page.getByRole('button', { name: 'Menú de tu cuenta' }).click();
   await page.getByRole('menuitem', { name: 'Cerrar sesión' }).click();
+  await expect(page.getByRole('heading', { name: 'Ingresa a Validasoft' })).toBeVisible();
   await virtual.cdp.send('WebAuthn.clearCredentials', { authenticatorId: virtual.id });
   await entrarConCodigo(page, g.correoAdmin);
+  await expect(page.getByRole('heading', { name: 'Confirma que eres tú' })).toBeVisible();
   await page.getByRole('button', { name: 'No tengo mi passkey' }).click();
   await page.getByLabel('Código de recuperación').fill(lista[0] ?? '');
   await page.getByRole('button', { name: 'Usar el código' }).click();
@@ -253,7 +255,7 @@ test('Configuración › Inicio de sesión único: el secreto no vuelve, el domi
   await page.getByRole('button', { name: 'Escribir secreto' }).click();
   await page.getByLabel('Secreto del cliente').fill('secreto-e2e-12345');
   await page.getByLabel('Dominio', { exact: true }).fill(`sso-${sufijo}.e2e.validasoft.co`);
-  await page.getByRole('button', { name: 'Agregar' }).click();
+  await page.getByRole('button', { name: 'Agregar', exact: true }).click();
   // Agregar un dominio puede pedir confirmar con la passkey (configurar el SSO es una acción sensible).
   if (await page.getByRole('dialog', { name: 'Confirma que eres tú' }).isVisible({ timeout: 2_000 }).catch(() => false)) await confirmarConPasskey(page);
   await expect(page.getByText(`@sso-${sufijo}.e2e.validasoft.co`)).toBeVisible();

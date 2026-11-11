@@ -249,6 +249,27 @@ describe('Dominios del SSO (PI-2)', () => {
     expect(await screen.findByText('No encontramos el texto en el sitio.')).toBeInTheDocument();
   });
 
+  it('agregar el primer dominio de una configuración nueva (que la crea) no borra lo que ya se escribió', async () => {
+    let creada = false;
+    const vacia = configuracion({ configurado: false, activo: false, nombre: '', autoridad: null, clientId: null, secretoConfigurado: false, ultimosCuatroSecreto: null, dominios: [], aprovisionamientoJit: false, rolesPorOmision: [], actualizadoEn: null });
+    const { usuario } = montar(vacia, {
+      'GET /api/v1/configuracion/sso': () => (creada ? { ...vacia, configurado: true, dominios: [{ ...PENDIENTE, dominio: 'nuevo.co' }], actualizadoEn: '2026-11-11T10:00:00Z' } : vacia),
+      'POST /api/v1/configuracion/sso/dominios': () => {
+        creada = true;
+        return { ...PENDIENTE, dominio: 'nuevo.co' };
+      },
+    });
+    await usuario.type(await screen.findByLabelText('Nombre del botón'), 'Andina');
+    await usuario.type(screen.getByLabelText('Client ID'), 'validasoft-andina');
+
+    await usuario.type(screen.getByLabelText('Dominio'), 'nuevo.co');
+    await usuario.click(screen.getByRole('button', { name: 'Agregar' }));
+
+    expect(await screen.findByText('@nuevo.co')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nombre del botón')).toHaveValue('Andina');
+    expect(screen.getByLabelText('Client ID')).toHaveValue('validasoft-andina');
+  });
+
   it('verificar un dominio no borra lo que se está editando en el formulario', async () => {
     let verificado = false;
     const { usuario } = montar(configuracion(), {

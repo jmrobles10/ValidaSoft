@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { agregarDominioSso, quitarDominioSso, verificarDominioSso, type DominioDeSsoDto } from '@validasoft/api-client';
 import { Chip } from '@mui/material';
 import { BadgeCheck, Clock, Copy, Plus, Trash2 } from 'lucide-react';
-import { useState, type SubmitEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga, Tarjeta } from '../../../../shared/componentes';
 import { invalidarRuta } from '../../../../shared/consultas';
@@ -36,8 +36,8 @@ function FilaDominio({ dominio }: { dominio: DominioDeSsoDto }) {
 
   return (
     <Box sx={{ py: 1, borderTop: 1, borderColor: 'divider', '&:first-of-type': { borderTop: 0 } }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <Typography sx={{ fontWeight: 600, flex: 1, minWidth: 0 }} noWrap>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
+        <Typography sx={{ fontWeight: 600, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>
           @{dominio.dominio}
         </Typography>
         {dominio.verificado ? (
@@ -87,9 +87,14 @@ export function DominiosSso({ dominios }: { dominios: readonly DominioDeSsoDto[]
     onSuccess: () => setDominio(''),
     onSettled: () => invalidarRuta(cliente, RUTA),
   });
-  const enviar = (evento: SubmitEvent) => {
-    evento.preventDefault();
+  // No es un formulario: va dentro del de la página (que guarda la configuración) y un envío anidado guardaría o recargaría todo.
+  const enviar = () => {
     if (dominio.trim().length > 0 && !agregar.isPending) agregar.mutate();
+  };
+  const alTeclear = (evento: KeyboardEvent) => {
+    if (evento.key !== 'Enter') return;
+    evento.preventDefault();
+    enviar();
   };
 
   return (
@@ -113,10 +118,10 @@ export function DominiosSso({ dominios }: { dominios: readonly DominioDeSsoDto[]
           {mensajeDeError(agregar.error, t)}
         </Alert>
       )}
-      <Box component="form" onSubmit={enviar} noValidate>
+      <Box>
         <Stack direction="row" spacing={1}>
-          <TextField size="small" label={t('sso.dominios.campo')} placeholder="empresa.co" value={dominio} onChange={(e) => setDominio(e.target.value)} sx={{ flex: 1, minWidth: 0 }} slotProps={{ htmlInput: { maxLength: 253 } }} />
-          <Button type="submit" variant="outlined" disabled={dominio.trim().length === 0 || agregar.isPending} startIcon={agregar.isPending ? <IconoCarga /> : <Plus size={16} aria-hidden />}>
+          <TextField size="small" label={t('sso.dominios.campo')} placeholder="empresa.co" value={dominio} onChange={(e) => setDominio(e.target.value)} onKeyDown={alTeclear} sx={{ flex: 1, minWidth: 0 }} slotProps={{ htmlInput: { maxLength: 253 } }} />
+          <Button type="button" variant="outlined" onClick={enviar} disabled={dominio.trim().length === 0 || agregar.isPending} startIcon={agregar.isPending ? <IconoCarga /> : <Plus size={16} aria-hidden />}>
             {t('sso.dominios.agregar')}
           </Button>
         </Stack>
