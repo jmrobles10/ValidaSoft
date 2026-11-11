@@ -51,7 +51,7 @@ jobs:
       - name: Probar (dominio e integración con Testcontainers)
         run: >-
           dotnet test Validasoft.slnx --configuration Release --no-build
-          --logger "trx;LogFilePrefix=resultados" --results-directory TestResults
+          --logger GitHubActions --logger "trx;LogFilePrefix=resultados" --results-directory TestResults
 
       # Que el empaquetado de los SDK no se pudra entre publicaciones (docs/08 §2.4): sin publicar nada. Sin `--no-build`: la documentación XML
       # de Validasoft.Contratos solo se genera al empaquetar (`_IsPacking`), así que `pack` debe compilar (igual que sdk-publicar.yml).

@@ -150,7 +150,9 @@ public sealed class ProtectorDeSecretosTests
 
         Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, $"vs2.{Kid(Clave2)}.{partes[2]}"));
         Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, "vs2.corto"));
-        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, $"vs2.{partes[1]}.{partes[2][..^2]}AA"));
+        // Se altera el primer carácter del cuerpo (el nonce): la etiqueta ya no cuadra siempre, sin depender de cómo terminaba el texto.
+        var alterado = (partes[2][0] == 'A' ? 'B' : 'A') + partes[2][1..];
+        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, $"vs2.{partes[1]}.{alterado}"));
     }
 
     [Theory]

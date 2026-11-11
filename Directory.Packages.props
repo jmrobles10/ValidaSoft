@@ -37,6 +37,8 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />
+    <!-- Anotaciones de las pruebas fallidas en el check run de GitHub Actions (MIT): se activa con el logger GitHubActions en ci.yml. -->
+    <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.5" />
     <PackageVersion Include="Alba" Version="8.5.3" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="Testcontainers.Minio" Version="4.15.0" />
