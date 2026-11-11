@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, test, type Download } from '@playwright/test';
 import { pdf } from '../soporte/archivos';
 import { abrirEmbebido } from '../soporte/embebido';
-import { abrirDesdeBandeja, aprobarArea } from '../soporte/empresa';
+import { abrirDesdeBandeja, aprobarArea, irASeccion } from '../soporte/empresa';
 import { completarInvitacion } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST } from '../soporte/semilla';
 
@@ -68,7 +68,7 @@ test('la administradora ve el informe de estado con los tiempos por área, lo ba
   }
 
   // La exportación y cada documento incluido quedan en la auditoría de accesos.
-  await ana.getByRole('link', { name: 'Auditoría', exact: true }).click();
+  await irASeccion(ana, 'Auditoría');
   await ana.getByRole('tab', { name: /Accesos/ }).click();
   await expect(ana.getByRole('row').filter({ hasText: 'Exportado' }).filter({ hasText: folio })).toBeVisible();
   await expect(ana.getByRole('row').filter({ hasText: 'Informe de estado de expedientes' }).first()).toBeVisible();

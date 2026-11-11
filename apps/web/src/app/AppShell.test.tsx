@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@mui/material';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { SCOPES } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { MemoryRouter, Route, Routes } from 'react-router';
@@ -46,5 +46,47 @@ describe('AppShell', () => {
     expect(pestana).toHaveAttribute('href', '/e/emp/auditoria');
     expect(pestana).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Vínculos' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('Configuración no es una pestaña de texto: es un engranaje con su tooltip, activo en cualquiera de sus secciones', () => {
+    permisos.scopes = new Set([SCOPES.vinculosLeer, SCOPES.configuracionLeer]);
+    montar('/e/emp/plantillas');
+    const barra = screen.getByRole('navigation', { name: 'Secciones' });
+    expect(within(barra).queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument();
+    const engranaje = screen.getByRole('link', { name: 'Configuración' });
+    expect(engranaje).toHaveAttribute('href', '/e/emp/tipos-vinculo');
+    expect(engranaje).toHaveAttribute('aria-current', 'page');
+    // Estando en Configuración ninguna pestaña queda activa.
+    expect(within(barra).getByRole('link', { name: 'Vínculos' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('fuera de Configuración el engranaje no está activo, y sin permisos de configuración no aparece', () => {
+    permisos.scopes = new Set([SCOPES.vinculosLeer, SCOPES.configuracionLeer]);
+    montar('/e/emp/vinculos');
+    expect(screen.getByRole('link', { name: 'Configuración' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('sin ningún permiso de configuración no hay engranaje', () => {
+    permisos.scopes = new Set([SCOPES.vinculosLeer]);
+    montar('/e/emp/vinculos');
+    expect(screen.queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument();
+  });
+
+  it('con todos los permisos hay nueve pestañas, en su orden, y sin medidas (jsdom) todas a la vista', () => {
+    permisos.scopes = new Set(Object.values(SCOPES));
+    montar('/e/emp/inicio');
+    const barra = screen.getByRole('navigation', { name: 'Secciones' });
+    expect(within(barra).getAllByRole('link').map((e) => e.textContent)).toEqual([
+      'Inicio',
+      'Bandeja',
+      'Revalidaciones',
+      'Vencimientos',
+      'Cumplimiento',
+      'Certificados',
+      'Vínculos',
+      'Informes',
+      'Auditoría',
+    ]);
+    expect(within(barra).queryByRole('button', { name: 'Más' })).not.toBeInTheDocument();
   });
 });

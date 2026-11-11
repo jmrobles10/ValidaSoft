@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { pdf } from '../soporte/archivos';
 import { abrirEmbebido } from '../soporte/embebido';
-import { abrirDesdeBandeja, aprobarArea } from '../soporte/empresa';
+import { abrirDesdeBandeja, aprobarArea, irASeccion } from '../soporte/empresa';
 import { completarInvitacion } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST } from '../soporte/semilla';
 
@@ -27,7 +27,7 @@ test('al aprobar, el certificado aparece en la lista de Sur y se encuentra por e
   await abrirDesdeBandeja(sofia, invitacion.nombre, 'Revisión');
   await aprobarArea(sofia, 'Revisión');
 
-  await sofia.getByRole('link', { name: 'Certificados', exact: true }).click();
+  await irASeccion(sofia, 'Certificados');
   await expect(sofia.getByRole('heading', { level: 1, name: 'Certificados' })).toBeVisible();
   const fila = sofia.getByRole('row').filter({ hasText: invitacion.nombre });
   await expect(fila).toContainText('Vigente');

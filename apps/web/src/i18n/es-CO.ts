@@ -56,6 +56,8 @@ export const esCO = {
     'tipos-vinculo': 'Tipos de vínculo',
     configuracion: 'Configuración',
     principal: 'Secciones',
+    mas: 'Más',
+    masSecciones: 'Más secciones',
   },
   configuracion: {
     grupo: 'Grupo empresarial',

@@ -16,7 +16,7 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 
 - **Empresa** (`soporte/semilla.ts`): grupo con Constructora Norte (Compras y Cumplimiento; Cumplimiento puede rechazar) y Constructora Sur (Revisión), el sistema integrado E2E con sus claves y personas con roles distintos.
 - **Proveedor** (`soporte/proveedor.ts`): entra con el enlace del correo y el código (Mailpit), acepta, sube documentos (PDF generados en `soporte/archivos.ts`) y responde observaciones.
-- **Personas de la empresa** (`soporte/embebido.ts`, `soporte/empresa.ts`): usan Validasoft embebido en un iframe de otro origen; la sesión llega por `postMessage` con identidad delegada firmada por el sistema integrado.
+- **Personas de la empresa** (`soporte/embebido.ts`, `soporte/empresa.ts`): usan Validasoft embebido en un iframe de otro origen; la sesión llega por `postMessage` con identidad delegada firmada por el sistema integrado. Para cambiar de sección se usa `irASeccion(app, nombre)`: la barra superior pasa a «Más» las pestañas que no caben en el ancho del iframe, así que la sección puede ser un enlace de la barra o un ítem de ese menú.
 - **Sistema integrado** (`soporte/receptor.ts`): recibe los webhooks y verifica su firma.
 
 ## Qué cubre
@@ -31,5 +31,6 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 | `eventos.spec.ts` | Webhooks firmados en orden; entrega fallida y reenvío; campana y correo a la revisora |
 | `lotes.spec.ts` | Invitación masiva: plantilla subida desde la pantalla, vista previa con errores por fila, lote procesado y terceros invitados; caducidad por plazo de cargue (job con fecha simulada para el tenant de la prueba) y reapertura |
 | `informes.spec.ts` | Informe de estado de expedientes con tiempos por área, filtro y descarga en Excel; exportación del expediente en ZIP; las exportaciones en la auditoría de accesos |
+| `navegacion.spec.ts` | Barra superior con «Más» adaptativo a 1536, 1100 y 700 px (sin desplazamiento horizontal, todas las secciones a un clic, activa dentro de «Más»), engranaje de Configuración, cambio de ancho en caliente y modo oscuro; deja capturas en `test-results/navegacion-*.png` |
 
 Los vencimientos se prueban sin mover el reloj: el proveedor declara una fecha de expedición vieja y los avisos o vencimientos que caen en el pasado se ejecutan enseguida.
