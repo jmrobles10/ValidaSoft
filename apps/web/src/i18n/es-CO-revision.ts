@@ -360,6 +360,8 @@ export const expedientes = {
       veredicto_anulado_por_administrador: 'Veredicto anulado',
       etapa_reabierta: 'Etapa reabierta',
       expediente_desaprobado: 'Expediente desaprobado',
+      sla_por_vencer: 'Plazo de revisión por vencer',
+      sla_incumplido: 'Plazo de revisión vencido',
       requisitos_calculados: 'Documentos que pide el flujo',
       requisitos_agregados: 'Se amplía la actualización',
       version_adjuntada_a_requisito: 'Versión nueva',
