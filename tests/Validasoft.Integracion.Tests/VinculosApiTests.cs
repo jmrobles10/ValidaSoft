@@ -165,6 +165,9 @@ public sealed class CorreosCapturados : ITransporteDeCorreo, IEnviadorDeCorreo
         return Task.CompletedTask;
     }
 
+    /// <summary>Cuántos correos han salido (para medir el avance de un envío masivo).</summary>
+    public int Total => _mensajes.Count;
+
     public IReadOnlyList<MensajeDeCorreo> Para(string correo) =>
         [.. _mensajes.Where(m => string.Equals(m.Para, correo, StringComparison.OrdinalIgnoreCase))];
 

@@ -17,6 +17,7 @@ using Validasoft.Contratos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Wolverine;
+using Xunit.Abstractions;
 
 namespace Validasoft.Integracion.Tests;
 
@@ -28,7 +29,7 @@ namespace Validasoft.Integracion.Tests;
 /// </summary>
 [Collection("api")]
 [Trait("Requiere", "Docker")]
-public sealed partial class RequisitosApiTests(ApiFixture fixture)
+public sealed partial class RequisitosApiTests(ApiFixture fixture, ITestOutputHelper salida)
 {
     private static readonly HttpClient Http = new();
 
