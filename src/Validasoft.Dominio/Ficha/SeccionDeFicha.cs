@@ -235,12 +235,14 @@ public sealed class SeccionDeFicha
     /// versión completa anterior (la misma referencia del soporte del cambio): si los datos difieren y la versión no trae ningún soporte
     /// (documento o versión de documento) que esa referencia no tuviera, es un cambio <b>sin soporte</b>. Es un hecho que se calcula de las
     /// versiones inmutables, no se guarda aparte: nulo si es la primera versión, no cambió nada, el cambio no es del tercero (viene de un
-    /// sistema de origen, FM-41) o sí trae un soporte nuevo. <see cref="SinSoporteDelCambio.Critico"/>: toca la identidad
+    /// sistema de origen, FM-41), la sección no exige soporte en los cambios (SST y especialidades) o sí trae un soporte nuevo. Con
+    /// <paramref name="desdeVersion"/> se compara contra esa versión (la que la empresa aceptó) en lugar de la última completa. <see cref="SinSoporteDelCambio.Critico"/>: toca la identidad
     /// (razón social, nombres y apellidos) o a un representante legal o suplente (docs/14 §5.2).
     /// </summary>
     public SinSoporteDelCambio? SinSoporte(int numero, int? desdeVersion = null)
     {
-        if (Versiones.FirstOrDefault(v => v.Numero == numero) is not { } version || !ExigeSoporteDelCambio(version.Origen))
+        if (Versiones.FirstOrDefault(v => v.Numero == numero) is not { } version || !ExigeSoporteDelCambio(version.Origen) ||
+            CatalogoDeSecciones.Buscar(Seccion) is not { ExigeSoporteEnCambios: true })
             return null;
         var referencia = desdeVersion is { } desde
             ? Versiones.FirstOrDefault(v => v.Numero == desde && v.Numero < numero)

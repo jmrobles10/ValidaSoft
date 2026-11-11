@@ -24,17 +24,20 @@ test('el proveedor abre Mi información, guarda General a medias, ve lo que falt
   await page.getByRole('button', { name: 'Continuar' }).or(page.getByRole('link', { name: 'Continuar' })).first().click();
   await expect(page).toHaveURL(/\/ficha\/general/);
 
-  // Sin datos no hay nada que guardar ni se puede continuar: la barra dice cuánto falta (lo evalúa la API, FM-46).
+  // La General llega prellenada con lo que ya se sabe del tercero (FD-1): hay algo que guardar aunque no haya tocado nada, pero no se
+  // puede continuar: la barra dice cuánto falta (lo evalúa la API, FM-46).
   const barra = page.getByRole('group', { name: 'Guardar la sección' });
+  await expect(page.getByRole('alert').filter({ hasText: 'Prellenamos tu información' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Razón social' })).toHaveValue('Ferretería La Ficha S.A.S.');
   await expect(barra.getByText(/Faltan? \d+ datos? para continuar/)).toBeVisible();
   await expect(barra.getByRole('button', { name: 'Guardar y continuar' })).toBeDisabled();
-  await expect(barra.getByRole('button', { name: 'Guardar', exact: true })).toBeDisabled();
+  await expect(barra.getByRole('button', { name: 'Guardar', exact: true })).toBeEnabled();
   // El panel acompaña la sección: todas las secciones con su estado y la abierta marcada.
   const panel = page.getByRole('navigation', { name: 'Secciones de mi información' });
   await expect(panel.getByRole('link', { name: /^Información general:/ })).toHaveAttribute('aria-current', 'step');
 
   // Un dato a medias: «Guardar» deja el borrador con los faltantes exactos del servidor y el wizard no avanza.
-  await page.getByRole('textbox', { name: 'Razón social' }).fill('Ferretería La Ficha S.A.S.');
+  await page.getByRole('textbox', { name: 'Teléfono' }).fill('601 555 1234');
   await expect(barra.getByText('Tienes cambios sin guardar')).toBeVisible();
   await barra.getByRole('button', { name: 'Guardar', exact: true }).click();
   await expect(page.getByText(/Para completar esta sección faltan? \d+ datos?/)).toBeVisible();

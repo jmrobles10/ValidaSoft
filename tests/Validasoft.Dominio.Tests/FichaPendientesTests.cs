@@ -400,6 +400,22 @@ public class FichaPendientesTests
     }
 
     [Fact]
+    public void Las_secciones_que_no_exigen_soporte_en_los_cambios_nunca_se_marcan_sin_soporte()
+    {
+        var definicion = CatalogoDeSecciones.Requerida(CodigosDeSeccion.Sst);
+        const string Todo = """
+            { "programa_salud_ocupacional": true, "identifica_factores_de_riesgo": true, "comite_paritario": true, "programa_higiene_y_seguridad": true,
+              "gestion_ambiental": true, "reglamento_interno": true, "politica_hseq": true, "licencias_y_permisos": true }
+            """;
+        var seccion = SeccionDeFicha.Create(SeccionDeFicha.Iniciar(Guid.NewGuid(), definicion, null, Ahora));
+        foreach (var json in new[] { Todo, Todo.Replace("\"comite_paritario\": true", "\"comite_paritario\": false") })
+            seccion = seccion.Proyectar(seccion.Registrar(definicion, Leer(CodigosDeSeccion.Sst, json, Juridica), [], Juridica, Catalogos, OrigenDeSeccion.Tercero, "t", Ahora));
+
+        seccion.Versiones.Count.ShouldBe(2);
+        seccion.SinSoporte(2).ShouldBeNull();
+    }
+
+    [Fact]
     public void Un_cambio_a_una_persona_legal_es_critico_solo_si_es_representante_o_suplente()
     {
         var definicion = CatalogoDeSecciones.Requerida(CodigosDeSeccion.Legal);
