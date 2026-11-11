@@ -189,6 +189,8 @@ public static class ConfiguracionMarten
                     .Index(x => x.ProximaRevisionDePlazo)
                     // Barrido de alertas de SLA de revisión (OP-12): solo los que tienen un plazo corriendo llevan valor.
                     .Index(x => x.ProximaRevisionDeSla);
+                // Ayuda por documento que una empresa escribió para sí (OP-15): id determinista {empresa:N}:{tipo:N}.
+                opts.Schema.For<Validasoft.Aplicacion.Documentos.AyudaDeDocumentoDeEmpresa>().MultiTenanted().Index(x => x.EmpresaId);
                 // Delegaciones de revisión por ausencias (OP-7): de una empresa, se leen por el delegado.
                 opts.Schema.For<Validasoft.Dominio.Delegaciones.DelegacionDeRevision>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.AUsuarioId);
                 // Plazos de revisión por defecto y umbral de aviso del SLA por empresa (OP-10; id = empresa).
@@ -253,6 +255,10 @@ public static class ConfiguracionMarten
                     .Index(x => x.Estado)
                     .Index(x => x.N);
 
+                // Campañas de renovación (OP-1): como el lote de invitación, un stream con snapshot inline y sus filas como documentos.
+                opts.Schema.For<Validasoft.Dominio.Campanias.CampaniaDeRenovacion>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.CreadaEn);
+                opts.Schema.For<Validasoft.Dominio.Campanias.FilaDeCampania>().MultiTenanted().Index(x => x.CampaniaId).Index(x => x.Estado).Index(x => x.N);
+
                 // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
                 // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
                 opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
@@ -271,6 +277,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Campanias.CampaniaDeRenovacion>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos

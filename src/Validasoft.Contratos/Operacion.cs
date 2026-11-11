@@ -15,18 +15,20 @@ public sealed record FiltroDeCampaniaDto(int DiasParaVencer = 30, Guid? TipoVinc
 public sealed record CrearCampaniaDto(FiltroDeCampaniaDto Filtro, string? Nombre = null);
 
 /// <summary>
-/// Un vínculo de la vista previa. <see cref="Accion"/>: <c>Abrir</c> (se abre su renovación y se le avisa al tercero) u <c>Omitir</c> (con su
+/// Un vínculo de la vista previa. <see cref="Accion"/>: <c>Abrir</c> (se abre su renovación y se le avisa al tercero), <c>Recordar</c> (ya la tiene abierta: se le
+/// recuerda al tercero) u <c>Omitir</c> (con su
 /// <see cref="Motivo"/>: ya tiene un expediente abierto, está bloqueado, nada por renovar…).
 /// </summary>
 public sealed record FilaVistaPreviaCampaniaDto(int N, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, string EstadoVinculo,
     DateOnly? VenceEn, string Accion, string? Motivo, bool ConCorreo);
 
 /// <summary>
-/// A quiénes afecta la campaña antes de confirmarla: <see cref="Abririan"/> renovaciones que se abrirían (con aviso por correo a
+/// A quiénes afecta la campaña antes de confirmarla: <see cref="Abririan"/> renovaciones que se abrirían y <see cref="Recordarian"/> terceros a quienes se les
+/// recordaría la que ya tienen abierta (con aviso por correo a
 /// <see cref="ConCorreo"/> terceros y por la campana a todos) y <see cref="Omitidos"/> que no. <see cref="Filas"/> trae hasta 200;
 /// <see cref="Truncada"/> si hay más.
 /// </summary>
-public sealed record VistaPreviaCampaniaDto(FiltroDeCampaniaDto Filtro, int Total, int Abririan, int Omitidos, int ConCorreo, bool Truncada,
+public sealed record VistaPreviaCampaniaDto(FiltroDeCampaniaDto Filtro, int Total, int Abririan, int Recordarian, int Omitidos, int ConCorreo, bool Truncada,
     IReadOnlyList<FilaVistaPreviaCampaniaDto> Filas);
 
 public sealed record TotalesCampaniaDto(int Filas, int Procesadas, int Pendientes, int Exitosas, int Fallidas, int Omitidas);

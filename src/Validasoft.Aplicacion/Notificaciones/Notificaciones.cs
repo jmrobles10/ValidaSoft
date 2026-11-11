@@ -86,6 +86,9 @@ public static class TiposNotificacion
 
     /// <summary>Terminó un lote de invitación masiva (a quien lo creó, LT-9).</summary>
     public const string LoteTerminado = "invitaciones.lote_terminado";
+
+    /// <summary>Terminó una campaña de renovación (a quien la creó, OP-5).</summary>
+    public const string CampaniaTerminada = "campanias.terminada";
     public const string PorVencer = "documento.por_vencer";
     public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
@@ -112,11 +115,11 @@ public static class TiposNotificacion
 
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
-            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido];
+            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer,
+        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer, CampaniaTerminada,
             SlaIncumplido];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
@@ -190,6 +193,8 @@ public sealed partial class PlanificadorDeNotificaciones
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Caducado, null, orden, ct);
             case ExpedienteRechazado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Rechazado, null, orden, ct);
+            case Dominio.Campanias.CampaniaTerminada campaniaTerminada:
+                return await CampaniaTerminadaAsync(evento, campaniaTerminada, contexto, orden, ct);
             case Dominio.Invitaciones.LoteTerminado terminado:
                 return await LoteTerminadoAsync(evento, terminado, contexto, orden, ct);
             case VencimientoAvisado aviso:

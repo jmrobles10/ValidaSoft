@@ -28,6 +28,10 @@ public interface IContextoDeEventos
     Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
         Task.FromResult<Dominio.Invitaciones.LoteDeInvitacion?>(null);
 
+    /// <summary>Campaña de renovación (OP-1); por omisión ninguna (los contextos de prueba no la necesitan).</summary>
+    Task<Dominio.Campanias.CampaniaDeRenovacion?> CampaniaAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        Task.FromResult<Dominio.Campanias.CampaniaDeRenovacion?>(null);
+
     Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct);
 
     Task<TipoDocumentoTenant?> TipoDocumentoAsync(Guid tenantId, Guid id, CancellationToken ct);
@@ -107,6 +111,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public Task<Dominio.Invitaciones.LoteDeInvitacion?> LoteAsync(Guid tenantId, Guid id, CancellationToken ct) =>
         CargarAsync<Dominio.Invitaciones.LoteDeInvitacion>(Tenant(tenantId), id, ct);
+
+    public Task<Dominio.Campanias.CampaniaDeRenovacion?> CampaniaAsync(Guid tenantId, Guid id, CancellationToken ct) =>
+        CargarAsync<Dominio.Campanias.CampaniaDeRenovacion>(Tenant(tenantId), id, ct);
 
     public Task<TipoVinculo?> TipoVinculoAsync(Guid tenantId, Guid id, CancellationToken ct) => CargarAsync<TipoVinculo>(Tenant(tenantId), id, ct);
 

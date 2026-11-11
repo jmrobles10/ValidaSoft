@@ -2,11 +2,52 @@ using JasperFx.Events;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Identidad;
+using Validasoft.Dominio.Integraciones;
 
 namespace Validasoft.Aplicacion.Notificaciones;
 
 public sealed partial class PlanificadorDeNotificaciones
 {
+    /// <summary>
+    /// Terminó una campaña de renovación (OP-5): campana y correo a quien la creó, si es una persona del tenant, con los totales y el enlace a su detalle
+    /// (como el aviso del lote de invitación, LT-9).
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> CampaniaTerminadaAsync(IEvent evento, Dominio.Campanias.CampaniaTerminada terminada, IContextoDeEventos contexto,
+        long orden, CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.CampaniaAsync(tenantId, evento.StreamId, ct) is not { } campania ||
+            campania.CreadaPor.Tipo != Dominio.Comun.ActorTipo.Usuario || !Guid.TryParse(campania.CreadaPor.Id, out var usuarioId))
+            return PlanDeNotificaciones.Vacio;
+        if ((await contexto.UsuariosAsync(tenantId, [usuarioId], ct)).FirstOrDefault(u => u.Activo && u.TieneRolEn(campania.EmpresaId)) is not { } usuario)
+            return PlanDeNotificaciones.Vacio;
+
+        var t = terminada.Totales;
+        var titulo = t.Fallidas > 0 ? "Campaña de renovación terminada con errores" : "Campaña de renovación terminada";
+        var partes = new List<string> { $"{t.Exitosas} de {t.Filas} vínculos renovados" };
+        if (t.Fallidas > 0)
+            partes.Add($"{t.Fallidas} fallidos");
+        if (t.Omitidas > 0)
+            partes.Add($"{t.Omitidas} omitidos");
+        var mensaje = $"«{campania.Nombre}»: {string.Join(", ", partes)}.";
+        var ruta = $"/e/{campania.EmpresaId}/vencimientos/campanias/{campania.Id}";
+        var notificacion = new Notificacion
+        {
+            Id = Deterministas.Guid($"notificacion:{evento.Id:N}:{usuario.Id:N}:{TiposNotificacion.CampaniaTerminada}"),
+            UsuarioId = usuario.Id,
+            EmpresaId = campania.EmpresaId,
+            Tipo = TiposNotificacion.CampaniaTerminada,
+            Titulo = titulo,
+            Mensaje = mensaje,
+            Enlace = ruta,
+            CreadaEn = evento.Timestamp,
+            Orden = orden
+        };
+        List<object> correos = TiposNotificacion.QuiereCorreo(await contexto.PreferenciasAsync(tenantId, usuario.Id, ct), TiposNotificacion.CampaniaTerminada)
+            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta, TenantId: tenantId)]
+            : [];
+        return new PlanDeNotificaciones([(tenantId, notificacion)], correos);
+    }
+
     /// <summary>
     /// El plazo de revisión de un área (SLA, OP-12) está por vencer o venció: campana y correo a quienes revisan por ella (sus miembros y quienes
     /// la tienen delegada) y, cuando venció y la empresa lo pide, también a sus administradores. Una persona recibe un solo aviso aunque esté en

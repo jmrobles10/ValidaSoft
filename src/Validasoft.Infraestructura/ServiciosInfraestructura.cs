@@ -72,6 +72,9 @@ public static class ServiciosInfraestructura
     /// </summary>
     public const string ColaLotes = "lotes";
 
+    /// <summary>Cola local durable y <b>secuencial</b> de las campañas de renovación (OP-3): una tanda a la vez, cada una encola la siguiente.</summary>
+    public const string ColaCampanias = "campanias";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -277,6 +280,8 @@ public static class ServiciosInfraestructura
         opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Invitaciones.ProcesarTandaDeLote>().ToLocalQueue(ColaLotes);
         opciones.LocalQueue(ColaLotes).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Campanias.ProcesarTandaDeCampania>().ToLocalQueue(ColaCampanias);
+        opciones.LocalQueue(ColaCampanias).Sequential().UseDurableInbox();
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
