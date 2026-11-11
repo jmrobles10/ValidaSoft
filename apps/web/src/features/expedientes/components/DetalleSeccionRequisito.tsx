@@ -8,6 +8,7 @@ import { esObjeto } from '../../terceros/ficha/formato';
 import { SeccionFicha } from '../../terceros/SeccionesVinculo';
 import { soporteEnVisor } from '../secciones';
 import { ComparacionSeccion } from './ComparacionSeccion';
+import { CruceSeccion } from './CruceSeccion';
 
 export interface DetalleSeccionRequisitoProps {
   requisito: RequisitoExpedienteDto;
@@ -20,8 +21,8 @@ export interface DetalleSeccionRequisitoProps {
 
 /**
  * Lo propio de un requisito de sección (F2): la completitud **para la empresa** con sus motivos legibles (FM-26), en una
- * actualización lo que cambió frente a la versión aceptada (FM-28), los datos de la versión en solo lectura y sus
- * soportes. Nada se calcula aquí: todo viene del expediente.
+ * actualización lo que cambió frente a la versión aceptada (FM-28), el cruce con los documentos que la respaldan (F5), los
+ * datos de la versión en solo lectura y sus soportes. Nada se calcula aquí: todo viene del expediente.
  */
 export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeVer, onVer }: DetalleSeccionRequisitoProps) {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeV
           <ComparacionSeccion cambios={seccion.cambios} versionAceptada={seccion.versionAceptada} />
         </SeccionFicha>
       )}
+      {seccion.cruce && <CruceSeccion cruce={seccion.cruce} />}
       {esObjeto(seccion.datos) && cubre !== null && (
         <SeccionFicha titulo={t('fichaEmpresa.requisito.datos', { n: String(cubre) })}>
           <DatosDeSeccion datos={seccion.datos} />

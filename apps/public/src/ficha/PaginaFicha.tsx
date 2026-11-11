@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
 import { useEstadoFicha } from './api';
+import { PropuestasEnResumen } from './PropuestasEnResumen';
 import { enlaceSeccion, estadoDeSeccion, filasDelResumen, periodoPorOmision } from './secciones';
 
 /**
@@ -59,6 +60,7 @@ export function PaginaFicha() {
           {t('ficha.completaTexto')}
         </Alert>
       )}
+      <PropuestasEnResumen />
       <Box sx={{ mb: 2 }}>
         <Typography sx={{ color: 'text.secondary', fontSize: 14, mb: 0.5 }}>{t('ficha.avance', { completas: String(completas), total: String(filas.length) })}</Typography>
         <LinearProgress variant="determinate" value={filas.length > 0 ? (completas / filas.length) * 100 : 0} aria-label={t('ficha.avance', { completas: String(completas), total: String(filas.length) })} />

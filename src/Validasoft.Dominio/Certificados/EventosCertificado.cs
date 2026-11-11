@@ -63,9 +63,10 @@ public sealed record CertificadoSuspendido(int Emision, string Motivo, EstadoCer
 
 /// <summary>
 /// Una versión nueva de un documento aceptado está en revalidación (RV-3): el certificado sigue siendo válido pero informa
-/// que tiene pendientes hasta que el expediente de actualización se apruebe (entonces se reemite).
+/// que tiene pendientes hasta que el expediente de actualización se apruebe (entonces se reemite). <see cref="Ampliado"/>:
+/// la actualización abierta sumó otros requisitos y el motivo se actualiza (el certificado ya estaba con pendientes).
 /// </summary>
-public sealed record CertificadoConPendientes(int Emision, string Motivo, Guid ExpedienteId, DateTimeOffset Fecha);
+public sealed record CertificadoConPendientes(int Emision, string Motivo, Guid ExpedienteId, DateTimeOffset Fecha, bool Ampliado = false);
 
 /// <summary>Venció el plazo de la revalidación sin resolverse (RV-4): los pendientes pasan a ser bloqueantes hasta la reemisión.</summary>
 public sealed record PlazoDeRevalidacionVencido(int Emision, Guid ExpedienteId, DateTimeOffset Fecha);

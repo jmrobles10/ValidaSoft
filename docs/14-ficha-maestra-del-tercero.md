@@ -141,6 +141,8 @@ Hoy la constructora exige el RUT, pero el RUT no sirve para validar lo que el pr
   - aceptar con justificación.
 - **La empresa puede desactivar la opción** para un requisito: el documento se sigue pidiendo y revisando, pero no se cruza con las secciones.
 
+**Construido en F5 ([registro](decisiones/registro.md) FM-51…FM-53):** la opción es `usarComoSoporte` del requisito del flujo (`null` = activa); el requisito de documento trae `soporteDeSecciones` (qué secciones respalda y el resultado de su cruce) y el de sección trae su `cruce`. Una discrepancia crítica pide una justificación de al menos 10 caracteres al aprobar (por documento y por área) y no se aprueba en lote. La empresa solo ve el cruce de los documentos cuyo análisis recibió (ADR-0012): sin análisis, revisión manual.
+
 ### 5.3 Actualizar desde el documento (FM-14)
 Simplifica lo que hoy es la feature de **Actualizaciones** del SRM (`ActualizacionProveedor`). Hoy son un detalle por sector, la comparación del valor anterior con el nuevo y un soporte genérico. Con Validasoft la actualización nace del documento:
 1. El tercero sube la versión nueva del RUT (o de la Cámara, los estados financieros o la certificación).
@@ -149,6 +151,8 @@ Simplifica lo que hoy es la feature de **Actualizaciones** del SRM (`Actualizaci
 4. Cada empresa recibe **una sola actualización**: el documento y las secciones que cambió (NW-17, RV-x). La revisión muestra tres columnas, anterior → nuevo → lo que dice el documento, solo con los campos que cambiaron.
 5. Cada **área responsable** aprueba u observa por sección, con motivos. Por ejemplo, Tesorería aprueba la bancaria y Contabilidad la tributaria: es el responsable por sector del SRM, configurado como áreas que revisan cada requisito.
 6. Al aceptar, se emite `seccion.aceptada` (FM-9) y el SRM aplica en AyF lo aceptado.
+
+**Construido en F5 (FM-48, FM-54):** `GET /public/v1/ficha/propuestas` y `GET /public/v1/ficha/{seccion}/propuestas`; en el portal, «Actualizar desde mi RUT / Cámara…» con la propuesta campo por campo, que el tercero confirma o corrige (nunca se guarda sola). Si ya había una actualización abierta (el RUT nuevo abre la suya), la sección cambiada **entra a esa misma actualización** en lugar de esperar a que se cierre: así cada empresa recibe **una sola actualización** con el documento y las secciones que cambiaron.
 
 Si el tercero cambia una sección **sin** documento nuevo (FM-15), la versión queda marcada **«sin respaldo»** frente a los campos que el documento vigente no confirma. La empresa configura qué pasa entonces:
 - se exige un documento nuevo para aceptarla (por omisión en los campos críticos);
@@ -170,7 +174,7 @@ Cuando hay hechos de IA del documento de respaldo (ADR-0012), la plataforma comp
 - **En revisión automática (H7):** una sección con todos sus campos críticos en `Coincide` puede aprobarse sola según el nivel de la empresa; una `Discrepa` en un campo crítico va a humano.
 
 ## 7. Eventos e integración
-- **Eventos de dominio:** los del documento (versión cargada, compartida, aceptada…), más `CruceDeSeccionRegistrado(numero, resultados[])`.
+- **Eventos de dominio:** los del documento (versión cargada, compartida, aceptada…), más `CruceDeSeccionRegistrado(numero, resultados[])` (en el stream de la sección) y `RequisitosAgregados(requisitos[])` (en el expediente de actualización, FM-49).
 - **Evento público** `seccion.aceptada { terceroId, vinculoId, empresaId, seccion, periodo?, version, aceptadaEn, contenido }`, emitido cuando una empresa acepta una versión (FM-9, FM-32). `contenido` es lo aceptado normalizado para el ERP, con las 13 calidades derivadas de los códigos DIAN (FM-33) y el representante legal que usa AyF (FM-34); el detalle está en [05 §6.6](05-api-contratos-y-webhooks.md). El SRM lo aplica en AyF con el mapeo de hoy: General, Tributaria, el representante legal y la cuenta designada. Si AyF falla, el SRM lo reintenta y lo deja en su bandeja; la aceptación en Validasoft no se revierte, porque es una decisión de negocio, no una transacción distribuida.
 - **API para el Portal, el SRM y Marco:**
   - `GET /api/v1/vinculos/{id}/ficha`: lo **aceptado** por esa empresa, sección por sección.
@@ -198,7 +202,7 @@ Producto pidió (2026-11-09) **primero la paridad con el SRM, sin IA**: los sect
 | F2 | **Validación por empresa en paridad con el SRM.** Las secciones son requisitos del flujo, con completitud y su motivo legible. Cada empresa acepta u observa cada sección por área, con motivos. Al cambiar una sección aceptada, se revalida **solo esa sección**, con comparación anterior → nuevo y su soporte: son las Actualizaciones del SRM, con un responsable por sección configurado como áreas que revisan. La empresa ve la ficha en Tercero 360 y en el expediente. |
 | F3 | **Integración con el SRM:** evento `seccion.aceptada` y `GET /api/v1/vinculos/{id}/ficha`, para que el SRM aplique en AyF lo aceptado (General, Tributaria, representante legal y cuenta designada). |
 | F4 | **Importador** desde las tablas `Ter*` del Portal y **sincronizador** de coexistencia. |
-| F5 | **IA:** cruce sección ↔ documento, la opción «Usar como soporte» con cruce automático en los requisitos de documento y la **actualización desde el documento** (§5.2, §5.3, §6). |
+| F5 | **IA:** cruce sección ↔ documento, la opción «Usar como soporte» con cruce automático en los requisitos de documento y la **actualización desde el documento** (§5.2, §5.3, §6). **Terminada (2026-11-10, FM-48…FM-55):** además de lo anterior, la actualización abierta se amplía con lo que cambia después. |
 | F6 | Personas relacionadas con bóveda propia (fase 2) y cargo de los contactos por empresa. |
 
 ## Decisiones abiertas

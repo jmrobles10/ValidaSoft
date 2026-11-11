@@ -30,3 +30,19 @@ describe('historial del expediente', () => {
     expect(eventoExpedienteATimeline(veredicto('Humano'), contexto, t).actor.tipo).toBe('tercero');
   });
 });
+
+describe('historial: ampliación de la actualización abierta', () => {
+  it('«requisitos_agregados» dice qué se sumó a la actualización', () => {
+    const evento: EventoHistorialDto = {
+      version: 9,
+      tipo: 'requisitos_agregados',
+      fecha: '2026-11-09T12:00:00Z',
+      actorTipo: 'Tercero',
+      actorId: 'tercero',
+      sistema: null,
+      datos: { requisitos: [{ requisitoId: 'r1', nombre: 'Información general' }, { requisitoId: 'r2', nombre: 'Cámara de comercio' }], fecha: '2026-11-09T12:00:00Z' },
+    };
+    const entrada = eventoExpedienteATimeline(evento, contexto, t);
+    expect(entrada.titulo).toBe('Se suman a la actualización abierta: Información general, Cámara de comercio');
+  });
+});

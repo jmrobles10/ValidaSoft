@@ -269,3 +269,42 @@ export async function expedienteAbierto(e: Escenario, invitacion: Invitacion): P
   if (!vinculo.expedienteAbiertoId) throw new Error(`El vínculo ${invitacion.vinculoId} no tiene expediente abierto.`);
   return vinculo.expedienteAbiertoId;
 }
+
+/**
+ * Plan de IA de la empresa (ADR-0012, PT-6) con una llave de prueba: el análisis de los documentos lo hace el proveedor
+ * simulado (lee marcas `[[clave=valor]]` del archivo), así que nada sale a OpenAI. Sin plan, la empresa no recibe el análisis
+ * y el cruce con la ficha es manual.
+ */
+export async function activarIa(e: Escenario, empresa: Empresa, incluidasMes = 20): Promise<void> {
+  await llamar('PUT', `/api/v1/plataforma/tenants/${e.tenantId}/empresas/${empresa.id}/plan-ia`, {
+    llave: CLAVE_PLATAFORMA,
+    cuerpo: { validacionesIncluidasMes: incluidasMes, adicionalHabilitado: false, apiKeyOpenAi: `sk-prueba-e2e-${randomUUID().replace(/-/g, '')}` },
+  });
+}
+
+/**
+ * Flujo de CLIENTE de la empresa con un documento y secciones de la ficha como requisitos (F2), todos para el área indicada. Como la
+ * empresa aún no tiene flujo de ese tipo, queda como el flujo por defecto al publicarlo.
+ */
+export async function publicarFlujoConFicha(
+  e: Escenario,
+  empresa: Empresa,
+  codigo: string,
+  area: Area,
+  requisitos: { tipoDocumento?: string; seccion?: string; usarComoSoporte?: boolean }[],
+): Promise<void> {
+  const flujo = await llamar<{ id: string }>('POST', '/api/v1/flujos', {
+    llave: e.admin,
+    empresa: empresa.id,
+    cuerpo: {
+      codigo,
+      nombre: `Flujo ${codigo}`,
+      tipoVinculo: 'CLIENTE',
+      etapas: [{ orden: 1, areas: [{ areaId: area.id, aprobadoresRequeridos: 1, puedeRechazarExpediente: true, automatica: false, slaHoras: null }] }],
+      politicaDevolucion: 'Inmediata',
+      separacionDeFunciones: false,
+      requisitos: requisitos.map((r) => ({ ...r, obligatorio: true, areasQueRevisan: [area.id], aprobadoresRequeridos: null })),
+    },
+  });
+  await llamar('POST', `/api/v1/flujos/${flujo.id}/publicar`, { llave: e.admin, empresa: empresa.id });
+}

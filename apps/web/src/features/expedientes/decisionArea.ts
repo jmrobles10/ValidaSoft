@@ -24,8 +24,11 @@ import { requisitosDe } from './requisitos';
 /** Lo que «Aprobar área» aprobaría a quien consulta: `ExpedienteDto.etapas[].areas[].documentosPorDecidir[]`. */
 export type DocumentoPorDecidir = DocumentoPorDecidirDto;
 export type ObservacionDeDocumento = ObservacionDeRequisitoDto;
-/** Cuerpo de la decisión del área (`VeredictoDto` con `versiones` o `requisitos`). */
-export type DecisionDeArea = Pick<VeredictoDto, 'veredicto' | 'versiones' | 'requisitos'>;
+/**
+ * Cuerpo de la decisión del área (`VeredictoDto` con `versiones` o `requisitos`). `justificacion` solo al aprobar documentos o
+ * secciones con una discrepancia crítica en su cruce (422 `justificacion-por-discrepancias` sin ella, F5).
+ */
+export type DecisionDeArea = Pick<VeredictoDto, 'veredicto' | 'versiones' | 'requisitos' | 'justificacion'>;
 
 /** Un documento que revisa el área, con lo que el área lleva decidido sobre él. */
 export interface DocumentoDelArea {

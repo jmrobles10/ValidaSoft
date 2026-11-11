@@ -187,6 +187,15 @@ public sealed record AprobacionPrevia(Guid ExpedienteId, string Folio, string Ti
 /// <summary>Los requisitos de la versión del flujo, congelados en el expediente (docs/03 §6.3). Un flujo sin requisitos no lo emite.</summary>
 public sealed record RequisitosCalculados(IReadOnlyList<RequisitoCalculado> Requisitos, DateTimeOffset Fecha);
 
+/// <summary>
+/// Una actualización abierta (RV-1) amplía su alcance: otro requisito del tercero cambió después de abrirse —una versión nueva
+/// de una sección que la empresa ya había aceptado o de un documento que ya había aprobado— y entra al mismo expediente, en vez
+/// de esperar a que se cierre, con la versión que lo cubre (<see cref="RequisitoCalculado"/>, calculado igual que al abrir). Las
+/// áreas que lo revisan vuelven a quedar pendientes: si su etapa ya se había aprobado, se reabre. Solo en expedientes de
+/// <c>Actualizacion</c>; idempotente (un requisito que el expediente ya tiene no se agrega dos veces).
+/// </summary>
+public sealed record RequisitosAgregados(IReadOnlyList<RequisitoCalculado> Requisitos, DateTimeOffset Fecha);
+
 /// <summary>Una versión actual compartida con el vínculo pasa a cubrir el requisito (la anterior queda en su historial).</summary>
 public sealed record VersionAdjuntadaARequisito(Guid RequisitoId, VersionDeRequisito Version, int? NumeroAnterior, DateTimeOffset Fecha);
 
@@ -274,7 +283,8 @@ public sealed record ExpedienteReenviado(OrigenReenvio Origen, string? Respuesta
 /// <summary>
 /// Un administrador anuló la última observación vigente (o eximió el último requisito observado,
 /// <see cref="RequisitoEximidoId"/>): el expediente deja de estar devuelto al tercero y la revisión sigue sin esperar un
-/// reenvío (FL-13). El área cuya observación se anuló vuelve a quedar pendiente.
+/// reenvío (FL-13). El área cuya observación se anuló vuelve a quedar pendiente. También la emite una actualización devuelta
+/// al tercero cuando los requisitos que se le agregan (<see cref="RequisitosAgregados"/>) reabren una etapa anterior a la que observó.
 /// </summary>
 public sealed record RevisionReanudada(Guid VeredictoAnuladoId, DateTimeOffset Fecha, Guid? RequisitoEximidoId = null);
 

@@ -115,29 +115,7 @@ public static class ProcesoDeValidacion
             a.Automatica, a.SlaHoras))])).ToList();
 
         var exigencia = ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
-        var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, exigencia, ct))
-            .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
-            .ToList();
-        var secciones = RequisitosDeExpediente.SeccionesDelFlujo(flujo.Version, exigencia, CalculadoraDeVigencia.Fecha(ahora))
-            .Where(s => soloRequisitos is null || soloRequisitos.Contains(s.RequisitoId))
-            .ToList();
-        // La ficha queda disponible para la empresa desde la aceptación (la de esta transacción trae los documentos ya compartidos).
-        var aceptado = documentos is not null || vinculo.InvitacionAceptada;
-        if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
-            documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, empresa.TenantId,
-                RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
-        var ficha = secciones.Count > 0 && aceptado ? await RequisitosDeExpediente.FichaAsync(sesion, tercero.Id, ct) : null;
-        var aceptadas = secciones.Count > 0
-            ? await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct)
-            : new Dictionary<string, SeccionAceptada>();
-        var calculados = pedidos.Select(p => (p.Requisito.Id, Calculado: RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)))
-            .Concat(secciones.Select(s => (s.Requisito.Id, Calculado: RequisitosDeExpediente.CalcularSeccion(s, tercero.Id, ficha,
-                RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, s)))))
-            .ToList();
-        // En el orden del flujo (los periodos de la financiera, del más reciente al más antiguo).
-        var orden = flujo.Version.Requisitos.Select(r => r.Id).ToList();
-        var requisitos = await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
-            [.. calculados.OrderBy(c => orden.IndexOf(c.Id)).Select(c => c.Calculado)], ct);
+        var requisitos = await CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, flujo.Version, exigencia, soloRequisitos, documentos, ahora, ct);
 
         var folio = await SiguienteFolioAsync(sesion, empresa, tenant, ahora, ct);
         var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
@@ -159,6 +137,42 @@ public static class ProcesoDeValidacion
         var estado = Expediente.Reproducir(null, eventos);
         await DespuesDeEscribirAsync(sesion, estado, eventos, vinculoStream, null, certificados, ahora, ct);
         return estado;
+    }
+
+    /// <summary>
+    /// Foto de los requisitos que la versión del flujo le pide a este tercero en este vínculo (los que cumplen su condición,
+    /// RQ-12), en el orden del flujo, y solo los de <paramref name="soloRequisitos"/> si se indican: cada documento con la versión
+    /// compartida que ya lo cubre, cada sección con la versión vigente si es completa para la empresa y lo que la empresa ya
+    /// aceptó o aprobó (RQ-11). La usan la apertura del expediente y la ampliación de una actualización abierta, para que ambos
+    /// calculen igual. Con <paramref name="documentos"/> nulo y la invitación aceptada, comparte con el vínculo lo que el flujo pide (RQ-3).
+    /// </summary>
+    public static async Task<IReadOnlyList<RequisitoCalculado>> CalcularRequisitosAsync(IDocumentSession sesion, Vinculo vinculo, Tercero tercero,
+        Guid tenantId, FlujoVersion version, ContextoDeExigencia exigencia, IReadOnlySet<Guid>? soloRequisitos, DocumentosDelVinculo? documentos,
+        DateTimeOffset ahora, CancellationToken ct)
+    {
+        var pedidos = (await RequisitosDeExpediente.DelFlujoAsync(sesion, version, exigencia, ct))
+            .Where(p => soloRequisitos is null || soloRequisitos.Contains(p.Requisito.Id))
+            .ToList();
+        var secciones = RequisitosDeExpediente.SeccionesDelFlujo(version, exigencia, CalculadoraDeVigencia.Fecha(ahora))
+            .Where(s => soloRequisitos is null || soloRequisitos.Contains(s.RequisitoId))
+            .ToList();
+        // La ficha queda disponible para la empresa desde la aceptación (la de esta transacción trae los documentos ya compartidos).
+        var aceptado = documentos is not null || vinculo.InvitacionAceptada;
+        if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
+            documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, tenantId,
+                RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);
+        var ficha = secciones.Count > 0 && aceptado ? await RequisitosDeExpediente.FichaAsync(sesion, tercero.Id, ct) : null;
+        var aceptadas = secciones.Count > 0
+            ? await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct)
+            : new Dictionary<string, SeccionAceptada>();
+        var calculados = pedidos.Select(p => (p.Requisito.Id, Calculado: RequisitosDeExpediente.Calcular(p, documentos?.Documentos ?? [], vinculo.Id)))
+            .Concat(secciones.Select(s => (s.Requisito.Id, Calculado: RequisitosDeExpediente.CalcularSeccion(s, tercero.Id, ficha,
+                RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, s)))))
+            .ToList();
+        // En el orden del flujo (los periodos de la financiera, del más reciente al más antiguo).
+        var orden = version.Requisitos.Select(r => r.Id).ToList();
+        return await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
+            [.. calculados.OrderBy(c => orden.IndexOf(c.Id)).Select(c => c.Calculado)], ct);
     }
 
     /// <summary>

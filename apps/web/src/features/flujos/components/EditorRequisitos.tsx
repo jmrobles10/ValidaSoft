@@ -8,6 +8,7 @@ import { resumenTipo } from '../../configuracion/tiposDocumento/resumen';
 import { nombreSeccion, seccionFicha } from '../../terceros/ficha/secciones';
 import { atajoDe, condicionDe, describirCondicion, type AtajoCondicion } from '../condiciones';
 import { MAXIMO_APROBADORES, requisitoDeSeccionNuevo, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
+import { seccionesQueRespalda } from '../requisitosDeSeccion';
 import { OpcionesSeccion, SelectorSeccion } from './CamposRequisitoSeccion';
 import { SelectorAreasRequisito } from './SelectorAreasRequisito';
 
@@ -143,6 +144,18 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
             </Box>
             {esSeccion && (
               <OpcionesSeccion requisito={r} onCambiar={(cambio) => cambiar(k, cambio)} deshabilitado={soloLectura} errorPeriodos={ePeriodos ? textoError(ePeriodos, true) : null} />
+            )}
+            {tipo && seccionesQueRespalda(tipo.tipoCanonico).length > 0 && (
+              <Box sx={{ mt: 0.5 }}>
+                <FormControlLabel
+                  control={<Switch checked={r.usarComoSoporte !== false} onChange={(ev) => cambiar(k, { usarComoSoporte: ev.target.checked })} disabled={soloLectura} />}
+                  label={t('cruce.editor.usarComoSoporte')}
+                  sx={{ mx: 0 }}
+                />
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12 }}>
+                  {t('cruce.editor.ayuda', { secciones: seccionesQueRespalda(tipo.tipoCanonico).map((c) => nombreSeccion(c, t)).join(', ') })}
+                </Typography>
+              </Box>
             )}
             {tipo && (
               <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 12, mt: 0.75 }} data-resumen-tipo="">

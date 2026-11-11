@@ -12,6 +12,7 @@ import { Faltantes } from './Faltantes';
 import { FormularioDeSeccion } from './FormularioDeSeccion';
 import { ALTO_CABECERA, entradaSeccion, MARGEN_SUPERIOR } from './movimiento';
 import { ObservacionesDeEmpresas } from './ObservacionesDeEmpresas';
+import { PropuestaDesdeDocumento } from './PropuestaDesdeDocumento';
 import { DialogoSalidaSinGuardar } from './SalidaSinGuardar';
 import { enlaceSeccion, esFaltanteDeSoporte, periodosElegibles, type DefinicionSeccion } from './secciones';
 import { SelectorSoporte } from './SelectorSoporte';
@@ -27,7 +28,8 @@ interface Props {
 }
 
 /**
- * Una sección del wizard: el título fijo arriba, lo que observó alguna empresa y los faltantes del servidor, el formulario,
+ * Una sección del wizard: el título fijo arriba, lo que observó alguna empresa, lo que un documento nuevo propone para la sección
+ * («Actualizar desde mi RUT…», que solo llena el formulario) y los faltantes del servidor, el formulario,
  * el soporte y la barra fija con «Guardar» (borrador) y «Guardar y continuar», que se habilita cuando la API dice que la
  * sección quedaría completa (FM-46) y avanza solo si el guardado lo confirma (FM-16, FM-17). Nunca calcula la completitud.
  * Entra con una animación corta cada vez que se cambia de sección.
@@ -114,6 +116,14 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
           )}
           <ObservacionesDeEmpresas observaciones={observaciones} />
           {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
+          <PropuestaDesdeDocumento
+            codigo={definicion.codigo}
+            periodo={periodo}
+            soportes={editor.soportes}
+            onUsarValores={editor.cambiar}
+            onCambiarSoportes={editor.cambiarSoportes}
+            deshabilitado={editor.guardando}
+          />
           <Faltantes faltantes={editor.faltantes} senal={senalFaltantes} />
           <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} />
           <SelectorSoporte

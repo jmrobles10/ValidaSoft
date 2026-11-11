@@ -53,6 +53,11 @@ export interface RequisitoEnEditor {
   periodos: number | null;
   /** La versión de la sección debe traer soporte para estar completa para la empresa. */
   exigeSoporte: boolean;
+  /**
+   * Solo en documentos que respaldan secciones (RUT, Cámara…): el documento se cruza con ellas y el revisor ve las diferencias
+   * (F5). `null` = activo por omisión; se conserva al guardar para no pisar lo que la API ya tenía.
+   */
+  usarComoSoporte: boolean | null;
 }
 
 /**
@@ -145,6 +150,7 @@ export function requisitoNuevo(tipoDocumentoTenantId = ''): RequisitoEnEditor {
     seccion: null,
     periodos: null,
     exigeSoporte: false,
+    usarComoSoporte: null,
   };
 }
 
@@ -199,6 +205,7 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
       seccion: r.seccion ?? null,
       periodos: r.periodos ?? null,
       exigeSoporte: r.exigeSoporte ?? false,
+      usarComoSoporte: r.usarComoSoporte ?? null,
     })),
     verificaciones: (version.verificaciones ?? []).map((v) => ({
       tipo: v.tipo,
@@ -352,6 +359,7 @@ export function requisitosADto(requisitos: readonly RequisitoEnEditor[]): Requis
     areasQueRevisan: r.areasQueRevisan,
     aprobadoresRequeridos: r.aprobadoresRequeridos,
     condicion: r.condicion,
+    ...(r.usarComoSoporte === null ? {} : { usarComoSoporte: r.usarComoSoporte }),
   }));
 }
 

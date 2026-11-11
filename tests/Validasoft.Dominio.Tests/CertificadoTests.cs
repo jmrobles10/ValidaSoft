@@ -172,6 +172,28 @@ public class CertificadoTests
         certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(30)).ShouldBeNull();
     }
 
+    [Fact]
+    public void Si_la_actualizacion_abierta_suma_requisitos_el_certificado_con_pendientes_actualiza_su_motivo_sin_cambiar_de_estado()
+    {
+        var (certificado, _) = Emitido();
+        var expediente = Guid.NewGuid();
+
+        // Vigente, el motivo no se actualiza: primero se marca con pendientes.
+        certificado.ActualizarMotivoDePendientes("Revalidación de RUT y la información general", expediente, Ahora.AddDays(1)).ShouldBeNull();
+        certificado = Aplicar(certificado, certificado.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(1)).ShouldNotBeNull());
+
+        var ampliado = certificado.ActualizarMotivoDePendientes("Revalidación de RUT y la información general", expediente, Ahora.AddDays(2)).ShouldNotBeNull();
+        (ampliado.Motivo, ampliado.Ampliado, ampliado.ExpedienteId, ampliado.Emision)
+            .ShouldBe(("Revalidación de RUT y la información general", true, expediente, 1));
+        certificado = Aplicar(certificado, ampliado);
+        certificado.Estado.ShouldBe(EstadoCertificado.ConPendientes);
+        certificado.Bloqueante.ShouldBeFalse();
+
+        // Con el plazo vencido (pendientes bloqueantes) ya no hay motivo que actualizar.
+        certificado = Aplicar(certificado, certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(16)).ShouldNotBeNull());
+        certificado.ActualizarMotivoDePendientes("Revalidación de RUT y la información general", expediente, Ahora.AddDays(17)).ShouldBeNull();
+    }
+
     private static Certificado Aplicar(Certificado certificado, params object[] eventos)
     {
         foreach (var evento in eventos)

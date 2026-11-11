@@ -43,7 +43,8 @@ public sealed partial class Expediente
     /// (409 <c>area-observada</c>) ni cuando no queda nada por decidir (409 <c>area-ya-se-pronuncio</c>). Las versiones de
     /// documentos que el área o la persona ya decidieron se ignoran (lectura anterior a otra decisión).
     /// </summary>
-    public IReadOnlyList<object> AprobarArea(Guid areaId, Revisor revisor, IReadOnlyDictionary<Guid, int>? versiones, DateTimeOffset ahora)
+    public IReadOnlyList<object> AprobarArea(Guid areaId, Revisor revisor, IReadOnlyDictionary<Guid, int>? versiones, DateTimeOffset ahora,
+        IReadOnlySet<Guid>? conDiscrepanciaCritica = null, string? justificacion = null)
     {
         var area = AreaParaDecidirPorRequisitos(areaId, revisor);
         var revisorId = revisor.UsuarioId.ToString();
@@ -74,10 +75,13 @@ public sealed partial class Expediente
         if (superadas.Count > 0)
             throw VersionSuperada(superadas);
 
+        var conDiscrepancia = pendientes.Where(p => conDiscrepanciaCritica?.Contains(p.RequisitoId) == true).ToList();
+        var texto = JustificacionPorDiscrepancias(conDiscrepancia.Select(p => BuscarRequisito(p.RequisitoId)!), justificacion);
         return Simular(s =>
         {
             foreach (var pendiente in pendientes)
-                s.Emitir(VeredictoHumano(BuscarRequisito(pendiente.RequisitoId)!, area, Veredicto.Aprobado, revisorId, [], null, ahora));
+                s.Emitir(VeredictoHumano(BuscarRequisito(pendiente.RequisitoId)!, area, Veredicto.Aprobado, revisorId, [], null, ahora,
+                    justificacion: conDiscrepancia.Contains(pendiente) ? texto : null));
         }, ahora);
     }
 
@@ -170,9 +174,34 @@ public sealed partial class Expediente
 
     /// <summary>Veredicto humano sobre la versión vigente del requisito (ya validada).</summary>
     private static VeredictoDeRequisitoEmitido VeredictoHumano(RequisitoDeExpediente requisito, AreaDeExpediente area, Veredicto veredicto,
-        string revisorId, IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null) =>
+        string revisorId, IReadOnlyList<MotivoAplicado> motivos, string? observacion, DateTimeOffset ahora, IReadOnlyList<string>? campos = null,
+        string? justificacion = null) =>
         new(Guid.CreateVersion7(), requisito.Id, area.AreaId, veredicto, OrigenVeredicto.Humano, revisorId, requisito.VersionActual!.Numero,
-            [.. motivos.DistinctBy(m => m.Codigo)], observacion, null, ahora, campos is { Count: > 0 } ? campos : null);
+            [.. motivos.DistinctBy(m => m.Codigo)], observacion, justificacion, ahora, campos is { Count: > 0 } ? campos : null);
+
+    /// <summary>
+    /// Aprobar un requisito cuyo cruce con el documento discrepa en un campo crítico (identificación, razón social, representante
+    /// legal, matrícula; FM-13) exige una justificación: el revisor la deja escrita junto al veredicto. Sin requisitos con
+    /// discrepancia, nula. 422 <c>justificacion-por-discrepancias</c> con <c>requisitos</c>.
+    /// </summary>
+    private static string? JustificacionPorDiscrepancias(IEnumerable<RequisitoDeExpediente> conDiscrepancia, string? justificacion)
+    {
+        var requisitos = conDiscrepancia.ToList();
+        if (requisitos.Count == 0)
+            return null;
+        var texto = Texto(justificacion, "justificacion");
+        if (texto is null || texto.Length < LongitudMinimaJustificacion)
+            throw new ReglaDeNegocioException(TipoFalla.Validacion, "justificacion-por-discrepancias",
+                $"El cruce con el documento discrepa en campos críticos de {string.Join(", ", requisitos.Select(r => r.Nombre))}: para aprobar, " +
+                $"escribe una justificación (al menos {LongitudMinimaJustificacion} caracteres) u observa el documento o la sección.")
+            {
+                Datos = new Dictionary<string, object?> { ["requisitos"] = requisitos.Select(r => r.Id).ToList() }
+            };
+        return texto;
+    }
+
+    /// <summary>Largo mínimo de la justificación para aprobar con discrepancias críticas.</summary>
+    public const int LongitudMinimaJustificacion = 10;
 
     private ReglaDeNegocioException VersionSuperada(IReadOnlyList<DocumentoPorDecidir> superadas) =>
         new(TipoFalla.Conflicto, "version-superada",

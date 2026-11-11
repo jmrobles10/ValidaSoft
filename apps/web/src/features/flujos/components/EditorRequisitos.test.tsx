@@ -9,15 +9,16 @@ import { EditorRequisitos } from './EditorRequisitos';
 
 const area = (id: string, nombre: string): AreaDto => ({ id, empresaId: 'e', codigo: id.toUpperCase(), nombre, miembros: ['u1'], activa: true });
 const tipo = { id: 'rut', codigo: 'RUT', nombre: 'Registro Único Tributario', clase: 'Archivo', activo: true } as TipoDocumentoTenantDto;
+const tipoRut = { ...tipo, tipoCanonico: 'RUT' } as TipoDocumentoTenantDto;
 
-function editor(requisitos: RequisitoEnEditor[], onCambiar = vi.fn()) {
+function editor(requisitos: RequisitoEnEditor[], onCambiar = vi.fn(), tipos = [tipo]) {
   render(
     <ThemeProvider theme={createValidasoftTheme('light')}>
       <EditorRequisitos
         requisitos={requisitos}
         etapas={[{ clave: 'e1', areas: [areaNueva('compras'), areaNueva('cumplimiento'), areaNueva('juridica'), areaNueva('tesoreria')] }]}
         areas={[area('compras', 'Compras'), area('cumplimiento', 'Cumplimiento'), area('juridica', 'Jurídica'), area('tesoreria', 'Tesorería')]}
-        tiposDocumento={[tipo]}
+        tiposDocumento={tipos}
         onCambiar={onCambiar}
         errores={[]}
         soloLectura={false}
@@ -114,5 +115,26 @@ describe('EditorRequisitos: secciones de la información del tercero (F2)', () =
     expect(within(primera).getByRole('spinbutton', { name: 'Periodos' })).toHaveAccessibleDescription('Entre 1 y 5 periodos.');
     expect(within(primera).queryByText('Esa sección ya está en la lista.')).not.toBeInTheDocument();
     expect(within(segunda).getByText('Esa sección ya está en la lista.')).toBeInTheDocument();
+  });
+
+  it('«Usar como soporte» aparece solo en documentos que respaldan secciones, activo por omisión, y se apaga', () => {
+    const onCambiar = vi.fn();
+    editor([requisitoNuevo('rut')], onCambiar, [tipoRut]);
+
+    const interruptor = screen.getByRole('switch', { name: 'Usar como soporte de las secciones' });
+    expect(interruptor).toBeChecked();
+    expect(screen.getByText(/El documento se cruza con Información general, Información tributaria, Información legal/)).toBeInTheDocument();
+    fireEvent.click(interruptor);
+    expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ usarComoSoporte: false })]);
+  });
+
+  it('«Usar como soporte» apagado se muestra apagado', () => {
+    editor([{ ...requisitoNuevo('rut'), usarComoSoporte: false }], vi.fn(), [tipoRut]);
+    expect(screen.getByRole('switch', { name: 'Usar como soporte de las secciones' })).not.toBeChecked();
+  });
+
+  it('un tipo que no respalda secciones no ofrece «Usar como soporte»', () => {
+    editor([requisitoNuevo('rut')]);
+    expect(screen.queryByRole('switch', { name: 'Usar como soporte de las secciones' })).not.toBeInTheDocument();
   });
 });

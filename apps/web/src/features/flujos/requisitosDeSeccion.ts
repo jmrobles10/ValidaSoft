@@ -1,5 +1,5 @@
 import { esErrorApi, type RequisitoDelFlujoDto } from '@validasoft/api-client';
-import { MAXIMO_PERIODOS, seccionFicha } from '../terceros/ficha/secciones';
+import { MAXIMO_PERIODOS, seccionFicha, type CodigoSeccionFicha } from '../terceros/ficha/secciones';
 import type { ErrorFlujo, RequisitoEnEditor } from './editor';
 
 /**
@@ -56,4 +56,20 @@ export function errorDeApiEnRequisitos(error: unknown, requisitos: readonly Requ
   if (typeof indice !== 'number' || !Number.isInteger(indice) || indice < 0 || indice >= requisitos.length) return null;
   const campo = `requisito.${String(indice)}`;
   return { codigo: error.codigo, campo: error.codigo.startsWith('periodos-') ? `${campo}.periodos` : campo };
+}
+
+/**
+ * Secciones que respalda cada tipo canónico de documento (`MapaDeRespaldo` de la plataforma, docs/14 §5.1): el mismo mapa que
+ * usan el cruce, «Usar como soporte» y la actualización desde el documento.
+ */
+const RESPALDA: Readonly<Record<string, readonly CodigoSeccionFicha[]>> = {
+  RUT: ['FICHA_GENERAL', 'FICHA_TRIBUTARIA', 'FICHA_LEGAL'],
+  CAMARA_COMERCIO: ['FICHA_GENERAL', 'FICHA_LEGAL'],
+  ESTADOS_FINANCIEROS: ['FICHA_FINANCIERA'],
+  CEDULA: ['FICHA_GENERAL'],
+};
+
+/** Secciones de la ficha que respalda un documento de ese tipo canónico (vacío = no respalda ninguna). */
+export function seccionesQueRespalda(tipoCanonico: string | null | undefined): readonly CodigoSeccionFicha[] {
+  return tipoCanonico ? (RESPALDA[tipoCanonico.toUpperCase()] ?? []) : [];
 }

@@ -10,6 +10,7 @@ import {
   type EstadoSeccionFichaDto,
   type ExpedientePublicoDto,
   type FaltanteSeccionDto,
+  type PropuestaDeSeccionDto,
   type SeccionFichaDto,
   type SeccionGuardadaDto,
   type VinculoPublicoDto,
@@ -102,6 +103,8 @@ interface Escenario {
   expedientes?: Record<string, ExpedientePublicoDto>;
   /** Respuesta de la evaluación sin guardar (FM-46); por omisión, completa. */
   alEvaluar?: (peticion: Peticion) => Response;
+  /** Propuestas de actualizar desde el documento (F5), de todas las secciones; por omisión, ninguna. */
+  propuestas?: PropuestaDeSeccionDto[];
 }
 
 /** Monta el wizard en `ruta` con una API falsa; devuelve los PUT que recibió. */
@@ -120,6 +123,11 @@ export function montarFicha(ruta: string, escenario: Escenario) {
         return Promise.resolve(escenario.alEvaluar?.(peticion) ?? json(200, { completa: true, faltantes: [], reglaVersion: 1 }));
       }
       if (url.pathname === '/public/v1/ficha') return Promise.resolve(json(200, escenario.estado));
+      if (url.pathname === '/public/v1/ficha/propuestas') return Promise.resolve(json(200, escenario.propuestas ?? []));
+      if (url.pathname.endsWith('/propuestas')) {
+        const codigo = url.pathname.split('/').at(-2);
+        return Promise.resolve(json(200, (escenario.propuestas ?? []).filter((x) => x.seccion === codigo)));
+      }
       if (url.pathname.startsWith('/public/v1/ficha/')) {
         const codigo = url.pathname.split('/').pop() ?? '';
         return Promise.resolve(json(200, escenario.secciones?.[codigo] ?? seccion(codigo)));

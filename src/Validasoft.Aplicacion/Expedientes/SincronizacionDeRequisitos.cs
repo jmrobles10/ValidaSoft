@@ -1,5 +1,6 @@
 using Marten;
 using Validasoft.Aplicacion.Certificados;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Vinculos;
@@ -17,7 +18,9 @@ public sealed record SincronizarRequisitosDelVinculo(Guid TenantId, Guid Vinculo
 
 /// <summary>
 /// Pone al día el expediente abierto del vínculo con lo que la bóveda le compartió; sin expediente abierto, abre la
-/// revalidación si la versión nueva es de un documento ya aprobado (RV-1). Toma el stream con bloqueo de fila
+/// revalidación si la versión nueva es de un documento ya aprobado o de una sección ya aceptada (RV-1); con una actualización
+/// abierta, además le suma los requisitos que cambiaron después de abrirse y no incluye (<see cref="Revalidacion.AmpliarAsync"/>).
+/// Toma el stream con bloqueo de fila
 /// (FL-12, en una sesión propia del tenant, así no compite con la del documento) y es <b>idempotente</b>: lee el estado
 /// actual de la bóveda y solo adjunta la versión actual si el requisito aún no la tiene, de modo que un mensaje repetido o
 /// fuera de orden no duplica eventos ni retrocede versiones.
@@ -49,11 +52,22 @@ public static class SincronizarRequisitosDelVinculoHandler
             return;
 
         var ahora = reloj.GetUtcNow();
-        var eventos = await RequisitosDeExpediente.SincronizarAsync(sesion, expediente, ahora, ct);
+        var eventos = (await RequisitosDeExpediente.SincronizarAsync(sesion, expediente, ahora, ct)).ToList();
+        // Una actualización abierta amplía su alcance con lo que cambió después de abrirse (la sincronización ya está aplicada).
+        var ampliacion = await Revalidacion.AmpliarAsync(sesion, Expediente.Reproducir(expediente, eventos), ahora, ct);
+        if (ampliacion is not null)
+            eventos.AddRange(ampliacion.Eventos);
         if (eventos.Count == 0)
             return;
 
         await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
+        if (ampliacion is not null)
+        {
+            var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(expediente.VinculoId), ct);
+            if (certificado.Aggregate?.ActualizarMotivoDePendientes(ampliacion.Motivo, expediente.Id, ahora) is { } pendientes)
+                certificado.AppendOne(pendientes);
+        }
+
         await sesion.SaveChangesAsync(ct);
     }
 }
