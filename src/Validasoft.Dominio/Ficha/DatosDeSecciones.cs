@@ -48,7 +48,7 @@ public sealed record DatosGenerales
     public int? AnioInicio { get; init; }
 }
 
-/// <summary>Dirección en el formato estructurado de AyF (opcional): «Calle 45 # 12 - 08, Oficina 301».</summary>
+/// <summary>Dirección en el formato estructurado colombiano (opcional): «Calle 45 # 12 - 08, Oficina 301».</summary>
 public sealed record DireccionEstructurada
 {
     /// <summary>Calle, Carrera, Avenida, AvenidaCalle, AvenidaCarrera, Diagonal, Transversal, Circular, Autopista, Kilometro.</summary>
@@ -73,8 +73,9 @@ public sealed record DireccionEstructurada
 }
 
 /// <summary>
-/// <c>FICHA_TRIBUTARIA</c>. Responsabilidades = códigos de la casilla 53 del RUT; de ellos se derivan las calidades del
-/// Portal (F3). ICA es municipal y no está en la casilla 53: <see cref="ResponsableIca"/> lo declara (FM-21).
+/// <c>FICHA_TRIBUTARIA</c>. Responsabilidades = códigos de la casilla 53 del RUT; de ellos se derivan las calidades tributarias
+/// (F3). ICA es municipal y no está en la casilla 53: <see cref="ResponsableIca"/> lo declara (FM-21), igual que la exención de la
+/// retención del CREE (<see cref="ExentoReteCree"/>, IO-4).
 /// </summary>
 public sealed record DatosTributarios
 {
@@ -90,6 +91,9 @@ public sealed record DatosTributarios
     public bool? ResponsableIca { get; init; }
 
     public bool? AutorretenedorIca { get; init; }
+
+    /// <summary>¿Exento de la retención del CREE? Se declara: no está en la casilla 53.</summary>
+    public bool? ExentoReteCree { get; init; }
 
     public IReadOnlyList<FilaIca>? Ica { get; init; }
 }
@@ -208,6 +212,9 @@ public sealed record PersonaRelacionada
 
     public DateOnly? FechaExpedicion { get; init; }
 
+    /// <summary>Lugar (ciudad) donde se expidió el documento de identidad (IO-4); texto libre de hasta 100 caracteres.</summary>
+    public string? LugarExpedicion { get; init; }
+
     public DateOnly? FechaNacimiento { get; init; }
 
     /// <summary>ISO 3166-1 alfa-2.</summary>
@@ -229,7 +236,7 @@ public sealed record FirmaRevisora
     public string? RazonSocial { get; init; }
 }
 
-/// <summary><c>FICHA_SST</c>: las ocho preguntas sí/no del Portal (SISO).</summary>
+/// <summary><c>FICHA_SST</c>: las ocho preguntas sí/no de seguridad y salud en el trabajo.</summary>
 public sealed record DatosSst
 {
     public bool? ProgramaSaludOcupacional { get; init; }

@@ -39,12 +39,6 @@ public sealed class Tercero
 
     public Guid? SucesorDe { get; set; }
 
-    /// <summary>
-    /// Clave del legado de donde se importó (docs/08 §6.2), p. ej. <c>portal:48112</c> (F4, FM-39); nula si nació en Validasoft.
-    /// Un tercero importado del Portal tiene como id el UUID v5 de esta clave, salvo que ya existiera por su identificación.
-    /// </summary>
-    public string? ClaveLegado { get; set; }
-
     /// <summary>Tenant que lo registró; junto con los vínculos define quién puede leer sus datos (anti-cosecha, docs/07 §10).</summary>
     public Guid? CreadoPorTenant { get; set; }
 

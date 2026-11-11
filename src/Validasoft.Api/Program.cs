@@ -1,5 +1,6 @@
 using JasperFx;
 using Npgsql;
+using Validasoft.Adaptadores.Portal;
 using Scalar.AspNetCore;
 using Validasoft.Infraestructura;
 using Validasoft.Infraestructura.Http;
@@ -10,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AgregarValidasoft(builder.Configuration);
 builder.Services.AgregarPlataformaWeb(builder.Configuration);
+// Adaptadores de origen del importador genérico: opcionales; sin ellos Validasoft funciona igual (el importador responde 404).
+builder.Services.AgregarAdaptadorPortal();
 builder.Services.AddOpenApi("v1");
 builder.Services.AddWolverineHttp();
 builder.Host.UseWolverine(opts => opts.ConfigurarMensajeria());

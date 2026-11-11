@@ -7,6 +7,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -40,9 +41,21 @@ public static class CuentasPublicasEndpoints
         TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
-        var cuenta = CuentaBancaria.Registrar(tercero.TerceroId,
-            new DatosDeCuentaBancaria(dto.Pais, dto.Banco, dto.TipoCuenta, dto.Numero, dto.Titular, dto.IdentificacionTitular, dto.Moneda),
-            protector.Proteger, reloj.GetUtcNow());
+        var datos = new DatosDeCuentaBancaria(dto.Pais, dto.Banco, dto.TipoCuenta, dto.Numero, dto.Titular, dto.IdentificacionTitular, dto.Moneda,
+            dto.BancoCodigo, dto.BancoSwift, dto.ContactoPagos is null ? null : new ContactoDePagos(dto.ContactoPagos.Nombre, dto.ContactoPagos.Correo, dto.ContactoPagos.Telefono));
+        // El banco se toma del catálogo de plataforma (IO-4): su nombre, su código de compensación y, si el tercero no lo dio, su SWIFT.
+        if (!string.IsNullOrWhiteSpace(dto.BancoCodigo))
+        {
+            var codigo = ReglasDeCatalogo.NormalizarCodigo(CatalogoDePlataforma.Bancos, dto.BancoCodigo)
+                         ?? throw ReglaDeNegocioException.Validacion("banco-no-encontrado", "El código del banco no es un código de compensación válido (4 dígitos).");
+            await using var global = sesiones.ConsultaGlobal();
+            var banco = await global.LoadAsync<EntradaDeCatalogo>(EntradaDeCatalogo.IdPara(CatalogoDePlataforma.Bancos, codigo), ct);
+            if (banco is not { Activo: true })
+                throw ReglaDeNegocioException.Validacion("banco-no-encontrado", $"El banco {codigo} no está en el catálogo.");
+            datos = datos with { Banco = banco.Nombre, BancoCodigo = banco.Codigo, BancoSwift = string.IsNullOrWhiteSpace(dto.BancoSwift) ? banco.Swift : dto.BancoSwift, Pais = string.IsNullOrWhiteSpace(dto.Pais) ? banco.Pais : dto.Pais };
+        }
+
+        var cuenta = CuentaBancaria.Registrar(tercero.TerceroId, datos, protector.Proteger, reloj.GetUtcNow());
         await using var boveda = sesiones.Boveda();
         boveda.Store(cuenta);
         await boveda.SaveChangesAsync(ct);
@@ -117,7 +130,10 @@ public static class CuentasPublicasEndpoints
     }
 
     private static CuentaParaDesignar ParaDesignar(CuentaBancaria c) =>
-        new(c.Id, c.Banco, c.TipoCuenta.ToString(), c.NumeroProtegido, c.Ultimos4, c.Titular, c.IdentificacionTitular, c.Moneda);
+        new(c.Id, c.Banco, c.TipoCuenta.ToString(), c.NumeroProtegido, c.Ultimos4, c.Titular, c.IdentificacionTitular, c.Moneda, c.BancoCodigo, c.BancoSwift,
+            c.ContactoPagos);
+
+    private static ContactoDePagosDto? ADto(ContactoDePagos? c) => c is null ? null : new ContactoDePagosDto(c.Nombre, c.Correo, c.Telefono);
 
     private static CuentaBancariaPublicaDto APublica(CuentaBancaria c, IReadOnlyList<VinculoVisto> vistos) =>
         new(c.Id, c.Banco, c.TipoCuenta.ToString(), c.NumeroEnmascarado, c.Titular, c.IdentificacionTitular, c.Moneda, c.Estado.ToString(),
@@ -127,7 +143,7 @@ public static class CuentasPublicasEndpoints
                     .Where(d => d?.Cuenta.CuentaId == c.Id)
                     .Select(d => new DesignacionDeCuentaDto(v.Vinculo.Id, v.Vinculo.EmpresaId, v.Empresa?.Nombre ?? string.Empty, d!.Estado.ToString(),
                         d.MotivoRechazo)))
-            ]);
+            ], c.BancoCodigo, c.BancoSwift, ADto(c.ContactoPagos));
 }
 
 /// <summary>La empresa ve y decide la cuenta designada de un vínculo (CB-2).</summary>
@@ -191,7 +207,8 @@ public static class CuentaDesignadaEndpoints
                 puedeAprobar ? protector.Desproteger(c.Cuenta.NumeroProtegido) : null, c.Cuenta.Titular, c.Cuenta.IdentificacionTitular,
                 c.Cuenta.Moneda, c.Estado.ToString(), c.PropuestaEn,
                 [.. c.Aprobaciones.Select(a => new AprobacionDeCuentaDto(a.UsuarioId, nombres.GetValueOrDefault(a.UsuarioId), a.Fecha))],
-                c.AprobadaEn, c.MotivoRechazo);
+                c.AprobadaEn, c.MotivoRechazo, c.Cuenta.BancoCodigo, c.Cuenta.BancoSwift,
+                c.Cuenta.ContactoPagos is null ? null : new ContactoDePagosDto(c.Cuenta.ContactoPagos.Nombre, c.Cuenta.ContactoPagos.Correo, c.Cuenta.ContactoPagos.Telefono));
 
         var usuario = contexto.ActorTipo == ActorTipo.Usuario ? contexto.ActorId : null;
         var puedes = puedeAprobar && usuario is not null && vinculo.CuentaPropuesta is { } propuesta &&

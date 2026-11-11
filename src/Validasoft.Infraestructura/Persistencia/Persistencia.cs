@@ -96,9 +96,12 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Validasoft.Dominio.Ficha.EntradaDeCatalogo>().DatabaseSchemaName("plataforma")
                     .Index(x => x.Catalogo)
                     .Index(x => x.Padre);
-                // Importador del Portal (F4, FM-39): corridas con su cursor y su informe, y el JSON de las de origen archivo.
-                opts.Schema.For<Aplicacion.Ficha.CorridaDeImportacionPortal>().DatabaseSchemaName("plataforma");
-                opts.Schema.For<Aplicacion.Ficha.ArchivoDeCorridaPortal>().DatabaseSchemaName("plataforma");
+                // Importador genérico (F4, FM-39): corridas con su cursor y su informe, y el JSON de las de fuente archivo.
+                opts.Schema.For<Aplicacion.Importacion.CorridaDeImportacion>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<Aplicacion.Importacion.ArchivoDeCorrida>().DatabaseSchemaName("plataforma");
+                // Claves de un tercero en un sistema externo (referencias externas): por tenant, con id único {SISTEMA}|{clave} dentro de
+                // él; las del importador de la plataforma viven en el tenant técnico "boveda".
+                opts.Schema.For<ReferenciaDeTercero>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
 
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);

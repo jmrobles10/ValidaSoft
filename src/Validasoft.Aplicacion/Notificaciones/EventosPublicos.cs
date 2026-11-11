@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using JasperFx.Events;
+using Validasoft.Aplicacion.Comun;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
@@ -98,6 +99,7 @@ public static class CatalogoEventosPublicos
         new("vinculo.reintegrado", "Se reintegró un vínculo desvinculado (revalida o restituye su estado)."),
         new("vinculo.anulado", "El vínculo se anuló."),
         new("vinculo.referencia_agregada", "Otro sistema integrado comparte el vínculo."),
+        new("vinculo.contactos_actualizados", "Cambiaron los contactos del tercero con la empresa (comercial, pagos, cumplimiento, notificaciones)."),
         new("vinculo.cuenta_designada_propuesta", "El tercero eligió una cuenta bancaria para cobrarle a la empresa; espera aprobación."),
         new("vinculo.cuenta_designada", "La empresa aprobó la cuenta bancaria designada (cuatro ojos)."),
         new("vinculo.cuenta_designada_rechazada", "La empresa rechazó la cuenta bancaria propuesta."),
@@ -129,8 +131,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         evento.Data switch
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
-                or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
-                or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
+                or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or ContactosDeVinculoActualizados or CuentaDesignadaPropuesta
+                or CuentaDesignadaAprobada or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
                 or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta
                 => await DeExpedienteAsync(evento, contexto, ct),
@@ -170,6 +172,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoReintegrado r => Estado(id, referencias, r.EstadoResultante, EstadoVinculo.Desvinculado, r.Justificacion, null, null),
             VinculoAnulado a => Estado(id, referencias, EstadoVinculo.Anulado, a.EstadoPrevio, a.Motivo, null, null),
             ReferenciaExternaAgregada r => new DatosReferenciaAgregadaDto(id, referencias, new ReferenciaExternaDto(r.Sistema, r.Id)),
+            ContactosDeVinculoActualizados c => new DatosContactosActualizadosDto(id, referencias, c.Despues.ADto()),
             CuentaDesignadaPropuesta p => Cuenta(id, referencias, p.Cuenta, EstadoCuentaDesignada.Propuesta, null),
             CuentaDesignadaAprobada a => (a.Cuenta ?? CuentaDe(vinculo, a.CuentaId)) is { } aprobada
                 ? Cuenta(id, referencias, aprobada, EstadoCuentaDesignada.Aprobada, null)
@@ -191,6 +194,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoDesvinculado => "vinculo.desvinculado",
             VinculoReintegrado => "vinculo.reintegrado",
             VinculoAnulado => "vinculo.anulado",
+            ContactosDeVinculoActualizados => "vinculo.contactos_actualizados",
             CuentaDesignadaPropuesta => "vinculo.cuenta_designada_propuesta",
             CuentaDesignadaAprobada => "vinculo.cuenta_designada",
             CuentaDesignadaRechazada => "vinculo.cuenta_designada_rechazada",
@@ -206,7 +210,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
     private static DatosCuentaDesignadaDto Cuenta(Guid id, IReadOnlyList<ReferenciaExternaDto> referencias, CuentaParaDesignar cuenta,
         EstadoCuentaDesignada estado, string? motivo) =>
         new(id, referencias, cuenta.CuentaId, cuenta.Banco, cuenta.TipoCuenta, Dominio.Terceros.CuentaBancaria.Enmascarar(cuenta.Ultimos4), cuenta.Titular,
-            cuenta.IdentificacionTitular, cuenta.Moneda, estado.ToString(), motivo);
+            cuenta.IdentificacionTitular, cuenta.Moneda, estado.ToString(), motivo, cuenta.BancoCodigo, cuenta.BancoSwift);
 
     private static DatosEstadoVinculoDto Estado(Guid id, IReadOnlyList<ReferenciaExternaDto> referencias, EstadoVinculo estado, EstadoVinculo? anterior,
         string? motivo, DateTimeOffset? hasta, Guid? expedienteId) =>

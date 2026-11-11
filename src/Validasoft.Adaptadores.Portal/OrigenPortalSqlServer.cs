@@ -1,43 +1,11 @@
 using System.Globalization;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using Validasoft.Aplicacion.Ficha;
-using Validasoft.Dominio.Comun;
-using Validasoft.Dominio.Ficha.Portal;
 
-namespace Validasoft.Infraestructura.Portal;
 
-/// <summary>
-/// Configuración del origen del Portal (<c>Validasoft:Importacion:Portal</c>): <c>CadenaDeConexion</c> (SQL Server del
-/// Portal, solo lectura; sin valor por omisión) y <c>Archivo</c> (ruta de un JSON con la forma de <see cref="ArchivoDelPortal"/>,
-/// para desarrollo, pruebas o un sincronizador sin red). Si están las dos, manda el archivo.
-/// </summary>
-public sealed class FabricaDeOrigenesPortal(IConfiguration configuracion) : IFabricaDeOrigenesPortal
-{
-    public const string Seccion = "Validasoft:Importacion:Portal";
 
-    private string? Cadena => configuracion[$"{Seccion}:CadenaDeConexion"] is { Length: > 0 } c ? c : null;
 
-    private string? Archivo => configuracion[$"{Seccion}:Archivo"] is { Length: > 0 } a ? a : null;
 
-    public bool SqlServerConfigurado => Cadena is not null;
-
-    public IOrigenPortal Configurado()
-    {
-        if (Archivo is { } ruta)
-        {
-            if (!File.Exists(ruta))
-                throw ReglaDeNegocioException.Conflicto("origen-portal-no-configurado", $"No existe el archivo del Portal configurado ({Seccion}:Archivo).");
-            return OrigenPortalArchivo.DesdeJson(File.ReadAllText(ruta));
-        }
-
-        return SqlServer();
-    }
-
-    public IOrigenPortal SqlServer() =>
-        new OrigenPortalSqlServer(Cadena ?? throw ReglaDeNegocioException.Conflicto("origen-portal-no-configurado",
-            $"No hay cadena de conexión del Portal ({Seccion}:CadenaDeConexion)."));
-}
+namespace Validasoft.Adaptadores.Portal;
 
 /// <summary>
 /// Lee el Portal de Proveedores en SQL Server (FM-39): solo <c>SELECT</c>, siempre parametrizados (el cursor y el rango de

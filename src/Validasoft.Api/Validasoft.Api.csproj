@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Validasoft.Infraestructura\Validasoft.Infraestructura.csproj" />
+    <ProjectReference Include="..\Validasoft.Adaptadores.Portal\Validasoft.Adaptadores.Portal.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Validasoft.Integracion.Tests" />

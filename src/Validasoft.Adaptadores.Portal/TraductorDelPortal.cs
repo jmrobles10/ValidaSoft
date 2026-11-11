@@ -2,31 +2,12 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Ficha;
+using Validasoft.Dominio.Ficha.Importacion;
 using Validasoft.Dominio.Identificaciones;
 using Validasoft.Dominio.Terceros;
 
-namespace Validasoft.Dominio.Ficha.Portal;
-
-/// <summary>
-/// Algo que pasó al traducir: <b>advertencia</b> (una corrección o normalización aplicada: DV recalculado, calidad sin código,
-/// persona duplicada, fecha de corte asumida) o <b>rechazo</b> (un dato del Portal que no se pudo convertir y quedó fuera; va
-/// al CSV de rechazos con su acción sugerida). <see cref="Seccion"/> nula = el tercero.
-/// </summary>
-public sealed record AvisoDeTraduccion(string? Seccion, int? Periodo, string Campo, string Codigo, string Mensaje, string? Dato = null,
-    string? AccionSugerida = null);
-
-/// <summary>Datos tipados y normalizados de una sección (y periodo, en la financiera), listos para registrar la versión.</summary>
-public sealed record SeccionTraducida(DefinicionDeSeccion Definicion, int? Periodo, object Datos);
-
-/// <summary>Identidad del tercero en Validasoft: identificación normalizada (DV recalculado), tipo de persona y nombre.</summary>
-public sealed record TerceroTraducido(Identificacion Identificacion, TipoPersona TipoPersona, string Nombre);
-
-/// <summary>
-/// Resultado de traducir un tercero del Portal (FM-40). Sin <see cref="Tercero"/> (identificación inválida, sin información
-/// general…) el tercero entero queda rechazado y no se importa nada de él.
-/// </summary>
-public sealed record ResultadoDeTraduccion(int Terid, string ClaveLegado, TerceroTraducido? Tercero, IReadOnlyList<SeccionTraducida> Secciones,
-    IReadOnlyList<AvisoDeTraduccion> Advertencias, IReadOnlyList<AvisoDeTraduccion> Rechazos);
+namespace Validasoft.Adaptadores.Portal;
 
 /// <summary>
 /// Traductor puro (sin E/S) de un tercero del Portal a las secciones de la ficha, con las correcciones de FM-10/FM-11
@@ -74,7 +55,7 @@ public static partial class TraductorDelPortal
     public static ResultadoDeTraduccion Traducir(TerceroDelPortal origen, CatalogosDelPortal catalogos, ICatalogosDeFicha plataforma, DateOnly hoy,
         TipoPersona? registrado = null)
     {
-        var clave = IdDeLegado.ClaveTerceroPortal(origen.Terid);
+        var clave = origen.Terid.ToString(CultureInfo.InvariantCulture);
         var avisos = new Avisos();
         var tercero = Identidad(origen, catalogos, avisos);
         if (tercero is not null && registrado is { } tipo && tipo != tercero.TipoPersona)
@@ -93,7 +74,7 @@ public static partial class TraductorDelPortal
         }
 
         if (tercero is null)
-            return new ResultadoDeTraduccion(origen.Terid, clave, null, [], avisos.Advertencias, avisos.Rechazos);
+            return new ResultadoDeTraduccion(AdaptadorPortal.CodigoDelSistema, clave, null, [], avisos.Advertencias, avisos.Rechazos);
 
         var secciones = new List<SeccionTraducida>();
         void Agregar(string codigo, int? periodo, object? datos)
@@ -134,7 +115,7 @@ public static partial class TraductorDelPortal
         avisos.Seccion = CodigosDeSeccion.Especialidades;
         Agregar(CodigosDeSeccion.Especialidades, null, Especialidades(origen, catalogos, avisos));
 
-        return new ResultadoDeTraduccion(origen.Terid, clave, tercero, secciones, avisos.Advertencias, avisos.Rechazos);
+        return new ResultadoDeTraduccion(AdaptadorPortal.CodigoDelSistema, clave, tercero, secciones, avisos.Advertencias, avisos.Rechazos);
     }
 
     // ---------- identidad ----------

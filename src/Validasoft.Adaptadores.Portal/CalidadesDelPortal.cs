@@ -1,4 +1,6 @@
-namespace Validasoft.Dominio.Ficha.Portal;
+using Validasoft.Dominio.Ficha;
+
+namespace Validasoft.Adaptadores.Portal;
 
 /// <summary>
 /// Fila de la tabla inversa de las calidades (FM-40): la columna S/N de <c>dbo.TerInfoTributaria</c>, la calidad de la ficha

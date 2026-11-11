@@ -1,16 +1,17 @@
 using Marten;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
+using Validasoft.Aplicacion.Ficha;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Ficha;
-using Validasoft.Dominio.Ficha.Portal;
+using Validasoft.Dominio.Ficha.Importacion;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
 
-namespace Validasoft.Aplicacion.Ficha;
+namespace Validasoft.Aplicacion.Importacion;
 
 /// <summary>Qué pasó con una sección (y periodo) de un tercero importado.</summary>
 public enum ResultadoDeSeccionImportada
@@ -27,49 +28,61 @@ public enum ResultadoDeSeccionImportada
 
 public sealed record SeccionImportada(string Seccion, int? Periodo, int? Version, ResultadoDeSeccionImportada Resultado);
 
-/// <summary>Resultado de importar (o sincronizar) un tercero del Portal.</summary>
+/// <summary>Resultado de importar (o sincronizar) un tercero de un sistema de origen.</summary>
 public sealed record TerceroImportado(
-    int Terid, string ClaveLegado, Guid? TerceroId, bool? Creado, IReadOnlyList<SeccionImportada> Secciones, int Aceptaciones, int AceptacionesExistentes,
+    string Sistema, string Clave, Guid? TerceroId, bool? Creado, IReadOnlyList<SeccionImportada> Secciones, int Aceptaciones, int AceptacionesExistentes,
     int SinVinculo, IReadOnlyList<AvisoDeTraduccion> Advertencias, IReadOnlyList<AvisoDeTraduccion> Rechazos)
 {
+    public string ClaveLegado => IdDeLegado.Clave(Sistema, Clave);
+
     public bool Rechazado => TerceroId is null;
 }
 
 /// <summary>
-/// Cómo se importa: <see cref="Simular"/> (dry-run: lee y calcula, no escribe), el origen de las versiones (<c>Importada</c> en
-/// la corrida; <c>Portal</c> en el sincronizador), el mapa constructora ⇒ empresa para las aceptaciones, el actor para la
-/// auditoría y el bus del outbox (para pedir la sincronización de requisitos de F2 en la misma transacción).
+/// Cómo se importa: <see cref="Simular"/> (dry-run: lee y calcula, no escribe), el <see cref="Sistema"/> de origen (código del
+/// adaptador), el origen de las versiones (<c>Importada</c> en la corrida; <c>SistemaExterno</c> en el sincronizador), el mapa unidad
+/// de origen ⇒ empresa para las aceptaciones, el actor para la auditoría y el bus del outbox (para pedir la sincronización de
+/// requisitos de F2 en la misma transacción).
 /// </summary>
 public sealed record OpcionesDeImportacion(
-    bool Simular, OrigenDeSeccion Origen, IReadOnlyDictionary<int, Empresa> Constructoras, ActorTipo ActorTipo, string ActorId, IMessageBus? Mensajes);
+    bool Simular, string Sistema, OrigenDeSeccion Origen, IReadOnlyDictionary<string, Empresa> Unidades, ActorTipo ActorTipo, string ActorId, IMessageBus? Mensajes);
 
 /// <summary>
-/// El importador de la ficha desde el Portal (F4, FM-39…FM-43): por tercero, traduce (puro), crea o encuentra el
-/// <see cref="Tercero"/> (id UUID v5 de <c>portal:{Terid}</c>; por identificación normalizada si ya existía), registra cada
-/// sección como versión con el mismo guardado del wizard (misma huella ⇒ nada; sin soporte: las versiones importadas no lo
-/// exigen) y, con el mapa de constructoras, deja aceptadas por la empresa las secciones del tercero que en el Portal estaba
-/// Completada o en Actualizacion. Idempotente.
+/// El importador genérico de la ficha (F4, FM-39…FM-43): por tercero de un sistema de origen (el adaptador lo lee y lo traduce, sin
+/// E/S), crea o encuentra el <see cref="Tercero"/> (id UUID v5 de <c>{sistema}:{clave}</c>; por identificación normalizada si ya
+/// existía), le anota su referencia externa del sistema (<see cref="ReferenciaDeTercero"/> de la plataforma), registra cada sección
+/// como versión con el mismo guardado del wizard (misma huella ⇒ nada; sin soporte: las versiones importadas no lo exigen) y, con el
+/// mapa de unidades, deja aceptadas por la empresa las secciones del tercero que en el origen estaba aprobado en su unidad.
+/// Idempotente. No sabe nada de ningún sistema concreto.
 /// </summary>
-public static class ImportacionDePortal
+public static class ImportadorDeTerceros
 {
-    /// <summary>Estados del Portal (<c>EstadoTercero</c>) que se importan como aceptados: Completada (3) y Actualizacion (4).</summary>
-    public static readonly IReadOnlySet<int> EstadosAceptados = new HashSet<int> { 3, 4 };
-
-    public static async Task<TerceroImportado> ImportarTerceroAsync(ISesiones sesiones, TerceroDelPortal origen, CatalogosDelPortal catalogos,
-        ICatalogosDeFicha plataforma, OpcionesDeImportacion opciones, TimeProvider reloj, CancellationToken ct)
+    public static async Task<TerceroImportado> ImportarTerceroAsync(ISesiones sesiones, TerceroDeOrigen origen, ICatalogosDeFicha plataforma,
+        OpcionesDeImportacion opciones, TimeProvider reloj, CancellationToken ct)
     {
         var hoy = reloj.Hoy();
-        var traduccion = TraductorDelPortal.Traducir(origen, catalogos, plataforma, hoy);
+        var traduccion = origen.Traducir(plataforma, hoy, null);
         if (traduccion.Tercero is null)
             return Rechazado(traduccion);
 
+        var idDeLegado = IdDeLegado.Tercero(traduccion.Sistema, traduccion.Clave);
+        var sistemaDeReferencia = ReferenciaDeTercero.NormalizarSistema(traduccion.Sistema);
+
         // El tercero: por su id del legado (reimportación) o por su identificación (ya lo registró una empresa).
         Tercero? tercero;
+        List<ReferenciaDeTercero> referencias = [];
         await using (var consulta = sesiones.ConsultaGlobal())
         {
-            tercero = await consulta.LoadAsync<Tercero>(IdDeLegado.TerceroPortal(origen.Terid), ct);
+            tercero = await consulta.LoadAsync<Tercero>(idDeLegado, ct);
             var clave = traduccion.Tercero.Identificacion.Clave;
             tercero ??= await consulta.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == clave, ct);
+        }
+
+        if (tercero is not null)
+        {
+            await using var boveda = sesiones.ConsultaBoveda();
+            var terceroId = tercero.Id;
+            referencias = [.. await boveda.Query<ReferenciaDeTercero>().Where(r => r.TerceroId == terceroId && r.Sistema == sistemaDeReferencia).ToListAsync(ct)];
         }
 
         var rechazosExtra = new List<AvisoDeTraduccion>();
@@ -77,15 +90,15 @@ public static class ImportacionDePortal
         {
             if (tercero.ClaveIdentificacion != traduccion.Tercero.Identificacion.Clave)
                 return Rechazado(traduccion, new AvisoDeTraduccion(null, null, "numero", "identificacion-cambiada",
-                    $"El Terid {origen.Terid} ya se importó como {tercero.ClaveIdentificacion} y el Portal hoy dice {traduccion.Tercero.Identificacion.Clave}.",
-                    traduccion.Tercero.Identificacion.Clave, "Revisar en el Portal: un tercero no cambia de identificación."));
-            if (tercero.ClaveLegado is { } otra && otra != traduccion.ClaveLegado)
-                return Rechazado(traduccion, new AvisoDeTraduccion(null, null, "numero", "tercero-duplicado-en-portal",
-                    $"La identificación {tercero.ClaveIdentificacion} ya se importó desde {otra}: el Portal tiene el tercero dos veces.",
-                    traduccion.ClaveLegado, "Fusionar los terceros en el Portal (o descartar el duplicado) y volver a importar."));
+                    $"La clave {origen.Clave} de {traduccion.Sistema} ya se importó como {tercero.ClaveIdentificacion} y el origen hoy dice {traduccion.Tercero.Identificacion.Clave}.",
+                    traduccion.Tercero.Identificacion.Clave, "Revisar en el sistema de origen: un tercero no cambia de identificación."));
+            if (referencias.FirstOrDefault(r => !string.Equals(r.Clave, traduccion.Clave, StringComparison.Ordinal)) is { } otra)
+                return Rechazado(traduccion, new AvisoDeTraduccion(null, null, "numero", "tercero-duplicado-en-origen",
+                    $"La identificación {tercero.ClaveIdentificacion} ya se importó desde {traduccion.Sistema}:{otra.Clave}: el origen tiene el tercero dos veces.",
+                    traduccion.ClaveLegado, "Fusionar los terceros en el sistema de origen (o descartar el duplicado) y volver a importar."));
             if (tercero.TipoPersona != traduccion.Tercero.TipoPersona)
             {
-                traduccion = TraductorDelPortal.Traducir(origen, catalogos, plataforma, hoy, tercero.TipoPersona);
+                traduccion = origen.Traducir(plataforma, hoy, tercero.TipoPersona);
                 if (traduccion.Tercero is null)
                     return Rechazado(traduccion);
             }
@@ -95,16 +108,14 @@ public static class ImportacionDePortal
         if (tercero is null)
         {
             tercero = Tercero.Crear(traduccion.Tercero.Identificacion, traduccion.Tercero.TipoPersona, traduccion.Tercero.Nombre, null, null, reloj.GetUtcNow());
-            tercero.Id = IdDeLegado.TerceroPortal(origen.Terid);
-            tercero.ClaveLegado = traduccion.ClaveLegado;
+            tercero.Id = idDeLegado;
             if (!opciones.Simular)
                 await GuardarTerceroAsync(sesiones, tercero, opciones, ct);
         }
-        else if (tercero.ClaveLegado is null && !opciones.Simular)
-        {
-            tercero.ClaveLegado = traduccion.ClaveLegado;
-            await GuardarTerceroAsync(sesiones, tercero, opciones, ct);
-        }
+
+        // La clave del tercero en el sistema de origen queda como su referencia externa (idempotente: una sola por sistema y clave).
+        if (!opciones.Simular && referencias.All(r => !string.Equals(r.Clave, traduccion.Clave, StringComparison.Ordinal)))
+            await GuardarReferenciaAsync(sesiones, tercero, traduccion, opciones, reloj, ct);
 
         var secciones = new List<SeccionImportada>();
         foreach (var seccion in traduccion.Secciones)
@@ -119,22 +130,25 @@ public static class ImportacionDePortal
             catch (ReglaDeNegocioException e)
             {
                 rechazosExtra.Add(new AvisoDeTraduccion(seccion.Definicion.Codigo, seccion.Periodo, e.Datos?.GetValueOrDefault("campo") as string ?? "datos",
-                    e.Codigo, e.Message, null, TraductorDelPortal.AccionCorregirEnPortal));
+                    e.Codigo, e.Message, null, AccionCorregirEnOrigen));
                 secciones.Add(new SeccionImportada(seccion.Definicion.Codigo, seccion.Periodo, null, ResultadoDeSeccionImportada.Rechazada));
             }
         }
 
-        var (aceptaciones, existentes, sinVinculo) = opciones.Constructoras.Count == 0
+        var (aceptaciones, existentes, sinVinculo) = opciones.Unidades.Count == 0
             ? (0, 0, 0)
-            : await AceptarAsync(sesiones, origen, tercero, creado, secciones, opciones, reloj, ct);
+            : await AceptarAsync(sesiones, origen, traduccion, tercero, creado, secciones, opciones, reloj, ct);
 
-        return new TerceroImportado(origen.Terid, traduccion.ClaveLegado, tercero.Id, creado, secciones, aceptaciones, existentes, sinVinculo,
+        return new TerceroImportado(traduccion.Sistema, traduccion.Clave, tercero.Id, creado, secciones, aceptaciones, existentes, sinVinculo,
             traduccion.Advertencias, [.. traduccion.Rechazos, .. rechazosExtra]);
     }
 
     private static TerceroImportado Rechazado(ResultadoDeTraduccion traduccion, AvisoDeTraduccion? extra = null) =>
-        new(traduccion.Terid, traduccion.ClaveLegado, null, null, [], 0, 0, 0, traduccion.Advertencias,
+        new(traduccion.Sistema, traduccion.Clave, null, null, [], 0, 0, 0, traduccion.Advertencias,
             extra is null ? traduccion.Rechazos : [.. traduccion.Rechazos, extra]);
+
+    /// <summary>Acción sugerida de un rechazo por un dato del origen.</summary>
+    public const string AccionCorregirEnOrigen = "Corregir el dato en el sistema de origen y volver a sincronizar el tercero.";
 
     private static IDocumentSession ConActor(IDocumentSession sesion, OpcionesDeImportacion opciones)
     {
@@ -150,9 +164,17 @@ public static class ImportacionDePortal
         await sesion.SaveChangesAsync(ct);
     }
 
+    private static async Task GuardarReferenciaAsync(ISesiones sesiones, Tercero tercero, ResultadoDeTraduccion traduccion, OpcionesDeImportacion opciones,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        await using var sesion = ConActor(sesiones.Boveda(), opciones);
+        sesion.Store(ReferenciaDeTercero.Crear(tercero.Id, traduccion.Sistema, traduccion.Clave, reloj.GetUtcNow()));
+        await sesion.SaveChangesAsync(ct);
+    }
+
     /// <summary>
     /// La versión con el mismo guardado del wizard (<see cref="GuardadoDeSecciones.RegistrarAsync"/>): sin soportes (las versiones
-    /// importadas no exigen el soporte del cambio: su respaldo es el legado), origen <c>Importada</c> o <c>Portal</c> y, con
+    /// importadas no exigen el soporte del cambio: su respaldo es el legado), origen <c>Importada</c> o <c>SistemaExterno</c> y, con
     /// el bus, la sincronización de requisitos de los vínculos aceptados en la misma transacción (revalidación de F2).
     /// </summary>
     private static async Task<SeccionImportada> RegistrarSeccionAsync(ISesiones sesiones, Tercero tercero, SeccionTraducida seccion,
@@ -181,19 +203,20 @@ public static class ImportacionDePortal
     }
 
     /// <summary>
-    /// Aceptación importada (FM-42): por cada constructora mapeada donde el tercero estaba Completada (3) o Actualizacion (4),
-    /// en cada vínculo del tercero con esa empresa, la versión vigente de cada sección (si salió del legado: origen
-    /// <c>Importada</c> o <c>Portal</c>) queda en <see cref="SeccionAceptada"/> con origen <c>Importacion</c>, sin expediente.
+    /// Aceptación importada (FM-42): por cada unidad de origen mapeada donde el tercero estaba aprobado, en cada vínculo del tercero
+    /// con esa empresa, la versión vigente de cada sección (si salió de un sistema de origen: origen
+    /// <c>Importada</c> o <c>SistemaExterno</c>) queda en <see cref="SeccionAceptada"/> con origen <c>Importacion</c>, sin expediente.
     /// Solo si el vínculo no tenía nada aceptado de esa sección: una aceptación existente (de un expediente o de una corrida
     /// anterior) no se toca, y los cambios posteriores se revalidan con F2. Sin vínculo en la empresa ⇒ se cuenta y se
     /// acepta en una corrida posterior, cuando exista.
     /// </summary>
-    private static async Task<(int Creadas, int Existentes, int SinVinculo)> AceptarAsync(ISesiones sesiones, TerceroDelPortal origen, Tercero tercero,
-        bool creado, IReadOnlyList<SeccionImportada> importadas, OpcionesDeImportacion opciones, TimeProvider reloj, CancellationToken ct)
+    private static async Task<(int Creadas, int Existentes, int SinVinculo)> AceptarAsync(ISesiones sesiones, TerceroDeOrigen origen,
+        ResultadoDeTraduccion traduccion, Tercero tercero, bool creado, IReadOnlyList<SeccionImportada> importadas, OpcionesDeImportacion opciones,
+        TimeProvider reloj, CancellationToken ct)
     {
-        var empresas = (origen.Constructoras ?? [])
-            .Where(c => EstadosAceptados.Contains(c.Estado) && opciones.Constructoras.ContainsKey(c.IdConstructora))
-            .Select(c => (c.IdConstructora, Empresa: opciones.Constructoras[c.IdConstructora]))
+        var empresas = origen.UnidadesAceptadas
+            .Where(opciones.Unidades.ContainsKey)
+            .Select(u => (Unidad: u, Empresa: opciones.Unidades[u]))
             .DistinctBy(c => c.Empresa.Id)
             .ToList();
         if (empresas.Count == 0)
@@ -211,12 +234,12 @@ public static class ImportacionDePortal
             await using var boveda = sesiones.ConsultaBoveda();
             var terceroId = tercero.Id;
             vigentes = [.. (await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct))
-                .Where(s => s.Vigente is { Origen: OrigenDeSeccion.Importada or OrigenDeSeccion.Portal })
+                .Where(s => s.Vigente is { Origen: OrigenDeSeccion.Importada or OrigenDeSeccion.SistemaExterno })
                 .Select(s => (s.Seccion, s.Periodo, s.Id, s.Vigente!.Numero, s.Vigente.Huella))];
         }
 
         int creadas = 0, existentes = 0, sinVinculo = 0;
-        foreach (var (constructora, empresa) in empresas)
+        foreach (var (unidad, empresa) in empresas)
         {
             List<Vinculo> vinculos;
             await using (var consulta = sesiones.ConsultaGlobal())
@@ -266,7 +289,7 @@ public static class ImportacionDePortal
                         ExpedienteId = Guid.Empty,
                         Folio = string.Empty,
                         Origen = OrigenDeAceptacion.Importacion,
-                        ClaveLegado = $"{IdDeLegado.ClaveTerceroPortal(origen.Terid)}|constructora:{constructora}"
+                        ClaveLegado = $"{traduccion.ClaveLegado}|unidad:{unidad}"
                     });
                 }
             }
@@ -281,25 +304,25 @@ public static class ImportacionDePortal
     // ---------- catálogos ----------
 
     /// <summary>
-    /// Catálogos para traducir y evaluar: los de plataforma de la base, más (si la corrida los importa) los del Portal ya
+    /// Catálogos para traducir y evaluar: los de plataforma de la base, más (si la corrida los importa) los del origen ya
     /// validados. Así un dry-run, que no los guarda, evalúa igual que la corrida real.
     /// </summary>
-    public static async Task<ICatalogosDeFicha> CatalogosAsync(ISesiones sesiones, CatalogosDelPortal? delPortal, DateTimeOffset ahora, CancellationToken ct)
+    public static async Task<ICatalogosDeFicha> CatalogosAsync(ISesiones sesiones, IReadOnlyList<CatalogoImportable>? delOrigen, DateTimeOffset ahora, CancellationToken ct)
     {
         List<EntradaDeCatalogo> entradas;
         await using (var consulta = sesiones.ConsultaGlobal())
             entradas = [.. await consulta.Query<EntradaDeCatalogo>().ToListAsync(ct)];
-        return Combinar(entradas, delPortal, ahora);
+        return Combinar(entradas, delOrigen, ahora);
     }
 
-    /// <summary>Función pura: las entradas de plataforma más las filas válidas de los catálogos del Portal (estas mandan).</summary>
-    public static ICatalogosDeFicha Combinar(IEnumerable<EntradaDeCatalogo> entradas, CatalogosDelPortal? delPortal, DateTimeOffset ahora)
+    /// <summary>Función pura: las entradas de plataforma más las filas válidas de los catálogos del origen (estas mandan).</summary>
+    public static ICatalogosDeFicha Combinar(IEnumerable<EntradaDeCatalogo> entradas, IReadOnlyList<CatalogoImportable>? delOrigen, DateTimeOffset ahora)
     {
-        if (delPortal is null)
+        if (delOrigen is null)
             return new CatalogosEnMemoria(entradas);
 
         var porId = entradas.ToDictionary(e => e.Id, StringComparer.Ordinal);
-        foreach (var (catalogo, filas, _) in CodigosDelPortal.Filas(delPortal))
+        foreach (var (catalogo, filas, _) in delOrigen)
         {
             var niveles = porId.Values.Where(e => e.Catalogo == catalogo && e.Nivel is not null).ToDictionary(e => e.Codigo, e => e.Nivel!.Value, StringComparer.Ordinal);
             foreach (var fila in filas.OrderBy(f => f.Nivel ?? 0))
@@ -317,14 +340,14 @@ public static class ImportacionDePortal
     }
 
     /// <summary>
-    /// Importa los catálogos del Portal a los de plataforma con la importación idempotente de F1 (upsert por código). En un
-    /// dry-run solo cuenta. Las filas del Portal que no se pudieron convertir (sin DANE, CIIU inválido…) vuelven como rechazadas.
+    /// Importa los catálogos del origen a los de plataforma con la importación idempotente de F1 (upsert por código). En un
+    /// dry-run solo cuenta. Las filas del origen que no se pudieron convertir (sin DANE, CIIU inválido…) vuelven como rechazadas.
     /// </summary>
-    public static async Task<IReadOnlyList<ResultadoImportacionCatalogoDto>> ImportarCatalogosAsync(ISesiones sesiones, CatalogosDelPortal catalogos,
+    public static async Task<IReadOnlyList<ResultadoImportacionCatalogoDto>> ImportarCatalogosAsync(ISesiones sesiones, IReadOnlyList<CatalogoImportable> catalogos,
         bool simular, DateTimeOffset ahora, CancellationToken ct)
     {
         var resultados = new List<ResultadoImportacionCatalogoDto>();
-        foreach (var (catalogo, filas, rechazos) in CodigosDelPortal.Filas(catalogos))
+        foreach (var (catalogo, filas, rechazos) in catalogos)
         {
             var noConvertidas = rechazos.Select(r => new FilaRechazadaDto(-1, null, r)).ToList();
             if (filas.Count == 0)
@@ -385,12 +408,12 @@ public static class ImportacionDePortal
 
     // ---------- traducción a DTO ----------
 
-    public static AvisoImportacionDto ADto(this AvisoDeTraduccion a, int terid) =>
-        new(IdDeLegado.ClaveTerceroPortal(terid), terid, a.Seccion, a.Periodo, a.Campo, a.Codigo, a.Mensaje, a.Dato, a.AccionSugerida);
+    public static AvisoImportacionDto ADto(this AvisoDeTraduccion a, string sistema, string clave) =>
+        new(IdDeLegado.Clave(sistema, clave), clave, a.Seccion, a.Periodo, a.Campo, a.Codigo, a.Mensaje, a.Dato, a.AccionSugerida);
 
-    public static SincronizacionPortalDto ADto(this TerceroImportado t) =>
-        new(t.Terid, t.ClaveLegado, t.TerceroId, t.Creado == true,
+    public static SincronizacionDto ADto(this TerceroImportado t) =>
+        new(t.Sistema, t.Clave, t.ClaveLegado, t.TerceroId, t.Creado == true,
             [.. t.Secciones.Select(s => new SeccionSincronizadaDto(s.Seccion, s.Periodo, s.Version, s.Resultado == ResultadoDeSeccionImportada.Creada,
                 s.Resultado == ResultadoDeSeccionImportada.Rechazada))],
-            [.. t.Advertencias.Select(a => a.ADto(t.Terid))], [.. t.Rechazos.Select(a => a.ADto(t.Terid))]);
+            [.. t.Advertencias.Select(a => a.ADto(t.Sistema, t.Clave))], [.. t.Rechazos.Select(a => a.ADto(t.Sistema, t.Clave))]);
 }

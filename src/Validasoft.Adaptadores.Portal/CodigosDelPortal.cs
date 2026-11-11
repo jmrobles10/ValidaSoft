@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace Validasoft.Dominio.Ficha.Portal;
+using Validasoft.Dominio.Ficha;
+
+namespace Validasoft.Adaptadores.Portal;
 
 /// <summary>
 /// Conversiones puras de los datos del Portal a los tipos y códigos de plataforma (FM-10, FM-40): DANE, CIIU, bancos,
@@ -190,7 +192,7 @@ public static partial class CodigosDelPortal
                 return porNombre;
         }
 
-        if (RegexIso2().IsMatch(mayusculas) && Identificaciones.CatalogoIdentificacion.Paises.Any(p => p.Codigo == mayusculas))
+        if (RegexIso2().IsMatch(mayusculas) && Validasoft.Dominio.Identificaciones.CatalogoIdentificacion.Paises.Any(p => p.Codigo == mayusculas))
             return mayusculas;
         return PaisesConocidos.GetValueOrDefault(normalizado);
     }

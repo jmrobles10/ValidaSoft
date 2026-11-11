@@ -1,18 +1,17 @@
 using Validasoft.Aplicacion.Ficha;
-using Validasoft.Contratos;
-using Validasoft.Dominio.Comun;
+using Validasoft.Aplicacion.Importacion;
 using Validasoft.Dominio.Ficha;
-using Validasoft.Dominio.Ficha.Portal;
+using Validasoft.Dominio.Ficha.Importacion;
 using Validasoft.Dominio.Terceros;
 
-namespace Validasoft.Dominio.Tests;
+namespace Validasoft.Adaptadores.Portal.Tests;
 
 /// <summary>
-/// Importador de la ficha desde el Portal (F4, FM-39…): el traductor puro con una tabla de casos por sección (DV recalculado,
+/// Adaptador de origen del Portal (F4, FM-39…): el traductor puro con una tabla de casos por sección (DV recalculado,
 /// calidades ⇒ códigos DIAN con <c>NoObligFacturar</c>, fechas y porcentajes de texto, ciudad sin DANE, personas duplicadas,
-/// financiera por año), las conversiones de catálogos, el UUID v5 de la clave del legado y el CSV de rechazos.
+/// financiera por año), las conversiones de catálogos y el adaptador visto como origen genérico (clave, unidades aceptadas).
 /// </summary>
-public class FichaImportacionPortalTests
+public class TraductorDelPortalTests
 {
     private static readonly DateOnly Hoy = new(2026, 11, 9);
     private static readonly DateTimeOffset Ahora = new(2026, 11, 9, 15, 0, 0, TimeSpan.Zero);
@@ -46,8 +45,12 @@ public class FichaImportacionPortalTests
             }
         }
 
-        return ImportacionDePortal.Combinar(entradas, Catalogos, Ahora);
+        return ImportadorDeTerceros.Combinar(entradas, CatalogosImportables(), Ahora);
     }
+
+    /// <summary>Los catálogos del Portal como los entrega el adaptador al importador genérico.</summary>
+    internal static IReadOnlyList<CatalogoImportable> CatalogosImportables() =>
+        [.. CodigosDelPortal.Filas(Catalogos).Select(c => new CatalogoImportable(c.Catalogo, c.Filas, c.Rechazos))];
 
     private static TerceroDelPortal Juridico(int terid = 101) => new(
         new TercerosPortal(terid, 3),
@@ -438,7 +441,7 @@ public class FichaImportacionPortalTests
     }
 
     [Fact]
-    public void Las_versiones_del_legado_no_exigen_el_soporte_del_cambio_y_las_del_tercero_si()
+    public void Las_versiones_de_un_sistema_de_origen_no_exigen_el_soporte_del_cambio_y_las_del_tercero_si()
     {
         var r = Traducir(Juridico());
         var general = r.Secciones.Single(s => s.Definicion.Codigo == CodigosDeSeccion.General);
@@ -446,36 +449,49 @@ public class FichaImportacionPortalTests
         var cambiada = ((DatosGenerales)general.Datos) with { Telefono = "6017778899" };
         var terceroId = Guid.NewGuid();
 
-        foreach (var (origen, completa) in new[] { (OrigenDeSeccion.Importada, true), (OrigenDeSeccion.Portal, true), (OrigenDeSeccion.Tercero, false) })
+        foreach (var (origen, completa) in new[] { (OrigenDeSeccion.Importada, true), (OrigenDeSeccion.SistemaExterno, true), (OrigenDeSeccion.Tercero, false) })
         {
             var seccion = SeccionDeFicha.Create(SeccionDeFicha.Iniciar(terceroId, general.Definicion, null, Ahora));
-            seccion = seccion.Proyectar(seccion.Registrar(general.Definicion, general.Datos, [], contexto, Plataforma(), OrigenDeSeccion.Importada, "importador", Ahora));
+            seccion = seccion.Proyectar(seccion.Registrar(general.Definicion, general.Datos, [], contexto, Plataforma(), OrigenDeSeccion.Importada, "importador:portal", Ahora));
             var v2 = (VersionDeSeccionRegistrada)seccion.Registrar(general.Definicion, cambiada, [], contexto, Plataforma(), origen, "x", Ahora).Single();
             (v2.Numero, v2.Completitud.Completa).ShouldBe((2, completa), origen.ToString());
             seccion.Proyectar([v2]).Recalcular(general.Definicion, contexto, Plataforma(), Ahora).ShouldBeNull(); // el recálculo dice lo mismo
         }
     }
 
-    // ---------- identidad del legado y CSV ----------
+    // ---------- el adaptador como origen genérico ----------
 
     [Fact]
-    public void El_uuid_v5_es_el_del_rfc_y_determinista_por_clave_del_legado()
+    public async Task El_adaptador_lee_un_archivo_y_entrega_la_clave_las_unidades_aceptadas_y_el_traductor()
     {
-        // Vector de prueba de RFC 9562 (anexo A.4): www.example.com en el espacio DNS.
-        IdDeLegado.UuidV5("www.example.com", new Guid("6ba7b810-9dad-11d1-80b4-00c04fd430c8")).ShouldBe(new Guid("2ed6657d-e927-568b-95e1-2665a8aea6a2"));
-        IdDeLegado.ClaveTerceroPortal(48112).ShouldBe("portal:48112");
-        IdDeLegado.TerceroPortal(48112).ShouldBe(IdDeLegado.TerceroPortal(48112));
-        IdDeLegado.TerceroPortal(48112).ShouldNotBe(IdDeLegado.TerceroPortal(48113));
-        IdDeLegado.TerceroPortal(48112).Version.ShouldBe(5);
+        var json = System.Text.Json.JsonSerializer.Serialize(new ArchivoDelPortal(Catalogos, [Juridico(101), Juridico(102) with { Constructoras = [new TercerosConstructora(7, 2), new TercerosConstructora(9, 4)] }]),
+            OrigenPortalArchivo.Opciones);
+        var adaptador = new AdaptadorPortal(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+        adaptador.ValidarArchivo(json);
+        ((IAdaptadorDeOrigen)adaptador).Codigo.ShouldBe("portal");
+        adaptador.ConectadoConfigurado.ShouldBeFalse();
+
+        var origen = adaptador.DesdeArchivo(json);
+        var lote = await origen.TercerosAsync(null, 10, CancellationToken.None);
+        lote.Select(t => t.Clave).ShouldBe(["101", "102"]);
+        lote[0].UnidadesAceptadas.ShouldBe(["7"]); // Completada (3); la 102 solo cuenta la de estado 4 (la 7, en estado 2, no)
+        lote[1].UnidadesAceptadas.ShouldBe(["9"]);
+        (await origen.TercerosAsync("101", 10, CancellationToken.None)).Select(t => t.Clave).ShouldBe(["102"]);
+        (await origen.TerceroAsync("101", CancellationToken.None))!.Clave.ShouldBe("101");
+        (await origen.TerceroAsync("999", CancellationToken.None)).ShouldBeNull();
+        (await origen.TerceroAsync("no-numerico", CancellationToken.None)).ShouldBeNull();
+
+        var traduccion = lote[0].Traducir(Plataforma(), Hoy, null);
+        (traduccion.Sistema, traduccion.Clave, traduccion.ClaveLegado).ShouldBe(("portal", "101", "portal:101"));
+        traduccion.Tercero!.Identificacion.Numero.ShouldBe("900123456");
     }
 
     [Fact]
-    public void El_csv_de_rechazos_escapa_comas_comillas_y_formulas()
+    public void Sin_cadena_de_conexion_el_origen_conectado_responde_409_y_con_archivo_configurado_se_usa_el_archivo()
     {
-        var csv = ImportacionDePortalEndpoints.Csv(
-        [
-            new AvisoImportacionDto("portal:1", 1, "FICHA_GENERAL", null, "ciudad", "ciudad-sin-dane", "Sin \"DANE\", revisar", "=HYPERLINK(1)", null)
-        ]);
-        csv.Split("\r\n")[1].ShouldBe("portal:1,1,FICHA_GENERAL,,ciudad,ciudad-sin-dane,\"Sin \"\"DANE\"\", revisar\",'=HYPERLINK(1),");
+        var adaptador = new AdaptadorPortal(new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build());
+        Should.Throw<Validasoft.Dominio.Comun.ReglaDeNegocioException>(() => adaptador.Conectado()).Codigo.ShouldBe("origen-no-configurado");
+        Should.Throw<Validasoft.Dominio.Comun.ReglaDeNegocioException>(() => adaptador.Configurado()).Codigo.ShouldBe("origen-no-configurado");
+        Should.Throw<Validasoft.Dominio.Comun.ReglaDeNegocioException>(() => adaptador.ValidarArchivo("{ no es json")).Codigo.ShouldBe("archivo-invalido");
     }
 }

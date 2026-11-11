@@ -5,12 +5,39 @@ using Validasoft.Dominio.Terceros;
 
 namespace Validasoft.Dominio.Ficha;
 
-/// <summary>De dónde viene una versión: el tercero en el portal (F1); el importador (F4) y el sincronizador del Portal (FM-11) después.</summary>
+/// <summary>
+/// De dónde viene una versión: el tercero en su portal (F1), el importador de un sistema de origen (F4) o ese sistema por el
+/// sincronizador de coexistencia (FM-11). El sistema concreto va en el autor de la versión (<c>importador:{sistema}:…</c>,
+/// <c>sincronizador:{sistema}</c>). Los eventos guardados antes de generalizarlo dicen <c>Portal</c>: se leen como
+/// <see cref="SistemaExterno"/> (<see cref="ConvertidorDeOrigenDeSeccion"/>).
+/// </summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(ConvertidorDeOrigenDeSeccion))]
 public enum OrigenDeSeccion
 {
     Tercero,
     Importada,
-    Portal
+    SistemaExterno
+}
+
+/// <summary>Lee y escribe <see cref="OrigenDeSeccion"/> como texto; el valor antiguo <c>Portal</c> se lee como <c>SistemaExterno</c> (upcasting de lo ya guardado).</summary>
+public sealed class ConvertidorDeOrigenDeSeccion : System.Text.Json.Serialization.JsonConverter<OrigenDeSeccion>
+{
+    public override OrigenDeSeccion Read(ref System.Text.Json.Utf8JsonReader reader, Type tipo, System.Text.Json.JsonSerializerOptions opciones)
+    {
+        if (reader.TokenType == System.Text.Json.JsonTokenType.Number && reader.TryGetInt32(out var numero) && Enum.IsDefined(typeof(OrigenDeSeccion), numero))
+            return (OrigenDeSeccion)numero;
+        var texto = reader.GetString();
+        return texto switch
+        {
+            "Tercero" => OrigenDeSeccion.Tercero,
+            "Importada" => OrigenDeSeccion.Importada,
+            "SistemaExterno" or "Portal" => OrigenDeSeccion.SistemaExterno,
+            _ => throw new System.Text.Json.JsonException($"Origen de sección desconocido: {texto}.")
+        };
+    }
+
+    public override void Write(System.Text.Json.Utf8JsonWriter escritor, OrigenDeSeccion valor, System.Text.Json.JsonSerializerOptions opciones) =>
+        escritor.WriteStringValue(valor.ToString());
 }
 
 /// <summary>Versión de un documento de la bóveda que respalda la versión de la sección (FM-5), con su tipo canónico.</summary>
@@ -188,8 +215,8 @@ public sealed class SeccionDeFicha
     }
 
     /// <summary>
-    /// Solo el cambio que hace el tercero exige soporte (FM-20). Las versiones que llegan del legado (<c>Importada</c>, <c>Portal</c>)
-    /// no: su respaldo es el Portal, que no guarda el soporte de cada cambio, y exigirlo dejaría incompleta toda versión migrada
+    /// Solo el cambio que hace el tercero exige soporte (FM-20). Las versiones que llegan de un sistema de origen (<c>Importada</c>, <c>SistemaExterno</c>)
+    /// no: su respaldo es ese sistema, que no guarda el soporte de cada cambio, y exigirlo dejaría incompleta toda versión migrada
     /// (F4, FM-41). La empresa las revisa igual en la revalidación (F2).
     /// </summary>
     public static bool ExigeSoporteDelCambio(OrigenDeSeccion origen) => origen == OrigenDeSeccion.Tercero;

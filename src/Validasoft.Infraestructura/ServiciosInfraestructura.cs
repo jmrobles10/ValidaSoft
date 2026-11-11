@@ -58,7 +58,7 @@ public static class ServiciosInfraestructura
     public const string ColaIa = "ia";
 
     /// <summary>
-    /// Cola local durable y <b>secuencial</b> del importador del Portal (F4): una corrida a la vez, que se reanuda desde su cursor si
+    /// Cola local durable y <b>secuencial</b> del importador genérico (F4): una corrida a la vez, que se reanuda desde su cursor si
     /// el proceso cae.
     /// </summary>
     public const string ColaImportacion = "importacion";
@@ -83,8 +83,8 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<IContextoSolicitud, ContextoDesdeHttp>();
         servicios.AddSingleton<IGeneradorDeApiKeys, GeneradorDeApiKeys>();
         servicios.AddSingleton<ICacheDeCredenciales, CacheDeCredenciales>();
-        // Origen del importador y del sincronizador del Portal (F4, FM-39): configuración Validasoft:Importacion:Portal.
-        servicios.AddSingleton<Aplicacion.Ficha.IFabricaDeOrigenesPortal, Portal.FabricaDeOrigenesPortal>();
+        // Los adaptadores de origen (IAdaptadorDeOrigen) los registra quien compone la aplicación; sin ninguno el importador responde 404.
+        servicios.AddSingleton<Aplicacion.Importacion.RegistroDeAdaptadores>();
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
@@ -249,7 +249,7 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
-        opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
+        opciones.PublishMessage<Aplicacion.Importacion.EjecutarImportacion>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))

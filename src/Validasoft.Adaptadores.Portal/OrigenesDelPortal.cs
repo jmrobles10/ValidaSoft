@@ -1,9 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Validasoft.Dominio.Comun;
-using Validasoft.Dominio.Ficha.Portal;
 
-namespace Validasoft.Aplicacion.Ficha;
+namespace Validasoft.Adaptadores.Portal;
 
 /// <summary>
 /// De dónde lee el importador las filas del Portal (FM-39): los catálogos y, por tercero, sus secciones. Solo lectura. Dos
@@ -19,22 +18,6 @@ public interface IOrigenPortal
 
     /// <summary>Un tercero con todas sus secciones, o nulo si no existe.</summary>
     Task<TerceroDelPortal?> TerceroAsync(int terid, CancellationToken ct);
-}
-
-/// <summary>Orígenes que conoce la plataforma: el configurado (sincronizador), el de SQL Server y uno desde un JSON.</summary>
-public interface IFabricaDeOrigenesPortal
-{
-    /// <summary>
-    /// El de la configuración <c>Validasoft:Importacion:Portal</c>: <c>Archivo</c> (ruta de un JSON) si está, si no
-    /// <c>CadenaDeConexion</c> (SQL Server). Sin ninguno ⇒ 409 <c>origen-portal-no-configurado</c>.
-    /// </summary>
-    IOrigenPortal Configurado();
-
-    /// <summary>La BD del Portal (<c>Validasoft:Importacion:Portal:CadenaDeConexion</c>, sin valor por omisión). Sin cadena ⇒ 409.</summary>
-    IOrigenPortal SqlServer();
-
-    /// <summary>¿Hay una cadena de conexión configurada?</summary>
-    bool SqlServerConfigurado { get; }
 }
 
 /// <summary>Forma del JSON del origen archivo: los catálogos y los terceros, con los nombres de tabla y columna del Portal (sin distinguir mayúsculas).</summary>

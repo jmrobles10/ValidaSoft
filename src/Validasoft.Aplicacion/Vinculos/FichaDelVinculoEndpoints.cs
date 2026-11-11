@@ -66,8 +66,10 @@ public static class FichaDelVinculoEndpoints
             filas.Select(f => f.Datos).OfType<DatosGenerales>().FirstOrDefault(), filas.Select(f => f.Datos).OfType<DatosLegales>().FirstOrDefault());
         var cuenta = (await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, protector, ct)).Actual;
 
+        var referenciasDelTercero = await ReferenciasDeTerceroEndpoints.ListarAsync(empresa.Sesion, vinculo.TerceroId, ct);
+
         return new FichaDelVinculoDto(vinculo.Id, vinculo.EmpresaId, vinculo.TerceroId,
             [.. vinculo.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))], tercero.TipoPersona.ToString(), secciones,
-            ContenidoParaErp.Representante(representante), cuenta);
+            ContenidoParaErp.Representante(representante), cuenta, vinculo.Contactos.ADto(), referenciasDelTercero);
     }
 }

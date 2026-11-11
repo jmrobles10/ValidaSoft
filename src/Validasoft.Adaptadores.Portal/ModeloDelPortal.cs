@@ -1,4 +1,4 @@
-namespace Validasoft.Dominio.Ficha.Portal;
+namespace Validasoft.Adaptadores.Portal;
 
 // Modelo de origen del importador (F4, FM-39): las filas del Portal de Proveedores que necesita la ficha, con los nombres de
 // tabla y columna del Portal (C:\Fuentes_Git\PortalProveedores\backend\librerias\Code.Model\Entity\dbo y
