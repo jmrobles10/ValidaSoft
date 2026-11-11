@@ -13,7 +13,7 @@ const SCOPES = [
   'configuracion:escribir', 'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar',
   'auditoria:leer', 'auditoria:exportar', 'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar',
   'expedientes:exportar', 'documentos:leer', 'documentos:descargar', 'certificados:leer', 'eventos:leer', 'webhooks:administrar',
-  'verificaciones:escribir', 'cumplimiento:decidir',
+  'verificaciones:escribir', 'cumplimiento:decidir', 'sesiones-tercero:crear',
 ];
 
 export interface Persona extends PersonaDelSistema {

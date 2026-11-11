@@ -2,13 +2,13 @@ using Validasoft.Dominio.Terceros;
 
 namespace Validasoft.Dominio.Ficha;
 
-/// <summary>De dónde sale una calidad tributaria del Portal (F3, FM-33).</summary>
+/// <summary>De dónde sale una calidad tributaria (F3, FM-33): datos tributarios genéricos de Colombia, para cualquier ERP.</summary>
 public enum OrigenDeCalidad
 {
     /// <summary>De los códigos de la casilla 53 del RUT: con alguno de los códigos ⇒ sí; sin ninguno ⇒ no.</summary>
     CodigoDian,
 
-    /// <summary>De un dato de la sección tributaria que no está en la casilla 53 (ICA es municipal).</summary>
+    /// <summary>De un dato de la sección tributaria que no está en la casilla 53 (ICA es municipal; la exención de CREE se declara).</summary>
     DatoDeLaSeccion,
 
     /// <summary>No se puede derivar de lo que guarda la ficha: va como <c>null</c> con su nota.</summary>
@@ -16,17 +16,15 @@ public enum OrigenDeCalidad
 }
 
 /// <summary>
-/// Fila de la tabla de las calidades: la calidad (clave camelCase en el contenido), el campo del PUT de terceros de AyF que
-/// alimenta (nulo si AyF no la recibe), el campo de <c>TerInfoTributaria</c> del Portal, de dónde sale, los códigos DIAN que
-/// la dan y la fuente o la nota.
+/// Fila de la tabla de las calidades: la calidad (clave camelCase en el contenido), de dónde sale, los códigos DIAN que la dan y la
+/// fuente o la nota. A qué campo de cada ERP corresponde es asunto del adaptador de ese ERP (docs/08 §3.4), no del núcleo.
 /// </summary>
-public sealed record ReglaDeCalidad(string Calidad, string? CampoAyf, string CampoPortal, OrigenDeCalidad Origen, IReadOnlyList<string> Codigos,
-    string Nota);
+public sealed record ReglaDeCalidad(string Calidad, OrigenDeCalidad Origen, IReadOnlyList<string> Codigos, string Nota);
 
 /// <summary>
-/// Las calidades S/N del Portal (<c>TerInfoTributaria</c>) derivadas de lo aceptado: las 13 que recibe el PUT de terceros de
-/// AyF más «autorretenedor RFT», que el Portal guarda y AyF no recibe. <c>null</c> = no se puede derivar (ver
-/// <see cref="CalidadesTributarias.Tabla"/>): el SRM conserva lo que AyF ya tiene.
+/// Las calidades tributarias sí/no de un tercero en Colombia, derivadas de lo aceptado (códigos de la casilla 53 del RUT y datos
+/// declarados de la sección tributaria). <c>null</c> = no se puede derivar ni se declaró (ver <see cref="CalidadesTributarias.Tabla"/>):
+/// el sistema que recibe conserva lo que ya tenga.
 /// </summary>
 public sealed record CalidadesTributarias(
     bool? ResponsableIva,
@@ -42,7 +40,8 @@ public sealed record CalidadesTributarias(
     bool? ProfesionalIndependiente,
     bool? ExentoRetencion,
     bool? AgenteRetenedorIva,
-    bool? ObligadoAFacturar)
+    bool? ObligadoAFacturar,
+    bool? ExentoReteCree = null)
 {
     private const string Casilla53 =
         "Casilla 53 del RUT (Resolución DIAN 000110 de 2021, anexo de responsabilidades; catálogo responsabilidades-dian).";
@@ -55,31 +54,33 @@ public sealed record CalidadesTributarias(
     /// </summary>
     public static readonly IReadOnlyList<ReglaDeCalidad> Tabla =
     [
-        new("responsableIva", "RegimenIva", "ResponsableIVA", OrigenDeCalidad.CodigoDian, ["48", "11"],
+        new("responsableIva", OrigenDeCalidad.CodigoDian, ["48", "11"],
             $"48 Impuesto sobre las ventas (IVA); 11 Ventas régimen común (histórico). Con 49 o 53 (no responsable) ⇒ no. {Casilla53}"),
-        new("autorretenedor", "AutoRetenedor", "Autorretenedor", OrigenDeCalidad.CodigoDian, ["15"], $"15 Autorretenedor. {Casilla53}"),
-        new("declaranteRenta", "DeclaranteRenta", "Declarante", OrigenDeCalidad.CodigoDian, ["05", "04"],
+        new("autorretenedor", OrigenDeCalidad.CodigoDian, ["15"], $"15 Autorretenedor. {Casilla53}"),
+        new("declaranteRenta", OrigenDeCalidad.CodigoDian, ["05", "04"],
             $"05 Renta régimen ordinario; 04 Renta régimen tributario especial. {Casilla53}"),
-        new("granContribuyente", "GranContribuyente", "GranContribuyente", OrigenDeCalidad.CodigoDian, ["13"], $"13 Gran contribuyente. {Casilla53}"),
-        new("autorretenedorIca", "AutoRetenedorICA", "AutoRetenedorICA", OrigenDeCalidad.DatoDeLaSeccion, [],
+        new("granContribuyente", OrigenDeCalidad.CodigoDian, ["13"], $"13 Gran contribuyente. {Casilla53}"),
+        new("autorretenedorIca", OrigenDeCalidad.DatoDeLaSeccion, [],
             "ICA es municipal y no está en la casilla 53: sale de autorretenedor_ica de la sección tributaria (null si no se diligenció)."),
-        new("regimenSimple", "RegimenSimple", "RegimenSimple", OrigenDeCalidad.CodigoDian, ["47"], $"47 Régimen simple de tributación (SIMPLE). {Casilla53}"),
-        new("granContribuyenteBogota", "GranContribuyenteBta", "GranContribuyenteBta", OrigenDeCalidad.NoDerivable, [],
+        new("regimenSimple", OrigenDeCalidad.CodigoDian, ["47"], $"47 Régimen simple de tributación (SIMPLE). {Casilla53}"),
+        new("granContribuyenteBogota", OrigenDeCalidad.NoDerivable, [],
             "Calidad distrital (Secretaría de Hacienda de Bogotá): no está en la casilla 53 ni en la ficha."),
-        new("regimenEspecial", "RegimenEspecial", "RegimenEspecial", OrigenDeCalidad.CodigoDian, ["04"],
+        new("regimenEspecial", OrigenDeCalidad.CodigoDian, ["04"],
             $"04 Impuesto sobre la renta régimen tributario especial. {Casilla53}"),
-        new("autorretenedorRft", null, "AutoretenedorRFT", OrigenDeCalidad.NoDerivable, [],
-            "La autorretención especial a título de renta (Decreto 2201 de 2016) no tiene código propio en la casilla 53. AyF no la recibe."),
-        new("descuentoSenaFic", "DescuentoSenaFic", "DescuentoSENAFIC", OrigenDeCalidad.NoDerivable, [],
+        new("autorretenedorRft", OrigenDeCalidad.NoDerivable, [],
+            "La autorretención especial a título de renta (Decreto 2201 de 2016) no tiene código propio en la casilla 53."),
+        new("descuentoSenaFic", OrigenDeCalidad.NoDerivable, [],
             "Aportes parafiscales (SENA/FIC): no están en la casilla 53 ni en la ficha."),
-        new("profesionalIndependiente", "ProfesionalIndependiente", "ProfesionalIndependiente", OrigenDeCalidad.NoDerivable, [],
+        new("profesionalIndependiente", OrigenDeCalidad.NoDerivable, [],
             "Condición del pago (servicios personales), no una responsabilidad del RUT."),
-        new("exentoRetencion", "ExentoRetefuente", "ExentoRetencionFuente", OrigenDeCalidad.NoDerivable, [],
+        new("exentoRetencion", OrigenDeCalidad.NoDerivable, [],
             "La exención de retención la soporta un certificado o la ley, no la casilla 53."),
-        new("agenteRetenedorIva", "AgenteRetenedorIVA", "AgenteRetenedorIVA", OrigenDeCalidad.CodigoDian, ["09", "23"],
+        new("agenteRetenedorIva", OrigenDeCalidad.CodigoDian, ["09", "23"],
             $"09 Retención en la fuente en el impuesto sobre las ventas; 23 Agente de retención en el impuesto sobre las ventas. El 07 es retención a título de renta y no cuenta. {Casilla53}"),
-        new("obligadoAFacturar", "NoObligadoFacturar", "NoObligFacturar", OrigenDeCalidad.CodigoDian, ["52", "16", "37"],
-            $"52 Facturador electrónico; 16 Obligación facturar por ingresos excluidos; 37 Obligado a facturar electrónicamente (histórico). AyF recibe la negación (NoObligadoFacturar = no obligado). {Casilla53}")
+        new("obligadoAFacturar", OrigenDeCalidad.CodigoDian, ["52", "16", "37"],
+            $"52 Facturador electrónico; 16 Obligación facturar por ingresos excluidos; 37 Obligado a facturar electrónicamente (histórico). {Casilla53}"),
+        new("exentoReteCree", OrigenDeCalidad.DatoDeLaSeccion, [],
+            "La exención de la retención del CREE no está en la casilla 53: sale de exento_rete_cree de la sección tributaria (null si no se diligenció).")
     ];
 
     /// <summary>Calidades que no se pueden derivar de la ficha (van como <c>null</c>), con su nota.</summary>
@@ -89,7 +90,7 @@ public sealed record CalidadesTributarias(
     /// Función pura: las calidades de unas responsabilidades (códigos de la casilla 53, con o sin cero a la izquierda) y del
     /// <c>autorretenedor_ica</c> declarado. Lo derivable de un código es sí con el código y no sin él; lo no derivable, <c>null</c>.
     /// </summary>
-    public static CalidadesTributarias Derivar(IEnumerable<string>? responsabilidades, bool? autorretenedorIca)
+    public static CalidadesTributarias Derivar(IEnumerable<string>? responsabilidades, bool? autorretenedorIca, bool? exentoReteCree = null)
     {
         var codigos = (responsabilidades ?? []).Select(c => (c ?? string.Empty).Trim().PadLeft(2, '0')).ToHashSet(StringComparer.Ordinal);
 
@@ -99,7 +100,7 @@ public sealed record CalidadesTributarias(
             return regla.Origen switch
             {
                 OrigenDeCalidad.CodigoDian => regla.Codigos.Any(codigos.Contains),
-                OrigenDeCalidad.DatoDeLaSeccion => autorretenedorIca,
+                OrigenDeCalidad.DatoDeLaSeccion => regla.Calidad == "exentoReteCree" ? exentoReteCree : autorretenedorIca,
                 _ => null
             };
         }
@@ -107,14 +108,35 @@ public sealed record CalidadesTributarias(
         return new CalidadesTributarias(
             Valor("responsableIva"), Valor("autorretenedor"), Valor("declaranteRenta"), Valor("granContribuyente"), Valor("autorretenedorIca"),
             Valor("regimenSimple"), Valor("granContribuyenteBogota"), Valor("regimenEspecial"), Valor("autorretenedorRft"), Valor("descuentoSenaFic"),
-            Valor("profesionalIndependiente"), Valor("exentoRetencion"), Valor("agenteRetenedorIva"), Valor("obligadoAFacturar"));
+            Valor("profesionalIndependiente"), Valor("exentoRetencion"), Valor("agenteRetenedorIva"), Valor("obligadoAFacturar"), Valor("exentoReteCree"));
     }
 
     /// <summary>Las calidades de los datos tributarios aceptados.</summary>
-    public static CalidadesTributarias Derivar(DatosTributarios datos) => Derivar(datos.Responsabilidades, datos.AutorretenedorIca);
+    public static CalidadesTributarias Derivar(DatosTributarios datos) => Derivar(datos.Responsabilidades, datos.AutorretenedorIca, datos.ExentoReteCree);
+
+    /// <summary>El valor de una calidad por su clave (la de <see cref="ReglaDeCalidad.Calidad"/>).</summary>
+    public bool? ValorDe(string calidad) => calidad switch
+    {
+        "responsableIva" => ResponsableIva,
+        "autorretenedor" => Autorretenedor,
+        "declaranteRenta" => DeclaranteRenta,
+        "granContribuyente" => GranContribuyente,
+        "autorretenedorIca" => AutorretenedorIca,
+        "regimenSimple" => RegimenSimple,
+        "granContribuyenteBogota" => GranContribuyenteBogota,
+        "regimenEspecial" => RegimenEspecial,
+        "autorretenedorRft" => AutorretenedorRft,
+        "descuentoSenaFic" => DescuentoSenaFic,
+        "profesionalIndependiente" => ProfesionalIndependiente,
+        "exentoRetencion" => ExentoRetencion,
+        "agenteRetenedorIva" => AgenteRetenedorIva,
+        "obligadoAFacturar" => ObligadoAFacturar,
+        "exentoReteCree" => ExentoReteCree,
+        _ => throw new ArgumentOutOfRangeException(nameof(calidad), calidad, "Calidad tributaria desconocida.")
+    };
 }
 
-/// <summary>De qué sección sale el representante legal que va a AyF.</summary>
+/// <summary>De qué sección sale el representante legal principal.</summary>
 public enum OrigenDelRepresentante
 {
     /// <summary>Persona natural: el propio tercero, de la información general.</summary>
@@ -124,12 +146,11 @@ public enum OrigenDelRepresentante
     Legal
 }
 
-/// <summary>El representante legal que recibe AyF y de dónde salió (<see cref="Indice"/>: posición en <c>personas[]</c> de la legal).</summary>
+/// <summary>El representante legal principal que recibe el ERP y de dónde salió (<see cref="Indice"/>: posición en <c>personas[]</c> de la legal).</summary>
 public sealed record RepresentanteLegalPrincipal(OrigenDelRepresentante Origen, PersonaRelacionada Persona, int? Indice)
 {
     /// <summary>
-    /// La misma regla que usa hoy el SRM al armar el PUT de terceros de AyF (<c>UtilidadesProveedor.RepresentanteLegal</c>):
-    /// persona natural ⇒ el propio tercero (nombres, apellidos, identificación y contacto de la General); jurídica o consorcio
+    /// La regla que ya usaban los sistemas de origen para el representante de un tercero: persona natural ⇒ el propio tercero (nombres, apellidos, identificación y contacto de la General); jurídica o consorcio
     /// ⇒ de las personas con rol <c>RepresentanteLegal</c>, la primera (menor orden) cuya representación es «Principal»; si
     /// ninguna lo es, la primera. Sin representantes ⇒ <c>null</c>. Función pura.
     /// </summary>
@@ -169,6 +190,6 @@ public sealed record RepresentanteLegalPrincipal(OrigenDelRepresentante Origen, 
     public static bool EsPrincipal(string? tipoRepresentacion) =>
         ReglasDeCatalogo.NormalizarTexto(tipoRepresentacion).StartsWith("principal", StringComparison.Ordinal);
 
-    /// <summary>Nombre completo como lo recibe AyF (nombres y apellidos con un espacio).</summary>
+    /// <summary>Nombre completo (nombres y apellidos con un espacio).</summary>
     public string Nombre => string.Join(' ', new[] { Persona.Nombres, Persona.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()));
 }

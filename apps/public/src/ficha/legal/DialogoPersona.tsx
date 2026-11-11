@@ -76,6 +76,7 @@ export function DialogoPersona({ inicial, nueva, mensaje, onGuardar, onCerrar }:
             <CampoSiNo etiqueta={t('ficha.legal.vinculoPep')} valor={p.vinculo_pep} onCambiar={(v) => cambiar({ vinculo_pep: v })} mensaje={mensaje('vinculo_pep')} />
             <Rejilla>
               <CampoFechaFicha etiqueta={t('ficha.legal.fechaExpedicion')} valor={p.fecha_expedicion} onCambiar={(v) => cambiar({ fecha_expedicion: v })} mensaje={mensaje('fecha_expedicion')} />
+              <CampoTexto etiqueta={t('ficha.legal.lugarExpedicion')} valor={p.lugar_expedicion} onCambiar={(v) => cambiar({ lugar_expedicion: v })} mensaje={mensaje('lugar_expedicion')} maxLength={100} />
               <CampoFechaFicha etiqueta={t('ficha.legal.fechaNacimiento')} valor={p.fecha_nacimiento} onCambiar={(v) => cambiar({ fecha_nacimiento: v })} mensaje={mensaje('fecha_nacimiento')} />
               <SelectorUnico etiqueta={t('ficha.legal.nacionalidad')} opciones={PAISES} valor={p.nacionalidad} onCambiar={(v) => cambiar({ nacionalidad: v })} mensaje={mensaje('nacionalidad')} />
               <SelectorUnico etiqueta={t('ficha.legal.residencia')} opciones={PAISES} valor={p.residencia} onCambiar={(v) => cambiar({ residencia: v })} mensaje={mensaje('residencia')} />

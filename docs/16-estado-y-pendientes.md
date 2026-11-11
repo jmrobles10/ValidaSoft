@@ -71,6 +71,7 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 |---|---|---|
 | `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones**; plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. Registro VV- |
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | **Terminada, con la verificación completa (§4.10).** Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
+| `feature/integracion-abierta` | Principio de producto | **Integración abierta (IO-1…IO-10).** El núcleo no nombra ni asume el SRM, el Portal ni AyF: importador genérico con adaptador de origen (el Portal es un adaptador opcional), referencias externas por sistema (tercero y vínculo, idempotentes y privadas de cada tenant), contactos por empresa (nombre, cargo, correo, teléfono, rol), datos de pago genéricos (banco del catálogo con código de compensación y SWIFT, contacto de pagos, lugar de expedición, `ExentoReteCree`) y embebido genérico del tercero (`POST /sesiones-tercero`, `/embed/:componente`, `montarEmbebido`). Guía «integrar un sistema nuevo en 5 pasos» y contrato del interruptor en [08](08-integracion-y-migracion.md) §2.2, §2.3 y §3.4; auditoría de acoplamiento en §9 |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
 ### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
@@ -144,11 +145,10 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 ### 4.2 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre
   las empresas como los del tercero.
-- **Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.
+- ~~**Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.~~ Resuelto en `feature/integracion-abierta` (IO-4): contactos por vínculo con cargo, correo, teléfono y rol.
 
 ### 4.3 Ficha — pendientes (FM-38, FM-55)
-- Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos, que hoy envía el SRM a AyF.
-- Lugar de expedición del documento del representante (AyF `Expedicion`). `ExentoReteCREE`.
+- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`. Pendiente: el lugar y la fecha de expedición cuando el representante es el propio tercero (persona natural).
 - Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).
 - Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.
 - La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.
@@ -172,10 +172,10 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 
 ### 4.5 H9 — pendientes
 - ~~Sandbox con datos aislados~~ **Hecho (SB-1…SB-6, 2026-11-11):** tenant hermano con la configuración del grupo, buzón de correo, IA y listas simuladas y reinicio ([05 §2.6.3](05-api-contratos-y-webhooks.md), [07 §5.4](07-seguridad-identidad-y-tenancy.md)). Falta, como mejora, una pantalla en la consola con el buzón y el botón de reinicio (hoy es por API y SDK; la llave de prueba sí se emite desde Configuración › API keys).
-- Embebido del tercero para el Portal: `POST /sesiones-tercero` y el componente `<validasoft-expediente>`.
+- ~~Embebido del tercero para el Portal: `POST /sesiones-tercero` y el componente `<validasoft-expediente>`.~~ Resuelto en `feature/integracion-abierta` (IO-6) para cualquier sistema: `POST /sesiones-tercero`, `/embed/:componente` (bóveda, expediente, ficha) y `montarEmbebido` en el SDK. Pendiente: los eventos de negocio del iframe (`documento-subido`, `expediente-completo`) y un Web Component empaquetado.
 - `POST /documentos` para integraciones.
 - **Carga de la consulta de certificación:** el script k6 (`tests/carga`) y su medida local están hechos; la consulta pasó de cuatro viajes a la base a uno (p50 secuencial 23,5 → 8,1 ms), pero **p99 < 100 ms a 500 rps no se pudo certificar** en la máquina de desarrollo compartida ([11, H9](11-trazabilidad-por-hito.md)). Falta repetirla en un entorno dedicado; si no llega, la proyección persistida `EstadoCertificacionTercero` es el siguiente paso.
-- **Publicar los paquetes NuGet y npm:** el empaquetado, la versión única, los README/CHANGELOG, ESM + CJS y el workflow `sdk-publicar.yml` están listos y probados sin publicar. Faltan **la decisión de licencia de Legal** (hoy `LICENCIA-SDK.md` es provisional), crear el entorno `publicacion-sdk` y los secretos `NUGET_API_KEY` y `NPM_TOKEN`, y poner el primer tag `sdk-v1.0.0` ([08 §2.3](08-integracion-y-migracion.md)). El SRM portó el verificador de firma porque el SDK no está publicado: cuando lo esté, debe adoptarlo.
+- **Publicar los paquetes NuGet y npm:** el empaquetado, la versión única, los README/CHANGELOG, ESM + CJS y el workflow `sdk-publicar.yml` están listos y probados sin publicar. Faltan **la decisión de licencia de Legal** (hoy `LICENCIA-SDK.md` es provisional), crear el entorno `publicacion-sdk` y los secretos `NUGET_API_KEY` y `NPM_TOKEN`, y poner el primer tag `sdk-v1.0.0` ([08 §2.4](08-integracion-y-migracion.md)). El SRM portó el verificador de firma porque el SDK no está publicado: cuando lo esté, debe adoptarlo.
 - La caché de API keys se invalida al instante solo en el nodo que rota.
 - Sandbox: las llaves de prueba emitidas antes de SB-2 (sin sandbox creado) responden 401 hasta que se cree con `POST /api/v1/sandbox`; no hay límite de tamaño del buzón ni retención automática del sandbox.
 

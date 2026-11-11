@@ -34,4 +34,6 @@ export interface CalidadesTributariasDto {
   agenteRetenedorIva: boolean | null;
   /** @nullable */
   obligadoAFacturar: boolean | null;
+  /** @nullable */
+  exentoReteCree?: boolean | null;
 }

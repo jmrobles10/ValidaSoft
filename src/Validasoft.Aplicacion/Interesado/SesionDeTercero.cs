@@ -15,6 +15,15 @@ public static class ReclamosTercero
     /// <summary>Un reclamo por vínculo: <c>vinculoId|tenantId|empresaId</c>.</summary>
     public const string Vinculos = "vinculos";
 
+    /// <summary>Solo en las sesiones embebidas (IO-5): <c>true</c>, el código del sistema que la abrió, el origen de la página que embebe y el componente.</summary>
+    public const string Embebido = "embebido";
+
+    public const string Sistema = "sistema";
+
+    public const string Origen = "origen";
+
+    public const string Componente = "componente";
+
     /// <summary>Nombre de la política de autorización de las rutas <c>/public/v1</c> que exigen sesión de tercero.</summary>
     public const string Politica = "tercero";
 }
@@ -26,11 +35,18 @@ public sealed record VinculoEnSesion(Guid VinculoId, Guid TenantId, Guid Empresa
 }
 
 /// <summary>
+/// De dónde viene una sesión embebida (IO-5): el sistema integrador que la pidió con su API key, el origen exacto de la página que
+/// aloja el iframe (uno de los permitidos de ese sistema) y qué componente se monta (<c>boveda</c>, <c>expediente</c> o <c>ficha</c>).
+/// </summary>
+public sealed record EmbebidoDeSesion(string Sistema, string Origen, string Componente, TimeSpan Duracion);
+
+/// <summary>
 /// Sesión del tercero leída del token: quién es, con qué correo entró, si verificó OTP y qué vínculos puede ver.
 /// Los vínculos se fijan al abrir la sesión (los de ese tercero cuyo correo coincide con el del enlace); un vínculo que no
-/// está aquí responde 404.
+/// está aquí responde 404. <see cref="Embebida"/>: la sesión la abrió un sistema integrador para un iframe (un solo vínculo, sin
+/// cookie de refresco).
 /// </summary>
-public sealed record SesionDeTercero(Guid TerceroId, string Correo, bool OtpVerificado, IReadOnlyList<VinculoEnSesion> Vinculos)
+public sealed record SesionDeTercero(Guid TerceroId, string Correo, bool OtpVerificado, IReadOnlyList<VinculoEnSesion> Vinculos, EmbebidoDeSesion? Embebida = null)
 {
     public static SesionDeTercero De(ClaimsPrincipal usuario)
     {
@@ -44,8 +60,13 @@ public sealed record SesionDeTercero(Guid TerceroId, string Correo, bool OtpVeri
             .Select(p => new VinculoEnSesion(Guid.Parse(p[0]), Guid.Parse(p[1]), Guid.Parse(p[2])))
             .ToList();
 
+        var embebida = string.Equals(usuario.FindFirstValue(ReclamosTercero.Embebido), "true", StringComparison.OrdinalIgnoreCase)
+            ? new EmbebidoDeSesion(usuario.FindFirstValue(ReclamosTercero.Sistema) ?? string.Empty, usuario.FindFirstValue(ReclamosTercero.Origen) ?? string.Empty,
+                usuario.FindFirstValue(ReclamosTercero.Componente) ?? string.Empty, TimeSpan.Zero)
+            : null;
+
         return new SesionDeTercero(terceroId, usuario.FindFirstValue(ReclamosTercero.Correo) ?? string.Empty,
-            string.Equals(usuario.FindFirstValue(ReclamosTercero.OtpVerificado), "true", StringComparison.OrdinalIgnoreCase), vinculos);
+            string.Equals(usuario.FindFirstValue(ReclamosTercero.OtpVerificado), "true", StringComparison.OrdinalIgnoreCase), vinculos, embebida);
     }
 
     public VinculoEnSesion VinculoRequerido(Guid vinculoId) =>
@@ -56,6 +77,7 @@ public sealed record SesionDeTercero(Guid TerceroId, string Correo, bool OtpVeri
 /// <summary>Emite el JWT de la sesión del tercero (HS256, 30 minutos, audiencia <c>validasoft:tercero</c>).</summary>
 public interface IEmisorDeSesionesTercero
 {
+    /// <summary>Con <paramref name="embebido"/> (IO-5) el token es de la sesión embebida: dura lo que dice y lleva sistema, origen y componente.</summary>
     (string Token, DateTimeOffset Expira) Emitir(Guid terceroId, string correo, bool otpVerificado, IReadOnlyList<VinculoEnSesion> vinculos,
-        DateTimeOffset ahora);
+        DateTimeOffset ahora, EmbebidoDeSesion? embebido = null);
 }

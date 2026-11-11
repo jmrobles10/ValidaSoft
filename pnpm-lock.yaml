@@ -95,6 +95,9 @@ importers:
       '@validasoft/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@validasoft/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@validasoft/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -146,6 +149,9 @@ importers:
       '@validasoft/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@validasoft/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       '@validasoft/ui':
         specifier: workspace:*
         version: link:../../packages/ui

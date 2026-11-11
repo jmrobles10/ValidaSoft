@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * Dirección en el formato estructurado de AyF (opcional, FM-19): «Calle 45 # 12 - 08, Oficina 301». Va plegada; se abre
+ * Dirección en el formato estructurado colombiano (opcional, FM-19): «Calle 45 # 12 - 08, Oficina 301». Va plegada; se abre
  * sola si ya tiene datos o si el servidor marcó alguno de sus campos.
  */
 export function DireccionPorPartes({ valor, onCambiar, mensaje, deshabilitado }: Props) {

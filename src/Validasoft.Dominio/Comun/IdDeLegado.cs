@@ -4,7 +4,7 @@ using System.Text;
 namespace Validasoft.Dominio.Comun;
 
 /// <summary>
-/// Identidad de lo que se importa del legado (docs/08 §6.2): <c>ClaveLegado</c> (p. ej. <c>portal:48112</c>) y su id en
+/// Identidad de lo que se importa de un sistema de origen (docs/08 §6.2): <c>ClaveLegado</c> (<c>{sistema}:{clave}</c>) y su id en
 /// Validasoft, un UUID v5 (RFC 9562, nombre con SHA-1) con el espacio de nombres fijo de Validasoft. Reimportar da el mismo
 /// id, así que la importación es idempotente y las referencias se resuelven sin tabla de equivalencias.
 /// </summary>
@@ -31,9 +31,9 @@ public static class IdDeLegado
         return new Guid(hash.AsSpan(0, 16), bigEndian: true);
     }
 
-    /// <summary>Clave del tercero del Portal de Proveedores: <c>portal:{Terid}</c>.</summary>
-    public static string ClaveTerceroPortal(int terid) => $"portal:{terid.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+    /// <summary>Clave del legado de un tercero: <c>{sistema}:{clave}</c> con el sistema en minúsculas (p. ej. <c>portal:48112</c>).</summary>
+    public static string Clave(string sistema, string clave) => $"{sistema.Trim().ToLowerInvariant()}:{clave.Trim()}";
 
-    /// <summary>Id en Validasoft del tercero del Portal (UUID v5 de su <see cref="ClaveTerceroPortal"/>).</summary>
-    public static Guid TerceroPortal(int terid) => UuidV5(ClaveTerceroPortal(terid));
+    /// <summary>Id en Validasoft de un tercero importado de un sistema de origen (UUID v5 de su <see cref="Clave"/>).</summary>
+    public static Guid Tercero(string sistema, string clave) => UuidV5(Clave(sistema, clave));
 }

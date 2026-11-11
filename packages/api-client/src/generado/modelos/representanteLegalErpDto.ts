@@ -30,4 +30,6 @@ export interface RepresentanteLegalErpDto {
   correo: string | null;
   /** @nullable */
   telefono: string | null;
+  /** @nullable */
+  lugarExpedicion?: string | null;
 }

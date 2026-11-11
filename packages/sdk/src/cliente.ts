@@ -5,21 +5,28 @@ import type {
   CertificadoDelVinculoDto,
   CertificadoDto,
   ConsultaCertificacionDto,
+  ContactoDeEmpresaDto,
   CorreoDePruebaDto,
+  CrearSesionEmbebidaDto,
+  CrearTerceroDto,
   CrearVinculoDto,
   DescargaDto,
   EnlaceInvitacionDto,
   EventoPublicoDto,
   ExpedienteDto,
+  FichaDelVinculoDto,
   InvitacionDto,
   JustificacionDto,
   PaginaDto,
   PaginaEventosDto,
+  ReferenciaExternaDto,
   SandboxDto,
   SesionUsuarioDto,
+  TerceroDto,
   TipoEventoPublicoDto,
   VinculoDto,
 } from './tipos.js';
+import type { SesionEmbebidaDto } from './embebido.js';
 
 /** Respuesta de error de la API (Problem Details): `codigo` es el código estable de la regla para decidir en el integrador. */
 export class ErrorValidasoft extends Error {
@@ -216,7 +223,15 @@ export class ClienteValidasoft {
       obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/vinculos', cuerpo: vinculo, claveIdempotencia, reintentable: claveIdempotencia !== undefined }),
     obtener: (id: string) => obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/${q(id)}` }),
     porReferencia: (sistema: string, id: string) =>
-      obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/por-referencia?sistema=${q(sistema)}&id=${q(id)}` }),
+      obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/por-referencia?sistema=${q(sistema)}&clave=${q(id)}` }),
+    /** Agrega al vínculo la clave del sistema de la API key (idempotente; el mismo sistema con otra clave es 409). */
+    agregarReferencia: (id: string, referencia: Pick<ReferenciaExternaDto, 'id'> & Partial<ReferenciaExternaDto>) =>
+      obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/referencias`, cuerpo: referencia }),
+    /** Reemplaza los contactos del tercero con la empresa (lista completa; vacía = quitarlos). */
+    actualizarContactos: (id: string, contactos: ContactoDeEmpresaDto[]) =>
+      obtener<VinculoDto>(this.ctx, { metodo: 'PUT', ruta: `api/v1/vinculos/${q(id)}/contactos`, cuerpo: { contactos } }),
+    /** Lo aceptado por la empresa, el representante, la cuenta designada, los contactos y las referencias del vínculo. */
+    ficha: (id: string) => obtener<FichaDelVinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/${q(id)}/ficha` }),
     bloquear: (id: string, bloqueo: BloquearVinculoDto) => obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/bloquear`, cuerpo: bloqueo }),
     desbloquear: (id: string, justificacion: JustificacionDto) =>
       obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/desbloquear`, cuerpo: justificacion }),
@@ -320,7 +335,26 @@ export class ClienteValidasoft {
     },
   };
 
+  readonly terceros = {
+    /** Crea el tercero; con `referenciaExterna` (clave en el sistema de la API key) la creación es idempotente. */
+    crear: (tercero: CrearTerceroDto, claveIdempotencia?: string) =>
+      obtener<TerceroDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/terceros', cuerpo: tercero, claveIdempotencia, reintentable: claveIdempotencia !== undefined }),
+    /** Registra la clave del tercero en el sistema de la API key (idempotente); devuelve las claves del tenant. */
+    agregarReferencia: (id: string, referencia: Pick<ReferenciaExternaDto, 'id'> & Partial<ReferenciaExternaDto>) =>
+      obtener<ReferenciaExternaDto[]>(this.ctx, { metodo: 'POST', ruta: `api/v1/terceros/${q(id)}/referencias`, cuerpo: referencia }),
+    referencias: (id: string) => obtener<ReferenciaExternaDto[]>(this.ctx, { metodo: 'GET', ruta: `api/v1/terceros/${q(id)}/referencias` }),
+    /** Busca el tercero por la clave que le dio el sistema. 404 si no existe (o no es visible para el tenant). */
+    porReferencia: (sistema: string, clave: string) =>
+      obtener<TerceroDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/terceros/por-referencia?sistema=${q(sistema)}&clave=${q(clave)}`, conEmpresa: false }),
+  };
+
   readonly sesiones = {
+    /**
+     * Abre una sesión corta del tercero para embeber su bóveda, su expediente o su ficha en el iframe de la página `origen`
+     * (`POST /api/v1/sesiones-tercero`). El token se entrega al iframe por `postMessage` (ver `montarEmbebido`), nunca en la URL.
+     */
+    crearDelTercero: (sesion: CrearSesionEmbebidaDto) =>
+      obtener<SesionEmbebidaDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sesiones-tercero', cuerpo: sesion }),
     /**
      * Canjea la identidad delegada por un token de 30 minutos para el iframe (`Authorization: Bearer`). Solo desde
      * {@link ClienteValidasoft.comoUsuario}.

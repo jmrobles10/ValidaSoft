@@ -12,6 +12,8 @@ const rutas: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/empresas" replace /> },
       { path: 'entrar', element: <PaginaEntrar /> },
+      // Entrada de un sistema integrador (IO-5): bóveda, expediente o ficha dentro de su iframe, con la sesión que él entrega.
+      { path: 'embed/:componente', lazy: () => import('../embebido/PaginaEmbebida').then((m) => ({ Component: m.PaginaEmbebida })) },
       { path: 'e/:token', lazy: () => import('../enlace/PaginaEnlace').then((m) => ({ Component: m.PaginaEnlace })) },
       // Anónima: a donde lleva el QR del certificado (`{UrlPublica}/verificar/{folio}?huella=…`).
       { path: 'verificar/:folio', lazy: () => import('../verificacion/PaginaVerificacion').then((m) => ({ Component: m.PaginaVerificacion })) },

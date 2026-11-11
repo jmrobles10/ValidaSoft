@@ -34,7 +34,7 @@ export const SECCIONES_FICHA: readonly DefinicionSeccionFicha[] = [
     codigo: 'FICHA_TRIBUTARIA',
     porPeriodo: false,
     soloJuridica: false,
-    campos: ['responsabilidades', 'resolucion_gran_contribuyente', 'resolucion_autorretenedor', 'responsable_ica', 'autorretenedor_ica', 'ica'],
+    campos: ['responsabilidades', 'resolucion_gran_contribuyente', 'resolucion_autorretenedor', 'responsable_ica', 'autorretenedor_ica', 'exento_rete_cree', 'ica'],
   },
   {
     codigo: 'FICHA_FINANCIERA',

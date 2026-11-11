@@ -997,7 +997,7 @@ Hacia atrás: política de deprecación de 12 meses sobre v1 (H5). Hacia adelant
 | `@validasoft/sdk` | Hecho, fetch + Web Crypto (CN-6) | `packages/sdk` |
 | Guía de integración y ejemplo ejecutable | Hecho (CN-7) | 08 §2.1, `docs/ejemplos/IntegradorSrm` (`net7.0`) |
 | Pruebas | Unitarias del SDK (.NET y TS), integración con el SDK contra la API en memoria y e2e de consulta, pull + webhook y rotación | `IntegracionSdkApiTests.cs`, `e2e/pruebas/integracion.spec.ts` |
-| Pendiente | `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección persistida `EstadoCertificacionTercero` y medida de k6 en un entorno dedicado (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), primera publicación de los paquetes (la hace una persona con los secretos) | — |
+| Pendiente | `legacy.estadoTercero`, `POST /documentos` para integraciones, proyección persistida `EstadoCertificacionTercero` y medida de k6 en un entorno dedicado (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), primera publicación de los paquetes (la hace una persona con los secretos). `POST /sesiones-tercero` (embebido del tercero para cualquier sistema) quedó hecho en IO-6 ([integracion.md §8.1](integracion.md#81-el-tercero-embebido-bóveda-expediente-y-ficha)) | — |
 
 #### H9 — Sandbox, publicación de los SDK, carga y guía (2026-11-11, SB-1…SB-10)
 | Elemento | Estado | Dónde |

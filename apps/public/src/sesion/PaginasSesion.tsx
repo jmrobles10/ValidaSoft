@@ -4,6 +4,8 @@ import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, Link as RouterLink } from 'react-router';
 import { PaginaAcceso } from './PaginaAcceso';
+import { EsperandoSesion } from '../embebido/EsperandoSesion';
+import { MODO_EMBEBIDO } from '../embebido/modo';
 import { useSesionTercero } from './sesionTercero';
 
 /** Mientras se intenta recuperar la sesión con la cookie (al arrancar), un instante de espera. */
@@ -16,6 +18,8 @@ function Restaurando() {
 export function RequiereSesion() {
   const estado = useSesionTercero((s) => s.estado);
   if (estado === 'activa') return <Outlet />;
+  // Dentro del iframe de un sistema integrador la identidad la pone el sistema: nunca se pide el correo (IO-5).
+  if (MODO_EMBEBIDO) return <EsperandoSesion />;
   if (estado === 'restaurando') return <Restaurando />;
   return <PaginaAcceso motivo={estado} />;
 }

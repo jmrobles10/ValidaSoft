@@ -170,7 +170,7 @@ public static class ConsultaCertificacionEndpoints
             : [];
         var motivo = MotivoDeBloqueo(vinculo, certificado);
         var cuenta = vinculo.CuentaDesignada is { Estado: EstadoCuentaDesignada.Aprobada } designada
-            ? new CuentaDesignadaResumenDto("****" + designada.Cuenta.Ultimos4, designada.Cuenta.Banco)
+            ? new CuentaDesignadaResumenDto("****" + designada.Cuenta.Ultimos4, designada.Cuenta.Banco, designada.Cuenta.BancoCodigo, designada.Cuenta.BancoSwift)
             : null;
 
         return new ConsultaCertificacionDto(

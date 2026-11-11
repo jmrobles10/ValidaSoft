@@ -20,7 +20,7 @@ public sealed class EmisorDeSesionesTercero(IConfiguration configuracion) : IEmi
     public static readonly TimeSpan Duracion = TimeSpan.FromMinutes(30);
 
     public (string Token, DateTimeOffset Expira) Emitir(Guid terceroId, string correo, bool otpVerificado, IReadOnlyList<VinculoEnSesion> vinculos,
-        DateTimeOffset ahora)
+        DateTimeOffset ahora, EmbebidoDeSesion? embebido = null)
     {
         var reclamos = new List<Claim>
         {
@@ -32,8 +32,17 @@ public sealed class EmisorDeSesionesTercero(IConfiguration configuracion) : IEmi
             new(ReclamosTercero.OtpVerificado, otpVerificado ? "true" : "false")
         };
         reclamos.AddRange(vinculos.Select(v => new Claim(ReclamosTercero.Vinculos, v.Reclamo())));
+        if (embebido is not null)
+        {
+            // Un id propio por sesión: dos emitidas en el mismo segundo no son el mismo token (queda rastro de cuál se usó).
+            reclamos.Add(new Claim("jti", Guid.NewGuid().ToString("N")));
+            reclamos.Add(new Claim(ReclamosTercero.Embebido, "true"));
+            reclamos.Add(new Claim(ReclamosTercero.Sistema, embebido.Sistema));
+            reclamos.Add(new Claim(ReclamosTercero.Origen, embebido.Origen));
+            reclamos.Add(new Claim(ReclamosTercero.Componente, embebido.Componente));
+        }
 
-        var expira = ahora + Duracion;
+        var expira = ahora + (embebido?.Duracion ?? Duracion);
         var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = EmisorDeSesiones.Emisor,

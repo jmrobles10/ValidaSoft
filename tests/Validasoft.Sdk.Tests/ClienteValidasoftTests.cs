@@ -165,6 +165,45 @@ public sealed class ClienteValidasoftTests
     }
 
     [Fact]
+    public async Task Integracion_abierta_referencias_contactos_ficha_y_sesion_del_tercero()
+    {
+        var (cliente, servidor) = Crear();
+        var tercero = Guid.NewGuid();
+        var vinculo = Guid.NewGuid();
+        servidor.Responder(HttpStatusCode.Created, """{"id":"0195f1c2-7d3e-7a00-8000-000000000002","nombre":"Aceros"}""");
+        servidor.Responder(HttpStatusCode.Created, """[{"sistema":"ERPX","id":"C-1"}]""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000002"}""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000001","contactos":[]}""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000001","contactos":[]}""");
+        servidor.Responder(HttpStatusCode.OK, """{"vinculoId":"0195f1c2-7d3e-7a00-8000-000000000001"}""");
+        servidor.Responder(HttpStatusCode.Created, """{"token":"a.b.c","expira":"2026-11-11T12:10:00Z","url":"https://valida.acme.co/embed/boveda","origen":"https://anfitrion.test","componente":"boveda","vinculoId":"0195f1c2-7d3e-7a00-8000-000000000001","terceroId":"0195f1c2-7d3e-7a00-8000-000000000002"}""");
+
+        await cliente.Terceros.CrearAsync(new CrearTerceroDto(new IdentificacionDto("CO", "NIT", "900123456"), "Juridica", "Aceros", null, null, new ReferenciaExternaDto("", "C-1")), "erpx-c-1");
+        (await cliente.Terceros.AgregarReferenciaAsync(tercero, new ReferenciaExternaDto("", "C-1"))).ShouldBe([new ReferenciaExternaDto("ERPX", "C-1")]);
+        await cliente.Terceros.PorReferenciaAsync("ERPX", "C 1");
+        await cliente.Vinculos.AgregarReferenciaAsync(vinculo, new ReferenciaExternaDto("", "S-1"));
+        await cliente.Vinculos.ActualizarContactosAsync(vinculo, [new ContactoDeEmpresaDto("Ana", null, "ana@aceros.co", null, "Pagos")]);
+        await cliente.Vinculos.FichaAsync(vinculo);
+        var sesion = await cliente.Sesiones.CrearDelTerceroAsync(new CrearSesionEmbebidaDto(vinculo, "boveda", "https://anfitrion.test", 5));
+        sesion.Token.ShouldBe("a.b.c");
+
+        var r = servidor.Recibidas;
+        (r[0].Peticion.Method, r[0].Peticion.RequestUri!.AbsolutePath, Cabecera(r[0].Peticion, "Idempotency-Key")).ShouldBe((HttpMethod.Post, "/api/v1/terceros", "erpx-c-1"));
+        r[0].Cuerpo!.ShouldContain("\"referenciaExterna\":{\"sistema\":\"\",\"id\":\"C-1\"}");
+        r[1].Peticion.RequestUri!.AbsolutePath.ShouldBe($"/api/v1/terceros/{tercero}/referencias");
+        r[2].Peticion.RequestUri!.PathAndQuery.ShouldBe("/api/v1/terceros/por-referencia?sistema=ERPX&clave=C%201");
+        Cabecera(r[2].Peticion, "X-Empresa").ShouldBeNull(); // el tercero es del tenant, no de una empresa
+        (r[3].Peticion.Method, r[3].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Post, $"/api/v1/vinculos/{vinculo}/referencias"));
+        (r[4].Peticion.Method, r[4].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Put, $"/api/v1/vinculos/{vinculo}/contactos"));
+        r[4].Cuerpo!.ShouldContain("\"contactos\":[{\"nombre\":\"Ana\"");
+        Cabecera(r[4].Peticion, "X-Empresa").ShouldBe(Empresa.ToString());
+        r[5].Peticion.RequestUri!.AbsolutePath.ShouldBe($"/api/v1/vinculos/{vinculo}/ficha");
+        (r[6].Peticion.Method, r[6].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Post, "/api/v1/sesiones-tercero"));
+        r[6].Cuerpo!.ShouldContain("\"origen\":\"https://anfitrion.test\"");
+        Cabecera(r[6].Peticion, "X-Usuario-Delegado").ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Para_empresa_cambia_x_empresa_y_la_url_base_puede_tener_ruta()
     {
         var (cliente, servidor) = Crear(urlBase: "https://erp.acme.co/validasoft");
@@ -173,7 +212,7 @@ public sealed class ClienteValidasoftTests
         await cliente.ParaEmpresa(otra).Vinculos.PorReferenciaAsync("SRM", "ADP 00123");
 
         var peticion = servidor.Recibidas.Single().Peticion;
-        peticion.RequestUri!.AbsoluteUri.ShouldBe("https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&id=ADP%2000123");
+        peticion.RequestUri!.AbsoluteUri.ShouldBe("https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&clave=ADP%2000123");
         Cabecera(peticion, "X-Empresa").ShouldBe(otra.ToString());
     }
 

@@ -79,7 +79,7 @@ function TarjetaPersona({ persona, indice, mensaje, onEditar, onQuitar, deshabil
   const { t } = useTranslation();
   const nombre = nombrePersona(persona) || t('ficha.legal.sinNombre');
   const ruta = `personas[${String(indice)}]`;
-  const campos = ['rol', 'tipo_identificacion', 'numero', 'dv', 'nombres', 'apellidos', 'cargo', 'porcentaje', 'pep', 'vinculo_pep', 'fecha_expedicion', 'fecha_nacimiento', 'nacionalidad', 'residencia', 'correo', 'telefono', 'tipo_representacion'];
+  const campos = ['rol', 'tipo_identificacion', 'numero', 'dv', 'nombres', 'apellidos', 'cargo', 'porcentaje', 'pep', 'vinculo_pep', 'fecha_expedicion', 'lugar_expedicion', 'fecha_nacimiento', 'nacionalidad', 'residencia', 'correo', 'telefono', 'tipo_representacion'];
   const marcados = campos.filter((c) => mensaje(`${ruta}.${c}`)).length;
   const errorFila = mensaje(ruta);
 

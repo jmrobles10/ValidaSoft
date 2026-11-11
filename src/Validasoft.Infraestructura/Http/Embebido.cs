@@ -174,6 +174,9 @@ public sealed class MiddlewareDeApps(RequestDelegate siguiente, AppsEstaticas ap
     /// <summary>Rutas de la API que la app del tercero (en la raíz) nunca atiende.</summary>
     private static readonly string[] RutasReservadas = ["/api", "/public", "/health", "/openapi", "/docs", PlataformaWeb.RutaAppWeb];
 
+    /// <summary>Ruta de la app del tercero pensada para vivir en un iframe (la <c>url</c> de <c>POST /api/v1/sesiones-tercero</c>).</summary>
+    public const string RutaEmbebidoDelTercero = "/embed";
+
     public async Task InvokeAsync(HttpContext http, OrigenesDeEmbebido origenes)
     {
         var peticion = http.Request;
@@ -202,7 +205,12 @@ public sealed class MiddlewareDeApps(RequestDelegate siguiente, AppsEstaticas ap
         else if (apps.Publica is not null && EsDocumento(peticion.Path) &&
                  !RutasReservadas.Any(r => peticion.Path.StartsWithSegments(r, StringComparison.OrdinalIgnoreCase)))
         {
-            await EntregarIndiceAsync(http, apps.Publica, Politica([]));
+            // Solo /embed/{componente} (IO-5/IO-6: bóveda, expediente o ficha del tercero dentro de la página de su sistema) admite
+            // ser enmarcada por los orígenes de los sistemas activos; el resto de la app del tercero, solo 'self' (clickjacking).
+            var ancestros = peticion.Path.StartsWithSegments(RutaEmbebidoDelTercero)
+                ? await origenes.ObtenerAsync(http.RequestAborted)
+                : [];
+            await EntregarIndiceAsync(http, apps.Publica, Politica(ancestros));
             return;
         }
 

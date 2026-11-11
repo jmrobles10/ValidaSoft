@@ -24,11 +24,27 @@ export interface CrearTerceroDto {
   nombre: string;
   nombreComercial?: string | null;
   contactos?: ContactoDto[] | null;
+  /** Con la clave del tercero en el sistema de la API key la creación es idempotente. */
+  referenciaExterna?: ReferenciaExternaDto | null;
 }
 
+/** Clave de un tercero o un vínculo en un sistema integrador (`id` es la clave externa). */
 export interface ReferenciaExternaDto {
   sistema: string;
   id: string;
+}
+
+/** Contacto del tercero con una empresa (distinto por empresa); `rol`: Comercial, Pagos, Cumplimiento o Notificaciones. */
+export interface ContactoDeEmpresaDto {
+  nombre: string;
+  cargo?: string | null;
+  correo: string;
+  telefono?: string | null;
+  rol: 'Comercial' | 'Pagos' | 'Cumplimiento' | 'Notificaciones';
+}
+
+export interface ActualizarContactosDto {
+  contactos: ContactoDeEmpresaDto[];
 }
 
 /** Alta de vínculo: el tercero por `terceroId` o por sus datos (si ya existe se reutiliza). */
@@ -63,6 +79,8 @@ export interface VinculoDto {
   invitacion: EnlaceInvitacionDto | null;
   invitacionAceptadaEn: string | null;
   referencias: ReferenciaExternaDto[];
+  /** Contactos del tercero con la empresa del vínculo, por rol. */
+  contactos?: ContactoDeEmpresaDto[];
   expedienteAbiertoId?: string | null;
   version: number;
   [campo: string]: unknown;
@@ -174,6 +192,50 @@ export interface PaginaEventosDto {
 export interface TipoEventoPublicoDto {
   tipo: string;
   descripcion: string;
+}
+
+/** Datos de una cuenta bancaria designada: el banco sale del catálogo (código de compensación local y SWIFT). */
+export interface ContactoDePagosDto {
+  nombre: string;
+  correo: string;
+  telefono?: string | null;
+}
+
+/** La ficha del vínculo para un ERP: lo aceptado por la empresa, el representante, la cuenta designada, los contactos y las claves externas. */
+export interface FichaDelVinculoDto {
+  vinculoId: string;
+  empresaId: string;
+  terceroId: string;
+  referencias: ReferenciaExternaDto[];
+  referenciasDelTercero?: ReferenciaExternaDto[];
+  contactos?: ContactoDeEmpresaDto[];
+  cuentaDesignada?: {
+    banco: string;
+    bancoCodigo?: string | null;
+    bancoSwift?: string | null;
+    numeroEnmascarado: string;
+    contactoPagos?: ContactoDePagosDto | null;
+    [campo: string]: unknown;
+  } | null;
+  [campo: string]: unknown;
+}
+
+export interface TerceroDto {
+  id: string;
+  identificacion: IdentificacionDto;
+  tipoPersona: string;
+  nombre: string;
+  [campo: string]: unknown;
+}
+
+/** Pide una sesión del tercero para un iframe: el vínculo debe llevar la referencia del sistema y `origen` ser uno de los suyos. */
+export interface CrearSesionEmbebidaDto {
+  vinculoId: string;
+  componente: 'boveda' | 'expediente' | 'ficha';
+  /** Origen exacto de la página que aloja el iframe (`https://host[:puerto]`). */
+  origen: string;
+  /** Vigencia en minutos (1 a 15; 10 por omisión). */
+  minutos?: number;
 }
 
 export interface SesionUsuarioDto {

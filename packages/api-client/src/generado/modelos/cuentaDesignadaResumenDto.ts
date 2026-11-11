@@ -8,4 +8,8 @@
 export interface CuentaDesignadaResumenDto {
   numeroEnmascarado: string;
   banco: string;
+  /** @nullable */
+  bancoCodigo?: string | null;
+  /** @nullable */
+  bancoSwift?: string | null;
 }

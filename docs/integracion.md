@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Responsable |
 |---|---|---|
-| Vigente (implementado: H9 y sandbox, SB-1…SB-12) | 2026-11-11 | Arquitectura |
+| Vigente (implementado: H9, sandbox SB-1…SB-12 e integración abierta IO-1…IO-10) | 2026-11-11 | Arquitectura |
 
 **Para quién es.** Para el equipo de un sistema que se integra con Validasoft (un ERP, un portal de proveedores, un sistema de compras o de
 pagos). Está escrita para que una persona externa se integre leyendo **solo este documento**: cada paso trae el ejemplo con `curl`, con el
@@ -58,6 +58,18 @@ Tu backend ── X-Api-Key + X-Empresa ──▶ Validasoft API ──▶ invit
      └──── GET /consultas/certificacion (ETag/304) ─────────────────────┘
 Tu aplicación ── <iframe> con la sesión que canjea tu backend ──▶ pantallas de revisión de Validasoft
 ```
+
+### 1.1 Integrar un sistema nuevo en 5 pasos
+
+Para un ERP, un portal o un CRM cualquiera (el SRM, el Portal y Marco son los primeros, no los únicos). Todo es genérico: nada de lo siguiente depende de un sistema concreto.
+
+1. **Registrar el sistema y su llave.** Un administrador del grupo crea el sistema (`POST /api/v1/sistemas { codigo, nombre, clavePublicaPem, origenesPermitidos }`) y su API key con los permisos mínimos y solo las empresas que integra (§2 y §3 de esta guía). El `codigo` es el que identifica a ese sistema en todas las referencias externas.
+2. **Identificar sus terceros y vínculos (referencias externas).** Crear el tercero con su clave (`POST /api/v1/terceros { …, referenciaExterna: { id: "C-77" } }`: idempotente, 201 la primera vez y 200 el mismo tercero después) o agregarla (`POST /terceros/{id}/referencias`); crear el vínculo con la suya (`POST /api/v1/vinculos { …, referenciaExterna }` o `POST /vinculos/{id}/referencias`) y buscar después por clave (`GET /terceros/por-referencia?sistema=&clave=`, `GET /vinculos/por-referencia?sistema=&clave=`). El sistema lo fija la API key y las claves son **privadas del tenant**: otro tenant con un sistema del mismo código no las ve ni choca con ellas.
+3. **Escuchar lo que pasa.** Webhooks firmados (`POST /api/v1/webhooks`) o pull (`GET /api/v1/eventos?desde=`), con el mismo sobre; deduplicar por `Validasoft-Event-Id` (§9 y §10). Los eventos que importan están en [docs/08 §3.4](08-integracion-y-migracion.md).
+4. **Consultar lo aceptado.** `GET /api/v1/vinculos/{id}/ficha` entrega, para que cualquier ERP cree o actualice al tercero: las secciones aceptadas normalizadas (con las calidades tributarias de Colombia, el lugar de expedición del representante y el representante principal), la **cuenta designada** (banco con su código de compensación y SWIFT, contacto de pagos), los **contactos por empresa** y las **referencias** del vínculo y del tercero. `GET /consultas/certificacion` responde si se le puede pagar o contratar (§11).
+5. **Mostrar las pantallas.** Embebido del tercero (§8.1) o de las personas de la empresa (§8), con orígenes validados; y, si hay históricos, un **adaptador de origen** para el importador ([docs/08 §6.6](08-integracion-y-migracion.md)): la misma forma que el del Portal (`IAdaptadorDeOrigen`), sin tocar el núcleo.
+
+Sin SRM y sin Portal todo esto funciona igual: son clientes de la API como cualquier otro, y el importador responde 404 `origen-no-registrado` si no hay adaptador.
 
 ## 2. Alta del sistema integrador desde la consola
 
@@ -316,6 +328,7 @@ Fallos: `401` con `codigo` `llave-sin-sistema` (la llave no es de un sistema), `
 
 Puedes mostrar dentro de tu aplicación las pantallas de Validasoft (la bandeja de revisión, los certificados, la configuración) en un `<iframe>`.
 Las dos piezas: **tu backend** canjea la identidad de la persona por una **sesión de 30 minutos**, y **tu página** se la pasa al iframe por `postMessage`.
+Hay dos embebidos: el de las **personas de tu empresa** (esta sección) y el del **tercero** —su bóveda, su expediente o su ficha— en [§8.1](#81-el-tercero-embebido-bóveda-expediente-y-ficha).
 
 1. **Registra el origen de tu página** en el sistema (§2: `origenesPermitidos`). Solo esos sitios pueden alojar el iframe (cabecera `frame-ancestors`) y recibir los mensajes.
 2. **El backend canjea la sesión** (la API key + la aserción de la persona; nunca desde el navegador):
@@ -363,6 +376,40 @@ Las dos piezas: **tu backend** canjea la identidad de la persona por una **sesi�
    | `validasoft:cerrar-sesion` | — |
 
    La ruta del iframe (`#/e/{empresa}/{pantalla}`): `bandeja`, `certificados`, `vinculos`, `invitaciones`, `configuracion/…`. En el sandbox, la empresa es la copia de pruebas (§5) y el token se canjea con la llave de prueba.
+
+### 8.1 El tercero embebido (bóveda, expediente y ficha)
+
+Lo anterior es el embebido de las **personas de tu empresa**. El del **tercero** (IO-6) es distinto: cualquier sistema integrador con permiso puede montar la **bóveda**, el **expediente** o la **ficha** de un tercero en un iframe de su página, sin que Validasoft sepa quién es. Ejemplo ejecutable sin librerías: [`docs/ejemplos/anfitrion-tercero`](ejemplos/anfitrion-tercero/index.html) (la página anfitriona) y [`servidor.mjs`](ejemplos/anfitrion-tercero/servidor.mjs) (su backend); lo prueba `e2e/pruebas/embebido-tercero.spec.ts` con un anfitrión ficticio.
+
+```mermaid
+sequenceDiagram
+  participant P as Página del sistema (origen A)
+  participant B as Backend del sistema
+  participant V as Validasoft API
+  participant I as iframe /embed/boveda
+  P->>B: el tercero abre «Mi bóveda»
+  B->>V: POST /api/v1/sesiones-tercero {vinculoId, componente, origen A} + API key + X-Empresa
+  V-->>B: 201 {token (≤15 min), url, expira}
+  B-->>P: {token, url}
+  P->>I: iframe src = url (sin token)
+  I-->>P: postMessage validasoft:ready
+  P->>I: postMessage validasoft:sesion {token} → solo al origen de Validasoft
+  I->>V: GET /public/v1/sesion/actual (Bearer token)
+  I-->>P: validasoft:resize {height} · validasoft:sesion-requerida {por-vencer}
+  P->>B: pedir otra sesión
+```
+
+**Quién puede y qué liga el token.** Solo la API key de un **sistema integrador** con `sesiones-tercero:crear`, para un vínculo de la empresa (`X-Empresa`) que **lleve la referencia de ese sistema** (403 `vinculo-ajeno`: un sistema embebe lo que integra) y con la invitación aceptada (409 `invitacion-no-aceptada`). El `origen` pedido debe estar entre los del sistema (`origenesPermitidos`, SE-1; 403 `origen-no-permitido`). El JWT (HS256, 1 a 15 minutos, 10 por omisión) trae el tercero, **un** vínculo, `sistema`, `origen`, `componente` y un `jti`; no hay cookie de refresco: el sistema pide otra sesión a su backend (la app avisa con `validasoft:sesion-requerida` un minuto antes de vencer). La respuesta no se guarda en el registro de idempotencia.
+
+**Qué valida el iframe** (defensa en profundidad, además de `frame-ancestors` con la unión de orígenes de los sistemas, SE-1/SE-2): lee los orígenes permitidos de `GET /public/v1/embed/origenes-permitidos`; solo anuncia `ready` al contenedor si su origen es uno de ellos; acepta el token **solo** de la ventana padre con ese origen y solo si el token fue emitido para **ese mismo origen**, es embebido, de un componente conocido y no venció; si no, muestra un aviso y ningún dato. Dentro del iframe no hay marca, navegación ni pie y **nunca** se pide el correo.
+
+**Protocolo** (versión 1; el mismo de ID-3 para la web de empresa, ahora en `@validasoft/sdk`): iframe → página `validasoft:ready`, `validasoft:sesion-requerida {motivo: inicial|por-vencer|vencida|rechazada}`, `validasoft:resize {height}`; página → iframe `validasoft:sesion {token}` y `validasoft:tema {mode}`. Quien usa un empaquetador monta todo con `montarEmbebido({ contenedor, sesion, renovarSesion })` del SDK de TypeScript (el embebido de **usuarios** de la empresa, §8 arriba, sigue usando `sesiones-usuario`).
+
+```ts
+// Backend del sistema (Node): la API key nunca llega al navegador.
+const sesion = await cliente.sesiones.crearDelTercero({ vinculoId, componente: 'boveda', origen: 'https://erp.cliente.co' });
+// Página: montarEmbebido({ contenedor, sesion, renovarSesion: () => fetch('/mi-backend/sesion').then(r => r.json()) });
+```
 
 ## 9. Webhooks
 

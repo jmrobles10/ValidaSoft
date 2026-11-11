@@ -1,4 +1,5 @@
 using Validasoft.Contratos;
+using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Identidad;
@@ -72,7 +73,19 @@ public static class Mapeos
             v.Bloqueo is null ? null : new BloqueoDto(v.Bloqueo.Motivo, v.Bloqueo.Desde, v.Bloqueo.Hasta),
             [.. v.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))],
             v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version, v.ExpedienteAbiertoId, v.AperturaDeExpedientePendiente,
-            v.UltimoResultado?.ToString());
+            v.UltimoResultado?.ToString(),
+            v.Contactos.ADto());
+
+    /// <summary>Los contactos del tercero con la empresa como los ve la API (rol en texto).</summary>
+    public static IReadOnlyList<ContactoDeEmpresaDto> ADto(this IEnumerable<ContactoDeEmpresa> contactos) =>
+        [.. contactos.Select(c => new ContactoDeEmpresaDto(c.Nombre, c.Cargo, c.Correo, c.Telefono, c.Rol.ToString()))];
+
+    /// <summary>Los contactos que llegan por la API a dominio: el rol debe ser uno de los cuatro (422 si no).</summary>
+    public static IReadOnlyList<ContactoDeEmpresa> ADominio(this IEnumerable<ContactoDeEmpresaDto>? contactos) =>
+        [.. (contactos ?? []).Select(c => new ContactoDeEmpresa(c.Nombre, c.Cargo, c.Correo, c.Telefono,
+            Enum.TryParse<RolDeContacto>(c.Rol, true, out var rol) && Enum.IsDefined(rol)
+                ? rol
+                : throw ReglaDeNegocioException.Validacion("contacto-rol-invalido", "El rol del contacto es Comercial, Pagos, Cumplimiento o Notificaciones.")))];
 
     public static TextoLegalDto ADto(this TextoLegal t) =>
         new(t.Id, t.Ambito.ToString(), t.EmpresaId, t.Tipo.ToString(), t.Version, t.Hash, t.Contenido, t.PublicadoEn, t.PublicadoPor);
@@ -84,5 +97,5 @@ public static class Mapeos
     public static VinculoPublicoDto APublico(this Vinculo v, Empresa? empresa, TipoVinculo? tipo) =>
         new(v.Id, empresa.APublica(v.EmpresaId),
             new TipoVinculoResumenDto(v.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
-            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId);
+            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId, null, v.Contactos.ADto());
 }

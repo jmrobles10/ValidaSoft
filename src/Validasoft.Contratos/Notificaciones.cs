@@ -52,11 +52,18 @@ public sealed record DatosInvitacionAceptadaDto(
 /// </summary>
 public sealed record DatosCuentaDesignadaDto(
     Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, Guid CuentaId, string Banco, string TipoCuenta, string NumeroEnmascarado,
-    string Titular, string IdentificacionTitular, string Moneda, string Estado, string? Motivo);
+    string Titular, string IdentificacionTitular, string Moneda, string Estado, string? Motivo, string? BancoCodigo = null, string? BancoSwift = null);
 
 public sealed record DatosEstadoVinculoDto(
     Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string Estado, string? EstadoAnterior, string? Motivo,
     DateTimeOffset? Hasta, Guid? ExpedienteId);
+
+/// <summary>
+/// <c>vinculo.contactos_actualizados</c> (IO-3): la lista completa de contactos del tercero con la empresa tras el cambio. Son
+/// contactos de negocio que el tercero o la empresa declararon para que los sistemas integradores sepan a quién escribirle por rol
+/// (no son revisores ni usuarios de Validasoft).
+/// </summary>
+public sealed record DatosContactosActualizadosDto(Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, IReadOnlyList<ContactoDeEmpresaDto> Contactos);
 
 /// <summary><c>vinculo.referencia_agregada</c>: otro sistema comparte el vínculo.</summary>
 public sealed record DatosReferenciaAgregadaDto(Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, ReferenciaExternaDto Referencia);

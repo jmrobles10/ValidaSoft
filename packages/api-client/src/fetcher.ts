@@ -110,9 +110,10 @@ async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, acepta
     cabeceras.set(nombre, valor);
   }
 
+  const url = construirUrl(cfg.baseUrl, config.url, config.params);
   let respuesta: Response;
   try {
-    respuesta = await cfg.fetch(construirUrl(cfg.baseUrl, config.url, config.params), {
+    respuesta = await cfg.fetch(url, {
       method: metodo,
       headers: cabeceras,
       body: cuerpo ?? null,
@@ -126,7 +127,7 @@ async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, acepta
   if (!respuesta.ok) {
     const datos = await leerCuerpo(respuesta);
     const error = errorDesdeProblema(respuesta.status, datos, respuesta.headers.get('X-Correlation-Id') ?? correlationId);
-    if (error.esNoAutenticado) cfg.alNoAutenticado?.(error);
+    if (error.esNoAutenticado) cfg.alNoAutenticado?.(error, url);
     throw error;
   }
   return respuesta;

@@ -20,4 +20,6 @@ export interface FilaCatalogoDto {
   nivel?: number | null;
   /** @nullable */
   activo?: boolean | null;
+  /** @nullable */
+  swift?: string | null;
 }

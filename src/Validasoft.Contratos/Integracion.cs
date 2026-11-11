@@ -9,7 +9,7 @@ namespace Validasoft.Contratos;
 public sealed record RevalidacionPendienteDto(string Tipo, DateOnly? Plazo, bool Bloqueante);
 
 /// <summary>Cuenta bancaria designada y aprobada del vínculo, sin el número completo.</summary>
-public sealed record CuentaDesignadaResumenDto(string NumeroEnmascarado, string Banco);
+public sealed record CuentaDesignadaResumenDto(string NumeroEnmascarado, string Banco, string? BancoCodigo = null, string? BancoSwift = null);
 
 /// <summary>Estado equivalente en el legado (SRM/Portal) mientras dura la coexistencia.</summary>
 public sealed record LegadoDto(int EstadoTercero);

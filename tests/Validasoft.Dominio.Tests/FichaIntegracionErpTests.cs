@@ -7,8 +7,8 @@ using Validasoft.Dominio.Terceros;
 namespace Validasoft.Dominio.Tests;
 
 /// <summary>
-/// Integración de la ficha con el SRM (F3, FM-32…): las calidades tributarias del Portal derivadas de los códigos DIAN (tabla de
-/// casos), el representante legal que recibe AyF y el contenido aceptado normalizado para el ERP.
+/// Integración de la ficha con cualquier ERP (F3, FM-32…; IO-4): las calidades tributarias de Colombia derivadas de los códigos DIAN
+/// (tabla de casos) y de lo declarado, el representante legal principal con su lugar de expedición y el contenido aceptado normalizado.
 /// </summary>
 public class FichaIntegracionErpTests
 {
@@ -34,7 +34,7 @@ public class FichaIntegracionErpTests
         return new CatalogosEnMemoria(entradas);
     }
 
-    // ---------- las calidades del Portal (FM-33) ----------
+    // ---------- las calidades tributarias (FM-33) ----------
 
     /// <summary>
     /// Casos: códigos de la casilla 53 ⇒ la calidad que se espera en <c>true</c> (todas las demás derivables de un código, en
@@ -74,6 +74,32 @@ public class FichaIntegracionErpTests
         foreach (var regla in CalidadesTributarias.NoDerivables)
             calidades[regla.Calidad].ShouldBeNull(regla.Calidad);
         calidades["autorretenedorIca"].ShouldBeNull();
+        calidades["exentoReteCree"].ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void La_exencion_de_retencion_cree_se_declara_en_la_seccion_y_no_sale_de_la_casilla_53(bool exento)
+    {
+        CalidadesTributarias.Derivar(new DatosTributarios { Responsabilidades = ["48", "52"], ExentoReteCree = exento }).ExentoReteCree.ShouldBe(exento);
+        CalidadesTributarias.Derivar(new DatosTributarios { Responsabilidades = ["48", "52"] }).ExentoReteCree.ShouldBeNull();
+        CalidadesTributarias.Derivar(new DatosTributarios { ExentoReteCree = exento }).ValorDe("exentoReteCree").ShouldBe(exento);
+        Should.Throw<ArgumentOutOfRangeException>(() => CalidadesTributarias.Derivar([], null).ValorDe("noExiste"));
+    }
+
+    [Fact]
+    public void Una_calidad_declarada_ya_no_va_entre_las_sin_derivar_y_una_sin_declarar_si()
+    {
+        var declarada = Canonico(CodigosDeSeccion.Tributaria, new DatosTributarios { Responsabilidades = ["48"], AutorretenedorIca = false, ExentoReteCree = true });
+        var t = ContenidoParaErp.Normalizar(CodigosDeSeccion.Tributaria, declarada, Catalogos).Tributaria.ShouldNotBeNull();
+        t.Calidades.ExentoReteCree.ShouldBe(true);
+        t.CalidadesSinDerivar.Select(c => c.Calidad).ShouldNotContain("exentoReteCree");
+        t.CalidadesSinDerivar.Select(c => c.Calidad).ShouldNotContain("autorretenedorIca");
+
+        var sinDeclarar = Canonico(CodigosDeSeccion.Tributaria, new DatosTributarios { Responsabilidades = ["48"] });
+        ContenidoParaErp.Normalizar(CodigosDeSeccion.Tributaria, sinDeclarar, Catalogos).Tributaria!.CalidadesSinDerivar.Select(c => c.Calidad)
+            .ShouldContain("exentoReteCree");
     }
 
     [Theory]
@@ -86,17 +112,15 @@ public class FichaIntegracionErpTests
     }
 
     [Fact]
-    public void La_tabla_cubre_las_13_calidades_de_ayf_mas_la_rft_del_portal_y_cada_una_tiene_su_fuente_o_nota()
+    public void La_tabla_cubre_las_15_calidades_tributarias_de_colombia_sin_nombres_de_sistemas_y_cada_una_tiene_su_fuente_o_nota()
     {
         var tabla = CalidadesTributarias.Tabla;
-        tabla.Count.ShouldBe(14);
+        tabla.Count.ShouldBe(15);
         tabla.Select(r => r.Calidad).ShouldBeUnique();
-        tabla.Where(r => r.CampoAyf is not null).Select(r => r.CampoAyf).ShouldBe(
-        [
-            "RegimenIva", "AutoRetenedor", "DeclaranteRenta", "GranContribuyente", "AutoRetenedorICA", "RegimenSimple", "GranContribuyenteBta",
-            "RegimenEspecial", "DescuentoSenaFic", "ProfesionalIndependiente", "ExentoRetefuente", "AgenteRetenedorIVA", "NoObligadoFacturar"
-        ]);
-        tabla.Single(r => r.CampoAyf is null).Calidad.ShouldBe("autorretenedorRft");
+        tabla.Select(r => r.Calidad).ShouldContain("exentoReteCree");
+        tabla.Where(r => r.Origen == OrigenDeCalidad.DatoDeLaSeccion).Select(r => r.Calidad).ShouldBe(["autorretenedorIca", "exentoReteCree"]);
+        // El núcleo no nombra a ningún sistema: el mapeo a los campos de cada ERP es de su adaptador.
+        tabla.ShouldAllBe(r => !r.Nota.Contains("AyF", StringComparison.Ordinal) && !r.Nota.Contains("Portal", StringComparison.Ordinal));
         tabla.ShouldAllBe(r => r.Nota.Length > 0);
         tabla.Where(r => r.Origen == OrigenDeCalidad.CodigoDian).ShouldAllBe(r => r.Codigos.Count > 0);
         CalidadesTributarias.NoDerivables.Select(r => r.Calidad).ShouldBe(
@@ -233,7 +257,7 @@ public class FichaIntegracionErpTests
             AutorretenedorIca: false, RegimenSimple: false, GranContribuyenteBogota: null, RegimenEspecial: false, AutorretenedorRft: null,
             DescuentoSenaFic: null, ProfesionalIndependiente: null, ExentoRetencion: null, AgenteRetenedorIva: false, ObligadoAFacturar: true));
         t.CalidadesSinDerivar.Select(c => c.Calidad).ShouldBe(
-            ["granContribuyenteBogota", "autorretenedorRft", "descuentoSenaFic", "profesionalIndependiente", "exentoRetencion"]);
+            ["granContribuyenteBogota", "autorretenedorRft", "descuentoSenaFic", "profesionalIndependiente", "exentoRetencion", "exentoReteCree"]);
         t.CalidadesSinDerivar.ShouldAllBe(c => c.Nota.Length > 0);
         t.ResolucionGranContribuyente.ShouldBe(new ResolucionDto("012635", new DateOnly(2022, 12, 14)));
         t.ResolucionAutorretenedor.ShouldBeNull();

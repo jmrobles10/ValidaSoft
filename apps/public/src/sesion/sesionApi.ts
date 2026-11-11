@@ -64,3 +64,12 @@ export async function cerrarSesionEnServidor(): Promise<void> {
 export function esRutaDeSesion(url: string): boolean {
   return /\/public\/v1\/(sesion\/|enlaces\/|acceso)/.test(url);
 }
+
+/**
+ * ¿Un 401 en esta URL da por terminada la sesión que hay? No si es de una ruta de la sesión: lo resuelve quien la llamó (`restaurar`,
+ * `renovarAhora`, el canje del enlace, el puente del iframe). Sin esta salvedad el 401 tardío del intento de restaurar al arrancar sin
+ * cookie tumbaba una sesión abierta mientras tanto (por el enlace, o la que el sistema anfitrión entrega a un iframe).
+ */
+export function unNoAutenticadoTerminaLaSesion(url: string): boolean {
+  return !esRutaDeSesion(url);
+}

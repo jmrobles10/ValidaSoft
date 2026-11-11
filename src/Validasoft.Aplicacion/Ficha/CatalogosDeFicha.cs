@@ -113,9 +113,9 @@ public static class ImportacionDeCatalogos
         return ids.Length == 0 ? CatalogosEnMemoria.Vacios : new CatalogosEnMemoria(await consulta.LoadManyAsync<EntradaDeCatalogo>(ct, ids));
     }
 
-    public static EntradaCatalogoDto ADto(EntradaDeCatalogo e) => new(e.Codigo, e.Nombre, e.Padre, e.Nivel, e.Departamento, e.Pais, e.Activo);
+    public static EntradaCatalogoDto ADto(EntradaDeCatalogo e) => new(e.Codigo, e.Nombre, e.Padre, e.Nivel, e.Departamento, e.Pais, e.Activo, e.Swift);
 
-    public static FilaDeCatalogo ADominio(FilaCatalogoDto f) => new(f.Codigo, f.Nombre, f.Departamento, f.Pais, f.Padre, f.Nivel, f.Activo);
+    public static FilaDeCatalogo ADominio(FilaCatalogoDto f) => new(f.Codigo, f.Nombre, f.Departamento, f.Pais, f.Padre, f.Nivel, f.Activo, f.Swift);
 }
 
 /// <summary>Catálogos de plataforma de la ficha (FM-10, FM-22): importación por Plataforma y búsqueda desde la web y el portal.</summary>

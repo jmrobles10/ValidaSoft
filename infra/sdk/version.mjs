@@ -1,4 +1,4 @@
-// Versión única de los SDK (docs/08 §2.3): Validasoft.Contratos, Validasoft.Sdk (NuGet) y @validasoft/sdk (npm) salen juntos con la
+// Versión única de los SDK (docs/08 §2.4): Validasoft.Contratos, Validasoft.Sdk (NuGet) y @validasoft/sdk (npm) salen juntos con la
 // misma versión semántica, que vive en dos sitios (src/Empaquetado.props y packages/sdk/package.json) y en la cabecera del CHANGELOG.
 //
 //   node infra/sdk/version.mjs                    muestra la versión actual

@@ -41,6 +41,8 @@ export const camposFicha = {
   resolucion_autorretenedor: 'Resolución de autorretenedor',
   responsable_ica: 'Contribuyente de ICA',
   autorretenedor_ica: 'Autorretenedor de ICA',
+  exento_rete_cree: 'Exento de retención CREE',
+  lugar_expedicion: 'Lugar de expedición',
   ica: 'Municipios donde declaras ICA',
   fecha_corte: 'Fecha de corte',
   activos: 'Activos totales',

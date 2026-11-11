@@ -53,6 +53,14 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/terceros/{id}': 'obtenerTercero',
   'GET /api/v1/terceros/por-identificacion': 'buscarTerceroPorIdentificacion',
   'GET /api/v1/terceros/{id}/ficha': 'obtenerFichaTercero',
+  'GET /api/v1/terceros/{id}/referencias': 'listarReferenciasTercero',
+  'POST /api/v1/terceros/{id}/referencias': 'agregarReferenciaTercero',
+  'GET /api/v1/terceros/por-referencia': 'buscarTerceroPorReferencia',
+  'POST /api/v1/vinculos/{id}/referencias': 'agregarReferenciaVinculo',
+  'PUT /api/v1/vinculos/{id}/contactos': 'actualizarContactosVinculo',
+  'PUT /public/v1/vinculos/{id}/contactos': 'actualizarContactosDelTercero',
+  'POST /api/v1/sesiones-tercero': 'crearSesionTercero',
+  'GET /public/v1/sesion/actual': 'obtenerSesionActual',
   'POST /api/v1/vinculos': 'crearVinculo',
   'GET /api/v1/vinculos': 'listarVinculos',
   'GET /api/v1/vinculos/por-referencia': 'obtenerVinculoPorReferencia',
@@ -269,11 +277,11 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/ficha/propuestas': 'listarPropuestasFicha',
   'GET /public/v1/ficha/{seccion}/propuestas': 'obtenerPropuestasSeccion',
   // Importador de la ficha desde el Portal y sincronizador de coexistencia (F4, docs/08 §6.6).
-  'POST /api/v1/plataforma/importacion/portal': 'importarPortal',
-  'GET /api/v1/plataforma/importacion/portal/{id}': 'obtenerImportacionPortal',
-  'GET /api/v1/plataforma/importacion/portal/{id}/rechazos': 'descargarRechazosImportacionPortal',
-  'POST /api/v1/plataforma/importacion/portal/{id}/reanudar': 'reanudarImportacionPortal',
-  'POST /api/v1/plataforma/importacion/portal/terceros/{terid}/sincronizar': 'sincronizarTerceroPortal',
+  'POST /api/v1/plataforma/importacion/{origen}': 'importarTerceros',
+  'GET /api/v1/plataforma/importacion/{origen}/{id}': 'obtenerImportacion',
+  'GET /api/v1/plataforma/importacion/{origen}/{id}/rechazos': 'descargarRechazosImportacion',
+  'POST /api/v1/plataforma/importacion/{origen}/{id}/reanudar': 'reanudarImportacion',
+  'POST /api/v1/plataforma/importacion/{origen}/terceros/{clave}/sincronizar': 'sincronizarTerceroDeOrigen',
   // Verificaciones externas y cumplimiento (H7, VE-5…VE-16).
   'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/consultar': 'consultarVerificacion',
   'POST /api/v1/expedientes/{id}/verificaciones/{tipo}/coincidencias/{coincidenciaId}/resolver': 'resolverCoincidencia',
@@ -321,7 +329,8 @@ const PREFIJOS = ['/api/v1/', '/public/v1/'];
 
 /** Respuesta real (código → esquema) de los endpoints publicados como `IResult`; `null` = sin cuerpo. */
 const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
-  crearTercero: { '201': 'TerceroDto' },
+  // 201 al crear; 200 si la clave externa ya identifica a ese tercero (idempotente, IO-2).
+  crearTercero: { '200': 'TerceroDto', '201': 'TerceroDto' },
   // 201 al crear; 200 cuando otro sistema integrado se suma al vínculo existente (I-0).
   crearVinculo: { '200': 'VinculoDto', '201': 'VinculoDto' },
   invitarVinculo: { '201': 'EnlaceInvitacionDto' },

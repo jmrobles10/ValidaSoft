@@ -136,6 +136,8 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `verificaciones:escribir` | — | ✓ | — | ✓ | — | scope | — |
 | `certificados:leer` / `revocar` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope / — | propios |
 | `consultas:leer` · `eventos:leer` · `sesiones-tercero:crear` | — | ✓ | ✓ | ✓ | ✓ | scope | — |
+
+> `sesiones-tercero:crear` (IO-6) solo sirve a la API key de un **sistema integrador**: abre la sesión de un tercero cuyo vínculo lleva la referencia de ese sistema, para un origen de los que el sistema registró, con un token de ≤ 15 minutos ligado a ese vínculo, origen y componente. Las llaves ya emitidas no la tienen: se crea o rota una con ella.
 | `vencimientos:leer` / `escribir` | — | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / — | scope | — |
 | `auditoria:leer` (dominio, configuración, identidad y accesos; alcance por empresa o tenant) | — | ✓ | — | ✓ | ✓ | scope (solo referencias) | — |
 | `auditoria:exportar` (Excel con los filtros de la pantalla, IF-4; ZIP firmado pendiente) | — | ✓ | — | — | ✓ | — | — |
@@ -329,7 +331,7 @@ Firma HMAC con timestamp; secretos de 256 bits con rotación solapada; payloads 
 | Denegación | Bombardear el buzón de un tercero con «pedir acceso» | 3 enlaces por hora por correo (RE-2) además de 60/min por IP |
 | Suplantación | Token del ERP falsificado | Introspección/firma por tenant |
 | Suplantación | Aserción `X-Usuario-Delegado` capturada (log, proxy) y repetida dentro de sus 5 min | `jti` obligatorio de un solo uso por sistema (SE-4): segundo uso ⇒ `401 asercion-reutilizada`, también en paralelo |
-| Manipulación | Clickjacking: un sitio ajeno enmarca las pantallas de Validasoft | `frame-ancestors 'self'` + orígenes registrados de sistemas activos (SE-1); la app del tercero solo `'self'` |
+| Manipulación | Clickjacking: un sitio ajeno enmarca las pantallas de Validasoft | `frame-ancestors 'self'` + orígenes registrados de sistemas activos (SE-1); la app del tercero solo `'self'`, salvo `/embed/{componente}` (la ruta de su iframe: IO-5), que admite además esos mismos orígenes |
 | Suplantación | Página ajena que aloja el iframe le entrega una sesión o recibe sus mensajes | El puente solo acepta y envía `postMessage` a orígenes publicados por la API (SE-2) |
 | Denegación | Evadir el límite por IP falseando `X-Forwarded-For` | La cabecera solo cuenta desde proxies confiables configurados y se toma la entrada que agregó el proxy (SE-6) |
 | Suplantación | Cambio de cuenta bancaria fraudulento | Solo el tercero propone; certificación con `IdentidadCoincide`; 2 aprobadores de la empresa; evento al ERP |

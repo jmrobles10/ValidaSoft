@@ -6,6 +6,7 @@
  */
 import type { ContactoDto } from './contactoDto';
 import type { IdentificacionDto } from './identificacionDto';
+import type { ReferenciaExternaDto } from './referenciaExternaDto';
 
 export interface CrearTerceroDto {
   identificacion: IdentificacionDto;
@@ -15,4 +16,5 @@ export interface CrearTerceroDto {
   nombreComercial: string | null;
   /** @nullable */
   contactos: ContactoDto[] | null;
+  referenciaExterna?: null | ReferenciaExternaDto;
 }

@@ -17,7 +17,10 @@ public enum CatalogoDePlataforma
     /// <summary>Actividades económicas CIIU Rev. 4 A.C.: código de 4 dígitos.</summary>
     ActividadesEconomicas,
 
-    /// <summary>Bancos: código de compensación del Banco de la República (CENIT, 4 dígitos).</summary>
+    /// <summary>
+    /// Bancos: código de compensación local (en Colombia, el del Banco de la República, CENIT, 4 dígitos) y, si se conoce, su SWIFT/BIC
+    /// (<see cref="EntradaDeCatalogo.Swift"/>). Un banco de otro país sin código local se declara en la cuenta solo con su SWIFT.
+    /// </summary>
     Bancos,
 
     /// <summary>Responsabilidades de la casilla 53 del RUT (DIAN): código de 2 dígitos.</summary>
@@ -48,8 +51,11 @@ public sealed class EntradaDeCatalogo
     /// <summary>Solo ciudades: nombre del departamento.</summary>
     public string? Departamento { get; set; }
 
-    /// <summary>Solo ciudades: país ISO 3166-1 alfa-2.</summary>
+    /// <summary>Ciudades: país ISO 3166-1 alfa-2. Bancos: país del código de compensación local (CO por omisión).</summary>
     public string? Pais { get; set; }
+
+    /// <summary>Solo bancos: código SWIFT/BIC (8 u 11 caracteres), si se conoce.</summary>
+    public string? Swift { get; set; }
 
     public string? Padre { get; set; }
 
@@ -65,12 +71,13 @@ public sealed class EntradaDeCatalogo
     /// <summary>¿Cambia algo de lo que se importa? (la fecha no cuenta: la importación es idempotente).</summary>
     public bool MismoContenido(EntradaDeCatalogo otra) =>
         Nombre == otra.Nombre && Departamento == otra.Departamento && Pais == otra.Pais && Padre == otra.Padre && Nivel == otra.Nivel &&
-        Activo == otra.Activo;
+        Activo == otra.Activo && Swift == otra.Swift;
 }
 
 /// <summary>Fila que llega a la importación (o a la semilla) antes de validarse.</summary>
 public sealed record FilaDeCatalogo(
-    string? Codigo, string? Nombre, string? Departamento = null, string? Pais = null, string? Padre = null, int? Nivel = null, bool? Activo = null);
+    string? Codigo, string? Nombre, string? Departamento = null, string? Pais = null, string? Padre = null, int? Nivel = null, bool? Activo = null,
+    string? Swift = null);
 
 /// <summary>Validación y normalización de las filas de cada catálogo, y la búsqueda sin tildes.</summary>
 public static partial class ReglasDeCatalogo
@@ -91,6 +98,20 @@ public static partial class ReglasDeCatalogo
 
     [GeneratedRegex("^[A-Z]{2}$")]
     private static partial Regex RegexPais();
+
+    [GeneratedRegex("^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$")]
+    private static partial Regex RegexSwift();
+
+    /// <summary>
+    /// SWIFT/BIC (ISO 9362) en mayúsculas y sin espacios: 4 letras de la entidad, 2 del país, 2 de la plaza y, opcional, 3 de la
+    /// sucursal. Vacío ⇒ <c>null</c>; con formato inválido ⇒ <c>false</c> en <paramref name="valido"/>.
+    /// </summary>
+    public static string? NormalizarSwift(string? swift, out bool valido)
+    {
+        var limpio = (swift ?? string.Empty).Replace(" ", string.Empty, StringComparison.Ordinal).Trim().ToUpperInvariant();
+        valido = limpio.Length == 0 || RegexSwift().IsMatch(limpio);
+        return limpio.Length == 0 ? null : limpio;
+    }
 
     /// <summary>Segmento de la URL (<c>/catalogos/{catalogo}</c>) → catálogo.</summary>
     private static readonly IReadOnlyDictionary<string, CatalogoDePlataforma> PorRuta = new Dictionary<string, CatalogoDePlataforma>(StringComparer.OrdinalIgnoreCase)
@@ -166,6 +187,16 @@ public static partial class ReglasDeCatalogo
 
         switch (catalogo)
         {
+            case CatalogoDePlataforma.Bancos:
+                var paisBanco = string.IsNullOrWhiteSpace(fila.Pais) ? "CO" : fila.Pais.Trim().ToUpperInvariant();
+                if (!RegexPais().IsMatch(paisBanco))
+                    return (null, $"El país '{fila.Pais}' no es un código ISO 3166-1 alfa-2.");
+                var swift = NormalizarSwift(fila.Swift, out var swiftValido);
+                if (!swiftValido)
+                    return (null, $"El SWIFT '{fila.Swift}' no es un código SWIFT/BIC válido (8 u 11 caracteres).");
+                entrada.Pais = paisBanco;
+                entrada.Swift = swift;
+                break;
             case CatalogoDePlataforma.Ciudades:
                 var departamento = (fila.Departamento ?? string.Empty).Trim();
                 if (departamento.Length == 0 || departamento.Length > MaximoNombre)

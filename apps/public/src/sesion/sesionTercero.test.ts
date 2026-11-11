@@ -1,7 +1,7 @@
 import { ErrorApi, ErrorDeRed, type SesionTerceroDto } from '@validasoft/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { envolverConRenovacion } from './renovacion';
-import { conCandado, renovarUnaVez } from './sesionApi';
+import { conCandado, renovarUnaVez, unNoAutenticadoTerminaLaSesion } from './sesionApi';
 import { correoValido } from './correo';
 import { ANTICIPO_RENOVACION_MS, crearSesionTercero, REINTENTO_RENOVACION_MS, type ApiSesion } from './sesionTercero';
 
@@ -103,6 +103,16 @@ describe('reintento tras 401', () => {
     await envolverConRenovacion(base, renovar)('/public/v1/sesion/renovar', { method: 'POST' });
     await envolverConRenovacion(base, renovar)('/public/v1/enlaces/tok/canjear', { method: 'POST' });
     expect(renovar).not.toHaveBeenCalled();
+  });
+});
+
+describe('qué 401 dan por terminada la sesión', () => {
+  it('los de las rutas de la sesión los resuelve su llamador: un 401 tardío del intento de restaurar no tumba la sesión abierta mientras tanto', () => {
+    expect(unNoAutenticadoTerminaLaSesion('http://api.prueba/public/v1/boveda')).toBe(true);
+    expect(unNoAutenticadoTerminaLaSesion('http://api.prueba/public/v1/vinculos')).toBe(true);
+    expect(unNoAutenticadoTerminaLaSesion('http://api.prueba/public/v1/sesion/renovar')).toBe(false);
+    expect(unNoAutenticadoTerminaLaSesion('http://api.prueba/public/v1/sesion/actual')).toBe(false);
+    expect(unNoAutenticadoTerminaLaSesion('http://api.prueba/public/v1/enlaces/tok/canjear')).toBe(false);
   });
 });
 

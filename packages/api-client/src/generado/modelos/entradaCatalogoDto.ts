@@ -17,4 +17,6 @@ export interface EntradaCatalogoDto {
   /** @nullable */
   pais?: string | null;
   activo?: boolean;
+  /** @nullable */
+  swift?: string | null;
 }
