@@ -4,7 +4,6 @@ import { EsqueletoTarjeta, EstadoVacio, PaginaEstado } from '@validasoft/ui';
 import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
-import { useScrollPropio } from '../../../sesion/alturaFija';
 import { EncabezadoPagina, EnlaceVolver, ErrorRecuperable, SinPermiso, Tarjeta } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
@@ -21,11 +20,11 @@ const REJILLA = { display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', l
 /**
  * Ficha aceptada de un vínculo (FD-3, `/e/:empresaId/vinculos/:vinculoId/ficha`): lo que **esta** empresa aceptó del tercero, por
  * sección, con su versión y su soporte, y aparte lo que el tercero guardó después y aún no se revisa. Un aviso agrupado dice cuántas
- * secciones tienen una versión nueva pendiente; a la derecha, el resumen. Solo lectura: se acepta u observa en el expediente.
+ * secciones tienen una versión nueva pendiente; a la derecha (debajo en pantallas angostas), el resumen. Solo lectura: se acepta u observa
+ * en el expediente. Sin scroll propio: no tiene encabezado que fijar, así que fluye con el alto de la página (embebida, el iframe crece con ella).
  */
 export function PaginaFichaAceptada() {
   const { t } = useTranslation();
-  useScrollPropio();
   const { vinculoId = '' } = useParams();
   const { empresa } = useEmpresaActiva();
   const permisos = usePermisos(empresa.id);

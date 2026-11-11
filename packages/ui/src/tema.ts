@@ -404,7 +404,7 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
       },
       MuiDialogTitle: { styleOverrides: { root: { ...TIPOGRAFIA.titulo3, padding: '16px 20px 4px' } } },
       MuiDialogContent: { styleOverrides: { root: { padding: '8px 20px' } } },
-      MuiDialogActions: { styleOverrides: { root: { padding: '12px 20px 16px', gap: 8, '& > :not(style) ~ :not(style)': { marginLeft: 0 } } } },
+      MuiDialogActions: { styleOverrides: { root: { padding: '12px 20px 16px', gap: 8, flexWrap: 'wrap', '& > :not(style) ~ :not(style)': { marginLeft: 0 } } } },
       MuiDrawer: {
         styleOverrides: { paper: { width: web ? 480 : '100%', backgroundColor: c.superficieNivel1, backgroundImage: 'none', borderLeft: `1px solid ${c.bordeSutil}`, boxShadow: s.dialogo } },
       },

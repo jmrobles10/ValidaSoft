@@ -56,7 +56,7 @@ test('la general llega prellenada y la ficha aceptada separa lo aceptado de lo q
   await expect(page.getByRole('textbox', { name: 'Razón social' })).toHaveValue(tercero.nombre);
   await expect(page.getByRole('textbox', { name: 'Correo electrónico' })).toHaveValue(tercero.correo);
   await expect(page.getByRole('textbox', { name: 'Identificación' })).toHaveValue(new RegExp(`^NIT ${tercero.identificacion.numero}-\\d$`));
-  await capturar(page, 'ficha-prellenada', { alto: 1500 });
+  await capturar(page, 'ficha-prellenada');
 
   // Lo demás lo diligencia el tercero; el RUT queda como soporte y «Guardar» no pide tocar lo prellenado.
   await page.getByRole('textbox', { name: 'Teléfono' }).fill('601 555 1234');
@@ -90,7 +90,7 @@ test('la general llega prellenada y la ficha aceptada separa lo aceptado de lo q
   await expect(general.getByRole('region', { name: 'Soporte con que se aceptó' })).toContainText(`${RUT} · versión 1`);
   await expect(sofia.getByRole('region', { name: 'Resumen' })).toContainText('1 sección aceptada');
   await expect(sofia.getByRole('region', { name: 'Resumen' })).toContainText('Nada pendiente de revisión.');
-  await capturar(paginaSofia, 'ficha-aceptada', { alto: 1500 });
+  await capturar(paginaSofia, 'ficha-aceptada');
 
   // El tercero cambia su razón social con el mismo RUT de antes: sin documento nuevo, y es un dato crítico.
   await page.goto('/ficha/general');
@@ -109,12 +109,12 @@ test('la general llega prellenada y la ficha aceptada separa lo aceptado de lo q
   const cambios = posterior.getByRole('table', { name: 'Qué cambió frente a la versión 1 aceptada' });
   await expect(cambios).toContainText('Aceros Pendientes S.A.S.');
   await expect(cambios).toContainText('Aceros Pendientes y Cía. S.A.S.');
-  await capturar(paginaSofia, 'ficha-aceptada-pendiente', { alto: 1500 });
+  await capturar(paginaSofia, 'ficha-aceptada-pendiente');
 
   // FD-4: en su revalidación, aprobar un cambio crítico sin documento nuevo pide una justificación.
   await posterior.getByRole('link', { name: /^Ver la revalidación/ }).click();
   await expect(sofia.getByRole('alert', { name: 'Cambio sin soporte' })).toBeVisible();
-  await capturar(paginaSofia, 'ficha-sin-soporte-revision', { alto: 1500 });
+  await capturar(paginaSofia, 'ficha-sin-soporte-revision');
   await regionDeArea(sofia, 'Revisión').getByRole('button', { name: /^Aprobar área/ }).click();
   const dialogo = sofia.getByRole('dialog', { name: /^Aprobar Revisión/ });
   await expect(dialogo.getByRole('alert')).toContainText('no tienen soporte');
