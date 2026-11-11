@@ -73,3 +73,12 @@ export * from './generado/endpoints/adjuntos-de-cumplimiento/adjuntos-de-cumplim
 export * from './generado/endpoints/rechazo-de-cumplimiento/rechazo-de-cumplimiento';
 export * from './generado/endpoints/informe-sagrilaft/informe-sagrilaft';
 export * from './generado/endpoints/revision-automatica/revision-automatica';
+export * from './generado/endpoints/sso-ingreso/sso-ingreso';
+export * from './generado/endpoints/sso-configuracion/sso-configuracion';
+export * from './generado/endpoints/mi-cuenta-seguridad/mi-cuenta-seguridad';
+export * from './generado/endpoints/sistemas-de-grupo/sistemas-de-grupo';
+export * from './generado/endpoints/sistemas-de-plataforma-estado/sistemas-de-plataforma-estado';
+export * from './generado/endpoints/empresas-de-grupo/empresas-de-grupo';
+export * from './generado/endpoints/clave-de-arranque/clave-de-arranque';
+export * from './generado/endpoints/auditoria-de-operadores/auditoria-de-operadores';
+export * from './generado/endpoints/consumo-de-ia/consumo-de-ia';

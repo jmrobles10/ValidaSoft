@@ -44,6 +44,9 @@ export const RUTAS_QUE_CREAN: readonly string[] = [
   '/api/v1/tipos-documento',
 ];
 
+/** Código con el que la API pide confirmar con la passkey antes de una acción sensible (PI-13). */
+export const CODIGO_REAUTENTICACION = 'reautenticacion-requerida';
+
 export function construirUrl(baseUrl: string, ruta: string, params?: object): string {
   const busqueda = new URLSearchParams();
   for (const [clave, valor] of Object.entries(params ?? {}) as [string, unknown][]) {
@@ -80,7 +83,7 @@ async function leerCuerpo(respuesta: Response): Promise<unknown> {
  * `X-Correlation-Id`. Devuelve la respuesta exitosa sin leer su cuerpo; si no lo es, lanza `ErrorApi` (o `ErrorDeRed`
  * si no hubo respuesta).
  */
-async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, aceptar: string): Promise<Response> {
+async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, aceptar: string, reautenticada = false): Promise<Response> {
   const cfg = configuracionCliente();
   const metodo = config.method.toUpperCase();
   const cabeceras = new Headers({ Accept: aceptar });
@@ -128,6 +131,9 @@ async function enviar(config: ConfigPeticion, opciones: OpcionesPeticion, acepta
     const datos = await leerCuerpo(respuesta);
     const error = errorDesdeProblema(respuesta.status, datos, respuesta.headers.get('X-Correlation-Id') ?? correlationId);
     if (error.esNoAutenticado) cfg.alNoAutenticado?.(error, url);
+    // Acción sensible: la app pide la passkey y, si la persona confirma, se repite la petición (una sola vez).
+    if (!reautenticada && error.codigo === CODIGO_REAUTENTICACION && cfg.alRequerirReautenticacion && (await cfg.alRequerirReautenticacion(error)))
+      return enviar(config, opciones, aceptar, true);
     throw error;
   }
   return respuesta;

@@ -263,6 +263,65 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDesactivarOperadorPlataformaMutationOptions(options), queryClient);
     }
+    export const reactivarOperadorPlataforma = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<OperadorDePlataformaDto>(
+      {url: `/api/v1/plataforma/operadores/${id}/reactivar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getReactivarOperadorPlataformaMutationKey = () => ['reactivarOperadorPlataforma'] as const;
+
+export const getReactivarOperadorPlataformaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivarOperadorPlataforma>>, TError,ReactivarOperadorPlataformaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof reactivarOperadorPlataforma>>, TError,ReactivarOperadorPlataformaMutationVariables, TContext> => {
+
+const mutationKey = getReactivarOperadorPlataformaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reactivarOperadorPlataforma>>, ReactivarOperadorPlataformaMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  reactivarOperadorPlataforma(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReactivarOperadorPlataformaMutationResult = NonNullable<Awaited<ReturnType<typeof reactivarOperadorPlataforma>>>
+
+    export type ReactivarOperadorPlataformaMutationError = ErrorType<void>
+    export type ReactivarOperadorPlataformaMutationVariables = {id: string}
+
+    export const useReactivarOperadorPlataforma = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivarOperadorPlataforma>>, TError,ReactivarOperadorPlataformaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reactivarOperadorPlataforma>>,
+        TError,
+        ReactivarOperadorPlataformaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReactivarOperadorPlataformaMutationOptions(options), queryClient);
+    }
     export const listarPasskeysOperador = (
     id: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal

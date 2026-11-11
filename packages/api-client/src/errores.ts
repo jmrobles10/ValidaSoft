@@ -34,6 +34,7 @@ export type CodigoErrorConocido =
   | 'asercion-incompleta'
   | 'llave-sin-sistema'
   | 'sistema-inactivo'
+  | 'reautenticacion-requerida'
   | 'no-autenticado'
   | 'prohibido'
   | 'no-encontrado'
