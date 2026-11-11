@@ -5,6 +5,7 @@ import { createValidasoftTheme } from '@validasoft/ui';
 import { useEffect, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { envolverConRenovacion } from '../sesion/renovacion';
+import { unNoAutenticadoTerminaLaSesion } from '../sesion/sesionApi';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { crearClienteConsultas } from '../shared/api';
 import { Avisos } from '../shared/avisos';
@@ -16,7 +17,9 @@ configurarCliente({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
   obtenerToken: () => useSesionTercero.getState().sesion?.accessToken ?? null,
   obtenerEmpresa: () => null,
-  alNoAutenticado: () => useSesionTercero.getState().vencer(),
+  alNoAutenticado: (_error, url) => {
+    if (unNoAutenticadoTerminaLaSesion(url)) useSesionTercero.getState().vencer();
+  },
   fetch: envolverConRenovacion((...argumentos) => globalThis.fetch(...argumentos), () => useSesionTercero.getState().renovarAhora()),
 });
 

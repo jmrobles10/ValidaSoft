@@ -97,6 +97,7 @@ test('un sistema ficticio embebe la bóveda y la ficha del tercero con una sesi�
   await expect(marco.getByRole('button', { name: 'Salir' })).toHaveCount(0);
   await expect(marco.getByRole('textbox', { name: 'Correo de la invitación' })).toHaveCount(0);
   expect(await mensajes(anfitrion)).toEqual(expect.arrayContaining(['validasoft:ready', 'validasoft:resize']));
+  await expect(marco.getByText('Aún no tienes documentos')).toBeVisible(); // ya cargó la lista (la captura no muestra el esqueleto)
   await capturar(anfitrion, 'embebido-boveda');
   expect(backend.pedidas).toEqual([{ componente: 'boveda', motivo: 'inicial' }]);
 

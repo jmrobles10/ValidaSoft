@@ -27,7 +27,9 @@ test('el proveedor designa su cuenta para Norte y queda designada cuando la apru
   await expect(page.getByRole('heading', { level: 1, name: 'Mis cuentas bancarias' })).toBeVisible();
   await page.getByRole('button', { name: 'Agregar cuenta' }).first().click();
   const nueva = page.getByRole('dialog', { name: 'Agregar cuenta bancaria' });
-  await nueva.getByLabel('Banco').fill('Bancolombia');
+  // El banco sale del catálogo (con su código de compensación y SWIFT, que viajan al ERP): se busca y se elige de la lista.
+  await nueva.getByRole('combobox', { name: 'Banco' }).fill('Bancolombia');
+  await page.getByRole('option', { name: 'Bancolombia' }).click();
   await nueva.getByRole('radio', { name: 'Ahorros' }).check();
   await nueva.getByLabel('Número de cuenta').fill('031-123456-78');
   await nueva.getByLabel('Titular de la cuenta').fill('Ferretería El Tornillo S.A.S.');

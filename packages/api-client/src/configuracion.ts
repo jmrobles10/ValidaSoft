@@ -11,8 +11,8 @@ export interface ConfiguracionCliente {
   obtenerToken: () => string | null;
   /** Empresa activa: viaja en `X-Empresa`. `null` en operaciones de tenant. */
   obtenerEmpresa: () => string | null;
-  /** Se llama con cada 401, después de rechazar la promesa. */
-  alNoAutenticado?: (error: ErrorApi) => void;
+  /** Se llama con cada 401 (y la URL pedida), antes de rechazar la promesa. */
+  alNoAutenticado?: (error: ErrorApi, url: string) => void;
   /** Genera `Idempotency-Key` y `X-Correlation-Id`. */
   generarId: () => string;
   /** Implementación de fetch (inyectable en pruebas). */

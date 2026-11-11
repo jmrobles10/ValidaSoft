@@ -29,7 +29,7 @@ export function Shell() {
 /** El contenido solo, a todo el ancho del iframe y sin saltos laterales. */
 function ShellEmbebido() {
   return (
-    <Box component="main" sx={{ minHeight: '100dvh', bgcolor: 'background.default', px: { xs: 1.5, sm: 2 }, py: { xs: 1.5, sm: 2 }, maxWidth: 960, mx: 'auto' }}>
+    <Box component="main" sx={{ bgcolor: 'background.default', px: { xs: 1.5, sm: 2 }, py: { xs: 1.5, sm: 2 }, maxWidth: 960, mx: 'auto' }}>
       <Outlet />
     </Box>
   );

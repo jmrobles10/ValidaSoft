@@ -16,6 +16,11 @@ import { MODO_EMBEBIDO } from './modo';
  */
 type MotivoPedido = 'inicial' | 'por-vencer' | 'vencida' | 'rechazada';
 
+/** Le dice al contenedor cuánto mide el contenido (el del body, no el del documento: este nunca baja del alto del iframe). */
+function avisarAlto(contenedor: string | null): void {
+  if (contenedor) window.parent.postMessage({ tipo: 'validasoft:resize', height: Math.ceil(document.body.getBoundingClientRect().height) }, contenedor);
+}
+
 export function usePuenteEmbebido(): void {
   const setEstado = useEstadoPuente((s) => s.poner);
   const permitidosRef = useRef<readonly string[] | null>(null);
@@ -50,6 +55,7 @@ export function usePuenteEmbebido(): void {
         setEstado((e) => (e === 'lista' ? e : 'sin-contenedor'));
       } else if (cambio) {
         window.parent.postMessage({ tipo: 'validasoft:ready', version: VERSION_PROTOCOLO }, contenedor);
+        avisarAlto(contenedor);
         setEstado((e) => (e === 'sin-contenedor' ? 'esperando' : e));
       }
     };
@@ -79,17 +85,15 @@ export function usePuenteEmbebido(): void {
         return;
       }
 
-      // La sesión de verdad (empresa y estado de cada vínculo) la da la API con ese mismo token; mientras tanto vale la provisional.
-      yaPidioVencida.current = false;
-      const expira = veredicto.reclamos.expira ?? Date.now() + 10 * 60_000;
-      useSesionTercero.getState().establecer({ accessToken: token, expira: new Date(expira).toISOString(), terceroId: '', otpVerificado: true, vinculos: [] });
-      obtenerSesionActual()
+      // La sesión (con la empresa y el estado de cada vínculo) la da la API con ese mismo token, y solo entonces se abre: una sesión
+      // provisional haría pedir datos que se cancelarían al cambiar de persona (sin terceroId) y dejarían la pantalla en el esqueleto.
+      obtenerSesionActual({ token })
         .then((sesion) => {
+          yaPidioVencida.current = false;
           useSesionTercero.getState().establecer(sesion);
           setEstado('lista');
         })
         .catch(() => {
-          useSesionTercero.getState().vencer();
           setEstado('rechazada');
           pedir('rechazada');
         });
@@ -115,11 +119,7 @@ export function usePuenteEmbebido(): void {
   // El alto del contenido, para que el anfitrión pueda ajustar el iframe.
   useEffect(() => {
     if (!MODO_EMBEBIDO) return undefined;
-    const avisar = () => {
-      const contenedor = contenedorRef.current;
-      if (contenedor) window.parent.postMessage({ tipo: 'validasoft:resize', height: Math.ceil(document.documentElement.scrollHeight) }, contenedor);
-    };
-    const observador = new ResizeObserver(avisar);
+    const observador = new ResizeObserver(() => avisarAlto(contenedorRef.current));
     observador.observe(document.body);
     return () => observador.disconnect();
   }, []);

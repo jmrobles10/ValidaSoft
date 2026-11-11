@@ -16,7 +16,10 @@ async function aceptar(page: Page, empresa: string): Promise<void> {
   await expect(page.getByRole('heading', { level: 1, name: `${empresa} te invita a validar tu información` })).toBeVisible();
   for (const casilla of await page.getByRole('checkbox', { name: 'Leí y acepto este texto' }).all()) await casilla.check();
   await page.getByRole('button', { name: 'Aceptar' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Ya aceptaste esta invitación' })).toBeVisible();
+  // Con documentos por subir lleva a «Tu revisión con …»; si la empresa no pide nada que no esté ya en la bóveda, a «Ya aceptaste…».
+  await expect(
+    page.getByRole('heading', { level: 1, name: `Tu revisión con ${empresa}` }).or(page.getByRole('heading', { level: 1, name: 'Ya aceptaste esta invitación' })),
+  ).toBeVisible();
 }
 
 async function contactosDelTercero(page: Page, empresa: string, contactos: { nombre: string; cargo: string; correo: string; telefono: string; rol: string }[]): Promise<void> {
@@ -32,9 +35,10 @@ async function contactosDelTercero(page: Page, empresa: string, contactos: { nom
     await contacto.getByRole('combobox', { name: /Rol/ }).click();
     await page.getByRole('option', { name: c.rol, exact: true }).click();
   }
+  await expect(page.getByRole('listbox')).toBeHidden(); // la lista de roles ya cerró: la captura muestra el diálogo limpio
   await capturar(page, 'contactos-tercero');
   await dialogo.getByRole('button', { name: 'Guardar contactos' }).click();
-  await expect(page.getByText(`Guardaste tus contactos con ${empresa}.`)).toBeVisible();
+  await expect(page.getByText(`Guardaste tus contactos con ${empresa}`)).toBeVisible();
 }
 
 test('el tercero y cada empresa manejan contactos distintos con cada empresa, y el cambio sale por el pull de eventos', async ({ page, browser }) => {

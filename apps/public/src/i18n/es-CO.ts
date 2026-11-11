@@ -120,7 +120,7 @@ export const esCO = {
     rol: 'Rol',
     roles: { Comercial: 'Comercial', Pagos: 'Pagos', Cumplimiento: 'Cumplimiento', Notificaciones: 'Notificaciones' },
     guardar: 'Guardar contactos',
-    exito: 'Guardaste tus contactos con {{empresa}}.',
+    exito: 'Guardaste tus contactos con {{empresa}}',
     errores: {
       nombre: 'Escribe el nombre de la persona.',
       correo: 'Escribe un correo válido, por ejemplo nombre@empresa.com.',
