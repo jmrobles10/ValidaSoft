@@ -182,16 +182,16 @@ test('Plataforma fija el plan de un grupo: al llegar al límite no se crean más
   await consola.getByRole('switch', { name: 'Bloquear al llegar al límite' }).check();
   await expect(consola.getByText('Al llegar a un límite, el grupo no podrá crear más de eso', { exact: false })).toBeVisible();
   await consola.getByRole('button', { name: 'Guardar el plan' }).click();
-  await expect(consola.getByText('Empresas').first()).toBeVisible();
-  await expect(consola.getByText('2 de 2')).toBeVisible();
-  await expect(consola.getByText('En el límite').first()).toBeVisible();
+  await expect(consola.getByText('Empresas', { exact: true }).first()).toBeVisible();
+  await expect(consola.getByText('2 de 2', { exact: true })).toBeVisible();
+  await expect(consola.getByText('En el límite', { exact: true }).first()).toBeVisible();
   await fotografiar(consola, 'plan-plataforma');
 
   // 2. El grupo ve su plan y su uso, y que está en el límite.
   const ana = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.ana, e.norte, 'plan-grupo');
   await expect(ana.getByRole('heading', { level: 1, name: 'Plan del grupo' })).toBeVisible();
-  await expect(ana.getByText('empresarial')).toBeVisible();
-  await expect(ana.getByText('2 de 2')).toBeVisible();
+  await expect(ana.getByText('empresarial', { exact: true })).toBeVisible();
+  await expect(ana.getByText('2 de 2', { exact: true })).toBeVisible();
   await expect(ana.getByText('Llegaste al límite de tu plan', { exact: false })).toBeVisible();
   await fotografiar(ana, 'plan-grupo-empresa');
 
@@ -202,7 +202,7 @@ test('Plataforma fija el plan de un grupo: al llegar al límite no se crean más
   // 4. Plataforma amplía el límite y la empresa ya se puede crear (lo que existe nunca dejó de funcionar).
   await consola.getByRole('textbox', { name: 'Empresas' }).fill('3');
   await consola.getByRole('button', { name: 'Guardar el plan' }).click();
-  await expect(consola.getByText('2 de 3')).toBeVisible();
+  await expect(consola.getByText('2 de 3', { exact: true })).toBeVisible();
   const creada = await llamar<{ id: string }>('POST', '/api/v1/empresas', { llave: e.admin, cuerpo: tercera });
   expect(creada.id).not.toBe('');
   await expect(llamar('POST', '/api/v1/empresas', { llave: e.admin, cuerpo: { ...tercera, identificacion: nitAleatorio(), prefijoFolio: `P${e.sufijo.slice(-5).toUpperCase()}` } })).rejects.toBeInstanceOf(ErrorDeApi);
@@ -223,9 +223,9 @@ test('una empresa registra su dominio de correo: mientras falte un registro el c
   await ana.getByRole('button', { name: 'Registrar el dominio' }).click();
   const registros = ana.getByRole('list', { name: 'Registros DNS' });
   await expect(registros.getByRole('listitem')).toHaveCount(3);
-  await expect(ana.getByText('Pendiente de verificar')).toBeVisible();
+  await expect(ana.getByText('Pendiente de verificar', { exact: true })).toBeVisible();
   await ana.getByRole('button', { name: 'Verificar ahora' }).click();
-  await expect(ana.getByText('Falta algún registro')).toBeVisible();
+  await expect(ana.getByText('Falta algún registro', { exact: true })).toBeVisible();
   await expect(registros.getByRole('listitem').filter({ has: ana.getByRole('heading', { name: 'DKIM', exact: true }) })).toContainText('No encontrado');
   await expect(registros.getByRole('listitem').filter({ has: ana.getByRole('heading', { name: 'SPF', exact: true }) })).toContainText('Correcto');
   await fotografiar(ana, 'dominio-correo-incompleto');
@@ -242,7 +242,7 @@ test('una empresa registra su dominio de correo: mientras falte un registro el c
   await ana.getByRole('textbox', { name: 'Nombre del remitente' }).fill('Compras Constructora Norte');
   await expect(ana.getByText(`Compras Constructora Norte <no-responder@${dominio}>`)).toBeVisible();
   await ana.getByRole('button', { name: 'Guardar los cambios' }).click();
-  await expect(ana.getByText('Pendiente de verificar')).toBeVisible();
+  await expect(ana.getByText('Pendiente de verificar', { exact: true })).toBeVisible();
   await ana.getByRole('button', { name: 'Verificar ahora' }).click();
   await expect(ana.getByText('Verificado', { exact: true })).toBeVisible();
   await expect(ana.getByText('Es tu remitente propio', { exact: false })).toBeVisible();

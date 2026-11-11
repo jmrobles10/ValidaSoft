@@ -156,7 +156,7 @@ test('Plataforma: agregar una empresa a un grupo y desactivar y reactivar uno de
   // Sistemas del grupo: desactivar (revoca sus llaves y sesiones) y reactivar.
   await consola.getByRole('button', { name: `Ver los sistemas de ${g.nombre}` }).click();
   const lista = consola.getByRole('dialog', { name: /Sistemas integrados/ });
-  await expect(lista.getByText('ERP de Andina')).toBeVisible();
+  await expect(lista.getByText('ERP de Andina', { exact: true })).toBeVisible();
   await capturar(page, 'plataforma-sistemas-del-grupo');
   await lista.getByRole('button', { name: 'Desactivar ERP de Andina' }).click();
   await consola.getByRole('dialog', { name: /^Desactivar ERP de Andina/ }).getByRole('button', { name: 'Desactivar' }).click();
@@ -236,7 +236,7 @@ test('Configuración › Inicio de sesión único: el secreto no vuelve, el domi
 
   await page.goto(`/app/#/e/${g.empresaId}/sso`);
   await expect(page.getByRole('heading', { level: 1, name: 'Inicio de sesión único' })).toBeVisible();
-  await expect(page.getByText('Sin configurar')).toBeVisible();
+  await expect(page.getByText('Sin configurar', { exact: true })).toBeVisible();
   await capturar(page, 'configuracion-sso-vacia');
 
   await page.getByLabel('Nombre del botón').fill('Andina');
@@ -253,7 +253,7 @@ test('Configuración › Inicio de sesión único: el secreto no vuelve, el domi
   // Agregar un dominio puede pedir confirmar con la passkey (configurar el SSO es una acción sensible).
   if (await page.getByRole('dialog', { name: 'Confirma que eres tú' }).isVisible({ timeout: 2_000 }).catch(() => false)) await confirmarConPasskey(page);
   await expect(page.getByText(`@sso-${sufijo}.e2e.validasoft.co`)).toBeVisible();
-  await expect(page.getByText('Por verificar')).toBeVisible();
+  await expect(page.getByText('Por verificar', { exact: true })).toBeVisible();
   await expect(page.getByText(/validasoft-verificacion=/)).toBeVisible();
   await capturar(page, 'configuracion-sso-dominio');
 
@@ -266,6 +266,6 @@ test('Configuración › Inicio de sesión único: el secreto no vuelve, el domi
   await expect(page.getByText('Secreto guardado, termina en 2345')).toBeVisible();
   await expect(page.getByText('secreto-e2e-12345')).toHaveCount(0);
   await expect(page.getByLabel('Secreto del cliente')).toHaveCount(0);
-  await expect(page.getByText('Apagado')).toBeVisible();
+  await expect(page.getByText('Apagado', { exact: true })).toBeVisible();
   await capturar(page, 'configuracion-sso-guardada');
 });

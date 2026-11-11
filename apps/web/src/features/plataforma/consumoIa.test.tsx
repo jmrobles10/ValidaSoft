@@ -148,7 +148,9 @@ describe('Uso de IA por cliente (PI-12)', () => {
   });
 
   it('exporta a Excel o CSV con los mismos filtros', async () => {
-    const archivo = () => new Response(new Blob(['x']), { status: 200, headers: { 'Content-Type': 'text/csv' } });
+    // Bytes, no un `Blob` de jsdom: con Node 22 (el del CI) `new Response(blob)` falla con «object.stream is not a function» —Node 26 sí lo acepta— y la
+    // descarga simulada reventaba antes de guardar nada.
+    const archivo = () => new Response(new Uint8Array([120]), { status: 200, headers: { 'Content-Type': 'text/csv' } });
     const { peticiones, usuario } = montar({ 'GET /api/v1/plataforma/ia/consumo/exportar': archivo }, '/plataforma/uso-ia?q=andino');
     await screen.findByText('Grupo Andino');
 

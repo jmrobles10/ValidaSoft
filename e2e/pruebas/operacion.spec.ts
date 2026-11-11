@@ -113,7 +113,7 @@ test('la campaña de renovación muestra a quién afecta, avisa antes de confirm
   await ana.getByRole('dialog', { name: '¿Abrir las renovaciones?' }).getByRole('button', { name: 'Confirmar y abrir' }).click();
   await expect(ana.getByRole('heading', { level: 1, name: 'Renovación de clientes E2E' })).toBeVisible();
   await expect(ana.getByText('Completada', { exact: true })).toBeVisible({ timeout: 40_000 });
-  await expect(ana.getByRole('table', { name: 'Vínculos de la campaña' }).getByText('Renovación abierta')).toBeVisible();
+  await expect(ana.getByRole('table', { name: 'Vínculos de la campaña' }).getByText(/^Renovación abierta · /)).toBeVisible();
   await capturar(paginaAna, 'campanias-detalle');
 
   const vinculo = await llamar<{ estado: string; expedienteAbiertoId: string | null }>('GET', `/api/v1/vinculos/${invitacion.vinculoId}`, {
@@ -176,14 +176,14 @@ test('el plazo de revisión avisa al acercarse y al vencer, marca la bandeja y e
   const paginaRuben = await (await browser.newContext()).newPage();
   const ruben = await abrirEmbebido(paginaRuben, e, e.ruben, e.norte, 'bandeja');
   await expect(ruben.getByRole('columnheader', { name: 'Plazo de revisión' })).toBeVisible();
-  await expect(ruben.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('A tiempo')).toBeVisible();
+  await expect(ruben.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('A tiempo', { exact: true })).toBeVisible();
   await capturar(paginaRuben, 'bandeja-plazo');
 
   // Informe de cumplimiento del plazo de revisión.
   const paginaInforme = await (await browser.newContext()).newPage();
   const informe = await abrirEmbebido(paginaInforme, e, e.ana, e.norte, 'informes/sla');
   await expect(informe.getByRole('heading', { level: 1 })).toBeVisible();
-  await expect(informe.getByText('Compras').first()).toBeVisible();
+  await expect(informe.getByText('Compras', { exact: true }).first()).toBeVisible();
   await capturar(paginaInforme, 'informe-sla');
 });
 
@@ -197,7 +197,7 @@ test('la empresa escribe la ayuda de un documento y el tercero la lee al entrega
   await ana.getByRole('textbox', { name: /Ayuda de Constructora Norte/ }).fill('Trae el RUT con fecha de este año y las responsabilidades marcadas.');
   await ana.getByRole('button', { name: 'Guardar' }).click();
   await expect(ana.getByText('Ayuda guardada: el tercero la ve desde ahora.')).toBeVisible();
-  await expect(ana.getByRole('row').filter({ hasText: 'Registro Único Tributario' }).getByText('Propia')).toBeVisible();
+  await expect(ana.getByRole('row').filter({ hasText: 'Registro Único Tributario' }).getByText('Propia', { exact: true })).toBeVisible();
 
   // El tercero de Norte la lee en su expediente; Sur no la tiene (la del grupo).
   const invitacion = await invitar(e, e.norte, nuevoTercero('Aceros de la Ayuda S.A.S.'));
@@ -228,12 +228,12 @@ test('la delegación avisa antes de crearse y quien la recibe revisa el área en
   await capturar(paginaRuben, 'delegaciones-aviso');
   await dialogo.getByRole('button', { name: 'Delegar', exact: true }).click();
   await expect(ruben.getByText(/Delegación creada: Olga Oficial revisa en tu lugar/)).toBeVisible();
-  await expect(ruben.getByRole('row').filter({ hasText: 'Olga Oficial' }).getByText('Vigente')).toBeVisible();
+  await expect(ruben.getByRole('row').filter({ hasText: 'Olga Oficial' }).getByText('Vigente', { exact: true })).toBeVisible();
 
   // Olga ve en su bandeja el expediente de Compras que no era suyo.
   const paginaOlga = await (await browser.newContext()).newPage();
   const olga = await abrirEmbebido(paginaOlga, e, e.olga, e.norte, 'bandeja');
-  await expect(olga.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('Compras')).toBeVisible();
+  await expect(olga.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('Compras', { exact: true })).toBeVisible();
   await capturar(paginaOlga, 'bandeja-delegada');
 
   // Rubén revoca: Olga deja de verla.
@@ -241,7 +241,7 @@ test('la delegación avisa antes de crearse y quien la recibe revisa el área en
   await ruben.getByRole('dialog', { name: 'Revocar delegación' }).getByRole('button', { name: 'Revocar delegación' }).click();
   await expect(ruben.getByText('Delegación revocada.')).toBeVisible();
   await paginaOlga.reload();
-  await expect(olga.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('Compras')).toHaveCount(0);
+  await expect(olga.getByRole('row').filter({ hasText: invitacion.nombre }).getByText('Compras', { exact: true })).toHaveCount(0);
 });
 
 test('las plantillas de correo traen los avisos de pre-vencimiento y vigencia para personalizarlos', async ({ browser }) => {
