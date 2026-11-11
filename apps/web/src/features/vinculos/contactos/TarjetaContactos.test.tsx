@@ -2,7 +2,7 @@ import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { configurarCliente, reiniciarCliente, SCOPES, type ContactoDeEmpresaDto } from '@validasoft/api-client';
+import { configurarCliente, reiniciarCliente, SCOPES, type ContactoDeEmpresaDto, type EstadoVinculo } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAvisos } from '../../../shared/useAvisos';
@@ -19,7 +19,7 @@ const CONTACTOS: ContactoDeEmpresaDto[] = [
 
 const json = (cuerpo: unknown, status = 200) => new Response(JSON.stringify(cuerpo), { status, headers: { 'Content-Type': status >= 400 ? 'application/problem+json' : 'application/json' } });
 
-function montar(contactos: ContactoDeEmpresaDto[] | undefined, estado = 'Activo', responder: (url: string) => Response = () => json({ id: 'v1', contactos: [] })) {
+function montar(contactos: ContactoDeEmpresaDto[] | undefined, estado: EstadoVinculo = 'Activo', responder: (url: string) => Response = () => json({ id: 'v1', contactos: [] })) {
   const peticiones: { url: string; metodo: string; cuerpo: unknown }[] = [];
   configurarCliente({
     fetch: vi.fn((entrada: RequestInfo | URL, init?: RequestInit) => {
