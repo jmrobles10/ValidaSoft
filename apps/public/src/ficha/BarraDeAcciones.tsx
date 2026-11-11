@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 import type { CompletitudSeccionDto } from '@validasoft/api-client';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { useLayoutEffect, useRef, useState } from 'react';
@@ -41,12 +41,14 @@ export function BarraDeAcciones({ prevista, errorPrevista, sinRevision, pendient
     return () => observador.disconnect();
   }, []);
 
+  // Mientras llega la primera evaluación, un esqueleto de la línea de estado (nunca un spinner).
+  const revisando = !errorPrevista && !sinRevision && !prevista;
   const [icono, color, texto] = errorPrevista
     ? [<CircleAlert key="i" size={18} aria-hidden />, 'error.main', t('ficha.barra.revisar', { detalle: mensajeDeError(errorPrevista, t) })]
     : sinRevision
       ? [<CircleAlert key="i" size={18} aria-hidden />, 'text.secondary', t('ficha.barra.sinRevision')]
-      : !prevista
-      ? [<CircularProgress key="i" size={16} aria-hidden />, 'text.secondary', t('ficha.barra.revisando')]
+      : revisando
+      ? [null, 'text.secondary', t('ficha.barra.revisando')]
       : lista
         ? [<CheckCircle2 key="i" size={18} aria-hidden />, 'success.main', t('ficha.barra.lista')]
         : [<CircleAlert key="i" size={18} aria-hidden />, 'warning.dark', t('ficha.barra.faltan', { count: faltantes.length })];
@@ -79,18 +81,24 @@ export function BarraDeAcciones({ prevista, errorPrevista, sinRevision, pendient
         }}
       >
         <Stack direction="row" spacing={1} aria-live="polite" sx={{ flex: 1, minWidth: 0, alignItems: 'center', color, opacity: pendiente && prevista ? 0.6 : 1, transition: 'opacity 200ms' }}>
-          <Box key={texto} component="span" sx={{ display: 'inline-flex', flex: 'none', animation: `${aparicion} 200ms ease-out` }}>
-            {icono}
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography key={texto} sx={{ fontSize: 14, lineHeight: '20px', fontWeight: 500, animation: `${aparicion} 200ms ease-out` }}>
-              {texto}
-            </Typography>
-            {sinGuardar && <Typography sx={{ fontSize: 12, lineHeight: '16px', color: 'text.secondary' }}>{t('ficha.barra.sinGuardar')}</Typography>}
-          </Box>
+          {revisando ? (
+            <Skeleton variant="rounded" width={220} height={14} role="status" aria-label={t('ficha.barra.revisando')} sx={{ maxWidth: '100%' }} />
+          ) : (
+            <>
+              <Box key={texto} component="span" sx={{ display: 'inline-flex', flex: 'none', animation: `${aparicion} 200ms ease-out` }}>
+                {icono}
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography key={texto} sx={{ fontSize: 14, lineHeight: '20px', fontWeight: 500, animation: `${aparicion} 200ms ease-out` }}>
+                  {texto}
+                </Typography>
+                {sinGuardar && <Typography sx={{ fontSize: 12, lineHeight: '16px', color: 'text.secondary' }}>{t('ficha.barra.sinGuardar')}</Typography>}
+              </Box>
+            </>
+          )}
         </Stack>
         <Stack direction="row" spacing={1.5} sx={{ flex: 'none', justifyContent: 'flex-end' }}>
-          <Button variant="outlined" size="large" disabled={guardando || !sinGuardar} onClick={onGuardar} sx={{ minHeight: 48, flex: { xs: 1, sm: 'none' } }}>
+          <Button variant="outlined" disabled={guardando || !sinGuardar} onClick={onGuardar} sx={{ flex: { xs: 1, sm: 'none' } }}>
             {guardando ? t('ficha.guardando') : t('ficha.guardar')}
           </Button>
           <Tooltip
@@ -99,7 +107,7 @@ export function BarraDeAcciones({ prevista, errorPrevista, sinRevision, pendient
             describeChild
           >
             <Box component="span" sx={{ display: 'inline-flex', flex: { xs: 1, sm: 'none' } }}>
-              <Button variant="contained" size="large" disabled={guardando || !lista} onClick={onContinuar} sx={{ minHeight: 48, flex: 1 }}>
+              <Button variant="contained" disabled={guardando || !lista} onClick={onContinuar} sx={{ flex: 1 }}>
                 {t('ficha.guardarContinuar')}
               </Button>
             </Box>

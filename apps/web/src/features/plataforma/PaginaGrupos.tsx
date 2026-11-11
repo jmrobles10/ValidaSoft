@@ -1,6 +1,6 @@
 import { Box, Button, Skeleton, Stack, Typography } from '@mui/material';
 import type { GrupoDto } from '@validasoft/api-client';
-import { BarraFiltros, CampoBusqueda, EstadoVacio } from '@validasoft/ui';
+import { BarraFiltros, CampoBusqueda, EstadoVacio, TablaEsqueleto } from '@validasoft/ui';
 import { Building2, Plus, SearchX } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,16 @@ import { TarjetaGrupo } from './TarjetaGrupo';
 
 const SEPARACION_PX = 16;
 const claveDeGrupo = (g: GrupoDto) => g.tenant.id;
+
+/** Lo que se ve mientras llegan los grupos: una tarjeta con su título y la tabla de sus empresas (como la real). */
+function EsqueletoGrupo() {
+  return (
+    <Box sx={{ py: 1.5, px: 2, border: 1, borderColor: 'divider', borderRadius: (th) => `${String(th.radio.md)}px`, bgcolor: 'background.paper' }}>
+      <Skeleton variant="rounded" width={220} height={16} sx={{ mb: 1.5, maxWidth: '60%' }} />
+      <TablaEsqueleto columnas={5} filas={2} />
+    </Box>
+  );
+}
 
 /** Los grupos (tenants) con sus empresas y el estado del plan de IA de cada una: scroll infinito y buscador (PT-9, PT-11). */
 export function PaginaGrupos() {
@@ -59,9 +69,9 @@ export function PaginaGrupos() {
       </BarraFiltros>
       {consulta.isError && !consulta.data && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}
       {consulta.isPending && (
-        <Stack spacing={2} role="status" aria-label={t('comun.cargando')}>
+        <Stack spacing={`${String(SEPARACION_PX)}px`} role="status" aria-busy="true" aria-label={t('plataforma.grupos.cargando')}>
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} variant="rounded" height={ALTO_ESTIMADO_GRUPO - 40} />
+            <EsqueletoGrupo key={i} />
           ))}
         </Stack>
       )}
@@ -93,6 +103,7 @@ export function PaginaGrupos() {
             errorAlCargarMas={consulta.isFetchNextPageError}
             alCargarMas={cargarMas}
             textoCargandoMas={t('plataforma.grupos.cargandoMas')}
+            esqueletoCargandoMas={<EsqueletoGrupo />}
             textoErrorMas={t('plataforma.grupos.errorMas')}
             textoReintentar={t('comun.reintentar')}
           />

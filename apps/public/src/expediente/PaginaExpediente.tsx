@@ -149,11 +149,11 @@ export function PaginaExpediente() {
               disabled={reenvio.isPending}
             />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button type="submit" variant="contained" size="large" disabled={reenvio.isPending}>
+              <Button type="submit" variant="contained" disabled={reenvio.isPending}>
                 {t('expediente.reenviar')}
               </Button>
               {!conRequisitos && (
-                <Button component={RouterLink} to="/boveda" variant="outlined" size="large" startIcon={<Upload size={18} aria-hidden />}>
+                <Button component={RouterLink} to="/boveda" variant="outlined" startIcon={<Upload size={18} aria-hidden />}>
                   {t('expediente.subirEnBoveda')}
                 </Button>
               )}

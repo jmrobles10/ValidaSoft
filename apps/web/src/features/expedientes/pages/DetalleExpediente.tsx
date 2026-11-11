@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Menu, MenuItem, ListItemIcon, ListItemText, Skeleton, Stack, Typography } from '@mui/material';
 import { esErrorApi, SCOPES, type AreaExpedienteDto } from '@validasoft/api-client';
-import { ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
+import { ChipEstado, EsqueletoTarjeta, formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { Ban, ChevronDown, Link2, Lock, SearchX, Send } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -70,8 +70,8 @@ export function DetalleExpediente() {
         <Skeleton variant="rounded" width={320} height={28} sx={{ mb: 1 }} />
         <Skeleton variant="rounded" width={240} height={14} sx={{ mb: 3 }} />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2 }}>
-          <Skeleton variant="rounded" height={280} />
-          <Skeleton variant="rounded" height={320} />
+          <EsqueletoTarjeta alto={280} />
+          <EsqueletoTarjeta alto={320} />
         </Box>
       </Box>
     );

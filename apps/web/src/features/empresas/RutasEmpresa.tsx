@@ -1,5 +1,6 @@
-import { Alert, Box, CircularProgress } from '@mui/material';
+import { Alert } from '@mui/material';
 import { accedeAEmpresa, configurarCliente } from '@validasoft/api-client';
+import { EsqueletoDetalle } from '@validasoft/ui';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useParams } from 'react-router';
@@ -16,7 +17,7 @@ export function RedireccionInicial() {
   const sugerida = useSesion((s) => s.empresaSugerida);
   const ultima = usePreferencias((s) => (sesion ? s.ultimaEmpresa[sesion.usuarioId] : undefined));
 
-  if (consulta.isPending) return <CircularProgress sx={{ m: 4 }} aria-label={t('comun.cargando')} />;
+  if (consulta.isPending) return <EsqueletoDetalle sx={{ p: 3 }} />;
   if (consulta.isError) return <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />;
 
   const destino = elegirEmpresaInicial(consulta.data, sugerida, ultima);
@@ -39,13 +40,7 @@ export function EmpresaDeLaRuta() {
     recordarEmpresa(sesion.usuarioId, empresa.id);
   }, [empresa, sesion, recordarEmpresa]);
 
-  if (consulta.isPending) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 6 }}>
-        <CircularProgress aria-label={t('comun.cargando')} />
-      </Box>
-    );
-  }
+  if (consulta.isPending) return <EsqueletoDetalle sx={{ p: 3 }} />;
   if (consulta.isError) return <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />;
   if (!empresa || (sesion && !accedeAEmpresa(sesion, empresa.id))) return <Alert severity="warning">{t('empresas.noEncontrada')}</Alert>;
 

@@ -28,7 +28,7 @@ export function ConfirmarRatificacion({ expedienteId, requisitoId, documento, em
 
   return (
     <>
-      <Button variant="outlined" size="large" startIcon={<CheckCheck size={16} aria-hidden />} onClick={() => setAbierto(true)} sx={{ mt: 1, ml: 3.25 }}>
+      <Button variant="outlined" startIcon={<CheckCheck size={16} aria-hidden />} onClick={() => setAbierto(true)} sx={{ mt: 1, ml: 3.25 }}>
         {t('expediente.ratificar.boton')}
       </Button>
       <Dialog open={abierto} onClose={cerrar} fullWidth maxWidth="xs" aria-labelledby="titulo-ratificar">

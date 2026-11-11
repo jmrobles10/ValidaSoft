@@ -51,7 +51,6 @@ export function FilasIca({ filas, onCambiar, mensaje, deshabilitado }: Props) {
                   onClick={() => quitar(i)}
                   disabled={deshabilitado}
                   aria-label={t('ficha.tributaria.quitarIca', { n })}
-                  sx={{ minHeight: 44 }}
                 >
                   {t('ficha.quitar')}
                 </Button>
@@ -64,7 +63,7 @@ export function FilasIca({ filas, onCambiar, mensaje, deshabilitado }: Props) {
           </Paper>
         );
       })}
-      <Button variant="outlined" startIcon={<Plus size={18} aria-hidden />} onClick={agregar} disabled={deshabilitado} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, minHeight: 44 }}>
+      <Button variant="outlined" startIcon={<Plus size={18} aria-hidden />} onClick={agregar} disabled={deshabilitado} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}>
         {t('ficha.tributaria.agregarIca')}
       </Button>
     </Stack>

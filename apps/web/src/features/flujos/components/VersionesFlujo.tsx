@@ -1,6 +1,6 @@
-import { Box, ButtonBase, Chip, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, ButtonBase, Chip, Stack, Typography } from '@mui/material';
 import type { FlujoVersionDto } from '@validasoft/api-client';
-import { formatearFecha } from '@validasoft/ui';
+import { EsqueletoTarjeta, formatearFecha } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
 
@@ -11,7 +11,7 @@ export function VersionesFlujo({ versiones, actual, onVer }: { versiones: readon
 
   return (
     <Tarjeta titulo={t('flujos.editor.versiones')}>
-      {!versiones && <Skeleton variant="rounded" height={80} />}
+      {!versiones && <EsqueletoTarjeta alto={80} />}
       <Stack component="ul" spacing={0.5} sx={{ m: 0, p: 0, listStyle: 'none' }}>
         {ordenadas.map((v) => {
           const fecha =

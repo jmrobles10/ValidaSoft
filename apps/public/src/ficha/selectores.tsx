@@ -49,7 +49,6 @@ export function CampoCatalogo({ catalogo, valor, onCambiar, etiqueta, mensaje, a
       getOptionLabel={(e) => etiquetaEntrada(catalogo, e)}
       isOptionEqualToValue={(a, b) => a.codigo === b.codigo}
       loading={busqueda.isFetching}
-      loadingText={t('ficha.buscando')}
       noOptionsText={texto ? t('ficha.sinOpciones') : t('ficha.escribeParaBuscar')}
       disabled={deshabilitado}
       fullWidth
@@ -107,7 +106,6 @@ export function SelectorMultiple({ opciones, valor, onCambiar, etiqueta, mensaje
       getOptionLabel={etiquetaOpcion ?? ((o) => `${o.codigo} · ${o.nombre}`)}
       isOptionEqualToValue={(a, b) => a.codigo === b.codigo}
       loading={cargando}
-      loadingText={t('comun.cargando')}
       noOptionsText={t('ficha.sinOpciones')}
       disableCloseOnSelect
       disabled={deshabilitado}

@@ -1,6 +1,6 @@
-import { Box, Button, Chip, Link, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Link, Stack, Typography } from '@mui/material';
 import { esErrorApi, SCOPES, type EstadoFilaLote, type FilaLoteDto } from '@validasoft/api-client';
-import { BarraFiltros, Dato, EstadoVacio, FiltroMenu, PaginaEstado, RejillaDatos, TablaConCursor, usePaginacionCursor, type ColumnaTabla } from '@validasoft/ui';
+import { BarraFiltros, Dato, EsqueletoTarjeta, EstadoVacio, FiltroMenu, PaginaEstado, RejillaDatos, TablaConCursor, type ColumnaTabla, usePaginacionCursor } from '@validasoft/ui';
 import { Ban, Download, Pause, Play, RotateCcw, SearchX } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,7 +80,7 @@ export function DetalleLote() {
 
   if (!permisos.puede(SCOPES.vinculosLeer)) return <SinPermiso seccion={t('lotes.titulo')} />;
   const volver = <EnlaceVolver a={`/e/${empresa.id}/invitaciones/lotes`}>{t('lotes.titulo')}</EnlaceVolver>;
-  if (consulta.isPending) return <Skeleton variant="rounded" height={240} aria-busy />;
+  if (consulta.isPending) return <EsqueletoTarjeta alto={240} />;
   if (consulta.isError) {
     return esErrorApi(consulta.error) && consulta.error.esNoEncontrado ? (
       <PaginaEstado icono={SearchX} titulo={t('lotes.detalle.noEncontrado')} texto={t('lotes.detalle.noEncontradoAyuda')} acciones={volver} />

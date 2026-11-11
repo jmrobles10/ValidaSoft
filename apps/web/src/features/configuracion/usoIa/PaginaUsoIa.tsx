@@ -1,6 +1,6 @@
-import { MenuItem, Skeleton, Stack, TextField } from '@mui/material';
+import { MenuItem, Stack, TextField } from '@mui/material';
 import { SCOPES } from '@validasoft/api-client';
-import { EstadoVacio } from '@validasoft/ui';
+import { EsqueletoTarjeta, EstadoVacio } from '@validasoft/ui';
 import { Sparkles } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -64,8 +64,8 @@ export function PaginaUsoIa() {
         <ErrorRecuperable mensaje={`${t('ia.uso.error')} ${mensajeDeError(consulta.error, t)}`} onReintentar={() => void consulta.refetch()} />
       ) : !datos ? (
         <Stack spacing={1.5} aria-busy>
-          <Skeleton variant="rounded" height={120} />
-          <Skeleton variant="rounded" height={180} />
+          <EsqueletoTarjeta alto={120} />
+          <EsqueletoTarjeta alto={180} />
         </Stack>
       ) : !tienePlanActivo(datos) ? (
         <Tarjeta>

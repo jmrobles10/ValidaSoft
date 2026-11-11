@@ -1,29 +1,7 @@
-import {
-  Alert,
-  Autocomplete,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  IconButton,
-  Skeleton,
-  Stack,
-  Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { actualizarArea, crearArea, definirMiembrosArea, SCOPES, type AreaDto, type UsuarioDto } from '@validasoft/api-client';
-import { AvatarActor, EstadoVacio, MarcoTabla } from '@validasoft/ui';
+import { AvatarActor, EsqueletoTarjeta, EstadoVacio, MarcoTabla } from '@validasoft/ui';
 import { ChevronRight, Pencil, Plus, Users, X } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,8 +40,8 @@ export function PaginaAreas() {
       {consulta.isError && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}
       {consulta.isPending && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: '280px minmax(0,1fr)' }, gap: 2 }}>
-          <Skeleton variant="rounded" height={180} />
-          <Skeleton variant="rounded" height={260} />
+          <EsqueletoTarjeta alto={180} />
+          <EsqueletoTarjeta alto={260} />
         </Box>
       )}
       {consulta.data && (

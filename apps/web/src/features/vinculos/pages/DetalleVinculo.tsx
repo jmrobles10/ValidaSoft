@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Chip, ListItemIcon, ListItemText, Menu, MenuItem, Skeleton, Stack, Typography } from '@mui/material';
 import { accionesDisponibles, esErrorApi, SCOPES, type DefinicionAccion, type VinculoDto } from '@validasoft/api-client';
-import { AvatarActor, ChipEstado, Dato, EstadoVacio, formatearFecha, LineaDeTiempo, MarcoTabla, PaginaEstado, RejillaDatos } from '@validasoft/ui';
+import { AvatarActor, ChipEstado, Dato, EsqueletoTarjeta, EstadoVacio, formatearFecha, LineaDeTiempo, MarcoTabla, PaginaEstado, RejillaDatos } from '@validasoft/ui';
 import { ChevronDown, Lock, SearchX } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,8 +50,8 @@ export function DetalleVinculo() {
         <Skeleton variant="rounded" width={320} height={28} sx={{ mb: 1 }} />
         <Skeleton variant="rounded" width={220} height={14} sx={{ mb: 3 }} />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2 }}>
-          <Skeleton variant="rounded" height={220} />
-          <Skeleton variant="rounded" height={320} />
+          <EsqueletoTarjeta alto={220} />
+          <EsqueletoTarjeta alto={320} />
         </Box>
       </Box>
     );

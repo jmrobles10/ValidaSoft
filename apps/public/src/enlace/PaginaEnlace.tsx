@@ -1,7 +1,7 @@
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { useMutation } from '@tanstack/react-query';
 import { verificarOtpEnlace, type SesionTerceroDto } from '@validasoft/api-client';
-import { formatearHora, PaginaEstado } from '@validasoft/ui';
+import { EsqueletoFormulario, formatearHora, PaginaEstado } from '@validasoft/ui';
 import { CircleAlert, Clock, Link2Off, WifiOff } from 'lucide-react';
 import { useEffect, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -100,10 +100,7 @@ export function PaginaEnlace() {
 
   if (canje?.tipo !== 'otp') {
     return (
-      <Stack spacing={2} sx={{ alignItems: 'center', py: 10 }} role="status">
-        <CircularProgress size={28} aria-hidden />
-        <Typography sx={{ color: 'text.secondary' }}>{t('enlace.abriendo')}</Typography>
-      </Stack>
+      <EsqueletoFormulario campos={2} conTarjeta etiqueta={t('enlace.abriendo')} sx={{ maxWidth: 420, mx: 'auto', mt: 4 }} />
     );
   }
 

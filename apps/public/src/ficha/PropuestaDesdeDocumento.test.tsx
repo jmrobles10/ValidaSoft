@@ -29,18 +29,31 @@ const CON_LECTURA: PropuestaDeSeccionDto = {
 
 const SIN_LECTURA: PropuestaDeSeccionDto = { ...CON_LECTURA, disponible: false, motivo: 'sin-lectura-automatica', campos: [], datos: undefined };
 
+const CAMARA: PropuestaDeSeccionDto['documento'] = { documentoId: 'd-camara', version: 2, tipoDocumento: 'CAMARA_COMERCIO', nombreDocumento: 'Certificado de existencia y representación legal', cargadaEn: '2026-11-09T16:00:00Z' };
+
 describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
-  it('en Mi información ofrece actualizar desde el documento con los datos distintos y lleva a la sección', async () => {
+  it('en Mi información avisa una sola vez por documento, con las secciones que afecta, y lleva a la primera', async () => {
     montarFicha('/ficha', {
       estado: estadoFicha({ secciones: [filaEstado('FICHA_GENERAL', { version: 1, completa: true })] }),
-      propuestas: [CON_LECTURA, { ...SIN_LECTURA, seccion: 'FICHA_TRIBUTARIA', nombreSeccion: 'Información tributaria' }],
+      propuestas: [
+        CON_LECTURA,
+        { ...SIN_LECTURA, seccion: 'FICHA_TRIBUTARIA', nombreSeccion: 'Información tributaria' },
+        { ...CON_LECTURA, documento: CAMARA, seccion: 'FICHA_LEGAL', nombreSeccion: 'Información legal' },
+        { ...CON_LECTURA, documento: CAMARA },
+      ],
     });
 
     const aviso = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que tu información' });
-    expect(aviso).toHaveTextContent('Tu RUT (versión 2) tiene 1 dato distinto');
-    expect(aviso).toHaveTextContent('Tu RUT (versión 2) es más nuevo; no se pudo leer automáticamente');
-    expect(within(aviso).getByRole('link', { name: 'Actualizar Información general desde mi RUT' })).toHaveAttribute('href', '/ficha/general');
-    expect(within(aviso).getByRole('link', { name: 'Actualizar Información tributaria desde mi RUT' })).toHaveAttribute('href', '/ficha/tributaria');
+    // Dos documentos (RUT y Cámara) aunque haya cuatro propuestas (sección x documento): una acción por documento.
+    expect(within(aviso).getAllByRole('link', { name: /^Actualizar desde mi/ })).toHaveLength(2);
+    expect(aviso).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto · no pudimos leerlo');
+    expect(aviso).toHaveTextContent('Tu Cámara de Comercio · versión 2 — 2 datos distintos');
+    const rut = within(aviso).getByRole('link', { name: 'Actualizar desde mi RUT: Información general, Información tributaria' });
+    expect(rut).toHaveAttribute('href', '/ficha/general');
+    // Cada sección afectada es un chip que lleva a su formulario.
+    const secciones = within(aviso).getByRole('list', { name: 'Secciones que cambian según tu RUT' });
+    expect(within(secciones).getByRole('link', { name: 'Información tributaria' })).toHaveAttribute('href', '/ficha/tributaria');
+    expect(aviso).not.toHaveTextContent('automáticamente');
   });
 
   it('sin propuestas no aparece nada', async () => {
@@ -59,7 +72,11 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
       alGuardar: () => json(200, guardada('FICHA_GENERAL', [], 'FICHA_TRIBUTARIA')),
     });
 
-    const propuesta = await screen.findByRole('alert', { name: 'Actualizar desde mi RUT' });
+    const propuesta = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
+    // Una línea por documento; los cambios campo por campo se despliegan a pedido.
+    expect(propuesta).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto');
+    expect(within(propuesta).queryByRole('table')).not.toBeInTheDocument();
+    await usuario.click(within(propuesta).getByRole('button', { name: 'Ver los cambios de mi RUT' }));
     const tabla = within(propuesta).getByRole('table', { name: 'Datos que cambian según tu RUT' });
     expect(within(tabla).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Dato', 'Lo que tienes', 'Lo que dice tu RUT']);
     expect(within(tabla).getAllByRole('row')[1]).toHaveTextContent('DirecciónCalle 45 # 12-08Cl 80 # 10-20');
@@ -67,7 +84,7 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     expect(screen.getByRole('textbox', { name: 'Dirección' })).toHaveValue('Calle 45 # 12-08');
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
 
-    await usuario.click(within(propuesta).getByRole('button', { name: 'Usar estos valores' }));
+    await usuario.click(within(propuesta).getByRole('button', { name: 'Usar los valores de mi RUT' }));
 
     expect(screen.getByRole('textbox', { name: 'Dirección' })).toHaveValue('Cl 80 # 10-20');
     expect(within(propuesta).getByRole('status')).toHaveTextContent('todavía no se ha guardado nada');
@@ -90,7 +107,7 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
       propuestas: [CON_LECTURA],
       alGuardar: () => json(200, guardada('FICHA_GENERAL', [], null)),
     });
-    await usuario.click(await screen.findByRole('button', { name: 'Usar estos valores' }));
+    await usuario.click(await screen.findByRole('button', { name: 'Usar los valores de mi RUT' }));
     const direccion = screen.getByRole('textbox', { name: 'Dirección' });
     await usuario.clear(direccion);
     await usuario.type(direccion, 'Cl 80 # 10-21');
@@ -103,9 +120,9 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
   it('«Ahora no» oculta la propuesta sin tocar el formulario', async () => {
     const usuario = userEvent.setup();
     montarFicha('/ficha/general', { estado: estadoFicha(), secciones: { FICHA_GENERAL: GENERAL }, propuestas: [CON_LECTURA] });
-    await usuario.click(await screen.findByRole('button', { name: 'Ahora no' }));
+    await usuario.click(await screen.findByRole('button', { name: 'Ahora no usar mi RUT' }));
 
-    expect(screen.queryByRole('alert', { name: 'Actualizar desde mi RUT' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' })).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Dirección' })).toHaveValue('Calle 45 # 12-08');
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
   });
@@ -114,14 +131,37 @@ describe('Actualizar desde mi RUT / Cámara… (F5)', () => {
     const usuario = userEvent.setup();
     montarFicha('/ficha/general', { estado: estadoFicha(), secciones: { FICHA_GENERAL: GENERAL }, propuestas: [SIN_LECTURA] });
 
-    const aviso = await screen.findByRole('alert', { name: 'Actualizar desde mi RUT' });
-    expect(aviso).toHaveTextContent('No pudimos leer automáticamente tu RUT');
+    const aviso = await screen.findByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
+    expect(aviso).toHaveTextContent('Tu RUT · versión 2 — no pudimos leerlo');
+    expect(aviso).not.toHaveTextContent('automáticamente');
     expect(within(aviso).queryByRole('table')).not.toBeInTheDocument();
-    expect(within(aviso).queryByRole('button', { name: 'Usar estos valores' })).not.toBeInTheDocument();
+    expect(within(aviso).queryByRole('button', { name: /^Usar los valores/ })).not.toBeInTheDocument();
 
-    await usuario.click(within(aviso).getByRole('button', { name: 'Usar como soporte' }));
-    expect(within(aviso).getByText(/Quedó marcado como soporte/)).toBeInTheDocument();
+    await usuario.click(within(aviso).getByRole('button', { name: 'Usar mi RUT como soporte' }));
+    expect(within(aviso).getByText(/Quedó como soporte/)).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Dirección' })).toHaveValue('Calle 45 # 12-08');
     expect(screen.getByText('Tienes cambios sin guardar')).toBeInTheDocument();
+  });
+
+  it('en la sección, dos documentos más nuevos (RUT y Cámara) van en un solo aviso con una línea por documento', async () => {
+    const usuario = userEvent.setup();
+    montarFicha('/ficha/general', {
+      estado: estadoFicha(),
+      secciones: { FICHA_GENERAL: GENERAL },
+      propuestas: [CON_LECTURA, { ...CON_LECTURA, documento: CAMARA, campos: [{ campo: 'razon_social', etiqueta: 'Razón social', actual: 'Aceros del Norte S.A.S.', propuesto: 'ACEROS DEL NORTE Y CIA' }] }],
+    });
+
+    const avisos = await screen.findAllByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
+    expect(avisos).toHaveLength(1);
+    const aviso = avisos[0]!;
+    const lineas = within(aviso).getAllByRole('listitem');
+    expect(lineas).toHaveLength(2);
+    expect(lineas[0]).toHaveTextContent('Tu RUT · versión 2 — 1 dato distinto');
+    expect(lineas[1]).toHaveTextContent('Tu Cámara de Comercio · versión 2 — 1 dato distinto');
+
+    // «Ahora no» descarta solo la línea de ese documento.
+    await usuario.click(within(lineas[0]!).getByRole('button', { name: 'Ahora no usar mi RUT' }));
+    expect(within(aviso).getAllByRole('listitem')).toHaveLength(1);
+    expect(aviso).not.toHaveTextContent('Tu RUT');
   });
 });

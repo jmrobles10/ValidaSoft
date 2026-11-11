@@ -1,6 +1,6 @@
 import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { TenantCreadoDto } from '@validasoft/api-client';
-import { FaltaParaEnviar } from '@validasoft/ui';
+import { DosColumnas, FaltaParaEnviar } from '@validasoft/ui';
 import { useState, type ReactNode, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EncabezadoPagina, EnlaceVolver, IconoCarga, Tarjeta } from '../../shared/componentes';
@@ -89,75 +89,91 @@ export function PaginaNuevoGrupo() {
           </Stack>
         }
       />
-      <Stack spacing={2} sx={{ maxWidth: 760 }}>
-        {crear.isError && <Alert severity="error">{mensajeDeError(crear.error, t)}</Alert>}
-        {paises.isError && <Alert severity="error">{mensajeDeError(paises.error, t)}</Alert>}
-        <Seccion titulo={t('plataforma.alta.grupo')} ayuda={t('plataforma.alta.grupoAyuda')}>
-          {campo(t('plataforma.alta.nombre'), b.nombre, (v) => cambiar({ nombre: v, ...(!b.slugManual && { slug: slugDesdeNombre(v) }) }), ['grupo-nombre-requerido'])}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            {campo(t('plataforma.alta.slug'), b.slug, (v) => cambiar({ slug: v.toLowerCase(), slugManual: true }), ['slug-invalido'], { ayuda: t('plataforma.alta.slugAyuda'), mono: true })}
-            {campo(t('plataforma.alta.zona'), b.zonaHoraria, (v) => cambiar({ zonaHoraria: v }), [], { mono: true })}
-          </Stack>
-        </Seccion>
-        <Seccion titulo={t('plataforma.alta.empresa')} ayuda={t('plataforma.alta.empresaAyuda')}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            <TextField select required label={t('empresasGrupo.campos.pais')} value={paises.data ? b.empresa.pais : ''} onChange={(e) => cambiarEmpresa({ pais: e.target.value, tipo: '' })} sx={{ flex: 1, minWidth: 0 }}>
-              {(paises.data ?? []).map((p) => (
-                <MenuItem key={p.codigo} value={p.codigo}>
-                  {p.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField select required label={t('empresasGrupo.campos.tipo')} value={tipo ? b.empresa.tipo : ''} onChange={(e) => cambiarEmpresa({ tipo: e.target.value })} sx={{ flex: 1.4, minWidth: 0 }}>
-              {tipos.map((x) => (
-                <MenuItem key={x.codigo} value={x.codigo}>
-                  {x.codigo} · {x.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-          {campo(t('empresasGrupo.campos.numero'), b.empresa.numero, (v) => cambiarEmpresa({ numero: v }), ['empresa-numero-requerido', 'empresa-numero-invalido'], {
-            ayuda: tipo?.tieneDv ? t('empresasGrupo.campos.numeroAyudaDv') : undefined,
-            mono: true,
-          })}
-          {campo(t('empresasGrupo.campos.razonSocial'), b.empresa.nombre, (v) => cambiarEmpresa({ nombre: v }), ['empresa-nombre-requerido'])}
-          {campo(t('empresasGrupo.campos.prefijo'), b.empresa.prefijo, (v) => cambiarEmpresa({ prefijo: v.toUpperCase().replace(/[^A-Z0-9]/g, '') }), ['empresa-prefijo-invalido'], {
-            ayuda: t('empresasGrupo.prefijoNoCambia'),
-            mono: true,
-          })}
-        </Seccion>
-        <Seccion titulo={t('plataforma.alta.administrador')} ayuda={t('plataforma.alta.administradorAyuda')}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            {campo(t('plataforma.alta.adminNombre'), b.adminNombre, (v) => cambiar({ adminNombre: v }), ['admin-nombre-requerido'])}
-            {campo(t('plataforma.alta.adminCorreo'), b.adminCorreo, (v) => cambiar({ adminCorreo: v }), ['admin-correo-invalido'])}
-          </Stack>
-          {campo(t('plataforma.alta.adminIdExterno'), b.adminIdExterno, (v) => cambiar({ adminIdExterno: v }), [], {
-            ayuda: t('plataforma.alta.adminIdExternoAyuda'),
-            mono: true,
-            requerido: false,
-          })}
-        </Seccion>
-        <Seccion titulo={t('plataforma.alta.sistema')} ayuda={t('plataforma.alta.sistemaAyuda')}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-            {campo(t('plataforma.alta.sistemaCodigo'), b.sistemaCodigo, (v) => cambiar({ sistemaCodigo: v.toUpperCase() }), ['sistema-codigo-invalido'], {
-              ayuda: t('plataforma.alta.sistemaCodigoAyuda'),
-              mono: true,
-            })}
-            {campo(t('plataforma.alta.sistemaNombre'), b.sistemaNombre, (v) => cambiar({ sistemaNombre: v }), ['sistema-nombre-requerido'])}
-          </Stack>
-          {campo(t('plataforma.alta.sistemaClave'), b.sistemaClave, (v) => cambiar({ sistemaClave: v }), ['clave-publica-requerida'], {
-            ayuda: t('plataforma.alta.sistemaClaveAyuda'),
-            mono: true,
-            filas: 4,
-          })}
-          {campo(t('plataforma.alta.sistemaOrigenes'), b.sistemaOrigenes, (v) => cambiar({ sistemaOrigenes: v }), ['origen-invalido'], {
-            ayuda: t('plataforma.alta.sistemaOrigenesAyuda'),
-            mono: true,
-            filas: 2,
-            requerido: false,
-          })}
-        </Seccion>
-      </Stack>
+      {crear.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {mensajeDeError(crear.error, t)}
+        </Alert>
+      )}
+      {paises.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {mensajeDeError(paises.error, t)}
+        </Alert>
+      )}
+      <DosColumnas
+        izquierda={
+          <>
+            <Seccion titulo={t('plataforma.alta.grupo')} ayuda={t('plataforma.alta.grupoAyuda')}>
+              {campo(t('plataforma.alta.nombre'), b.nombre, (v) => cambiar({ nombre: v, ...(!b.slugManual && { slug: slugDesdeNombre(v) }) }), ['grupo-nombre-requerido'])}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                {campo(t('plataforma.alta.slug'), b.slug, (v) => cambiar({ slug: v.toLowerCase(), slugManual: true }), ['slug-invalido'], { ayuda: t('plataforma.alta.slugAyuda'), mono: true })}
+                {campo(t('plataforma.alta.zona'), b.zonaHoraria, (v) => cambiar({ zonaHoraria: v }), [], { mono: true })}
+              </Stack>
+            </Seccion>
+            <Seccion titulo={t('plataforma.alta.empresa')} ayuda={t('plataforma.alta.empresaAyuda')}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <TextField select required label={t('empresasGrupo.campos.pais')} value={paises.data ? b.empresa.pais : ''} onChange={(e) => cambiarEmpresa({ pais: e.target.value, tipo: '' })} sx={{ flex: 1, minWidth: 0 }}>
+                  {(paises.data ?? []).map((p) => (
+                    <MenuItem key={p.codigo} value={p.codigo}>
+                      {p.nombre}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField select required label={t('empresasGrupo.campos.tipo')} value={tipo ? b.empresa.tipo : ''} onChange={(e) => cambiarEmpresa({ tipo: e.target.value })} sx={{ flex: 1.4, minWidth: 0 }}>
+                  {tipos.map((x) => (
+                    <MenuItem key={x.codigo} value={x.codigo}>
+                      {x.codigo} · {x.nombre}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Stack>
+              {campo(t('empresasGrupo.campos.numero'), b.empresa.numero, (v) => cambiarEmpresa({ numero: v }), ['empresa-numero-requerido', 'empresa-numero-invalido'], {
+                ayuda: tipo?.tieneDv ? t('empresasGrupo.campos.numeroAyudaDv') : undefined,
+                mono: true,
+              })}
+              {campo(t('empresasGrupo.campos.razonSocial'), b.empresa.nombre, (v) => cambiarEmpresa({ nombre: v }), ['empresa-nombre-requerido'])}
+              {campo(t('empresasGrupo.campos.prefijo'), b.empresa.prefijo, (v) => cambiarEmpresa({ prefijo: v.toUpperCase().replace(/[^A-Z0-9]/g, '') }), ['empresa-prefijo-invalido'], {
+                ayuda: t('empresasGrupo.prefijoNoCambia'),
+                mono: true,
+              })}
+            </Seccion>
+          </>
+        }
+        derecha={
+          <>
+            <Seccion titulo={t('plataforma.alta.administrador')} ayuda={t('plataforma.alta.administradorAyuda')}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                {campo(t('plataforma.alta.adminNombre'), b.adminNombre, (v) => cambiar({ adminNombre: v }), ['admin-nombre-requerido'])}
+                {campo(t('plataforma.alta.adminCorreo'), b.adminCorreo, (v) => cambiar({ adminCorreo: v }), ['admin-correo-invalido'])}
+              </Stack>
+              {campo(t('plataforma.alta.adminIdExterno'), b.adminIdExterno, (v) => cambiar({ adminIdExterno: v }), [], {
+                ayuda: t('plataforma.alta.adminIdExternoAyuda'),
+                mono: true,
+                requerido: false,
+              })}
+            </Seccion>
+            <Seccion titulo={t('plataforma.alta.sistema')} ayuda={t('plataforma.alta.sistemaAyuda')}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                {campo(t('plataforma.alta.sistemaCodigo'), b.sistemaCodigo, (v) => cambiar({ sistemaCodigo: v.toUpperCase() }), ['sistema-codigo-invalido'], {
+                  ayuda: t('plataforma.alta.sistemaCodigoAyuda'),
+                  mono: true,
+                })}
+                {campo(t('plataforma.alta.sistemaNombre'), b.sistemaNombre, (v) => cambiar({ sistemaNombre: v }), ['sistema-nombre-requerido'])}
+              </Stack>
+              {campo(t('plataforma.alta.sistemaClave'), b.sistemaClave, (v) => cambiar({ sistemaClave: v }), ['clave-publica-requerida'], {
+                ayuda: t('plataforma.alta.sistemaClaveAyuda'),
+                mono: true,
+                filas: 4,
+              })}
+              {campo(t('plataforma.alta.sistemaOrigenes'), b.sistemaOrigenes, (v) => cambiar({ sistemaOrigenes: v }), ['origen-invalido'], {
+                ayuda: t('plataforma.alta.sistemaOrigenesAyuda'),
+                mono: true,
+                filas: 2,
+                requerido: false,
+              })}
+            </Seccion>
+          </>
+        }
+      />
     </Box>
   );
 }

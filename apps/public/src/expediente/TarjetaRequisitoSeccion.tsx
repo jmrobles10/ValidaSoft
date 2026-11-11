@@ -62,7 +62,6 @@ export function TarjetaRequisitoSeccion({ requisito, expediente, conAccion }: { 
             component={RouterLink}
             to={enlaceDeSeccion(requisito)}
             variant="contained"
-            size="large"
             startIcon={<PencilLine size={16} aria-hidden />}
             sx={{ mt: 1 }}
           >

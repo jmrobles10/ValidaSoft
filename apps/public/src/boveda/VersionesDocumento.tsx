@@ -1,6 +1,6 @@
-import { Alert, Box, Button, Skeleton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import type { VersionDocumentoDto } from '@validasoft/api-client';
-import { ChipEstado, formatearFecha } from '@validasoft/ui';
+import { ChipEstado, EsqueletoTarjetas, formatearFecha } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { useDocumentoBoveda } from '../shared/api';
 import { ErrorRecuperable } from '../shared/componentes';
@@ -14,7 +14,7 @@ export function VersionesDocumento({ documentoId, onRetirar }: { documentoId: st
   const consulta = useDocumentoBoveda(documentoId, true);
   const descargar = useDescargar();
 
-  if (consulta.isPending) return <Skeleton variant="rounded" height={96} sx={{ mt: 1.5 }} />;
+  if (consulta.isPending) return <EsqueletoTarjetas cantidad={2} lineas={1} sx={{ mt: 1.5 }} />;
   if (consulta.isError) return <ErrorRecuperable error={consulta.error} onReintentar={() => void consulta.refetch()} />;
 
   const versiones = [...consulta.data.versiones].sort((a, b) => b.n - a.n);

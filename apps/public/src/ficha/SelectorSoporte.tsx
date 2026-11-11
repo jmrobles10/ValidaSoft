@@ -87,7 +87,7 @@ export function SelectorSoporte({ definicion, soportes, onCambiar, faltaSoporte,
           </Alert>
         )}
       </FormControl>
-      <Button component={RouterLink} to={subir} variant="text" startIcon={<Upload size={18} aria-hidden />} sx={{ mt: 1, minHeight: 44 }}>
+      <Button component={RouterLink} to={subir} variant="text" startIcon={<Upload size={18} aria-hidden />} sx={{ mt: 1 }}>
         {t('ficha.soporte.subir')}
       </Button>
       <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>{t('ficha.soporte.subirAyuda')}</Typography>

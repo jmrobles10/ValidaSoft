@@ -55,7 +55,7 @@ export function AvisoConsolidado({ documentos }: { documentos: readonly Document
                   variant="text"
                   startIcon={<Upload size={16} aria-hidden />}
                   aria-label={`${t('boveda.porRenovar.subir')}: ${l.documento}`}
-                  sx={{ minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}
+                  size="small"
                 >
                   {t('boveda.porRenovar.subir')}
                 </Button>

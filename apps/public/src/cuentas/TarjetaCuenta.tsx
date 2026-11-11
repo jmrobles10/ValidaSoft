@@ -39,7 +39,7 @@ export function TarjetaCuenta({ cuenta }: { cuenta: CuentaBancariaPublicaDto }) 
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', ml: 'auto', flex: 'none' }}>
           {activa ? <ChipEstado estado="Activo" etiqueta={t('cuentas.estados.Activa')} size="medium" /> : <ChipEstado estado="Retirada" etiqueta={t('cuentas.estados.Retirada')} size="medium" />}
           {activa && (
-            <Button variant="text" onClick={() => setRetirando(true)} startIcon={<Archive size={16} aria-hidden />} aria-label={`${t('cuentas.retirar')}: ${nombreCuenta(cuenta)}`} sx={{ color: 'text.secondary', minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}>
+            <Button variant="text" onClick={() => setRetirando(true)} startIcon={<Archive size={16} aria-hidden />} aria-label={`${t('cuentas.retirar')}: ${nombreCuenta(cuenta)}`} sx={{ color: 'text.secondary' }}>
               {t('cuentas.retirar')}
             </Button>
           )}

@@ -82,7 +82,6 @@ export function TarjetaRequisito({ requisito, expediente, enlace }: { requisito:
           component={RouterLink}
           to={enlace}
           variant={accion === 'reemplazar' ? 'text' : 'contained'}
-          size="large"
           startIcon={modo === 'Formulario' ? <PencilLine size={16} aria-hidden /> : <Upload size={16} aria-hidden />}
           sx={{ mt: 1, ml: accion === 'reemplazar' ? 2.25 : 3.25 }}
         >

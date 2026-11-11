@@ -1,4 +1,4 @@
-import { Box, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { ErrorEnLinea } from '@validasoft/ui';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,17 +23,8 @@ export function CabeceraPagina({ titulo, sub, accion }: { titulo: string; sub?: 
   );
 }
 
-/** Esqueleto de tarjetas mientras carga. */
-export function EsqueletoTarjetas({ cantidad = 2 }: { cantidad?: number }) {
-  const { t } = useTranslation();
-  return (
-    <Stack spacing={1.5} aria-busy aria-label={t('comun.cargando')}>
-      {Array.from({ length: cantidad }, (_, i) => (
-        <Skeleton key={i} variant="rounded" height={96} />
-      ))}
-    </Stack>
-  );
-}
+/** Esqueleto de tarjetas mientras carga (ver `esqueletos.tsx` de `@validasoft/ui`). */
+export { EsqueletoTarjetas } from '@validasoft/ui';
 
 export function ErrorRecuperable({ error, onReintentar }: { error: unknown; onReintentar: () => void }) {
   const { t } = useTranslation();
