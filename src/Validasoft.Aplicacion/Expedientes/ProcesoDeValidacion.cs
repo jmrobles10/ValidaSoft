@@ -14,6 +14,7 @@ using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
+using Microsoft.Extensions.DependencyInjection;
 using Wolverine;
 
 namespace Validasoft.Aplicacion.Expedientes;
@@ -22,7 +23,48 @@ namespace Validasoft.Aplicacion.Expedientes;
 /// Lo que necesita el proceso para escribirle al tercero: el bus del outbox de la petición y el protector con el que viaja
 /// el token del enlace de acceso del correo de observación (IN-3, RE-4).
 /// </summary>
-public sealed record CorreoAlTercero(IMessageBus Mensajes, IProtectorDeSecretos Protector);
+/// <remarks>
+/// <see cref="Publicar"/> es lo que recibe cada mensaje: en una petición, el bus del outbox (misma transacción); en segundo
+/// plano, <see cref="CorreosPendientesDeCierre"/>, que los junta y los publica al confirmar la transacción (CU-19).
+/// </remarks>
+public sealed record CorreoAlTercero(Func<object, ValueTask> Publicar, IProtectorDeSecretos Protector)
+{
+    public CorreoAlTercero(IMessageBus mensajes, IProtectorDeSecretos protector)
+        : this(mensaje => mensajes.PublishAsync(mensaje), protector)
+    {
+    }
+}
+
+/// <summary>
+/// Correos al tercero que produce un cierre hecho <b>en segundo plano</b> (la consulta automática de listas o la revisión
+/// automática aprueban o rechazan el expediente sin una petición): se juntan durante la transacción y se publican después de
+/// confirmarla, así el tercero recibe el correo de resultado aunque no lo haya cerrado una persona (CU-19). Si la transacción
+/// falla, no se publica nada.
+/// </summary>
+public sealed class CorreosPendientesDeCierre(IProtectorDeSecretos protector)
+{
+    private readonly List<object> _mensajes = [];
+
+    public CorreoAlTercero Correo => new(mensaje =>
+    {
+        _mensajes.Add(mensaje);
+        return ValueTask.CompletedTask;
+    }, protector);
+
+    public int Cantidad => _mensajes.Count;
+
+    /// <summary>Publica lo reunido con un bus propio del alcance (después de <c>SaveChangesAsync</c>).</summary>
+    public async Task PublicarAsync(IServiceScopeFactory alcances)
+    {
+        if (_mensajes.Count == 0)
+            return;
+        await using var alcance = alcances.CreateAsyncScope();
+        var bus = alcance.ServiceProvider.GetRequiredService<IMessageBus>();
+        foreach (var mensaje in _mensajes)
+            await bus.PublishAsync(mensaje);
+        _mensajes.Clear();
+    }
+}
 
 /// <summary>Versión de flujo elegida para un expediente y cómo se eligió.</summary>
 public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFlujo Origen);
@@ -326,7 +368,7 @@ public static class ProcesoDeValidacion
 
         var empresa = await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct);
         var rechazo = eventos.OfType<ExpedienteRechazado>().FirstOrDefault();
-        await correo.Mensajes.PublishAsync(new CorreoDeResultadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
+        await correo.Publicar(new CorreoDeResultadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
             rechazo is null, rechazo is null ? [] : [.. rechazo.Motivos.Select(m => m.TextoAlTercero)], empresa?.TenantId, estado.EmpresaId,
             vinculo.TerceroId));
     }
@@ -352,7 +394,7 @@ public static class ProcesoDeValidacion
         var (enlace, token) = EnlaceDeAcceso.Emitir(empresa?.TenantId, vinculo.Id, vinculo.TerceroId, vinculo.CorreoTercero,
             ahora + EnlaceDeAcceso.VigenciaObservacion, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
         sesion.Store(enlace);
-        await correo.Mensajes.PublishAsync(new CorreoDeObservacionPendiente(enlace.CorreoDestino, empresa?.Nombre ?? "La empresa", estado.Folio,
+        await correo.Publicar(new CorreoDeObservacionPendiente(enlace.CorreoDestino, empresa?.Nombre ?? "La empresa", estado.Folio,
             observaciones, correo.Protector.Proteger(token), enlace.Expira, empresa?.TenantId, estado.EmpresaId, vinculo.TerceroId));
     }
 

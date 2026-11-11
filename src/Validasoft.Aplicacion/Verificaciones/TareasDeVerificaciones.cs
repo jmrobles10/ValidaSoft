@@ -1,6 +1,8 @@
 using Marten;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Certificados;
+using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Dominio.Comun;
@@ -19,7 +21,7 @@ namespace Validasoft.Aplicacion.Verificaciones;
 /// de escribir; la llamada al proveedor se hace antes, sin bloquear el expediente.
 /// </summary>
 public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeListas consulta, EmisorDeCertificados certificados, TimeProvider reloj,
-    ILogger<TareasDeVerificaciones> registro)
+    IProtectorDeSecretos protector, IServiceScopeFactory alcances, ILogger<TareasDeVerificaciones> registro)
 {
     public const string ConsultadoPorElSistema = "Sistema (consulta automática)";
 
@@ -81,9 +83,12 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
         // ids, no se pisan). Solo se registra si la consulta automática sigue pendiente.
         if (stream.Aggregate is not { EstaAbierto: true } actual || actual.ProximaConsultaDeListas is not { } pendiente || pendiente > reloj.GetUtcNow())
             return;
-        await ProcesoDeValidacion.AnexarAsync(sesion, stream, actual.RegistrarConsultaDeListas(resultado, "sistema", reloj.GetUtcNow()), null, certificados,
-            reloj.GetUtcNow(), ct);
+        // Si esta consulta era lo último que faltaba y el expediente se aprueba solo, el tercero también recibe su correo de resultado (CU-19).
+        var correos = new CorreosPendientesDeCierre(protector);
+        await ProcesoDeValidacion.AnexarAsync(sesion, stream, actual.RegistrarConsultaDeListas(resultado, "sistema", reloj.GetUtcNow()), correos.Correo,
+            certificados, reloj.GetUtcNow(), ct);
         await sesion.SaveChangesAsync(ct);
+        await correos.PublicarAsync(alcances);
     }
 
     /// <summary>Expira lo que venció con el expediente abierto (las listas quedan para reconsulta; el estudio, para el oficial).</summary>
@@ -98,6 +103,60 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
         if (eventos.Count == 0)
             return;
         await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
+        await sesion.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Cambiaron las personas relacionadas del tercero (CU-15; la ficha legal tiene una versión nueva): en cada empresa donde hay
+    /// un expediente abierto con una consulta de listas que no cubre a alguna persona actual, la consulta se expira y vuelve a correr
+    /// sola; en los vínculos activos, el monitoreo reconsulta ya. Idempotente: sin personas nuevas no hace nada.
+    /// </summary>
+    public async Task ExpirarPorCambioDePersonasAsync(Guid terceroId, CancellationToken ct)
+    {
+        List<Expediente> expedientes;
+        List<MonitoreoDeListas> monitoreos;
+        Dictionary<Guid, Guid> tenants;
+        await using (var global = store.QuerySession())
+        {
+            expedientes = [.. await global.Query<Expediente>().Where(e => e.AnyTenant() && e.TerceroId == terceroId && e.ConVerificaciones).ToListAsync(ct)];
+            monitoreos = [.. await global.Query<MonitoreoDeListas>().Where(m => m.AnyTenant() && m.TerceroId == terceroId && m.ProximaConsulta != null).ToListAsync(ct)];
+            var empresas = expedientes.Where(e => e.EstaAbierto).Select(e => e.EmpresaId).Concat(monitoreos.Select(m => m.EmpresaId)).Distinct().ToArray();
+            tenants = empresas.Length == 0 ? [] : (await global.LoadManyAsync<Empresa>(ct, empresas)).ToDictionary(e => e.Id, e => e.TenantId);
+        }
+
+        foreach (var expediente in expedientes.Where(e => e.EstaAbierto && tenants.ContainsKey(e.EmpresaId)))
+            await IntentarAsync(() => ExpirarListasDeExpedienteAsync(tenants[expediente.EmpresaId], expediente.Id, terceroId, ct), expediente.Folio,
+                "expirar las listas por cambio de personas");
+        foreach (var monitoreo in monitoreos.Where(m => tenants.ContainsKey(m.EmpresaId)))
+            await IntentarAsync(() => ReconsultarMonitoreoAsync(tenants[monitoreo.EmpresaId], monitoreo.Id, terceroId, ct), monitoreo.Folio,
+                "reconsultar el monitoreo por cambio de personas");
+    }
+
+    private async Task ExpirarListasDeExpedienteAsync(Guid tenantId, Guid expedienteId, Guid terceroId, CancellationToken ct)
+    {
+        await using var sesion = SesionDeSistema(tenantId);
+        var claves = (await ConsultaDeListas.PersonasAsync(sesion, terceroId, ct)).Select(p => p.Clave).ToList();
+        var ahora = reloj.GetUtcNow();
+        var stream = await sesion.Events.FetchForExclusiveWriting<Expediente>(expedienteId, ct);
+        if (stream.Aggregate is not { } expediente)
+            return;
+        var eventos = expediente.ExpirarListasPorCambioDePersonas(claves, ahora);
+        if (eventos.Count == 0)
+            return;
+        await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
+        await sesion.SaveChangesAsync(ct);
+    }
+
+    private async Task ReconsultarMonitoreoAsync(Guid tenantId, Guid vinculoId, Guid terceroId, CancellationToken ct)
+    {
+        await using var sesion = SesionDeSistema(tenantId);
+        var monitoreo = await sesion.LoadAsync<MonitoreoDeListas>(vinculoId, ct);
+        if (monitoreo is null)
+            return;
+        var claves = (await ConsultaDeListas.PersonasAsync(sesion, terceroId, ct)).Select(p => p.Clave).ToList();
+        if (!monitoreo.ReconsultarPorCambioDePersonas(claves, reloj.GetUtcNow()))
+            return;
+        sesion.Store(monitoreo);
         await sesion.SaveChangesAsync(ct);
     }
 

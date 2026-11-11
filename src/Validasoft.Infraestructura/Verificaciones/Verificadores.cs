@@ -41,68 +41,6 @@ public sealed class VerificadorSimulado : IVerificadorDeListas
 }
 
 /// <summary>
-/// Infolaft, proveedor principal de Sinco (VE-8). Autenticación HTTP Basic con el usuario y la clave de la empresa; una
-/// búsqueda por persona con <c>POST Search/searchPaginated?accuracyLevel=EXACTA&amp;forceSearch=true&amp;queryByName={nombre}&amp;searchMode=SearchByName</c>
-/// (por documento, <c>queryByDocument</c>/<c>SearchByDocument</c>, es un <b>supuesto</b> sin confirmar). El formato de la
-/// respuesta es un supuesto: se lee con <see cref="LectorDeRespuestaDeListas"/>. Infolaft no entrega PDF por API (supuesto):
-/// Validasoft genera el suyo y guarda la respuesta cruda con su hash. Riesgo de Habeas Data: el nombre viaja en la query
-/// string (queda en los registros del proveedor y de los proxies); la consulta va amparada por la autorización de
-/// tratamiento que el tercero aceptó. Apagado por omisión.
-/// </summary>
-public sealed class VerificadorInfolaft(IHttpClientFactory clientes, ILogger<VerificadorInfolaft> registro) : IVerificadorDeListas
-{
-    public const string Cliente = "listas-infolaft";
-
-    public string Proveedor => ProveedoresDeListas.Infolaft;
-
-    public async Task<RespuestaDeListas> ConsultarAsync(SolicitudDeListas solicitud, CancellationToken ct)
-    {
-        var credenciales = solicitud.Credenciales ?? throw new ProveedorDeListasNoDisponibleException("Infolaft necesita las credenciales de la empresa.");
-        var url = Base(credenciales.UrlBase ?? OpcionesDeVerificaciones.UrlPorOmision(Proveedor)!);
-        var cliente = clientes.CreateClient(Cliente);
-        var crudas = new JsonArray();
-        var coincidencias = new List<CoincidenciaHallada>();
-        foreach (var persona in solicitud.Personas)
-        {
-            var consulta = credenciales.ModoBusqueda == ModoBusquedaListas.PorDocumento
-                ? $"Search/searchPaginated?accuracyLevel=EXACTA&forceSearch=true&queryByDocument={Uri.EscapeDataString(persona.Numero)}&searchMode=SearchByDocument"
-                : $"Search/searchPaginated?accuracyLevel=EXACTA&forceSearch=true&queryByName={Uri.EscapeDataString(persona.Nombre)}&searchMode=SearchByName";
-            using var peticion = new HttpRequestMessage(HttpMethod.Post, new Uri(url, consulta)) { Content = new StringContent(string.Empty) };
-            peticion.Headers.Authorization = Basica(credenciales);
-            peticion.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            using var respuesta = await cliente.SendAsync(peticion, ct);
-            var texto = await respuesta.Content.ReadAsStringAsync(ct);
-            if (respuesta.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                throw new ProveedorDeListasNoDisponibleException("Infolaft rechazó las credenciales de la empresa.");
-            if (!respuesta.IsSuccessStatusCode)
-                throw new ProveedorDeListasNoDisponibleException($"Infolaft respondió HTTP {(int)respuesta.StatusCode}.");
-
-            try
-            {
-                coincidencias.AddRange(LectorDeRespuestaDeListas.Leer(texto, persona));
-                crudas.Add(new JsonObject { ["persona"] = persona.Clave, ["respuesta"] = JsonNode.Parse(texto) });
-            }
-            catch (JsonException e)
-            {
-                registro.LogWarning("Infolaft devolvió algo que no es JSON para una persona ({Longitud} caracteres).", texto.Length);
-                throw new ProveedorDeListasNoDisponibleException("Infolaft devolvió una respuesta que no es JSON.", e);
-            }
-        }
-
-        var criterio = credenciales.ModoBusqueda == ModoBusquedaListas.PorDocumento
-            ? "Infolaft · búsqueda por número de documento, exactitud EXACTA"
-            : "Infolaft · búsqueda por nombre (SearchByName), exactitud EXACTA";
-        return new RespuestaDeListas($"infolaft-{Guid.CreateVersion7():N}", coincidencias, criterio, ["Listas de Infolaft (según el plan contratado)"], null,
-            new JsonObject { ["proveedor"] = Proveedor, ["consultas"] = crudas }.ToJsonString());
-    }
-
-    internal static Uri Base(string url) => new(url.EndsWith('/') ? url : url + "/");
-
-    internal static AuthenticationHeaderValue Basica(CredencialesEnClaro c) =>
-        new("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{c.Usuario}:{c.Clave}")));
-}
-
-/// <summary>
 /// Stradata (alternativa del legado, VE-8): <c>GET buscador?nom=&amp;id=&amp;min=90&amp;min_id=90&amp;format=json</c> con Basic, como
 /// en el SRM (<c>ApiStradataBL</c>). Apagado por omisión.
 /// </summary>

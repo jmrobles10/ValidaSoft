@@ -132,15 +132,16 @@ public static class MapeosDeValidacion
                 [.. et.Areas.Select(a => a.ADto(miembros.TryGetValue(a.AreaId, out var m) ? m : [], PorDecidir(e, et, a, consultante)))]))],
             e.Reenvios, e.UltimaRespuesta,
             e.Rechazo is null ? null : new RechazoDto(e.Rechazo.AreaId, e.Rechazo.RevisorId, [.. e.Rechazo.Motivos.Select(m => m.Codigo)],
-                e.Rechazo.Justificacion, e.Rechazo.Fecha),
+                e.Rechazo.Justificacion, e.Rechazo.Fecha, e.Rechazo.Origen),
             e.MotivoAnulacion, e.AbiertoEn, e.CerradoEn, e.ActualizadoEn, e.Version,
             [.. e.Requisitos.Select(r => r.ADto(e, documentacion))],
-            [.. e.Verificaciones.Select(v => v.ADto())],
+            [.. e.Verificaciones.Select(v => v.ADto(e.AdjuntosDeCumplimiento))],
             e.EsperandoVerificaciones,
             e.PlazoDto(),
             e.Desaprobaciones,
             e.UltimaDesaprobacion?.ADto(),
-            e.UltimoRecordatorioDeObservaciones is { } ultimo ? new RecordatorioObservacionesDto(ultimo, e.RecordatoriosDeObservaciones) : null);
+            e.UltimoRecordatorioDeObservaciones is { } ultimo ? new RecordatorioObservacionesDto(ultimo, e.RecordatoriosDeObservaciones) : null,
+            [.. e.AdjuntosDeCumplimiento.Select(a => a.ADto())]);
 
     /// <summary>Plazo de cargue del expediente inicial (LT-2); nulo si no tiene (otros tipos, o un flujo sin plazo).</summary>
     public static PlazoCargueExpedienteDto? PlazoDto(this Expediente e) =>

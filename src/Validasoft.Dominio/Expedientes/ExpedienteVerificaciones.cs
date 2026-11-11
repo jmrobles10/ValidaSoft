@@ -200,6 +200,17 @@ public sealed partial class Expediente
         var evidencias = datos.Evidencias ?? [];
         if (evidencias.GroupBy(e => (e.DocumentoId, e.Version)).Any(g => g.Count() > 1))
             throw ReglaDeNegocioException.Validacion("evidencias-repetidas", "Una evidencia aparece dos veces.");
+        var adjuntos = (datos.Adjuntos ?? []).Distinct().ToList();
+        if (adjuntos.Any(id => BuscarAdjuntoDeCumplimiento(id) is not { Proposito: PropositoDeAdjunto.Estudio }))
+            throw ReglaDeNegocioException.Validacion("adjunto-invalido", "Un archivo adjunto del estudio no está en el expediente.");
+        // Con matriz (CU-17): ajustar el nivel que salió del cálculo exige explicarlo (la debida diligencia mínima del nivel la verifica el endpoint con la configuración).
+        var justificacionDeNivel = Texto(datos.JustificacionDeNivel, "justificacionDeNivel");
+        if (datos.Matriz is { } matriz)
+        {
+            if (datos.NivelRiesgo != matriz.Nivel && (justificacionDeNivel is null || justificacionDeNivel.Length < LongitudMinimaJustificacion))
+                throw ReglaDeNegocioException.Validacion("justificacion-de-nivel-requerida",
+                    $"La matriz dio nivel {matriz.Nivel} y registras {datos.NivelRiesgo}: explica el ajuste (al menos {LongitudMinimaJustificacion} caracteres).");
+        }
         if (vigenteHasta <= ahora)
             throw ReglaDeNegocioException.Validacion("vigencia-invalida", "La vigencia del estudio debe ser futura.");
         var listas = BuscarVerificacion(TipoVerificacion.ListasRestrictivas);
@@ -209,8 +220,10 @@ public sealed partial class Expediente
             AsegurarSinConflictoDeIntereses(oficial, null);
 
         var verificadoEnListas = listas?.SatisfechaEn(ahora) ?? false;
-        return Simular(s => s.Emitir(new EstudioDeCumplimientoRegistrado(datos with { Observaciones = observaciones, Evidencias = [.. evidencias] },
-            verificadoEnListas, oficial.UsuarioId.ToString(), vigenteHasta, ahora)), ahora);
+        return Simular(s => s.Emitir(new EstudioDeCumplimientoRegistrado(datos with
+            {
+                Observaciones = observaciones, Evidencias = [.. evidencias], Adjuntos = adjuntos, JustificacionDeNivel = justificacionDeNivel
+            }, verificadoEnListas, oficial.UsuarioId.ToString(), vigenteHasta, ahora)), ahora);
     }
 
     /// <summary>Anota una consulta automática fallida; la verificación sigue pendiente y se reintenta desde <paramref name="reintentarDesde"/>.</summary>

@@ -41,7 +41,7 @@ public sealed record FlujoParaExpediente(
 public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
 
 public sealed record RechazoDelExpediente(Guid AreaId, string RevisorId, IReadOnlyList<MotivoAplicado> Motivos, string Justificacion,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha, string? Origen = null);
 
 /// <summary>
 /// Veredicto guardado en el área (sobre el expediente) o en un requisito (con <see cref="AreaId"/> y
@@ -618,7 +618,7 @@ public sealed partial class Expediente
     {
         Estado = EstadoExpediente.Rechazado;
         TerminarPlazo();
-        Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha);
+        Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha, e.Origen);
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
@@ -819,6 +819,7 @@ public sealed partial class Expediente
             case CoincidenciaResuelta e: Apply(e); break;
             case EstudioDeCumplimientoRegistrado e: Apply(e); break;
             case VerificacionExpirada e: Apply(e); break;
+            case AdjuntoDeCumplimientoSubido e: Apply(e); break;
             case ConsultaDeVerificacionFallida e: Apply(e); break;
             case EvidenciaDeVerificacionDescargada e: Apply(e); break;
             case RecordatorioDeCargueEnviado e: Apply(e); break;

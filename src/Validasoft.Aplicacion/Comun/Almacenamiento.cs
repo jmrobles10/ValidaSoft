@@ -71,6 +71,9 @@ public static class ClavesDeAlmacen
     public static string EvidenciaDeVerificacion(Guid empresaId, string sha256, string extension) =>
         $"empresas/{empresaId:N}/verificaciones/{sha256}.{extension}";
 
+    /// <summary>Archivo que sube el oficial de cumplimiento al expediente (CU-16): bucket del tenant, content-addressed.</summary>
+    public static string AdjuntoDeCumplimiento(Guid empresaId, string sha256) => $"empresas/{empresaId:N}/cumplimiento/{sha256}";
+
     /// <summary>Versiones devueltas: nunca se comparten (docs/07 §6.1).</summary>
     public static string Cuarentena(Guid documentoId, int numero) => $"cuarentena/{documentoId:N}/v{numero}";
 }

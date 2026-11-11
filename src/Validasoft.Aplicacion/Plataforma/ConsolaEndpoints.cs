@@ -7,6 +7,7 @@ using Validasoft.Aplicacion.Identidad;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Ia;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Integraciones;
@@ -107,6 +108,9 @@ public static class SecretosEndpoints
     public const string TipoSecretoWebhook = "secreto-webhook";
     public const string TipoCuentaBancaria = "cuenta-bancaria";
 
+    /// <summary>Usuario y clave de los proveedores de listas de cada empresa: cifrados con la clave del grupo (CU-20).</summary>
+    public const string TipoCredencialDeListas = "credenciales-listas";
+
     /// <summary>Solo cuenta (no re-cifra): clave vigente, claves anteriores y, por tipo, cuántos secretos ya usan la vigente.</summary>
     [WolverineGet("/api/v1/plataforma/secretos")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
@@ -137,12 +141,13 @@ public static class SecretosEndpoints
         public int Total, Vigentes, Recifrados, Fallidos;
 
         /// <summary>Devuelve el texto re-cifrado, o nulo si no cambia (ya vigente, simulación o ilegible).</summary>
-        public string? Procesar(string? protegido, IProtectorDeSecretos protector, bool simular)
+        public string? Procesar(string? protegido, IProtectorDeSecretos protector, bool simular, Guid? grupoId = null)
         {
             if (string.IsNullOrEmpty(protegido))
                 return null;
             Total++;
-            if (protector.EstaConClaveActual(protegido))
+            // Con grupo: vigente solo si está cifrado con la clave derivada del grupo (lo guardado con la de la instalación migra).
+            if (grupoId is null ? protector.EstaConClaveActual(protegido) : protector.EstaCifradoParaGrupoConClaveActual(protegido))
             {
                 Vigentes++;
                 return null;
@@ -150,7 +155,7 @@ public static class SecretosEndpoints
 
             try
             {
-                var nuevo = protector.Recifrar(protegido);
+                var nuevo = grupoId is { } grupo ? protector.RecifrarDeGrupo(grupo, protegido) : protector.Recifrar(protegido);
                 if (simular)
                     return null;
                 Recifrados++;
@@ -171,6 +176,7 @@ public static class SecretosEndpoints
         var llaves = new Conteo(TipoLlaveOpenAi);
         var webhooks = new Conteo(TipoSecretoWebhook);
         var cuentas = new Conteo(TipoCuentaBancaria);
+        var listas = new Conteo(TipoCredencialDeListas);
 
         List<Guid> tenants;
         await using (var consulta = sesiones.ConsultaGlobal())
@@ -186,6 +192,23 @@ public static class SecretosEndpoints
                     continue;
                 plan.ApiKeyOpenAiProtegida = nuevo;
                 sesion.Store(plan);
+                cambios = true;
+            }
+
+            foreach (var configuracion in await sesion.Query<ListasRestrictivasEmpresa>().ToListAsync(ct))
+            {
+                var cambioLista = false;
+                foreach (var credenciales in configuracion.Credenciales.Values)
+                {
+                    if (listas.Procesar(credenciales.ClaveProtegida, protector, simular, tenantId) is not { } recifrada)
+                        continue;
+                    credenciales.ClaveProtegida = recifrada;
+                    cambioLista = true;
+                }
+
+                if (!cambioLista)
+                    continue;
+                sesion.Store(configuracion);
                 cambios = true;
             }
 
@@ -221,6 +244,6 @@ public static class SecretosEndpoints
                 await boveda.SaveChangesAsync(ct);
         }
 
-        return new EstadoDeSecretosDto(protector.ClaveVigente, protector.ClavesAnteriores, simular, [llaves.ADto(), webhooks.ADto(), cuentas.ADto()]);
+        return new EstadoDeSecretosDto(protector.ClaveVigente, protector.ClavesAnteriores, simular, [llaves.ADto(), webhooks.ADto(), cuentas.ADto(), listas.ADto()]);
     }
 }

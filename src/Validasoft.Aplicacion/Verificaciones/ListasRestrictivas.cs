@@ -255,7 +255,7 @@ public sealed class ConsultaDeListas(
                 $"La empresa llegó a la cuota mensual de {proveedor.Nombre} ({proveedor.Credenciales!.CuotaMensual} búsquedas).");
 
         var credenciales = proveedor.Credenciales is { } c
-            ? new CredencialesEnClaro(c.Usuario, protector.Desproteger(c.ClaveProtegida), c.UrlBase ?? proveedor.Opciones.UrlBase, c.ModoBusqueda)
+            ? new CredencialesEnClaro(c.Usuario, protector.DesprotegerDeGrupo(tenantId, c.ClaveProtegida), c.UrlBase ?? proveedor.Opciones.UrlBase, c.ModoBusqueda)
             : null;
         RespuestaDeListas respuesta;
         try
@@ -407,6 +407,59 @@ public static class LectorDeRespuestaDeListas
         }
 
         return null;
+    }
+
+    private static readonly string[] ClavesPdfBase64 = ["pdf", "pdfBase64", "pdf_base64", "reportPdf", "reportBase64", "reporte", "report", "certificado", "certificate", "file"];
+    private static readonly string[] ClavesPdfUrl = ["pdfUrl", "pdf_url", "urlPdf", "reportUrl", "report_url", "urlReporte", "certificateUrl", "downloadUrl"];
+
+    /// <summary>
+    /// El PDF que traiga la respuesta de un proveedor (CU-21): en base64 (lo decodifica y comprueba que sea PDF) o un enlace https para
+    /// descargarlo. Busca en la raíz y un nivel dentro de <c>data</c>/<c>content</c>. Nada hallado ⇒ (nulo, nulo).
+    /// </summary>
+    public static (byte[]? Pdf, string? Enlace) PdfDe(string json)
+    {
+        using var documento = JsonDocument.Parse(json);
+        foreach (var nivel in Niveles(documento.RootElement))
+        {
+            foreach (var clave in ClavesPdfBase64)
+            {
+                if (Propiedad(nivel, clave) is { ValueKind: JsonValueKind.String } valor)
+                {
+                    try
+                    {
+                        var bytes = Convert.FromBase64String(valor.GetString()!.Trim());
+                        if (EsPdf(bytes))
+                            return (bytes, null);
+                    }
+                    catch (FormatException)
+                    {
+                        // No era base64: se sigue buscando.
+                    }
+                }
+            }
+
+            foreach (var clave in ClavesPdfUrl)
+            {
+                if (Propiedad(nivel, clave) is { ValueKind: JsonValueKind.String } valor && !string.IsNullOrWhiteSpace(valor.GetString()))
+                    return (null, valor.GetString()!.Trim());
+            }
+        }
+
+        return (null, null);
+    }
+
+    public static bool EsPdf(byte[] bytes) => bytes.Length > 5 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46 && bytes[4] == 0x2D;
+
+    private static IEnumerable<JsonElement> Niveles(JsonElement raiz)
+    {
+        if (raiz.ValueKind != JsonValueKind.Object)
+            yield break;
+        yield return raiz;
+        foreach (var clave in new[] { "data", "content", "result", "resultado" })
+        {
+            if (Propiedad(raiz, clave) is { ValueKind: JsonValueKind.Object } interior)
+                yield return interior;
+        }
     }
 
     private static decimal? Puntaje(JsonElement objeto)

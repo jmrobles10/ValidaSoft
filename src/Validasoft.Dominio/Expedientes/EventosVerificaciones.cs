@@ -39,10 +39,15 @@ public enum DecisionCoincidencia
     Confirmada
 }
 
-/// <summary>Debida diligencia del estudio SAGRILAFT: simple u ampliada (intensificada; obligatoria con riesgo alto, VE-9).</summary>
+/// <summary>
+/// Debida diligencia del estudio SAGRILAFT, de menor a mayor intensidad (los textos van como se guardan; en pantalla se leen
+/// «simplificada», «ordinaria» e «intensificada»): <c>Simple</c>, <c>Ordinaria</c> (CU-17) y <c>Ampliada</c> (la intensificada;
+/// obligatoria con riesgo alto, VE-9). Se guarda como texto, así que agregar <c>Ordinaria</c> no cambia lo ya registrado.
+/// </summary>
 public enum DebidaDiligencia
 {
     Simple,
+    Ordinaria,
     Ampliada
 }
 
@@ -90,8 +95,12 @@ public sealed record EvidenciaDeVerificacion(string Bucket, string Clave, string
 public sealed record EvidenciaDeEstudio(Guid DocumentoId, int Version, string? Nombre);
 
 /// <summary>Lo que registra el Oficial de Cumplimiento (campos del legado: listas, conflicto de interés, riesgo 1–3, debida diligencia).</summary>
+/// <param name="Matriz">Con matriz de riesgo activa (CU-17): el cálculo del que salieron el nivel y la debida diligencia.</param>
+/// <param name="JustificacionDeNivel">Si el oficial ajustó el nivel de la matriz, por qué (obligatoria en ese caso).</param>
+/// <param name="Adjuntos">Archivos que el oficial subió para soportar el estudio (CU-16).</param>
 public sealed record DatosDeEstudio(int NivelRiesgo, bool ConflictoDeInteres, DebidaDiligencia DebidaDiligencia, string? Observaciones,
-    IReadOnlyList<EvidenciaDeEstudio> Evidencias, ConceptoCumplimiento Concepto);
+    IReadOnlyList<EvidenciaDeEstudio> Evidencias, ConceptoCumplimiento Concepto, Cumplimiento.ResultadoDeMatriz? Matriz = null,
+    string? JustificacionDeNivel = null, IReadOnlyList<Guid>? Adjuntos = null);
 
 /// <summary>Resultado de una consulta a un proveedor de listas, listo para registrarse (sin ids de coincidencia todavía).</summary>
 public sealed record ResultadoDeListas(string Proveedor, string ReferenciaExterna, IReadOnlyList<PersonaConsultada> Personas,
@@ -127,7 +136,25 @@ public sealed record EstudioDeCumplimientoRegistrado(DatosDeEstudio Estudio, boo
     DateTimeOffset Fecha);
 
 /// <summary>La vigencia del resultado pasó con el expediente abierto: hay que volver a consultar (listas) o a estudiar.</summary>
-public sealed record VerificacionExpirada(TipoVerificacion Tipo, DateTimeOffset VencioEn, DateTimeOffset Fecha);
+/// <param name="Motivo">Nulo si venció su vigencia; si no, por qué se expiró antes (p. ej. cambió el representante legal, CU-15).</param>
+public sealed record VerificacionExpirada(TipoVerificacion Tipo, DateTimeOffset VencioEn, DateTimeOffset Fecha, string? Motivo = null);
+
+/// <summary>Para qué se subió un archivo de cumplimiento: soportar el estudio del oficial o ser la evidencia de una consulta de listas hecha por fuera.</summary>
+public enum PropositoDeAdjunto
+{
+    Estudio,
+    ConsultaManual
+}
+
+/// <summary>
+/// Archivo que sube el oficial de cumplimiento al expediente (CU-16): PDF o imagen guardada en el bucket del tenant, con su
+/// SHA-256. No pasa por la bóveda del tercero: es de la empresa y no se comparte.
+/// </summary>
+public sealed record AdjuntoDeCumplimiento(Guid Id, string Nombre, string TipoContenido, long Tamano, string Sha256, string Bucket, string Clave,
+    PropositoDeAdjunto Proposito, string Por, DateTimeOffset Fecha);
+
+/// <summary>El oficial subió un archivo al expediente (el estudio lo cita por su id; la consulta manual lo usa de evidencia).</summary>
+public sealed record AdjuntoDeCumplimientoSubido(AdjuntoDeCumplimiento Adjunto);
 
 /// <summary>La consulta automática al proveedor falló (no disponible, sin credenciales…); se reintenta desde <see cref="ReintentarDesde"/>.</summary>
 public sealed record ConsultaDeVerificacionFallida(TipoVerificacion Tipo, string Proveedor, string Error, DateTimeOffset ReintentarDesde,

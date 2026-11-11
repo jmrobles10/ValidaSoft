@@ -214,7 +214,8 @@ public sealed record SeccionDeRequisitoDto(
 public sealed record EtapaExpedienteDto(int Orden, string Estado, DateTimeOffset? ActivadaEn, DateTimeOffset? AprobadaEn,
     IReadOnlyList<AreaExpedienteDto> Areas);
 
-public sealed record RechazoDto(Guid AreaId, string Usuario, IReadOnlyList<string> Motivos, string Justificacion, DateTimeOffset Fecha);
+/// <param name="Origen">Nulo si lo rechazó un área; <c>Cumplimiento</c> si lo rechazó directamente el oficial (CU-18; el área es entonces vacía).</param>
+public sealed record RechazoDto(Guid AreaId, string Usuario, IReadOnlyList<string> Motivos, string Justificacion, DateTimeOffset Fecha, string? Origen = null);
 
 public sealed record ExpedienteDto(
     Guid Id,
@@ -244,7 +245,8 @@ public sealed record ExpedienteDto(
     PlazoCargueExpedienteDto? PlazoCargue = null,
     int Desaprobaciones = 0,
     DesaprobacionDto? UltimaDesaprobacion = null,
-    RecordatorioObservacionesDto? RecordatorioObservaciones = null);
+    RecordatorioObservacionesDto? RecordatorioObservaciones = null,
+    IReadOnlyList<AdjuntoDeCumplimientoDto>? AdjuntosDeCumplimiento = null);
 
 /// <summary>
 /// Última vez que un administrador devolvió a revisión lo ya decidido del expediente (DS-1, DS-2). <see cref="Alcance"/>:

@@ -151,6 +151,22 @@ public sealed class MonitoreoDeListas
         ActualizadoEn = ahora;
     }
 
+    /// <summary>
+    /// Cambiaron las personas relacionadas del tercero (CU-15): si alguna actual no estaba entre las consultadas, la próxima
+    /// reconsulta pasa a ser ya. Devuelve si cambió algo (un monitoreo detenido no se reactiva).
+    /// </summary>
+    public bool ReconsultarPorCambioDePersonas(IReadOnlyCollection<string> clavesActuales, DateTimeOffset ahora)
+    {
+        if (ProximaConsulta is null || Listas.ReferenciaExterna is null)
+            return false;
+        var consultadas = Listas.Personas.Select(p => p.Clave).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (clavesActuales.All(consultadas.Contains) || ProximaConsulta <= ahora)
+            return false;
+        ProximaConsulta = ahora;
+        ActualizadoEn = ahora;
+        return true;
+    }
+
     /// <summary>El vínculo dejó de estar activo: no se consulta más (el historial se conserva).</summary>
     public void Detener(DateTimeOffset ahora)
     {

@@ -1,5 +1,6 @@
 using Marten;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
@@ -39,7 +40,8 @@ public sealed class OpcionesDeRevisionAutomatica(IConfiguration configuracion)
 /// Las llamadas a OpenAI no pasan por aquí: el análisis ya está en la bóveda.
 /// </summary>
 public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCertificados certificados, OpcionesDeIa opcionesIa,
-    OpcionesDeRevisionAutomatica opciones, TimeProvider reloj, ILogger<TareasDeRevisionAutomatica> registro)
+    OpcionesDeRevisionAutomatica opciones, TimeProvider reloj, IProtectorDeSecretos protector, IServiceScopeFactory alcances,
+    ILogger<TareasDeRevisionAutomatica> registro)
 {
     public const string Actor = "revision-automatica";
 
@@ -172,13 +174,16 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
         if (registradas.Count == 0)
             return 0;
 
-        await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, null, certificados, ahora, ct);
+        // Un cierre por aprobación automática también le llega al tercero por correo (CU-19).
+        var correos = new CorreosPendientesDeCierre(protector);
+        await ProcesoDeValidacion.AnexarAsync(sesion, stream, eventos, correos.Correo, certificados, ahora, ct);
         var clave = UsoRevisionAutomatica.Clave(expediente.EmpresaId, mes);
         var uso = await sesion.LoadAsync<UsoRevisionAutomatica>(clave, ct) ?? UsoRevisionAutomatica.Nuevo(expediente.EmpresaId, mes);
         foreach (var registrada in registradas)
             uso.Registrar(registrada.Resultado);
         sesion.Store(uso);
         await sesion.SaveChangesAsync(ct);
+        await correos.PublicarAsync(alcances);
         return registradas.Count;
     }
 
