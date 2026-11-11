@@ -3121,6 +3121,187 @@
         }
       }
     },
+    "/api/v1/plataforma/tenants/{tenantId}/plan": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_tenants_tenantId_plan",
+        "description": "GET_api_v1_plataforma_tenants_tenantId_plan",
+        "operationId": "GET_api_v1_plataforma_tenants_tenantId_plan",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsoDelGrupoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+        ],
+        "summary": "PUT_api_v1_plataforma_tenants_tenantId_plan",
+        "description": "PUT_api_v1_plataforma_tenants_tenantId_plan",
+        "operationId": "PUT_api_v1_plataforma_tenants_tenantId_plan",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarPlanDelGrupoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsoDelGrupoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/planes/revisar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_planes_revisar",
+        "description": "POST_api_v1_plataforma_planes_revisar",
+        "operationId": "POST_api_v1_plataforma_planes_revisar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarPlanesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeRevisionDePlanesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/plan": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+        ],
+        "summary": "GET_api_v1_tenant_plan",
+        "description": "GET_api_v1_tenant_plan",
+        "operationId": "GET_api_v1_tenant_plan",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDelGrupoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/tenant/uso": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+        ],
+        "summary": "GET_api_v1_tenant_uso",
+        "description": "GET_api_v1_tenant_uso",
+        "operationId": "GET_api_v1_tenant_uso",
+        "parameters": [
+          {
+            "name": "mes",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsoDelGrupoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/tenants": {
       "post": {
         "tags": [
@@ -7472,6 +7653,655 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UsoIaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/boveda/exportar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.ExportacionDeBovedaEndpoints"
+        ],
+        "summary": "POST_public_v1_boveda_exportar",
+        "description": "POST_public_v1_boveda_exportar",
+        "operationId": "POST_public_v1_boveda_exportar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/exportaciones": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.ExportacionDeBovedaEndpoints"
+        ],
+        "summary": "GET_public_v1_exportaciones",
+        "description": "GET_public_v1_exportaciones",
+        "operationId": "GET_public_v1_exportaciones",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExportacionBovedaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/exportaciones/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.ExportacionDeBovedaEndpoints"
+        ],
+        "summary": "GET_public_v1_exportaciones_id",
+        "description": "GET_public_v1_exportaciones_id",
+        "operationId": "GET_public_v1_exportaciones_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportacionBovedaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/exportaciones/{id}/descarga": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.ExportacionDeBovedaEndpoints"
+        ],
+        "summary": "POST_public_v1_exportaciones_id_descarga",
+        "description": "POST_public_v1_exportaciones_id_descarga",
+        "operationId": "POST_public_v1_exportaciones_id_descarga",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DescargaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/habeas/revisar-plazos": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.PlazosDeHabeasEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_habeas_revisar_plazos",
+        "description": "POST_api_v1_plataforma_habeas_revisar_plazos",
+        "operationId": "POST_api_v1_plataforma_habeas_revisar_plazos",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarPlazosDeHabeasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeRevisionDeHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/solicitudes-habeas": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDelTerceroEndpoints"
+        ],
+        "summary": "POST_public_v1_solicitudes_habeas",
+        "description": "POST_public_v1_solicitudes_habeas",
+        "operationId": "POST_public_v1_solicitudes_habeas",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearSolicitudHabeasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_solicitudes_habeas",
+        "description": "GET_public_v1_solicitudes_habeas",
+        "operationId": "GET_public_v1_solicitudes_habeas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitudHabeasDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/solicitudes-habeas/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_solicitudes_habeas_id",
+        "description": "GET_public_v1_solicitudes_habeas_id",
+        "operationId": "GET_public_v1_solicitudes_habeas_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/solicitudes-habeas/{id}/constancia": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_solicitudes_habeas_id_constancia",
+        "description": "GET_public_v1_solicitudes_habeas_id_constancia",
+        "operationId": "GET_public_v1_solicitudes_habeas_id_constancia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConstanciaHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/solicitudes-habeas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaEmpresaEndpoints"
+        ],
+        "summary": "GET_api_v1_solicitudes_habeas",
+        "description": "GET_api_v1_solicitudes_habeas",
+        "operationId": "GET_api_v1_solicitudes_habeas",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfSolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/solicitudes-habeas/resumen": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaEmpresaEndpoints"
+        ],
+        "summary": "GET_api_v1_solicitudes_habeas_resumen",
+        "description": "GET_api_v1_solicitudes_habeas_resumen",
+        "operationId": "GET_api_v1_solicitudes_habeas_resumen",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenDeSolicitudesHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/solicitudes-habeas/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaEmpresaEndpoints"
+        ],
+        "summary": "GET_api_v1_solicitudes_habeas_id",
+        "description": "GET_api_v1_solicitudes_habeas_id",
+        "operationId": "GET_api_v1_solicitudes_habeas_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/solicitudes-habeas/{id}/resolver": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaEmpresaEndpoints"
+        ],
+        "summary": "POST_api_v1_solicitudes_habeas_id_resolver",
+        "description": "POST_api_v1_solicitudes_habeas_id_resolver",
+        "operationId": "POST_api_v1_solicitudes_habeas_id_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverSolicitudHabeasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-habeas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_habeas",
+        "description": "GET_api_v1_plataforma_solicitudes_habeas",
+        "operationId": "GET_api_v1_plataforma_solicitudes_habeas",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfSolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-habeas/resumen": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_habeas_resumen",
+        "description": "GET_api_v1_plataforma_solicitudes_habeas_resumen",
+        "operationId": "GET_api_v1_plataforma_solicitudes_habeas_resumen",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenDeSolicitudesHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-habeas/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_habeas_id",
+        "description": "GET_api_v1_plataforma_solicitudes_habeas_id",
+        "operationId": "GET_api_v1_plataforma_solicitudes_habeas_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudHabeasDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-habeas/{id}/plan": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_habeas_id_plan",
+        "description": "GET_api_v1_plataforma_solicitudes_habeas_id_plan",
+        "operationId": "GET_api_v1_plataforma_solicitudes_habeas_id_plan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDeSupresionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-habeas/{id}/resolver": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_solicitudes_habeas_id_resolver",
+        "description": "POST_api_v1_plataforma_solicitudes_habeas_id_resolver",
+        "operationId": "POST_api_v1_plataforma_solicitudes_habeas_id_resolver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolverSolicitudHabeasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudHabeasDto"
                 }
               }
             }
@@ -11966,6 +12796,156 @@
         }
       }
     },
+    "/api/v1/empresas/{id}/dominio-correo": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.DominioDeCorreoEndpoints"
+        ],
+        "summary": "GET_api_v1_empresas_id_dominio_correo",
+        "description": "GET_api_v1_empresas_id_dominio_correo",
+        "operationId": "GET_api_v1_empresas_id_dominio_correo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeCorreoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.DominioDeCorreoEndpoints"
+        ],
+        "summary": "PUT_api_v1_empresas_id_dominio_correo",
+        "description": "PUT_api_v1_empresas_id_dominio_correo",
+        "operationId": "PUT_api_v1_empresas_id_dominio_correo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarDominioDeCorreoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeCorreoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.DominioDeCorreoEndpoints"
+        ],
+        "summary": "DELETE_api_v1_empresas_id_dominio_correo",
+        "description": "DELETE_api_v1_empresas_id_dominio_correo",
+        "operationId": "DELETE_api_v1_empresas_id_dominio_correo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeCorreoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/empresas/{id}/dominio-correo/verificar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Configuracion.DominioDeCorreoEndpoints"
+        ],
+        "summary": "POST_api_v1_empresas_id_dominio_correo_verificar",
+        "description": "POST_api_v1_empresas_id_dominio_correo_verificar",
+        "operationId": "POST_api_v1_empresas_id_dominio_correo_verificar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeCorreoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/motivos": {
       "get": {
         "tags": [
@@ -13497,6 +14477,29 @@
           }
         }
       },
+      "ActualizarDominioDeCorreoDto": {
+        "required": [
+          "dominio"
+        ],
+        "type": "object",
+        "properties": {
+          "dominio": {
+            "type": "string"
+          },
+          "parteLocal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombreRemitente": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ActualizarEmpresaDto": {
         "type": "object",
         "properties": {
@@ -13610,6 +14613,25 @@
               "null",
               "boolean"
             ]
+          }
+        }
+      },
+      "ActualizarPlanDelGrupoDto": {
+        "required": [
+          "codigo",
+          "limites",
+          "bloqueoSuave"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "limites": {
+            "$ref": "#/components/schemas/LimitesDePlanDto"
+          },
+          "bloqueoSuave": {
+            "type": "boolean"
           }
         }
       },
@@ -15849,6 +16871,28 @@
           }
         }
       },
+      "ComprobacionDeRegistroDnsDto": {
+        "required": [
+          "finalidad",
+          "correcto",
+          "encontrado"
+        ],
+        "type": "object",
+        "properties": {
+          "finalidad": {
+            "type": "string"
+          },
+          "correcto": {
+            "type": "boolean"
+          },
+          "encontrado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ConcederAccesoSoporteDto": {
         "required": [
           "empresaId",
@@ -16059,6 +17103,75 @@
           },
           "aceptado": {
             "type": "boolean"
+          }
+        }
+      },
+      "ConstanciaHabeasDto": {
+        "required": [
+          "radicado",
+          "tipo",
+          "alcance",
+          "destino",
+          "recibidaEl",
+          "resueltaEl",
+          "dentroDelPlazo",
+          "resultado",
+          "suprimidos",
+          "retenidos",
+          "anonimizados",
+          "hash"
+        ],
+        "type": "object",
+        "properties": {
+          "radicado": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "alcance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "destino": {
+            "type": "string"
+          },
+          "recibidaEl": {
+            "type": "string",
+            "format": "date"
+          },
+          "resueltaEl": {
+            "type": "string",
+            "format": "date"
+          },
+          "dentroDelPlazo": {
+            "type": "boolean"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "suprimidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ElementoSuprimidoDto"
+            }
+          },
+          "retenidos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ElementoRetenidoDto"
+            }
+          },
+          "anonimizados": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hash": {
+            "type": "string"
           }
         }
       },
@@ -17372,6 +18485,36 @@
           }
         }
       },
+      "CrearSolicitudHabeasDto": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "alcance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "detalle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CrearTenantDto": {
         "required": [
           "slug",
@@ -18644,6 +19787,25 @@
           }
         }
       },
+      "DestinoDeSolicitudHabeasDto": {
+        "required": [
+          "empresaId",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
       "DiffCampoDto": {
         "required": [
           "campo",
@@ -19075,6 +20237,89 @@
           }
         }
       },
+      "DominioDeCorreoDto": {
+        "required": [
+          "empresaId",
+          "configurado",
+          "dominio",
+          "parteLocal",
+          "nombreRemitente",
+          "estado",
+          "registros",
+          "verificacion",
+          "verificadoEn",
+          "ultimaVerificacionEn",
+          "remitenteEnUso",
+          "remitenteDeLaPlataforma",
+          "simulado"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "configurado": {
+            "type": "boolean"
+          },
+          "dominio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "parteLocal": {
+            "type": "string"
+          },
+          "nombreRemitente": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "registros": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RegistroDnsDto"
+            }
+          },
+          "verificacion": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComprobacionDeRegistroDnsDto"
+            }
+          },
+          "verificadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "ultimaVerificacionEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "remitenteEnUso": {
+            "type": "string"
+          },
+          "remitenteDeLaPlataforma": {
+            "type": "string"
+          },
+          "simulado": {
+            "type": "boolean"
+          }
+        }
+      },
       "EditarFlujoDto": {
         "type": "object",
         "properties": {
@@ -19212,6 +20457,94 @@
             "format": "uuid"
           },
           "cuenta": {
+            "type": "string"
+          }
+        }
+      },
+      "ElementoDePlanDeSupresionDto": {
+        "required": [
+          "tipo",
+          "referencia",
+          "descripcion",
+          "accion",
+          "baseLegal",
+          "retenidaHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "accion": {
+            "type": "string"
+          },
+          "baseLegal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retenidaHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ElementoRetenidoDto": {
+        "required": [
+          "tipo",
+          "referencia",
+          "descripcion",
+          "baseLegal",
+          "retenidaHasta"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": "string"
+          },
+          "baseLegal": {
+            "type": "string"
+          },
+          "retenidaHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ElementoSuprimidoDto": {
+        "required": [
+          "tipo",
+          "referencia",
+          "descripcion"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": "string"
+          },
+          "descripcion": {
             "type": "string"
           }
         }
@@ -20668,6 +22001,99 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ExportacionBovedaDto": {
+        "required": [
+          "id",
+          "estado",
+          "solicitadaEn",
+          "terminadaEn",
+          "expiraEn",
+          "archivos",
+          "bytes",
+          "sha256",
+          "hashManifiesto",
+          "kid",
+          "codigoDeError",
+          "descargas"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "solicitadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "terminadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expiraEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "archivos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "bytes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hashManifiesto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kid": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigoDeError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "descargas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -23650,6 +25076,63 @@
           }
         }
       },
+      "LimitesDePlanDto": {
+        "required": [
+          "usuarios",
+          "empresas",
+          "vinculosActivos",
+          "almacenamientoMb",
+          "llamadasApiMes"
+        ],
+        "type": "object",
+        "properties": {
+          "usuarios": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "empresas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vinculosActivos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "almacenamientoMb": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "llamadasApiMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "ListasRestrictivasConfigDto": {
         "required": [
           "proveedor",
@@ -23844,6 +25327,50 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "MedicionDePlanDto": {
+        "required": [
+          "metrica",
+          "usado",
+          "limite",
+          "porcentaje",
+          "nivel"
+        ],
+        "type": "object",
+        "properties": {
+          "metrica": {
+            "type": "string"
+          },
+          "usado": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "limite": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "porcentaje": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nivel": {
+            "type": "string"
           }
         }
       },
@@ -24848,6 +26375,27 @@
           }
         }
       },
+      "PaginaDtoOfSolicitudHabeasDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SolicitudHabeasDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfVinculoDto": {
         "required": [
           "datos",
@@ -25319,6 +26867,92 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          }
+        }
+      },
+      "PlanDelGrupoDto": {
+        "required": [
+          "tenantId",
+          "codigo",
+          "limites",
+          "bloqueoSuave",
+          "configurado",
+          "actualizadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "limites": {
+            "$ref": "#/components/schemas/LimitesDePlanDto"
+          },
+          "bloqueoSuave": {
+            "type": "boolean"
+          },
+          "configurado": {
+            "type": "boolean"
+          },
+          "actualizadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "PlanDeSupresionDto": {
+        "required": [
+          "solicitudId",
+          "alcance",
+          "suprimir",
+          "retener",
+          "anonimizar",
+          "elementos"
+        ],
+        "type": "object",
+        "properties": {
+          "solicitudId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "alcance": {
+            "type": "string"
+          },
+          "suprimir": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "retener": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "anonimizar": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "elementos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ElementoDePlanDeSupresionDto"
             }
           }
         }
@@ -26565,6 +28199,29 @@
           }
         }
       },
+      "RegistroDnsDto": {
+        "required": [
+          "finalidad",
+          "tipo",
+          "nombre",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "finalidad": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "string"
+          }
+        }
+      },
       "ReglaFrescuraDto": {
         "required": [
           "tipo"
@@ -27222,6 +28879,27 @@
           }
         }
       },
+      "ResolverSolicitudHabeasDto": {
+        "required": [
+          "decision",
+          "respuesta"
+        ],
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string"
+          },
+          "respuesta": {
+            "type": "string"
+          },
+          "baseLegal": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RespuestaDeMatrizDto": {
         "required": [
           "factor",
@@ -27327,6 +29005,65 @@
             "items": {
               "$ref": "#/components/schemas/DesgloseDeMatrizDto"
             }
+          }
+        }
+      },
+      "ResultadoDeRevisionDeHabeasDto": {
+        "required": [
+          "revisadas",
+          "porVencer",
+          "vencidas"
+        ],
+        "type": "object",
+        "properties": {
+          "revisadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vencidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResultadoDeRevisionDePlanesDto": {
+        "required": [
+          "grupos",
+          "avisos"
+        ],
+        "type": "object",
+        "properties": {
+          "grupos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "avisos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -27611,6 +29348,49 @@
             "format": "double"
           },
           "slaIncumplidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResumenDeSolicitudesHabeasDto": {
+        "required": [
+          "abiertas",
+          "porVencer",
+          "vencidas",
+          "resueltas"
+        ],
+        "type": "object",
+        "properties": {
+          "abiertas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "porVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vencidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "resueltas": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -28312,6 +30092,30 @@
           },
           "bloqueante": {
             "type": "boolean"
+          }
+        }
+      },
+      "RevisarPlanesDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "RevisarPlazosDeHabeasDto": {
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -29638,6 +31442,131 @@
           }
         }
       },
+      "SolicitudHabeasDto": {
+        "required": [
+          "id",
+          "radicado",
+          "tipo",
+          "alcance",
+          "estado",
+          "resultado",
+          "destino",
+          "recibidaEn",
+          "venceEl",
+          "diasHabiles",
+          "diasHabilesRestantes",
+          "plazo",
+          "dentroDelPlazo",
+          "resueltaEn",
+          "detalle",
+          "respuesta",
+          "contenidoSuprimido",
+          "constanciaHash",
+          "titular"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "radicado": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "alcance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "resultado": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "destino": {
+            "$ref": "#/components/schemas/DestinoDeSolicitudHabeasDto"
+          },
+          "recibidaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venceEl": {
+            "type": "string",
+            "format": "date"
+          },
+          "diasHabiles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasHabilesRestantes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "plazo": {
+            "type": "string"
+          },
+          "dentroDelPlazo": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "resueltaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "detalle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "respuesta": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contenidoSuprimido": {
+            "type": "boolean"
+          },
+          "constanciaHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "titular": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TitularDeSolicitudDto"
+              }
+            ]
+          }
+        }
+      },
       "SoporteDeSeccionesDto": {
         "required": [
           "sinAnalisis",
@@ -30595,6 +32524,25 @@
           }
         }
       },
+      "TitularDeSolicitudDto": {
+        "required": [
+          "nombre",
+          "identificacion",
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "identificacion": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          }
+        }
+      },
       "TitularPublicoDto": {
         "required": [
           "nombre",
@@ -30754,6 +32702,47 @@
           "empresaId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "UsoDelGrupoDto": {
+        "required": [
+          "mes",
+          "plan",
+          "mediciones",
+          "alertas",
+          "bloqueado",
+          "almacenamientoMedidoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "mes": {
+            "type": "string"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PlanDelGrupoDto"
+          },
+          "mediciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MedicionDePlanDto"
+            }
+          },
+          "alertas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bloqueado": {
+            "type": "boolean"
+          },
+          "almacenamientoMedidoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -32644,6 +34633,9 @@
       "name": "Validasoft.Aplicacion.Plataforma.OperadoresDirectosEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Plataforma.PlanDelGrupoEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Plataforma.TenantsEndpoints"
     },
     {
@@ -32732,6 +34724,21 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ia.UsoIaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Habeas.ExportacionDeBovedaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Habeas.PlazosDeHabeasEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDelTerceroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaEmpresaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Habeas.SolicitudesHabeasDeLaPlataformaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Flujos.FlujosEndpoints"
@@ -32834,6 +34841,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.AreasEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Configuracion.DominioDeCorreoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Configuracion.MotivosEndpoints"
