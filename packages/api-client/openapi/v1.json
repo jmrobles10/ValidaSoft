@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5151/"
+      "url": "http://localhost:5211/"
     }
   ],
   "paths": {
@@ -2947,6 +2947,41 @@
         }
       }
     },
+    "/api/v1/plataforma/operadores/{id}/reactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.OperadoresDirectosEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_operadores_id_reactivar",
+        "description": "POST_api_v1_plataforma_operadores_id_reactivar",
+        "operationId": "POST_api_v1_plataforma_operadores_id_reactivar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperadorDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/operadores/{id}/passkeys": {
       "get": {
         "tags": [
@@ -3362,6 +3397,409 @@
                   "items": {
                     "$ref": "#/components/schemas/TipoIdentificacionDto"
                   }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/tenants/{tenantId}/sistemas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SistemasDeGrupoEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_tenants_tenantId_sistemas",
+        "description": "GET_api_v1_plataforma_tenants_tenantId_sistemas",
+        "operationId": "GET_api_v1_plataforma_tenants_tenantId_sistemas",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SistemaIntegradoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/tenants/{tenantId}/sistemas/{id}/desactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SistemasDeGrupoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_desactivar",
+        "description": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_desactivar",
+        "operationId": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_desactivar",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaIntegradoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/tenants/{tenantId}/sistemas/{id}/reactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SistemasDeGrupoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_reactivar",
+        "description": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_reactivar",
+        "operationId": "POST_api_v1_plataforma_tenants_tenantId_sistemas_id_reactivar",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaIntegradoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/sistemas/{codigo}/desactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SistemasDePlataformaEstadoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_sistemas_codigo_desactivar",
+        "description": "POST_api_v1_plataforma_sistemas_codigo_desactivar",
+        "operationId": "POST_api_v1_plataforma_sistemas_codigo_desactivar",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/sistemas/{codigo}/reactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SistemasDePlataformaEstadoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_sistemas_codigo_reactivar",
+        "description": "POST_api_v1_plataforma_sistemas_codigo_reactivar",
+        "operationId": "POST_api_v1_plataforma_sistemas_codigo_reactivar",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/tenants/{tenantId}/empresas": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.EmpresasDeGrupoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_tenants_tenantId_empresas",
+        "description": "POST_api_v1_plataforma_tenants_tenantId_empresas",
+        "operationId": "POST_api_v1_plataforma_tenants_tenantId_empresas",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CrearEmpresaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/clave-de-arranque": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ClaveDeArranqueEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_clave_de_arranque",
+        "description": "GET_api_v1_plataforma_clave_de_arranque",
+        "operationId": "GET_api_v1_plataforma_clave_de_arranque",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaveDeArranqueDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/clave-de-arranque/desactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ClaveDeArranqueEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_clave_de_arranque_desactivar",
+        "description": "POST_api_v1_plataforma_clave_de_arranque_desactivar",
+        "operationId": "POST_api_v1_plataforma_clave_de_arranque_desactivar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaveDeArranqueDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/clave-de-arranque/reactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ClaveDeArranqueEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_clave_de_arranque_reactivar",
+        "description": "POST_api_v1_plataforma_clave_de_arranque_reactivar",
+        "operationId": "POST_api_v1_plataforma_clave_de_arranque_reactivar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaveDeArranqueDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/auditoria-ingresos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.AuditoriaDeOperadoresEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_auditoria_ingresos",
+        "description": "GET_api_v1_plataforma_auditoria_ingresos",
+        "operationId": "GET_api_v1_plataforma_auditoria_ingresos",
+        "parameters": [
+          {
+            "name": "operador",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "evento",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exitoso",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "desde",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfIngresoDeOperadorDto"
                 }
               }
             }
@@ -6112,6 +6550,42 @@
         }
       }
     },
+    "/api/v1/sistemas/{id}/reactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SistemasEndpoints"
+        ],
+        "summary": "POST_api_v1_sistemas_id_reactivar",
+        "description": "POST_api_v1_sistemas_id_reactivar",
+        "operationId": "POST_api_v1_sistemas_id_reactivar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SistemaIntegradoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/usuarios": {
       "post": {
         "tags": [
@@ -6570,6 +7044,137 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/mi-cuenta/reautenticacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+        ],
+        "summary": "GET_api_v1_mi_cuenta_reautenticacion",
+        "description": "GET_api_v1_mi_cuenta_reautenticacion",
+        "operationId": "GET_api_v1_mi_cuenta_reautenticacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDeReautenticacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+        ],
+        "summary": "POST_api_v1_mi_cuenta_reautenticacion",
+        "description": "POST_api_v1_mi_cuenta_reautenticacion",
+        "operationId": "POST_api_v1_mi_cuenta_reautenticacion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarPasskeyDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReautenticacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/mi-cuenta/reautenticacion/opciones": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+        ],
+        "summary": "POST_api_v1_mi_cuenta_reautenticacion_opciones",
+        "description": "POST_api_v1_mi_cuenta_reautenticacion_opciones",
+        "operationId": "POST_api_v1_mi_cuenta_reautenticacion_opciones",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpcionesDePasskeyDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/mi-cuenta/codigos-de-recuperacion": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+        ],
+        "summary": "GET_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "description": "GET_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "operationId": "GET_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDeRecuperacionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+        ],
+        "summary": "POST_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "description": "POST_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "operationId": "POST_api_v1_mi_cuenta_codigos_de_recuperacion",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodigosDeRecuperacionDto"
                 }
               }
             }
@@ -7098,6 +7703,41 @@
         }
       }
     },
+    "/api/v1/ingreso/recuperacion": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.IngresoEndpoints"
+        ],
+        "summary": "POST_api_v1_ingreso_recuperacion",
+        "description": "POST_api_v1_ingreso_recuperacion",
+        "operationId": "POST_api_v1_ingreso_recuperacion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsarCodigoDeRecuperacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasoDeIngresoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/ingreso/sesion/renovar": {
       "post": {
         "tags": [
@@ -7285,6 +7925,565 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SesionTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/ingreso/sso/descubrir": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoIngresoEndpoints"
+        ],
+        "summary": "POST_api_v1_ingreso_sso_descubrir",
+        "description": "POST_api_v1_ingreso_sso_descubrir",
+        "operationId": "POST_api_v1_ingreso_sso_descubrir",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DescubrirSsoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SsoDescubiertoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/ingreso/sso/iniciar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoIngresoEndpoints"
+        ],
+        "summary": "POST_api_v1_ingreso_sso_iniciar",
+        "description": "POST_api_v1_ingreso_sso_iniciar",
+        "operationId": "POST_api_v1_ingreso_sso_iniciar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IniciarSsoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SsoIniciadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/ingreso/sso/callback": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoIngresoEndpoints"
+        ],
+        "summary": "GET_api_v1_ingreso_sso_callback",
+        "description": "GET_api_v1_ingreso_sso_callback",
+        "operationId": "GET_api_v1_ingreso_sso_callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/ingreso/sso/completar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoIngresoEndpoints"
+        ],
+        "summary": "POST_api_v1_ingreso_sso_completar",
+        "description": "POST_api_v1_ingreso_sso_completar",
+        "operationId": "POST_api_v1_ingreso_sso_completar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletarSsoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasoDeIngresoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/sso": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "GET_api_v1_configuracion_sso",
+        "description": "GET_api_v1_configuracion_sso",
+        "operationId": "GET_api_v1_configuracion_sso",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "PUT_api_v1_configuracion_sso",
+        "description": "PUT_api_v1_configuracion_sso",
+        "operationId": "PUT_api_v1_configuracion_sso",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FijarSsoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/sso/dominios": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "POST_api_v1_configuracion_sso_dominios",
+        "description": "POST_api_v1_configuracion_sso_dominios",
+        "operationId": "POST_api_v1_configuracion_sso_dominios",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgregarDominioSsoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/sso/dominios/{dominio}/verificar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "POST_api_v1_configuracion_sso_dominios_dominio_verificar",
+        "description": "POST_api_v1_configuracion_sso_dominios_dominio_verificar",
+        "operationId": "POST_api_v1_configuracion_sso_dominios_dominio_verificar",
+        "parameters": [
+          {
+            "name": "dominio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DominioDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/sso/dominios/{dominio}": {
+      "delete": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "DELETE_api_v1_configuracion_sso_dominios_dominio",
+        "description": "DELETE_api_v1_configuracion_sso_dominios_dominio",
+        "operationId": "DELETE_api_v1_configuracion_sso_dominios_dominio",
+        "parameters": [
+          {
+            "name": "dominio",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/configuracion/sso/probar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "POST_api_v1_configuracion_sso_probar",
+        "description": "POST_api_v1_configuracion_sso_probar",
+        "operationId": "POST_api_v1_configuracion_sso_probar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PruebaDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/tenants/{id}/sso/desactivar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_tenants_id_sso_desactivar",
+        "description": "POST_api_v1_plataforma_tenants_id_sso_desactivar",
+        "operationId": "POST_api_v1_plataforma_tenants_id_sso_desactivar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfiguracionDeSsoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/ia/consumo": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.ConsumoDeIaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_ia_consumo",
+        "description": "GET_api_v1_plataforma_ia_consumo",
+        "operationId": "GET_api_v1_plataforma_ia_consumo",
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grupoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumoDeIaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/ia/consumo/exportar": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.ConsumoDeIaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_ia_consumo_exportar",
+        "description": "GET_api_v1_plataforma_ia_consumo_exportar",
+        "operationId": "GET_api_v1_plataforma_ia_consumo_exportar",
+        "parameters": [
+          {
+            "name": "periodo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grupoId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "formato",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/ia/tarifa": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.ConsumoDeIaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_ia_tarifa",
+        "description": "GET_api_v1_plataforma_ia_tarifa",
+        "operationId": "GET_api_v1_plataforma_ia_tarifa",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDeIaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Ia.ConsumoDeIaEndpoints"
+        ],
+        "summary": "PUT_api_v1_plataforma_ia_tarifa",
+        "description": "PUT_api_v1_plataforma_ia_tarifa",
+        "operationId": "PUT_api_v1_plataforma_ia_tarifa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FijarTarifaDeIaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TarifaDeIaDto"
                 }
               }
             }
@@ -12806,6 +14005,15 @@
           "activo": {
             "type": "boolean",
             "default": true
+          },
+          "precioAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -13114,6 +14322,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "AgregarDominioSsoDto": {
+        "required": [
+          "dominio"
+        ],
+        "type": "object",
+        "properties": {
+          "dominio": {
+            "type": "string"
           }
         }
       },
@@ -14478,6 +15697,45 @@
           }
         }
       },
+      "ClaveDeArranqueDto": {
+        "required": [
+          "configurada",
+          "desactivada",
+          "desactivadaEn",
+          "desactivadaPor",
+          "operadoresConPasskey"
+        ],
+        "type": "object",
+        "properties": {
+          "configurada": {
+            "type": "boolean"
+          },
+          "desactivada": {
+            "type": "boolean"
+          },
+          "desactivadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "desactivadaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "operadoresConPasskey": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ClavePublicaDeCertificadosDto": {
         "required": [
           "kid",
@@ -14553,6 +15811,25 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CodigosDeRecuperacionDto": {
+        "required": [
+          "codigos",
+          "generadosEn"
+        ],
+        "type": "object",
+        "properties": {
+          "codigos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "generadosEn": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -14801,6 +16078,18 @@
           }
         }
       },
+      "CompletarSsoDto": {
+        "required": [
+          "desafio"
+        ],
+        "type": "object",
+        "properties": {
+          "desafio": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CompletitudSeccionDto": {
         "required": [
           "completa",
@@ -14927,6 +16216,128 @@
           },
           "passkeyParaTodos": {
             "type": "boolean"
+          }
+        }
+      },
+      "ConfiguracionDeSsoDto": {
+        "required": [
+          "configurado",
+          "activo",
+          "proveedor",
+          "nombre",
+          "autoridad",
+          "clientId",
+          "secretoConfigurado",
+          "ultimosCuatroSecreto",
+          "alcances",
+          "reclamoDeGrupos",
+          "organizacionWorkOs",
+          "conexionWorkOs",
+          "dominios",
+          "aprovisionamientoJit",
+          "rolesPorOmision",
+          "reglas",
+          "sincronizarRoles",
+          "modo",
+          "urlDeRetorno",
+          "workOsDisponible",
+          "actualizadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "configurado": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "proveedor": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "autoridad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "secretoConfigurado": {
+            "type": "boolean"
+          },
+          "ultimosCuatroSecreto": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "alcances": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reclamoDeGrupos": {
+            "type": "string"
+          },
+          "organizacionWorkOs": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conexionWorkOs": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dominios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DominioDeSsoDto"
+            }
+          },
+          "aprovisionamientoJit": {
+            "type": "boolean"
+          },
+          "rolesPorOmision": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RolAsignadoDto"
+            }
+          },
+          "reglas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReglaDeGrupoSsoDto"
+            }
+          },
+          "sincronizarRoles": {
+            "type": "boolean"
+          },
+          "modo": {
+            "type": "string"
+          },
+          "urlDeRetorno": {
+            "type": "string"
+          },
+          "workOsDisponible": {
+            "type": "boolean"
+          },
+          "actualizadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -15160,6 +16571,347 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ConsumoDeIaDto": {
+        "required": [
+          "periodo",
+          "moneda",
+          "precioPorValidacionAdicional",
+          "totales",
+          "grupos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "periodo": {
+            "type": "string"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "precioPorValidacionAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "totales": {
+            "$ref": "#/components/schemas/ConsumoDeIaTotalesDto"
+          },
+          "grupos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsumoDeIaGrupoDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ConsumoDeIaEmpresaDto": {
+        "required": [
+          "empresaId",
+          "empresa",
+          "validacionesIncluidasMes",
+          "incluidasConsumidas",
+          "adicionalesConsumidas",
+          "adicionalHabilitado",
+          "analisisPagados",
+          "tokensEntrada",
+          "tokensEntradaEnCache",
+          "tokensSalida",
+          "costoUsd",
+          "precioAdicional",
+          "precioPropio",
+          "valorAdicional",
+          "modelos"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "type": "string"
+          },
+          "validacionesIncluidasMes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "incluidasConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalesConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalHabilitado": {
+            "type": "boolean"
+          },
+          "analisisPagados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensEntradaEnCache": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "precioAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "precioPropio": {
+            "type": "boolean"
+          },
+          "valorAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "modelos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsoPorModeloIaDto"
+            }
+          }
+        }
+      },
+      "ConsumoDeIaGrupoDto": {
+        "required": [
+          "grupoId",
+          "grupo",
+          "slug",
+          "incluidasConsumidas",
+          "adicionalesConsumidas",
+          "analisisPagados",
+          "tokensEntrada",
+          "tokensSalida",
+          "costoUsd",
+          "valorAdicional",
+          "empresas"
+        ],
+        "type": "object",
+        "properties": {
+          "grupoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grupo": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "incluidasConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalesConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analisisPagados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "valorAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConsumoDeIaEmpresaDto"
+            }
+          }
+        }
+      },
+      "ConsumoDeIaTotalesDto": {
+        "required": [
+          "grupos",
+          "empresas",
+          "incluidasConsumidas",
+          "adicionalesConsumidas",
+          "analisisPagados",
+          "tokensEntrada",
+          "tokensSalida",
+          "costoUsd",
+          "valorAdicional"
+        ],
+        "type": "object",
+        "properties": {
+          "grupos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "empresas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "incluidasConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "adicionalesConsumidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "analisisPagados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "valorAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -17245,6 +18997,17 @@
           }
         }
       },
+      "DescubrirSsoDto": {
+        "required": [
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string"
+          }
+        }
+      },
       "DesgloseDeMatrizDto": {
         "required": [
           "factor",
@@ -17772,6 +19535,48 @@
             "items": {
               "$ref": "#/components/schemas/VersionDocumentoDto"
             }
+          }
+        }
+      },
+      "DominioDeSsoDto": {
+        "required": [
+          "dominio",
+          "verificado",
+          "token",
+          "instruccion",
+          "creadoEn",
+          "verificadoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "dominio": {
+            "type": "string"
+          },
+          "verificado": {
+            "type": "boolean"
+          },
+          "token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instruccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "creadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "verificadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -18435,6 +20240,67 @@
           },
           "mensaje": {
             "type": "string"
+          }
+        }
+      },
+      "EstadoDeReautenticacionDto": {
+        "required": [
+          "vigente",
+          "hasta",
+          "minutos"
+        ],
+        "type": "object",
+        "properties": {
+          "vigente": {
+            "type": "boolean"
+          },
+          "hasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "minutos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "EstadoDeRecuperacionDto": {
+        "required": [
+          "disponibles",
+          "total",
+          "generadosEn"
+        ],
+        "type": "object",
+        "properties": {
+          "disponibles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "total": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "generadosEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -19601,6 +21467,120 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "FijarSsoDto": {
+        "required": [
+          "activo",
+          "proveedor",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "activo": {
+            "type": "boolean"
+          },
+          "proveedor": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "autoridad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "secretoDelCliente": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "alcances": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "reclamoDeGrupos": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "organizacionWorkOs": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conexionWorkOs": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "aprovisionamientoJit": {
+            "type": "boolean",
+            "default": false
+          },
+          "rolesPorOmision": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RolAsignadoDto"
+            }
+          },
+          "reglas": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ReglaDeGrupoSsoDto"
+            }
+          },
+          "sincronizarRoles": {
+            "type": "boolean",
+            "default": false
+          },
+          "modo": {
+            "type": "string",
+            "default": "Complementario"
+          }
+        }
+      },
+      "FijarTarifaDeIaDto": {
+        "required": [
+          "precioPorValidacionAdicional",
+          "moneda"
+        ],
+        "type": "object",
+        "properties": {
+          "precioPorValidacionAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
           }
         }
       },
@@ -21750,6 +23730,97 @@
           }
         }
       },
+      "IngresoDeOperadorDto": {
+        "required": [
+          "id",
+          "fecha",
+          "evento",
+          "exitoso",
+          "operadorId",
+          "correo",
+          "metodo",
+          "motivo",
+          "ip",
+          "dispositivo",
+          "actorTipo",
+          "actorId",
+          "sesionId",
+          "passkeyId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evento": {
+            "type": "string"
+          },
+          "exitoso": {
+            "type": "boolean"
+          },
+          "operadorId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "correo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "metodo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ip": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dispositivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actorTipo": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "sesionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "passkeyId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "IniciarAdjuntoDeCumplimientoDto": {
         "required": [
           "nombreArchivo",
@@ -21861,6 +23932,17 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "IniciarSsoDto": {
+        "required": [
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string"
           }
         }
       },
@@ -23183,6 +25265,27 @@
           }
         }
       },
+      "PaginaDtoOfIngresoDeOperadorDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngresoDeOperadorDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfLoteDto": {
         "required": [
           "datos",
@@ -23797,6 +25900,15 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "precioAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -24300,6 +26412,35 @@
           }
         }
       },
+      "PruebaDeSsoDto": {
+        "required": [
+          "correcto",
+          "mensaje",
+          "emisor",
+          "puntoDeAutorizacion"
+        ],
+        "type": "object",
+        "properties": {
+          "correcto": {
+            "type": "boolean"
+          },
+          "mensaje": {
+            "type": "string"
+          },
+          "emisor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "puntoDeAutorizacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PublicarTextoLegalDto": {
         "required": [
           "contenido"
@@ -24319,6 +26460,27 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ReautenticacionDto": {
+        "required": [
+          "hasta",
+          "minutos"
+        ],
+        "type": "object",
+        "properties": {
+          "hasta": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "minutos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -24942,6 +27104,28 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ReglaDeGrupoSsoDto": {
+        "required": [
+          "grupo",
+          "rol"
+        ],
+        "type": "object",
+        "properties": {
+          "grupo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          },
+          "empresaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -27886,6 +30070,44 @@
           }
         }
       },
+      "SsoDescubiertoDto": {
+        "required": [
+          "disponible",
+          "nombre",
+          "reemplazaElCodigo"
+        ],
+        "type": "object",
+        "properties": {
+          "disponible": {
+            "type": "boolean"
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reemplazaElCodigo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SsoIniciadoDto": {
+        "required": [
+          "desafio",
+          "urlDeAutorizacion"
+        ],
+        "type": "object",
+        "properties": {
+          "desafio": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "urlDeAutorizacion": {
+            "type": "string"
+          }
+        }
+      },
       "SuspensionDelCertificadoDto": {
         "required": [
           "motivo",
@@ -27899,6 +30121,41 @@
           "desde": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "TarifaDeIaDto": {
+        "required": [
+          "precioPorValidacionAdicional",
+          "moneda",
+          "actualizadaEn",
+          "actualizadaPor"
+        ],
+        "type": "object",
+        "properties": {
+          "precioPorValidacionAdicional": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "actualizadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actualizadaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -28885,6 +31142,22 @@
           }
         }
       },
+      "UsarCodigoDeRecuperacionDto": {
+        "required": [
+          "desafio",
+          "codigo"
+        ],
+        "type": "object",
+        "properties": {
+          "desafio": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          }
+        }
+      },
       "UsoIaDiaDto": {
         "required": [
           "fecha",
@@ -29104,6 +31377,62 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "UsoPorModeloIaDto": {
+        "required": [
+          "modelo",
+          "llamadas",
+          "tokensEntrada",
+          "tokensEntradaEnCache",
+          "tokensSalida",
+          "costoUsd"
+        ],
+        "type": "object",
+        "properties": {
+          "modelo": {
+            "type": "string"
+          },
+          "llamadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "tokensEntrada": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensEntradaEnCache": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "tokensSalida": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "costoUsd": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
           }
         }
       },
@@ -30711,6 +33040,21 @@
       "name": "Validasoft.Aplicacion.Plataforma.CatalogosEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Plataforma.SistemasDeGrupoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Plataforma.SistemasDePlataformaEstadoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Plataforma.EmpresasDeGrupoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Plataforma.ClaveDeArranqueEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Plataforma.AuditoriaDeOperadoresEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
     },
     {
@@ -30771,6 +33115,9 @@
       "name": "Validasoft.Aplicacion.Identidad.MiCuentaEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Identidad.MiCuentaSeguridadEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Identidad.GestionDeIngresoEndpoints"
     },
     {
@@ -30787,6 +33134,15 @@
     },
     {
       "name": "Validasoft.Aplicacion.Identidad.SesionActualDelTerceroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Identidad.SsoIngresoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Identidad.SsoConfiguracionEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ia.ConsumoDeIaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ia.PlanIaEndpoints"
