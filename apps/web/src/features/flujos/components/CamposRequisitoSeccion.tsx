@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MAXIMO_PERIODOS, SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
 import type { RequisitoEnEditor } from '../editor';
 import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
+import { CampoDias } from './CampoDias';
 
 interface Props {
   requisito: RequisitoEnEditor;
@@ -70,29 +71,25 @@ export function OpcionesSeccion({
           label={t('fichaEmpresa.editor.exigeSoporte')}
           sx={{ mx: 0, minHeight: 40 }}
         />
-        <TextField
-          size="small"
-          type="number"
+        <CampoDias
           label={t('fichaEmpresa.editor.vigenciaDias')}
-          value={requisito.vigenciaDias ?? ''}
+          valor={String(requisito.vigenciaDias ?? '')}
+          maximo={MAXIMO_VIGENCIA_VINCULO_DIAS}
           placeholder={t('fichaEmpresa.editor.noVence')}
-          onChange={(ev) => onCambiar({ vigenciaDias: ev.target.value === '' ? null : Number(ev.target.value) })}
+          onCambiar={(valor) => onCambiar({ vigenciaDias: valor === '' ? null : Number(valor) })}
           error={Boolean(errorVigencia)}
           helperText={errorVigencia ?? t('fichaEmpresa.editor.vigenciaDiasAyuda')}
-          slotProps={{ htmlInput: { min: 1, max: MAXIMO_VIGENCIA_VINCULO_DIAS } }}
           disabled={deshabilitado}
           sx={{ width: 230 }}
         />
-        <TextField
-          size="small"
-          type="number"
+        <CampoDias
           label={t('fichaEmpresa.editor.diasRevalidacion')}
-          value={requisito.diasRevalidacion ?? ''}
+          valor={String(requisito.diasRevalidacion ?? '')}
+          maximo={MAXIMO_DIAS_REVALIDACION}
           placeholder="15"
-          onChange={(ev) => onCambiar({ diasRevalidacion: ev.target.value === '' ? null : Number(ev.target.value) })}
+          onCambiar={(valor) => onCambiar({ diasRevalidacion: valor === '' ? null : Number(valor) })}
           error={Boolean(errorRevalidacion)}
           helperText={errorRevalidacion ?? t('fichaEmpresa.editor.diasRevalidacionAyuda')}
-          slotProps={{ htmlInput: { min: 1, max: MAXIMO_DIAS_REVALIDACION } }}
           disabled={deshabilitado}
           sx={{ width: 230 }}
         />

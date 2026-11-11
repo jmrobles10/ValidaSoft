@@ -61,9 +61,9 @@ describe('historial del vínculo: vigencia periódica (VV-1)', () => {
     expect(eventoATimeline(evento('vigencia_del_vinculo_fijada', { VigenteHasta: null }), contexto, t).detalle).toBe('Sin vencimiento periódico');
   });
 
-  it('el aviso pasa el vínculo de Activo a Por vencer con la fecha de vencimiento', () => {
+  it('el primer aviso pasa el vínculo de Activo a Por vencer (pre-vencimiento) con la fecha de vencimiento', () => {
     expect(eventoATimeline(evento('vinculo_por_vencer', { VigenteHasta: '2027-11-06', DiasRestantes: 30, AvisosCumplidos: [30] }), contexto, t)).toMatchObject({
-      titulo: 'Vínculo por vencer',
+      titulo: 'Vínculo en pre-vencimiento',
       antes: 'Activo',
       despues: 'PorVencer',
       detalle: 'Vence el 06/11/2027',

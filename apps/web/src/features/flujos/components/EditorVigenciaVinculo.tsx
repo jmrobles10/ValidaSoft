@@ -1,6 +1,7 @@
 import { Box, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { BorradorFlujo, ErrorFlujo } from '../editor';
+import { CampoDias } from './CampoDias';
 import { MAXIMO_GRACIA_VIGENCIA_DIAS, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
 
 interface Props {
@@ -30,15 +31,13 @@ export function EditorVigenciaVinculo({ borrador, onCambiar, errores, soloLectur
       </Typography>
       <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 1.5 }}>{t('flujoVigencia.ayuda')}</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '160px minmax(0,320px) 160px' }, gap: 2, alignItems: 'start' }}>
-        <TextField
-          size="small"
-          type="number"
+        <CampoDias
           label={t('flujoVigencia.dias')}
-          value={borrador.vigenciaDias}
-          onChange={(e) => onCambiar({ ...borrador, vigenciaDias: e.target.value })}
+          valor={borrador.vigenciaDias}
+          maximo={MAXIMO_VIGENCIA_VINCULO_DIAS}
+          onCambiar={(valor) => onCambiar({ ...borrador, vigenciaDias: valor })}
           error={Boolean(error('vigencia.dias'))}
           helperText={error('vigencia.dias') ?? t('flujoVigencia.diasAyuda')}
-          slotProps={{ htmlInput: { min: 0, max: MAXIMO_VIGENCIA_VINCULO_DIAS } }}
         />
         <TextField
           size="small"
@@ -49,16 +48,14 @@ export function EditorVigenciaVinculo({ borrador, onCambiar, errores, soloLectur
           error={Boolean(error('vigencia.avisos'))}
           helperText={error('vigencia.avisos') ?? t('flujoVigencia.avisosAyuda')}
         />
-        <TextField
-          size="small"
-          type="number"
+        <CampoDias
           label={t('flujoVigencia.gracia')}
-          value={borrador.vigenciaGracia}
+          valor={borrador.vigenciaGracia}
+          maximo={MAXIMO_GRACIA_VIGENCIA_DIAS}
           disabled={soloLectura || !activa}
-          onChange={(e) => onCambiar({ ...borrador, vigenciaGracia: e.target.value })}
+          onCambiar={(valor) => onCambiar({ ...borrador, vigenciaGracia: valor })}
           error={Boolean(error('vigencia.gracia'))}
           helperText={error('vigencia.gracia') ?? t('flujoVigencia.graciaAyuda')}
-          slotProps={{ htmlInput: { min: 0, max: MAXIMO_GRACIA_VIGENCIA_DIAS } }}
         />
       </Box>
     </Box>

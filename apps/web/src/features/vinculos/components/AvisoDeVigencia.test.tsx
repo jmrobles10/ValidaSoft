@@ -13,16 +13,19 @@ function montar(vinculo: Parameters<typeof AvisoDeVigencia>[0]['vinculo']) {
 }
 
 describe('aviso de la vigencia del vínculo', () => {
-  it('por vencer: dice cuándo vence, en la fecha de calendario (sin correrla por zona horaria)', () => {
+  it('en pre-vencimiento: dice cuándo vence, en la fecha de calendario (sin correrla por zona horaria), y que su renovación está abierta', () => {
+    const { unmount } = montar({ estado: 'PorVencer', vigenteHasta: '2027-11-06', expedienteAbiertoId: 'e1' });
+    expect(screen.getByText('La validación de este tercero está en pre-vencimiento')).toBeInTheDocument();
+    expect(screen.getByText(/Vence el 06\/11\/2027\. Su renovación está abierta/)).toBeInTheDocument();
+    unmount();
     montar({ estado: 'PorVencer', vigenteHasta: '2027-11-06', expedienteAbiertoId: null });
-    expect(screen.getByText('La validación de este tercero vence pronto')).toBeInTheDocument();
-    expect(screen.getByText(/Vence el 06\/11\/2027\./)).toBeInTheDocument();
+    expect(screen.getByText('Vence el 06/11/2027. No tiene una renovación abierta.')).toBeInTheDocument();
   });
 
   it('vencido con la renovación abierta: lo dice; sin renovación, también', () => {
     const { unmount } = montar({ estado: 'Vencido', vigenteHasta: '2027-11-06', expedienteAbiertoId: 'e1' });
     expect(screen.getByText('La validación de este tercero venció')).toBeInTheDocument();
-    expect(screen.getByText(/Tiene una renovación abierta para ratificar o actualizar su información\./)).toBeInTheDocument();
+    expect(screen.getByText(/Su renovación sigue abierta para ratificar o actualizar su información\./)).toBeInTheDocument();
     unmount();
     montar({ estado: 'Vencido', vigenteHasta: '2027-11-06', expedienteAbiertoId: null });
     expect(screen.getByText('Venció el 06/11/2027. Aún no se abre su renovación.')).toBeInTheDocument();

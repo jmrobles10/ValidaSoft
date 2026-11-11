@@ -9,7 +9,9 @@ import { situacionDelVinculo } from './situacion';
  * - `enRevision`: la empresa está revisando (o el expediente está abierto sin nada pendiente).
  * - `observado`: la empresa devolvió algo → «Tienes observaciones».
  * - `aprobado`: expediente aprobado o vínculo `Activo`.
- * - `porVencer`: el vínculo está `PorVencer` por su vigencia periódica (VV-1): vence pronto y tendrá que ratificar su información.
+ * - `preVencimiento`: el vínculo está `PorVencer` (primer aviso de su vigencia periódica, VV-1) y su renovación espera que el
+ *   tercero ratifique o actualice su información antes de la fecha (VV-3); si la aprueba la empresa a tiempo, nunca vence.
+ * - `porVencer`: el vínculo está `PorVencer` pero no hay una renovación abierta a la vista: vence pronto.
  * - `ratificar`: el vínculo venció y su renovación espera que el tercero ratifique o actualice su información (VV-3).
  * `null` cuando no hay un paso propio que contar (sin aceptar, vínculo suspendido o terminado, expediente cerrado sin
  * aprobar): se muestra el estado tal cual.
@@ -19,6 +21,7 @@ export type AvanceTercero =
   | { tipo: 'enRevision' }
   | { tipo: 'observado' }
   | { tipo: 'aprobado' }
+  | { tipo: 'preVencimiento'; hasta: string | null }
   | { tipo: 'porVencer'; hasta: string | null }
   | { tipo: 'ratificar' };
 
@@ -27,7 +30,12 @@ export function avanceDelTercero(
   expediente: { estado: EstadoExpediente; requisitosFaltantes?: number; tipo?: string } | null | undefined,
 ): AvanceTercero | null {
   if (vinculo && (situacionDelVinculo(vinculo.estado) !== 'vigente' || !vinculo.invitacionAceptada)) return null;
-  if (vinculo?.estado === 'PorVencer') return { tipo: 'porVencer', hasta: vinculo.vigenteHasta ?? null };
+  if (vinculo?.estado === 'PorVencer') {
+    // Pre-vencimiento: la renovación abierta espera al tercero. Ya enviada (en revisión u observada) cuenta como cualquier expediente.
+    const renovacion = expediente?.tipo === 'Renovacion' ? expediente.estado : null;
+    if (renovacion === 'Abierto') return { tipo: 'preVencimiento', hasta: vinculo.vigenteHasta ?? null };
+    if (renovacion !== 'EnRevision' && renovacion !== 'Observado') return { tipo: 'porVencer', hasta: vinculo.vigenteHasta ?? null };
+  }
   if (vinculo?.estado === 'Vencido' && expediente?.tipo === 'Renovacion' && expediente.estado === 'Abierto') return { tipo: 'ratificar' };
   if (vinculo?.estado === 'Activo' || expediente?.estado === 'Aprobado') return { tipo: 'aprobado' };
   switch (expediente?.estado) {
@@ -50,6 +58,7 @@ export const ESTADO_DEL_AVANCE = {
   enRevision: 'EnRevision',
   observado: 'Observado',
   aprobado: 'Aprobado',
+  preVencimiento: 'PorVencer',
   porVencer: 'PorVencer',
   ratificar: 'Vencido',
 } as const;

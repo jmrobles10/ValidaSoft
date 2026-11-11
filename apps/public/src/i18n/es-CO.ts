@@ -85,6 +85,7 @@ export const esCO = {
     aceptada: 'Aceptaste la invitación el {{fecha}}.',
     subirDocumentos: 'Subir documentos',
     verObservaciones: 'Ver observaciones',
+    ratificar: 'Ratificar mi información',
   },
   invitacion: {
     titulo: '{{empresa}} te invita a validar tu información',
@@ -124,10 +125,13 @@ export const esCO = {
     enRevision: 'En revisión',
     observado: 'Tienes observaciones',
     aprobado: 'Aprobado',
+    preVencimiento: 'En pre-vencimiento',
     porVencer: 'Por vencer',
     ratificar: 'Ratifica tu información',
-    textoPorVencer: 'Tu validación con {{empresa}} vence el {{fecha}}. Cuando venza, ratifica (confirma que sigue igual) o actualiza tu información para seguir al día.',
-    textoPorVencerSinFecha: 'Tu validación con {{empresa}} vence pronto. Cuando venza, ratifica o actualiza tu información para seguir al día.',
+    textoPreVencimiento: 'En pre-vencimiento: ratifica tu información con {{empresa}} antes del {{fecha}} para seguir al día.',
+    textoPreVencimientoSinFecha: 'En pre-vencimiento: ratifica tu información con {{empresa}} antes de que venza para seguir al día.',
+    textoPorVencer: 'Tu validación con {{empresa}} vence el {{fecha}}. Ratifica (confirma que sigue igual) o actualiza tu información para seguir al día.',
+    textoPorVencerSinFecha: 'Tu validación con {{empresa}} vence pronto. Ratifica o actualiza tu información para seguir al día.',
     textoRatificar: 'La validación con {{empresa}} venció. Ratifica (confirma que sigue igual) o actualiza las secciones de tu información que te pide.',
   },
   vinculoSituacion: {

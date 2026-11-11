@@ -297,7 +297,7 @@ export const esCO = {
     vinculo_anulado: 'Vínculo anulado',
     expediente_vinculado: 'Expediente abierto',
     vinculo_activado: 'Vínculo activado',
-    vinculo_por_vencer: 'Vínculo por vencer',
+    vinculo_por_vencer: 'Vínculo en pre-vencimiento',
     vinculo_vencido: 'Vínculo vencido',
     vigencia_del_vinculo_fijada: 'Vigencia fijada',
     expediente_cerrado: 'Expediente cerrado',

@@ -4,11 +4,11 @@
 export const flujoVigencia = {
   titulo: 'Vigencia del vínculo',
   ayuda:
-    'Cada cuántos días vence la validación del tercero con esta empresa, contados desde su última aprobación. Al vencer, el tercero debe ratificar (confirmar que sigue igual) o actualizar las secciones de su información que pide este flujo. 0 = no vence por tiempo.',
+    'Cada cuántos días vence la validación del tercero con esta empresa, contados desde su última aprobación. Desde el primer aviso (pre-vencimiento) el tercero ratifica (confirma que sigue igual) o actualiza las secciones de su información que pide este flujo; si se aprueba a tiempo, no vence. 0 = no vence por tiempo.',
   dias: 'Días',
   diasAyuda: '0 = sin vencimiento periódico.',
   avisos: 'Avisos (días antes de vencer)',
-  avisosAyuda: 'Separados por coma; el primero deja el vínculo «Por vencer».',
+  avisosAyuda: 'Separados por coma; el primero abre el pre-vencimiento: el vínculo queda «Por vencer» y se abre la renovación del tercero.',
   gracia: 'Gracia (días)',
   graciaAyuda: 'Días que sigue valiendo después de la fecha.',
 } as const;
@@ -17,10 +17,11 @@ export const flujoVigencia = {
 export const vigenciaVinculo = {
   vigenteHasta: 'Vigente hasta',
   sinVigencia: 'Sin vencimiento periódico',
-  porVencerTitulo: 'La validación de este tercero vence pronto',
-  porVencerTexto: 'Vence el {{fecha}}. Al vencer, el tercero deberá ratificar o actualizar las secciones de su información.',
+  porVencerTitulo: 'La validación de este tercero está en pre-vencimiento',
+  porVencerTexto: 'Vence el {{fecha}}. Su renovación está abierta: si ratifica o actualiza su información y la apruebas antes de esa fecha, no vence.',
+  porVencerSinRenovacion: 'Vence el {{fecha}}. No tiene una renovación abierta.',
   vencidoTitulo: 'La validación de este tercero venció',
-  vencidoTexto: 'Venció el {{fecha}}. Tiene una renovación abierta para ratificar o actualizar su información.',
+  vencidoTexto: 'Venció el {{fecha}}. Su renovación sigue abierta para ratificar o actualizar su información.',
   vencidoSinRenovacion: 'Venció el {{fecha}}. Aún no se abre su renovación.',
 } as const;
 

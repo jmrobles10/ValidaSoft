@@ -20,7 +20,7 @@ describe('EditorVigenciaVinculo', () => {
   it('sin vigencia (0 días) deja los avisos y la gracia inactivos y explica que no vence por tiempo', () => {
     montar();
     expect(screen.getByText('Vigencia del vínculo')).toBeInTheDocument();
-    expect(screen.getByLabelText('Días')).toHaveValue(0);
+    expect(screen.getByLabelText('Días')).toHaveValue('0');
     expect(screen.getByText('0 = sin vencimiento periódico.')).toBeInTheDocument();
     expect(screen.getByLabelText('Avisos (días antes de vencer)')).toBeDisabled();
     expect(screen.getByLabelText('Gracia (días)')).toBeDisabled();
@@ -35,6 +35,15 @@ describe('EditorVigenciaVinculo', () => {
     fireEvent.change(screen.getByLabelText('Gracia (días)'), { target: { value: '10' } });
     expect(onCambiar).toHaveBeenLastCalledWith({ ...borrador, vigenciaGracia: '10' });
     fireEvent.change(screen.getByLabelText('Días'), { target: { value: '180' } });
+    expect(onCambiar).toHaveBeenLastCalledWith({ ...borrador, vigenciaDias: '180' });
+  });
+
+  it('los días son un campo de texto del sistema (no el numérico del navegador) y solo dejan dígitos', () => {
+    const { onCambiar, borrador } = montar({ vigenciaDias: '365' });
+    expect(screen.getByRole('textbox', { name: 'Días' })).toHaveAttribute('inputmode', 'numeric');
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Días'), { target: { value: '1a8-0' } });
     expect(onCambiar).toHaveBeenLastCalledWith({ ...borrador, vigenciaDias: '180' });
   });
 
