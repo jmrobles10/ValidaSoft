@@ -146,6 +146,7 @@ export const apiKeys = {
     eventosLeer: 'Leer eventos (consulta y SSE)',
     webhooksAdministrar: 'Administrar webhooks',
     consultasLeer: 'Consultar la certificación (ERP y otros sistemas)',
+    sesionesTerceroCrear: 'Abrir la sesión del tercero para embeber su bóveda, expediente o ficha',
     sandboxAdministrar: 'Administrar el sandbox y leer su buzón de correo de pruebas',
     verificacionesEscribir: 'Consultar listas restrictivas',
     cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',

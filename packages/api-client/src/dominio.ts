@@ -30,6 +30,7 @@ export const SCOPES = {
   eventosLeer: 'eventos:leer',
   webhooksAdministrar: 'webhooks:administrar',
   consultasLeer: 'consultas:leer',
+  sesionesTerceroCrear: 'sesiones-tercero:crear',
   sandboxAdministrar: 'sandbox:administrar',
   verificacionesEscribir: 'verificaciones:escribir',
   cumplimientoDecidir: 'cumplimiento:decidir',

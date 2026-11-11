@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.Json;
 using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Identidad;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Wolverine.Http;
@@ -156,6 +158,10 @@ internal static class Sse
         return ahora;
     }
 
+    /// <summary>La familia de la sesión de ingreso directo (<c>validasoft:sesion-id</c>) con la que se abrió el stream; nulo con otra credencial.</summary>
+    public static Guid? SesionDirectaDe(ClaimsPrincipal usuario) =>
+        Guid.TryParse(usuario.FindFirst(ReclamosDeIngreso.SesionId)?.Value, out var sesionId) ? sesionId : null;
+
     public static async Task EsperarAsync(CancellationToken ct)
     {
         try
@@ -237,9 +243,11 @@ public static class NotificacionesEndpoints
     /// un certificado— para que la pantalla abierta lo refresque sola (NT-12); solo de la empresa activa y su tenant. Consulta cada 2 s.
     /// </summary>
     [WolverineGet("/api/v1/notificaciones/stream")]
-    public static async Task<IResult> Stream(HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj)
+    public static async Task<IResult> Stream(HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeSesionesDirectas sesionesDirectas,
+        TimeProvider reloj)
     {
         var usuarioId = Persona(contexto);
+        var sesionDirecta = Sse.SesionDirectaDe(http.User);
         var ct = http.RequestAborted;
         var ultimo = http.Request.Headers["Last-Event-ID"].ToString() is { Length: > 0 } reanudar ? EventosEndpoints.LeerCursor(reanudar) : reloj.GetUtcNow().UtcTicks;
         var tenantId = contexto.TenantRequerido();
@@ -249,7 +257,8 @@ public static class NotificacionesEndpoints
 
         int? noLeidasAnterior = null;
         var ultimoLatido = reloj.GetUtcNow();
-        while (!ct.IsCancellationRequested)
+        // Una sesión de ingreso directo cerrada o revocada corta también el stream (ING-3): el cliente reconecta y la API le responde 401.
+        while (!ct.IsCancellationRequested && (sesionDirecta is null || await sesionesDirectas.VigenteAsync(sesionDirecta.Value, ct)))
         {
             if (empresaActiva is { } empresaId)
             {

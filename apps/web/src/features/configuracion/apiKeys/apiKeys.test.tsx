@@ -27,7 +27,7 @@ const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
   'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer', 'auditoria:exportar',
   'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'expedientes:exportar', 'documentos:leer', 'documentos:descargar',
-  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'sandbox:administrar', 'verificaciones:escribir', 'cumplimiento:decidir',
+  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'sesiones-tercero:crear', 'sandbox:administrar', 'verificaciones:escribir', 'cumplimiento:decidir',
 ];
 
 const EMPRESAS = [
@@ -93,7 +93,7 @@ describe('permisos de una API key', () => {
 
   it('marcar un grupo agrega los que faltan; con el grupo completo, lo desmarca', () => {
     const integracion = scopesDeGrupo('integracion');
-    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar', 'consultas:leer', 'sandbox:administrar']);
+    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar', 'consultas:leer', 'sesiones-tercero:crear', 'sandbox:administrar']);
     expect(alternarGrupo([...integracion, 'vinculos:leer'], 'integracion')).toEqual(['vinculos:leer']);
   });
 });

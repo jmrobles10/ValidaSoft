@@ -25,6 +25,9 @@ public static class ReclamosDeIngreso
 /// </summary>
 public interface ICacheDeSesionesDirectas
 {
+    /// <summary>Si la sesión directa sigue vigente (no se cerró, no se revocó ni venció): la respuesta se guarda unos segundos en memoria.</summary>
+    Task<bool> VigenteAsync(Guid sesionId, CancellationToken ct);
+
     void Olvidar(Guid sesionId);
 }
 

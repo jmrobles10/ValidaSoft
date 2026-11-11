@@ -11,6 +11,8 @@
     <PackageReference Include="Alba" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Testcontainers.Minio" />
+    <!-- Fido2 (vía la API) arrastra System.Formats.Cbor 9.0.0, con una vulnerabilidad conocida (NU1902): se fija la versión corregida. -->
+    <PackageReference Include="System.Formats.Cbor" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
