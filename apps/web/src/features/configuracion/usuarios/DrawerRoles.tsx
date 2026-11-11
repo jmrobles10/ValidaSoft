@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Drawer, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { EmpresaDto, RolAsignadoDto, UsuarioDto } from '@validasoft/api-client';
 import { AvatarActor, AlineadoConCampo } from '@validasoft/ui';
 import { Ban, Plus, X } from 'lucide-react';
@@ -14,22 +14,27 @@ export interface DrawerRolesProps {
   empresas: readonly EmpresaDto[];
   guardando: boolean;
   error: unknown;
-  onGuardar: (datos: { nombre: string; correo: string; roles: RolAsignadoDto[] }) => void;
+  onGuardar: (datos: { nombre: string; correo: string; roles: RolAsignadoDto[]; invitar: boolean }) => void;
   onDesactivar?: () => void;
   onCerrar: () => void;
+  /** El grupo admite el ingreso directo: al agregar a una persona se le puede enviar la invitación por correo (ING-5). */
+  puedeInvitar?: boolean;
 }
 
 /** Editor lateral de roles por empresa o para todo el grupo (ID-2); también da de alta a una persona. */
-export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, onDesactivar, onCerrar }: DrawerRolesProps) {
+export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, onDesactivar, onCerrar, puedeInvitar = false }: DrawerRolesProps) {
   const { t } = useTranslation();
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
+  // Por omisión se invita (si el grupo lo admite); la persona lo desmarca si no quiere avisarle todavía.
+  const [invitarElegido, setInvitar] = useState<boolean | null>(null);
+  const invitar = puedeInvitar && (invitarElegido ?? true);
   const [filas, setFilas] = useState<FilaRol[]>(() => aFilas(usuario?.roles ?? []));
 
   const cambiar = (indice: number, cambios: Partial<FilaRol>) => setFilas((actuales) => actuales.map((f, i) => (i === indice ? { ...f, ...cambios } : f)));
   const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
-    onGuardar({ nombre: nombre.trim(), correo: correo.trim(), roles: aRoles(filas) });
+    onGuardar({ nombre: nombre.trim(), correo: correo.trim(), roles: aRoles(filas), invitar: !usuario && invitar });
   };
 
   return (
@@ -132,6 +137,18 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
             {t('usuarios.agregarRol')}
           </Button>
         </Box>
+
+        {!usuario && (
+          <Box>
+            <FormControlLabel
+              control={<Checkbox checked={invitar} disabled={!puedeInvitar} onChange={(e) => setInvitar(e.target.checked)} />}
+              label={t('usuariosIngreso.invitar')}
+            />
+            <Typography variant="body2" sx={{ color: 'text.secondary', ml: 4 }}>
+              {puedeInvitar ? t('usuariosIngreso.invitarAyuda') : t('usuariosIngreso.invitarApagado')}
+            </Typography>
+          </Box>
+        )}
 
         <Alert severity="info">{t('usuarios.aplicanAlIngresar')}</Alert>
 

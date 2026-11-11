@@ -5,6 +5,8 @@ import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/empresas/useEmpresas';
+import { AvisoDePasskey } from '../features/cuenta/AvisoDePasskey';
+import { MenuDeCuenta } from '../features/cuenta/MenuDeCuenta';
 import { Campana } from '../features/notificaciones/Campana';
 import { useAlturaFija } from '../sesion/alturaFija';
 import { BotonConfiguracion } from './BotonConfiguracion';
@@ -128,6 +130,7 @@ export function AppShell() {
         )}
         <Campana empresaId={empresa.id} />
         {primeraConfiguracion && <BotonConfiguracion destino={`/e/${empresa.id}/${primeraConfiguracion.ruta}`} activo={enConfiguracion} />}
+        <MenuDeCuenta rutaMiCuenta={`/e/${empresa.id}/mi-cuenta`} />
         {!temaDelContenedor && (
           <Tooltip title={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')}>
             <IconButton aria-label={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')} onClick={() => fijarModo(modo === 'dark' ? 'light' : 'dark')}>
@@ -136,6 +139,7 @@ export function AppShell() {
           </Tooltip>
         )}
       </Box>
+      <AvisoDePasskey rutaMiCuenta={`/e/${empresa.id}/mi-cuenta`} />
       <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }) }}>
         <Outlet context={contexto satisfies ContextoEmpresa} />
       </Box>

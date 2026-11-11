@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AdministradorInicialDto } from './administradorInicialDto';
+import type { ConfiguracionDeIngresoDto } from './configuracionDeIngresoDto';
 import type { CrearEmpresaDto } from './crearEmpresaDto';
 import type { CrearSistemaIntegradoDto } from './crearSistemaIntegradoDto';
 
@@ -18,4 +19,5 @@ export interface CrearTenantDto {
   empresa?: null | CrearEmpresaDto;
   administrador?: null | AdministradorInicialDto;
   sistema?: null | CrearSistemaIntegradoDto;
+  ingreso?: null | ConfiguracionDeIngresoDto;
 }

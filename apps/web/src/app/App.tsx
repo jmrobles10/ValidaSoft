@@ -5,6 +5,7 @@ import { createValidasoftTheme } from '@validasoft/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { RouterProvider } from 'react-router';
 import { PantallaSesion } from '../sesion/PantallaSesion';
+import { useRenovacionDeSesionDirecta, useRestaurarSesionDirecta } from '../sesion/sesionDirecta';
 import { useSesion } from '../sesion/sesionStore';
 import { usePuenteEmbed } from '../sesion/usePuenteEmbed';
 import { Avisos } from '../shared/avisos';
@@ -25,6 +26,9 @@ export function App() {
   const [clienteConsultas] = useState(crearClienteConsultas);
   const [router] = useState(crearRouter);
   const { embebida } = usePuenteEmbed();
+  // Fuera de un sistema integrado la persona entra directo (ING-1): al abrir se restaura la sesión con la cookie y mientras la use se renueva.
+  const restaurando = useRestaurarSesionDirecta(!embebida);
+  useRenovacionDeSesionDirecta();
   const estado = useSesion((s) => s.estado);
   const usuarioId = useSesion((s) => s.sesion?.usuarioId ?? null);
   const usuarioAnterior = useRef(usuarioId);
@@ -47,7 +51,7 @@ export function App() {
     <ThemeProvider theme={tema}>
       <CssBaseline enableColorScheme />
       <QueryClientProvider client={clienteConsultas}>
-        {estado === 'activa' ? <RouterProvider router={router} /> : <PantallaSesion estado={estado} embebida={embebida} />}
+        {estado === 'activa' ? <RouterProvider router={router} /> : <PantallaSesion estado={estado} embebida={embebida} restaurando={restaurando} />}
         <Avisos />
       </QueryClientProvider>
     </ThemeProvider>

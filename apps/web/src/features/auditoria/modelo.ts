@@ -1,8 +1,8 @@
 import type { ActorAuditoriaDto, ListarAuditoriaParams } from '@validasoft/api-client';
 import type { TFunction } from 'i18next';
 
-/** Tipos que la API responde hoy; `Dominio` e `Identidad` dan 422 `tipo-no-disponible` y no se ofrecen. */
-export const TIPOS_AUDITORIA = ['Configuracion', 'Acceso'] as const;
+/** Tipos que la API responde hoy; `Dominio` da 422 `tipo-no-disponible` (los eventos de dominio están en el historial de cada vínculo y expediente) y no se ofrece. */
+export const TIPOS_AUDITORIA = ['Configuracion', 'Acceso', 'Identidad'] as const;
 export type TipoAuditoria = (typeof TIPOS_AUDITORIA)[number];
 export const TIPO_POR_DEFECTO: TipoAuditoria = 'Configuracion';
 
@@ -25,9 +25,32 @@ export const ENTIDADES_CONFIGURACION = [
   'AccesoSoporte',
 ] as const;
 export const ENTIDADES_ACCESO = ['Documento', 'Certificado', 'Expediente', 'Exportacion'] as const;
-export type EntidadAuditada = (typeof ENTIDADES_CONFIGURACION)[number] | (typeof ENTIDADES_ACCESO)[number];
+/** Auditoría de identidad (ING-6): ingresos y códigos, passkeys y sesiones de las personas del grupo. */
+export const ENTIDADES_IDENTIDAD = ['Ingreso', 'Passkey', 'Sesion'] as const;
+export type EntidadAuditada = (typeof ENTIDADES_CONFIGURACION)[number] | (typeof ENTIDADES_ACCESO)[number] | (typeof ENTIDADES_IDENTIDAD)[number];
 
-export const ACCIONES = ['Creado', 'Modificado', 'Publicado', 'Archivado', 'Desactivado', 'Rotado', 'Revocado', 'Descargado', 'Exportado'] as const;
+export const ACCIONES = [
+  'Creado',
+  'Modificado',
+  'Publicado',
+  'Archivado',
+  'Desactivado',
+  'Rotado',
+  'Revocado',
+  'Descargado',
+  'Exportado',
+  'CodigoEnviado',
+  'CodigoIncorrecto',
+  'IngresoExitoso',
+  'IngresoFallido',
+  'PasskeyRegistrada',
+  'PasskeyRevocada',
+  'PasskeyEliminada',
+  'SesionCerrada',
+  'SesionRevocada',
+  'ReusoDeSesion',
+  'UsuarioInvitado',
+] as const;
 export const ACTORES = ['Usuario', 'Tercero', 'Integracion', 'Sistema', 'Plataforma', 'Migracion'] as const;
 export const TIPOS_CAMBIO = ['Agregado', 'Modificado', 'Eliminado'] as const;
 export type TipoCambio = (typeof TIPOS_CAMBIO)[number];
@@ -42,7 +65,8 @@ export function esUnoDe<T extends string>(valores: readonly T[], valor: unknown)
   return (valores as readonly unknown[]).includes(valor);
 }
 
-export const entidadesDe = (tipo: TipoAuditoria): readonly EntidadAuditada[] => (tipo === 'Acceso' ? ENTIDADES_ACCESO : ENTIDADES_CONFIGURACION);
+export const entidadesDe = (tipo: TipoAuditoria): readonly EntidadAuditada[] =>
+  tipo === 'Acceso' ? ENTIDADES_ACCESO : tipo === 'Identidad' ? ENTIDADES_IDENTIDAD : ENTIDADES_CONFIGURACION;
 
 export interface FiltrosAuditoria {
   tipo: TipoAuditoria;
@@ -109,7 +133,7 @@ export function formatearMomento(valor: string): string {
 export const idCorto = (id: string) => (id.length > 8 ? id.slice(0, 8) : id);
 
 export function textoEntidad(tipo: string, t: TFunction): string {
-  return esUnoDe([...ENTIDADES_CONFIGURACION, ...ENTIDADES_ACCESO], tipo) ? t(`auditoria.entidades.${tipo}`) : tipo;
+  return esUnoDe([...ENTIDADES_CONFIGURACION, ...ENTIDADES_ACCESO, ...ENTIDADES_IDENTIDAD], tipo) ? t(`auditoria.entidades.${tipo}`) : tipo;
 }
 
 export function textoAccion(accion: string, t: TFunction): string {

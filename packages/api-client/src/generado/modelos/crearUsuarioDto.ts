@@ -16,4 +16,6 @@ export interface CrearUsuarioDto {
   roles: RolAsignadoDto[] | null;
   /** @nullable */
   identidades: IdentidadExternaDto[] | null;
+  /** @nullable */
+  invitar?: boolean | null;
 }

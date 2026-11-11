@@ -5,7 +5,7 @@
 
 export const plataforma = {
   titulo: 'Plataforma',
-  nav: { grupos: 'Grupos y empresas', secretos: 'Secretos' },
+  nav: { grupos: 'Grupos y empresas', operadores: 'Operadores', secretos: 'Secretos' },
   sesion: '{{persona}} · operador de Plataforma desde {{sistema}}',
   grupos: {
     titulo: 'Grupos y empresas',
@@ -82,6 +82,7 @@ export const plataforma = {
       'empresa-prefijo-invalido': 'El prefijo de folio lleva de 2 a 10 letras mayúsculas o números.',
       'admin-nombre-requerido': 'Falta el nombre del administrador.',
       'admin-correo-invalido': 'El correo del administrador no es válido.',
+      'modos-requeridos': 'Elige al menos una forma de ingreso: desde el sistema integrado o directo a Validasoft.',
       'sistema-codigo-invalido': 'El código del sistema empieza con letra y usa mayúsculas, números o guion bajo (máx. 20).',
       'sistema-nombre-requerido': 'Falta el nombre del sistema.',
       'clave-publica-requerida': 'Pega la clave pública del sistema en PEM (-----BEGIN PUBLIC KEY-----).',

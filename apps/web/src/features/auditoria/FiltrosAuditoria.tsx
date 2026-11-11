@@ -69,7 +69,7 @@ export function FiltrosAuditoria({ filtros }: { filtros: FiltrosAuditoria }) {
           ancho={260}
           valor={entidadId.texto}
           onCambiar={entidadId.setTexto}
-          placeholder={tipo === 'Acceso' ? t('auditoria.filtros.entidadIdAcceso') : t('auditoria.filtros.entidadId')}
+          placeholder={tipo === 'Acceso' ? t('auditoria.filtros.entidadIdAcceso') : tipo === 'Identidad' ? t('auditoria.filtros.entidadIdIdentidad') : t('auditoria.filtros.entidadId')}
         />
         <CampoBusqueda ancho={200} valor={actor.texto} onCambiar={actor.setTexto} placeholder={t('auditoria.filtros.actor')} />
         {campoFecha('desde')}
