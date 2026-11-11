@@ -9,6 +9,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -280,14 +281,84 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 
+    /// <summary>
+    /// Reintegra un vínculo desvinculado (DS-3). Por omisión <b>revalida</b>: vuelve a validación y se abre una renovación con
+    /// todos los documentos del flujo (si nunca fue aprobado, vuelve a <c>Invitado</c> para invitarlo de nuevo). Con
+    /// <c>revalidar: false</c> restituye el estado que tenía al desvincularse y emite su certificado de nuevo con lo ya aprobado,
+    /// solo si esas versiones siguen vigentes (409 <c>reintegro-requiere-revalidacion</c> con los motivos si no).
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/reintegrar")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
-    public static async Task<VinculoDto> Reintegrar(Guid id, JustificacionDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+    public static async Task<VinculoDto> Reintegrar(Guid id, ReintegrarVinculoDto dto, SesionDeEmpresa empresa, HttpContext http, IContextoSolicitud contexto,
+        IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
-        var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        return await GuardarAsync(empresa, stream, stream.Aggregate!.Reintegrar(dto.Justificacion, reloj.GetUtcNow()), ct);
+        empresa.UsarMensajeria(mensajes);
+        var version = VersionEsperada(http);
+        var abierto = false;
+        var resultado = await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var ahora = reloj.GetUtcNow();
+            var stream = await empresa.VinculoParaEscribirAsync(id, version, ct);
+            var vinculo = stream.Aggregate!;
+            var evento = vinculo.Reintegrar(dto.Justificacion, ahora, sinRevalidar: !dto.Revalidar);
+
+            if (evento.SinRevalidar)
+            {
+                var viabilidad = await ReintegroDeVinculos.EvaluarAsync(empresa, vinculo, ahora, ct);
+                if (!viabilidad.PuedeSinRevalidar)
+                    throw new ReglaDeNegocioException(TipoFalla.Conflicto, "reintegro-requiere-revalidacion",
+                        $"No se puede reintegrar sin revalidar: {string.Join(" ", viabilidad.Motivos)}")
+                    {
+                        Datos = new Dictionary<string, object?> { ["motivos"] = viabilidad.Motivos }
+                    };
+            }
+
+            stream.AppendOne(evento);
+            if (vinculo.Estado != evento.EstadoResultante)
+                vinculo.Apply(evento); // El agregado del stream decide lo que sigue con el estado ya reintegrado.
+
+            if (evento.SinRevalidar)
+            {
+                // Lo ya aprobado sigue en pie: el certificado revocado al desvincular se emite de nuevo con ese expediente.
+                var aprobado = await ReintegroDeVinculos.UltimoAprobadoAsync(empresa.Sesion, id, ct)
+                               ?? throw ReglaDeNegocioException.Conflicto("reintegro-requiere-revalidacion", "No hay un expediente aprobado que restituir.");
+                await empresa.Certificados.EmitirAsync(empresa.Sesion, aprobado, vinculo, ahora, ct,
+                    $"Vínculo reintegrado sin revalidar: {evento.Justificacion}");
+            }
+            else if (evento.EstadoResultante == EstadoVinculo.EnValidacion)
+            {
+                // Con aprobación previa se revalida todo: una renovación con todos los documentos del flujo, abierta por quien reintegra.
+                var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(empresa.Sesion, vinculo, null, ct)
+                            ?? throw ReglaDeNegocioException.Validacion("falta-flujo-por-defecto",
+                                "Para revalidar al reintegrar, el vínculo necesita un flujo o el tipo un flujo por defecto publicado.");
+                await ProcesoDeValidacion.AbrirAsync(empresa.Sesion, stream, flujo, contexto, empresa.Certificados, ahora, ct,
+                    tipoExpediente: TipoExpediente.Renovacion);
+                abierto = true;
+            }
+
+            await empresa.Sesion.SaveChangesAsync(ct);
+            var guardado = await empresa.CargarVinculoAsync(id, ct);
+            return guardado.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(guardado.TipoVinculoId, ct));
+        });
+
+        if (abierto)
+        {
+            // La renovación pudo compartir documentos con el vínculo (sin outbox de la bóveda): vigencias e IA, como al abrir un expediente.
+            await mensajes.PublishAsync(new Documentos.CalcularVigenciasDelVinculo(resultado.TerceroId, resultado.Id));
+            await mensajes.PublishAsync(new Ia.AnalizarIaDelVinculo(resultado.TerceroId, resultado.Id));
+        }
+
+        return resultado;
     }
+
+    /// <summary>
+    /// Si el vínculo desvinculado se puede reintegrar sin revalidar (DS-3) y, si no, por qué: una versión cambió en la bóveda del
+    /// tercero sin que la empresa la revisara, una aprobada ya venció o el vínculo no estaba aprobado y vigente al desvincularse.
+    /// </summary>
+    [WolverineGet("/api/v1/vinculos/{id}/reintegro")]
+    [Authorize(Policy = Permisos.VinculosLeer)]
+    public static async Task<ViabilidadDeReintegroDto> ViabilidadDeReintegro(Guid id, SesionDeEmpresa empresa, TimeProvider reloj, CancellationToken ct) =>
+        await ReintegroDeVinculos.EvaluarAsync(empresa, await empresa.CargarVinculoAsync(id, ct), reloj.GetUtcNow(), ct);
 
     /// <summary>Terminal; si tenía un expediente abierto, se anula en la misma transacción; su certificado se revoca (por el sistema).</summary>
     [WolverinePost("/api/v1/vinculos/{id}/anular")]

@@ -1762,6 +1762,65 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getReenviarExpedientePublicoMutationOptions(options), queryClient);
     }
+    export const reintentarPostulacion = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExpedientePublicoDto>(
+      {url: `/public/v1/vinculos/${id}/reintentar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getReintentarPostulacionMutationKey = () => ['reintentarPostulacion'] as const;
+
+export const getReintentarPostulacionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reintentarPostulacion>>, TError,ReintentarPostulacionMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof reintentarPostulacion>>, TError,ReintentarPostulacionMutationVariables, TContext> => {
+
+const mutationKey = getReintentarPostulacionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reintentarPostulacion>>, ReintentarPostulacionMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  reintentarPostulacion(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReintentarPostulacionMutationResult = NonNullable<Awaited<ReturnType<typeof reintentarPostulacion>>>
+
+    export type ReintentarPostulacionMutationError = ErrorType<void>
+    export type ReintentarPostulacionMutationVariables = {id: string}
+
+    export const useReintentarPostulacion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reintentarPostulacion>>, TError,ReintentarPostulacionMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reintentarPostulacion>>,
+        TError,
+        ReintentarPostulacionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReintentarPostulacionMutationOptions(options), queryClient);
+    }
     export const ratificarRequisito = (
     id: string,
     requisitoId: string,

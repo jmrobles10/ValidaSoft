@@ -35,6 +35,8 @@ import type {
   MotivoDto,
   ObtenerVinculoPorReferenciaParams,
   PaginaDtoOfVinculoDto,
+  ReintegrarVinculoDto,
+  ViabilidadDeReintegroDto,
   VinculoDto
 } from '../../modelos';
 
@@ -695,7 +697,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     }
     export const reintegrarVinculo = (
     id: string,
-    justificacionDto: BodyType<JustificacionDto>,
+    reintegrarVinculoDto: BodyType<ReintegrarVinculoDto>,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {
 
@@ -703,7 +705,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return clienteValidasoft<VinculoDto>(
       {url: `/api/v1/vinculos/${id}/reintegrar`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: justificacionDto, signal
+      data: reintegrarVinculoDto, signal
     },
       options);
     }
@@ -741,9 +743,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ReintegrarVinculoMutationResult = NonNullable<Awaited<ReturnType<typeof reintegrarVinculo>>>
-    export type ReintegrarVinculoMutationBody = BodyType<JustificacionDto>
+    export type ReintegrarVinculoMutationBody = BodyType<ReintegrarVinculoDto>
     export type ReintegrarVinculoMutationError = ErrorType<void>
-    export type ReintegrarVinculoMutationVariables = {id: string;data: BodyType<JustificacionDto>}
+    export type ReintegrarVinculoMutationVariables = {id: string;data: BodyType<ReintegrarVinculoDto>}
 
     export const useReintegrarVinculo = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reintegrarVinculo>>, TError,ReintegrarVinculoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
@@ -755,7 +757,92 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getReintegrarVinculoMutationOptions(options), queryClient);
     }
-    export const anularVinculo = (
+    export const obtenerViabilidadDeReintegro = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ViabilidadDeReintegroDto>(
+      {url: `/api/v1/vinculos/${id}/reintegro`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerViabilidadDeReintegroQueryKey = (id: string,) => {
+    return [
+    `/api/v1/vinculos/${id}/reintegro`
+    ] as const;
+    }
+
+
+export const getObtenerViabilidadDeReintegroQueryOptions = <TData = Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerViabilidadDeReintegroQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>> = ({ signal }) => obtenerViabilidadDeReintegro(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerViabilidadDeReintegroQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>>
+export type ObtenerViabilidadDeReintegroQueryError = ErrorType<void>
+
+
+export function useObtenerViabilidadDeReintegro<TData = Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerViabilidadDeReintegro<TData = Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerViabilidadDeReintegro<TData = Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerViabilidadDeReintegro<TData = Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerViabilidadDeReintegro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerViabilidadDeReintegroQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const anularVinculo = (
     id: string,
     motivoDto: BodyType<MotivoDto>,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal

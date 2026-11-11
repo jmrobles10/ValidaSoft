@@ -52,7 +52,11 @@ export function TarjetaExpedienteVinculo({ vinculo }: { vinculo: VinculoDto }) {
           </Stack>
         )}
         {!abiertoId && vinculo.aperturaDeExpedientePendiente && <Alert severity="warning">{t('expedientes.enVinculo.pendiente')}</Alert>}
-        {!abiertoId && !vinculo.aperturaDeExpedientePendiente && <Typography sx={{ color: 'text.secondary' }}>{t('expedientes.enVinculo.sinExpediente')}</Typography>}
+        {!abiertoId && !vinculo.aperturaDeExpedientePendiente && (
+          <Typography sx={{ color: 'text.secondary' }}>
+            {vinculo.ultimoResultado === 'Rechazado' ? t('expedientes.enVinculo.rechazado') : t('expedientes.enVinculo.sinExpediente')}
+          </Typography>
+        )}
         {abrir && (
           <div>
             <Button variant="contained" startIcon={<FolderOpen size={16} aria-hidden />} onClick={() => setAbriendo(true)}>

@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5109/"
+      "url": "http://localhost:5111/"
     }
   ],
   "paths": {
@@ -1020,7 +1020,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JustificacionDto"
+                "$ref": "#/components/schemas/ReintegrarVinculoDto"
               }
             }
           },
@@ -1033,6 +1033,42 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/VinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/reintegro": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.VinculosEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_reintegro",
+        "description": "GET_api_v1_vinculos_id_reintegro",
+        "operationId": "GET_api_v1_vinculos_id_reintegro",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViabilidadDeReintegroDto"
                 }
               }
             }
@@ -5808,6 +5844,13 @@
             }
           },
           {
+            "name": "desaprobados",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "limite",
             "in": "query",
             "schema": {
@@ -6341,6 +6384,157 @@
         }
       }
     },
+    "/api/v1/expedientes/{id}/etapas/{orden}/reabrir": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_etapas_orden_reabrir",
+        "description": "POST_api_v1_expedientes_id_etapas_orden_reabrir",
+        "operationId": "POST_api_v1_expedientes_id_etapas_orden_reabrir",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JustificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/desaprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_desaprobar",
+        "description": "POST_api_v1_expedientes_id_desaprobar",
+        "operationId": "POST_api_v1_expedientes_id_desaprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DesaprobarExpedienteDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/expedientes/{id}/fase-inicial": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ExpedientesEndpoints"
+        ],
+        "summary": "POST_api_v1_expedientes_id_fase_inicial",
+        "description": "POST_api_v1_expedientes_id_fase_inicial",
+        "operationId": "POST_api_v1_expedientes_id_fase_inicial",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JustificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedienteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/bandeja": {
       "get": {
         "tags": [
@@ -6647,6 +6841,42 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResultadoRevisionPlazosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/public/v1/vinculos/{id}/reintentar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Expedientes.ReintentoPublicoEndpoints"
+        ],
+        "summary": "POST_public_v1_vinculos_id_reintentar",
+        "description": "POST_public_v1_vinculos_id_reintentar",
+        "operationId": "POST_public_v1_vinculos_id_reintentar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpedientePublicoDto"
                 }
               }
             }
@@ -12656,6 +12886,16 @@
                 "$ref": "#/components/schemas/PlazoCargueDto"
               }
             ]
+          },
+          "reintento": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReintentoDto"
+              }
+            ]
           }
         }
       },
@@ -13541,6 +13781,59 @@
           }
         }
       },
+      "DesaprobacionDto": {
+        "required": [
+          "etapa",
+          "alcance",
+          "usuario",
+          "justificacion",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "etapa": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "alcance": {
+            "type": "string"
+          },
+          "usuario": {
+            "type": "string"
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DesaprobarExpedienteDto": {
+        "required": [
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "justificacion": {
+            "type": "string"
+          },
+          "etapa": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "DescargaDto": {
         "required": [
           "url",
@@ -14115,6 +14408,16 @@
               },
               {
                 "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
+          },
+          "reintento": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReintentoDto"
               }
             ]
           }
@@ -15265,6 +15568,25 @@
                 "$ref": "#/components/schemas/PlazoCargueExpedienteDto"
               }
             ]
+          },
+          "desaprobaciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "ultimaDesaprobacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DesaprobacionDto"
+              }
+            ]
           }
         }
       },
@@ -15630,6 +15952,10 @@
             ],
             "format": "int32",
             "default": 0
+          },
+          "desaprobado": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -16721,6 +17047,16 @@
               },
               {
                 "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
+          },
+          "reintento": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReintentoDto"
               }
             ]
           }
@@ -19723,6 +20059,76 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "ReintegrarVinculoDto": {
+        "required": [
+          "justificacion"
+        ],
+        "type": "object",
+        "properties": {
+          "justificacion": {
+            "type": "string"
+          },
+          "revalidar": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "ReintentoDto": {
+        "required": [
+          "permitido"
+        ],
+        "type": "object",
+        "properties": {
+          "permitido": {
+            "type": "boolean"
+          },
+          "diasEspera": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
+      "ReintentoPublicoDto": {
+        "required": [
+          "rechazadoEn",
+          "motivos",
+          "permitido",
+          "disponible",
+          "desde"
+        ],
+        "type": "object",
+        "properties": {
+          "rechazadoEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "motivos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MotivoPublicoDto"
+            }
+          },
+          "permitido": {
+            "type": "boolean"
+          },
+          "disponible": {
+            "type": "boolean"
+          },
+          "desde": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -23228,6 +23634,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "revertido": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -23634,6 +24044,24 @@
           }
         }
       },
+      "ViabilidadDeReintegroDto": {
+        "required": [
+          "puedeSinRevalidar",
+          "motivos"
+        ],
+        "type": "object",
+        "properties": {
+          "puedeSinRevalidar": {
+            "type": "boolean"
+          },
+          "motivos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "VigenciaDto": {
         "required": [
           "vigenteHasta",
@@ -23838,6 +24266,12 @@
           "aperturaDeExpedientePendiente": {
             "type": "boolean",
             "default": false
+          },
+          "ultimoResultado": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -23933,6 +24367,16 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "reintento": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReintentoPublicoDto"
+              }
+            ]
           }
         }
       },
@@ -24329,6 +24773,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.PlazosDeCargueEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Expedientes.ReintentoPublicoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Expedientes.RatificacionEndpoints"

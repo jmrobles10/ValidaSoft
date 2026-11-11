@@ -140,6 +140,39 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
               />
             </Box>
           </Box>
+
+          <Box component="fieldset" disabled={soloLectura} sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+            <Typography component="legend" sx={{ fontSize: 13, fontWeight: 600, mb: 0.5 }}>
+              {t('flujoReintento.titulo')}
+            </Typography>
+            <FormControlLabel
+              control={<Switch checked={borrador.reintentoPermitido} onChange={(e) => onCambiar({ ...borrador, reintentoPermitido: e.target.checked })} />}
+              disabled={soloLectura}
+              sx={{ alignItems: 'flex-start', mx: 0 }}
+              label={
+                <Box sx={{ pt: '6px' }}>
+                  <Typography component="span" sx={{ display: 'block', fontSize: 14, fontWeight: 500 }}>
+                    {t('flujoReintento.permitir')}
+                  </Typography>
+                  <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 12 }}>
+                    {t('flujoReintento.ayuda')}
+                  </Typography>
+                </Box>
+              }
+            />
+            {borrador.reintentoPermitido && (
+              <TextField
+                size="small"
+                label={t('flujoReintento.dias')}
+                helperText={t('flujoReintento.diasAyuda')}
+                value={borrador.reintentoDias}
+                disabled={soloLectura}
+                onChange={(e) => onCambiar({ ...borrador, reintentoDias: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 3, autoComplete: 'off' } }}
+                sx={{ mt: 1.5, width: { xs: '100%', md: 160 } }}
+              />
+            )}
+          </Box>
         </Stack>
       </Tarjeta>
 

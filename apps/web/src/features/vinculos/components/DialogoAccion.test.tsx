@@ -44,13 +44,15 @@ interface Peticion {
   cuerpo: unknown;
 }
 
-function preparar(accion: AccionVinculo, respuesta: () => Response, base: VinculoDto = vinculo) {
+function preparar(accion: AccionVinculo, respuesta: () => Response, base: VinculoDto = vinculo, viabilidad?: { puedeSinRevalidar: boolean; motivos: string[] }) {
   const peticiones: Peticion[] = [];
   configurarCliente({
     fetch: vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const direccion = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
       // El diálogo consulta el tercero para su subtítulo; esa lectura no cuenta como la acción.
       if (direccion.includes('/terceros/')) return Promise.resolve(json(200, tercero));
+      // Al reintegrar pregunta si se puede sin revalidar (DS-3); tampoco cuenta como la acción.
+      if (direccion.endsWith('/reintegro')) return Promise.resolve(json(200, viabilidad ?? { puedeSinRevalidar: false, motivos: [] }));
       const cuerpo: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
       peticiones.push({ url: direccion, cabeceras: new Headers(init?.headers), cuerpo });
       return Promise.resolve(respuesta());
@@ -150,6 +152,45 @@ describe('DialogoAccion', () => {
 
     await waitFor(() => expect(peticiones).toHaveLength(1));
     expect(peticiones[0]?.cuerpo).toEqual({ correoDestino: 'contacto@aceros.co', vigenciaHoras: 72 });
+  });
+
+  describe('reintegrar (DS-3)', () => {
+    const desvinculado: VinculoDto = { ...vinculo, estado: 'Desvinculado' };
+
+    it('por omisión revalida; sin revalidar solo se ofrece si lo aprobado sigue vigente', async () => {
+      const usuario = userEvent.setup();
+      const { peticiones } = preparar('reintegrar', () => json(200, vinculo), desvinculado, { puedeSinRevalidar: true, motivos: [] });
+
+      const sin = await screen.findByRole('radio', { name: /Reintegrar sin revalidar/ });
+      expect(sin).toBeEnabled();
+      expect(screen.getByRole('radio', { name: /^Revalidar/ })).toBeChecked();
+
+      await usuario.type(screen.getByLabelText(/Justificación/), 'Se renovó el contrato');
+      await usuario.click(sin);
+      await usuario.click(screen.getByRole('button', { name: 'Reintegrar vínculo' }));
+
+      await waitFor(() => expect(peticiones).toHaveLength(1));
+      expect(peticiones[0]?.url).toBe('/api/v1/vinculos/v1/reintegrar');
+      expect(peticiones[0]?.cuerpo).toEqual({ justificacion: 'Se renovó el contrato', revalidar: false });
+    });
+
+    it('si no se puede sin revalidar explica por qué, deshabilita esa opción y envía revalidar', async () => {
+      const usuario = userEvent.setup();
+      const { peticiones } = preparar('reintegrar', () => json(200, vinculo), desvinculado, {
+        puedeSinRevalidar: false,
+        motivos: ['Su vigencia terminó: Registro Único Tributario.'],
+      });
+
+      expect(await screen.findByText('Su vigencia terminó: Registro Único Tributario.')).toBeInTheDocument();
+      expect(screen.getByText('No se puede reintegrar sin revalidar:')).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /Reintegrar sin revalidar/ })).toBeDisabled();
+
+      await usuario.type(screen.getByLabelText(/Justificación/), 'Retoma la relación');
+      await usuario.click(screen.getByRole('button', { name: 'Reintegrar vínculo' }));
+
+      await waitFor(() => expect(peticiones).toHaveLength(1));
+      expect(peticiones[0]?.cuerpo).toEqual({ justificacion: 'Retoma la relación', revalidar: true });
+    });
   });
 
   it('si el vínculo ya no admite la acción lo dice y no deja enviarla', () => {

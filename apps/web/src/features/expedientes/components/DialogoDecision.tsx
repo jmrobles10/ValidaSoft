@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
 import type { ExpedienteDto, MotivoTipificadoDto, Veredicto } from '@validasoft/api-client';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,6 +41,8 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
   const [texto, setTexto] = useState('');
   const [campos, setCampos] = useState<string[]>([]);
   const [justificacionCruce, setJustificacionCruce] = useState('');
+  // Al desaprobar un expediente aprobado: desde qué etapa se revisa de nuevo ('' = la última, la que lo cerró).
+  const [etapaDestino, setEtapaDestino] = useState('');
   // El error de cada campo sale cuando la persona ya lo tocó; mientras falte algo, el botón de enviar está deshabilitado.
   const [motivosTocados, setMotivosTocados] = useState(false);
   const [textoTocado, setTextoTocado] = useState(false);
@@ -127,6 +129,30 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
         };
       case 'anular':
         return { titulo: t('expedientes.anulacion.titulo'), ayuda: t('expedientes.anulacion.ayuda'), campo: t('expedientes.anulacion.motivo'), confirmar: t('expedientes.anulacion.confirmar'), exito: t('expedientes.anulacion.exito') };
+      case 'reabrirEtapa':
+        return {
+          titulo: t('expedientes.reapertura.titulo', { orden: String(dialogo.etapa.orden) }),
+          ayuda: t('expedientes.reapertura.ayuda', { orden: String(dialogo.etapa.orden) }),
+          campo: t('expedientes.reapertura.justificacion'),
+          confirmar: t('expedientes.reapertura.confirmar'),
+          exito: t('expedientes.reapertura.exito', { orden: String(dialogo.etapa.orden) }),
+        };
+      case 'faseInicial':
+        return {
+          titulo: t('expedientes.faseInicial.titulo'),
+          ayuda: expediente.estado === 'Aprobado' ? t('expedientes.faseInicial.ayudaAprobado') : t('expedientes.faseInicial.ayuda'),
+          campo: t('expedientes.faseInicial.justificacion'),
+          confirmar: t('expedientes.faseInicial.confirmar'),
+          exito: t('expedientes.faseInicial.exito'),
+        };
+      case 'desaprobar':
+        return {
+          titulo: t('expedientes.desaprobacion.titulo'),
+          ayuda: t('expedientes.desaprobacion.ayuda'),
+          campo: t('expedientes.desaprobacion.justificacion'),
+          confirmar: t('expedientes.desaprobacion.confirmar'),
+          exito: t('expedientes.desaprobacion.exito'),
+        };
     }
   })();
 
@@ -157,6 +183,12 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
         return { tipo: 'reenviar', respuesta: texto };
       case 'anular':
         return { tipo: 'anular', motivo: texto };
+      case 'reabrirEtapa':
+        return { tipo: 'reabrirEtapa', orden: dialogo.etapa.orden, justificacion: texto };
+      case 'faseInicial':
+        return { tipo: 'faseInicial', justificacion: texto };
+      case 'desaprobar':
+        return { tipo: 'desaprobar', justificacion: texto, ...(etapaDestino ? { etapa: Number(etapaDestino) } : {}) };
     }
   };
 
@@ -171,7 +203,8 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
     });
   };
 
-  const destructiva = dialogo.tipo === 'rechazar' || dialogo.tipo === 'anular' || dialogo.tipo === 'anularVeredicto';
+  const destructiva =
+    dialogo.tipo === 'rechazar' || dialogo.tipo === 'anular' || dialogo.tipo === 'anularVeredicto' || dialogo.tipo === 'desaprobar' || dialogo.tipo === 'faseInicial';
   const mostrarCampo = !esVeredicto || observando;
   const pendiente = !aplica
     ? null
@@ -267,6 +300,28 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                   disabled={!aplica}
                 />
               </>
+            )}
+
+            {dialogo.tipo === 'desaprobar' && expediente.etapas.length > 1 && (
+              <TextField
+                select
+                label={t('expedientes.desaprobacion.desde')}
+                helperText={t('expedientes.desaprobacion.desdeAyuda')}
+                value={etapaDestino}
+                onChange={(e) => setEtapaDestino(e.target.value)}
+                disabled={!aplica}
+                slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+              >
+                <MenuItem value="">{t('expedientes.desaprobacion.ultimaEtapa')}</MenuItem>
+                {[...expediente.etapas]
+                  .sort((a, b) => a.orden - b.orden)
+                  .slice(0, -1)
+                  .map((etapa) => (
+                    <MenuItem key={etapa.orden} value={String(etapa.orden)}>
+                      {etapa.orden === 1 ? t('expedientes.desaprobacion.primeraEtapa') : t('expedientes.desaprobacion.desdeEtapa', { orden: String(etapa.orden) })}
+                    </MenuItem>
+                  ))}
+              </TextField>
             )}
 
             {mostrarCampo && (

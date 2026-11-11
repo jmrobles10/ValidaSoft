@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { DesaprobacionDto } from './desaprobacionDto';
 import type { EstadoExpediente } from './estadoExpediente';
 import type { EtapaExpedienteDto } from './etapaExpedienteDto';
 import type { FlujoDeExpedienteDto } from './flujoDeExpedienteDto';
@@ -48,4 +49,6 @@ export interface ExpedienteDto {
   verificaciones?: VerificacionDto[] | null;
   esperandoVerificaciones?: boolean;
   plazoCargue?: null | PlazoCargueExpedienteDto;
+  desaprobaciones?: number;
+  ultimaDesaprobacion?: null | DesaprobacionDto;
 }

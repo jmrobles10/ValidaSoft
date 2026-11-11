@@ -36,4 +36,6 @@ export interface VinculoDto {
   /** @nullable */
   expedienteAbiertoId?: string | null;
   aperturaDeExpedientePendiente?: boolean;
+  /** @nullable */
+  ultimoResultado?: string | null;
 }

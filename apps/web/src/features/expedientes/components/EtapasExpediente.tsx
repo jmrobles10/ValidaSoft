@@ -1,7 +1,7 @@
 import { Box, Button, Chip, IconButton, ListItemIcon, ListItemText, Menu, MenuItem, Stack, Tooltip, Typography } from '@mui/material';
 import { SCOPES, type AreaExpedienteDto, type ExpedienteDto, type VeredictoEmitidoDto } from '@validasoft/api-client';
 import { AvatarActor, formatearFecha, formatearFechaHora } from '@validasoft/ui';
-import { BadgeCheck, Ellipsis, Gavel, ShieldX, Sparkles, Timer, Undo2 } from 'lucide-react';
+import { BadgeCheck, Ellipsis, Gavel, RotateCcw, ShieldX, Sparkles, Timer, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tarjeta } from '../../../shared/componentes';
@@ -10,6 +10,7 @@ import {
   bloqueoVeredicto,
   puedeAnularVeredicto,
   puedeAprobarComoAdministrador,
+  puedeReabrirEtapa,
   puedeRechazar,
   type ContextoRevisor,
   type DialogoExpediente,
@@ -41,6 +42,18 @@ export function EtapasExpediente({ expediente, contexto, nombres, motivos, onAcc
               <Typography component="span" sx={{ fontSize: 12, color: etapa.estado === 'Activa' ? 'acento.main' : 'text.secondary' }}>
                 · {t(`expedientes.etapas.estadoEtapa.${etapa.estado}`)}
               </Typography>
+              {puedeReabrirEtapa(expediente, etapa, contexto(null).scopes, contexto(null).vinculoBloqueado) && (
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<RotateCcw size={14} aria-hidden />}
+                  onClick={() => onAccion({ tipo: 'reabrirEtapa', etapa })}
+                  aria-label={t('expedientes.etapas.reabrirAccesible', { orden: String(etapa.orden) })}
+                  sx={{ ml: 'auto !important' }}
+                >
+                  {t('expedientes.etapas.reabrir')}
+                </Button>
+              )}
             </Stack>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', md: 'repeat(auto-fit, minmax(280px, 1fr))' }, gap: 1.5 }}>
               {etapa.areas.map((area) => (
@@ -180,13 +193,14 @@ function Veredictos({ veredictos, nombre, motivos }: { veredictos: readonly Vere
           <Box component="li" key={v.id} sx={{ display: 'flex', gap: 1, opacity: inactivo ? 0.65 : 1 }}>
             <AvatarActor tipo={v.origen === 'Sistema' ? 'sistema' : 'persona'} nombre={quien} tamano={24} />
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: 13, lineHeight: '18px', textDecoration: v.anulado ? 'line-through' : 'none' }}>
+              <Typography sx={{ fontSize: 13, lineHeight: '18px', textDecoration: v.anulado || v.revertido ? 'line-through' : 'none' }}>
                 {accion}
                 <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12 }}>
                   {' · '}
                   {formatearFecha(v.fecha)}
                   {v.superado ? ` · ${t('expedientes.veredictos.superado')}` : ''}
                   {v.anulado ? ` · ${t('expedientes.veredictos.anulado')}` : ''}
+                  {v.revertido ? ` · ${t('expedientes.veredictos.revertido')}` : ''}
                 </Typography>
               </Typography>
               {v.motivos.length > 0 && (

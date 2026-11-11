@@ -10,7 +10,7 @@ import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { informes } from './es-CO-informes';
 import { inicio } from './es-CO-inicio';
-import { erroresLotes, flujoPlazo, lotes, plazoCargue } from './es-CO-lotes';
+import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -221,11 +221,19 @@ export const esCO = {
     reintegrar: {
       boton: 'Reintegrar',
       titulo: 'Reintegrar vínculo',
-      ayuda: 'Si alguna vez fue aprobado vuelve a validación; si no, vuelve a Invitado.',
+      ayuda: 'Retoma la relación con esta empresa. Elige si el tercero vuelve a pasar por las áreas.',
       resumen: 'Retoma la relación con esta empresa',
       campo: 'Justificación',
       confirmar: 'Reintegrar vínculo',
       exito: 'Vínculo reintegrado.',
+      como: 'Cómo reintegrar',
+      revalidar: 'Revalidar',
+      revalidarAyuda: 'Vuelve a validación y se abre una renovación con todos los documentos del flujo. Si nunca fue aprobado, vuelve a Invitado.',
+      sinRevalidar: 'Reintegrar sin revalidar',
+      sinRevalidarAyuda: 'Restituye el estado que tenía al desvincularse y emite su certificado de nuevo con lo que ya se había aprobado.',
+      noSePuede: 'No se puede reintegrar sin revalidar:',
+      sinViabilidad: 'No pudimos comprobar si se puede reintegrar sin revalidar. Puedes revalidar.',
+      cargando: 'Comprobando si se puede reintegrar sin revalidar',
     },
     anular: {
       boton: 'Anular',
@@ -259,6 +267,7 @@ export const esCO = {
   lotes,
   plazoCargue,
   flujoPlazo,
+  flujoReintento,
   informes,
   expedientes,
   documentos,

@@ -95,6 +95,7 @@ public static class CatalogoEventosPublicos
         new("vinculo.bloqueado", "El vínculo se bloqueó."),
         new("vinculo.desbloqueado", "El vínculo se desbloqueó."),
         new("vinculo.desvinculado", "El vínculo terminó (desvinculación)."),
+        new("vinculo.reintegrado", "Se reintegró un vínculo desvinculado (revalida o restituye su estado)."),
         new("vinculo.anulado", "El vínculo se anuló."),
         new("vinculo.referencia_agregada", "Otro sistema integrado comparte el vínculo."),
         new("vinculo.cuenta_designada_propuesta", "El tercero eligió una cuenta bancaria para cobrarle a la empresa; espera aprobación."),
@@ -108,6 +109,7 @@ public static class CatalogoEventosPublicos
         new("expediente.rechazado", "El expediente se rechazó."),
         new("expediente.caducado", "Venció el plazo de cargue con el expediente en manos del tercero."),
         new("expediente.reabierto", "La empresa reabrió un expediente caducado con un plazo nuevo."),
+        new("expediente.desaprobado", "Un administrador devolvió a revisión lo ya aprobado: una etapa, la fase inicial o el expediente completo."),
         new("documento.compartido", "Una versión de un documento quedó compartida con el vínculo."),
         new("documento.por_vencer", "Un documento compartido está por vencer para el vínculo."),
         new("documento.vencido", "Un documento compartido venció para el vínculo.")
@@ -127,10 +129,11 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         evento.Data switch
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
-                or VinculoDesvinculado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
+                or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or CuentaDesignadaPropuesta or CuentaDesignadaAprobada
                 or CuentaDesignadaRechazada => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
-                or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto => await DeExpedienteAsync(evento, contexto, ct),
+                or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta
+                => await DeExpedienteAsync(evento, contexto, ct),
             VersionCompartida or VencimientoAvisado or VersionVencida => await DeDocumentoAsync(evento, contexto, ct),
             _ => null
         };
@@ -164,6 +167,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoBloqueado b => Estado(id, referencias, EstadoVinculo.Bloqueado, b.EstadoPrevio, b.Motivo, b.Hasta, null),
             VinculoDesbloqueado d => Estado(id, referencias, d.EstadoRestituido, EstadoVinculo.Bloqueado, d.Justificacion, null, null),
             VinculoDesvinculado d => Estado(id, referencias, EstadoVinculo.Desvinculado, d.EstadoPrevio, d.Motivo, null, null),
+            VinculoReintegrado r => Estado(id, referencias, r.EstadoResultante, EstadoVinculo.Desvinculado, r.Justificacion, null, null),
             VinculoAnulado a => Estado(id, referencias, EstadoVinculo.Anulado, a.EstadoPrevio, a.Motivo, null, null),
             ReferenciaExternaAgregada r => new DatosReferenciaAgregadaDto(id, referencias, new ReferenciaExternaDto(r.Sistema, r.Id)),
             CuentaDesignadaPropuesta p => Cuenta(id, referencias, p.Cuenta, EstadoCuentaDesignada.Propuesta, null),
@@ -185,6 +189,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoBloqueado => "vinculo.bloqueado",
             VinculoDesbloqueado => "vinculo.desbloqueado",
             VinculoDesvinculado => "vinculo.desvinculado",
+            VinculoReintegrado => "vinculo.reintegrado",
             VinculoAnulado => "vinculo.anulado",
             CuentaDesignadaPropuesta => "vinculo.cuenta_designada_propuesta",
             CuentaDesignadaAprobada => "vinculo.cuenta_designada",
@@ -247,6 +252,18 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             ExpedienteAprobado => ("expediente.aprobado", Datos(EstadoExpediente.Aprobado)),
             ExpedienteCaducado c => ("expediente.caducado", Datos(EstadoExpediente.Caducado) with { Causa = "PlazoDeCargue", PlazoHasta = c.PlazoHasta }),
             ExpedienteReabierto r => ("expediente.reabierto", Datos(r.EstadoRestituido) with { PlazoHasta = r.PlazoHasta }),
+            ExpedienteDesaprobado d => ("expediente.desaprobado", Datos(EstadoExpediente.EnRevision) with
+            {
+                Causa = d.FaseInicial ? "FaseInicial" : "ExpedienteAprobado",
+                Justificacion = d.Justificacion,
+                Etapa = d.Orden
+            }),
+            EtapaReabierta d => ("expediente.desaprobado", Datos(EstadoExpediente.EnRevision) with
+            {
+                Causa = d.FaseInicial ? "FaseInicial" : "EtapaReabierta",
+                Justificacion = d.Justificacion,
+                Etapa = d.Orden
+            }),
             ExpedienteRechazado r => ("expediente.rechazado", Datos(EstadoExpediente.Rechazado) with
             {
                 Motivos = [.. r.Motivos.Select(m => new MotivoEnEventoDto(m.Codigo, m.TextoAlTercero))],

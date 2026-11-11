@@ -30,4 +30,5 @@ export interface VeredictoEmitidoDto {
   derivado?: boolean;
   /** @nullable */
   campos?: string[] | null;
+  revertido?: boolean;
 }

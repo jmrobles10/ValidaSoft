@@ -9,6 +9,7 @@ export type ListarExpedientesParams = {
   estado?: string;
   area?: string;
   vinculoId?: string;
+  desaprobados?: boolean;
   limite?: number;
   cursor?: string;
 };

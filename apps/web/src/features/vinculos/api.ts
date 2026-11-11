@@ -8,6 +8,7 @@ import {
   getListarVinculosQueryOptions,
   getObtenerHistorialVinculoQueryOptions,
   getObtenerTerceroQueryOptions,
+  getObtenerViabilidadDeReintegroQueryOptions,
   getObtenerVinculoQueryOptions,
   invitarVinculo,
   obtenerVinculoPorReferencia,
@@ -35,6 +36,12 @@ export function useHistorialVinculo(empresaId: string, id: string) {
   return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId) });
 }
 
+/** ¿Se puede reintegrar sin revalidar? y, si no, por qué (DS-3). Se pide al abrir el diálogo, siempre fresco. */
+export function useViabilidadDeReintegro(empresaId: string, id: string, habilitado: boolean) {
+  const opciones = getObtenerViabilidadDeReintegroQueryOptions(id, { request: { empresa: empresaId } });
+  return useQuery({ ...opciones, queryKey: conEmpresa(opciones.queryKey, empresaId), enabled: habilitado, staleTime: 0, gcTime: 0 });
+}
+
 /** Datos del tercero (globales; visibles si la empresa tiene un vínculo con él). */
 export function useTercero(id: string, habilitado = true) {
   const opciones = getObtenerTerceroQueryOptions(id);
@@ -58,6 +65,8 @@ export interface EntradaAccion {
   /** Fin del bloqueo (ISO) o vigencia de la invitación en horas. */
   hasta?: string | null;
   vigenciaHoras?: number;
+  /** Solo al reintegrar (DS-3): `true` (por omisión) vuelve a validar; `false` restituye el estado sin revalidar. */
+  revalidar?: boolean;
 }
 
 export type ResultadoAccion = { tipo: 'vinculo'; vinculo: VinculoDto } | { tipo: 'invitacion'; invitacion: EnlaceInvitacionDto };
@@ -80,7 +89,7 @@ export function ejecutarAccion(empresaId: string, entrada: EntradaAccion): Promi
     case 'desvincular':
       return comoVinculo(desvincularVinculo(vinculo.id, { motivo: texto }, opciones));
     case 'reintegrar':
-      return comoVinculo(reintegrarVinculo(vinculo.id, { justificacion: texto }, opciones));
+      return comoVinculo(reintegrarVinculo(vinculo.id, { justificacion: texto, revalidar: entrada.revalidar ?? true }, opciones));
     case 'anular':
       return comoVinculo(anularVinculo(vinculo.id, { motivo: texto }, opciones));
   }

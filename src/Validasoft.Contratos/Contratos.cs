@@ -245,7 +245,8 @@ public sealed record VinculoDto(
     DateTimeOffset ActualizadoEn,
     long Version,
     Guid? ExpedienteAbiertoId = null,
-    bool AperturaDeExpedientePendiente = false);
+    bool AperturaDeExpedientePendiente = false,
+    string? UltimoResultado = null);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -254,6 +255,20 @@ public sealed record BloquearVinculoDto(string Motivo, DateTimeOffset? Hasta);
 public sealed record MotivoDto(string Motivo);
 
 public sealed record JustificacionDto(string Justificacion);
+
+/// <summary>
+/// Reintegra un vínculo desvinculado (DS-3). Con <see cref="Revalidar"/> (por omisión) vuelve a validación y se abre una
+/// renovación con todos los documentos del flujo; sin revalidar restituye el estado que tenía al desvincularse y emite el
+/// certificado de nuevo con lo ya aprobado, solo si esas versiones siguen vigentes (<c>GET /vinculos/{id}/reintegro</c> dice si
+/// se puede y, si no, por qué).
+/// </summary>
+public sealed record ReintegrarVinculoDto(string Justificacion, bool Revalidar = true);
+
+/// <summary>
+/// Si el vínculo desvinculado se puede reintegrar sin revalidar (DS-3). <see cref="Motivos"/>: por qué no (un documento
+/// cambió o venció, el vínculo no estaba aprobado…), en texto para la persona; vacío cuando sí se puede.
+/// </summary>
+public sealed record ViabilidadDeReintegroDto(bool PuedeSinRevalidar, IReadOnlyList<string> Motivos);
 
 /// <summary><see cref="Sistema"/>: sistema integrado desde el que se actuó (ADR-0011), si aplica.</summary>
 public sealed record EventoHistorialDto(
@@ -298,7 +313,15 @@ public sealed record VerificarOtpDto(string Codigo);
 /// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
-    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null);
+    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null);
+
+/// <summary>
+/// Lo que el tercero ve de un rechazo (DS-4): cuándo y con qué motivos (los textos al tercero, sin áreas ni revisores). Con
+/// <see cref="Permitido"/> la empresa deja que el tercero vuelva a postularse; <see cref="Disponible"/> es que ya puede
+/// (<see cref="Desde"/> es la fecha en que cumple la espera del flujo).
+/// </summary>
+public sealed record ReintentoPublicoDto(DateTimeOffset RechazadoEn, IReadOnlyList<MotivoPublicoDto> Motivos, bool Permitido, bool Disponible,
+    DateTimeOffset? Desde);
 
 public sealed record TextoLegalPublicoDto(string Tipo, int TextoVersion, string HashTexto, string Contenido, DateTimeOffset PublicadoEn);
 

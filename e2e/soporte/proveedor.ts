@@ -16,7 +16,8 @@ const codigosUsados = new Map<string, string[]>();
  * código que le llega al mismo correo. Queda en la pantalla de aceptar la invitación.
  */
 export async function entrarPorInvitacion(page: Page, invitacion: Invitacion): Promise<void> {
-  const tipo = invitacion.tipo === 'CLIENTE' ? 'cliente' : 'proveedor';
+  // El asunto lleva el nombre del tipo en minúscula (Proveedor, Cliente, Aliado…): el código en mayúsculas lo da igual.
+  const tipo = invitacion.tipo.toLowerCase();
   const correo = await esperarCorreo(invitacion.correo, new RegExp(`^${escapar(invitacion.empresa.nombre)} te invita a validar tu vínculo como ${tipo}$`));
   await page.goto(enlace(correo, '/e/'));
   const pideCodigo = page.getByRole('heading', { name: 'Escribe el código' });

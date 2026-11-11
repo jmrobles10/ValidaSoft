@@ -89,6 +89,9 @@ export interface BorradorFlujo {
   /** Plazo de cargue del expediente inicial (LT-1), como lo escribe la persona: días (0 = sin plazo) y recordatorios «15, 7, 1». */
   plazoDias: string;
   plazoRecordatorios: string;
+  /** Reintento del tercero tras un rechazo (DS-4): si puede volver a postularse por su cuenta y cuántos días espera (0 = de inmediato). */
+  reintentoPermitido: boolean;
+  reintentoDias: string;
   etapas: EtapaEnEditor[];
   requisitos: RequisitoEnEditor[];
   verificaciones: VerificacionEnEditor[];
@@ -168,6 +171,8 @@ export function borradorVacio(): BorradorFlujo {
     separacionDeFunciones: false,
     plazoDias: String(PLAZO_POR_DEFECTO.dias),
     plazoRecordatorios: PLAZO_POR_DEFECTO.recordatorios.join(', '),
+    reintentoPermitido: false,
+    reintentoDias: '0',
     etapas: [{ clave: nuevaClave(), areas: [areaNueva()] }],
     requisitos: [],
     verificaciones: [],
@@ -182,6 +187,8 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
     separacionDeFunciones: version.separacionDeFunciones,
     plazoDias: String((version.plazoCargue ?? PLAZO_POR_DEFECTO).dias),
     plazoRecordatorios: (version.plazoCargue?.recordatorios ?? PLAZO_POR_DEFECTO.recordatorios).join(', '),
+    reintentoPermitido: version.reintento?.permitido ?? false,
+    reintentoDias: String(version.reintento?.diasEspera ?? 0),
     etapas: [...version.etapas]
       .sort((a, b) => a.orden - b.orden)
       .map((e) => ({
@@ -411,10 +418,20 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     politica: borrador.politicaDevolucion,
     separacion: borrador.separacionDeFunciones,
     plazo: plazoADto(borrador),
+    reintento: reintentoADto(borrador),
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos),
     verificaciones: verificacionesADto(borrador.verificaciones),
   });
+}
+
+/**
+ * El reintento del editor como lo recibe la API (DS-4): sin permiso no hay espera; los días son un entero (lo que no sea número
+ * vale 0) y la API valida el rango (`reintento-invalido`).
+ */
+export function reintentoADto(borrador: Pick<BorradorFlujo, 'reintentoPermitido' | 'reintentoDias'>): { permitido: boolean; diasEspera: number } {
+  const dias = Number.parseInt(borrador.reintentoDias.trim(), 10);
+  return { permitido: borrador.reintentoPermitido, diasEspera: borrador.reintentoPermitido && Number.isFinite(dias) ? dias : 0 };
 }
 
 /** Plazo de cargue por omisión (P-4-2): 30 días con recordatorios a 15, 7 y 1 día de vencer. */

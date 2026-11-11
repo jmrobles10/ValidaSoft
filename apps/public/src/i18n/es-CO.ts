@@ -86,6 +86,13 @@ export const esCO = {
     subirDocumentos: 'Subir documentos',
     verObservaciones: 'Ver observaciones',
   },
+  rechazo: {
+    titulo: '{{empresa}} cerró tu revisión sin aprobarla el {{fecha}}',
+    volver: 'Volver a postularme',
+    volverAyuda: 'Empiezas una revisión nueva con tus documentos actuales.',
+    enEspera: 'Podrás volver a postularte desde el {{fecha}}.',
+    noPermitido: 'Si quieres retomarlo, escríbele a {{empresa}}: ella decide si abre una revisión nueva.',
+  },
   invitacion: {
     titulo: '{{empresa}} te invita a validar tu información',
     sub: 'Vínculo como {{tipo}}. Para compartir tus documentos con {{empresa}}, lee y acepta estos textos.',

@@ -264,7 +264,13 @@ stateDiagram-v2
   Activo --> Desvinculado: VinculoDesvinculado
   PorVencer --> Desvinculado: VinculoDesvinculado
   Vencido --> Desvinculado: VinculoDesvinculado
-  Desvinculado --> EnValidacion: VinculoReintegrado (abre Renovacion)
+  Desvinculado --> EnValidacion: VinculoReintegrado (abre Renovacion con todo el flujo, DS-3)
+  Desvinculado --> Activo: VinculoReintegrado(SinRevalidar) (restituye el estado y reemite el certificado, DS-3)
+  Desvinculado --> PorVencer: VinculoReintegrado(SinRevalidar)
+  Desvinculado --> Invitado: VinculoReintegrado (si nunca fue aprobado)
+  Activo --> EnValidacion: VinculoDesaprobado (el último expediente aprobado vuelve a revisión, DS-2)
+  PorVencer --> EnValidacion: VinculoDesaprobado
+  Vencido --> EnValidacion: VinculoDesaprobado
   Invitado --> Anulado: VinculoAnulado
   EnValidacion --> Anulado: VinculoAnulado
   Activo --> Anulado: VinculoAnulado
@@ -287,6 +293,8 @@ stateDiagram-v2
 
 `CerrarExpediente(Aprobado)` de **cualquier** tipo recalcula el estado del vínculo desde sus requisitos: si ya no hay críticos vencidos, `Vencido`/`PorVencer` → `Activo` (I-15).
 
+**Desaprobar, reintegrar y volver a postularse (DS-1…DS-6, [registro](decisiones/registro.md)).** *Desaprobar* un expediente aprobado (`VinculoDesaprobado(ExpedienteId, EstadoPrevio, Justificacion)`) pasa el vínculo a `EnValidacion` con **ese mismo expediente** otra vez abierto (`ExpedienteAbiertoId`); solo si es el último aprobado, sin otro abierto y con el vínculo ni bloqueado ni terminado. Si el expediente reabierto se aprueba, el vínculo vuelve a `Activo` (`VinculoActivado`); si se rechaza o se anula, a `Invitado` con `TuvoAprobacion` — por eso un expediente `Inicial` se abre sobre cualquier vínculo `Invitado`, haya sido aprobado antes o no. `EstadoAlDesvincular` guarda el estado con que se desvinculó (el previo al bloqueo si estaba bloqueado): `Reintegrar(sinRevalidar)` solo restituye `Activo` o `PorVencer`. `VincularExpediente` admite una `Renovacion` sobre un vínculo `EnValidacion` con aprobación previa (el reintegrado que revalida). El rechazo de un expediente deja al vínculo `Invitado` con `UltimoResultado = Rechazado`: el tercero puede volver a postularse si el flujo lo permite (`ReintentoTrasRechazo`, §13) y la empresa abre un `Inicial` nuevo cuando quiera.
+
 ### 5.3 Comandos y eventos
 
 | Comando | Evento(s) | Regla |
@@ -307,8 +315,9 @@ stateDiagram-v2
 | `DesignarCuenta(CuentaId)` | `CuentaDesignadaPropuesta(CuentaId, CuentaAnteriorId?)` | **Solo el tercero.** La cuenta debe ser suya y tener certificación `Actual`. |
 | `AprobarCuentaDesignada(UsuarioId)` / `RechazarCuentaDesignada(Motivo)` | `CuentaDesignadaAprobada(AprobadaPor[])` / `CuentaDesignadaRechazada` | Requiere `AprobadoresRequeridos` (2 por defecto, P-4-7) distintos con `cuentas:aprobar`. **Un solo cuatro ojos (esc. 1):** la aprobación marca `Aprobado` el requisito `CUENTA_BANCARIA` del expediente abierto (si existe) con los mismos aprobadores; no se aprueba aparte. Al aprobarse se publica `vinculo.cuenta_designada` al ERP de la empresa. |
 | `Bloquear(Motivo, Hasta?)` / `Desbloquear(Justificacion)` | `VinculoBloqueado(EstadoPrevio)` / `VinculoDesbloqueado(EstadoRestituido)` | Permiso `vinculos:bloquear`; privado de la empresa. Saga: `SuspenderCertificado` + `CongelarComparticion`; al desbloquear `RestablecerCertificado` + `ReanudarComparticion` o `AbrirExpediente(Renovacion)` si algo venció (B-5). |
-| `Desvincular(Motivo)` | `VinculoDesvinculado` | Desde cualquier estado no terminal. Congela la compartición (saga → `Documento`); histórico intacto. |
-| `Reintegrar` | `VinculoReintegrado` | Abre `Renovacion`. |
+| `Desvincular(Motivo)` | `VinculoDesvinculado` | Desde cualquier estado no terminal. Congela la compartición (saga → `Documento`); histórico intacto. Guarda `EstadoAlDesvincular` (DS-3); anula el expediente abierto y revoca el certificado en la misma transacción. |
+| `Reintegrar(Justificacion, Revalidar = true)` | `VinculoReintegrado(EstadoResultante, Justificacion, SinRevalidar)` | **Revalidar** (`documental = 1` del SRM): con aprobación previa ⇒ `EnValidacion` y **se abre una `Renovacion` con todos los documentos del flujo** en la misma transacción (422 `falta-flujo-por-defecto` si no hay flujo); sin aprobación previa ⇒ `Invitado`. **Sin revalidar** (`documental = 0`): restituye `EstadoAlDesvincular` (`Activo`/`PorVencer`; 409 `reintegro-sin-aprobacion-vigente`) y reemite el certificado con el último expediente aprobado, sin abrir expediente; solo si lo aprobado sigue en pie (409 `reintegro-requiere-revalidacion`; la viabilidad la explica `GET /vinculos/{id}/reintegro`: versión nueva en la bóveda sin revisar, versión vencida o en gracia). DS-3, DS-5, DS-6. |
+| `DesaprobarVinculo(ExpedienteId, Justificacion)` (lo dispara `DesaprobarExpediente`) | `VinculoDesaprobado(ExpedienteId, EstadoPrevio, Justificacion)` | Justificación obligatoria. 409 `vinculo-bloqueado`, `estado-terminal`, `expediente-abierto-existente`, `no-es-el-ultimo-aprobado`. El certificado se **revoca** (no se suspende: un desbloqueo lo restablecería) y lo aceptado de las secciones (`SeccionAceptada`) se retira, todo en la misma transacción; al aprobarse de nuevo se emite la emisión n+1. DS-2, DS-3. |
 | `Anular(Motivo)` | `VinculoAnulado` | Terminal; desde cualquier estado no terminal, incluido `Bloqueado`. |
 | `ExpirarVerificacionesDeRepresentante(RelacionSalienteId, RelacionEntranteId)` | `VerificacionesDeRepresentanteExpiradas(Tipos[])` | Adición 3: solo tras `RelacionConfirmada` (§4.5). La cédula aceptada y las listas del saliente quedan `Desactualizadas`/`Expiradas`; el requisito de cédula del entrante nace `Pendiente` (o `Cargado` si su bóveda ya la tiene). |
 
@@ -334,13 +343,18 @@ stateDiagram-v2
   Abierto --> Anulado: ExpedienteAnulado
   EnRevision --> Anulado: ExpedienteAnulado
   Observado --> Anulado: ExpedienteAnulado
+  EnRevision --> EnRevision: EtapaReabierta (DS-1)
+  Observado --> EnRevision: EtapaReabierta + RevisionReanudada (DS-1)
+  Aprobado --> EnRevision: ExpedienteDesaprobado (DS-2)
 ```
 
 Para `Actualizacion` (revalidación) el expediente nace directamente en `EnRevision` con el requisito ya `Cargado`: no hay fase de carga. `Rechazado` es **terminal** (P-5-5): el administrador abre un expediente nuevo. `Caducado` (plazo 30 días por defecto, recordatorios 15/7/1) se **reabre** en un clic (P-4-2). Implementado (LT-1…LT-4): el plazo es de la versión del flujo y solo del `Inicial`; corre en `Abierto` y, completo, en cada `Observado`; `ExpedienteReabierto` vuelve al estado en que caducó (`Abierto` u `Observado`) y el vínculo, que con `ExpedienteCerrado(Caducado)` había vuelto a `Invitado`, vuelve a `EnValidacion`.
 
+**Desaprobar (DS-1, DS-2).** `Aprobado` deja de ser terminal solo para un administrador: `ExpedienteDesaprobado` lo devuelve a `EnRevision` (mismo folio, mismos requisitos e historial) y `EtapaReabierta` hace lo mismo con una etapa ya aprobada de un expediente abierto. En ambos, la etapa devuelta y las posteriores vuelven a `Esperando`, los veredictos vigentes de sus áreas (de área y por documento) quedan como `Revertido` (siguen en el historial, ya no cuentan), se activa la etapa devuelta —las áreas automáticas aprueban de nuevo— y, si estaba `Observado`, la observación deja de contar y la revisión se reanuda. Rechazado, Anulado y Caducado siguen terminales.
+
 ### 6.2 Estado interno
 
-`TenantId`, `EmpresaId`, `VinculoId`, `Tipo`, `Folio` (`{PrefijoEmpresa}-E-{Año}-{Secuencia}`, T-9), `FlujoVersionId`, `PlazoCargueHasta`, `Reaperturas`, `ContextoEvaluado` (snapshot de atributos), `Requisitos[] { RequisitoId, TipoTenantId, TiposAceptados[] (canónicos alternativos, P-2-5), TipoCanonicoId?, ReglaId, Obligatorio, Critico, CriticoDeCumplimiento, Ambito, Clase, DePersonaRelacionada?: TipoRelacionTerceros, DuenoResuelto (TerceroId de la persona o del tercero), AreasQueRevisan[], ConfiguracionEfectiva { ReglaFrescura, NivelRevision, DiasRevalidacion, PoliticaDesactualizada, AprobadoresRequeridos, PorcentajeMuestreo, CamposCuyoCambioExigeHumano[] } (resuelta tenant → empresa → regla, B-4), Estado, VersionActualId?, HistorialVersiones[], Reenvios, VeredictosPorArea: Dictionary<AreaId, Veredicto[] { Veredicto, Origen, RevisorId?, Fecha, Motivos[], CamposAfectados[], Observacion, NoAdmitirEstaVersion, SobreVersionId, Evidencia? }> }`, `Etapas[] { Orden, Areas[], Estado, SlaVence, Escalamientos }`, `Verificaciones[] { Tipo, Proveedor, Bloqueante, Estado, Resultado, EvidenciaVersionId?, VigenteHasta?, ReferenciaExterna, Coincidencias[] { Id, Decision: Descartada \| Confirmada, Justificacion, VigenteHasta } }`, `RevisoresAsignados: (AreaId, RequisitoId?) → UsuarioId`, `Delegaciones[]`, `ConflictosDeInteres[]`.
+`TenantId`, `EmpresaId`, `VinculoId`, `Tipo`, `Folio` (`{PrefijoEmpresa}-E-{Año}-{Secuencia}`, T-9), `FlujoVersionId`, `PlazoCargueHasta`, `Reaperturas`, `Desaprobaciones`, `UltimaDesaprobacion { Etapa, FaseInicial, ExpedienteAprobado, AdministradorId, Justificacion, Fecha }` (DS-1, DS-2), `ContextoEvaluado` (snapshot de atributos), `Requisitos[] { RequisitoId, TipoTenantId, TiposAceptados[] (canónicos alternativos, P-2-5), TipoCanonicoId?, ReglaId, Obligatorio, Critico, CriticoDeCumplimiento, Ambito, Clase, DePersonaRelacionada?: TipoRelacionTerceros, DuenoResuelto (TerceroId de la persona o del tercero), AreasQueRevisan[], ConfiguracionEfectiva { ReglaFrescura, NivelRevision, DiasRevalidacion, PoliticaDesactualizada, AprobadoresRequeridos, PorcentajeMuestreo, CamposCuyoCambioExigeHumano[] } (resuelta tenant → empresa → regla, B-4), Estado, VersionActualId?, HistorialVersiones[], Reenvios, VeredictosPorArea: Dictionary<AreaId, Veredicto[] { Veredicto, Origen, RevisorId?, Fecha, Motivos[], CamposAfectados[], Observacion, NoAdmitirEstaVersion, SobreVersionId, Evidencia? }> }`, `Etapas[] { Orden, Areas[], Estado, SlaVence, Escalamientos }`, `Verificaciones[] { Tipo, Proveedor, Bloqueante, Estado, Resultado, EvidenciaVersionId?, VigenteHasta?, ReferenciaExterna, Coincidencias[] { Id, Decision: Descartada \| Confirmada, Justificacion, VigenteHasta } }`, `RevisoresAsignados: (AreaId, RequisitoId?) → UsuarioId`, `Delegaciones[]`, `ConflictosDeInteres[]`.
 
 ### 6.3 Comandos y eventos
 
@@ -371,6 +385,9 @@ Para `Actualizacion` (revalidación) el expediente nace directamente en `EnRevis
 | `AnularVeredictoComoAdministrador(AreaId, RequisitoId?, Justificacion)` / `AprobarAreaComoAdministrador(AreaId, Justificacion)` | `VeredictoAnuladoPorAdministrador` / `VeredictoDeAreaEmitido(Origen: Administrador, EnNombreDe)` | Siempre con rastro; no puede revertir `ExpedienteRechazado`. |
 | `EvaluarCierre` (interno) | `ExpedienteAprobado(VersionesAprobadas[(TipoTenantId, VersionId, FechaExpedicion?, FechaVencimientoDoc?, Periodo?)])` | Todas las etapas `Aprobada` **y** todas las verificaciones bloqueantes `Satisfecha` y vigentes. |
 | `CaducarExpediente` / `ReabrirExpediente` / `AnularExpediente(Motivo)` | `ExpedienteCaducado` / `ExpedienteReabierto(NuevoPlazo)` / `ExpedienteAnulado` | Job / administrador. |
+| `ReabrirEtapa(Orden, Justificacion)` (`DesaprobarAFlujo` del SRM) | `EtapaReabierta(Orden, FaseInicial = false, AdministradorId, Justificacion)` + `EtapaActivada(Orden)` (+ `RevisionReanudada` si estaba `Observado`) | `expedientes:administrar`. Expediente `EnRevision` u `Observado` y etapa `Aprobada` (409 `estado-invalido`, `etapa-no-aprobada`; 404 `etapa-no-encontrada`; 422 `justificacion-requerida`). Esa etapa y las posteriores vuelven a esperar y sus veredictos vigentes quedan `Revertido`. DS-1. |
+| `VolverAFaseInicial(Justificacion)` (`DesaprobarAEstadoInicial`) | `EtapaReabierta(1, FaseInicial = true, …)` o, con el expediente `Aprobado`, `ExpedienteDesaprobado(1, FaseInicial = true, …)`; luego `EtapaActivada(1)` | Igual desde la etapa 1 con **todos** los veredictos vigentes. 409 `ya-esta-en-fase-inicial` si la primera etapa está activa y nadie (salvo el sistema) decidió. DS-1. |
+| `DesaprobarExpediente(Etapa?, Justificacion)` (`DesaprobarTercero`) | `ExpedienteDesaprobado(Orden, FaseInicial, AdministradorId, Justificacion)` + `EtapaActivada(Orden)`; en el vínculo, `VinculoDesaprobado` (§5.3) y, en el certificado, `CertificadoRevocado` | Solo un `Aprobado`; vuelve a `EnRevision` desde `Etapa` (por omisión la última). Misma transacción que el vínculo y el certificado (`ProcesoDeValidacion.DesaprobarAsync`). Si la cascada lo aprueba otra vez en el acto (áreas automáticas) no se revoca nada. DS-2, DS-3. |
 | `RegistrarIncumplimientoSla(AreaId)` / `EscalarSla(AreaId, Nivel)` | `SlaIncumplido` / `SlaEscalado(Nivel: ResponsableArea \| Administrador)` | Scheduled message al activar la etapa; nunca auto-aprueba (P-4-5). |
 | `MarcarRequisitoDesactualizado(RequisitoId, VersionNuevaId)` / `MarcarRequisitoVencido(RequisitoId)` | `RequisitoDesactualizado` / `RequisitoVencido` | Lo emite la saga sobre expedientes `Inicial`/`Renovacion` abiertos cuando cambia la versión actual o vence la aceptada. |
 | `ExportarExpediente` | `ExpedienteExportado(HashZip)` | Adición 5: ZIP con índice firmado. |
@@ -591,6 +608,8 @@ FlujoPorDefecto { EmpresaId, TipoVinculoId, FlujoId }   -- obligatorio: publicar
 - Motivos: base de plataforma (`ilegible`, `incompleto`, `vencido`, `no-corresponde-al-tercero`, `datos-no-coinciden`, `formato-no-vigente`, `firma-faltante`, `frescura-incumplida`) + propios del tenant, con `camposAfectados[]` opcionales (P-5-1, P-5-2).
 - Verificaciones externas (`IVerificador`): `ListasRestrictivas` (proveedores con contrato vigente + `EvidenciaManual`; cada empresa consulta con su contrato, P-9-3; cubre al tercero y a sus personas relacionadas vigentes), `EstudioDeCumplimiento` (legado + matriz configurable en H8), `ConsultaErp`, `FuenteOficial` (RUES/DIAN/Registraduría, fase posterior). `BENEFICIARIO_FINAL` y `DECLARACION_PEP` son formularios **globales de la persona natural**; `FORMULARIO_SARLAFT` es `PorVinculo` y los referencia (§4.5, I-20).
 - Cierre automático: `EvaluarCierre` tras cada evento.
+
+**Reintento tras un rechazo (DS-4).** Cada versión de flujo guarda `ReintentoTrasRechazo { Permitido, DiasEspera }` (como `PlazoDeCargue`: versionada, validada al guardar y al publicar, 0–365 días, 422 `reintento-invalido`; por omisión **no permitido**, y una versión guardada antes lo trae nulo = no permitido). Con un expediente `Rechazado`, el vínculo queda `Invitado` con `UltimoResultado = Rechazado`: el tercero ve el rechazo con los textos de los motivos y, si el flujo vigente del vínculo lo permite y pasó la espera (`PuedeDesde(rechazo.Fecha)`), abre un `Inicial` nuevo con «Volver a postularme»; la empresa lo abre cuando quiera con `POST /vinculos/{id}/expedientes`.
 
 ---
 

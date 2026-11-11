@@ -68,6 +68,11 @@ export function Bandeja() {
                 {t('bandeja.devuelto')}
               </Typography>
             )}
+            {f.desaprobado && (
+              <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12, whiteSpace: 'nowrap' }}>
+                {t('bandeja.reabierto')}
+              </Typography>
+            )}
           </Box>
         ),
       },

@@ -90,7 +90,12 @@ public sealed record VinculoDesbloqueado(EstadoVinculo EstadoRestituido, string 
 
 public sealed record VinculoDesvinculado(EstadoVinculo EstadoPrevio, string Motivo, DateTimeOffset Fecha);
 
-public sealed record VinculoReintegrado(EstadoVinculo EstadoResultante, string Justificacion, DateTimeOffset Fecha);
+/// <summary>
+/// Reintegro de un vínculo desvinculado (DS-3). <see cref="SinRevalidar"/>: se restituye el estado que tenía al desvincularse y
+/// su certificado se emite de nuevo con lo ya aprobado, sin abrir un expediente (equivale al <c>documental = 0</c> del SRM); si
+/// no, vuelve a validación y se abre una renovación con todos los documentos del flujo (<c>documental = 1</c>).
+/// </summary>
+public sealed record VinculoReintegrado(EstadoVinculo EstadoResultante, string Justificacion, DateTimeOffset Fecha, bool SinRevalidar = false);
 
 public sealed record VinculoAnulado(EstadoVinculo EstadoPrevio, string Motivo, DateTimeOffset Fecha);
 
@@ -113,6 +118,13 @@ public sealed record ExpedienteVinculado(Guid ExpedienteId, TipoExpediente Tipo,
 
 /// <summary>El expediente abierto terminó; con <c>Rechazado</c>, <c>Anulado</c> o <c>Caducado</c> un vínculo en validación vuelve a <c>Invitado</c>.</summary>
 public sealed record ExpedienteCerrado(Guid ExpedienteId, ResultadoExpediente Resultado, DateTimeOffset Fecha);
+
+/// <summary>
+/// Un administrador desaprobó el último expediente aprobado del vínculo (DS-2): el mismo expediente vuelve a revisión, el vínculo
+/// pasa de <see cref="EstadoPrevio"/> a <c>EnValidacion</c> y su certificado se revoca. Al aprobarse de nuevo el vínculo vuelve a
+/// <c>Activo</c> y se emite un certificado nuevo; si se rechaza o se anula, el vínculo vuelve a <c>Invitado</c>.
+/// </summary>
+public sealed record VinculoDesaprobado(Guid ExpedienteId, EstadoVinculo EstadoPrevio, string Justificacion, DateTimeOffset Fecha);
 
 /// <summary>Expediente aprobado: el vínculo queda <c>Activo</c> y con aprobación previa (habilita renovaciones).</summary>
 public sealed record VinculoActivado(Guid ExpedienteId, DateTimeOffset Fecha);

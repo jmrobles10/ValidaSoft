@@ -44,6 +44,11 @@ export function veredictosInvalidados(area: AreaDeRequisitoDto): VeredictoEmitid
   return area.veredictos.filter((v) => v.invalidado);
 }
 
+/** Lo que un administrador devolvió a revisión (reapertura de etapa, fase inicial o desaprobación, DS-1): ya no cuenta. */
+export function veredictosRevertidos(area: AreaDeRequisitoDto): VeredictoEmitidoDto[] {
+  return area.veredictos.filter((v) => v.revertido);
+}
+
 /** Por qué la persona no puede decidir este requisito en esta área; `null` = puede. Cada valor tiene su texto. */
 export type BloqueoRequisito =
   | 'sin-permiso'
@@ -127,6 +132,7 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
     for (const c of v.coincidencias) if (c.resueltaPor !== 'sistema') agregar(c.resueltaPor);
   }
   agregar(expediente.rechazo?.usuario);
+  agregar(expediente.ultimaDesaprobacion?.usuario);
   return [...ids].sort();
 }
 

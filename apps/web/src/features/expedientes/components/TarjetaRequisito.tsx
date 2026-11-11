@@ -8,7 +8,15 @@ import { etiquetaDeRuta } from '../../terceros/ficha/secciones';
 import { ResumenVersion } from '../../documentos/ResumenVersion';
 import type { DocumentoEnVisor } from '../../documentos/VisorDocumento';
 import type { ContextoRevisor, DialogoExpediente } from '../reglas';
-import { bloqueoRequisito, documentoEnVisor, puedeEximir, veredictosInvalidados, veredictosVigentesDeRequisito, type BloqueoRequisito } from '../requisitos';
+import {
+  bloqueoRequisito,
+  documentoEnVisor,
+  puedeEximir,
+  veredictosInvalidados,
+  veredictosRevertidos,
+  veredictosVigentesDeRequisito,
+  type BloqueoRequisito,
+} from '../requisitos';
 import { BotonVerVersion } from './BotonVerVersion';
 import { DetalleSeccionRequisito } from './DetalleSeccionRequisito';
 import { SoporteDeSecciones } from './SoporteDeSecciones';
@@ -200,6 +208,11 @@ function AreaDelRequisito({
       {veredictosInvalidados(areaRequisito).map((v) => (
         <Typography key={v.id} sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5, textDecoration: 'line-through' }}>
           {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.invalidado', { n: String(v.sobreVersion ?? '—') })}
+        </Typography>
+      ))}
+      {veredictosRevertidos(areaRequisito).map((v) => (
+        <Typography key={v.id} sx={{ color: 'text.secondary', fontSize: 12, mt: 0.5, textDecoration: 'line-through' }}>
+          {autor(v)} · {t(`expedientes.veredictos.${v.veredicto}`).toLowerCase()} · {t('expedientes.requisitos.revertido')}
         </Typography>
       ))}
       {explicar && (

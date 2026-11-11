@@ -149,6 +149,8 @@ public sealed partial class Expediente
         ExpedienteRechazado e => e.Fecha,
         ExpedienteAnulado e => e.Fecha,
         VeredictoAnuladoPorAdministrador e => e.Fecha,
+        ExpedienteDesaprobado e => e.Fecha,
+        EtapaReabierta e => e.Fecha,
         _ => null
     };
 }

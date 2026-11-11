@@ -188,6 +188,40 @@ public static class ProcesoDeValidacion
         return estado;
     }
 
+    /// <summary>
+    /// Desaprueba un expediente ya aprobado (DS-2) <b>en la misma transacción</b>: el vínculo vuelve a <c>EnValidacion</c> con
+    /// este mismo expediente abierto (<c>VinculoDesaprobado</c>), el certificado se revoca y lo que la empresa había aceptado de
+    /// sus secciones (FM-3) se retira hasta que se apruebe de nuevo. <paramref name="eventos"/> trae <c>ExpedienteDesaprobado</c>
+    /// y lo que la cascada produjo; si esta lo aprobó otra vez en el acto (todas sus áreas son automáticas), el certificado y
+    /// lo aceptado se conservan. 409 del vínculo: bloqueado, terminado, con otro expediente abierto o este no es el último aprobado.
+    /// </summary>
+    public static async Task<Expediente> DesaprobarAsync(IDocumentSession sesion, IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
+        string actor, CorreoAlTercero? correo, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
+    {
+        var expediente = stream.Aggregate ?? throw new InvalidOperationException("El expediente no existe.");
+        var desaprobado = eventos.OfType<ExpedienteDesaprobado>().Single();
+
+        var vinculoStream = await sesion.Events.FetchForWriting<Vinculo>(expediente.VinculoId, ct);
+        var vinculo = vinculoStream.Aggregate ?? throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "El vínculo del expediente no existe.");
+        var evento = vinculo.Desaprobar(expediente.Id, desaprobado.Justificacion, ahora);
+        vinculoStream.AppendOne(evento);
+        if (vinculo.ExpedienteAbiertoId != expediente.Id)
+            vinculo.Apply(evento); // El agregado del stream decide el cierre inmediato (todo automático) con el estado al día.
+
+        if (!eventos.OfType<ExpedienteAprobado>().Any())
+        {
+            await CicloDeCertificados.AlDesaprobarAsync(sesion, vinculo.Id, expediente.Folio, desaprobado.Justificacion, actor, ahora, ct);
+            var expedienteId = expediente.Id;
+            foreach (var aceptada in await sesion.Query<SeccionAceptada>().Where(s => s.ExpedienteId == expedienteId).ToListAsync(ct))
+                sesion.Delete(aceptada);
+        }
+
+        var estado = Expediente.Reproducir(expediente, eventos);
+        stream.AppendMany(eventos);
+        await DespuesDeEscribirAsync(sesion, estado, eventos, vinculoStream, correo, certificados, ahora, ct);
+        return estado;
+    }
+
     /// <summary>Un vínculo anulado o desvinculado anula su expediente abierto (el vínculo ya lo soltó en su propio evento).</summary>
     public static async Task AnularPorTerminacionDelVinculoAsync(IDocumentSession sesion, Guid expedienteId, string motivo, DateTimeOffset ahora,
         CancellationToken ct)

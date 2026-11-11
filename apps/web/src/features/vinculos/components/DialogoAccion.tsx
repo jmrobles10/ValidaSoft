@@ -1,4 +1,4 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Skeleton, Stack, TextField, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { accionPermitidaPorEstado, esErrorApi, type DefinicionAccion, type VinculoDto } from '@validasoft/api-client';
 import { RotateCcw } from 'lucide-react';
@@ -10,7 +10,7 @@ import { invalidarRuta } from '../../../shared/consultas';
 import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { ICONO_ACCION, MAXIMO_TEXTO, PALABRA_ANULAR } from '../acciones';
-import { useAccionVinculo, useTercero } from '../api';
+import { useAccionVinculo, useTercero, useViabilidadDeReintegro } from '../api';
 import { identificacionDe } from '../tercero';
 
 export interface DialogoAccionProps {
@@ -43,6 +43,10 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
   const [textoTocado, setTextoTocado] = useState(false);
   const [confirmacionTocada, setConfirmacionTocada] = useState(false);
   const [recargando, setRecargando] = useState(false);
+  // Al reintegrar (DS-3): revalidar (por omisión) o restituir sin revalidar, solo si lo aprobado sigue vigente.
+  const [revalidar, setRevalidar] = useState(true);
+  const viabilidad = useViabilidadDeReintegro(empresaId, vinculo.id, accion === 'reintegrar');
+  const puedeSinRevalidar = viabilidad.data?.puedeSinRevalidar === true;
 
   const conTexto = requiere !== 'correo';
   const vacio = conTexto && !texto.trim();
@@ -65,7 +69,7 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
     evento.preventDefault();
     if (pendiente) return;
     mutacion.mutate(
-      { accion, vinculo, texto: texto.trim(), hasta: hasta ? new Date(`${hasta}T23:59:59`).toISOString() : null, vigenciaHoras: vigencia },
+      { accion, vinculo, texto: texto.trim(), hasta: hasta ? new Date(`${hasta}T23:59:59`).toISOString() : null, vigenciaHoras: vigencia, revalidar: revalidar || !puedeSinRevalidar },
       {
         onSuccess: (resultado) => {
           mostrar(
@@ -136,6 +140,81 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
               <Typography>{t(`acciones.${accion}.ayuda`)}</Typography>
             )}
             {mutacion.isError && <Alert severity="error">{mensajeDeError(mutacion.error, t)}</Alert>}
+            {accion === 'reintegrar' && !yaNoAplica && (
+              <Box>
+                {viabilidad.isPending ? (
+                  <Stack spacing={1.5} role="status" aria-busy="true" aria-label={t('acciones.reintegrar.cargando')}>
+                    {[0, 1].map((i) => (
+                      <Stack key={i} direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                        <Skeleton variant="circular" width={18} height={18} />
+                        <Stack spacing={0.75} sx={{ flex: 1 }}>
+                          <Skeleton variant="rounded" height={12} width="38%" />
+                          <Skeleton variant="rounded" height={10} width={i === 0 ? '72%' : '58%'} />
+                        </Stack>
+                      </Stack>
+                    ))}
+                  </Stack>
+                ) : (
+                  <>
+                    <RadioGroup
+                      aria-label={t('acciones.reintegrar.como')}
+                      value={revalidar || !puedeSinRevalidar ? 'revalidar' : 'sin'}
+                      onChange={(e) => setRevalidar(e.target.value === 'revalidar')}
+                    >
+                      <FormControlLabel
+                        value="revalidar"
+                        control={<Radio size="small" />}
+                        sx={{ alignItems: 'flex-start', mx: 0, py: 0.25 }}
+                        label={
+                          <Box sx={{ pt: '5px' }}>
+                            <Typography component="span" sx={{ display: 'block', fontWeight: 600, fontSize: 14 }}>
+                              {t('acciones.reintegrar.revalidar')}
+                            </Typography>
+                            <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 13 }}>
+                              {t('acciones.reintegrar.revalidarAyuda')}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                      <FormControlLabel
+                        value="sin"
+                        disabled={!puedeSinRevalidar}
+                        control={<Radio size="small" />}
+                        sx={{ alignItems: 'flex-start', mx: 0, py: 0.25 }}
+                        label={
+                          <Box sx={{ pt: '5px' }}>
+                            <Typography component="span" sx={{ display: 'block', fontWeight: 600, fontSize: 14 }}>
+                              {t('acciones.reintegrar.sinRevalidar')}
+                            </Typography>
+                            <Typography component="span" sx={{ color: 'text.secondary', display: 'block', fontSize: 13 }}>
+                              {t('acciones.reintegrar.sinRevalidarAyuda')}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </RadioGroup>
+                    {viabilidad.isError ? (
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        {t('acciones.reintegrar.sinViabilidad')}
+                      </Alert>
+                    ) : (
+                      !puedeSinRevalidar && (
+                        <Alert severity="info" sx={{ mt: 1 }}>
+                          <Typography component="span" sx={{ display: 'block', fontSize: 13, fontWeight: 600 }}>
+                            {t('acciones.reintegrar.noSePuede')}
+                          </Typography>
+                          <Box component="ul" sx={{ m: 0, pl: 2.5 }}>
+                            {viabilidad.data.motivos.map((motivo) => (
+                              <li key={motivo}>{motivo}</li>
+                            ))}
+                          </Box>
+                        </Alert>
+                      )
+                    )}
+                  </>
+                )}
+              </Box>
+            )}
             <TextField
               required={conTexto}
               type={conTexto ? 'text' : 'email'}

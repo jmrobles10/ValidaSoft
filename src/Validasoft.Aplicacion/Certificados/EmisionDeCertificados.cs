@@ -31,12 +31,15 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
 
     /// <summary>
     /// Emite (o reemite, si el vínculo ya tenía certificado de otro expediente) con el estado del expediente recién aprobado.
-    /// Idempotente: si el certificado ya tiene una emisión de ese expediente no hace nada.
+    /// Idempotente: si el certificado ya tiene una emisión de ese expediente que no esté revocada no hace nada. Una emisión
+    /// revocada (el expediente se desaprobó, DS-2, o el vínculo se desvinculó y se reintegra sin revalidar, DS-3) no cuenta: el
+    /// mismo expediente vuelve a emitir. <paramref name="motivoDeReemision"/> es el motivo que queda en el reemplazo.
     /// </summary>
-    public async Task EmitirAsync(IDocumentSession sesion, Expediente expediente, Vinculo vinculo, DateTimeOffset ahora, CancellationToken ct)
+    public async Task EmitirAsync(IDocumentSession sesion, Expediente expediente, Vinculo vinculo, DateTimeOffset ahora, CancellationToken ct,
+        string? motivoDeReemision = null)
     {
         var stream = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculo.Id), ct);
-        if (stream.Aggregate is { } existente && existente.Emisiones.Any(e => e.ExpedienteId == expediente.Id))
+        if (stream.Aggregate is { } existente && existente.Emisiones.Any(e => e.ExpedienteId == expediente.Id && e.Estado != EstadoCertificado.Revocado))
             return;
 
         var empresa = await sesion.LoadAsync<Empresa>(vinculo.EmpresaId, ct)
@@ -46,7 +49,7 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
 
         if (stream.Aggregate is { } certificado)
         {
-            stream.AppendMany(certificado.Reemitir(origen, plantilla, claves, UrlPublica, $"Expediente {expediente.Folio} aprobado", ahora));
+            stream.AppendMany(certificado.Reemitir(origen, plantilla, claves, UrlPublica, motivoDeReemision ?? $"Expediente {expediente.Folio} aprobado", ahora));
             return;
         }
 
@@ -184,6 +187,19 @@ public static class CicloDeCertificados
         var stream = await sesion.Events.FetchForExclusiveWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (stream.Aggregate is { Estado: EstadoCertificado.Suspendido } certificado)
             stream.AppendOne(certificado.Restablecer($"Vínculo desbloqueado: {justificacion}", ahora));
+    }
+
+    /// <summary>
+    /// Desaprobación del último expediente aprobado (DS-2): el certificado se sostenía en esa aprobación, así que se revoca
+    /// (irreversible) a nombre de quien desaprobó; si se vuelve a aprobar, se emite uno nuevo. Se revoca y no se suspende porque
+    /// una suspensión la levantaría un desbloqueo del vínculo, y la aprobación que la sostenía ya no existe.
+    /// </summary>
+    public static async Task AlDesaprobarAsync(IDocumentSession sesion, Guid vinculoId, string folio, string justificacion, string actor,
+        DateTimeOffset ahora, CancellationToken ct)
+    {
+        var stream = await sesion.Events.FetchForExclusiveWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
+        if (stream.Aggregate is { } certificado && certificado.Estado != EstadoCertificado.Revocado)
+            stream.AppendOne(certificado.Revocar($"Expediente {folio} desaprobado: {justificacion}", OrigenRevocacion.Administrador, actor, ahora));
     }
 
     /// <summary>Anulación o desvinculación: revocación por el sistema (irreversible) con la causa y el motivo del vínculo.</summary>

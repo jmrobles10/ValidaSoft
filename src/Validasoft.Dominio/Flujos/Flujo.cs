@@ -65,7 +65,8 @@ public sealed record DefinicionDeFlujo(
     bool SeparacionDeFunciones,
     IReadOnlyList<RequisitoDelFlujo>? Requisitos = null,
     IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null,
-    PlazoDeCargue? PlazoCargue = null)
+    PlazoDeCargue? PlazoCargue = null,
+    ReintentoTrasRechazo? Reintento = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -141,7 +142,8 @@ public sealed record DefinicionDeFlujo(
             Etapas = etapas,
             Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo),
             Verificaciones = ValidarVerificaciones(),
-            PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar()
+            PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar(),
+            Reintento = (Reintento ?? ReintentoTrasRechazo.PorDefecto).Validar()
         };
     }
 
@@ -336,13 +338,22 @@ public sealed class FlujoVersion
     /// <summary>El plazo que rige (el guardado o el de P-4-2).</summary>
     public PlazoDeCargue PlazoEfectivo() => PlazoCargue ?? PlazoDeCargue.PorDefecto;
 
+    /// <summary>
+    /// Si el tercero rechazado puede volver a postularse por su cuenta y desde cuándo (DS-4). Nulo en las versiones guardadas
+    /// antes: vale <see cref="ReintentoTrasRechazo.PorDefecto"/> (no se permite).
+    /// </summary>
+    public ReintentoTrasRechazo? Reintento { get; set; }
+
+    public ReintentoTrasRechazo ReintentoEfectivo() => Reintento ?? ReintentoTrasRechazo.PorDefecto;
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
 
     public DateTimeOffset? RetiradaEn { get; set; }
 
-    public DefinicionDeFlujo Definicion() => new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo());
+    public DefinicionDeFlujo Definicion() =>
+        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo());
 }
 
 /// <summary>
@@ -427,6 +438,7 @@ public sealed class Flujo
             borrador.Requisitos = [.. validada.Requisitos ?? []];
             borrador.Verificaciones = [.. validada.Verificaciones ?? []];
             borrador.PlazoCargue = validada.PlazoCargue;
+            borrador.Reintento = validada.Reintento;
         }
 
         ActualizadoEn = ahora;
@@ -454,6 +466,7 @@ public sealed class Flujo
         borrador.Requisitos = [.. validada.Requisitos ?? []];
         borrador.Verificaciones = [.. validada.Verificaciones ?? []];
         borrador.PlazoCargue = validada.PlazoCargue;
+        borrador.Reintento = validada.Reintento;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -471,6 +484,7 @@ public sealed class Flujo
         Requisitos = [.. definicion.Requisitos ?? []],
         Verificaciones = [.. definicion.Verificaciones ?? []],
         PlazoCargue = definicion.PlazoCargue,
+        Reintento = definicion.Reintento,
         CreadaEn = ahora
     };
 

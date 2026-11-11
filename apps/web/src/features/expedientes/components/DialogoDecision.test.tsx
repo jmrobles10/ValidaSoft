@@ -217,3 +217,92 @@ describe('DialogoDecision: aprobar un requisito con una discrepancia crítica en
     expect(screen.queryByRole('textbox', { name: /Justificación de la aprobación/ })).not.toBeInTheDocument();
   });
 });
+
+describe('DialogoDecision: desaprobar (DS-1, DS-2)', () => {
+  const dosEtapas = (estado: 'EnRevision' | 'Aprobado'): ExpedienteDto => ({
+    ...expediente(estado),
+    etapaActual: 2,
+    etapas: [
+      { orden: 1, estado: 'Aprobada', activadaEn: null, aprobadaEn: null, areas: [area({ areaId: 'a-compras', nombre: 'Compras', estado: 'Aprobada', veredictos: [veredicto()] })] },
+      { orden: 2, estado: estado === 'Aprobado' ? 'Aprobada' : 'Activa', activadaEn: null, aprobadaEn: null, areas: [area({ areaId: 'a-cumplimiento', nombre: 'Cumplimiento' })] },
+    ],
+  });
+
+  /** El cuerpo y la ruta de la decisión (el POST), no las lecturas. */
+  const posts = (fetch: { mock: { calls: readonly (readonly [RequestInfo | URL, RequestInit?])[] } }) =>
+    fetch.mock.calls
+      .filter(([, init]) => init?.method === 'POST')
+      .map(([url, init]) => ({
+        url: typeof url === 'string' ? url : url instanceof URL ? url.href : url.url,
+        cuerpo: (typeof init?.body === 'string' ? JSON.parse(init.body) : null) as unknown,
+      }));
+
+  it('reabrir una etapa exige la justificación y la envía a la etapa elegida', async () => {
+    const usuario = userEvent.setup();
+    const inicial = dosEtapas('EnRevision');
+    const { fetch, onCerrar } = preparar({
+      inicial,
+      dialogo: { tipo: 'reabrirEtapa', etapa: inicial.etapas[0]! },
+      respuesta: () => json(200, inicial),
+      recarga: null,
+    });
+
+    expect(screen.getByRole('heading', { name: /Reabrir la etapa 1/ })).toBeInTheDocument();
+    const boton = screen.getByRole('button', { name: 'Reabrir etapa' });
+    expect(boton).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Falta llenar «Justificación».');
+
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación/ }), 'Faltó revisar la garantía');
+    await usuario.click(boton);
+
+    await waitFor(() => expect(onCerrar).toHaveBeenCalled());
+    expect(posts(fetch)).toEqual([{ url: '/api/v1/expedientes/e1/etapas/1/reabrir', cuerpo: { justificacion: 'Faltó revisar la garantía' } }]);
+  });
+
+  it('desaprobar un expediente aprobado avisa lo que pasa con el vínculo y el certificado y deja elegir desde qué etapa', async () => {
+    const usuario = userEvent.setup();
+    const inicial = dosEtapas('Aprobado');
+    const { fetch, onCerrar } = preparar({ inicial, dialogo: { tipo: 'desaprobar' }, respuesta: () => json(200, dosEtapas('EnRevision')), recarga: null });
+
+    expect(screen.getByText(/su certificado se revoca/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Desaprobar expediente' })).toBeDisabled();
+
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación/ }), 'Apareció una inhabilidad');
+    await usuario.click(screen.getByRole('combobox', { name: /Se revisa de nuevo desde/ }));
+    await usuario.click(screen.getByRole('option', { name: /La primera etapa/ }));
+    await usuario.click(screen.getByRole('button', { name: 'Desaprobar expediente' }));
+
+    await waitFor(() => expect(onCerrar).toHaveBeenCalled());
+    expect(posts(fetch)).toEqual([{ url: '/api/v1/expedientes/e1/desaprobar', cuerpo: { justificacion: 'Apareció una inhabilidad', etapa: 1 } }]);
+  });
+
+  it('sin elegir etapa se desaprueba desde la última', async () => {
+    const usuario = userEvent.setup();
+    const { fetch, onCerrar } = preparar({ inicial: dosEtapas('Aprobado'), dialogo: { tipo: 'desaprobar' }, respuesta: () => json(200, dosEtapas('EnRevision')), recarga: null });
+
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación/ }), 'Revisar de nuevo');
+    await usuario.click(screen.getByRole('button', { name: 'Desaprobar expediente' }));
+
+    await waitFor(() => expect(onCerrar).toHaveBeenCalled());
+    expect(posts(fetch)).toEqual([{ url: '/api/v1/expedientes/e1/desaprobar', cuerpo: { justificacion: 'Revisar de nuevo', etapa: null } }]);
+  });
+
+  it('volver a la fase inicial envía la justificación y deja de aplicar si el expediente ya está al comienzo', async () => {
+    const usuario = userEvent.setup();
+    const inicial = dosEtapas('EnRevision');
+    const { fetch, onCerrar } = preparar({ inicial, dialogo: { tipo: 'faseInicial' }, respuesta: () => json(200, inicial), recarga: null });
+
+    await usuario.type(screen.getByRole('textbox', { name: /Justificación/ }), 'Cambió la política');
+    await usuario.click(screen.getByRole('button', { name: 'Volver a la fase inicial' }));
+
+    await waitFor(() => expect(onCerrar).toHaveBeenCalled());
+    expect(posts(fetch)).toEqual([{ url: '/api/v1/expedientes/e1/fase-inicial', cuerpo: { justificacion: 'Cambió la política' } }]);
+  });
+
+  it('si otra persona ya devolvió el expediente al comienzo, lo explica y no deja enviar', async () => {
+    preparar({ inicial: dosEtapas('EnRevision'), alAbrir: expediente('EnRevision'), dialogo: { tipo: 'faseInicial' }, respuesta: () => json(200, expediente('EnRevision')), recarga: null });
+
+    expect(await screen.findByText(YA_NO_APLICA)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Volver a la fase inicial' })).toBeDisabled();
+  });
+});
