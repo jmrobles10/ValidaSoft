@@ -103,7 +103,7 @@ test('tras confirmar una coincidencia el oficial rechaza por cumplimiento: es de
   await expect(dialogo).toBeHidden();
 
   // El expediente dice quién lo rechazó y el historial también.
-  const aviso = olga.getByRole('alert').filter({ hasText: 'Rechazado por Cumplimiento' });
+  const aviso = olga.getByRole('alert').filter({ hasText: 'Cumplimiento lo rechazó el' });
   await expect(aviso).toContainText('Cumplimiento lo rechazó el');
   await expect(aviso).toContainText('Coincidencia confirmada con OFAC: no se puede vincular.');
   await expect(olga.getByText('Rechazado por Cumplimiento').first()).toBeVisible();

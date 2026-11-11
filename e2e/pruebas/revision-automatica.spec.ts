@@ -191,7 +191,8 @@ test('con muestreo del 100 % la aprobación queda en Excepciones: una persona co
   await fila(sofia, revertido.tercero).getByRole('link', { name: /^Abrir el expediente/ }).click();
   await expect(sofia.getByRole('heading', { level: 1, name: revertido.tercero.nombre })).toBeVisible();
   const decision = sofia.getByRole('region', { name: 'Decisión automática' });
-  await expect(decision).toContainText('Revertida por Sofía Revisora');
+  // Quien solo revisa no lista usuarios: el panel dice «una persona» (con permiso para verlos diría su nombre).
+  await expect(decision).toContainText('Revertida por una persona');
   await expect(decision).toContainText('Justificación: El RUT que subió no es el vigente.');
   await expect(decision.getByRole('button')).toHaveCount(0);
   await expect(sofia.getByText(`Una persona revirtió la aprobación automática de ${RUT} en el área Revisión`)).toBeVisible();
