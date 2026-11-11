@@ -1,7 +1,7 @@
 import { Box, TextField, Typography } from '@mui/material';
+import { CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import type { BorradorFlujo, ErrorFlujo } from '../editor';
-import { CampoDias } from './CampoDias';
 import { MAXIMO_GRACIA_VIGENCIA_DIAS, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
 
 interface Props {
@@ -31,13 +31,13 @@ export function EditorVigenciaVinculo({ borrador, onCambiar, errores, soloLectur
       </Typography>
       <Typography sx={{ color: 'text.secondary', fontSize: 12, mb: 1.5 }}>{t('flujoVigencia.ayuda')}</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '160px minmax(0,320px) 160px' }, gap: 2, alignItems: 'start' }}>
-        <CampoDias
-          label={t('flujoVigencia.dias')}
+        <CampoNumero
+          etiqueta={t('flujoVigencia.dias')}
           valor={borrador.vigenciaDias}
-          maximo={MAXIMO_VIGENCIA_VINCULO_DIAS}
-          onCambiar={(valor) => onCambiar({ ...borrador, vigenciaDias: valor })}
+          maxDigitos={String(MAXIMO_VIGENCIA_VINCULO_DIAS).length}
+          onCambiar={(texto) => onCambiar({ ...borrador, vigenciaDias: texto })}
           error={Boolean(error('vigencia.dias'))}
-          helperText={error('vigencia.dias') ?? t('flujoVigencia.diasAyuda')}
+          ayuda={error('vigencia.dias') ?? t('flujoVigencia.diasAyuda')}
         />
         <TextField
           size="small"
@@ -48,14 +48,14 @@ export function EditorVigenciaVinculo({ borrador, onCambiar, errores, soloLectur
           error={Boolean(error('vigencia.avisos'))}
           helperText={error('vigencia.avisos') ?? t('flujoVigencia.avisosAyuda')}
         />
-        <CampoDias
-          label={t('flujoVigencia.gracia')}
+        <CampoNumero
+          etiqueta={t('flujoVigencia.gracia')}
           valor={borrador.vigenciaGracia}
-          maximo={MAXIMO_GRACIA_VIGENCIA_DIAS}
-          disabled={soloLectura || !activa}
-          onCambiar={(valor) => onCambiar({ ...borrador, vigenciaGracia: valor })}
+          maxDigitos={String(MAXIMO_GRACIA_VIGENCIA_DIAS).length}
+          deshabilitado={soloLectura || !activa}
+          onCambiar={(texto) => onCambiar({ ...borrador, vigenciaGracia: texto })}
           error={Boolean(error('vigencia.gracia'))}
-          helperText={error('vigencia.gracia') ?? t('flujoVigencia.graciaAyuda')}
+          ayuda={error('vigencia.gracia') ?? t('flujoVigencia.graciaAyuda')}
         />
       </Box>
     </Box>

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
 import type { RequisitoEnEditor } from '../editor';
 import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
-import { CampoDias } from './CampoDias';
 
 interface Props {
   requisito: RequisitoEnEditor;
@@ -69,26 +68,26 @@ export function OpcionesSeccion({
           label={t('fichaEmpresa.editor.exigeSoporte')}
           sx={{ mx: 0, minHeight: 40 }}
         />
-        <CampoDias
-          label={t('fichaEmpresa.editor.vigenciaDias')}
-          valor={String(requisito.vigenciaDias ?? '')}
-          maximo={MAXIMO_VIGENCIA_VINCULO_DIAS}
+        <CampoNumero
+          etiqueta={t('fichaEmpresa.editor.vigenciaDias')}
+          valor={requisito.vigenciaDias}
+          maxDigitos={String(MAXIMO_VIGENCIA_VINCULO_DIAS).length}
           placeholder={t('fichaEmpresa.editor.noVence')}
-          onCambiar={(valor) => onCambiar({ vigenciaDias: valor === '' ? null : Number(valor) })}
+          onCambiar={(texto) => onCambiar({ vigenciaDias: texto === '' ? null : Number(texto) })}
           error={Boolean(errorVigencia)}
-          helperText={errorVigencia ?? t('fichaEmpresa.editor.vigenciaDiasAyuda')}
-          disabled={deshabilitado}
+          ayuda={errorVigencia ?? t('fichaEmpresa.editor.vigenciaDiasAyuda')}
+          deshabilitado={deshabilitado}
           sx={{ width: 230 }}
         />
-        <CampoDias
-          label={t('fichaEmpresa.editor.diasRevalidacion')}
-          valor={String(requisito.diasRevalidacion ?? '')}
-          maximo={MAXIMO_DIAS_REVALIDACION}
+        <CampoNumero
+          etiqueta={t('fichaEmpresa.editor.diasRevalidacion')}
+          valor={requisito.diasRevalidacion}
+          maxDigitos={String(MAXIMO_DIAS_REVALIDACION).length}
           placeholder="15"
-          onCambiar={(valor) => onCambiar({ diasRevalidacion: valor === '' ? null : Number(valor) })}
+          onCambiar={(texto) => onCambiar({ diasRevalidacion: texto === '' ? null : Number(texto) })}
           error={Boolean(errorRevalidacion)}
-          helperText={errorRevalidacion ?? t('fichaEmpresa.editor.diasRevalidacionAyuda')}
-          disabled={deshabilitado}
+          ayuda={errorRevalidacion ?? t('fichaEmpresa.editor.diasRevalidacionAyuda')}
+          deshabilitado={deshabilitado}
           sx={{ width: 230 }}
         />
       </Stack>
