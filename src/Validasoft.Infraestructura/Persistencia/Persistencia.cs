@@ -127,6 +127,16 @@ public static class ConfiguracionMarten
                 opts.Schema.For<AsercionUsada>().DatabaseSchemaName("identidad").Index(x => x.ExpiraEn);
                 // Límite de enlaces pedidos con el correo (RE-2): un documento por correo (hash), con concurrencia optimista.
                 opts.Schema.For<LimiteDeAccesoPorCorreo>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
+                // Ingreso directo sin contraseñas (ING-1…ING-6): ceremonias de ingreso (código y passkey), passkeys, sesiones de las
+                // personas y registro de identidad. Globales: el ingreso empieza sin saber de qué grupo es la persona.
+                opts.Schema.For<DesafioDeIngreso>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true).Index(x => x.Expira);
+                opts.Schema.For<Passkey>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_passkey_credencial", x => x.CredencialId)
+                    .Index(x => x.SujetoId);
+                opts.Schema.For<SesionDeUsuario>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .Index(x => x.SujetoId)
+                    .Index(x => x.ExpiraEn);
+                opts.Schema.For<RegistroDeIngreso>().DatabaseSchemaName("identidad").Index(x => x.Fecha).Index(x => x.SujetoId);
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")

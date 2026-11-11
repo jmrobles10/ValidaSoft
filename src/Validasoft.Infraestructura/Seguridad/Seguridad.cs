@@ -95,6 +95,12 @@ public static class Reclamos
 
     /// <summary>Nombre visible del operador en la sesión de Plataforma (PT-4).</summary>
     public const string Nombre = "name";
+
+    /// <summary>Familia de la sesión directa (ING-1): cerrar o revocar la sesión corta el token de acceso en segundos.</summary>
+    public const string SesionId = Aplicacion.Identidad.ReclamosDeIngreso.SesionId;
+
+    /// <summary>Cómo se autenticó la sesión directa: <c>Codigo</c>, <c>Passkey</c> o <c>CodigoYPasskey</c>.</summary>
+    public const string Metodo = Aplicacion.Identidad.ReclamosDeIngreso.Metodo;
 }
 
 /// <summary>

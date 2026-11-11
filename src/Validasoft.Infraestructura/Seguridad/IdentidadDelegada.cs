@@ -18,7 +18,7 @@ namespace Validasoft.Infraestructura.Seguridad;
 /// <c>jti</c> de un solo uso (SE-4) — y arma el principal del <b>usuario</b> con el permiso efectivo (intersección de
 /// llave y roles).
 /// </summary>
-public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados usuarios, RegistroDeAsercionesUsadas usadas, TimeProvider reloj)
+public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados usuarios, RegistroDeAsercionesUsadas usadas, PoliticaDeIngreso politica, TimeProvider reloj)
 {
     public const string Cabecera = "X-Usuario-Delegado";
     public const string Audiencia = "validasoft";
@@ -36,6 +36,8 @@ public sealed class VerificadorDeIdentidadDelegada(RegistroDeUsuariosDelegados u
         var sistema = await usuarios.CargarSistemaAsync(tenantId, sistemaId, ct);
         if (sistema is null || !sistema.Activo)
             throw ReglaDeNegocioException.NoAutenticado("sistema-inactivo", "El sistema integrado de la API key no existe o está desactivado.");
+        // Cada grupo elige cómo entran sus personas (ING-1): sin el modo Delegado, la aserción del sistema no abre sesión.
+        await politica.AsegurarModoAsync(tenantId, ModoDeIngreso.Delegado, ct);
 
         var (datos, jti, expira) = await ValidarAsync(asercion, sistema.Codigo, sistema.ClavePublicaPem, reloj.GetUtcNow());
         // Después de la firma (nadie llena el registro con aserciones falsas) y antes de tocar al usuario.
@@ -177,9 +179,39 @@ public sealed class EmisorDeSesiones(IConfiguration configuracion) : IEmisorDeSe
             new Claim(Reclamos.Scope, Permisos.PlataformaTenants)
         ], ahora);
 
-    private SesionUsuarioDto Firmar(List<Claim> reclamos, DateTimeOffset ahora)
+    public SesionUsuarioDto EmitirDeUsuario(Usuario usuario, Guid tenantId, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora)
     {
-        var expira = ahora + Duracion;
+        // Mismos reclamos que la sesión delegada: el permiso efectivo es el de los roles del usuario (la llave de un sistema no interviene).
+        var permisos = Permisos.ParaUsuario(usuario.Roles, Permisos.DelTenant, ["*"]);
+        var reclamos = new List<Claim>
+        {
+            new(Reclamos.Tenant, tenantId.ToString()),
+            new(Reclamos.ActorTipo, ActorTipo.Usuario.ToString()),
+            new(Reclamos.Sujeto, usuario.Id.ToString()),
+            new(Reclamos.Nombre, usuario.Nombre),
+            new(Reclamos.SesionId, sesionId.ToString()),
+            new(Reclamos.Metodo, metodo.ToString())
+        };
+        reclamos.AddRange(permisos.DeTenant.Select(s => new Claim(Reclamos.Scope, s)));
+        reclamos.AddRange(permisos.PorEmpresa.SelectMany(p => p.Value.Select(s => new Claim(Reclamos.ScopeEmpresa, $"{s}|{p.Key}"))));
+        reclamos.AddRange(permisos.Empresas.Select(e => new Claim(Reclamos.Empresa, e)));
+        return Firmar(reclamos, ahora, vigencia);
+    }
+
+    public SesionUsuarioDto EmitirDeOperador(OperadorDePlataforma operador, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora) =>
+        Firmar(
+        [
+            new Claim(Reclamos.Sujeto, operador.Id),
+            new Claim(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),
+            new Claim(Reclamos.Nombre, operador.Nombre),
+            new Claim(Reclamos.Scope, Permisos.PlataformaTenants),
+            new Claim(Reclamos.SesionId, sesionId.ToString()),
+            new Claim(Reclamos.Metodo, metodo.ToString())
+        ], ahora, vigencia);
+
+    private SesionUsuarioDto Firmar(List<Claim> reclamos, DateTimeOffset ahora, TimeSpan? vigencia = null)
+    {
+        var expira = ahora + (vigencia ?? Duracion);
         var token = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
             Issuer = Emisor,

@@ -21,7 +21,26 @@ public static class Mapeos
         new(t.Pais, t.Codigo, t.Nombre, t.AplicaA.ToString(), t.Patron, t.TieneDv);
 
     public static TenantDto ADto(this Tenant t) =>
-        new(t.Id, t.Slug, t.Nombre, t.Region, t.Plan, t.ZonaHoraria, t.Idioma, t.Activo, t.CreadoEn);
+        new(t.Id, t.Slug, t.Nombre, t.Region, t.Plan, t.ZonaHoraria, t.Idioma, t.Activo, t.CreadoEn, t.IngresoADto());
+
+    public static ConfiguracionDeIngresoDto IngresoADto(this Tenant t) =>
+        new([.. Enum.GetValues<ModoDeIngreso>().Where(m => m != ModoDeIngreso.Ninguno && t.ModosDeIngreso.HasFlag(m)).Select(m => m.ToString())],
+            t.SesionHoras, t.InactividadMinutos, t.PasskeyParaTodos);
+
+    /// <summary>Modos de ingreso del DTO (<c>Delegado</c>, <c>Directo</c>) como banderas; un nombre desconocido ⇒ 422.</summary>
+    public static ModoDeIngreso ModosADominio(IEnumerable<string>? modos)
+    {
+        var resultado = ModoDeIngreso.Ninguno;
+        foreach (var modo in modos ?? [])
+        {
+            if (!Enum.TryParse<ModoDeIngreso>(modo, true, out var m) || m == ModoDeIngreso.Ninguno || !Enum.IsDefined(m))
+                throw Dominio.Comun.ReglaDeNegocioException.Validacion("modos-de-ingreso-invalidos",
+                    $"'{modo}' no es un modo de ingreso (Delegado, Directo).");
+            resultado |= m;
+        }
+
+        return resultado;
+    }
 
     public static EmpresaDto ADto(this Empresa e) =>
         new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa, e.ColorMarca);
@@ -40,10 +59,10 @@ public static class Mapeos
             : throw Dominio.Comun.ReglaDeNegocioException.Validacion("rol-invalido",
                 $"'{r.Rol}' no es un rol ({string.Join(", ", Enum.GetNames<Rol>())}).");
 
-    public static UsuarioDto ADto(this Usuario u) =>
+    public static UsuarioDto ADto(this Usuario u, bool passkeyParaTodos = false, int passkeys = 0) =>
         new(u.Id, u.Nombre, u.Correo, u.Identificacion?.ADto(), u.Activo,
             [.. u.Identidades.Select(i => new IdentidadExternaDto(i.SistemaId, i.IdExterno))],
-            [.. u.Roles.Select(ADto)], u.CreadoEn, u.UltimoAcceso);
+            [.. u.Roles.Select(ADto)], u.CreadoEn, u.UltimoAcceso, u.ExigePasskey(passkeyParaTodos), passkeys, u.InvitadoEn);
 
     public static AreaDto ADto(this Area a) => new(a.Id, a.EmpresaId, a.Codigo, a.Nombre, a.Miembros, a.Activa);
 

@@ -93,6 +93,17 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
+        // Ingreso directo sin contraseñas (ING-1…ING-7): código por correo, passkeys (WebAuthn) y sesiones propias de las personas del grupo.
+        servicios.AddSingleton<CookieDeSesionDeUsuario>();
+        servicios.AddSingleton<PoliticaDeIngreso>();
+        servicios.AddSingleton<IServicioDePasskeys, ServicioDePasskeysFido2>();
+        servicios.AddSingleton<VerificadorDeSesionesDirectas>();
+        servicios.AddSingleton<ICacheDeSesionesDirectas>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDirectas>());
+        servicios.AddSingleton<IProveedorDeIdentidad, ProveedorLocalDeCodigos>();
+        servicios.AddSingleton<RegistroDeIngresos>();
+        servicios.AddSingleton<CuentasDeIngreso>();
+        servicios.AddScoped<ServicioDeIngreso>();
+        servicios.AddHostedService<LimpiezaDeIngresos>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
         servicios.AddScoped<IVerificadorDeOperadores, VerificadorDeOperadores>(); // operadores de Plataforma (PT-4)
@@ -182,6 +193,16 @@ public static class ServiciosInfraestructura
                 // La clave se lee al primer uso del esquema: sin Validasoft:Sesiones:ClaveFirma solo falla el Bearer.
                 opciones.MapInboundClaims = false;
                 opciones.TokenValidationParameters = EmisorDeSesiones.ParametrosDeValidacion(configuracion);
+                // Una sesión directa cerrada o revocada deja de valer en segundos, aunque su token de acceso no haya vencido (ING-3).
+                opciones.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async contexto =>
+                    {
+                        if (Guid.TryParse(contexto.Principal?.FindFirst(Reclamos.SesionId)?.Value, out var sesionId) &&
+                            !await contexto.HttpContext.RequestServices.GetRequiredService<VerificadorDeSesionesDirectas>().VigenteAsync(sesionId, contexto.HttpContext.RequestAborted))
+                            contexto.Fail("La sesión se cerró.");
+                    }
+                };
             })
             .AddJwtBearer(EmisorDeSesionesTercero.Esquema, opciones =>
             {

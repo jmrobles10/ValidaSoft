@@ -24,6 +24,14 @@ public sealed class ApiFixture : IAsyncLifetime
     public const string ClavePlataforma = "dev-plataforma-solo-local-cambiar-0001";
     public const string UrlPublica = "https://publico.validasoft.test";
     public const int LimitePublico = 20;
+
+    /// <summary>Peticiones por minuto y por IP de <c>/api/v1/ingreso</c> en las pruebas (ING-1).</summary>
+    public const int LimiteIngreso = 25;
+
+    /// <summary>Sitio (<c>rp.id</c>) y origen de la app web que declaran las passkeys de las pruebas (ING-2).</summary>
+    public const string SitioDePasskeys = "validasoft.test";
+
+    public const string OrigenDeLaApp = "https://app.validasoft.test";
     public const long TamanoMaximo = 3 * 1024 * 1024;
 
     /// <summary>Fork comunitario de MinIO (misma línea de comandos; minio/minio ya no se publica en Docker Hub).</summary>
@@ -76,6 +84,10 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:LimitePublico:Peticiones", LimitePublico.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:LimitePublico:VentanaSegundos", "60");
             b.UseSetting("Validasoft:SesionTercero:CookieSegura", "true"); // como producción: se verifica el atributo Secure
+            b.UseSetting("Validasoft:Ingreso:Passkeys:RpId", SitioDePasskeys);
+            b.UseSetting("Validasoft:Ingreso:Passkeys:Origenes:0", OrigenDeLaApp);
+            b.UseSetting("Validasoft:LimiteIngreso:Peticiones", LimiteIngreso.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            b.UseSetting("Validasoft:LimiteIngreso:VentanaSegundos", "60");
             b.UseSetting("Validasoft:Apps:Web", Path.Combine(CarpetaApps, "web"));
             b.UseSetting("Validasoft:Apps:Publica", Path.Combine(CarpetaApps, "public"));
             b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);

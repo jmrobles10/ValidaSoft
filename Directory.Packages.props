@@ -14,6 +14,8 @@
     <!-- Alinea la versión transitiva de JwtBearer con JsonWebTokens: IdentityModel exige la misma versión en todos sus paquetes. -->
     <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.23.0" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.19.0" />
+    <!-- Passkeys (WebAuthn) del ingreso sin contraseñas (ING-2; MIT): verificación de registro y de aserción en el servidor. -->
+    <PackageVersion Include="Fido2" Version="4.3.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="MailKit" Version="4.18.2" />
     <!-- Almacenamiento de binarios compatible con S3 (MinIO en desarrollo y on-premise; S3 en la nube). -->

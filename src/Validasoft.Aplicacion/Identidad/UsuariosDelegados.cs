@@ -64,8 +64,10 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, TimeProvid
             AsegurarActivo(usuario);
             var antes = usuario.ADto();
             var cambioDatos = await ActualizarDatosAsync(sesion, usuario, nombre, correo, ct);
+            var completarGrupo = usuario.TenantId is null;
+            usuario.TenantId ??= contexto.TenantId;
             var registrarAcceso = usuario.UltimoAcceso is null || ahora - usuario.UltimoAcceso >= IntervaloUltimoAcceso;
-            if (!cambioDatos && !registrarAcceso)
+            if (!cambioDatos && !registrarAcceso && !completarGrupo)
                 return usuario;
 
             usuario.UltimoAcceso = ahora;
@@ -83,6 +85,7 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, TimeProvid
             AsegurarActivo(porCorreo);
             var antes = porCorreo.ADto();
             porCorreo.EnlazarIdentidad(sistema.Id, asercion.IdExterno);
+            porCorreo.TenantId ??= contexto.TenantId;
             porCorreo.Nombre = string.IsNullOrWhiteSpace(nombre) ? porCorreo.Nombre : nombre;
             porCorreo.UltimoAcceso = ahora;
             usuario = porCorreo;
@@ -90,7 +93,7 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, TimeProvid
         }
         else
         {
-            usuario = Usuario.CrearDesdeSistema(sistema.Id, asercion.IdExterno, nombre, correo, ahora);
+            usuario = Usuario.CrearDesdeSistema(sistema.Id, asercion.IdExterno, nombre, correo, ahora, contexto.TenantId);
             Auditoria.Registrar(sesion, contexto, "Usuario", usuario.Id.ToString(), AccionConfiguracion.Creado, null, usuario.ADto(), ahora);
         }
 
