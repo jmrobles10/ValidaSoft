@@ -51,12 +51,14 @@ flowchart LR
 | Generación | Escrito a mano sobre los DTO de `Validasoft.Contratos` (sin Kiota, Refit ni Polly: el SRM .NET 7 no arrastra dependencias) | Tipos escritos a mano con los nombres de `Validasoft.Contratos` (sin `openapi-typescript`/`openapi-fetch`) |
 | Incluye | `ClienteValidasoft` (`IClienteValidasoft`): `Vinculos`, `Invitaciones`, `Expedientes`, `Certificados`, `Consultas`, `Eventos` (con `RecorrerAsync`), `Sesiones`; `ParaEmpresa(id)` y `ComoUsuario(usuario)`; `Idempotency-Key` automática en todo POST (la misma en los reintentos); reintentos solo de lo idempotente (GET, PUT y POST con clave explícita); errores como `ExcepcionValidasoft { Estado, Codigo, Detalle, Correlacion }`; `FirmanteDeAsercionesDelegadas` (RS256/ES256); `VerificadorDeWebhooks` (tolerancia 5 min, varios secretos durante la rotación) | `ClienteValidasoft` con los mismos grupos (`vinculos.crear`, `consultas.certificacion`, `eventos.recorrer`…), `crearFirmanteDeAserciones()` (PKCS#8), `verificarWebhook()` / `validarWebhook()` / `leerCabecera()` (cabeceras de `fetch` o de Node), `ErrorValidasoft` |
 | Versionado | SemVer alineado con la API (`1.x`); `dotnet pack` produce `Validasoft.Contratos` y `Validasoft.Sdk` (la documentación XML solo se genera al empaquetar) | `pnpm --filter @validasoft/sdk build` deja `dist/`; `publishConfig` publica `dist` (en el workspace se consume `src`) |
-| Publicación | Workflow `imagenes.yml` (GitHub Actions, doc 04 §11) — pendiente | igual — pendiente |
-| Sandbox | Una API key de prueba (`vsk_test_…`, P-11-4) dentro del mismo tenant: mismos endpoints, datos aislados, webhooks a URL de prueba, sin correos reales (van a un buzón de sandbox) — **pendiente**: hoy `sandbox` solo cambia el prefijo de la llave | igual |
+| Publicación | **Listo para publicar** (SB-7): workflow `sdk-publicar.yml` al crear un tag `sdk-v<versión>`, versión única, README y CHANGELOG por paquete (§2.3). No se ha publicado nada | Igual: `@validasoft/sdk` sale con el mismo tag, en **ESM y CommonJS** |
+| Sandbox | **Implementado** (SB-1…SB-6, §2.2): una llave `vsk_test_…` opera en un tenant hermano con la configuración del grupo y ningún dato; correos al buzón, IA y listas simuladas; `Sandbox` en el cliente (`ObtenerAsync`, `ReiniciarAsync`, `CorreosAsync`, `EsperarCorreoAsync`) | Igual (`sandbox.obtener()`, `reiniciar()`, `correos()`, `esperarCorreo()`) |
 | Idiomas oficiales | Solo .NET y TypeScript (P-12-3); otros lenguajes consumen OpenAPI directamente | — |
 | Prohibido | Lógica de negocio en el SDK; reintento de POST creadores sin clave de idempotencia | igual |
 
 Toda llamada del SDK opera en el contexto `tenant + empresa`: el cliente se construye con la API key (que fija el tenant) y la empresa por defecto (`X-Empresa`); con una llave de varias empresas, `ParaEmpresa(id)` cambia la empresa.
+
+> **La guía completa para un integrador externo —alta del sistema, llaves, sandbox, identidad delegada, embebido, webhooks, pull, consulta de certificación, errores, límites y versionado— es [integracion.md](integracion.md).** Lo que sigue (§2.1) es la versión corta para el SRM, Marco y el Portal; §2.2 explica el sandbox y §2.3 la publicación de los paquetes.
 
 ### 2.1 Guía de integración paso a paso (H9, implementado)
 
@@ -149,6 +151,35 @@ var datos = r.NoModificado ? copia!.Datos : r.Datos!;   // datos.Bloqueado ⇒ n
 Sin vínculo con la empresa (o tercero desconocido): `200 { certificado: false, estadoVinculo: "SinVinculo" }`. Si Validasoft no responde en 2 s o devuelve 5xx, Marco responde el mismo contrato desde su copia con `fuenteRespaldo: true` y `antiguedadSegundos` (§5; el ejemplo lo hace).
 
 **9. Rotar la API key sin cortar el servicio.** Configuración › API keys › «Rotar» (o `POST /api/v1/api-keys/{id}/rotar { anteriorValidaHasta }`): sale una clave nueva con los mismos permisos, alcance y sistema, y la actual sigue valiendo el tiempo elegido (24 h por defecto, hasta 30 días; «ahora» corta de inmediato). Procedimiento: rotar → poner la nueva en el gestor de secretos y desplegar → verificar que el sistema la usa → la anterior deja de valer sola a su hora (401). Revocar sigue siendo inmediato.
+
+### 2.2 Sandbox (H9, SB-1…SB-6)
+
+**Para qué.** Que un integrador pruebe su sistema de punta a punta —invitación, carga, aprobación, certificado, webhooks, consulta— sin tocar producción, sin enviar un correo real a nadie, sin gastar IA ni consultas de listas y pudiendo empezar de cero cuando quiera.
+
+**Modelo (SB-1).** Una llave `vsk_test_{grupo}_…` pertenece al grupo de producción —se emite, rota y revoca allí, y sobrevive a los reinicios— pero **opera en el sandbox**: un **tenant hermano** (`Tenant.TenantDeProduccionId`) que se crea y siembra **cuando se pide** (`POST /api/v1/sandbox` o emitir la primera llave con `sandbox: true`). Como es otro tenant, todo lo que Marten parte por `tenant_id` queda aislado sin cambiar una consulta (vínculos, expedientes, certificados, usuarios, eventos, webhooks, informes, KPIs, auditoría). Lo global se aísla aparte ([07 §5.4](07-seguridad-identidad-y-tenancy.md)): los **terceros** de un sandbox son otros (clave única con el tenant por delante), los **correos** van al buzón, la **IA** y las **listas** son simuladas, los certificados no son verificables en `/public/v1/verificar`, y el sandbox no aparece en la consola de Plataforma ni en el acceso con el correo.
+
+**Siembra (SB-3).** Copia de la configuración de producción: una **copia de pruebas de cada empresa** (otro id; nombre «… (sandbox)»; prefijo de folio con una `T` por delante), tipos de vínculo y de documento, áreas (sin miembros), flujos, motivos, plantillas, textos legales (los de la empresa real o uno de prueba) y los sistemas integrados con su id y clave pública —así la aserción que firma tu sistema vale en los dos entornos—, más un plan de IA con la llave simulada y el proveedor de listas simulado. **Ningún dato**: ni terceros, ni vínculos, ni documentos, ni usuarios. Las personas que llegan por identidad delegada nacen **administradoras** del sandbox (acotadas por los scopes de la llave).
+
+**Reinicio (SB-5).** `POST /api/v1/sandbox/reiniciar` borra la partición del tenant sandbox, los terceros de pruebas con su bóveda, archivos, enlaces de acceso, sesiones y eventos públicos, y siembra de nuevo con la configuración de ese momento. Conserva los **ids de las empresas**, las **llaves** y el **cursor** de los eventos: el integrador no cambia su configuración.
+
+**Contrato.** Rutas, DTO y códigos en [05 §2.6.3](05-api-contratos-y-webhooks.md); permiso `sandbox:administrar`; toda respuesta de una credencial de prueba lleva `Validasoft-Entorno: sandbox`. Paso a paso con ejemplos en [integracion.md §5](integracion.md#5-sandbox-probar-sin-riesgo).
+
+### 2.3 Publicación de los SDK (SB-7)
+
+Los tres paquetes —`Validasoft.Contratos` y `Validasoft.Sdk` (NuGet), `@validasoft/sdk` (npm)— salen **juntos con la misma versión semántica**:
+
+| Pieza | Dónde |
+|---|---|
+| Versión única | `src/Empaquetado.props` (`VersionSdk`) y `packages/sdk/package.json`; `node infra/sdk/version.mjs <versión>` cambia las dos y `--verificar sdk-v<versión>` falla si el tag, los manifiestos o el CHANGELOG no coinciden |
+| Metadatos NuGet | `src/Empaquetado.props`: autor, repositorio, licencia (`LICENCIA-SDK.md`), README y CHANGELOG dentro del paquete, símbolos `.snupkg`, Source Link, build determinista en CI |
+| npm | `packages/sdk/package.json`: `exports` ESM y CJS con tipos (`publishConfig`), `files`, repositorio, licencia y procedencia (`provenance`); `pnpm --filter @validasoft/sdk verificar` construye y comprueba que las dos salidas cargan y validan un webhook firmado |
+| README y CHANGELOG | `src/Validasoft.Sdk`, `src/Validasoft.Contratos` y `packages/sdk` (instalación, configuración, invitación, consulta, webhooks y sandbox) |
+| CI | `ci.yml` empaqueta los NuGet y construye el paquete npm **sin publicar** en cada cambio |
+| Publicación | `.github/workflows/sdk-publicar.yml`, al crear un tag `sdk-v<versión>`: verifica (tag = manifiestos = CHANGELOG), prueba, empaqueta, espera la aprobación del entorno `publicacion-sdk`, publica en NuGet (`NUGET_API_KEY`) y en npm (`NPM_TOKEN`, con procedencia) y crea el release con las notas del CHANGELOG |
+
+**Cómo configurar los secretos** (lo hace un administrador del repositorio; nunca se escriben en el repositorio): *Settings › Secrets and variables › Actions › New repository secret*: `NUGET_API_KEY` (API key de nuget.org con permiso «Push new packages and package versions» sobre `Validasoft.*`) y `NPM_TOKEN` (token «Automation» de npm con escritura sobre `@validasoft/sdk`); opcionalmente *Settings › Environments › publicacion-sdk › Required reviewers* para que una persona apruebe cada publicación.
+
+**Para publicar una versión:** `node infra/sdk/version.mjs 1.2.0` → escribir la entrada `## [1.2.0]` en los dos CHANGELOG → merge a `main` → crear y empujar el tag `sdk-v1.2.0`. **Pendiente antes del primer tag:** que Legal confirme la licencia (hoy `LICENCIA-SDK.md` es un texto provisional de uso para integrarse) y crear el entorno y los secretos.
 
 ---
 

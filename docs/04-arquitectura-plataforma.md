@@ -134,7 +134,7 @@ C:\Fuentes_Git\Validasoft\
 │   ├── Validasoft.Api.ContractTests/      # Verify: snapshot de OpenAPI y payloads
 │   ├── Validasoft.Arquitectura.Tests/     # NetArchTest
 │   ├── e2e/                               # Playwright
-│   └── carga/                             # k6
+│   └── carga/                             # k6 (certificacion.k6.js: consulta de certificación, tests/carga/README.md)
 ├── infra/
 │   ├── compose/{compose.yaml, compose.dev.yaml, compose.prod.yaml, .env.example}
 │   ├── grafana/                           # dashboards versionados

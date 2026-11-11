@@ -73,6 +73,9 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
 
+### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
+Deja **bien definida la forma de integrarse** (SB-1…SB-10, [registro](decisiones/registro.md)): **sandbox** con datos aislados (tenant hermano, buzón de correo, IA y listas simuladas, reinicio), **SDK publicables** (versión única, README/CHANGELOG, ESM + CJS, workflow `sdk-publicar.yml`; no se publicó nada), **prueba de carga k6** de la consulta de certificación (consulta de cuatro viajes a uno; el p99 < 100 ms a 500 rps queda por certificar en un entorno dedicado), la **[guía de integración](integracion.md)** de punta a punta y la **e2e de integración completa con el SDK** en el sandbox. Detalle en §4.5.
+
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
 push**). Por decisión de Producto queda en espera hasta validar todo el alcance de Validasoft; no se sube ni se crea
@@ -146,12 +149,13 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
   - rotar la credencial expuesta en ADPRO ([15 §2](15-infolaft.md)).
 
 ### 4.5 H9 — pendientes
-- Sandbox con datos aislados (hoy `sandbox` solo cambia el prefijo de la llave).
+- ~~Sandbox con datos aislados~~ **Hecho (SB-1…SB-6, 2026-11-11):** tenant hermano con la configuración del grupo, buzón de correo, IA y listas simuladas y reinicio ([05 §2.6.3](05-api-contratos-y-webhooks.md), [07 §5.4](07-seguridad-identidad-y-tenancy.md)). Falta, como mejora, una pantalla en la consola con el buzón y el botón de reinicio (hoy es por API y SDK; la llave de prueba sí se emite desde Configuración › API keys).
 - Embebido del tercero para el Portal: `POST /sesiones-tercero` y el componente `<validasoft-expediente>`.
 - `POST /documentos` para integraciones.
-- Proyección `EstadoCertificacionTercero` medida con k6 (500 rps, p99 < 100 ms).
-- Publicar los paquetes NuGet y npm (el SRM portó el verificador de firma porque el SDK no está publicado).
+- **Carga de la consulta de certificación:** el script k6 (`tests/carga`) y su medida local están hechos; la consulta pasó de cuatro viajes a la base a uno (p50 secuencial 23,5 → 8,1 ms), pero **p99 < 100 ms a 500 rps no se pudo certificar** en la máquina de desarrollo compartida ([11, H9](11-trazabilidad-por-hito.md)). Falta repetirla en un entorno dedicado; si no llega, la proyección persistida `EstadoCertificacionTercero` es el siguiente paso.
+- **Publicar los paquetes NuGet y npm:** el empaquetado, la versión única, los README/CHANGELOG, ESM + CJS y el workflow `sdk-publicar.yml` están listos y probados sin publicar. Faltan **la decisión de licencia de Legal** (hoy `LICENCIA-SDK.md` es provisional), crear el entorno `publicacion-sdk` y los secretos `NUGET_API_KEY` y `NPM_TOKEN`, y poner el primer tag `sdk-v1.0.0` ([08 §2.3](08-integracion-y-migracion.md)). El SRM portó el verificador de firma porque el SDK no está publicado: cuando lo esté, debe adoptarlo.
 - La caché de API keys se invalida al instante solo en el nodo que rota.
+- Sandbox: las llaves de prueba emitidas antes de SB-2 (sin sandbox creado) responden 401 hasta que se cree con `POST /api/v1/sandbox`; no hay límite de tamaño del buzón ni retención automática del sandbox.
 
 ### 4.6 Plataforma e identidad
 - Login propio de Plataforma con OIDC y 2FA; hoy entra con la clave de arranque más identidad delegada.
@@ -183,8 +187,8 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
 La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del proceso de validación. Faltan, como mínimo:
 - **Persona natural y jurídica en el wizard:** la natural no ve Legal ni Financiera y la jurídica exige socio.
 - **Multiempresa con la ficha:** dos empresas validan la misma sección y una revalida tras un cambio.
-- **Integración externa completa con el SDK:** sistema → invitación → webhooks → consulta de certificación →
-  embebido.
+- ~~**Integración externa completa con el SDK:** sistema → invitación → webhooks → consulta de certificación →
+  embebido.~~ **Hecha en el sandbox** (`e2e/pruebas/integracion-sandbox.spec.ts`, 2026-11-11).
 - **Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación →
   certificado.
 - **IA con el proveedor simulado:** cupo agotado y escalamiento.

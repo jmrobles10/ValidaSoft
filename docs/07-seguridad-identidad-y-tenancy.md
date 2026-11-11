@@ -119,6 +119,7 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 |---|---|---|---|---|---|---|---|
 | `plataforma:tenants` · `plataforma:catalogo` · `plataforma:uso` | ✓ | — | — | — | — | — | — |
 | `empresas:administrar` | — | ✓ (tenant) | — | — | — | — | — |
+| `sandbox:administrar` (crear, reiniciar y leer el buzón del sandbox, SB-6) | — | ✓ (tenant) | — | — | — | scope (también una llave de prueba sobre su propio sandbox) | — |
 | `configuracion:leer` / `escribir` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | — |
 | `usuarios:administrar` · `api-keys:administrar` · `webhooks:administrar` | — | ✓ | — | — | — | scope (webhooks) | — |
 | `terceros:leer` / `escribir` (campos privados) | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | propio (maestros) |
@@ -162,7 +163,8 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
 | Rotación / revocación | `POST /api-keys/{id}/rotar`: la anterior vale 24 h por defecto (de 0 a 30 días, CN-3); revocación inmediata; la caché de verificaciones (5 min) vence con el reloj de Validasoft y se olvida en el nodo al rotar o revocar (otros nodos, ≤ 5 min) |
 | Registro | `ultimoUsoEn`, `ultimaIp`, contador; alerta por uso de llave inactiva 90 días |
-| Restricción | IPs/CIDR, `expiraEn`; **sandbox** por llave de prueba (`vsk_test_…`) en H9 (P-11-4) |
+| Restricción | IPs/CIDR, `expiraEn` |
+| **Sandbox** (SB-1…SB-5) | Una llave `vsk_test_{grupo}_…` (marca `sandbox`, emitida como cualquier llave) **vive en el grupo de producción** —se lista, rota y revoca allí— pero **autentica en el sandbox del grupo**: un tenant hermano (`Tenant.TenantDeProduccionId`) con copias de las empresas (otro id; `empresas` de la llave se traducen a los ids de las copias), la configuración heredada y ningún dato. El prefijo y la marca deben coincidir (`test` ⇔ `sandbox`); sin sandbox la llave responde 401 (se crea al emitir la primera o con `POST /sandbox`). Toda respuesta lleva `Validasoft-Entorno: sandbox`; una credencial del sandbox no crea, lista, rota ni revoca llaves (422 `no-disponible-en-sandbox`). §5.4 |
 | Prohibido | API keys en navegadores; el embed usa `POST /sesiones-usuario` servidor a servidor. El CORS opcional (SE-5) no admite `X-Api-Key` ni `X-Usuario-Delegado` |
 
 ---
@@ -217,6 +219,22 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 | KPIs | — | los suyos | los suyos | ✗ | scope | agregados del tenant sin detalle de decisiones | agregados por tenant |
 | Auditoría de accesos a documentos | accesos a sus documentos (empresa, fecha, motivo) | los de A1 | los de A2 | los de B1 | — | ✓ | — |
 | Prompts/respuestas de IA | ✗ | evidencia resumida | evidencia resumida | ídem | — | ✓ completa | sin contenido |
+
+### 5.4 Sandbox: un tenant hermano con lo global aislado (SB-1…SB-5)
+
+El sandbox de un grupo es **otro tenant** (`Tenant.TenantDeProduccionId = {grupo}`, slug `{slug}~sandbox`, que ningún slug real admite): todo lo que Marten parte por `tenant_id` —vínculos, expedientes, certificados, configuración, usuarios, eventos, webhooks, informes, KPIs, auditoría— queda aislado sin tocar una sola consulta. Lo que **no** se parte por tenant se aísla aparte:
+
+| Lo global | Cómo se aísla en un sandbox |
+|---|---|
+| **Terceros y bóveda** (`boveda`, únicos por identificación) | El tercero de un sandbox es otro: `Tercero.SandboxTenantId` y una clave única con el tenant por delante (`sbx:{tenant}|CO|NIT|…`), así su NIT no choca con el real y su bóveda (documentos, ficha, cuentas, avisos), sus enlaces de acceso y sus sesiones cuelgan del tercero de pruebas. Las búsquedas por identificación del tenant usan `IContextoSolicitud.ClaveDeTercero`; la identificación visible no cambia |
+| **Correo** | `IEnviadorDeCorreo` decide por `MensajeDeCorreo.TenantId`: el de un sandbox se guarda en su buzón (`CorreoDePrueba`, `GET /sandbox/correos`) y **nunca** llega a `ITransporteDeCorreo` (SMTP). Todos los manejadores de la cola `correo` atribuyen el tenant de su mensaje |
+| **IA** | Los planes del sandbox llevan la «llave» `sk-sandbox-…`; el analizador por entorno la manda al proveedor simulado: ningún documento de prueba sale a OpenAI |
+| **Listas restrictivas** | El proveedor del sandbox es siempre el simulado, aunque la instalación no lo permita y sin gastar la cuota de la empresa |
+| **Verificación pública de certificados** | La búsqueda por folio descarta los certificados de un tenant sandbox (404): no son verificables ni cuentan para decidir si un folio es ambiguo |
+| **Acceso con el correo** (`POST /public/v1/acceso`) | Ignora los vínculos de terceros de un sandbox: el correo real de quien probó una integración no recibe enlaces de pruebas |
+| **Consola de Plataforma** | Las listas de tenants y de grupos no incluyen sandboxes |
+
+El sandbox se **crea y siembra al pedirlo** con la configuración de producción (empresas, tipos de vínculo y de documento, áreas sin miembros, flujos, motivos, plantillas y sistemas integrados con su id y clave pública), y se **reinicia** borrando su partición y los terceros de pruebas con todo lo que cuelga de ellos ([08 §2.2](08-integracion-y-migracion.md) y la [guía de integración](integracion.md) lo explican al integrador). Las personas que llegan por identidad delegada nacen administradoras del sandbox, acotadas por los scopes de su llave.
 
 ---
 
