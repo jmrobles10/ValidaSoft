@@ -6,14 +6,17 @@ import {
   Sparkles,
   FileText,
   KeyRound,
+  Layers,
   Link2,
   LogIn,
   ListChecks,
   LockKeyhole,
   Mail,
+  MailCheck,
   Palette,
   Plug,
   Route,
+  ScrollText,
   ShieldCheck,
   Users,
   Webhook,
@@ -40,7 +43,10 @@ export interface SeccionConfiguracion {
     | 'revision-automatica'
     | 'listas-restrictivas'
     | 'matriz-riesgo'
-    | 'accesos-soporte';
+    | 'accesos-soporte'
+    | 'plan-grupo'
+    | 'habeas-data'
+    | 'dominio-correo';
   scope: Scope;
   icono: LucideIcon;
   /** Datos y marca, plantillas de correo, plan y uso de IA, áreas y flujos son de la empresa activa; el resto (empresas, usuarios, sistemas, llaves, tipos, soporte…), del grupo. */
@@ -60,8 +66,12 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'sistemas', scope: SCOPES.sistemasAdministrar, icono: Plug, alcance: 'grupo' },
   { ruta: 'api-keys', scope: SCOPES.apiKeysAdministrar, icono: KeyRound, alcance: 'grupo' },
   { ruta: 'accesos-soporte', scope: SCOPES.empresasAdministrar, icono: LockKeyhole, alcance: 'grupo' },
+  // Plan y uso del grupo (OD-14, OD-17): el aviso de límite del backend enlaza a `/e/{empresa}/plan-grupo`; no cambiar la ruta sin cambiar el backend.
+  { ruta: 'plan-grupo', scope: SCOPES.configuracionLeer, icono: Layers, alcance: 'grupo' },
   { ruta: 'datos-marca', scope: SCOPES.empresasAdministrar, icono: Palette, alcance: 'empresa' },
   { ruta: 'plantillas', scope: SCOPES.configuracionLeer, icono: Mail, alcance: 'empresa' },
+  // Remitente propio con registros DNS verificados (OD-18…OD-22).
+  { ruta: 'dominio-correo', scope: SCOPES.empresasAdministrar, icono: MailCheck, alcance: 'empresa' },
   // El aviso de cupo de IA (IA-9) enlaza a `/e/{empresa}/uso-ia`: no cambiar la ruta sin cambiar el backend.
   { ruta: 'uso-ia', scope: SCOPES.configuracionLeer, icono: Sparkles, alcance: 'empresa' },
   // Nivel de la revisión automática con IA (Manual, Asistido, Automático) y su uso del mes (ADR-0012).
@@ -70,6 +80,8 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'listas-restrictivas', scope: SCOPES.configuracionLeer, icono: ShieldCheck, alcance: 'empresa' },
   // Factores, límites y niveles con los que se calcula el riesgo SAGRILAFT en el estudio de cumplimiento (CU-17).
   { ruta: 'matriz-riesgo', scope: SCOPES.configuracionLeer, icono: Gauge, alcance: 'empresa' },
+  // Solicitudes de consulta, corrección y supresión de los terceros (Ley 1581, OD-1…OD-8); los avisos de plazo enlazan a `/e/{empresa}/habeas-data`.
+  { ruta: 'habeas-data', scope: SCOPES.supresionesResolver, icono: ScrollText, alcance: 'empresa' },
   { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },
   { ruta: 'flujos', scope: SCOPES.flujosLeer, icono: Route, alcance: 'empresa' },
 ];

@@ -32,6 +32,14 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaPlanIa').then((m) => ({ Component: m.PaginaPlanIa })),
         },
         {
+          path: 'grupos/:tenantId/plan',
+          lazy: () => import('../features/plataforma/PaginaPlanGrupo').then((m) => ({ Component: m.PaginaPlanGrupo })),
+        },
+        {
+          path: 'habeas',
+          lazy: () => import('../features/plataforma/PaginaHabeasPlataforma').then((m) => ({ Component: m.PaginaHabeasPlataforma })),
+        },
+        {
           path: 'operadores',
           lazy: () => import('../features/plataforma/PaginaOperadores').then((m) => ({ Component: m.PaginaOperadores })),
         },
@@ -198,6 +206,18 @@ export function crearRouter() {
                 {
                   path: 'accesos-soporte',
                   lazy: () => import('../features/configuracion/accesosSoporte/PaginaAccesosSoporte').then((m) => ({ Component: m.PaginaAccesosSoporte })),
+                },
+                {
+                  path: 'plan-grupo',
+                  lazy: () => import('../features/configuracion/planGrupo/PaginaPlanGrupo').then((m) => ({ Component: m.PaginaPlanGrupo })),
+                },
+                {
+                  path: 'habeas-data',
+                  lazy: () => import('../features/configuracion/habeas/PaginaHabeasData').then((m) => ({ Component: m.PaginaHabeasData })),
+                },
+                {
+                  path: 'dominio-correo',
+                  lazy: () => import('../features/configuracion/dominioCorreo/PaginaDominioCorreo').then((m) => ({ Component: m.PaginaDominioCorreo })),
                 },
                 {
                   path: 'datos-marca',

@@ -18,6 +18,8 @@ describe('claveDeTipo', () => {
   it('traduce el código del tipo a su clave de textos y no confunde propiedades del prototipo', () => {
     expect(claveDeTipo('expediente.tercero_respondio')).toBe('terceroRespondio');
     expect(claveDeTipo('webhook.deshabilitado')).toBe('webhookDeshabilitado');
+    expect(claveDeTipo('habeas.plazo')).toBe('habeasPlazo');
+    expect(claveDeTipo('plan.limite')).toBe('planLimite');
     expect(claveDeTipo('constructor')).toBeNull();
     expect(claveDeTipo('otro.tipo')).toBeNull();
   });
