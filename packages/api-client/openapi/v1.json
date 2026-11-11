@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5151/"
+      "url": "http://localhost:5171/"
     }
   ],
   "paths": {
@@ -353,6 +353,42 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CuentaDesignadaDelVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/ficha-aceptada": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.FichaAceptadaDelVinculoEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_ficha_aceptada",
+        "description": "GET_api_v1_vinculos_id_ficha_aceptada",
+        "operationId": "GET_api_v1_vinculos_id_ficha_aceptada",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FichaAceptadaDelVinculoDto"
                 }
               }
             }
@@ -13961,6 +13997,63 @@
           }
         }
       },
+      "CambioPosteriorDelTerceroDto": {
+        "required": [
+          "version",
+          "fecha",
+          "cambios",
+          "soportes",
+          "sinSoporte",
+          "revalidacion"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CambioDeCampoDto"
+            }
+          },
+          "soportes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
+          },
+          "sinSoporte": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SinSoporteDto"
+              }
+            ]
+          },
+          "revalidacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RevalidacionDeSeccionDto"
+              }
+            ]
+          }
+        }
+      },
       "CampoCruzadoDto": {
         "required": [
           "campo",
@@ -15601,6 +15694,31 @@
               {
                 "$ref": "#/components/schemas/RepresentanteLegalErpDto"
               }
+            ]
+          },
+          "pep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "vinculoPep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "fechaExpedicion": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "lugarExpedicion": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }
@@ -18505,6 +18623,15 @@
             "items": {
               "$ref": "#/components/schemas/EstadoSeccionFichaDto"
             }
+          },
+          "observaciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ObservacionDeSeccionDto"
+            }
           }
         }
       },
@@ -19449,6 +19576,34 @@
           },
           "mensaje": {
             "type": "string"
+          }
+        }
+      },
+      "FichaAceptadaDelVinculoDto": {
+        "required": [
+          "vinculoId",
+          "terceroId",
+          "tipoPersona",
+          "secciones"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipoPersona": {
+            "type": "string"
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionAceptadaVistaDto"
+            }
           }
         }
       },
@@ -22143,6 +22298,60 @@
           }
         }
       },
+      "LoAceptadoDeSeccionDto": {
+        "required": [
+          "version",
+          "aceptadaEn",
+          "expedienteId",
+          "folio",
+          "origen",
+          "datos",
+          "soportes"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aceptadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "origen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "datos": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "soportes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
+          }
+        }
+      },
       "LoteDto": {
         "required": [
           "id",
@@ -22846,6 +23055,40 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ObservacionDeSeccionDto": {
+        "required": [
+          "empresa",
+          "expedienteId",
+          "seccion",
+          "periodo",
+          "observacion"
+        ],
+        "type": "object",
+        "properties": {
+          "empresa": {
+            "type": "string"
+          },
+          "expedienteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seccion": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "observacion": {
+            "$ref": "#/components/schemas/ObservacionPublicaDto"
           }
         }
       },
@@ -25216,6 +25459,18 @@
               "null",
               "string"
             ]
+          },
+          "pep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "vinculoPep": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -27111,6 +27366,46 @@
           }
         }
       },
+      "SeccionAceptadaVistaDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo",
+          "aceptada",
+          "cambioPosterior"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "aceptada": {
+            "$ref": "#/components/schemas/LoAceptadoDeSeccionDto"
+          },
+          "cambioPosterior": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CambioPosteriorDelTerceroDto"
+              }
+            ]
+          }
+        }
+      },
       "SeccionAfectadaPorRetiroDto": {
         "required": [
           "seccion",
@@ -27228,6 +27523,16 @@
                 "$ref": "#/components/schemas/CruceDeRequisitoDto"
               }
             ]
+          },
+          "sinSoporte": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SinSoporteDto"
+              }
+            ]
           }
         }
       },
@@ -27341,6 +27646,17 @@
             "items": {
               "$ref": "#/components/schemas/AceptacionDeSeccionDto"
             }
+          },
+          "prellenado": {},
+          "sinSoporte": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SinSoporteDto"
+              }
+            ]
           }
         }
       },
@@ -27718,6 +28034,24 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AvisoImportacionDto"
+            }
+          }
+        }
+      },
+      "SinSoporteDto": {
+        "required": [
+          "critico",
+          "cambios"
+        ],
+        "type": "object",
+        "properties": {
+          "critico": {
+            "type": "boolean"
+          },
+          "cambios": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CambioDeCampoDto"
             }
           }
         }
@@ -30646,6 +30980,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.FichaAceptadaDelVinculoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.FichaDelVinculoEndpoints"

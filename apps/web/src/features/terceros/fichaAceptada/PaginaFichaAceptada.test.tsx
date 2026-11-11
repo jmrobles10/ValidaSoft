@@ -146,7 +146,7 @@ describe('Ficha aceptada del vínculo (FD-3)', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Ferretería El Tornillo' })).toBeInTheDocument();
     // Un solo aviso agrupado (no uno por sección) dice cuántas tienen una versión nueva pendiente de revisión.
-    const avisos = screen.getAllByRole('alert').filter((a) => a.textContent?.includes('versión nueva pendiente de revisión'));
+    const avisos = screen.getAllByRole('alert').filter((a) => a.textContent.includes('versión nueva pendiente de revisión'));
     expect(avisos).toHaveLength(1);
     expect(avisos[0]).toHaveTextContent('1 sección tiene una versión nueva pendiente de revisión');
     expect(avisos[0]).toHaveTextContent('Lo que ves abajo sigue siendo lo que aceptaste');

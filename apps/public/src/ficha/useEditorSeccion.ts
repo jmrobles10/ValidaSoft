@@ -14,7 +14,7 @@ export interface ErrorDeCampo {
 /** La sugerencia de una sección vacía (FD-1): solo si no hay ninguna versión guardada y es un objeto. */
 export function prellenadoDe(inicial: Pick<SeccionFichaDto, 'version' | 'datos' | 'prellenado'>): object | null {
   const sugerido = inicial.prellenado;
-  return inicial.version === null && (inicial.datos === null || inicial.datos === undefined) && typeof sugerido === 'object' && sugerido !== null && !Array.isArray(sugerido) ? sugerido : null;
+  return inicial.version === null && !inicial.datos && typeof sugerido === 'object' && sugerido !== null && !Array.isArray(sugerido) ? sugerido : null;
 }
 
 /** Lo que no edita el tercero (lo fija la API con su registro, FM-19) no se envía. */

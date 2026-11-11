@@ -6,7 +6,7 @@ export interface ResumenDeFichaAceptada {
   pendientes: number;
 }
 
-export const tienePendiente = (seccion: Pick<SeccionAceptadaVistaDto, 'cambioPosterior'>): boolean => seccion.cambioPosterior !== null && seccion.cambioPosterior !== undefined;
+export const tienePendiente = (seccion: Pick<SeccionAceptadaVistaDto, 'cambioPosterior'>): boolean => seccion.cambioPosterior !== null;
 
 export function resumirFichaAceptada(ficha: Pick<FichaAceptadaDelVinculoDto, 'secciones'>): ResumenDeFichaAceptada {
   return { aceptadas: ficha.secciones.length, pendientes: ficha.secciones.filter(tienePendiente).length };
