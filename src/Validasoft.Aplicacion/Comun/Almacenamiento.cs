@@ -40,6 +40,9 @@ public interface IAlmacenDeArchivos
     /// <summary>Elimina el objeto si existe (idempotente).</summary>
     Task EliminarAsync(string bucket, string clave, CancellationToken ct);
 
+    /// <summary>Elimina todos los objetos del bucket cuya clave empieza por <paramref name="prefijo"/> (vacío = todo el bucket); no falla si el bucket no existe. Solo el reinicio del sandbox (SB-5) lo usa.</summary>
+    Task EliminarPrefijoAsync(string bucket, string prefijo, CancellationToken ct);
+
     /// <summary>Crea el bucket si no existe (los de tenant nacen con su primera carga <c>PorVinculo</c>).</summary>
     Task AsegurarBucketAsync(string bucket, CancellationToken ct);
 }

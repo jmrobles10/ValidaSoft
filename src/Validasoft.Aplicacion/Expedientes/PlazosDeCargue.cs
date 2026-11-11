@@ -50,8 +50,8 @@ public static class CorreoDePlazoDeCarguePendienteHandler
         RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
     {
         var mensaje = redactor.RedactarPlazoDeCargue(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Caducidad, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Caducidad, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 

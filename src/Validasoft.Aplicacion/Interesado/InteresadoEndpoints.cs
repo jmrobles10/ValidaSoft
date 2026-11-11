@@ -50,7 +50,7 @@ public static class EnlacesPublicosEndpoints
         }
 
         await mensajes.PublishAsync(new CorreoDeAccesoPendiente(PlantillaCorreo.CodigoOtp, enlace.CorreoDestino,
-            protector.Proteger(resultado.CodigoOtp!), resultado.OtpExpira!.Value, null, null));
+            protector.Proteger(resultado.CodigoOtp!), resultado.OtpExpira!.Value, null, null, enlace.TenantId));
         await sesion.SaveChangesAsync(ct);
         return Results.Json(new OtpRequeridoDto(true, resultado.OtpExpira.Value), statusCode: StatusCodes.Status202Accepted);
     }

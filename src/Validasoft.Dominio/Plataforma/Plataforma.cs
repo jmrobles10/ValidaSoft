@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Identificaciones;
@@ -29,7 +30,43 @@ public sealed class Tenant
 
     public DateTimeOffset CreadoEn { get; set; }
 
+    /// <summary>
+    /// Si es el sandbox de un grupo (SB-1): el tenant de producción del que es hermano. Nulo en todo tenant real. Un sandbox
+    /// es un tenant más —con sus propias empresas, datos y eventos—, así que nada suyo se mezcla con producción.
+    /// </summary>
+    public Guid? TenantDeProduccionId { get; set; }
+
+    /// <summary>Última vez que se reinició el sandbox (SB-5); nulo si nunca.</summary>
+    public DateTimeOffset? ReiniciadoEn { get; set; }
+
+    [JsonIgnore]
+    public bool EsSandbox => TenantDeProduccionId is not null;
+
     public string IdentificadorMarten => Id.ToString("N");
+
+    /// <summary>
+    /// El sandbox de <paramref name="produccion"/> (SB-1): mismo grupo, región y zona horaria. Su slug lleva <c>~sandbox</c>,
+    /// carácter que ningún slug real puede tener, así nunca choca con el de otro grupo. Las API keys de prueba no llevan este
+    /// slug sino el del grupo de producción (<c>vsk_test_{slug}_…</c>).
+    /// </summary>
+    public static Tenant CrearSandbox(Tenant produccion, DateTimeOffset ahora)
+    {
+        if (produccion.EsSandbox)
+            throw ReglaDeNegocioException.Validacion("sandbox-de-sandbox", "Un sandbox no tiene sandbox propio.");
+
+        return new Tenant
+        {
+            Id = Guid.CreateVersion7(),
+            Slug = produccion.Slug + AislamientoDeSandbox.SufijoDeSlug,
+            Nombre = produccion.Nombre + AislamientoDeSandbox.SufijoDeNombre,
+            Region = produccion.Region,
+            ZonaHoraria = produccion.ZonaHoraria,
+            Idioma = produccion.Idioma,
+            Plan = produccion.Plan,
+            TenantDeProduccionId = produccion.Id,
+            CreadoEn = ahora
+        };
+    }
 
     public static Tenant Crear(string slug, string nombre, string? region, string? zonaHoraria, DateTimeOffset ahora)
     {
@@ -86,6 +123,40 @@ public sealed class Empresa
     public bool Activa { get; set; } = true;
 
     public DateTimeOffset CreadaEn { get; set; }
+
+    /// <summary>Si es la copia de pruebas de una empresa real (SB-3): la empresa de producción que refleja. Nulo en las reales.</summary>
+    public Guid? EmpresaDeProduccionId { get; set; }
+
+    /// <summary>
+    /// Copia de <paramref name="produccion"/> para el sandbox (SB-3): misma identificación y marca, nombre con «(sandbox)» y un
+    /// prefijo de folio propio (<see cref="AislamientoDeSandbox.PrefijoDeFolio"/>) para que un folio de prueba nunca se confunda
+    /// con uno real.
+    /// </summary>
+    public static Empresa CrearCopiaDeSandbox(Empresa produccion, Guid tenantSandboxId, string prefijoFolio, DateTimeOffset ahora) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        TenantId = tenantSandboxId,
+        Identificacion = produccion.Identificacion,
+        ClaveIdentificacion = produccion.ClaveIdentificacion,
+        Nombre = produccion.Nombre + AislamientoDeSandbox.SufijoDeNombre,
+        PrefijoFolio = prefijoFolio,
+        LogoUrl = produccion.LogoUrl,
+        ReplyTo = produccion.ReplyTo,
+        ColorMarca = produccion.ColorMarca,
+        Activa = produccion.Activa,
+        EmpresaDeProduccionId = produccion.Id,
+        CreadaEn = ahora
+    };
+
+    /// <summary>Alinea la copia de pruebas con su empresa real: nombre, marca y si está activa (no toca identificación ni prefijo).</summary>
+    public void SincronizarCopiaDeSandbox(Empresa produccion)
+    {
+        Nombre = produccion.Nombre + AislamientoDeSandbox.SufijoDeNombre;
+        LogoUrl = produccion.LogoUrl;
+        ReplyTo = produccion.ReplyTo;
+        ColorMarca = produccion.ColorMarca;
+        Activa = produccion.Activa;
+    }
 
     public static Empresa Crear(Guid tenantId, Identificacion identificacion, string nombre, string prefijoFolio,
         string? logoUrl, string? replyTo, DateTimeOffset ahora)

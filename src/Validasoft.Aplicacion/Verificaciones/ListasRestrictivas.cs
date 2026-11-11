@@ -153,7 +153,7 @@ public sealed record ProveedorResuelto(string Nombre, OpcionesDeProveedor Opcion
 /// </summary>
 public sealed class ConsultaDeListas(
     IEnumerable<IVerificadorDeListas> verificadores, OpcionesDeVerificaciones opciones, ControlDeProveedores control, IAlmacenDeArchivos almacen,
-    IGeneradorDePdfDeEvidencia generadorPdf, IProtectorDeSecretos protector, IDocumentStore store, TimeProvider reloj)
+    IGeneradorDePdfDeEvidencia generadorPdf, IProtectorDeSecretos protector, IDocumentStore store, IEntornos entornos, TimeProvider reloj)
 {
     public const string TipoPdf = "application/pdf";
 
@@ -163,12 +163,15 @@ public sealed class ConsultaDeListas(
     /// Proveedor que usará la empresa: el que eligió o el de la instalación. 503 <c>verificacion-no-disponible</c> si no hay
     /// ninguno, si la instalación no lo habilitó o si falta su adaptador; 422 <c>credenciales-requeridas</c> sin credenciales.
     /// </summary>
-    public ProveedorResuelto Resolver(ListasRestrictivasEmpresa? configuracion)
+    public ProveedorResuelto Resolver(ListasRestrictivasEmpresa? configuracion, bool sandbox = false)
     {
-        var nombre = configuracion?.Proveedor ?? opciones.ProveedorPorDefecto
-                     ?? throw ReglaDeNegocioException.NoDisponible("verificacion-no-disponible",
-                         "La empresa no tiene un proveedor de listas restrictivas configurado (Configuración › Listas restrictivas).");
-        var deProveedor = opciones.Proveedor(nombre);
+        // En el sandbox (SB-4) siempre el proveedor simulado, aunque la instalación no lo permita: ninguna consulta de prueba sale a un
+        // proveedor real ni gasta la cuota de la empresa.
+        var nombre = sandbox ? ProveedoresDeListas.Simulado
+            : configuracion?.Proveedor ?? opciones.ProveedorPorDefecto
+              ?? throw ReglaDeNegocioException.NoDisponible("verificacion-no-disponible",
+                  "La empresa no tiene un proveedor de listas restrictivas configurado (Configuración › Listas restrictivas).");
+        var deProveedor = sandbox ? opciones.Proveedor(nombre) with { Habilitado = true } : opciones.Proveedor(nombre);
         if (!deProveedor.Habilitado)
             throw ReglaDeNegocioException.NoDisponible("verificacion-no-disponible", $"{nombre} no está habilitado en esta instalación.");
         var verificador = verificadores.FirstOrDefault(v => v.Proveedor == nombre)
@@ -202,7 +205,7 @@ public sealed class ConsultaDeListas(
                       ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "El tercero del expediente no existe.");
         var personas = new List<PersonaAConsultar>
         {
-            new(tercero.ClaveIdentificacion, "Tercero", tercero.Nombre, tercero.Identificacion.Pais, tercero.Identificacion.Tipo, tercero.Identificacion.Numero)
+            new(tercero.Identificacion.Clave, "Tercero", tercero.Nombre, tercero.Identificacion.Pais, tercero.Identificacion.Tipo, tercero.Identificacion.Numero)
         };
 
         var legal = await sesion.ForTenant(TenantsTecnicos.Boveda).LoadAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(terceroId, CodigosDeSeccion.Legal, null), ct);
@@ -241,7 +244,7 @@ public sealed class ConsultaDeListas(
         string consultadoPor, int mesesVigencia, CancellationToken ct)
     {
         var configuracion = await sesion.LoadAsync<ListasRestrictivasEmpresa>(empresaId, ct);
-        var proveedor = Resolver(configuracion);
+        var proveedor = Resolver(configuracion, await entornos.EsSandboxAsync(tenantId, ct));
         var personas = await PersonasAsync(sesion, terceroId, ct);
         var ahora = reloj.GetUtcNow();
         var mes = UsoMensualListas.MesDe(CalculadoraDeVigencia.Fecha(ahora));

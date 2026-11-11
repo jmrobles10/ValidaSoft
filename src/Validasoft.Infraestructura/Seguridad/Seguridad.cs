@@ -35,6 +35,8 @@ public sealed class ContextoSolicitud : IContextoSolicitud
     public IReadOnlySet<string> Scopes { get; set; } = new HashSet<string>();
 
     public IReadOnlySet<string> Empresas { get; set; } = new HashSet<string>();
+
+    public bool EsSandbox { get; set; }
 }
 
 /// <summary>
@@ -73,6 +75,8 @@ public sealed class ContextoDesdeHttp(Microsoft.AspNetCore.Http.IHttpContextAcce
     public IReadOnlySet<string> Scopes => Actual.Scopes;
 
     public IReadOnlySet<string> Empresas => Actual.Empresas;
+
+    public bool EsSandbox => Actual.EsSandbox;
 }
 
 public static class Reclamos
@@ -309,17 +313,31 @@ public sealed class AutenticacionPorApiKey(
         if (partes.Length != 4 || partes[0] != "vsk" || partes[3].Length != 64)
             return null;
 
+        // vsk_test_… es una llave de prueba (SB-2): vive en el grupo de producción, pero opera en su sandbox.
+        var dePrueba = partes[1] == "test";
         await using var global = store.QuerySession();
         var tenant = await global.Query<Tenant>().FirstOrDefaultAsync(t => t.Slug == partes[2]);
-        if (tenant is null || !tenant.Activo)
+        if (tenant is null || !tenant.Activo || tenant.EsSandbox)
             return null;
 
         await using var sesion = store.QuerySession(tenant.Id.ToString("N"));
         var prefijo = partes[3][..8];
         var candidatas = await sesion.Query<ApiKey>().Where(k => k.Prefijo == prefijo).ToListAsync();
-        var llave = candidatas.FirstOrDefault(k => k.VigenteEn(reloj.GetUtcNow()) && GeneradorDeApiKeys.Verificar(valor, k.Hash));
+        // El prefijo del entorno y la marca de la llave deben coincidir: una llave de prueba nunca vale como de producción ni al revés.
+        var llave = candidatas.FirstOrDefault(k => k.Sandbox == dePrueba && k.VigenteEn(reloj.GetUtcNow()) && GeneradorDeApiKeys.Verificar(valor, k.Hash));
         if (llave is null)
             return null;
+
+        var tenantDeLaPeticion = tenant;
+        IReadOnlyList<string> empresas = llave.Empresas;
+        if (dePrueba)
+        {
+            var sandbox = await global.Query<Tenant>().FirstOrDefaultAsync(t => t.TenantDeProduccionId == tenant.Id);
+            if (sandbox is null || !sandbox.Activo)
+                return null; // el grupo aún no tiene sandbox: POST /api/v1/sandbox (o emitir una llave de prueba) lo crea
+            tenantDeLaPeticion = sandbox;
+            empresas = await EmpresasDelSandboxAsync(global, sandbox.Id, llave.Empresas);
+        }
 
         // La llave de un sistema desactivado deja de autenticar (como mucho 5 minutos después, por la caché).
         string? codigoSistema = null;
@@ -331,8 +349,22 @@ public sealed class AutenticacionPorApiKey(
             codigoSistema = sistema.Codigo;
         }
 
-        return new LlaveValidada(tenant.Id.ToString(), llave.Id.ToString(), llave.Scopes, llave.Empresas, llave.ExpiraEn,
+        return new LlaveValidada(tenantDeLaPeticion.Id.ToString(), llave.Id.ToString(), llave.Scopes, empresas, llave.ExpiraEn,
             llave.SistemaId, codigoSistema);
+    }
+
+    /// <summary>
+    /// Las empresas de una llave de prueba son las de producción que eligió el administrador; en el sandbox cada una tiene su copia
+    /// con otro id: <c>*</c> sigue siendo todas y el resto se traduce a los ids de las copias.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> EmpresasDelSandboxAsync(IQuerySession global, Guid sandboxId, IReadOnlyList<string> deLaLlave)
+    {
+        if (deLaLlave.Contains("*"))
+            return deLaLlave;
+
+        var reales = deLaLlave.Select(e => Guid.TryParse(e, out var id) ? id : (Guid?)null).Where(id => id is not null).Select(id => id!.Value).ToHashSet();
+        var copias = await global.Query<Empresa>().Where(e => e.TenantId == sandboxId).ToListAsync();
+        return [.. copias.Where(c => c.EmpresaDeProduccionId is { } real && reales.Contains(real)).Select(c => c.Id.ToString())];
     }
 
     private AuthenticateResult Exito(IEnumerable<Claim> reclamos)

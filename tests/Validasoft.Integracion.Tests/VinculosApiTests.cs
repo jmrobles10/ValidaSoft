@@ -96,8 +96,10 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Lotes:TamanoTanda", "5");
             b.ConfigureTestServices(s =>
             {
-                s.RemoveAll<IEnviadorDeCorreo>();
-                s.AddSingleton<IEnviadorDeCorreo>(Correos);
+                // El transporte SMTP se reemplaza, no el enviador: el aislamiento del sandbox (SB-4) sigue activo en las pruebas y lo que
+                // llega a Correos es solo lo que de verdad saldría a un destinatario.
+                s.RemoveAll<ITransporteDeCorreo>();
+                s.AddSingleton<ITransporteDeCorreo>(Correos);
                 s.RemoveAll<TimeProvider>();
                 s.AddSingleton<TimeProvider>(Reloj);
                 s.RemoveAll<Validasoft.Aplicacion.Ia.IAnalizadorDeDocumentos>();
@@ -134,7 +136,7 @@ public sealed class RelojDePruebas : TimeProvider
 }
 
 /// <summary>Enviador falso: guarda los correos para leer el enlace o el código; el envío real ocurre tras el commit (outbox).</summary>
-public sealed class CorreosCapturados : IEnviadorDeCorreo
+public sealed class CorreosCapturados : ITransporteDeCorreo
 {
     private readonly ConcurrentQueue<MensajeDeCorreo> _mensajes = new();
 

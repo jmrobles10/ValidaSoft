@@ -212,7 +212,7 @@ public static class NotificacionesDeCumplimiento
         })).ToList();
         var correos = destinatarios.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), tipo))
             .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}{(folio is null ? string.Empty : $": {folio}")}",
-                [mensaje, empresa is null ? "Revisa la bandeja de cumplimiento." : $"Empresa: {empresa}. Revisa la bandeja de cumplimiento."], ruta))
+                [mensaje, empresa is null ? "Revisa la bandeja de cumplimiento." : $"Empresa: {empresa}. Revisa la bandeja de cumplimiento."], ruta, tenantId))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }

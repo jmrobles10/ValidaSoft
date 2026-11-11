@@ -14,6 +14,7 @@ using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine.Http;
@@ -45,37 +46,69 @@ public static class ConsultaCertificacionEndpoints
     [ProducesResponseType<ConsultaCertificacionDto>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status304NotModified)]
     public static async Task<IResult> Consultar(HttpContext http, string? pais, string? tipoIdentificacion, string? numero, string? tipoVinculo,
-        Guid? vinculoId, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+        Guid? vinculoId, ISesiones sesiones, IContextoSolicitud contexto, IndiceDeVinculosConsultados indice, TimeProvider reloj, CancellationToken ct)
     {
         var empresaId = contexto.EmpresaRequerida();
+        var tenantId = contexto.TenantRequerido();
         await using var sesion = sesiones.DelTenant();
-        var vinculo = vinculoId is { } id
-            ? await PorIdAsync(sesion, empresaId, id, ct)
-            : await PorIdentificacionAsync(sesion, empresaId, pais, tipoIdentificacion, numero, tipoVinculo, ct);
+        var hoy = Hoy(reloj);
 
-        var respuesta = vinculo is null ? SinVinculoDto() : await ArmarAsync(sesion, vinculo, Hoy(reloj), ct);
-        return Responder(http, respuesta);
+        // Camino rápido: el vínculo se conoce por su id (o porque esta identificación y tipo ya se resolvieron antes) ⇒ un solo viaje a
+        // la base (vínculo y certificado juntos) en lugar de cuatro. Los datos se leen siempre vivos; solo se recuerda el id.
+        string? clave = null;
+        var codigo = CodigoDeTipo(tipoVinculo);
+        Guid? conocido = vinculoId;
+        if (conocido is null)
+        {
+            clave = ClaveDeConsulta(contexto, pais, tipoIdentificacion, numero);
+            if (codigo is not null)
+                conocido = indice.Buscar(tenantId, empresaId, clave, codigo);
+        }
+
+        if (conocido is { } id)
+        {
+            var (vinculo, certificado) = await CargarVinculoYCertificadoAsync(sesion, id, ct);
+            if (vinculo is not null && vinculo.EmpresaId == empresaId)
+                return Responder(http, await ArmarAsync(sesion, vinculo, certificado, hoy, ct));
+            if (vinculoId is not null)
+                throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo en la empresa.");
+            indice.Olvidar(tenantId, empresaId, clave!, codigo!); // el vínculo ya no existe (p. ej. tras reiniciar el sandbox): se resuelve de nuevo
+        }
+
+        var porIdentificacion = await PorIdentificacionAsync(sesion, empresaId, clave!, codigo, ct);
+        if (porIdentificacion is not null && codigo is not null)
+            indice.Recordar(tenantId, empresaId, clave!, codigo, porIdentificacion.Id);
+
+        return Responder(http, porIdentificacion is null ? SinVinculoDto() : await ArmarAsync(sesion, porIdentificacion, null, hoy, ct));
     }
 
     private static DateOnly Hoy(TimeProvider reloj) => Dominio.Documentos.CalculadoraDeVigencia.Fecha(reloj.GetUtcNow());
 
-    private static async Task<Vinculo?> PorIdAsync(IDocumentSession sesion, Guid empresaId, Guid id, CancellationToken ct)
-    {
-        var vinculo = await sesion.LoadAsync<Vinculo>(id, ct);
-        return vinculo is not null && vinculo.EmpresaId == empresaId
-            ? vinculo
-            : throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo en la empresa.");
-    }
+    private static string? CodigoDeTipo(string? tipoVinculo) => string.IsNullOrWhiteSpace(tipoVinculo) ? null : tipoVinculo.Trim().ToUpperInvariant();
 
-    private static async Task<Vinculo?> PorIdentificacionAsync(IDocumentSession sesion, Guid empresaId, string? pais, string? tipo, string? numero,
-        string? tipoVinculo, CancellationToken ct)
+    /// <summary>La clave del tercero como se guarda para este tenant (con el sandbox por delante, SB-4). 422 <c>consulta-incompleta</c>.</summary>
+    private static string ClaveDeConsulta(IContextoSolicitud contexto, string? pais, string? tipo, string? numero)
     {
         if (string.IsNullOrWhiteSpace(tipo) || string.IsNullOrWhiteSpace(numero))
             throw ReglaDeNegocioException.Validacion("consulta-incompleta",
                 "Indica la identificación del tercero (pais, tipoIdentificacion y numero) o el vinculoId.");
 
-        var clave = new IdentificacionDto(string.IsNullOrWhiteSpace(pais) ? "CO" : pais, tipo, numero).ADominio().Clave;
-        var codigoTipo = string.IsNullOrWhiteSpace(tipoVinculo) ? null : tipoVinculo.Trim().ToUpperInvariant();
+        return contexto.ClaveDeTercero(new IdentificacionDto(string.IsNullOrWhiteSpace(pais) ? "CO" : pais, tipo, numero).ADominio().Clave);
+    }
+
+    /// <summary>El vínculo y su certificado (su id se deriva del del vínculo) en un solo viaje.</summary>
+    private static async Task<(Vinculo? Vinculo, Certificado? Certificado)> CargarVinculoYCertificadoAsync(IDocumentSession sesion, Guid id,
+        CancellationToken ct)
+    {
+        var lote = sesion.CreateBatchQuery();
+        var vinculoPedido = lote.Load<Vinculo>(id);
+        var certificadoPedido = lote.Load<Certificado>(Certificado.IdPara(id));
+        await lote.Execute(ct);
+        return (await vinculoPedido, await certificadoPedido);
+    }
+
+    private static async Task<Vinculo?> PorIdentificacionAsync(IDocumentSession sesion, Guid empresaId, string clave, string? codigoTipo, CancellationToken ct)
+    {
 
         var lote = sesion.CreateBatchQuery();
         var terceroPedido = lote.Query<Tercero>().Where(t => t.ClaveIdentificacion == clave).FirstOrDefault();
@@ -103,16 +136,33 @@ public static class ConsultaCertificacionEndpoints
             : vinculos.SingleOrDefault();
     }
 
-    private static async Task<ConsultaCertificacionDto> ArmarAsync(IDocumentSession sesion, Vinculo vinculo, DateOnly hoy, CancellationToken ct)
+    /// <summary>
+    /// La respuesta del vínculo. Con <paramref name="precargado"/> (el certificado que ya se leyó junto al vínculo) solo se lee el
+    /// expediente abierto, si lo hay; sin él, certificado y expediente van en un solo viaje.
+    /// </summary>
+    private static async Task<ConsultaCertificacionDto> ArmarAsync(IDocumentSession sesion, Vinculo vinculo, Certificado? precargado, DateOnly hoy,
+        CancellationToken ct)
     {
-        var lote = sesion.CreateBatchQuery();
-        var certificadoPedido = lote.Load<Certificado>(Certificado.IdPara(vinculo.Id));
-        var expedientePedido = vinculo.ExpedienteAbiertoId is { } abierto ? lote.Load<Expediente>(abierto) : null;
-        await lote.Execute(ct);
-        var certificado = await certificadoPedido;
+        Certificado? certificado;
+        Expediente? expediente = null;
+        if (precargado is not null)
+        {
+            certificado = precargado;
+            if (vinculo.ExpedienteAbiertoId is { } soloAbierto)
+                expediente = await sesion.LoadAsync<Expediente>(soloAbierto, ct);
+        }
+        else
+        {
+            var lote = sesion.CreateBatchQuery();
+            var certificadoPedido = lote.Load<Certificado>(Certificado.IdPara(vinculo.Id));
+            var expedientePedido = vinculo.ExpedienteAbiertoId is { } abierto ? lote.Load<Expediente>(abierto) : null;
+            await lote.Execute(ct);
+            certificado = await certificadoPedido;
+            expediente = expedientePedido is null ? null : await expedientePedido;
+        }
+
         if (certificado is not null && certificado.EmpresaId != vinculo.EmpresaId)
             certificado = null;
-        var expediente = expedientePedido is null ? null : await expedientePedido;
 
         var actual = certificado?.Actual;
         var revalidacion = expediente is { Tipo: TipoExpediente.Actualizacion, EstaAbierto: true }

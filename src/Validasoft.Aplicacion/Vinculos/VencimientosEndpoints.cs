@@ -123,7 +123,7 @@ public static class VencimientosEndpoints
             [
                 .. grupo.OrderBy(x => x.Vencimiento.VigenteHasta)
                     .Select(x => new DocumentoPorVencer(x.Vencimiento.Documento, [new VencimientoPorEmpresa(nombreEmpresa, x.Vencimiento.VigenteHasta)]))
-            ]));
+            ], contexto.TenantId));
         await empresa.Sesion.SaveChangesAsync(ct);
         return new RecordatorioEnviadoDto(enviar.Select(x => x.Correo).Distinct().Count(), enviar.Count, omitidos);
     }
@@ -171,7 +171,7 @@ public static class VencimientosEndpoints
                 var tercero = terceros.GetValueOrDefault(vinculo.TerceroId);
                 var tipo = tipos.GetValueOrDefault(vinculo.TipoVinculoId);
                 filas.Add(new VencimientoDto(vinculo.Id, documento.Id,
-                    new TerceroResumenDto(vinculo.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.ClaveIdentificacion ?? string.Empty),
+                    new TerceroResumenDto(vinculo.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.Identificacion.Clave ?? string.Empty),
                     new TipoVinculoResumenDto(vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
                     documento.NombreTipo, numero, hasta, hasta.DayNumber - hoy.DayNumber, estadoVigencia.ToString(), vigencia.Base.ToString(),
                     vigencia.FinDeGracia, permite,

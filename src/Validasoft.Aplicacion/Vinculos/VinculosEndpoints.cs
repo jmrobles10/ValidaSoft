@@ -25,7 +25,7 @@ public static class TercerosEndpoints
     public static async Task<IResult> Crear(CrearTerceroDto dto, ISesiones sesiones, IContextoSolicitud contexto,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = ConstruirTercero(dto, contexto.TenantRequerido(), reloj.GetUtcNow());
+        var tercero = ConstruirTercero(dto, contexto.TenantRequerido(), contexto.EsSandbox, reloj.GetUtcNow());
 
         await using var sesion = sesiones.DelTenant();
         var existente = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == tercero.ClaveIdentificacion, ct);
@@ -55,7 +55,7 @@ public static class TercerosEndpoints
     public static async Task<TerceroDto> PorIdentificacion(string pais, string tipo, string numero, ISesiones sesiones,
         IContextoSolicitud contexto, CancellationToken ct)
     {
-        var clave = new IdentificacionDto(pais, tipo, numero).ADominio().Clave;
+        var clave = contexto.ClaveDeTercero(new IdentificacionDto(pais, tipo, numero).ADominio().Clave);
         await using var sesion = sesiones.DelTenant();
         var tercero = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == clave, ct);
         return tercero is not null && await EsVisibleAsync(sesion, tercero, contexto, ct)
@@ -63,7 +63,11 @@ public static class TercerosEndpoints
             : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
     }
 
-    internal static Tercero ConstruirTercero(CrearTerceroDto dto, Guid tenantId, DateTimeOffset ahora)
+    /// <summary>
+    /// El tercero que se registra desde un tenant. En un sandbox (<paramref name="esSandbox"/>, SB-4) queda aislado: su clave lleva el
+    /// tenant sandbox por delante y no choca con el tercero real que tenga la misma identificación.
+    /// </summary>
+    internal static Tercero ConstruirTercero(CrearTerceroDto dto, Guid tenantId, bool esSandbox, DateTimeOffset ahora)
     {
         if (!Enum.TryParse<TipoPersona>(dto.TipoPersona, true, out var tipoPersona))
             throw ReglaDeNegocioException.Validacion("tipo-persona-invalido", "El tipo de persona debe ser Natural, Juridica o Consorcio.");
@@ -71,6 +75,8 @@ public static class TercerosEndpoints
         var tercero = Tercero.Crear(dto.Identificacion.ADominio(), tipoPersona, dto.Nombre, dto.NombreComercial,
             dto.Contactos?.Select(c => new Contacto(c.Nombre, c.Correo.Trim().ToLowerInvariant(), c.Telefono, c.Rol)), ahora);
         tercero.CreadoPorTenant = tenantId;
+        if (esSandbox)
+            tercero.AislarEnSandbox(tenantId);
         return tercero;
     }
 
@@ -369,7 +375,7 @@ public static class VinculosEndpoints
         if (dto.Tercero is null)
             throw ReglaDeNegocioException.Validacion("tercero-requerido", "Indica terceroId o los datos del tercero.");
 
-        var nuevo = TercerosEndpoints.ConstruirTercero(dto.Tercero, contexto.TenantRequerido(), ahora);
+        var nuevo = TercerosEndpoints.ConstruirTercero(dto.Tercero, contexto.TenantRequerido(), contexto.EsSandbox, ahora);
         var existente = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == nuevo.ClaveIdentificacion, ct);
         if (existente is not null)
             return existente; // Ya existe en la plataforma: se reutiliza sin tocar sus datos maestros (P-1-7).

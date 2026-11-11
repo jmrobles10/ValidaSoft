@@ -60,6 +60,12 @@ public static class Permisos
     /// pagar o contratar. Solo devuelve el resumen (sin documentos ni datos personales); por eso va aparte de los demás.
     /// </summary>
     public const string ConsultasLeer = "consultas:leer";
+
+    /// <summary>
+    /// Crear, sincronizar y reiniciar el sandbox del grupo y leer su buzón de correo de pruebas (SB-6). Se obtiene como los demás
+    /// de administración del tenant; una API key de prueba con este permiso puede reiniciar su propio sandbox.
+    /// </summary>
+    public const string SandboxAdministrar = "sandbox:administrar";
     /// <summary>Consultar o reconsultar las listas restrictivas de un expediente (VE-15).</summary>
     public const string VerificacionesEscribir = "verificaciones:escribir";
 
@@ -72,7 +78,7 @@ public static class Permisos
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir, SandboxAdministrar
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];
@@ -89,7 +95,7 @@ public static class Permisos
     /// gestiona usuarios, sistemas, llaves ni empresas (evita que se otorgue alcance de tenant a sí mismo).
     /// </summary>
     public static readonly IReadOnlySet<string> SoloDeTenant =
-        new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar };
+        new HashSet<string> { EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, SandboxAdministrar };
 
     /// <summary>
     /// Lo que todo rol lee; los documentos compartidos y los certificados se leen y descargan con cualquier rol, y la consulta

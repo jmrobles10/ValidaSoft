@@ -12,7 +12,7 @@ namespace Validasoft.Infraestructura.Correo;
 /// En desarrollo apunta a Mailpit (SMTP 1025, interfaz en http://localhost:8025). Nunca registra el cuerpo del correo:
 /// lleva el token del enlace o el código OTP.
 /// </summary>
-public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorSmtp> logger) : IEnviadorDeCorreo
+public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorSmtp> logger) : ITransporteDeCorreo
 {
     public async Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct)
     {

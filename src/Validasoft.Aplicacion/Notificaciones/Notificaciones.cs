@@ -112,7 +112,8 @@ public static class TiposNotificacion
 /// Correo a una persona del tenant (revisor o administrador), ya consolidado: uno por persona y hecho (NW-9). Cola
 /// <c>correo</c>; <see cref="Ruta"/> es la de <c>apps/web</c> y el redactor le antepone la URL de la app.
 /// </summary>
-public sealed record CorreoDeNotificacionPendiente(string Para, string Nombre, string Asunto, IReadOnlyList<string> Lineas, string? Ruta);
+public sealed record CorreoDeNotificacionPendiente(string Para, string Nombre, string Asunto, IReadOnlyList<string> Lineas, string? Ruta,
+    Guid? TenantId = null);
 
 /// <summary>Texto aceptado para la constancia del tercero.</summary>
 public sealed record TextoAceptadoParaCorreo(string Titulo, int Version, string Hash);
@@ -393,7 +394,7 @@ public sealed class PlanificadorDeNotificaciones
                     // «de Constructora Sur S.A.S.» ya termina en punto: no se agrega otro («S.A.S..»).
                     ConPunto($"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}"),
                     (areasDe.Count == 1 ? "Tu área: " : "Tus áreas: ") + string.Join(", ", areasDe) + "."
-                ], ruta));
+                ], ruta, tenantId));
             }
         }
 
@@ -439,7 +440,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         };
         List<object> correos = TiposNotificacion.QuiereCorreo(await contexto.PreferenciasAsync(tenantId, usuario.Id, ct), TiposNotificacion.LoteTerminado)
-            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta)]
+            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta, tenantId)]
             : [];
         return new PlanDeNotificaciones([(tenantId, notificacion)], correos);
     }
@@ -489,7 +490,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         })).ToList();
         var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.WebhookDeshabilitado))
-            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, "Webhook deshabilitado: " + suscripcion.Sistema, [mensaje], null))
+            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, "Webhook deshabilitado: " + suscripcion.Sistema, [mensaje], null, tenantId))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }
@@ -527,7 +528,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         })).ToList();
         var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.CupoIa))
-            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}: {empresa ?? mes}", [mensaje], ruta))
+            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}: {empresa ?? mes}", [mensaje], ruta, tenantId))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }
@@ -536,7 +537,7 @@ public sealed class PlanificadorDeNotificaciones
 public static class CorreoDeNotificacionPendienteHandler
 {
     public static Task Handle(CorreoDeNotificacionPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarNotificacion(correo), ct);
+        enviador.EnviarAsync(redactor.RedactarNotificacion(correo).DeTenant(correo.TenantId), ct);
 }
 
 /// <summary>
@@ -558,22 +559,22 @@ public static class CorreoDeCertificadoPendienteHandler
 {
     public static async Task Handle(CorreoDeCertificadoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
         Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
 }
 
 public static class CorreoDeVencidoPendienteHandler
 {
     public static async Task Handle(CorreoDeVencidoPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
         Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct)).DeTenant(correo.TenantId), ct);
 }
 
 public static class CorreoDeConstanciaPendienteHandler
 {
     public static async Task Handle(CorreoDeConstanciaPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
         Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct)).DeTenant(correo.TenantId), ct);
 }

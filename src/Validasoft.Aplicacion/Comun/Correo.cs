@@ -5,10 +5,21 @@ using Validasoft.Dominio.Configuracion;
 
 namespace Validasoft.Aplicacion.Comun;
 
-/// <summary>Correo listo para enviar (texto plano y HTML).</summary>
-public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html);
+/// <summary>
+/// Correo listo para enviar (texto plano y HTML). <see cref="TenantId"/>: el tenant de quien lo origina; si es un sandbox el correo
+/// no sale a su destinatario sino al buzón de pruebas (SB-4). Nulo = no es de un tenant (acceso del tercero sin empresa).
+/// </summary>
+public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html, Guid? TenantId = null)
+{
+    /// <summary>El mismo correo atribuido al tenant que lo origina (lo usan todos los manejadores de la cola <c>correo</c>).</summary>
+    public MensajeDeCorreo DeTenant(Guid? tenantId) => this with { TenantId = tenantId };
+}
 
 /// <summary>Envío de correo; la implementación (SMTP con MailKit) vive en infraestructura.</summary>
+/// <remarks>
+/// Los manejadores envían por aquí. La implementación (<c>EnviadorDeCorreo</c>) retiene en el buzón del sandbox los correos de un
+/// tenant sandbox y entrega los demás al <see cref="ITransporteDeCorreo"/>.
+/// </remarks>
 public interface IEnviadorDeCorreo
 {
     Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct);
@@ -313,8 +324,8 @@ public static class CorreoDeObservacionPendienteHandler
         RedactorDeCorreos redactor, PlantillasDeCorreo plantillas, CancellationToken ct)
     {
         var mensaje = redactor.RedactarObservacion(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -329,8 +340,8 @@ public static class CorreoDeResultadoPendienteHandler
 {
     public static async Task Handle(CorreoDeResultadoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor,
         PlantillasDeCorreo plantillas, CancellationToken ct) =>
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
-            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
+            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
 }
 
 /// <summary>Despacha los correos del outbox. Wolverine reintenta si el servidor SMTP falla.</summary>
@@ -344,6 +355,6 @@ public static class CorreoDeAccesoPendienteHandler
         if (correo.Plantilla == PlantillaCorreo.Invitacion)
             mensaje = await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Invitacion, correo.TenantId, correo.EmpresaId,
                 EjemplosDeCorreo.VariablesDe(correo.Empresa, tipoVinculo: correo.TipoVinculo), ct);
-        await enviador.EnviarAsync(mensaje, ct);
+        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId), ct);
     }
 }

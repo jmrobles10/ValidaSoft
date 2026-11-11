@@ -34,7 +34,7 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
     public const string CabeceraEmpresa = "X-Empresa";
     public const string CabeceraCorrelacion = "X-Correlation-Id";
 
-    public async Task InvokeAsync(HttpContext http, IDocumentStore store)
+    public async Task InvokeAsync(HttpContext http, IDocumentStore store, IEntornos entornos, CacheDeEmpresas empresas)
     {
         var contexto = ContextoDesdeHttp.De(http);
         contexto.CorrelationId = Correlacion(http);
@@ -49,11 +49,18 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
             contexto.Sistema = usuario.FindFirstValue(Reclamos.Sistema);
             contexto.Empresas = usuario.FindAll(Reclamos.Empresa).Select(c => c.Value).ToHashSet();
 
+            // Una credencial de prueba opera en el sandbox del grupo (SB-1): toda respuesta lo dice, para que nadie lo confunda con producción.
+            if (contexto.TenantId is { } tenantDeLaCredencial && await entornos.EsSandboxAsync(tenantDeLaCredencial, http.RequestAborted))
+            {
+                contexto.EsSandbox = true;
+                http.Response.Headers[AislamientoDeSandbox.CabeceraEntorno] = AislamientoDeSandbox.Entorno;
+            }
+
             var cabeceraEmpresa = http.Request.Headers[CabeceraEmpresa].ToString();
             if (!string.IsNullOrWhiteSpace(cabeceraEmpresa))
             {
                 var empresa = Guid.TryParse(cabeceraEmpresa, out var empresaId) && contexto.TenantId is not null
-                    ? await CargarEmpresaAsync(store, empresaId, http.RequestAborted)
+                    ? await empresas.ObtenerAsync(store, empresaId, http.RequestAborted)
                     : null;
 
                 var permitida = empresa is not null && empresa.Activa && empresa.TenantId == contexto.TenantId &&
@@ -85,11 +92,6 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
         return string.IsNullOrWhiteSpace(correlacion) || correlacion.Length > 100 ? http.TraceIdentifier : correlacion;
     }
 
-    private static async Task<Empresa?> CargarEmpresaAsync(IDocumentStore store, Guid id, CancellationToken ct)
-    {
-        await using var sesion = store.QuerySession();
-        return await sesion.LoadAsync<Empresa>(id, ct);
-    }
 }
 
 /// <summary>Clave de idempotencia ya usada (docs/05 §3.1). Global; vence a las 24 horas.</summary>
