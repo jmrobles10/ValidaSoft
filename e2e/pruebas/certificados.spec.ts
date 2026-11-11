@@ -38,5 +38,9 @@ test('al aprobar, el certificado aparece en la lista de Sur y se encuentra por e
   await paginaSofia.screenshot({ path: 'test-results/certificados-web.png', fullPage: true });
 
   // Se abre por el folio: el nombre del tercero en la fila es el enlace a su ficha (Tercero 360).
-  await fila.getByText(new RegExp(`${e.sur.prefijo}-C-\\d{4}-\\d{6}-1`)).click();
-  await expect(sofia.getByRole('heading', { level: 1, name: invitacion.nombre })).toBeVisible();});
+  // La lista se vuelve a pintar al terminar la búsqueda: si el clic cae justo en ese momento no navega, así que se repite.
+  await expect(async () => {
+    await fila.getByText(new RegExp(`${e.sur.prefijo}-C-\\d{4}-\\d{6}-1`)).click({ timeout: 3000 });
+    await expect(sofia.getByRole('heading', { level: 1, name: invitacion.nombre })).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 30_000 });
+});

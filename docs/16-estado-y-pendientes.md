@@ -175,6 +175,20 @@ seguidas con la corrección.
 **Pendiente tras F5** (FM-55): la revisión automática de H7 aún no usa el cruce; la certificación bancaria no está en el mapa de respaldo;
 una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15); la cédula respalda solo la General.
 
+**Verificación de `feature/ficha-f5-cierre` (2026-11-10):**
+
+| Verificación | Resultado |
+|---|---|
+| `dotnet build` (toda la solución) | 0 errores, 0 advertencias |
+| Pruebas de dominio | 658/658 (incluye 9 de la actualización ampliada y 1 del certificado) |
+| Pruebas de integración | 147/147 (incluye las 4 de F5 y 2 de la actualización ampliada) |
+| Pruebas del SDK .NET | 18/18 |
+| `pnpm lint` · `pnpm typecheck` · `pnpm build` | en verde |
+| `pnpm test` (Vitest, web y portal) | 625/625 |
+| `Un_RUT_nuevo_propone…` | 6 corridas seguidas en verde |
+| `pnpm e2e` (aislada, 3 trabajadores) | 48/48 (46 anteriores + 2 nuevas). `certificados.spec.ts` fallaba 1 de cada 3 veces por un clic que caía mientras la lista se volvía a pintar; ahora repite el clic |
+| E2E nueva `ficha-f5.spec.ts` | 2/2: el tercero sube un RUT nuevo, acepta la propuesta y la empresa ve una sola actualización con el RUT, la General y el cruce; y la aprobación con una discrepancia crítica pide justificación |
+
 ### 4.6 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre
   las empresas como los del tercero.
