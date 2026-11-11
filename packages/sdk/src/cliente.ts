@@ -5,6 +5,7 @@ import type {
   CertificadoDelVinculoDto,
   CertificadoDto,
   ConsultaCertificacionDto,
+  CorreoDePruebaDto,
   CrearVinculoDto,
   DescargaDto,
   EnlaceInvitacionDto,
@@ -12,7 +13,9 @@ import type {
   ExpedienteDto,
   InvitacionDto,
   JustificacionDto,
+  PaginaDto,
   PaginaEventosDto,
+  SandboxDto,
   SesionUsuarioDto,
   TipoEventoPublicoDto,
   VinculoDto,
@@ -151,6 +154,24 @@ export interface FiltroEventos {
   limite?: number;
 }
 
+/** Filtros del buzón de pruebas del sandbox: destinatario, parte del asunto, tamaño de página (1–200) y cursor de la página anterior. */
+export interface FiltroCorreos {
+  para?: string;
+  asunto?: string;
+  limite?: number;
+  cursor?: string;
+}
+
+function correosDe(ctx: Contexto, filtro: FiltroCorreos): Promise<PaginaDto<CorreoDePruebaDto>> {
+  const parametros = new URLSearchParams();
+  if (filtro.para) parametros.set('para', filtro.para);
+  if (filtro.asunto) parametros.set('asunto', filtro.asunto);
+  if (filtro.limite !== undefined) parametros.set('limite', String(filtro.limite));
+  if (filtro.cursor) parametros.set('cursor', filtro.cursor);
+  const consulta = parametros.toString();
+  return obtener<PaginaDto<CorreoDePruebaDto>>(ctx, { metodo: 'GET', ruta: `api/v1/sandbox/correos${consulta ? `?${consulta}` : ''}`, conEmpresa: false });
+}
+
 async function* recorrer(cliente: ClienteValidasoft, filtro: FiltroEventos): AsyncGenerator<EventoPublicoDto> {
   let desde = filtro.desde;
   for (;;) {
@@ -261,6 +282,42 @@ export class ClienteValidasoft {
     /** Recorre todas las páginas hasta el último evento disponible; guarda `evento.cursor` al procesar cada uno. */
     recorrer: (filtro: FiltroEventos = {}): AsyncGenerator<EventoPublicoDto> => recorrer(this, filtro),
     tipos: () => obtener<TipoEventoPublicoDto[]>(this.ctx, { metodo: 'GET', ruta: 'api/v1/eventos/tipos' }),
+  };
+
+  /**
+   * El sandbox del grupo (docs/08 §2.2): un entorno de pruebas aislado al que apuntan las API keys `vsk_test_…`, con la configuración del
+   * grupo, ningún dato real, los correos retenidos en un buzón consultable y los proveedores de IA y de listas simulados. Piden el
+   * permiso `sandbox:administrar`; sirven con la llave de producción y con la de prueba, siempre sobre el sandbox.
+   */
+  readonly sandbox = {
+    /** Si existe, sus empresas (el `X-Empresa` de una llave de prueba es el `id` de cada una) y cuántos correos tiene. */
+    obtener: () => obtener<SandboxDto>(this.ctx, { metodo: 'GET', ruta: 'api/v1/sandbox', conEmpresa: false }),
+    /** Lo crea con la configuración del grupo o, si ya existe, le agrega lo que le falte de producción. Idempotente. */
+    asegurar: () => obtener<SandboxDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sandbox', conEmpresa: false, reintentable: true }),
+    /** Borra todo lo hecho en el sandbox y lo siembra de nuevo con la configuración de producción de ahora. */
+    reiniciar: () => obtener<SandboxDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sandbox/reiniciar', conEmpresa: false }),
+    /** Los correos que el sandbox habría enviado, los más nuevos primero. */
+    correos: (filtro: FiltroCorreos = {}) => correosDe(this.ctx, filtro),
+    /**
+     * Espera a que llegue al buzón un correo para `para` (y, si se indica, con `asunto` en el asunto) y lo devuelve; falla si no llega en
+     * `esperaMs` (20 s por omisión). El de la invitación trae el enlace del tercero en `enlaces`.
+     */
+    esperarCorreo: async (para: string, opciones: { asunto?: string; esperaMs?: number } = {}): Promise<CorreoDePruebaDto> => {
+      const limite = Date.now() + (opciones.esperaMs ?? 20_000);
+      for (;;) {
+        const pagina = await correosDe(this.ctx, { para, asunto: opciones.asunto, limite: 1 });
+        const primero = pagina.datos[0];
+        if (primero) return primero;
+        if (Date.now() >= limite) throw new Error(`No llegó al buzón del sandbox ningún correo para ${para}.`);
+        await esperar(250);
+      }
+    },
+    /** Un correo del buzón. */
+    correo: (id: string) => obtener<CorreoDePruebaDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/sandbox/correos/${q(id)}`, conEmpresa: false }),
+    /** Vacía el buzón. */
+    vaciarCorreos: async (): Promise<void> => {
+      await obtener<null>(this.ctx, { metodo: 'DELETE', ruta: 'api/v1/sandbox/correos', conEmpresa: false });
+    },
   };
 
   readonly sesiones = {

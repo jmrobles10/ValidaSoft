@@ -180,3 +180,40 @@ export interface SesionUsuarioDto {
   token: string;
   expira: string;
 }
+
+/** Empresa del sandbox (SB-3): la copia de pruebas de una empresa real. Con una llave de prueba, `X-Empresa` es `id`. */
+export interface EmpresaDeSandboxDto {
+  id: string;
+  produccionId: string;
+  nombre: string;
+  prefijoFolio: string;
+  activa: boolean;
+}
+
+/** Estado del sandbox del grupo (`GET /sandbox`). `entorno` es el de la credencial que pregunta. */
+export interface SandboxDto {
+  existe: boolean;
+  entorno: 'produccion' | 'sandbox';
+  tenantId: string | null;
+  creadoEn: string | null;
+  reiniciadoEn: string | null;
+  empresas: EmpresaDeSandboxDto[];
+  sistemas: string[];
+  correos: number;
+}
+
+/** Correo que el sandbox habría enviado, retenido en su buzón: `enlaces` trae el de acceso del tercero. */
+export interface CorreoDePruebaDto {
+  id: string;
+  para: string;
+  asunto: string;
+  texto: string;
+  html: string;
+  enlaces: string[];
+  recibidoEn: string;
+}
+
+export interface PaginaDto<T> {
+  datos: T[];
+  siguienteCursor: string | null;
+}

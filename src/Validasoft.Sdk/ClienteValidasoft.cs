@@ -25,6 +25,9 @@ public interface IClienteValidasoft
 
     SesionesApi Sesiones { get; }
 
+    /// <summary>El sandbox del grupo y su buzón de correo de pruebas (docs/08 §2.2).</summary>
+    SandboxApi Sandbox { get; }
+
     /// <summary>El mismo cliente sobre otra empresa interna (<c>X-Empresa</c>), para llaves con alcance a varias.</summary>
     IClienteValidasoft ParaEmpresa(Guid empresaId);
 
@@ -61,6 +64,7 @@ public sealed class ClienteValidasoft : IClienteValidasoft
         Consultas = new ConsultasApi(transporte);
         Eventos = new EventosApi(transporte);
         Sesiones = new SesionesApi(transporte);
+        Sandbox = new SandboxApi(transporte);
     }
 
     public VinculosApi Vinculos { get; }
@@ -76,6 +80,8 @@ public sealed class ClienteValidasoft : IClienteValidasoft
     public EventosApi Eventos { get; }
 
     public SesionesApi Sesiones { get; }
+
+    public SandboxApi Sandbox { get; }
 
     public IClienteValidasoft ParaEmpresa(Guid empresaId) => new ClienteValidasoft(_transporte.Con(empresaId, _transporte.Usuario));
 
@@ -282,4 +288,73 @@ public sealed class SesionesApi
             throw new InvalidOperationException("La sesión es de una persona: usa cliente.ComoUsuario(usuario).Sesiones.CrearAsync().");
         return _t.EnviarAsync<SesionUsuarioDto>(new Peticion(HttpMethod.Post, "api/v1/sesiones-usuario", ConEmpresa: false), ct);
     }
+}
+
+/// <summary>
+/// El sandbox del grupo (docs/08 §2.2): un entorno de pruebas aislado al que apuntan las API keys <c>vsk_test_…</c>, con la
+/// configuración del grupo, ningún dato real, los correos retenidos en un buzón consultable y los proveedores de IA y de listas
+/// simulados. Piden el permiso <c>sandbox:administrar</c>; funcionan con la llave de producción y con la de prueba, siempre sobre
+/// el sandbox.
+/// </summary>
+public sealed class SandboxApi
+{
+    private readonly Transporte _t;
+
+    internal SandboxApi(Transporte transporte) => _t = transporte;
+
+    /// <summary>Si existe, sus empresas (el <c>X-Empresa</c> de una llave de prueba es el <see cref="EmpresaDeSandboxDto.Id"/>) y cuántos correos tiene.</summary>
+    public Task<SandboxDto> ObtenerAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Get, "api/v1/sandbox", ConEmpresa: false), ct);
+
+    /// <summary>Lo crea con la configuración del grupo o, si ya existe, le agrega lo que le falte de producción. Idempotente.</summary>
+    public Task<SandboxDto> AsegurarAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Post, "api/v1/sandbox", ConEmpresa: false, Reintentable: true), ct);
+
+    /// <summary>Borra todo lo hecho en el sandbox y lo siembra de nuevo con la configuración de producción de ahora.</summary>
+    public Task<SandboxDto> ReiniciarAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Post, "api/v1/sandbox/reiniciar", ConEmpresa: false), ct);
+
+    /// <summary>Los correos que el sandbox habría enviado, los más nuevos primero.</summary>
+    public Task<PaginaDto<CorreoDePruebaDto>> CorreosAsync(string? para = null, string? asunto = null, int? limite = null, string? cursor = null,
+        CancellationToken ct = default)
+    {
+        var parametros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(para))
+            parametros.Add("para=" + ClienteValidasoft.Escapar(para));
+        if (!string.IsNullOrWhiteSpace(asunto))
+            parametros.Add("asunto=" + ClienteValidasoft.Escapar(asunto));
+        if (limite is { } l)
+            parametros.Add("limite=" + l.ToString(CultureInfo.InvariantCulture));
+        if (!string.IsNullOrWhiteSpace(cursor))
+            parametros.Add("cursor=" + ClienteValidasoft.Escapar(cursor));
+        var ruta = "api/v1/sandbox/correos" + (parametros.Count == 0 ? string.Empty : "?" + string.Join("&", parametros));
+        return _t.EnviarAsync<PaginaDto<CorreoDePruebaDto>>(new Peticion(HttpMethod.Get, ruta, ConEmpresa: false), ct);
+    }
+
+    /// <summary>
+    /// Espera a que llegue al buzón un correo para <paramref name="para"/> (y, si se indica, cuyo asunto contenga
+    /// <paramref name="asunto"/>) y lo devuelve; <see cref="TimeoutException"/> si no llega en <paramref name="espera"/> (20 s por omisión).
+    /// El de la invitación trae el enlace del tercero en <see cref="CorreoDePruebaDto.Enlaces"/>.
+    /// </summary>
+    public async Task<CorreoDePruebaDto> EsperarCorreoAsync(string para, string? asunto = null, TimeSpan? espera = null, CancellationToken ct = default)
+    {
+        var limite = DateTime.UtcNow + (espera ?? TimeSpan.FromSeconds(20));
+        while (true)
+        {
+            var pagina = await CorreosAsync(para, asunto, 1, null, ct);
+            if (pagina.Datos.Count > 0)
+                return pagina.Datos[0];
+            if (DateTime.UtcNow >= limite)
+                throw new TimeoutException($"No llegó al buzón del sandbox ningún correo para {para}.");
+            await Task.Delay(250, ct);
+        }
+    }
+
+    /// <summary>Un correo del buzón.</summary>
+    public Task<CorreoDePruebaDto> CorreoAsync(Guid id, CancellationToken ct = default) =>
+        _t.EnviarAsync<CorreoDePruebaDto>(new Peticion(HttpMethod.Get, $"api/v1/sandbox/correos/{id}", ConEmpresa: false), ct);
+
+    /// <summary>Vacía el buzón.</summary>
+    public Task VaciarCorreosAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SinContenido>(new Peticion(HttpMethod.Delete, "api/v1/sandbox/correos", ConEmpresa: false), ct);
 }

@@ -53,6 +53,12 @@ jobs:
           dotnet test Validasoft.slnx --configuration Release --no-build
           --logger "trx;LogFilePrefix=resultados" --results-directory TestResults
 
+      # Que el empaquetado de los SDK no se pudra entre publicaciones (docs/08 §2.3): sin publicar nada.
+      - name: Empaquetar el SDK .NET (sin publicar)
+        run: |
+          dotnet pack src/Validasoft.Contratos/Validasoft.Contratos.csproj --configuration Release --no-build --output artefactos/nuget
+          dotnet pack src/Validasoft.Sdk/Validasoft.Sdk.csproj --configuration Release --no-build --output artefactos/nuget
+
       - name: Paquetes con vulnerabilidades conocidas (informativo)
         if: always()
         run: dotnet list Validasoft.slnx package --vulnerable --include-transitive
@@ -94,6 +100,10 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # El paquete npm del SDK trae ESM y CJS: las dos salidas cargan y validan un webhook firmado.
+      - name: Paquete npm del SDK (ESM y CJS)
+        run: node infra/sdk/verificar-paquete.mjs
 
   e2e:
     name: Pruebas de punta a punta (Playwright)
