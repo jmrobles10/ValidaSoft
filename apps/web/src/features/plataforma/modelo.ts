@@ -163,7 +163,7 @@ export interface BorradorPlanIa {
   adicional: boolean;
   /** Vacío = sin tope. */
   tope: string;
-  /** Precio propio de cada validación adicional de esta empresa (PI-18); vacío = el de la tarifa general. */
+  /** Precio propio de cada validación adicional de esta empresa (PI-12); vacío = el de la tarifa general. */
   precio: string;
   modeloPorDefecto: string;
   modeloEscalamiento: string;

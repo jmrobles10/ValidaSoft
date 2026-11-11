@@ -77,7 +77,7 @@ function TablaEmpresas({ grupo, id }: { grupo: GrupoDto; id: string }) {
   );
 }
 
-/** Agregar una empresa a un grupo que ya existe (PI-4): el mismo formulario del grupo, con la clave de idempotencia de este diálogo. */
+/** Agregar una empresa a un grupo que ya existe (PI-9): el mismo formulario del grupo, con la clave de idempotencia de este diálogo. */
 function DialogoNuevaEmpresa({ grupo, onCerrar }: { grupo: GrupoDto; onCerrar: () => void }) {
   const { t } = useTranslation();
   const [clave] = useState(() => crypto.randomUUID());

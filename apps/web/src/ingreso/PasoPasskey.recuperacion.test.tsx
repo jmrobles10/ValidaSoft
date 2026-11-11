@@ -23,7 +23,7 @@ function montar(alResultado: (paso: PasoDeIngresoDto) => void = () => undefined)
   return userEvent.setup();
 }
 
-describe('recuperar el acceso sin la passkey (PI-15)', () => {
+describe('recuperar el acceso sin la passkey (PI-18)', () => {
   it('ofrece usar un código de recuperación y volver a la passkey', async () => {
     const usuario = montar();
 

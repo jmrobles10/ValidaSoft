@@ -26,7 +26,7 @@ const SIN_EMPRESA = { empresa: null } as const;
 export const TAMANO_PAGINA_CONSUMO = 25;
 export const TAMANO_PAGINA_INGRESOS = 50;
 
-// ---------- Consumo de IA por cliente (PI-18) ----------
+// ---------- Consumo de IA por cliente (PI-12) ----------
 
 export interface FiltroDeConsumo {
   periodo: string;
@@ -94,7 +94,7 @@ export function useCambiarClaveDeArranque() {
   });
 }
 
-// ---------- Operadores, empresas y sistemas de un grupo (PI-3, PI-4) ----------
+// ---------- Operadores, empresas y sistemas de un grupo (PI-7, PI-9) ----------
 
 export function useReactivarOperador() {
   const cliente = useQueryClient();
@@ -104,7 +104,7 @@ export function useReactivarOperador() {
   });
 }
 
-/** Agrega una empresa a un grupo que ya existe (PI-4); lleva `Idempotency-Key`: repetir el envío no la duplica. */
+/** Agrega una empresa a un grupo que ya existe (PI-9); lleva `Idempotency-Key`: repetir el envío no la duplica. */
 export function useCrearEmpresaDeGrupo(tenantId: string, claveIdempotencia: string) {
   const cliente = useQueryClient();
   return useMutation({

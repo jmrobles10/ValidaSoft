@@ -59,7 +59,7 @@ function DialogoDeCodigos({ nuevos, onCerrar }: { nuevos: CodigosDeRecuperacionD
 }
 
 /**
- * Códigos de recuperación (PI-15): diez códigos de un solo uso para entrar si se pierde la passkey. Aquí se ve cuántos quedan y se generan otros (los
+ * Códigos de recuperación (PI-18): diez códigos de un solo uso para entrar si se pierde la passkey. Aquí se ve cuántos quedan y se generan otros (los
  * anteriores dejan de servir); generarlos exige confirmar con la passkey (PI-13), que el cliente de la API pide solo.
  */
 export function TarjetaCodigosDeRecuperacion() {

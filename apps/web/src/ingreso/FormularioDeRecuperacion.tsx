@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * Sin la passkey a la mano (PI-15): un código de recuperación de los diez que la persona guardó. Sirve una sola vez y, al usarlo, el servidor la lleva a
+ * Sin la passkey a la mano (PI-18): un código de recuperación de los diez que la persona guardó. Sirve una sola vez y, al usarlo, el servidor la lleva a
  * registrar una passkey nueva; no abre la sesión por sí solo.
  */
 export function FormularioDeRecuperacion({ desafio, alResultado, alCancelar }: Props) {

@@ -1,5 +1,5 @@
 /**
- * Textos es-CO de lo nuevo de la consola de Plataforma (PI-3, PI-4, PI-16…PI-18): uso de IA por cliente con su tarifa, ingresos de los operadores, clave de
+ * Textos es-CO de lo nuevo de la consola de Plataforma (PI-7, PI-9, PI-12, PI-16, PI-17): uso de IA por cliente con su tarifa, ingresos de los operadores, clave de
  * arranque, y las empresas y los sistemas de un grupo. Se integran en `es-CO.ts` como `consola`.
  */
 

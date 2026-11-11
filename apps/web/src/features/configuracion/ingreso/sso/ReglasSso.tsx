@@ -42,7 +42,7 @@ export function RolesPorOmision({ filas, empresas, alCambiar }: { filas: FilaDeR
   return (
     <Stack spacing={1}>
       {filas.map((fila, i) => (
-        <Stack key={`${fila.rol}-${fila.empresaId}-${String(i)}`} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+        <Stack key={i} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <SelectoresDeRol fila={fila} empresas={empresas} alCambiar={(c) => actualizar(i, c)} etiquetaRol={t('sso.roles.rol')} />
           <Tooltip title={t('sso.roles.quitar')}>
             <IconButton size="small" aria-label={t('sso.roles.quitar')} onClick={() => alCambiar(filas.filter((_, j) => j !== i))}>
@@ -70,7 +70,7 @@ export function ReglasDeGrupos({ filas, empresas, alCambiar }: { filas: FilaDeRe
         </Typography>
       )}
       {filas.map((fila, i) => (
-        <Stack key={`${fila.grupo}-${String(i)}`} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
+        <Stack key={i} direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { md: 'center' } }}>
           <TextField size="small" label={t('sso.reglas.grupo')} value={fila.grupo} onChange={(e) => actualizar(i, { grupo: e.target.value })} sx={{ minWidth: 190, flex: 1 }} slotProps={{ htmlInput: { maxLength: 300 } }} />
           <Typography aria-hidden sx={{ color: 'text.secondary', display: { xs: 'none', md: 'block' } }}>
             →

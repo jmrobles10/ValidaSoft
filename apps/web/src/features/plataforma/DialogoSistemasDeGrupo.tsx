@@ -43,7 +43,7 @@ function FilaSistema({ sistema, alCambiar }: { sistema: SistemaIntegradoDto; alC
 }
 
 /**
- * Los sistemas integrados de un grupo (PI-3): desactivar uno cierra de inmediato el acceso de sus llaves y de los tokens que emitió, y reactivarlo no revive lo
+ * Los sistemas integrados de un grupo (PI-7): desactivar uno cierra de inmediato el acceso de sus llaves y de los tokens que emitió, y reactivarlo no revive lo
  * anterior (las llaves revocadas siguen revocadas y los tokens vencen). Cada cambio pide confirmar con la passkey.
  */
 export function DialogoSistemasDeGrupo({ tenantId, grupo, onCerrar }: { tenantId: string; grupo: string; onCerrar: () => void }) {

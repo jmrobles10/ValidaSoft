@@ -7,10 +7,11 @@ export interface PeticionSimulada {
   ruta: string;
   url: string;
   cuerpo: unknown;
+  cabeceras: Headers;
 }
 
 /** Cómo responde la API simulada a una ruta (`'POST /api/v1/ingreso/codigo'`): datos (200), `undefined` (204), una respuesta con otro estado o una función de la petición. */
-export type RespuestaSimulada = unknown;
+export type RespuestaSimulada = object | string | number | boolean | null | undefined;
 export type ManejadorSimulado = RespuestaSimulada | ((peticion: PeticionSimulada) => RespuestaSimulada);
 
 /** Una respuesta de error ProblemDetails como las de la API (`codigo` estable, `detail` en español). */
@@ -47,11 +48,11 @@ export function simularApi(rutas: Record<string, ManejadorSimulado>): PeticionSi
       const metodo = (init?.method ?? 'GET').toUpperCase();
       const ruta = url.split('?')[0] ?? url;
       const cuerpo: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-      const peticion: PeticionSimulada = { metodo, ruta, url, cuerpo };
+      const peticion: PeticionSimulada = { metodo, ruta, url, cuerpo, cabeceras: new Headers(init?.headers) };
       peticiones.push(peticion);
       const manejador = rutas[`${metodo} ${ruta}`];
       if (manejador === undefined) return Promise.resolve(aRespuesta(new ProblemaSimulado(404, 'no-encontrado', `Sin simular: ${metodo} ${ruta}`)));
-      return Promise.resolve(aRespuesta(typeof manejador === 'function' ? (manejador as (p: PeticionSimulada) => RespuestaSimulada)(peticion) : manejador));
+      return Promise.resolve(aRespuesta(typeof manejador === 'function' ? manejador(peticion) : manejador));
     }),
   });
   return peticiones;

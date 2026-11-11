@@ -1,5 +1,5 @@
 /**
- * Textos es-CO de la seguridad del ingreso (PI-13…PI-17): reautenticación con la passkey para acciones sensibles y los errores nuevos del inicio de sesión único
+ * Textos es-CO de la seguridad del ingreso (PI-13, PI-18): reautenticación con la passkey para acciones sensibles y los errores nuevos del inicio de sesión único
  * y de la consola. Se integran en `es-CO.ts`.
  */
 

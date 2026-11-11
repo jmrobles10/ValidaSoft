@@ -77,7 +77,7 @@ function DialogoTarifa({ tarifa, onCerrar }: { tarifa: TarifaDeIaDto; onCerrar: 
   );
 }
 
-/** El precio general de cada validación adicional (PI-18): con él se valora lo que una empresa consume por encima de su plan; cada plan puede tener uno propio. */
+/** El precio general de cada validación adicional (PI-12): con él se valora lo que una empresa consume por encima de su plan; cada plan puede tener uno propio. */
 export function TarjetaTarifaIa() {
   const { t } = useTranslation();
   const consulta = useTarifaIa();

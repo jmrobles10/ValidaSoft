@@ -1,7 +1,7 @@
 import type { FijarTarifaDeIaDto } from '@validasoft/api-client';
 
 /**
- * Consumo de IA por cliente (PI-18): periodos, formato de cifras y la tarifa del adicional. Solo lógica pura; lo que se ve está en `PaginaConsumoIa`.
+ * Consumo de IA por cliente (PI-12): periodos, formato de cifras y la tarifa del adicional. Solo lógica pura; lo que se ve está en `PaginaConsumoIa`.
  */
 
 export const MESES_ATRAS = 12;

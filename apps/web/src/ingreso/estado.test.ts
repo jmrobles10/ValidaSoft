@@ -97,7 +97,7 @@ describe('retorno del proveedor de identidad (PI-1)', () => {
   });
 });
 
-describe('código de recuperación (PI-15)', () => {
+describe('código de recuperación (PI-18)', () => {
   it('lo que se escribe queda en mayúsculas, con guion después de cinco y sin sobrantes', () => {
     expect(normalizarCodigoDeRecuperacion('ab3cd')).toBe('AB3CD');
     expect(normalizarCodigoDeRecuperacion('ab3cdefgh2')).toBe('AB3CD-EFGH2');

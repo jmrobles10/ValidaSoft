@@ -26,7 +26,7 @@ function Esqueleto() {
 }
 
 /**
- * Uso de IA por cliente (PI-18): para cada grupo y empresa, en el mes elegido, las validaciones incluidas y adicionales, los tokens, el costo del proveedor y lo
+ * Uso de IA por cliente (PI-12): para cada grupo y empresa, en el mes elegido, las validaciones incluidas y adicionales, los tokens, el costo del proveedor y lo
  * que valen las adicionales con el precio vigente. Exportable a Excel o CSV con los mismos filtros.
  */
 export function PaginaConsumoIa() {

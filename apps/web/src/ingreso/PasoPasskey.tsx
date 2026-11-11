@@ -44,7 +44,7 @@ export function PasoVerificarPasskey({ desafio, opciones, alResultado, alVolver 
     onSuccess: alResultado,
   });
   const intentada = useRef(false);
-  // Sin la passkey a la mano, un código de recuperación lleva a registrar otra (PI-15).
+  // Sin la passkey a la mano, un código de recuperación lleva a registrar otra (PI-18).
   const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {

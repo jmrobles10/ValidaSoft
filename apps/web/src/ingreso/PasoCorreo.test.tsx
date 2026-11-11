@@ -13,7 +13,7 @@ const original = window.location;
 
 beforeEach(() => {
   asignar.mockReset();
-  vi.stubGlobal('location', { ...original, assign: asignar, hash: '' });
+  vi.stubGlobal('location', { href: original.href, pathname: original.pathname, search: original.search, assign: asignar, hash: '' });
 });
 
 afterEach(() => {

@@ -1,5 +1,5 @@
 /**
- * Textos es-CO de plataforma e identidad (PI-1…PI-19): inicio de sesión único con el proveedor del cliente, reautenticación para acciones sensibles, códigos de
+ * Textos es-CO de plataforma e identidad (PI-1…PI-6): inicio de sesión único con el proveedor del cliente, reautenticación para acciones sensibles, códigos de
  * recuperación, consumo de IA, auditoría de ingresos de operadores, clave de arranque y empresas y sistemas de un grupo desde la consola. Se integran en `es-CO.ts`.
  */
 
@@ -97,7 +97,7 @@ export const sso = {
     rol: 'Rol',
     donde: 'Dónde',
     todoElGrupo: 'Todo el grupo',
-    quitar: 'Quitar',
+    quitar: 'Quitar este rol',
     agregarPorOmision: 'Agregar un rol',
   },
   reglas: {

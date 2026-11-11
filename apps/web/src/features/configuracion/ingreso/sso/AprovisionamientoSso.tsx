@@ -49,7 +49,7 @@ export function AccesoSso({ formulario, alCambiar, tieneDominioVerificado }: Pro
   );
 }
 
-/** Quién se crea y con qué roles (PI-3, PI-4): primer ingreso, roles por omisión, reglas de grupos del proveedor y sincronización. */
+/** Quién se crea y con qué roles (PI-4): primer ingreso, roles por omisión, reglas de grupos del proveedor y sincronización. */
 export function AprovisionamientoSso({ formulario, empresas, alCambiar }: Props & { empresas: readonly EmpresaDto[] }) {
   const { t } = useTranslation();
   return (
