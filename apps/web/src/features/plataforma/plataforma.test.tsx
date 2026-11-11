@@ -155,7 +155,7 @@ describe('PaginaPlanIa', () => {
         if (metodo !== 'GET') peticiones.push({ url, metodo, cuerpo });
         const json = (datos: unknown) => Promise.resolve(new Response(JSON.stringify(datos), { status: 200, headers: { 'Content-Type': 'application/json' } }));
         if (url.endsWith('/probar-llave')) return json({ resultado: 'valida', mensaje: 'ok', ultimosCuatro: 'WXYZ', probadaEn: '2026-11-09T15:00:00Z' });
-        if (url.includes('/plataforma/grupos')) return json(GRUPOS);
+        if (url.includes('/plataforma/grupos/t1')) return json(GRUPOS[0]);
         if (metodo === 'PUT') return json({ ...PLAN, ultimosCuatro: 'NUEV', actualizadoEn: '2026-11-09T16:00:00Z' });
         return json(PLAN);
       }),

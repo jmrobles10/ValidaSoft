@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Navigate, Outlet, useLocation } from 'react-router';
 import { RELLENO_CONTENIDO } from '../../app/rellenoContenido';
+import { useAlturaFija, useScrollPropio } from '../../sesion/alturaFija';
 import { useSesion } from '../../sesion/sesionStore';
 import { usePreferencias } from '../../shared/preferencias';
 
@@ -35,11 +36,25 @@ export function ShellPlataforma() {
   const sesion = useSesion((s) => s.sesion);
   const { modo, temaDelContenedor, fijarModo } = usePreferencias();
   const { pathname } = useLocation();
+  // Embebida, toda la consola tiene alto fijo y `main` con scroll propio (ver `sesion/alturaFija.ts`): la lista de grupos es
+  // virtual y necesita un área que desplace, y así el iframe no cambia de alto ni de ancho útil al pasar de una pestaña a otra.
+  useScrollPropio();
+  const alturaFija = useAlturaFija((s) => s.altura);
 
   if (!sesion || !esSesionDePlataforma(sesion)) return <Navigate to="/" replace />;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', [VARIABLE_TOPE]: (th) => `${String(th.densidad.cabeceraEmbebida)}px` }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: 'background.default',
+        ...(alturaFija === null ? { minHeight: '100vh' } : { height: alturaFija, overflow: 'hidden' }),
+        // Con scroll de ventana, bajo la barra; con scroll propio de `main`, se resta el relleno de `main` para que el
+        // encabezado de la página quede pegado a la barra (igual que en AppShell).
+        [VARIABLE_TOPE]: (th) => (alturaFija === null ? `${String(th.densidad.cabeceraEmbebida)}px` : `-${th.spacing(RELLENO_CONTENIDO.y)}`),
+      }}
+    >
       <Box
         component="header"
         sx={{
@@ -111,7 +126,7 @@ export function ShellPlataforma() {
           </Tooltip>
         )}
       </Box>
-      <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0 }}>
+      <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }) }}>
         <Outlet />
       </Box>
     </Box>

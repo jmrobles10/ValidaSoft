@@ -17,6 +17,7 @@
     "@fontsource-variable/geist-mono": "^5.2.0",
     "@mui/material": "^9.5.0",
     "@tanstack/react-query": "^5.90.0",
+    "@tanstack/react-virtual": "3.14.26",
     "@validasoft/api-client": "workspace:*",
     "@validasoft/ui": "workspace:*",
     "i18next": "^25.6.0",

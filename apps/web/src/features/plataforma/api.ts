@@ -1,10 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   actualizarPlanIaEmpresa,
   crearTenant,
-  getListarGruposQueryOptions,
+  getListarGruposQueryKey,
   getObtenerEstadoSecretosQueryOptions,
+  getObtenerGrupoQueryOptions,
   getObtenerPlanIaEmpresaQueryOptions,
+  listarGrupos,
   probarLlaveIaEmpresa,
   recifrarSecretos,
   type ActualizarPlanIaEmpresaDto,
@@ -15,8 +17,28 @@ import { invalidarRuta } from '../../shared/consultas';
 /** La consola de Plataforma no tiene empresa activa ni tenant (PT-4). */
 const SIN_EMPRESA = { empresa: null } as const;
 
-export function useGrupos() {
-  return useQuery(getListarGruposQueryOptions({ request: SIN_EMPRESA }));
+/** Grupos por página del scroll infinito (el servidor admite hasta 100). */
+export const TAMANO_PAGINA_GRUPOS = 20;
+
+/**
+ * Los grupos de a páginas (PT-9, PT-11): la siguiente se pide con el cursor de la última. `q` busca por grupo, empresa o NIT.
+ * La clave empieza por la ruta de la API (para que `invalidarRuta` la alcance) y se distingue de la de un grupo suelto.
+ */
+export function useGrupos(q: string) {
+  const texto = q.trim() || undefined;
+  return useInfiniteQuery({
+    queryKey: [...getListarGruposQueryKey({ q: texto, limite: TAMANO_PAGINA_GRUPOS }), 'paginas'],
+    queryFn: ({ pageParam, signal }) => listarGrupos({ q: texto, limite: TAMANO_PAGINA_GRUPOS, cursor: pageParam }, SIN_EMPRESA, signal),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultima) => ultima.siguienteCursor ?? undefined,
+    // Al cambiar la búsqueda se sigue viendo la lista anterior (atenuada) hasta que llega la nueva.
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Un grupo con sus empresas, para rotular la pantalla del plan sin recorrer la lista. */
+export function useGrupo(tenantId: string) {
+  return useQuery(getObtenerGrupoQueryOptions(tenantId, { request: SIN_EMPRESA }));
 }
 
 /** La respuesta trae los valores de las dos API keys: solo se ven esta vez. */

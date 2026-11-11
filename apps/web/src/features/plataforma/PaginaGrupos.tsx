@@ -1,91 +1,47 @@
-import { Box, Button, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, Button, Skeleton, Stack, Typography } from '@mui/material';
 import type { GrupoDto } from '@validasoft/api-client';
-import { EstadoVacio, formatearFecha, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
-import { Building2, CircleDashed, KeyRound, Plus, Sparkles } from 'lucide-react';
+import { BarraFiltros, CampoBusqueda, EstadoVacio } from '@validasoft/ui';
+import { Building2, Plus, SearchX } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink } from 'react-router';
-import { EncabezadoPagina, ErrorRecuperable, Tarjeta } from '../../shared/componentes';
+import { Link as RouterLink, useSearchParams } from 'react-router';
+import { EncabezadoPagina, ErrorRecuperable } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
-import { identificacionVisible } from '../configuracion/empresas/modelo';
-import { EstadoActivo } from '../configuracion/EstadoActivo';
+import { ListaVirtual } from '../../shared/ListaVirtual';
+import { useBusquedaEnUrl } from '../../shared/useBusquedaEnUrl';
 import { useGrupos } from './api';
-import { estadoPlanIa, llaveEnmascarada } from './modelo';
+import { ALTO_ESTIMADO_GRUPO, ESPERA_BUSQUEDA_GRUPOS_MS } from './modelo';
+import { TarjetaGrupo } from './TarjetaGrupo';
 
-function TablaEmpresas({ grupo }: { grupo: GrupoDto }) {
-  const { t } = useTranslation();
-  if (grupo.empresas.length === 0)
-    return (
-      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-        {t('plataforma.grupos.sinEmpresas')}
-      </Typography>
-    );
+const SEPARACION_PX = 16;
+const claveDeGrupo = (g: GrupoDto) => g.tenant.id;
 
-  return (
-    <MarcoTabla>
-      <TableContainer>
-        <Table size="small" aria-label={t('plataforma.grupos.columnas.empresa')}>
-          <TableHead>
-            <TableRow>
-              <TableCell>{t('plataforma.grupos.columnas.empresa')}</TableCell>
-              <TableCell sx={{ width: 180 }}>{t('plataforma.grupos.columnas.identificacion')}</TableCell>
-              <TableCell sx={{ width: 100 }}>{t('plataforma.grupos.columnas.prefijo')}</TableCell>
-              <TableCell sx={{ width: 210 }}>{t('plataforma.grupos.columnas.planIa')}</TableCell>
-              <TableCell sx={{ width: 120 }}>
-                <Box component="span" sx={visualmenteOculto}>
-                  {t('plataforma.grupos.columnas.acciones')}
-                </Box>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {grupo.empresas.map((e) => {
-              const estado = estadoPlanIa(e);
-              return (
-                <TableRow key={e.id}>
-                  <TableCell>
-                    <Typography component="span" sx={{ fontWeight: 500, fontSize: 14 }}>
-                      {e.nombre}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="monoTabla">{identificacionVisible(e.identificacion)}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="monoTabla">{e.prefijoFolio}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <EstadoActivo
-                      activo={estado === 'activo'}
-                      icono={estado === 'activo' ? KeyRound : estado === 'sin-plan' ? CircleDashed : undefined}
-                      texto={t(`plataforma.grupos.estadoPlan.${estado}`, { llave: llaveEnmascarada(e.ultimosCuatro) })}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      component={RouterLink}
-                      to={`/plataforma/grupos/${grupo.tenant.id}/empresas/${e.id}/plan-ia`}
-                      size="small"
-                      variant="text"
-                      startIcon={<Sparkles size={14} aria-hidden />}
-                      aria-label={t('plataforma.grupos.configurarPlanDe', { empresa: e.nombre })}
-                    >
-                      {t('plataforma.grupos.configurarPlan')}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </MarcoTabla>
-  );
-}
-
-/** Los grupos (tenants) con sus empresas y el estado del plan de IA de cada una. */
+/** Los grupos (tenants) con sus empresas y el estado del plan de IA de cada una: scroll infinito y buscador (PT-9, PT-11). */
 export function PaginaGrupos() {
   const { t } = useTranslation();
-  const consulta = useGrupos();
+  const [parametros, setParametros] = useSearchParams();
+  const q = (parametros.get('q') ?? '').trim();
+  const busqueda = useBusquedaEnUrl(ESPERA_BUSQUEDA_GRUPOS_MS);
+  const consulta = useGrupos(q);
+  const [desplegados, setDesplegados] = useState<ReadonlySet<string>>(new Set());
+
+  // Una página nueva puede repetir un grupo si se creó otro mientras se desplazaba (el cursor es por posición).
+  const grupos = useMemo(() => {
+    const vistos = new Set<string>();
+    return (consulta.data?.pages ?? []).flatMap((p) => p.datos).filter((g) => !vistos.has(g.tenant.id) && vistos.add(g.tenant.id));
+  }, [consulta.data]);
+  const alternar = useCallback(
+    (id: string) =>
+      setDesplegados((previos) => {
+        const nuevos = new Set(previos);
+        if (!nuevos.delete(id)) nuevos.add(id);
+        return nuevos;
+      }),
+    [],
+  );
+  const limpiar = () => setParametros(new URLSearchParams(), { replace: true });
+  const { fetchNextPage } = consulta;
+  const cargarMas = useCallback(() => void fetchNextPage(), [fetchNextPage]);
 
   return (
     <>
@@ -98,35 +54,55 @@ export function PaginaGrupos() {
           </Button>
         }
       />
-      {consulta.isError && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}
+      <BarraFiltros>
+        <CampoBusqueda valor={busqueda.texto} onCambiar={busqueda.setTexto} placeholder={t('plataforma.grupos.buscar')} ancho={380} />
+      </BarraFiltros>
+      {consulta.isError && !consulta.data && <ErrorRecuperable mensaje={mensajeDeError(consulta.error, t)} onReintentar={() => void consulta.refetch()} />}
       {consulta.isPending && (
-        <Typography variant="body2" role="status" sx={{ color: 'text.secondary' }}>
-          {t('comun.cargando')}
-        </Typography>
+        <Stack spacing={2} role="status" aria-label={t('comun.cargando')}>
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} variant="rounded" height={ALTO_ESTIMADO_GRUPO - 40} />
+          ))}
+        </Stack>
       )}
-      {consulta.data?.length === 0 && <EstadoVacio icono={Building2} titulo={t('plataforma.grupos.vacio')} texto={t('plataforma.grupos.vacioAyuda')} />}
-      <Stack spacing={2}>
-        {consulta.data?.map((grupo) => (
-          <Tarjeta
-            key={grupo.tenant.id}
-            etiqueta={grupo.tenant.nombre}
-            titulo={
-              <Stack direction="row" spacing={1} component="span" sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                <span>{grupo.tenant.nombre}</span>
-                <Chip size="small" variant="outlined" label={grupo.tenant.slug} sx={{ fontFamily: (th) => th.typography.mono.fontFamily }} />
-                {!grupo.tenant.activo && <Chip size="small" label={t('plataforma.grupos.inactivo')} />}
-              </Stack>
-            }
-            acciones={
-              <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                {t('plataforma.grupos.creado', { fecha: formatearFecha(grupo.tenant.creadoEn) })}
-              </Typography>
-            }
-          >
-            <TablaEmpresas grupo={grupo} />
-          </Tarjeta>
-        ))}
-      </Stack>
+      {consulta.isSuccess && grupos.length === 0 && (
+        <EstadoVacio
+          icono={q ? SearchX : Building2}
+          titulo={q ? t('plataforma.grupos.vacioBusqueda', { q }) : t('plataforma.grupos.vacio')}
+          texto={q ? t('plataforma.grupos.vacioBusquedaAyuda') : t('plataforma.grupos.vacioAyuda')}
+          accion={
+            q ? (
+              <Button variant="outlined" onClick={limpiar}>
+                {t('plataforma.grupos.limpiarBusqueda')}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+      {grupos.length > 0 && (
+        <Box aria-busy={consulta.isPlaceholderData} sx={{ opacity: consulta.isPlaceholderData ? 0.6 : 1, transition: 'opacity 120ms' }}>
+          <ListaVirtual
+            filas={grupos}
+            claveFila={claveDeGrupo}
+            altoEstimado={ALTO_ESTIMADO_GRUPO}
+            separacion={SEPARACION_PX}
+            etiqueta={t('plataforma.grupos.lista')}
+            renderFila={(g) => <TarjetaGrupo grupo={g} expandido={desplegados.has(g.tenant.id)} onAlternar={() => alternar(g.tenant.id)} />}
+            hayMas={consulta.hasNextPage}
+            cargandoMas={consulta.isFetchingNextPage}
+            errorAlCargarMas={consulta.isFetchNextPageError}
+            alCargarMas={cargarMas}
+            textoCargandoMas={t('plataforma.grupos.cargandoMas')}
+            textoErrorMas={t('plataforma.grupos.errorMas')}
+            textoReintentar={t('comun.reintentar')}
+          />
+          {!consulta.hasNextPage && (
+            <Typography variant="caption" role="status" sx={{ display: 'block', textAlign: 'center', color: 'text.secondary', pt: 2 }}>
+              {t('plataforma.grupos.fin', { count: grupos.length })}
+            </Typography>
+          )}
+        </Box>
+      )}
     </>
   );
 }

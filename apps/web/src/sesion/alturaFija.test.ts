@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { ALTO_MINIMO, alturaDisponible, MARGEN_CONTENEDOR, RESERVA_PANTALLA, useAlturaFija, ventanaDelContenedor } from './alturaFija';
+import { afterEach, describe, expect, it } from 'vitest';
+import { ALTO_MINIMO, alturaDisponible, contenedorConScroll, MARGEN_CONTENEDOR, RESERVA_PANTALLA, useAlturaFija, ventanaDelContenedor } from './alturaFija';
 
 /** Ventana de un iframe del mismo origen cuyo borde superior está en `top` dentro de un contenedor de `alto` px. */
 function iframeMismoOrigen(top: number, alto: number): Window {
@@ -45,5 +45,24 @@ describe('alto fijo del iframe embebido', () => {
     salir();
     salir();
     expect(useAlturaFija.getState().paginas).toBe(0);
+  });
+});
+
+describe('contenedorConScroll', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('devuelve el ancestro con scroll propio, no los que solo recortan ni el propio elemento', () => {
+    document.body.innerHTML = '<div id="a" style="overflow-y: auto"><div id="b" style="overflow: hidden"><div id="c"><span id="hijo"></span></div></div></div>';
+    const hijo = document.getElementById('hijo');
+    expect(contenedorConScroll(hijo)?.id).toBe('a');
+    expect(contenedorConScroll(document.getElementById('a'))).toBeNull();
+  });
+
+  it('sin ancestro con scroll desplaza la ventana: null', () => {
+    document.body.innerHTML = '<div><div id="x"></div></div>';
+    expect(contenedorConScroll(document.getElementById('x'))).toBeNull();
+    expect(contenedorConScroll(null)).toBeNull();
   });
 });

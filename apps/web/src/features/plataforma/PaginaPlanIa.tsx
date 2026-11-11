@@ -7,7 +7,7 @@ import { useParams } from 'react-router';
 import { EncabezadoPagina, EnlaceVolver, ErrorRecuperable, IconoCarga, Tarjeta } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
-import { useGrupos, useGuardarPlanIa, usePlanIa, useProbarLlave } from './api';
+import { useGrupo, useGuardarPlanIa, usePlanIa, useProbarLlave } from './api';
 import { LlaveOpenAi } from './LlaveOpenAi';
 import { borradorDesdePlan, cuerpoPlanIa, validarPlanIa, type BorradorPlanIa, type ErrorPlanIa } from './modelo';
 
@@ -133,12 +133,11 @@ export function PaginaPlanIa() {
   const { t } = useTranslation();
   const { tenantId = '', empresaId = '' } = useParams();
   const plan = usePlanIa(tenantId, empresaId);
-  const grupos = useGrupos();
-  const grupo = grupos.data?.find((g) => g.tenant.id === tenantId);
-  const empresa = grupo?.empresas.find((e) => e.id === empresaId);
+  const grupo = useGrupo(tenantId);
+  const empresa = grupo.data?.empresas.find((e) => e.id === empresaId);
 
   if (plan.isError) return <ErrorRecuperable mensaje={mensajeDeError(plan.error, t)} onReintentar={() => void plan.refetch()} />;
-  if (!plan.data || grupos.isPending)
+  if (!plan.data || grupo.isPending)
     return (
       <Typography variant="body2" role="status" sx={{ color: 'text.secondary' }}>
         {t('comun.cargando')}
@@ -146,5 +145,5 @@ export function PaginaPlanIa() {
     );
 
   // Al guardar, el formulario se rehace con lo que devolvió el servidor (sin la llave escrita).
-  return <FormularioPlan key={`${tenantId}:${empresaId}`} tenantId={tenantId} empresaId={empresaId} plan={plan.data} empresa={empresa?.nombre ?? '—'} grupo={grupo?.tenant.nombre ?? '—'} />;
+  return <FormularioPlan key={`${tenantId}:${empresaId}`} tenantId={tenantId} empresaId={empresaId} plan={plan.data} empresa={empresa?.nombre ?? '—'} grupo={grupo.data?.tenant.nombre ?? '—'} />;
 }
