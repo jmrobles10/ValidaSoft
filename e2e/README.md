@@ -25,7 +25,7 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 |---|---|
 | `decisiones.spec.ts` | Aprobación de las dos áreas; observación con versión corregida que invalida lo decidido; rechazo; rechazo durante la devolución; respuesta con explicación; aprobación en nombre de un área |
 | `multiempresa.spec.ts` | Dos empresas del grupo con el mismo proveedor (el enlace de cada correo abre su invitación); proveedor que también es cliente (reutiliza lo ya aprobado y revisa solo lo adicional, o queda activo al aceptar si no hay nada más); dos grupos distintos con su propia vigencia |
-| `actualizaciones.spec.ts` | Versión nueva durante la revisión; decisión con la pantalla vieja; formato no admitido y archivo repetido; actualización desde la bóveda después de aprobado |
+| `actualizaciones.spec.ts` | Versión nueva durante la revisión; el diálogo de decisión abierto cuando llega una versión nueva (el tiempo real avisa y no deja confirmar); formato no admitido y archivo repetido; actualización desde la bóveda después de aprobado |
 | `vencimientos.spec.ts` | Vigente, por vencer, en gracia y vencido (con avisos); fecha futura; recálculo al cambiar la regla |
 | `certificado.spec.ts` | Verificación pública auténtica y PDF; huella o folio inválidos; bloqueo y desbloqueo; revocación |
 | `eventos.spec.ts` | Webhooks firmados en orden; entrega fallida y reenvío; campana y correo a la revisora |
