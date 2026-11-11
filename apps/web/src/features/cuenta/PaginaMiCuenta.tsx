@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { EncabezadoPagina, ErrorRecuperable, Tarjeta } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
 import { useEmpresasPorId } from './useEmpresasPorId';
+import { TarjetaCodigosDeRecuperacion } from './TarjetaCodigosDeRecuperacion';
 import { TarjetaPasskeys } from './TarjetaPasskeys';
 import { TarjetaSesiones } from './TarjetaSesiones';
 
@@ -31,6 +32,10 @@ function textoDeMetodo(metodo: string, t: TFunction): string {
       return t('cuenta.metodos.Passkey');
     case 'CodigoYPasskey':
       return t('cuenta.metodos.CodigoYPasskey');
+    case 'Sso':
+      return t('cuenta.metodos.Sso');
+    case 'SsoYPasskey':
+      return t('cuenta.metodos.SsoYPasskey');
     default:
       return metodo;
   }
@@ -89,7 +94,12 @@ export function PaginaMiCuenta() {
               <TarjetaSesiones />
             </>
           }
-          derecha={<TarjetaPasskeys exigePasskey={consulta.data.exigePasskey} />}
+          derecha={
+            <>
+              <TarjetaPasskeys exigePasskey={consulta.data.exigePasskey} />
+              <TarjetaCodigosDeRecuperacion />
+            </>
+          }
         />
       )}
     </>

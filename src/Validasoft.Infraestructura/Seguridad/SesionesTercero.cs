@@ -40,6 +40,7 @@ public sealed class EmisorDeSesionesTercero(IConfiguration configuracion) : IEmi
             reclamos.Add(new Claim(ReclamosTercero.Sistema, embebido.Sistema));
             reclamos.Add(new Claim(ReclamosTercero.Origen, embebido.Origen));
             reclamos.Add(new Claim(ReclamosTercero.Componente, embebido.Componente));
+            reclamos.Add(new Claim(ReclamosTercero.GeneracionDelSistema, embebido.Generacion.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
         var expira = ahora + (embebido?.Duracion ?? Duracion);

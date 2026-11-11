@@ -2,6 +2,7 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Sandbox;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
@@ -110,9 +111,10 @@ public static class ApiKeysEndpoints
 {
     [WolverinePost("/api/v1/api-keys")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
-    public static async Task<IResult> Crear(CrearApiKeyDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves,
-        IContextoSolicitud contexto, ServicioDeSandbox sandbox, TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Crear(CrearApiKeyDto dto, HttpContext http, ISesiones sesiones, IGeneradorDeApiKeys llaves,
+        IContextoSolicitud contexto, ServicioDeSandbox sandbox, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "crear-api-key", ct);
         ExigirProduccion(contexto);
         var tenantId = contexto.TenantRequerido();
         var ahora = reloj.GetUtcNow();
@@ -171,9 +173,10 @@ public static class ApiKeysEndpoints
 
     [WolverineDelete("/api/v1/api-keys/{id}")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
-    public static async Task<IResult> Revocar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeCredenciales cache, TimeProvider reloj,
-        CancellationToken ct)
+    public static async Task<IResult> Revocar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeCredenciales cache, ServicioDeIngreso servicio,
+        TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "revocar-api-key", ct);
         ExigirProduccion(contexto);
         await using var sesion = sesiones.DelTenant();
         var llave = await sesion.LoadAsync<ApiKey>(id, ct);
@@ -197,9 +200,10 @@ public static class ApiKeysEndpoints
     /// </summary>
     [WolverinePost("/api/v1/api-keys/{id}/rotar")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
-    public static async Task<IResult> Rotar(Guid id, RotarApiKeyDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves, IContextoSolicitud contexto,
-        ICacheDeCredenciales cache, TimeProvider reloj, CancellationToken ct)
+    public static async Task<IResult> Rotar(Guid id, RotarApiKeyDto dto, HttpContext http, ISesiones sesiones, IGeneradorDeApiKeys llaves, IContextoSolicitud contexto,
+        ICacheDeCredenciales cache, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "rotar-api-key", ct);
         ExigirProduccion(contexto);
         var tenantId = contexto.TenantRequerido();
         await using var sesion = sesiones.DelTenant();

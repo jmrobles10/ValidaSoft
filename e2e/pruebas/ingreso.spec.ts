@@ -263,6 +263,10 @@ test('un administrador invita por correo, ve el acceso de la persona y revoca su
   await drawer.getByRole('button', { name: 'Revocar' }).click();
   await page.getByRole('dialog').getByLabel('Motivo (opcional)').fill('Perdió el teléfono');
   await page.getByRole('dialog').getByRole('button', { name: 'Revocar' }).click();
+  // Revocar una passkey es una acción sensible (PI-13): pide confirmar con la passkey de la administradora y, al confirmar, sigue sola.
+  const reautenticacion = page.getByRole('dialog', { name: 'Confirma que eres tú' });
+  await expect(reautenticacion).toBeVisible();
+  await reautenticacion.getByRole('button', { name: 'Usar mi passkey' }).click();
   await expect(page.getByText('Passkey revocada y sesiones cerradas.')).toBeVisible();
 
   // La sesión de Carla ya no sirve (su token cayó) y la auditoría de identidad lo registra.

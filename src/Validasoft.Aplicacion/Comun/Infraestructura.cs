@@ -181,7 +181,8 @@ public interface IProtectorDeSecretos
 
 /// <summary>
 /// Caché de verificaciones de API keys (para no pagar Argon2 en cada petición). Al revocar o rotar una llave se olvida su
-/// verificación en este nodo, así el cambio vale de inmediato; en los demás nodos, como mucho 5 minutos después (CN-3).
+/// verificación en este nodo y se avisa a los demás (<see cref="IBusDeInvalidaciones"/>, PI-8), así el cambio vale de inmediato en
+/// todos los servidores; si el aviso no llega, la verificación vence sola a los 5 minutos (CN-3).
 /// </summary>
 public interface ICacheDeCredenciales
 {

@@ -64,8 +64,18 @@ public static class IngresoEndpoints
     [WolverinePost("/api/v1/ingreso/passkey/registro")]
     [AllowAnonymous]
     public static Task<PasoDeIngresoDto> RegistrarPasskey(RegistrarPasskeyDto dto, HttpContext http, IContextoSolicitud contexto, ServicioDeIngreso servicio,
-        CancellationToken ct) =>
-        servicio.RegistrarPasskeyAsync(dto, ContextoDeCliente.De(http, contexto.CorrelationId), http.Response, ct);
+        IMessageBus mensajes, CancellationToken ct) =>
+        servicio.RegistrarPasskeyAsync(dto, ContextoDeCliente.De(http, contexto.CorrelationId), http.Response, mensajes, ct);
+
+    /// <summary>
+    /// Código de recuperación (PI-18): con el código del correo ya verificado y la cuenta elegida, la persona que perdió su passkey usa uno de sus códigos de un solo uso y
+    /// sigue el registro de una passkey nueva (<c>RegistrarPasskey</c>). 422 <c>codigo-de-recuperacion-invalido</c> (con <c>intentosRestantes</c>); 429 <c>recuperacion-bloqueada</c>.
+    /// </summary>
+    [WolverinePost("/api/v1/ingreso/recuperacion")]
+    [AllowAnonymous]
+    public static Task<PasoDeIngresoDto> UsarCodigoDeRecuperacion(UsarCodigoDeRecuperacionDto dto, HttpContext http, IContextoSolicitud contexto, ServicioDeIngreso servicio,
+        IMessageBus mensajes, CancellationToken ct) =>
+        servicio.UsarCodigoDeRecuperacionAsync(dto, ContextoDeCliente.De(http, contexto.CorrelationId), mensajes, ct);
 
     /// <summary>
     /// Renueva el token de acceso con la cookie <c>vs_usuario</c> y la rota. Exige <c>X-Validasoft-Cliente: web</c> (defensa CSRF además de

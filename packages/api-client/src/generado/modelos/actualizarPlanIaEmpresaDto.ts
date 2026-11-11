@@ -22,4 +22,9 @@ export interface ActualizarPlanIaEmpresaDto {
      */
   umbralConfianza?: number | string | null;
   activo?: boolean;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
+  precioAdicional?: number | string | null;
 }

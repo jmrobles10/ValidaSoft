@@ -121,8 +121,10 @@ public static class AuditoriaEndpoints
     /// <summary>Sobre qué recayó el evento de identidad: la passkey, la sesión o el ingreso (códigos, ingresos e invitaciones).</summary>
     private static string EntidadDeIdentidad(EventoDeIngreso evento) => evento switch
     {
-        EventoDeIngreso.PasskeyRegistrada or EventoDeIngreso.PasskeyRevocada or EventoDeIngreso.PasskeyEliminada => "Passkey",
-        EventoDeIngreso.SesionCerrada or EventoDeIngreso.SesionRevocada or EventoDeIngreso.ReusoDeSesion => "Sesion",
+        EventoDeIngreso.PasskeyRegistrada or EventoDeIngreso.PasskeyRevocada or EventoDeIngreso.PasskeyEliminada or EventoDeIngreso.CodigosDeRecuperacionGenerados or
+            EventoDeIngreso.CodigoDeRecuperacionUsado => "Passkey",
+        EventoDeIngreso.SesionCerrada or EventoDeIngreso.SesionRevocada or EventoDeIngreso.ReusoDeSesion or EventoDeIngreso.ReautenticacionExitosa or
+            EventoDeIngreso.ReautenticacionFallida => "Sesion",
         _ => "Ingreso"
     };
 

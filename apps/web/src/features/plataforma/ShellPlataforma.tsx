@@ -15,7 +15,9 @@ import { usePreferencias } from '../../shared/preferencias';
 const PESTANAS = [
   { clave: 'grupos', ruta: '/plataforma/grupos' },
   { clave: 'habeas', ruta: '/plataforma/habeas' },
+  { clave: 'usoIa', ruta: '/plataforma/uso-ia' },
   { clave: 'operadores', ruta: '/plataforma/operadores' },
+  { clave: 'ingresos', ruta: '/plataforma/ingresos' },
   { clave: 'secretos', ruta: '/plataforma/secretos' },
 ] as const;
 

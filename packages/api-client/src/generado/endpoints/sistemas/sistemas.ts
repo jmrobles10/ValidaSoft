@@ -471,3 +471,62 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDesactivarSistemaMutationOptions(options), queryClient);
     }
+    export const reactivarSistema = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SistemaIntegradoDto>(
+      {url: `/api/v1/sistemas/${id}/reactivar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getReactivarSistemaMutationKey = () => ['reactivarSistema'] as const;
+
+export const getReactivarSistemaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivarSistema>>, TError,ReactivarSistemaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof reactivarSistema>>, TError,ReactivarSistemaMutationVariables, TContext> => {
+
+const mutationKey = getReactivarSistemaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reactivarSistema>>, ReactivarSistemaMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  reactivarSistema(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReactivarSistemaMutationResult = NonNullable<Awaited<ReturnType<typeof reactivarSistema>>>
+
+    export type ReactivarSistemaMutationError = ErrorType<void>
+    export type ReactivarSistemaMutationVariables = {id: string}
+
+    export const useReactivarSistema = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reactivarSistema>>, TError,ReactivarSistemaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reactivarSistema>>,
+        TError,
+        ReactivarSistemaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReactivarSistemaMutationOptions(options), queryClient);
+    }

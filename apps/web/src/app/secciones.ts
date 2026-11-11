@@ -6,6 +6,7 @@ import {
   BookOpenText,
   Sparkles,
   FileText,
+  IdCard,
   KeyRound,
   Layers,
   Link2,
@@ -39,6 +40,7 @@ export interface SeccionConfiguracion {
     | 'tipos-documento'
     | 'tipos-vinculo'
     | 'ingreso'
+    | 'sso'
     | 'flujos'
     | 'datos-marca'
     | 'plantillas'
@@ -65,6 +67,8 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'usuarios', scope: SCOPES.usuariosAdministrar, icono: Users, alcance: 'grupo' },
   // Cómo entran las personas del grupo (ING-1): modos, duración de la sesión e inactividad, passkey para todos.
   { ruta: 'ingreso', scope: SCOPES.usuariosAdministrar, icono: LogIn, alcance: 'grupo' },
+  // Inicio de sesión único con el proveedor de identidad del cliente (PI-1): proveedor, dominios verificados, creación de personas y roles.
+  { ruta: 'sso', scope: SCOPES.usuariosAdministrar, icono: IdCard, alcance: 'grupo' },
   { ruta: 'tipos-vinculo', scope: SCOPES.configuracionLeer, icono: Link2, alcance: 'grupo' },
   { ruta: 'tipos-documento', scope: SCOPES.configuracionLeer, icono: FileText, alcance: 'grupo' },
   { ruta: 'motivos', scope: SCOPES.configuracionLeer, icono: ListChecks, alcance: 'grupo' },

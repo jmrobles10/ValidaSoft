@@ -222,3 +222,54 @@ describe('nombreDeArchivo', () => {
     expect(nombreDeArchivo(null)).toBeNull();
   });
 });
+
+describe('reautenticación con passkey (PI-13)', () => {
+  const REAUTENTICACION = { codigo: 'reautenticacion-requerida', detail: 'Confirma con tu passkey', status: 403, minutos: 5, accion: 'rotar-api-key', tienePasskey: true };
+
+  it('repite la petición una vez cuando la persona confirma y devuelve el resultado de la segunda', async () => {
+    const respuestas = [json(403, REAUTENTICACION), json(201, { id: 'k1' })];
+    const llamadas = prepararFetch(() => respuestas.shift()!);
+    const alRequerir = vi.fn<(error: ErrorApi) => Promise<boolean>>(() => Promise.resolve(true));
+    configurarCliente({ alRequerirReautenticacion: alRequerir });
+
+    const resultado = await clienteValidasoft<{ id: string }>({ url: '/api/v1/api-keys/k1', method: 'DELETE' });
+
+    expect(alRequerir).toHaveBeenCalledTimes(1);
+    expect(alRequerir.mock.calls[0]?.[0]).toMatchObject({ codigo: 'reautenticacion-requerida', extensiones: { accion: 'rotar-api-key', minutos: 5 } });
+    expect(llamadas).toHaveLength(2);
+    expect(llamadas[1]?.url).toBe(llamadas[0]?.url);
+    expect(llamadas[1]?.metodo).toBe(llamadas[0]?.metodo);
+    expect(resultado).toEqual({ id: 'k1' });
+  });
+
+  it('con una cuerpo JSON lo reenvía igual y no pide la passkey más de una vez por petición', async () => {
+    const llamadas = prepararFetch(() => json(403, REAUTENTICACION));
+    const alRequerir = vi.fn<(error: ErrorApi) => Promise<boolean>>(() => Promise.resolve(true));
+    configurarCliente({ alRequerirReautenticacion: alRequerir });
+
+    await expect(bloquearVinculo('v1', { motivo: 'x', hasta: null })).rejects.toMatchObject({ codigo: 'reautenticacion-requerida' });
+
+    expect(alRequerir).toHaveBeenCalledTimes(1); // si tras confirmar vuelve a pedirla, no se entra en un bucle
+    expect(llamadas).toHaveLength(2);
+    expect(llamadas[1]?.cuerpo).toBe(llamadas[0]?.cuerpo);
+  });
+
+  it('si la persona no confirma, rechaza con el error original y no repite', async () => {
+    const llamadas = prepararFetch(() => json(403, REAUTENTICACION));
+    configurarCliente({ alRequerirReautenticacion: () => Promise.resolve(false) });
+
+    await expect(revocarApiKey('k1')).rejects.toMatchObject({ codigo: 'reautenticacion-requerida', estado: 403 });
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('sin quien la atienda, el error sale tal cual; y otros 403 no la disparan', async () => {
+    const alRequerir = vi.fn<(error: ErrorApi) => Promise<boolean>>(() => Promise.resolve(true));
+    prepararFetch(() => json(403, REAUTENTICACION));
+    await expect(revocarApiKey('k1')).rejects.toBeInstanceOf(ErrorApi);
+
+    prepararFetch(() => json(403, { codigo: 'alcance-insuficiente', detail: 'x', status: 403 }));
+    configurarCliente({ alRequerirReautenticacion: alRequerir });
+    await expect(revocarApiKey('k1')).rejects.toMatchObject({ codigo: 'alcance-insuficiente' });
+    expect(alRequerir).not.toHaveBeenCalled();
+  });
+});

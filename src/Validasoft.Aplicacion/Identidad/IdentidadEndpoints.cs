@@ -2,6 +2,7 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Plataforma;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
@@ -56,9 +57,10 @@ public static class SistemasEndpoints
     /// <summary>Rotación de la clave pública: desde ya, solo valen las aserciones firmadas con la nueva.</summary>
     [WolverinePut("/api/v1/sistemas/{id}/clave-publica")]
     [Authorize(Policy = Permisos.SistemasAdministrar)]
-    public static async Task<SistemaIntegradoDto> RotarClave(Guid id, RotarClavePublicaDto dto, ISesiones sesiones,
-        IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+    public static async Task<SistemaIntegradoDto> RotarClave(Guid id, RotarClavePublicaDto dto, HttpContext http, ISesiones sesiones,
+        IContextoSolicitud contexto, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "rotar-clave-del-sistema", ct);
         await using var sesion = sesiones.DelTenant();
         var sistema = await CargarAsync(sesion, id, ct);
         var antes = sistema.ADto();
@@ -91,22 +93,28 @@ public static class SistemasEndpoints
         return sistema.ADto();
     }
 
-    /// <summary>Sus API keys dejan de autenticar, sus aserciones se rechazan y sus orígenes ya no pueden embeber.</summary>
+    /// <summary>
+    /// Desactiva el sistema (PI-7): <b>se revocan todas sus API keys</b> (también las de prueba), sus sesiones —las de identidad delegada y las embebidas del tercero— dejan de
+    /// valer en segundos en todos los servidores, sus aserciones se rechazan y sus orígenes ya no pueden embeber. Reactivarlo no restaura las llaves revocadas: hay que emitir
+    /// otras. Exige reautenticar con la passkey a quien entró directo (403 <c>reautenticacion-requerida</c>).
+    /// </summary>
     [WolverinePost("/api/v1/sistemas/{id}/desactivar")]
     [Authorize(Policy = Permisos.SistemasAdministrar)]
-    public static async Task<SistemaIntegradoDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto,
-        OrigenesDeEmbebido embebido, TimeProvider reloj, CancellationToken ct)
+    public static async Task<SistemaIntegradoDto> Desactivar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeCredenciales cacheLlaves,
+        ICacheDeSistemas cacheSistemas, OrigenesDeEmbebido embebido, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
-        await using var sesion = sesiones.DelTenant();
-        var sistema = await CargarAsync(sesion, id, ct);
-        var antes = sistema.ADto();
-        sistema.Desactivar();
+        await servicio.ExigirReautenticacionAsync(http.User, "desactivar-sistema", ct);
+        return (await GestionDeSistemas.DesactivarIntegradorAsync(contexto.TenantRequerido(), id, sesiones, contexto, cacheLlaves, cacheSistemas, embebido, reloj, ct)).ADto();
+    }
 
-        sesion.Store(sistema);
-        Auditoria.Registrar(sesion, contexto, "SistemaIntegrado", sistema.Id.ToString(), AccionConfiguracion.Desactivado, antes, sistema.ADto(), reloj.GetUtcNow());
-        await sesion.SaveChangesAsync(ct);
-        embebido.Invalidar();
-        return sistema.ADto();
+    /// <summary>Vuelve a activar el sistema (PI-7). Sus llaves se revocaron al desactivarlo y no se restauran: emite otras. 409 <c>sistema-activo</c> si ya estaba activo.</summary>
+    [WolverinePost("/api/v1/sistemas/{id}/reactivar")]
+    [Authorize(Policy = Permisos.SistemasAdministrar)]
+    public static async Task<SistemaIntegradoDto> Reactivar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeSistemas cacheSistemas,
+        OrigenesDeEmbebido embebido, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
+    {
+        await servicio.ExigirReautenticacionAsync(http.User, "reactivar-sistema", ct);
+        return (await GestionDeSistemas.ReactivarIntegradorAsync(contexto.TenantRequerido(), id, sesiones, contexto, cacheSistemas, embebido, reloj, ct)).ADto();
     }
 
     private static async Task<SistemaIntegrado> CargarAsync(IDocumentSession sesion, Guid id, CancellationToken ct) =>
@@ -208,9 +216,10 @@ public static class UsuariosEndpoints
     /// <summary>Reemplaza los roles del usuario. Cada empresa debe ser del tenant y estar al alcance de quien asigna.</summary>
     [WolverinePut("/api/v1/usuarios/{id}/roles")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
-    public static async Task<UsuarioDto> AsignarRoles(Guid id, AsignarRolesDto dto, ISesiones sesiones, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+    public static async Task<UsuarioDto> AsignarRoles(Guid id, AsignarRolesDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
+        ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "cambiar-roles", ct);
         await using var sesion = sesiones.DelTenant();
         var usuario = await CargarAsync(sesion, id, ct);
         var roles = (dto.Roles ?? []).Select(r => r.ADominio()).ToList();
@@ -228,8 +237,9 @@ public static class UsuariosEndpoints
     [WolverinePost("/api/v1/usuarios/{id}/desactivar")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
     public static async Task<UsuarioDto> Desactivar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeSesionesDirectas cache,
-        TimeProvider reloj, CancellationToken ct)
+        ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "desactivar-usuario", ct);
         await using var sesion = sesiones.DelTenant();
         var usuario = await CargarAsync(sesion, id, ct);
         await ValidarRolesAsync([], usuario.Roles, sesiones, contexto, ct);

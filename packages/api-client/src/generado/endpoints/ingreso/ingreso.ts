@@ -22,6 +22,7 @@ import type {
   RegistrarPasskeyDto,
   SesionDirectaDto,
   SolicitarCodigoDto,
+  UsarCodigoDeRecuperacionDto,
   VerificarCodigoDto,
   VerificarPasskeyDto
 } from '../../modelos';
@@ -401,6 +402,67 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRegistrarPasskeyIngresoMutationOptions(options), queryClient);
+    }
+    export const usarCodigoRecuperacion = (
+    usarCodigoDeRecuperacionDto: BodyType<UsarCodigoDeRecuperacionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<PasoDeIngresoDto>(
+      {url: `/api/v1/ingreso/recuperacion`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: usarCodigoDeRecuperacionDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getUsarCodigoRecuperacionMutationKey = () => ['usarCodigoRecuperacion'] as const;
+
+export const getUsarCodigoRecuperacionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usarCodigoRecuperacion>>, TError,UsarCodigoRecuperacionMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof usarCodigoRecuperacion>>, TError,UsarCodigoRecuperacionMutationVariables, TContext> => {
+
+const mutationKey = getUsarCodigoRecuperacionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usarCodigoRecuperacion>>, UsarCodigoRecuperacionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  usarCodigoRecuperacion(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UsarCodigoRecuperacionMutationResult = NonNullable<Awaited<ReturnType<typeof usarCodigoRecuperacion>>>
+    export type UsarCodigoRecuperacionMutationBody = BodyType<UsarCodigoDeRecuperacionDto>
+    export type UsarCodigoRecuperacionMutationError = ErrorType<void>
+    export type UsarCodigoRecuperacionMutationVariables = {data: BodyType<UsarCodigoDeRecuperacionDto>}
+
+    export const useUsarCodigoRecuperacion = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usarCodigoRecuperacion>>, TError,UsarCodigoRecuperacionMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof usarCodigoRecuperacion>>,
+        TError,
+        UsarCodigoRecuperacionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUsarCodigoRecuperacionMutationOptions(options), queryClient);
     }
     export const renovarSesionIngreso = (
 

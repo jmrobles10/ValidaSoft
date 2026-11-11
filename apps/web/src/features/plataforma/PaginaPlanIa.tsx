@@ -12,7 +12,7 @@ import { LlaveOpenAi } from './LlaveOpenAi';
 import { borradorDesdePlan, cuerpoPlanIa, validarPlanIa, type BorradorPlanIa, type ErrorPlanIa } from './modelo';
 import { ResumenPlanIa } from './ResumenPlanIa';
 
-type Campo = 'incluidas' | 'tope' | 'modelos' | 'umbral';
+type Campo = 'incluidas' | 'tope' | 'precio' | 'modelos' | 'umbral';
 
 function FormularioPlan({ tenantId, empresaId, plan, empresa, grupo }: { tenantId: string; empresaId: string; plan: PlanIaEmpresaDto; empresa: string; grupo: string }) {
   const { t } = useTranslation();
@@ -97,9 +97,10 @@ function FormularioPlan({ tenantId, empresaId, plan, empresa, grupo }: { tenantI
                   </Typography>
                 </Box>
                 {b.adicional && (
-                  <Box sx={{ maxWidth: { sm: 'calc(50% - 6px)' } }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                     {numero('tope', t('plataforma.planIa.tope'), b.tope, (v) => cambiar({ tope: v }), 'tope-invalido', t('plataforma.planIa.topeAyuda'))}
-                  </Box>
+                    {numero('precio', t('plataforma.planIa.precio'), b.precio, (v) => cambiar({ precio: v }), 'precio-invalido', t('plataforma.planIa.precioAyuda'))}
+                  </Stack>
                 )}
               </Stack>
             </Tarjeta>

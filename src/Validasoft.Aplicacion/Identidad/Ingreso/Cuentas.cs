@@ -2,6 +2,7 @@ using System.Text.Json;
 using Marten;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
+using Validasoft.Aplicacion.Comun;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Identidad;
@@ -41,9 +42,9 @@ public sealed record ContextoDeCliente(string? Ip, string? Dispositivo, string C
 /// <summary>
 /// Política de ingreso de un grupo (modos, duración e inactividad de la sesión directa, passkey para todos) con una caché corta en
 /// memoria. Los dos modos se verifican aquí: la identidad delegada (<c>Delegado</c>) al autenticar, el ingreso directo (<c>Directo</c>) al
-/// pedir el código, al renovar la sesión y al validar cada token. Cambiar la política la invalida en este nodo; los demás la ven al vencer.
+/// pedir el código, al renovar la sesión y al validar cada token. Cambiar la política la invalida en este nodo y se avisa a los demás (PI-8).
 /// </summary>
-public sealed class PoliticaDeIngreso(IDocumentStore store, IMemoryCache cache)
+public sealed class PoliticaDeIngreso(IDocumentStore store, IMemoryCache cache, IBusDeInvalidaciones? bus = null) : IReceptorDeInvalidaciones
 {
     public static readonly TimeSpan Vigencia = TimeSpan.FromSeconds(30);
 
@@ -71,7 +72,24 @@ public sealed class PoliticaDeIngreso(IDocumentStore store, IMemoryCache cache)
                     : "Este grupo no admite el ingreso directo a Validasoft: sus personas entran desde el sistema integrado.");
     }
 
-    public void Olvidar(Guid tenantId) => cache.Remove(Clave(tenantId));
+    public string Tipo => TiposDeInvalidacion.PoliticaDeIngreso;
+
+    public void Olvidar(Guid tenantId)
+    {
+        cache.Remove(Clave(tenantId));
+        bus?.Publicar(Tipo, tenantId.ToString());
+    }
+
+    public void Recibir(string id)
+    {
+        if (Guid.TryParse(id, out var tenantId))
+            cache.Remove(Clave(tenantId));
+    }
+
+    /// <summary>Se perdió la escucha de avisos: la política guardada vence sola en 30 segundos.</summary>
+    public void Reiniciar()
+    {
+    }
 }
 
 /// <summary>Una cuenta con la que se puede entrar: su documento, su grupo y lo que se le exige.</summary>

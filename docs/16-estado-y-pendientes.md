@@ -268,16 +268,10 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
 - Sandbox: las llaves de prueba emitidas antes de SB-2 (sin sandbox creado) responden 401 hasta que se cree con `POST /api/v1/sandbox`; no hay límite de tamaño del buzón ni retención automática del sandbox.
 
 ### 4.6 Plataforma e identidad
-- Plataforma ya entra **directo** (correo, código y passkey obligatoria; ING-4). Falta **desactivar la clave de arranque en producción** una vez
-  creado el primer operador (hoy es dejar vacía la variable `VALIDASOFT__PLATAFORMA__CLAVEBOOTSTRAP`; una acción en la consola sería mejor) y, más adelante,
-  federar con OIDC/WorkOS (ING-7: la abstracción existe, no está integrada).
-- 2FA de usuarios (P-14-4): **resuelta** con las passkeys (ING-2). Pendiente a evaluar: reautenticación (step-up) para acciones sensibles,
-  códigos de recuperación y avisos por correo cuando se registra o revoca una passkey.
-- Conditional UI: ofrecer las passkeys del sitio en el propio campo del correo (hoy hay un botón «Entrar con una passkey»).
-- Consultar en la consola la auditoría de ingreso de los operadores de Plataforma (hoy se registra; la consulta es la del grupo).
-- Desactivar sistemas de Plataforma por API (los operadores ya se desactivan, ING-4); agregar empresas a un grupo desde la consola.
-- `POST /api-keys` y `POST /sesiones-usuario` todavía guardan su respuesta en el registro de idempotencia 24 h.
 - ~~Ayuda por documento **por empresa**.~~ Hecho (OP-15, OP-16).
+- **Hecho en `feature/plataforma-identidad` (PI-1…PI-19, 2026-11-11; sin PR):** SSO con el proveedor del cliente (OIDC genérico y WorkOS tras configuración, dominios verificados, JIT, reglas de grupos a roles, modo exclusivo); desactivar y reactivar sistemas y operadores; agregar empresas a un grupo desde la consola; idempotencia sin secretos; cuenta de los eventos cifrada con la clave del grupo; invalidación inmediata de llaves y sesiones en todos los servidores (PostgreSQL `LISTEN/NOTIFY`); uso de IA por cliente con su tarifa y exportación; step-up con passkey; passkeys en el campo del correo; aviso por correo de passkeys; auditoría de ingresos de los operadores y clave de arranque desde la consola; códigos de recuperación. Diseño en [07 §2.8](07-seguridad-identidad-y-tenancy.md) y contrato en [05 §2.11](05-api-contratos-y-webhooks.md).
+- **Sigue pendiente (PI-19):** probar el SSO contra un proveedor real (Entra ID, Google Workspace) y WorkOS real —hoy solo hay simuladores—; SAML nativo y SCIM; TOTP; login propio de Plataforma con OIDC (PT-8); KMS por tenant (P-14-3: la clave del grupo se deriva de la maestra); y una prueba de integración del `409 sin-operadores-con-passkey` (la base de pruebas es compartida).
+- Operación: cuando el primer operador tenga su passkey, **desactivar la clave de arranque desde Secretos › Clave de arranque**; los grupos que usen SSO deben registrar la URL de retorno en su proveedor.
 
 ### 4.7 H8 restante
 - ~~Campañas de renovación.~~ Hecho en `feature/operacion-revision` (OP-1…OP-6, §3.1.4).

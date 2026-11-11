@@ -29,8 +29,9 @@ public static class OperadoresDirectosEndpoints
     [WolverinePost("/api/v1/plataforma/operadores")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
     public static async Task<IResult> Crear(CrearOperadorDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, IMessageBus mensajes,
-        IProtectorDeSecretos protector, RegistroDeIngresos registro, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeSecretos protector, RegistroDeIngresos registro, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "crear-operador", ct);
         var ahora = reloj.GetUtcNow();
         var operador = OperadorDePlataforma.RegistrarDirecto(dto.Nombre, dto.Correo, ahora);
         await using var sesion = sesiones.Global(mensajes);
@@ -58,12 +59,20 @@ public static class OperadoresDirectosEndpoints
         return [.. operadores.Select(o => o.ADto(activas.Count(p => p.SujetoId == o.Id)))];
     }
 
-    /// <summary>Desactiva al operador: ya no entra y sus sesiones se cierran.</summary>
+    /// <summary>
+    /// Desactiva al operador (PI-7): ya no entra, <b>sus sesiones se cierran</b> —también las de identidad delegada, en todos los servidores— y <b>sus passkeys se revocan</b>.
+    /// Reactivarlo no las restaura: entra con el código del correo y registra una nueva. Nadie puede desactivarse a sí mismo (409 <c>auto-desactivacion</c>). Exige reautenticar
+    /// con la passkey (403 <c>reautenticacion-requerida</c>).
+    /// </summary>
     [WolverinePost("/api/v1/plataforma/operadores/{id}/desactivar")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
     public static async Task<OperadorDePlataformaDto> Desactivar(string id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeSesionesDirectas cache,
-        TimeProvider reloj, CancellationToken ct)
+        ICacheDeSistemas cacheSistemas, ServicioDeIngreso servicio, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "desactivar-operador", ct);
+        if (string.Equals(contexto.ActorId, id, StringComparison.Ordinal))
+            throw ReglaDeNegocioException.Conflicto("auto-desactivacion", "No puedes desactivarte a ti mismo: pídeselo a otro operador.");
+
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
         var operador = await sesion.LoadAsync<OperadorDePlataforma>(id, ct) ?? throw ReglaDeNegocioException.NoEncontrado("operador-no-encontrado", "No existe ese operador.");
@@ -71,11 +80,52 @@ public static class OperadoresDirectosEndpoints
         operador.Desactivar();
         sesion.Store(operador);
         Auditoria.Registrar(sesion, contexto, Entidad, operador.Id, AccionConfiguracion.Desactivado, antes, operador.ADto(0), ahora);
-        var cerradas = await GestionDeSesiones.CerrarTodasAsync(sesion, TipoDePropietario.Operador, operador.Id, SesionDeUsuario.MotivoUsuarioDesactivado,
-            $"{contexto.ActorTipo}:{contexto.ActorId}", ContextoDeCliente.De(http, contexto.CorrelationId), contexto.ActorTipo, contexto.ActorId, ahora, ct);
+        var cliente = ContextoDeCliente.De(http, contexto.CorrelationId);
+        var por = $"{contexto.ActorTipo}:{contexto.ActorId}";
+        var cerradas = await GestionDeSesiones.CerrarTodasAsync(sesion, TipoDePropietario.Operador, operador.Id, SesionDeUsuario.MotivoUsuarioDesactivado, por, cliente,
+            contexto.ActorTipo, contexto.ActorId, ahora, ct);
+
+        // Sus llaves (passkeys) también se revocan: al volver a entrar registra otras.
+        var llaves = await sesion.Query<Passkey>().Where(p => p.Propietario == TipoDePropietario.Operador && p.SujetoId == id && p.RevocadaEn == null).ToListAsync(ct);
+        foreach (var llave in llaves)
+        {
+            llave.Revocar(por, "Operador desactivado", ahora);
+            sesion.Store(llave);
+            RegistroDeIngresos.Agregar(sesion, RegistroDeIngresos.Crear(EventoDeIngreso.PasskeyRevocada, true, cliente, ahora, null, TipoDePropietario.Operador, id, operador.Correo,
+                actorTipo: contexto.ActorTipo, actorId: contexto.ActorId, passkeyId: llave.Id, motivo: "Operador desactivado", detalle: llave.Nombre));
+        }
+
         await sesion.SaveChangesAsync(ct);
         foreach (var cerrada in cerradas)
             cache.Olvidar(cerrada);
+        cacheSistemas.OlvidarOperador(id);
+        return operador.ADto(0);
+    }
+
+    /// <summary>
+    /// Vuelve a activar al operador (PI-7) y le envía el correo para entrar: como sus passkeys se revocaron al desactivarlo, entra con el código y registra una nueva. 409
+    /// <c>operador-activo</c> si ya estaba activo. Exige reautenticar con la passkey.
+    /// </summary>
+    [WolverinePost("/api/v1/plataforma/operadores/{id}/reactivar")]
+    [Authorize(Policy = Permisos.PlataformaTenants)]
+    public static async Task<OperadorDePlataformaDto> Reactivar(string id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, IMessageBus mensajes,
+        IProtectorDeSecretos protector, ICacheDeSistemas cacheSistemas, ServicioDeIngreso servicio, RegistroDeIngresos registro, TimeProvider reloj, CancellationToken ct)
+    {
+        await servicio.ExigirReautenticacionAsync(http.User, "reactivar-operador", ct);
+        var ahora = reloj.GetUtcNow();
+        await using var sesion = sesiones.Global(mensajes);
+        var operador = await sesion.LoadAsync<OperadorDePlataforma>(id, ct) ?? throw ReglaDeNegocioException.NoEncontrado("operador-no-encontrado", "No existe ese operador.");
+        var antes = operador.ADto(0);
+        operador.Reactivar();
+        sesion.Store(operador);
+        Auditoria.Registrar(sesion, contexto, Entidad, operador.Id, AccionConfiguracion.Reactivado, antes, operador.ADto(0), ahora);
+        if (operador.EsDirecto)
+            await mensajes.PublishAsync(new CorreoDeAccesoPendiente(PlantillaCorreo.InvitacionDeUsuario, operador.Correo, protector.Proteger("-"), ahora, "Plataforma de Validasoft",
+                "Operador de Plataforma"));
+        await sesion.SaveChangesAsync(ct);
+        cacheSistemas.OlvidarOperador(id);
+        await registro.RegistrarAsync(EventoDeIngreso.UsuarioInvitado, true, ContextoDeCliente.De(http, contexto.CorrelationId), null, TipoDePropietario.Operador, operador.Id,
+            operador.Correo, actorTipo: contexto.ActorTipo, actorId: contexto.ActorId, detalle: "Operador reactivado", ct: ct);
         return operador.ADto(0);
     }
 
@@ -93,11 +143,12 @@ public static class OperadoresDirectosEndpoints
     [WolverinePost("/api/v1/plataforma/operadores/{id}/passkeys/{passkeyId}/revocar")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
     public static async Task<PasskeyDto> RevocarPasskey(string id, Guid passkeyId, RevocarPasskeyDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
-        ICacheDeSesionesDirectas cache, TimeProvider reloj, CancellationToken ct)
+        ICacheDeSesionesDirectas cache, CuentasDeIngreso cuentas, ServicioDeIngreso servicio, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "revocar-passkey", ct);
         await CargarAsync(sesiones, id, ct);
         return await GestionDeIngresoEndpoints.RevocarAsync(passkeyId, new CuentaDeIngreso(TipoDePropietario.Operador, null, id), dto.Motivo, http, sesiones, contexto, cache,
-            reloj, ct);
+            cuentas, mensajes, reloj, ct);
     }
 
     [WolverineGet("/api/v1/plataforma/operadores/{id}/sesiones")]

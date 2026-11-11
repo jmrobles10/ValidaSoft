@@ -31,7 +31,7 @@ public static class FichaTerceroEndpoints
     [WolverineGet("/api/v1/terceros/{id}/ficha")]
     [Authorize(Policy = Permisos.TercerosLeer)]
     public static async Task<FichaTerceroDto> Obtener(Guid id, SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, EmisorDeCertificados emisor, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, EmisorDeCertificados emisor, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = await empresa.Sesion.LoadAsync<Tercero>(id, ct);
         var vinculosDelGrupo = tercero is null
@@ -87,7 +87,7 @@ public static class FichaTerceroEndpoints
                 : null;
 
             vinculos.Add(new VinculoEnFichaDto(vinculo.ADto(tipos.GetValueOrDefault(vinculo.TipoVinculoId)), certificado,
-                await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, protector, ct), compartidos));
+                await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, campos, ct), compartidos));
         }
 
         return new FichaTerceroDto(tercero.ADto(), vinculos, otras, secciones);

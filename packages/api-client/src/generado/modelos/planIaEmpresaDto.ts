@@ -22,4 +22,9 @@ export interface PlanIaEmpresaDto {
   activo: boolean;
   /** @nullable */
   actualizadoEn: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
+  precioAdicional?: number | string | null;
 }

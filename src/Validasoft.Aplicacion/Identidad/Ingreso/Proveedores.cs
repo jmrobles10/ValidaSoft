@@ -1,4 +1,5 @@
 using Marten;
+using Validasoft.Contratos;
 using Validasoft.Dominio.Identidad;
 
 namespace Validasoft.Aplicacion.Identidad;
@@ -34,18 +35,26 @@ public interface IServicioDePasskeys
         CancellationToken ct);
 }
 
-/// <summary>Lo que el proveedor de identidad entrega cuando una persona se verificó: quién es y si el proveedor ya exigió más de un factor.</summary>
-public sealed record IdentidadVerificada(string Proveedor, string Correo, string? Nombre, bool EsMultifactor);
+/// <summary>
+/// Lo que el proveedor de identidad entrega cuando una persona se verificó: quién es y si el proveedor ya exigió más de un factor. Un proveedor federado
+/// (SSO, PI-3) agrega además su identificador estable de la persona (<paramref name="Sujeto"/>) y los grupos que declaró (<paramref name="Grupos"/>, con
+/// <paramref name="GruposDeclarados"/> falso si el token no traía el reclamo: así no se confunde «sin grupos» con «no los informó»).
+/// </summary>
+public sealed record IdentidadVerificada(
+    string Proveedor, string Correo, string? Nombre, bool EsMultifactor, string? Sujeto = null, IReadOnlyList<string>? Grupos = null, bool GruposDeclarados = false);
 
-/// <summary>Primer paso de un proveedor de identidad: lo que recibe el navegador para continuar.</summary>
-public sealed record InicioDeIngreso(Guid Desafio, DateTimeOffset Expira, string Mensaje);
+/// <summary>
+/// Primer paso de un proveedor de identidad: lo que recibe el navegador para continuar. Un proveedor federado agrega <paramref name="UrlDeAutorizacion"/> (a dónde
+/// va el navegador) y <paramref name="SecretoDeNavegador"/> (va en una cookie para ligar el regreso al mismo navegador).
+/// </summary>
+public sealed record InicioDeIngreso(Guid Desafio, DateTimeOffset Expira, string Mensaje, string? UrlDeAutorizacion = null, string? SecretoDeNavegador = null);
 
 /// <summary>
 /// Proveedor de identidad del ingreso directo (ING-7): verifica <b>quién es</b> la persona y nada más; no sabe de grupos, roles ni sesiones.
-/// Hoy hay uno propio (<c>local</c>: código de 6 dígitos al correo). Un proveedor federado (OIDC, WorkOS, SSO con Azure AD o Google)
-/// implementaría esta misma interfaz —<see cref="IniciarAsync"/> devolvería la URL de autorización y <see cref="CompletarAsync"/> canjearía
-/// el código de su <i>callback</i>—, entregaría la misma <see cref="IdentidadVerificada"/> y todo lo demás (cuentas por correo, política del
-/// grupo, passkeys, sesiones y tokens) no cambia.
+/// Hay tres: el propio (<c>local</c>: código de 6 dígitos al correo) y dos federados (PI-3, PI-6) que implementan esta misma interfaz —<see cref="IniciarAsync"/>
+/// devuelve la URL de autorización y <see cref="CompletarAsync"/> canjea el código de su <i>callback</i>—: <c>oidc</c> (Azure AD/Entra, Google Workspace o cualquier
+/// OIDC) y <c>workos</c>. Todos entregan la misma <see cref="IdentidadVerificada"/> y todo lo demás (cuentas por correo, política del grupo, passkeys, sesiones y
+/// tokens) no cambia.
 /// </summary>
 public interface IProveedorDeIdentidad
 {
@@ -63,4 +72,11 @@ public interface IProveedorDeIdentidad
     /// el intento y el llamador lo guarda). Vencido o agotado: falla con la regla del proveedor.
     /// </summary>
     Task<IdentidadVerificada?> CompletarAsync(DesafioDeIngreso desafio, string respuesta, DateTimeOffset ahora, CancellationToken ct);
+
+    /// <summary>
+    /// «Probar conexión» de un proveedor federado (PI-1): comprueba, sin iniciar sesión ni cambiar nada, que el proveedor responde y está bien configurado. El proveedor
+    /// propio no tiene qué probar.
+    /// </summary>
+    Task<PruebaDeSsoDto> ProbarAsync(ConfiguracionDeSso configuracion, CancellationToken ct) =>
+        Task.FromResult(new PruebaDeSsoDto(false, "Este proveedor no tiene prueba de conexión.", null, null));
 }

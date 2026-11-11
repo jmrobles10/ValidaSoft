@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Dominio.Identidad;
 
@@ -11,9 +12,9 @@ namespace Validasoft.Infraestructura.Seguridad;
 /// <summary>
 /// Comprueba en cada petición que la sesión directa de un token (<c>validasoft:sesion-id</c>) siga vigente: cerrarla, revocarla o desactivar a la
 /// persona corta el token de acceso en segundos en vez de esperar a que venza. El resultado se guarda <see cref="Vigencia"/> en memoria; al
-/// cerrar o revocar se olvida en este nodo (en los demás, al vencer la caché).
+/// cerrar o revocar se olvida en este nodo y se avisa a los demás (PI-8).
 /// </summary>
-public sealed class VerificadorDeSesionesDirectas(IDocumentStore store, IMemoryCache cache, TimeProvider reloj) : ICacheDeSesionesDirectas
+public sealed class VerificadorDeSesionesDirectas(IDocumentStore store, IMemoryCache cache, TimeProvider reloj, IBusDeInvalidaciones? bus = null) : ICacheDeSesionesDirectas, IReceptorDeInvalidaciones
 {
     public static readonly TimeSpan Vigencia = TimeSpan.FromSeconds(15);
 
@@ -31,7 +32,24 @@ public sealed class VerificadorDeSesionesDirectas(IDocumentStore store, IMemoryC
         return vigente;
     }
 
-    public void Olvidar(Guid sesionId) => cache.Remove(Clave(sesionId));
+    public string Tipo => TiposDeInvalidacion.SesionDirecta;
+
+    public void Olvidar(Guid sesionId)
+    {
+        cache.Remove(Clave(sesionId));
+        bus?.Publicar(Tipo, sesionId.ToString());
+    }
+
+    public void Recibir(string id)
+    {
+        if (Guid.TryParse(id, out var sesionId))
+            cache.Remove(Clave(sesionId));
+    }
+
+    /// <summary>Se perdió la escucha de avisos: las sesiones guardadas vencen solas en segundos.</summary>
+    public void Reiniciar()
+    {
+    }
 }
 
 /// <summary>

@@ -24,6 +24,9 @@ public static class ReclamosTercero
 
     public const string Componente = "componente";
 
+    /// <summary>Generación del sistema con la que se abrió la sesión embebida (PI-7): si el sistema se desactivó desde entonces, la sesión ya no vale.</summary>
+    public const string GeneracionDelSistema = "generacion";
+
     /// <summary>Nombre de la política de autorización de las rutas <c>/public/v1</c> que exigen sesión de tercero.</summary>
     public const string Politica = "tercero";
 }
@@ -38,7 +41,7 @@ public sealed record VinculoEnSesion(Guid VinculoId, Guid TenantId, Guid Empresa
 /// De dónde viene una sesión embebida (IO-5): el sistema integrador que la pidió con su API key, el origen exacto de la página que
 /// aloja el iframe (uno de los permitidos de ese sistema) y qué componente se monta (<c>boveda</c>, <c>expediente</c> o <c>ficha</c>).
 /// </summary>
-public sealed record EmbebidoDeSesion(string Sistema, string Origen, string Componente, TimeSpan Duracion);
+public sealed record EmbebidoDeSesion(string Sistema, string Origen, string Componente, TimeSpan Duracion, int Generacion = 0);
 
 /// <summary>
 /// Sesión del tercero leída del token: quién es, con qué correo entró, si verificó OTP y qué vínculos puede ver.
@@ -62,7 +65,8 @@ public sealed record SesionDeTercero(Guid TerceroId, string Correo, bool OtpVeri
 
         var embebida = string.Equals(usuario.FindFirstValue(ReclamosTercero.Embebido), "true", StringComparison.OrdinalIgnoreCase)
             ? new EmbebidoDeSesion(usuario.FindFirstValue(ReclamosTercero.Sistema) ?? string.Empty, usuario.FindFirstValue(ReclamosTercero.Origen) ?? string.Empty,
-                usuario.FindFirstValue(ReclamosTercero.Componente) ?? string.Empty, TimeSpan.Zero)
+                usuario.FindFirstValue(ReclamosTercero.Componente) ?? string.Empty, TimeSpan.Zero,
+                int.TryParse(usuario.FindFirstValue(ReclamosTercero.GeneracionDelSistema), out var generacion) ? generacion : 0)
             : null;
 
         return new SesionDeTercero(terceroId, usuario.FindFirstValue(ReclamosTercero.Correo) ?? string.Empty,

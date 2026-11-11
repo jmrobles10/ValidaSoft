@@ -5,9 +5,11 @@ import { RefreshCw, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DialogoConfirmacion, EncabezadoPagina, ErrorRecuperable, Tarjeta } from '../../shared/componentes';
+import { esCO } from '../../i18n/es-CO';
 import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
 import { useEstadoSecretos, useRecifrarSecretos } from './api';
+import { TarjetaClaveDeArranque } from './TarjetaClaveDeArranque';
 
 const pendientes = (t: SecretosPorTipoDto) => t.total - t.vigentes - t.fallidos;
 
@@ -82,7 +84,7 @@ export function PaginaSecretos() {
                 <TableBody>
                   {datos.porTipo.map((x) => (
                     <TableRow key={x.tipo}>
-                      <TableCell>{t(`plataforma.secretos.tipos.${x.tipo as 'llave-openai' | 'secreto-webhook' | 'cuenta-bancaria' | 'credenciales-listas'}`)}</TableCell>
+                      <TableCell>{t(`plataforma.secretos.tipos.${x.tipo as keyof typeof esCO.plataforma.secretos.tipos}`)}</TableCell>
                       <TableCell align="right">{x.total}</TableCell>
                       <TableCell align="right">{x.vigentes}</TableCell>
                       <TableCell align="right">{pendientes(x)}</TableCell>
@@ -95,6 +97,9 @@ export function PaginaSecretos() {
           </MarcoTabla>
         </Stack>
       )}
+      <Stack sx={{ mt: 2 }}>
+        <TarjetaClaveDeArranque />
+      </Stack>
       {confirmando && (
         <DialogoConfirmacion
           titulo={t('plataforma.secretos.confirmarTitulo')}

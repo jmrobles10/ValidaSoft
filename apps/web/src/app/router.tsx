@@ -40,6 +40,14 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaHabeasPlataforma').then((m) => ({ Component: m.PaginaHabeasPlataforma })),
         },
         {
+          path: 'uso-ia',
+          lazy: () => import('../features/plataforma/PaginaConsumoIa').then((m) => ({ Component: m.PaginaConsumoIa })),
+        },
+        {
+          path: 'ingresos',
+          lazy: () => import('../features/plataforma/PaginaIngresosOperadores').then((m) => ({ Component: m.PaginaIngresosOperadores })),
+        },
+        {
           path: 'operadores',
           lazy: () => import('../features/plataforma/PaginaOperadores').then((m) => ({ Component: m.PaginaOperadores })),
         },
@@ -262,6 +270,10 @@ export function crearRouter() {
                 {
                   path: 'ayuda-de-documentos',
                   lazy: () => import('../features/configuracion/ayudas/PaginaAyudasDeDocumentos').then((m) => ({ Component: m.PaginaAyudasDeDocumentos })),
+                },
+                {
+                  path: 'sso',
+                  lazy: () => import('../features/configuracion/ingreso/sso/PaginaSso').then((m) => ({ Component: m.PaginaSso })),
                 },
               ],
             },

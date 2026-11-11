@@ -7,8 +7,8 @@ import { planPlataforma } from './es-CO-derechos-plan-correo';
 
 export const plataforma = {
   titulo: 'Plataforma',
-  nav: { grupos: 'Grupos y empresas', habeas: 'Habeas data', operadores: 'Operadores', secretos: 'Secretos' },
   plan: planPlataforma,
+  nav: { grupos: 'Grupos y empresas', habeas: 'Habeas data', usoIa: 'Uso de IA', operadores: 'Operadores', ingresos: 'Ingresos', secretos: 'Secretos' },
   sesion: '{{persona}} · operador de Plataforma desde {{sistema}}',
   grupos: {
     titulo: 'Grupos y empresas',
@@ -34,7 +34,7 @@ export const plataforma = {
     mostrarEmpresas: 'Mostrar las {{count}} empresas',
     ocultarEmpresas: 'Ocultar las empresas',
     inactivo: 'Inactivo',
-    sinEmpresas: 'Este grupo aún no tiene empresas: su administrador puede crearlas en Configuración › Empresas del grupo.',
+    sinEmpresas: 'Este grupo aún no tiene empresas: agrégala aquí o su administrador puede crearlas en Configuración › Empresas del grupo.',
     columnas: { empresa: 'Empresa', identificacion: 'Identificación', prefijo: 'Prefijo', planIa: 'Plan de IA', acciones: 'Acciones' },
     configurarPlan: 'Plan de IA',
     planDelGrupo: 'Plan y límites',
@@ -119,6 +119,8 @@ export const plataforma = {
     adicionalAyuda: 'Al agotar las incluidas, se siguen validando con IA y se cobran aparte.',
     tope: 'Tope de adicionales por mes',
     topeAyuda: 'Vacío = sin tope.',
+    precio: 'Precio propio por adicional',
+    precioAyuda: 'Vacío = la tarifa general de Plataforma (Uso de IA).',
     modelos: 'Modelos y confianza',
     modeloPorDefecto: 'Modelo por defecto',
     modeloEscalamiento: 'Modelo de escalamiento',
@@ -162,6 +164,7 @@ export const plataforma = {
       adicionales: 'Adicionales',
       adicionalesNo: 'No se permiten',
       adicionalesSinTope: 'Permitidos, sin tope',
+      precioGeneral: 'La tarifa general',
       adicionalesConTope: 'Permitidos, hasta {{tope}} al mes',
       actualizado: 'Última actualización',
       sinGuardar: 'Aún sin guardar',
@@ -171,6 +174,7 @@ export const plataforma = {
     errores: {
       'incluidas-invalidas': 'Las validaciones incluidas van de 0 a 1 000 000.',
       'tope-invalido': 'El tope va de 0 a 1 000 000, o vacío para no tener tope.',
+      'precio-invalido': 'Escribe un precio entre 0 y 100 000 000, con hasta dos decimales, o déjalo vacío para usar la tarifa general.',
       'modelo-invalido': 'El nombre del modelo lleva letras, números, puntos o guiones.',
       'umbral-invalido': 'El umbral de confianza va de 0 a 1.',
       'llave-invalida': 'La API key debe tener entre 20 y 512 caracteres, sin espacios.',
@@ -190,6 +194,8 @@ export const plataforma = {
       'secreto-webhook': 'Secretos de webhooks',
       'cuenta-bancaria': 'Números de cuenta',
       'credenciales-listas': 'Credenciales de listas restrictivas',
+      'cuenta-en-eventos': 'Números de cuenta en el historial de los vínculos',
+      'cuenta-en-vinculos': 'Números de cuenta en los vínculos',
     },
     revisar: 'Revisar de nuevo',
     recifrar: 'Re-cifrar con la clave vigente',

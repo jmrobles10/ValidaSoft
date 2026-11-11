@@ -24,6 +24,9 @@ import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
+import { consola } from './es-CO-consola';
+import { sso } from './es-CO-identidad';
+import { erroresSeguridad, reautenticacion } from './es-CO-seguridad';
 import { plataforma } from './es-CO-plataforma';
 import { erroresRecordatorios, flujoRecordatorio, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
@@ -75,6 +78,7 @@ export const esCO = {
     delegaciones: 'Delegación de revisión',
     'plazos-de-revision': 'Plazos de revisión',
     'ayuda-de-documentos': 'Ayuda de documentos',
+    sso: 'Inicio de sesión único',
     'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
@@ -352,6 +356,9 @@ export const esCO = {
   habeas,
   plan,
   dominioCorreo,
+  sso,
+  consola,
+  reautenticacion,
   motivos,
   flujos,
   historial: {
@@ -694,6 +701,7 @@ export const esCO = {
     ...erroresSla,
     ...erroresIngreso,
     ...erroresRevisionAutomatica,
+    ...erroresSeguridad,
   },
 } as const;
 
