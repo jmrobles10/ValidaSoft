@@ -9,8 +9,10 @@ import { fichaMaestra } from './es-CO-ficha';
 import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
 import { informes } from './es-CO-informes';
+import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
+import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -55,6 +57,8 @@ export const esCO = {
     'accesos-soporte': 'Accesos de soporte',
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
+    ingreso: 'Ingreso',
+    'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
     mas: 'Más',
@@ -73,7 +77,7 @@ export const esCO = {
     cerrada: 'Cerraste la sesión',
     cerradaAyuda: 'Para volver a entrar, abre Validasoft desde tu sistema.',
     soloEmbebidaTitulo: 'Abre Validasoft desde tu sistema',
-    soloEmbebida: 'Esta pantalla vive dentro del sistema integrado (SRM, Marco, Portal…) y recibe de él tu sesión.',
+    soloEmbebida: 'Esta pantalla vive dentro del sistema integrado (un ERP, un portal…) y recibe de él tu sesión.',
     dev: {
       titulo: 'Sesión de desarrollo',
       ayuda:
@@ -135,19 +139,39 @@ export const esCO = {
     filtros: { estado: 'Estado', tipo: 'Tipo', limpiar: 'Limpiar filtros' },
     buscar: {
       placeholder: 'Buscar por referencia externa ({{sistema}} · PRV-002)',
-      formato: 'Escribe la referencia con su sistema delante: SRM · PRV-002.',
+      formato: 'Escribe la referencia con su sistema delante: ERP · PRV-002.',
       sinResultado: 'Ningún vínculo tiene la referencia “{{referencia}}”.',
-      sinResultadoAyuda: 'Revisa la referencia en {{sistema}} o escríbela con el sistema delante: SRM · PRV-002.',
+      sinResultadoAyuda: 'Revisa la referencia en {{sistema}} o escríbela con el sistema delante: ERP · PRV-002.',
       limpiar: 'Limpiar búsqueda',
     },
     columnas: { tercero: 'Tercero', tipo: 'Tipo', estado: 'Estado', referencias: 'Referencias externas', creado: 'Creado' },
     sinReferencias: 'Sin referencias',
     vacio: '{{empresa}} aún no tiene vínculos.',
-    vacioAyuda: 'Los vínculos llegan desde los sistemas integrados (SRM, Marco…) o por invitación.',
+    vacioAyuda: 'Los vínculos llegan desde los sistemas integrados (ERP, portales…) o por invitación.',
     vacioFiltros: 'Ningún vínculo coincide con esos filtros.',
     errorLista: 'No pudimos cargar los vínculos.',
     abrir: 'Abrir vínculo de {{tercero}}',
     terceroDesconocido: 'Tercero sin acceso',
+    contactos: {
+      titulo: 'Contactos del tercero',
+      dialogo: 'Contactos del tercero con esta empresa',
+      editar: 'Editar',
+      vacio: 'Aún no hay contactos. Cada empresa tiene los suyos: comercial, pagos, cumplimiento y notificaciones.',
+      vacioEditor: 'Sin contactos. Agrega a quien debe recibir los avisos de cada tema.',
+      ayuda: 'El mismo tercero tiene contactos distintos para cada empresa. Lo que guardes reemplaza la lista y llega a los sistemas conectados.',
+      agregar: 'Agregar contacto',
+      quitar: 'Quitar el contacto {{n}}',
+      contacto: 'Contacto {{n}}',
+      nombre: 'Nombre',
+      cargo: 'Cargo',
+      correo: 'Correo',
+      telefono: 'Teléfono',
+      rol: 'Rol',
+      roles: { Comercial: 'Comercial', Pagos: 'Pagos', Cumplimiento: 'Cumplimiento', Notificaciones: 'Notificaciones' },
+      guardar: 'Guardar contactos',
+      exito: 'Guardaste los contactos.',
+      errores: { nombre: 'Escribe el nombre de la persona.', correo: 'Escribe un correo válido, por ejemplo nombre@empresa.com.', repetido: 'Ese correo ya está con ese mismo rol.' },
+    },
     detalle: {
       datos: 'Datos del vínculo',
       tercero: 'Tercero',
@@ -166,7 +190,7 @@ export const esCO = {
       bloqueoHasta: ' hasta el {{hasta}}',
       atributos: 'Atributos',
       referencias: 'Referencias externas',
-      referenciasAyuda: 'Cuando un sistema integrado (SRM, Marco…) cree o enlace este vínculo, su identificador aparece aquí.',
+      referenciasAyuda: 'Cuando un sistema integrado (un ERP, un portal…) cree o enlace este vínculo, su identificador aparece aquí.',
       sinReferencias: 'Ningún sistema ha registrado una referencia.',
       sistema: 'Sistema',
       referencia: 'Referencia',
@@ -269,6 +293,8 @@ export const esCO = {
   plazoCargue,
   flujoPlazo,
   flujoReintento,
+  flujoVigencia,
+  vigenciaVinculo,
   informes,
   expedientes,
   documentos,
@@ -281,6 +307,13 @@ export const esCO = {
   tiposVinculo,
   certificados: { ...certificados, lista: certificadosLista },
   cuentas,
+  ingreso,
+  cuenta,
+  ingresoGrupo,
+  accesoUsuario,
+  usuariosIngreso,
+  operadores,
+  ingresoPlataforma,
   terceros,
   fichaMaestra,
   fichaEmpresa,
@@ -305,10 +338,14 @@ export const esCO = {
     vinculo_anulado: 'Vínculo anulado',
     expediente_vinculado: 'Expediente abierto',
     vinculo_activado: 'Vínculo activado',
+    vinculo_por_vencer: 'Vínculo en pre-vencimiento',
+    vinculo_vencido: 'Vínculo vencido',
+    vigencia_del_vinculo_fijada: 'Vigencia fijada',
     expediente_cerrado: 'Expediente cerrado',
     referencia: 'Referencia {{sistema}} {{id}}',
     invitacion: 'A {{correo}}, vence el {{expira}}',
     hasta: 'Hasta el {{fecha}}',
+    vigencia: { venceEl: 'Vence el {{fecha}}', vigenteHasta: 'Vigente hasta el {{fecha}}', sinVigencia: 'Sin vencimiento periódico' },
     actor: {
       tu: 'Tú',
       Usuario: 'Usuario',
@@ -415,7 +452,7 @@ export const esCO = {
     desactivadoAviso: 'Sistema desactivado.',
     confirmarDesactivar: 'Sus API keys dejan de autenticar y las personas ya no pueden entrar desde {{codigo}}. Su historial se conserva.',
     vacio: 'Aún no hay sistemas integrados.',
-    vacioAyuda: 'Registra el sistema (SRM, Marco…) con su clave pública para que las personas entren desde él.',
+    vacioAyuda: 'Registra el sistema (un ERP, un portal…) con su clave pública para que las personas entren desde él.',
     faltaCodigo: 'Falta el código (iss).',
     faltaNombre: 'Falta el nombre.',
     faltaClave: 'Falta la clave pública.',
@@ -620,8 +657,10 @@ export const esCO = {
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
     ...erroresLotes,
+    ...erroresVigencias,
     ...erroresCruce,
     ...erroresRecordatorios,
+    ...erroresIngreso,
   },
 } as const;
 

@@ -55,7 +55,8 @@ async function registrarCuentaConCertificacion(page: Page): Promise<void> {
   await page.goto('/cuentas');
   await page.getByRole('button', { name: 'Agregar cuenta' }).first().click();
   const nueva = page.getByRole('dialog', { name: 'Agregar cuenta bancaria' });
-  await nueva.getByLabel('Banco').fill('Bancolombia');
+  await nueva.getByRole('combobox', { name: 'Banco' }).fill('Bancolombia'); // el banco sale del catálogo
+  await page.getByRole('option', { name: 'Bancolombia' }).click();
   await nueva.getByRole('radio', { name: 'Ahorros' }).check();
   await nueva.getByLabel('Número de cuenta').fill('031-123456-78');
   await nueva.getByLabel('Titular de la cuenta').fill('Ferretería El Tornillo S.A.S.');

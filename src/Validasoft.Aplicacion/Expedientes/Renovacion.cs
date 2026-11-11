@@ -80,7 +80,9 @@ public static class RatificacionEndpoints
     /// El tercero declara que el documento vencido no cambió (condición única I-14): el tipo canónico lo permite, la
     /// versión es la actual y no trae una fecha de vencimiento ya cumplida. La bóveda registra la ratificación y recalcula la
     /// vigencia desde hoy; el requisito de la renovación queda cubierto y sus áreas lo aprueban sin revisarlo (A-7). Si era
-    /// lo único, la renovación se aprueba, el vínculo vuelve a <c>Activo</c> y el certificado se reemite.
+    /// lo único, la renovación se aprueba, el vínculo vuelve a <c>Activo</c> y el certificado se reemite. En una sección de la
+    /// ficha (renovación periódica del vínculo, VV-1) ratificar es confirmar que su información sigue igual: no cambia ningún dato
+    /// de la ficha, queda como <c>RequisitoRatificado</c> en el expediente y la sección vigente completa cubre el requisito.
     /// </summary>
     [WolverinePost("/public/v1/expedientes/{id}/requisitos/{requisitoId}/ratificar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
@@ -103,9 +105,15 @@ public static class RatificacionEndpoints
         var por = $"tercero:{tercero.Correo}";
 
         // La bóveda primero: la ratificación y la vigencia recalculada deben estar antes de cerrar la renovación, porque el
-        // certificado reemitido toma la vigencia de cada documento.
-        Guid documentoId;
+        // certificado reemitido toma la vigencia de cada documento. Una sección de la ficha no escribe en la bóveda.
+        Guid? documentoId = null;
         VersionDeRequisito version;
+        if (requisito.EsSeccion)
+        {
+            version = await VersionDeSeccionAsync(sesiones, ubicado, requisito, ct);
+            ubicado.RatificarRequisito(requisitoId, version, por, ahora);
+        }
+        else
         await using (var boveda = sesiones.Boveda())
         {
             var documento = await BuscarDocumentoAsync(boveda, ubicado, requisito, ct)
@@ -124,7 +132,8 @@ public static class RatificacionEndpoints
             documentoId = documento.Id;
         }
 
-        await mensajes.InvokeAsync(new CalcularVigenciasDelDocumento(documentoId), ct);
+        if (documentoId is { } docId)
+            await mensajes.InvokeAsync(new CalcularVigenciasDelDocumento(docId), ct);
 
         // El expediente, con reintentos: al aprobarse reemite el certificado, que otro proceso puede estar tocando (su PDF).
         return await Peticiones.ConReintentosAsync(async () =>
@@ -140,6 +149,25 @@ public static class RatificacionEndpoints
             var documentacion = await DocumentacionDelExpediente.CargarAsync(sesion, consultaBoveda, estado, reglas, CalculadoraDeVigencia.Fecha(ahora), ct);
             return estado.APublico(await sesion.LoadAsync<Empresa>(estado.EmpresaId, ct), documentacion);
         }, 5);
+    }
+
+    /// <summary>
+    /// La versión vigente de la sección que el tercero ratifica (VV-1): solo si la renovación la exige (la empresa ya la había aceptado) y
+    /// la versión es completa para la empresa; si no, 422 <c>ratificacion-no-permitida</c> o 409 <c>seccion-incompleta</c>.
+    /// </summary>
+    private static async Task<VersionDeRequisito> VersionDeSeccionAsync(ISesiones sesiones, Expediente expediente, RequisitoDeExpediente requisito,
+        CancellationToken ct)
+    {
+        if (!requisito.ExigeRatificacion || requisito.VersionAceptadaPrevia is null || Dominio.Ficha.CatalogoDeSecciones.Buscar(requisito.Seccion) is not { } definicion)
+            throw ReglaDeNegocioException.Validacion("ratificacion-no-permitida",
+                $"{requisito.Nombre} no se ratifica: la empresa aún no la había aceptado. Diligénciala en Mi información.");
+
+        await using var boveda = sesiones.ConsultaBoveda();
+        var seccion = await boveda.LoadAsync<Dominio.Ficha.SeccionDeFicha>(
+            Dominio.Ficha.SeccionDeFicha.IdPara(expediente.TerceroId, definicion.Codigo, requisito.Periodo), ct);
+        return RequisitosDeSeccion.Evaluar(definicion, requisito.Periodo, requisito.ExigeSoporte, seccion).Disponible
+               ?? throw ReglaDeNegocioException.Conflicto("seccion-incompleta",
+                   $"{requisito.Nombre} está incompleta: complétala en Mi información antes de ratificar.");
     }
 
     /// <summary>El documento de la bóveda que cubre el requisito: global por canónico o el <c>PorVinculo</c> de ese tipo y vínculo.</summary>

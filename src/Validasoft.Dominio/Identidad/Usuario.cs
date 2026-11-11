@@ -26,6 +26,13 @@ public sealed class Usuario
 {
     public Guid Id { get; set; }
 
+    /// <summary>
+    /// Grupo al que pertenece (copia del <c>tenant_id</c> de Marten): el ingreso directo busca la cuenta por correo en todos los
+    /// grupos y necesita saber de cuál es cada una. Nulo en los usuarios anteriores al ingreso directo, que se completan al
+    /// habilitar ese modo en su grupo.
+    /// </summary>
+    public Guid? TenantId { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
 
     /// <summary>Normalizado (minúsculas, sin espacios); único en el tenant.</summary>
@@ -44,7 +51,10 @@ public sealed class Usuario
 
     public DateTimeOffset? UltimoAcceso { get; set; }
 
-    public static Usuario Crear(string nombre, string correo, Identificacion? identificacion, DateTimeOffset ahora)
+    /// <summary>Cuándo se le envió la última invitación a ingresar con su correo (ING-5).</summary>
+    public DateTimeOffset? InvitadoEn { get; set; }
+
+    public static Usuario Crear(string nombre, string correo, Identificacion? identificacion, DateTimeOffset ahora, Guid? tenantId = null)
     {
         if (string.IsNullOrWhiteSpace(nombre))
             throw ReglaDeNegocioException.Validacion("nombre-requerido", "El nombre del usuario es obligatorio.");
@@ -52,6 +62,7 @@ public sealed class Usuario
         return new Usuario
         {
             Id = Guid.CreateVersion7(),
+            TenantId = tenantId,
             Nombre = nombre.Trim(),
             Correo = NormalizarCorreo(correo),
             Identificacion = identificacion,
@@ -60,9 +71,9 @@ public sealed class Usuario
     }
 
     /// <summary>Alta automática desde una aserción delegada: nace <b>sin roles</b> (ID-2).</summary>
-    public static Usuario CrearDesdeSistema(Guid sistemaId, string idExterno, string nombre, string correo, DateTimeOffset ahora)
+    public static Usuario CrearDesdeSistema(Guid sistemaId, string idExterno, string nombre, string correo, DateTimeOffset ahora, Guid? tenantId = null)
     {
-        var usuario = Crear(nombre, correo, null, ahora);
+        var usuario = Crear(nombre, correo, null, ahora, tenantId);
         usuario.EnlazarIdentidad(sistemaId, idExterno);
         usuario.UltimoAcceso = ahora;
         return usuario;
@@ -110,6 +121,12 @@ public sealed class Usuario
             throw ReglaDeNegocioException.Conflicto("usuario-inactivo", "El usuario ya está desactivado.");
         Activo = false;
     }
+
+    /// <summary>
+    /// Debe tener passkey: lo exige algún rol (<see cref="PoliticaDePasskeys"/>) o el grupo lo pide a todos (ING-2). Sin passkey, el código
+    /// del correo (un solo factor) no abre sesión: solo sirve para registrar una.
+    /// </summary>
+    public bool ExigePasskey(bool paraTodosEnElGrupo) => paraTodosEnElGrupo || Roles.Any(r => PoliticaDePasskeys.RolExige(r.Rol));
 
     /// <summary>Si tiene algún rol en la empresa, directamente o para todo el tenant.</summary>
     public bool TieneRolEn(Guid empresaId) => Roles.Any(r => r.EmpresaId is null || r.EmpresaId == empresaId);

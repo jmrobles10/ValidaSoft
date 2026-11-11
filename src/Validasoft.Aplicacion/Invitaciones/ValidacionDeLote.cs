@@ -6,6 +6,7 @@ using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identificaciones;
 using Validasoft.Dominio.Invitaciones;
+using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 
@@ -48,11 +49,12 @@ public static partial class ValidacionDeLote
         }
 
         // Vínculos que ya existen en la empresa para las identificaciones válidas (por bloques: un lote puede tener miles).
-        var claves = previas.Where(p => p.Errores.Count == 0).Select(p => p.Clave!).Distinct().ToList();
+        var sandbox = empresa.TenantSandbox; // en un sandbox los terceros llevan su tenant por delante (SB-4)
+        var claves = previas.Where(p => p.Errores.Count == 0).Select(p => AislamientoDeSandbox.ClaveDeTercero(p.Clave!, sandbox)).Distinct().ToList();
         var terceros = new Dictionary<string, Guid>(StringComparer.Ordinal);
         foreach (var bloque in claves.Chunk(Bloque))
             foreach (var t in await empresa.Sesion.Query<Tercero>().Where(t => t.ClaveIdentificacion.IsOneOf(bloque)).ToListAsync(ct))
-                terceros[t.ClaveIdentificacion] = t.Id;
+                terceros[t.Identificacion.Clave] = t.Id;
         var vinculos = new Dictionary<(Guid, Guid), Vinculo>();
         foreach (var bloque in terceros.Values.Distinct().Chunk(Bloque))
             foreach (var v in await empresa.Vinculos().Where(v => v.TerceroId.IsOneOf(bloque)).ToListAsync(ct))

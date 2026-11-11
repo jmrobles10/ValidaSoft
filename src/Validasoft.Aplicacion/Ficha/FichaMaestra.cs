@@ -24,12 +24,20 @@ public static class MapeosFicha
     public static CompletitudSeccionDto ADto(this CompletitudDeSeccion c) =>
         new(c.Completa, [.. c.Faltantes.Select(f => new FaltanteSeccionDto(f.Campo, f.Regla, f.Mensaje))], c.ReglaVersion);
 
-    public static SoporteSeccionDto ADto(this SoporteDeSeccion s) => new(s.DocumentoId, s.Version, s.TipoDocumento);
+    /// <summary>
+    /// El soporte como lo ve quien consulta. Con <paramref name="documentos"/> (la bóveda del tercero) trae el nombre legible del
+    /// tipo y si el tercero retiró esa versión (RT-4); sin ellos, solo la referencia.
+    /// </summary>
+    public static SoporteSeccionDto ADto(this SoporteDeSeccion s, IReadOnlyDictionary<Guid, Documento>? documentos = null) =>
+        documentos is not null && documentos.TryGetValue(s.DocumentoId, out var documento)
+            ? new SoporteSeccionDto(s.DocumentoId, s.Version, s.TipoDocumento, documento.Buscar(s.Version)?.Estado == EstadoVersion.Retirada, documento.NombreTipo)
+            : new SoporteSeccionDto(s.DocumentoId, s.Version, s.TipoDocumento);
 
     /// <summary>Versión vigente de la sección (o vacía si aún no tiene).</summary>
-    public static SeccionFichaDto ADto(this SeccionDeFicha? seccion, DefinicionDeSeccion definicion, int? periodo) =>
+    public static SeccionFichaDto ADto(this SeccionDeFicha? seccion, DefinicionDeSeccion definicion, int? periodo,
+        IReadOnlyDictionary<Guid, Documento>? documentos = null) =>
         seccion?.Vigente is { } v
-            ? new SeccionFichaDto(definicion.Codigo, definicion.Nombre, seccion.Periodo, v.Numero, v.Datos, [.. v.Soportes.Select(s => s.ADto())],
+            ? new SeccionFichaDto(definicion.Codigo, definicion.Nombre, seccion.Periodo, v.Numero, v.Datos, [.. v.Soportes.Select(s => s.ADto(documentos))],
                 v.Completitud.ADto(), v.Huella, v.Origen.ToString(), v.Fecha, seccion.Versiones.Count, v.EsquemaVersion)
             : new SeccionFichaDto(definicion.Codigo, definicion.Nombre, periodo, null, null, [], null, null, null, null, seccion?.Versiones.Count ?? 0,
                 definicion.VersionEsquema);
@@ -268,7 +276,19 @@ public static class FichaMaestraEndpoints
         var tercero = await GuardadoDeSecciones.TerceroAsync(sesiones, terceroId, ct);
         await using var boveda = sesiones.ConsultaBoveda();
         var estado = await boveda.LoadAsync<EstadoDeFicha>(terceroId, ct) ?? EstadoDeFicha.Nuevo(terceroId);
-        return estado.ADto(tercero.TipoPersona);
+        var dto = estado.ADto(tercero.TipoPersona);
+
+        // Una sección cuyo soporte el tercero retiró lo ve como advertencia en su fila (RT-4): se lee de la bóveda, no se recalcula.
+        var secciones = await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct);
+        var documentos = await SoportesDeSeccion.DocumentosAsync(boveda, secciones, ct);
+        var retirados = secciones.Select(s => (s.Seccion, s.Periodo, Soportes: SoportesDeSeccion.Retirados(s, documentos))).Where(x => x.Soportes.Count > 0)
+            .ToDictionary(x => (x.Seccion, x.Periodo), x => x.Soportes);
+        return retirados.Count == 0
+            ? dto
+            : dto with
+            {
+                Secciones = [.. dto.Secciones.Select(f => retirados.TryGetValue((f.Seccion, f.Periodo), out var soportes) ? f with { SoportesRetirados = soportes } : f)]
+            };
     }
 
     /// <summary>Versión vigente de la sección (datos, soportes y completitud) o vacía. 404 <c>seccion-no-encontrada</c>; la financiera exige <c>?periodo=</c>.</summary>
@@ -282,7 +302,7 @@ public static class FichaMaestraEndpoints
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, reloj.Hoy());
         await using var boveda = sesiones.ConsultaBoveda();
         var actual = await boveda.LoadAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(terceroId, definicion.Codigo, periodoValido), ct);
-        return actual.ADto(definicion, periodoValido);
+        return actual.ADto(definicion, periodoValido, await SoportesDeSeccion.DocumentosAsync(boveda, [actual], ct));
     }
 
     /// <summary>
@@ -301,8 +321,10 @@ public static class FichaMaestraEndpoints
         var resultado = await GuardadoDeSecciones.GuardarAsync(sesiones, terceroId, definicion, periodo, dto, OrigenDeSeccion.Tercero, terceroId.ToString(),
             reloj, ct, mensajes, contexto);
         var vigente = resultado.Seccion.Vigente!;
+        await using var boveda = sesiones.ConsultaBoveda();
         return new SeccionGuardadaDto(vigente.Numero, resultado.Creada, vigente.Completitud.ADto(),
-            resultado.Estado.SiguienteSeccion(resultado.TipoPersona, definicion.Codigo), resultado.Seccion.ADto(definicion, resultado.Seccion.Periodo));
+            resultado.Estado.SiguienteSeccion(resultado.TipoPersona, definicion.Codigo),
+            resultado.Seccion.ADto(definicion, resultado.Seccion.Periodo, await SoportesDeSeccion.DocumentosAsync(boveda, [resultado.Seccion], ct)));
     }
 
     /// <summary>

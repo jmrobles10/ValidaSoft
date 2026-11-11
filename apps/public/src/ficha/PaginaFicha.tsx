@@ -1,13 +1,15 @@
 import { Alert, AlertTitle, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
 import type { EstadoSeccionFichaDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
-import { ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronRight, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
 import { useEstadoFicha } from './api';
+import { ConfirmarRatificacion } from '../expediente/ConfirmarRatificacion';
 import { PropuestasEnResumen } from './PropuestasEnResumen';
 import { enlaceSeccion, estadoDeSeccion, filasDelResumen, periodoPorOmision } from './secciones';
+import { deLaSeccion, useRatificacionesPendientes, type RatificacionPendiente } from './useRatificacionesPendientes';
 
 /**
  * Mi información (docs/14 §4.1): las secciones en el orden de la API con el estado que calculó el servidor (completa,
@@ -16,6 +18,7 @@ import { enlaceSeccion, estadoDeSeccion, filasDelResumen, periodoPorOmision } fr
 export function PaginaFicha() {
   const { t } = useTranslation();
   const consulta = useEstadoFicha();
+  const ratificaciones = useRatificacionesPendientes();
 
   if (consulta.isPending) {
     return (
@@ -61,21 +64,38 @@ export function PaginaFicha() {
         </Alert>
       )}
       <PropuestasEnResumen />
+      <AvisoDeRatificaciones pendientes={ratificaciones} />
       <Box sx={{ mb: 2 }}>
         <Typography sx={{ color: 'text.secondary', fontSize: 14, mb: 0.5 }}>{t('ficha.avance', { completas: String(completas), total: String(filas.length) })}</Typography>
         <LinearProgress variant="determinate" value={filas.length > 0 ? (completas / filas.length) * 100 : 0} aria-label={t('ficha.avance', { completas: String(completas), total: String(filas.length) })} />
       </Box>
       <Paper variant="outlined" component="ol" aria-label={t('ficha.titulo')} sx={{ p: 0, m: 0, listStyle: 'none', overflow: 'hidden' }}>
         {filas.map((fila) => (
-          <FilaSeccion key={`${fila.seccion}-${String(fila.periodo)}`} fila={fila} />
+          <FilaSeccion key={`${fila.seccion}-${String(fila.periodo)}`} fila={fila} porRatificar={deLaSeccion(ratificaciones, fila.seccion, fila.periodo ?? null)} />
         ))}
       </Paper>
     </>
   );
 }
 
-/** Una sección del resumen: nombre (y periodo), estado del servidor y el botón para abrirla. */
-function FilaSeccion({ fila }: { fila: EstadoSeccionFichaDto }) {
+/**
+ * Renovación periódica del vínculo (VV-3): las empresas que le piden al tercero confirmar su información. Cada sección se ratifica
+ * (sigue igual) o se actualiza desde su fila.
+ */
+function AvisoDeRatificaciones({ pendientes }: { pendientes: readonly RatificacionPendiente[] }) {
+  const { t } = useTranslation();
+  const empresas = [...new Set(pendientes.map((p) => p.empresa))];
+  if (empresas.length === 0) return null;
+  return (
+    <Alert severity="info" sx={{ mb: 2 }}>
+      <AlertTitle>{t('expediente.ratificar.seccion.bannerTitulo', { count: empresas.length })}</AlertTitle>
+      {t('expediente.ratificar.seccion.bannerTexto', { empresas: empresas.join(', ') })}
+    </Alert>
+  );
+}
+
+/** Una sección del resumen: nombre (y periodo), estado del servidor, el botón para abrirla y, si alguna empresa lo pide, para ratificarla. */
+function FilaSeccion({ fila, porRatificar }: { fila: EstadoSeccionFichaDto; porRatificar: readonly RatificacionPendiente[] }) {
   const { t } = useTranslation();
   const estado = estadoDeSeccion(fila);
   const nombre = fila.periodo ? t('ficha.nombreConPeriodo', { nombre: fila.nombre, periodo: String(fila.periodo) }) : fila.nombre;
@@ -101,6 +121,31 @@ function FilaSeccion({ fila }: { fila: EstadoSeccionFichaDto }) {
               </Typography>
             )}
           </Stack>
+          {/* El tercero retiró un documento que respaldaba la sección: sus datos siguen guardados; se le dice que elija otro soporte. */}
+          {(fila.soportesRetirados ?? []).map((s) => (
+            <Stack key={`${s.documentoId}-${String(s.version)}`} direction="row" spacing={0.75} sx={{ alignItems: 'center', mt: 0.75, color: 'warning.main' }}>
+              <TriangleAlert size={16} aria-hidden />
+              <Typography component="span" sx={{ fontSize: 13, color: 'text.primary' }}>
+                {t('ficha.soporte.retirado', { tipo: s.nombre ?? s.tipoDocumento ?? '', n: String(s.version) })}
+              </Typography>
+            </Stack>
+          ))}
+          {porRatificar.length > 0 && (
+            <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
+              {porRatificar.map((p) => (
+                <ConfirmarRatificacion
+                  key={p.requisitoId}
+                  tipo="seccion"
+                  compacto
+                  expedienteId={p.expedienteId}
+                  requisitoId={p.requisitoId}
+                  documento={p.nombre}
+                  empresa={p.empresa}
+                  etiqueta={t('expediente.ratificar.seccion.paraEmpresa', { empresa: p.empresa })}
+                />
+              ))}
+            </Stack>
+          )}
         </Box>
         <Button
           component={RouterLink}

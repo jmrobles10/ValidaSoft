@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type FrameLocator, type Page } from '@playwright/test';
 import { pdf } from '../soporte/archivos';
-import { esperarCorreo, literal } from '../soporte/correo';
+import { esperarCorreo, literal, textoSinEnlaces } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea, irASeccion, observar } from '../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero, esperarTarjeta, responder, subirDocumento } from '../soporte/proveedor';
@@ -136,7 +136,7 @@ test('el recordatorio de observaciones: individual desde el expediente y en lote
   expect(correo.texto).toContain(RUT);
   expect(correo.texto).toContain('Falta nitidez.');
   expect(correo.texto).toMatch(/\/e\/[A-Za-z0-9_-]{43}/);
-  for (const interno of ['Rubén', 'Compras', 'Olga', 'Cumplimiento']) expect(correo.texto).not.toContain(interno);
+  for (const interno of ['Rubén', 'Compras', 'Olga', 'Cumplimiento']) expect(textoSinEnlaces(correo.texto)).not.toContain(interno);
   await esperarEstadoDelTercero(page, 'Observado');
   await page.getByRole('link', { name: 'Mi bóveda' }).click();
   await esperarAvisoEnLaCampana(page, 'Recordatorio: observaciones pendientes');

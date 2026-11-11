@@ -16,9 +16,9 @@ public sealed partial class RequisitosApiTests
         Task<List<PlantillaNotificacionDto>> CatalogoAsync(Credencial credencial) =>
             ApiAsync<List<PlantillaNotificacionDto>>("GET", RutaPlantillas, credencial, null, 200);
 
-        // El catálogo: los 10 correos sin personalizar, con el asunto que sale hoy y sus variables.
+        // El catálogo: los correos sin personalizar, con el asunto que sale hoy y sus variables.
         var catalogo = await CatalogoAsync(Admin(norte));
-        catalogo.Select(p => p.Evento).ShouldBe(["invitacion", "observacion", "resultado", "consentimiento-empresa", "vencido", "certificado", "caducidad", "recordatorio-observaciones", "desaprobacion", "reintegro"]);
+        catalogo.Select(p => p.Evento).ShouldBe(["invitacion", "observacion", "resultado", "consentimiento-empresa", "vencido", "certificado", "caducidad", "recordatorio-observaciones", "desaprobacion", "reintegro", "retiro-version"]);
         catalogo.ShouldAllBe(p => p.Canal == "correo" && p.Version == 0 && p.Asunto == null && p.Cabecera == null && p.Pie == null);
         var invitacion = catalogo[0];
         invitacion.AsuntoPorDefecto.ShouldBe("Norte S.A.S. te invita a validar tu vínculo como proveedor");

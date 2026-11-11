@@ -1,9 +1,10 @@
 import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import type { VersionDocumentoDto } from '@validasoft/api-client';
-import { ChipEstado, EsqueletoTarjetas, formatearFecha } from '@validasoft/ui';
+import { EsqueletoTarjetas, formatearFecha } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { useDocumentoBoveda } from '../shared/api';
 import { ErrorRecuperable } from '../shared/componentes';
+import { ChipDeVersion } from './ChipDeVersion';
 import { formatearTamano } from './subida';
 import { useDescargar } from './useDescargar';
 import { mensajeDevolucion, sePuedeDescargar, sePuedeRetirar } from './versiones';
@@ -24,7 +25,7 @@ export function VersionesDocumento({ documentoId, onRetirar }: { documentoId: st
         <Box component="li" key={v.n} sx={{ p: 1.5, borderRadius: 1, bgcolor: 'superficie.nivel2' }}>
           <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             <Typography sx={{ fontWeight: 600, fontSize: 14 }}>{t('comun.version', { n: String(v.n) })}</Typography>
-            <ChipEstado estado={v.estado} fecha={v.cargadaEn} />
+            <ChipDeVersion version={v} />
           </Stack>
           <Typography sx={{ color: 'text.secondary', fontSize: 13, mt: 0.5, wordBreak: 'break-word' }}>
             {v.nombreOriginal} · {formatearTamano(v.tamanoBytes)} · {formatearFecha(v.cargadaEn)}

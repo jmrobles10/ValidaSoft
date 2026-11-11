@@ -16,7 +16,14 @@ export const RECLAMOS = {
   sistemaId: 'validasoft:sistema-id',
   sujeto: 'sub',
   nombre: 'name',
+  /** Familia de la sesión de ingreso directo (ING-1); ausente en las sesiones delegadas. */
+  sesionId: 'validasoft:sesion-id',
+  /** Cómo se autenticó una sesión directa: `Codigo`, `Passkey` o `CodigoYPasskey`. */
+  metodo: 'validasoft:metodo',
 } as const;
+
+/** Cómo entró una persona de ingreso directo (`MetodoDeIngreso` en la API). */
+export type MetodoDeIngreso = 'Codigo' | 'Passkey' | 'CodigoYPasskey';
 
 /** Actor de las sesiones de la consola de Plataforma (PT-4): sin tenant ni empresas, solo `plataforma:tenants`. */
 export const ACTOR_PLATAFORMA = 'Plataforma';
@@ -32,6 +39,10 @@ export interface SesionValidasoft {
   nombre: string | null;
   /** Código del sistema integrado desde el que se abrió la sesión (SRM, MARCO…). */
   sistema: string | null;
+  /** Familia de la sesión si la persona entró directo a Validasoft (código y passkey); `null` si vino por identidad delegada. */
+  sesionId: string | null;
+  /** Cómo se autenticó (solo ingreso directo). */
+  metodoIngreso: MetodoDeIngreso | null;
   actorTipo: string | null;
   /** Scopes válidos en cualquier empresa efectiva y en las operaciones de tenant. */
   scopesDeTenant: ReadonlySet<string>;
@@ -96,6 +107,7 @@ export function leerSesion(token: string): SesionValidasoft {
   }
 
   const empresas = lista(claims[RECLAMOS.empresa]);
+  const metodo = textoOpcional(claims[RECLAMOS.metodo]);
   return {
     token,
     expira: new Date(exp * 1000),
@@ -103,11 +115,18 @@ export function leerSesion(token: string): SesionValidasoft {
     tenantId,
     nombre: textoOpcional(claims[RECLAMOS.nombre]),
     sistema: textoOpcional(claims[RECLAMOS.sistema]),
+    sesionId: textoOpcional(claims[RECLAMOS.sesionId]),
+    metodoIngreso: metodo === 'Codigo' || metodo === 'Passkey' || metodo === 'CodigoYPasskey' ? metodo : null,
     actorTipo,
     scopesDeTenant: new Set(lista(claims[RECLAMOS.scope])),
     scopesPorEmpresa,
     empresas: empresas.includes('*') ? '*' : new Set(empresas),
   };
+}
+
+/** La persona entró directo a Validasoft (código y passkey): tiene sus propias sesiones y passkeys en «Mi cuenta». */
+export function esSesionDirecta(sesion: SesionValidasoft): boolean {
+  return sesion.sesionId !== null;
 }
 
 /** Sesión de un operador de Plataforma (consola `/plataforma`, PT-4): sin tenant y con `plataforma:tenants`. */

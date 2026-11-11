@@ -656,6 +656,7 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
             Nombres = Texto(p.Nombres),
             Apellidos = Texto(p.Apellidos),
             Cargo = Texto(p.Cargo),
+            LugarExpedicion = Texto(p.LugarExpedicion),
             Porcentaje = Cifra(p.Porcentaje),
             Nacionalidad = Mayusculas(p.Nacionalidad),
             Residencia = Mayusculas(p.Residencia),
@@ -702,6 +703,7 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
             Longitud(r, p.Nombres, $"{campo}.nombres", "Nombres", 200);
             Longitud(r, p.Apellidos, $"{campo}.apellidos", "Apellidos", 150);
             Longitud(r, p.Cargo, $"{campo}.cargo", "Cargo", 150);
+            Longitud(r, p.LugarExpedicion, $"{campo}.lugar_expedicion", "Lugar de expedición", 100);
             Longitud(r, p.TipoRepresentacion, $"{campo}.tipo_representacion", "Tipo de representación", 100);
             if (p.Porcentaje is < 0 or > 100)
                 r.Formato($"{campo}.porcentaje", "El porcentaje de participación va de 0 a 100.");

@@ -57,3 +57,11 @@ export function codigo(correo: Correo): string {
 export function literal(texto: string): string {
   return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * El texto del correo tal como lo lee la persona, sin las direcciones: los enlaces llevan un token aleatorio que, por azar, puede contener un
+ * nombre («Olga») y hacer fallar una comprobación de «no nombra a nadie» que nada tiene que ver con el contenido.
+ */
+export function textoSinEnlaces(texto: string): string {
+  return texto.replace(/https?:\/\/\S+/g, '');
+}

@@ -14,6 +14,10 @@
     <!-- Alinea la versión transitiva de JwtBearer con JsonWebTokens: IdentityModel exige la misma versión en todos sus paquetes. -->
     <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.23.0" />
     <PackageVersion Include="Scalar.AspNetCore" Version="2.19.0" />
+    <!-- Passkeys (WebAuthn) del ingreso sin contraseñas (ING-2; MIT): verificación de registro y de aserción en el servidor. -->
+    <PackageVersion Include="Fido2" Version="4.3.2" />
+    <!-- Fido2 4.3.2 arrastra System.Formats.Cbor 9.0.0, con una vulnerabilidad conocida (NU1902, corregida desde la 10.0.15): las pruebas de integración fijan la corregida; la API usa la del framework. -->
+    <PackageVersion Include="System.Formats.Cbor" Version="10.0.15" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="MailKit" Version="4.18.2" />
     <!-- Almacenamiento de binarios compatible con S3 (MinIO en desarrollo y on-premise; S3 en la nube). -->
@@ -25,6 +29,8 @@
     <PackageVersion Include="PdfPig" Version="0.1.16" />
     <!-- Lectura de la BD del Portal de Proveedores en el importador de la ficha (F4, FM-39; MIT). -->
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <!-- SqlClient 6.1.1 arrastra Pkcs 9.0.4, con vulnerabilidades conocidas (NU1902/NU1903): se fija la versión corregida que ya usa el resto de la solución. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <!-- Pruebas -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />

@@ -66,3 +66,30 @@ describe('Mi información: resumen', () => {
     expect(screen.queryByRole('form')).not.toBeInTheDocument();
   });
 });
+
+describe('Mi información: un soporte retirado se ve en el resumen (RT-4)', () => {
+  it('la sección sigue completa y dice que su soporte fue retirado', async () => {
+    montarFicha('/ficha', {
+      estado: estadoFicha({
+        siguienteSeccion: 'FICHA_TRIBUTARIA',
+        secciones: [
+          filaEstado('FICHA_GENERAL', {
+            version: 2,
+            completa: true,
+            soportesRetirados: [{ documentoId: 'd-rut', version: 8, tipoDocumento: 'RUT', nombre: 'Registro Único Tributario', retirado: true }],
+          }),
+          filaEstado('FICHA_TRIBUTARIA'),
+          filaEstado('FICHA_LEGAL'),
+          filaEstado('FICHA_FINANCIERA'),
+          filaEstado('FICHA_SST'),
+          filaEstado('FICHA_ESPECIALIDADES'),
+        ],
+      }),
+    });
+
+    const general = await screen.findByRole('listitem', { name: 'Información general' });
+    expect(general).toHaveTextContent('Completa');
+    expect(general).toHaveTextContent('Tu soporte (Registro Único Tributario, versión 8) fue retirado.');
+    expect(screen.getByRole('listitem', { name: 'Información tributaria' })).not.toHaveTextContent('retirado');
+  });
+});

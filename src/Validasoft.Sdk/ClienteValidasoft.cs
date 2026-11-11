@@ -13,6 +13,8 @@ public interface IClienteValidasoft
 {
     VinculosApi Vinculos { get; }
 
+    TercerosApi Terceros { get; }
+
     InvitacionesApi Invitaciones { get; }
 
     ExpedientesApi Expedientes { get; }
@@ -24,6 +26,9 @@ public interface IClienteValidasoft
     EventosApi Eventos { get; }
 
     SesionesApi Sesiones { get; }
+
+    /// <summary>El sandbox del grupo y su buzón de correo de pruebas (docs/08 §2.2).</summary>
+    SandboxApi Sandbox { get; }
 
     /// <summary>El mismo cliente sobre otra empresa interna (<c>X-Empresa</c>), para llaves con alcance a varias.</summary>
     IClienteValidasoft ParaEmpresa(Guid empresaId);
@@ -55,15 +60,19 @@ public sealed class ClienteValidasoft : IClienteValidasoft
     {
         _transporte = transporte;
         Vinculos = new VinculosApi(transporte);
+        Terceros = new TercerosApi(transporte);
         Invitaciones = new InvitacionesApi(transporte);
         Expedientes = new ExpedientesApi(transporte);
         Certificados = new CertificadosApi(transporte);
         Consultas = new ConsultasApi(transporte);
         Eventos = new EventosApi(transporte);
         Sesiones = new SesionesApi(transporte);
+        Sandbox = new SandboxApi(transporte);
     }
 
     public VinculosApi Vinculos { get; }
+
+    public TercerosApi Terceros { get; }
 
     public InvitacionesApi Invitaciones { get; }
 
@@ -76,6 +85,8 @@ public sealed class ClienteValidasoft : IClienteValidasoft
     public EventosApi Eventos { get; }
 
     public SesionesApi Sesiones { get; }
+
+    public SandboxApi Sandbox { get; }
 
     public IClienteValidasoft ParaEmpresa(Guid empresaId) => new ClienteValidasoft(_transporte.Con(empresaId, _transporte.Usuario));
 
@@ -112,16 +123,49 @@ public sealed class VinculosApi
     public Task<VinculoDto> ObtenerAsync(Guid id, CancellationToken ct = default) =>
         _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Get, $"api/v1/vinculos/{id}"), ct);
 
-    /// <summary>Busca por la referencia del sistema (<c>sistema</c> = código, <c>id</c> = el del sistema). 404 si no existe.</summary>
-    public Task<VinculoDto> PorReferenciaAsync(string sistema, string id, CancellationToken ct = default) =>
+    /// <summary>Busca por la clave externa del sistema (<c>sistema</c> = código, <c>clave</c> = la del sistema). 404 si no existe.</summary>
+    public Task<VinculoDto> PorReferenciaAsync(string sistema, string clave, CancellationToken ct = default) =>
         _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Get,
-            $"api/v1/vinculos/por-referencia?sistema={ClienteValidasoft.Escapar(sistema)}&id={ClienteValidasoft.Escapar(id)}"), ct);
+            $"api/v1/vinculos/por-referencia?sistema={ClienteValidasoft.Escapar(sistema)}&clave={ClienteValidasoft.Escapar(clave)}"), ct);
+
+    /// <summary>Agrega al vínculo la clave del sistema de la API key (idempotente; el mismo sistema con otra clave es 409).</summary>
+    public Task<VinculoDto> AgregarReferenciaAsync(Guid id, ReferenciaExternaDto referencia, CancellationToken ct = default) =>
+        _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Post, $"api/v1/vinculos/{id}/referencias", referencia), ct);
+
+    /// <summary>Reemplaza los contactos del tercero con la empresa (lista completa; vacía = quitarlos).</summary>
+    public Task<VinculoDto> ActualizarContactosAsync(Guid id, IReadOnlyList<ContactoDeEmpresaDto> contactos, CancellationToken ct = default) =>
+        _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Put, $"api/v1/vinculos/{id}/contactos", new ActualizarContactosDto(contactos)), ct);
+
+    /// <summary>Lo aceptado por la empresa, el representante, la cuenta designada, los contactos y las referencias del vínculo.</summary>
+    public Task<FichaDelVinculoDto> FichaAsync(Guid id, CancellationToken ct = default) =>
+        _t.EnviarAsync<FichaDelVinculoDto>(new Peticion(HttpMethod.Get, $"api/v1/vinculos/{id}/ficha"), ct);
 
     public Task<VinculoDto> BloquearAsync(Guid id, BloquearVinculoDto bloqueo, CancellationToken ct = default) =>
         _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Post, $"api/v1/vinculos/{id}/bloquear", bloqueo), ct);
 
     public Task<VinculoDto> DesbloquearAsync(Guid id, JustificacionDto justificacion, CancellationToken ct = default) =>
         _t.EnviarAsync<VinculoDto>(new Peticion(HttpMethod.Post, $"api/v1/vinculos/{id}/desbloquear", justificacion), ct);
+}
+
+/// <summary>Terceros y sus claves en el sistema de la API key (referencias externas, IO-3).</summary>
+public sealed class TercerosApi
+{
+    private readonly Transporte _t;
+
+    internal TercerosApi(Transporte transporte) => _t = transporte;
+
+    /// <summary>Crea el tercero; con <c>ReferenciaExterna</c> (clave en el sistema de la API key) la creación es idempotente.</summary>
+    public Task<TerceroDto> CrearAsync(CrearTerceroDto tercero, string? claveIdempotencia = null, CancellationToken ct = default) =>
+        _t.EnviarAsync<TerceroDto>(new Peticion(HttpMethod.Post, "api/v1/terceros", tercero, claveIdempotencia, Reintentable: claveIdempotencia is not null), ct);
+
+    /// <summary>Registra la clave del tercero en el sistema de la API key (idempotente); devuelve las claves del tenant.</summary>
+    public Task<IReadOnlyList<ReferenciaExternaDto>> AgregarReferenciaAsync(Guid id, ReferenciaExternaDto referencia, CancellationToken ct = default) =>
+        _t.EnviarAsync<IReadOnlyList<ReferenciaExternaDto>>(new Peticion(HttpMethod.Post, $"api/v1/terceros/{id}/referencias", referencia), ct);
+
+    /// <summary>Busca el tercero por la clave que le dio el sistema. 404 si no existe (o no es visible para el tenant).</summary>
+    public Task<TerceroDto> PorReferenciaAsync(string sistema, string clave, CancellationToken ct = default) =>
+        _t.EnviarAsync<TerceroDto>(new Peticion(HttpMethod.Get,
+            $"api/v1/terceros/por-referencia?sistema={ClienteValidasoft.Escapar(sistema)}&clave={ClienteValidasoft.Escapar(clave)}", ConEmpresa: false), ct);
 }
 
 /// <summary>Invitaciones del tercero a un vínculo (enlace por correo).</summary>
@@ -273,6 +317,14 @@ public sealed class SesionesApi
     internal SesionesApi(Transporte transporte) => _t = transporte;
 
     /// <summary>
+    /// Abre una sesión corta del tercero (1 a 15 minutos) para embeber su bóveda, su expediente o su ficha en el iframe de la página
+    /// <see cref="CrearSesionEmbebidaDto.Origen"/> (<c>POST /api/v1/sesiones-tercero</c>, scope <c>sesiones-tercero:crear</c>). El
+    /// token se entrega al iframe por <c>postMessage</c>, nunca en la URL; la API key no sale del backend del sistema.
+    /// </summary>
+    public Task<SesionEmbebidaDto> CrearDelTerceroAsync(CrearSesionEmbebidaDto sesion, CancellationToken ct = default) =>
+        _t.EnviarAsync<SesionEmbebidaDto>(new Peticion(HttpMethod.Post, "api/v1/sesiones-tercero", sesion), ct);
+
+    /// <summary>
     /// Canjea la identidad delegada por un token de 30 minutos que el iframe recibe por <c>postMessage</c> y envía como
     /// <c>Authorization: Bearer</c>. Solo desde <see cref="IClienteValidasoft.ComoUsuario"/>.
     /// </summary>
@@ -282,4 +334,73 @@ public sealed class SesionesApi
             throw new InvalidOperationException("La sesión es de una persona: usa cliente.ComoUsuario(usuario).Sesiones.CrearAsync().");
         return _t.EnviarAsync<SesionUsuarioDto>(new Peticion(HttpMethod.Post, "api/v1/sesiones-usuario", ConEmpresa: false), ct);
     }
+}
+
+/// <summary>
+/// El sandbox del grupo (docs/08 §2.2): un entorno de pruebas aislado al que apuntan las API keys <c>vsk_test_…</c>, con la
+/// configuración del grupo, ningún dato real, los correos retenidos en un buzón consultable y los proveedores de IA y de listas
+/// simulados. Piden el permiso <c>sandbox:administrar</c>; funcionan con la llave de producción y con la de prueba, siempre sobre
+/// el sandbox.
+/// </summary>
+public sealed class SandboxApi
+{
+    private readonly Transporte _t;
+
+    internal SandboxApi(Transporte transporte) => _t = transporte;
+
+    /// <summary>Si existe, sus empresas (el <c>X-Empresa</c> de una llave de prueba es el <see cref="EmpresaDeSandboxDto.Id"/>) y cuántos correos tiene.</summary>
+    public Task<SandboxDto> ObtenerAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Get, "api/v1/sandbox", ConEmpresa: false), ct);
+
+    /// <summary>Lo crea con la configuración del grupo o, si ya existe, le agrega lo que le falte de producción. Idempotente.</summary>
+    public Task<SandboxDto> AsegurarAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Post, "api/v1/sandbox", ConEmpresa: false, Reintentable: true), ct);
+
+    /// <summary>Borra todo lo hecho en el sandbox y lo siembra de nuevo con la configuración de producción de ahora.</summary>
+    public Task<SandboxDto> ReiniciarAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SandboxDto>(new Peticion(HttpMethod.Post, "api/v1/sandbox/reiniciar", ConEmpresa: false), ct);
+
+    /// <summary>Los correos que el sandbox habría enviado, los más nuevos primero.</summary>
+    public Task<PaginaDto<CorreoDePruebaDto>> CorreosAsync(string? para = null, string? asunto = null, int? limite = null, string? cursor = null,
+        CancellationToken ct = default)
+    {
+        var parametros = new List<string>();
+        if (!string.IsNullOrWhiteSpace(para))
+            parametros.Add("para=" + ClienteValidasoft.Escapar(para));
+        if (!string.IsNullOrWhiteSpace(asunto))
+            parametros.Add("asunto=" + ClienteValidasoft.Escapar(asunto));
+        if (limite is { } l)
+            parametros.Add("limite=" + l.ToString(CultureInfo.InvariantCulture));
+        if (!string.IsNullOrWhiteSpace(cursor))
+            parametros.Add("cursor=" + ClienteValidasoft.Escapar(cursor));
+        var ruta = "api/v1/sandbox/correos" + (parametros.Count == 0 ? string.Empty : "?" + string.Join("&", parametros));
+        return _t.EnviarAsync<PaginaDto<CorreoDePruebaDto>>(new Peticion(HttpMethod.Get, ruta, ConEmpresa: false), ct);
+    }
+
+    /// <summary>
+    /// Espera a que llegue al buzón un correo para <paramref name="para"/> (y, si se indica, cuyo asunto contenga
+    /// <paramref name="asunto"/>) y lo devuelve; <see cref="TimeoutException"/> si no llega en <paramref name="espera"/> (20 s por omisión).
+    /// El de la invitación trae el enlace del tercero en <see cref="CorreoDePruebaDto.Enlaces"/>.
+    /// </summary>
+    public async Task<CorreoDePruebaDto> EsperarCorreoAsync(string para, string? asunto = null, TimeSpan? espera = null, CancellationToken ct = default)
+    {
+        var limite = DateTime.UtcNow + (espera ?? TimeSpan.FromSeconds(20));
+        while (true)
+        {
+            var pagina = await CorreosAsync(para, asunto, 1, null, ct);
+            if (pagina.Datos.Count > 0)
+                return pagina.Datos[0];
+            if (DateTime.UtcNow >= limite)
+                throw new TimeoutException($"No llegó al buzón del sandbox ningún correo para {para}.");
+            await Task.Delay(250, ct);
+        }
+    }
+
+    /// <summary>Un correo del buzón.</summary>
+    public Task<CorreoDePruebaDto> CorreoAsync(Guid id, CancellationToken ct = default) =>
+        _t.EnviarAsync<CorreoDePruebaDto>(new Peticion(HttpMethod.Get, $"api/v1/sandbox/correos/{id}", ConEmpresa: false), ct);
+
+    /// <summary>Vacía el buzón.</summary>
+    public Task VaciarCorreosAsync(CancellationToken ct = default) =>
+        _t.EnviarAsync<SinContenido>(new Peticion(HttpMethod.Delete, "api/v1/sandbox/correos", ConEmpresa: false), ct);
 }

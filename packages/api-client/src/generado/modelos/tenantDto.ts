@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ConfiguracionDeIngresoDto } from './configuracionDeIngresoDto';
 
 export interface TenantDto {
   id: string;
@@ -15,4 +16,5 @@ export interface TenantDto {
   idioma: string;
   activo: boolean;
   creadoEn: string;
+  ingreso?: null | ConfiguracionDeIngresoDto;
 }

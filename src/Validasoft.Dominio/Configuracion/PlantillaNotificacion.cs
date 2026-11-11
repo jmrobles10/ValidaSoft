@@ -11,7 +11,8 @@ public sealed record EventoDePlantilla(string Evento, string Nombre, string Desc
 
 /// <summary>
 /// Catálogo cerrado de correos personalizables (PL-1). OTP, enlaces de acceso, autorregistro, el aviso consolidado de
-/// vencimiento (varias empresas) y las notificaciones internas no son de una empresa: no se personalizan.
+/// vencimiento (varias empresas) y las notificaciones internas no son de una empresa: no se personalizan. La excepción es
+/// <c>retiro-version</c> (RT-2): llega al personal de la empresa, que puede ajustar su asunto, cabecera y pie.
 /// </summary>
 public static class CatalogoDePlantillas
 {
@@ -27,6 +28,7 @@ public static class CatalogoDePlantillas
     public const string RecordatorioObservaciones = "recordatorio-observaciones";
     public const string Desaprobacion = "desaprobacion";
     public const string Reintegro = "reintegro";
+    public const string RetiroDeVersion = "retiro-version";
 
     public static readonly IReadOnlyList<EventoDePlantilla> Eventos =
     [
@@ -40,7 +42,10 @@ public static class CatalogoDePlantillas
         new(RecordatorioObservaciones, "Recordatorio de observaciones", "La empresa le recuerda al tercero las observaciones que sigue teniendo pendientes.",
             ["empresa", "folio"]),
         new(Desaprobacion, "Validación devuelta a revisión", "La empresa devolvió a revisión una validación que ya estaba aprobada.", ["empresa", "folio"]),
-        new(Reintegro, "Vínculo reintegrado", "La empresa reintegró el vínculo del tercero, con o sin validar de nuevo.", ["empresa", "folio"])
+        new(Reintegro, "Vínculo reintegrado", "La empresa reintegró el vínculo del tercero, con o sin validar de nuevo.", ["empresa", "folio"]),
+        new(RetiroDeVersion, "Versión retirada por el tercero",
+            "Aviso al personal de la empresa (no al tercero) cuando el tercero retira una versión que ya había aprobado o que está en revisión.",
+            ["empresa", "folio", "documento"])
     ];
 
     public static EventoDePlantilla? Buscar(string? evento) =>

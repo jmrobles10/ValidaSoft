@@ -18,25 +18,27 @@ namespace Validasoft.Aplicacion.Comun;
 /// <summary>
 /// Auditoría de la empresa activa (docs/05 §2.7, docs/06 <c>/auditoria</c>, AU-1): los cambios de configuración de la empresa y
 /// los de todo el grupo, con el detalle campo por campo, y los accesos a documentos y a certificados de la empresa. Los
-/// eventos de dominio se consultan en el historial de cada vínculo o expediente; la auditoría de identidad aún no se registra.
+/// eventos de dominio se consultan en el historial de cada vínculo o expediente; la auditoría de identidad (<c>tipo=Identidad</c>, ING-6) son los
+/// ingresos exitosos y fallidos, las passkeys y las sesiones del grupo, con su IP y navegador.
 /// Se arma al consultar, de lo más reciente a lo más antiguo; cursor opaco.
 /// </summary>
 public static class AuditoriaEndpoints
 {
     private const string Configuracion = "Configuracion";
     private const string Acceso = "Acceso";
+    private const string Identidad = "Identidad";
 
     /// <summary>Filas que admite la exportación a Excel (IF-4); más ⇒ 422 <c>exportacion-demasiado-grande</c>.</summary>
     public const int MaximoExportacion = 50_000;
 
     [WolverineGet("/api/v1/auditoria")]
     [Authorize(Policy = Permisos.AuditoriaLeer)]
-    public static async Task<PaginaDto<RegistroAuditoriaDto>> Listar(SesionDeEmpresa empresa, ISesiones sesiones, string? tipo, string? entidad,
-        string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, int? limite, string? cursor, CancellationToken ct)
+    public static async Task<PaginaDto<RegistroAuditoriaDto>> Listar(SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto, string? tipo,
+        string? entidad, string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, int? limite, string? cursor, CancellationToken ct)
     {
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
         var salto = Peticiones.LeerDesplazamiento(cursor);
-        var registros = await RegistrosAsync(empresa, sesiones, tipo, entidad, entidadId, actor, desde, hasta, ct);
+        var registros = await RegistrosAsync(empresa, sesiones, contexto, tipo, entidad, entidadId, actor, desde, hasta, ct);
         var pagina = await ConNombresAsync(empresa, [.. registros.Skip(salto).Take(tamano)], ct);
         var siguiente = registros.Count > salto + tamano ? Peticiones.EscribirDesplazamiento(salto + tamano) : null;
         return new PaginaDto<RegistroAuditoriaDto>(pagina, siguiente);
@@ -52,17 +54,17 @@ public static class AuditoriaEndpoints
     public static async Task<IResult> Excel(SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http, TimeProvider reloj,
         string? tipo, string? entidad, string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
     {
-        var registros = await RegistrosAsync(empresa, sesiones, tipo, entidad, entidadId, actor, desde, hasta, ct);
+        var registros = await RegistrosAsync(empresa, sesiones, contexto, tipo, entidad, entidadId, actor, desde, hasta, ct);
         if (registros.Count > MaximoExportacion)
             throw ReglaDeNegocioException.Validacion("exportacion-demasiado-grande",
                 $"La exportación admite hasta {MaximoExportacion} registros: acota el rango de fechas o agrega filtros.");
         var conNombres = await ConNombresAsync(empresa, registros, ct);
-        var bytes = HojaDeCalculo.Crear(TipoDe(tipo) == Configuracion ? "Configuración" : "Accesos",
+        var bytes = HojaDeCalculo.Crear(TipoDe(tipo) switch { Configuracion => "Configuración", Identidad => "Identidad", _ => "Accesos" },
             ["Fecha", "Tipo", "Acción", "Entidad", "Id de la entidad", "Nombre", "Tipo de actor", "Actor", "Id del actor", "Sistema", "Cambios",
                 "Justificación", "Detalle", "Vínculo", "IP", "Navegador", "Correlación"],
             conNombres.Select(r => (IReadOnlyList<object?>)
             [
-                Informes.Exportaciones.Local(r.Fecha), r.Tipo == Configuracion ? "Configuración" : "Acceso", r.Accion, r.Entidad.Tipo, r.Entidad.Id,
+                Informes.Exportaciones.Local(r.Fecha), r.Tipo == Configuracion ? "Configuración" : r.Tipo == Identidad ? "Identidad" : "Acceso", r.Accion, r.Entidad.Tipo, r.Entidad.Id,
                 r.Entidad.Nombre, r.Actor.Tipo, r.Actor.Nombre, r.Actor.Id, r.Actor.Sistema, Cambios(r.Diff), r.Justificacion, r.Detalle,
                 r.VinculoId?.ToString(), r.Ip, r.UserAgent, r.CorrelationId
             ]));
@@ -72,17 +74,57 @@ public static class AuditoriaEndpoints
             new Informes.ArchivoExportado("Auditoria", "Excel", bytes, HojaDeCalculo.TipoContenido, archivo, conNombres.Count), ct);
     }
 
-    private static async Task<List<RegistroAuditoriaDto>> RegistrosAsync(SesionDeEmpresa empresa, ISesiones sesiones, string? tipo, string? entidad,
-        string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
+    private static async Task<List<RegistroAuditoriaDto>> RegistrosAsync(SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto, string? tipo,
+        string? entidad, string? entidadId, string? actor, DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
     {
         if (desde is not null && hasta is not null && desde > hasta)
             throw ReglaDeNegocioException.Validacion("rango-invalido", "La fecha inicial es posterior a la final.");
         return TipoDe(tipo) switch
         {
             Configuracion => await ConfiguracionAsync(empresa, entidad, entidadId, actor, desde, hasta, ct),
+            Identidad => await IdentidadAsync(sesiones, contexto.TenantRequerido(), entidad, entidadId, actor, desde, hasta, ct),
             _ => await AccesosAsync(empresa, sesiones, entidad, entidadId, actor, desde, hasta, ct)
         };
     }
+
+    /// <summary>
+    /// Auditoría de identidad del grupo (ING-6): ingresos exitosos y fallidos, passkeys registradas o revocadas y sesiones cerradas, de las personas
+    /// del grupo. <c>entidadId</c> filtra por la persona a la que se refiere el registro; <c>actor</c>, por quien hizo la acción.
+    /// </summary>
+    private static async Task<List<RegistroAuditoriaDto>> IdentidadAsync(ISesiones sesiones, Guid tenantId, string? entidad, string? entidadId, string? actor,
+        DateTimeOffset? desde, DateTimeOffset? hasta, CancellationToken ct)
+    {
+        await using var consulta = sesiones.ConsultaGlobal();
+        IQueryable<RegistroDeIngreso> filas = consulta.Query<RegistroDeIngreso>().Where(r => r.TenantId == tenantId);
+        if (!string.IsNullOrWhiteSpace(entidadId))
+            filas = filas.Where(r => r.SujetoId == entidadId);
+        if (!string.IsNullOrWhiteSpace(actor))
+            filas = filas.Where(r => r.ActorId == actor);
+        if (desde is not null)
+            filas = filas.Where(r => r.Fecha >= desde);
+        if (hasta is not null)
+            filas = filas.Where(r => r.Fecha <= hasta);
+
+        var lista = await filas.OrderByDescending(r => r.Fecha).ThenByDescending(r => r.Id).Take(MaximoExportacion + 1).ToListAsync(ct);
+        return [.. lista
+            .Select(r => (Registro: r, Entidad: EntidadDeIdentidad(r.Evento)))
+            .Where(x => string.IsNullOrWhiteSpace(entidad) || x.Entidad.Equals(entidad, StringComparison.OrdinalIgnoreCase))
+            .Select(x => new RegistroAuditoriaDto(x.Registro.Id, Identidad, x.Registro.Fecha, null,
+                new ActorAuditoriaDto(x.Registro.ActorTipo.ToString(), x.Registro.ActorId, null, null),
+                new EntidadAuditadaDto(x.Entidad, x.Registro.SujetoId ?? string.Empty, x.Registro.Correo),
+                x.Registro.Evento.ToString(), null, null, [], null,
+                string.Join(" · ", new[] { x.Registro.Exitoso ? null : "Fallido", x.Registro.Metodo?.ToString(), x.Registro.Motivo, x.Registro.Detalle }
+                    .Where(t => !string.IsNullOrWhiteSpace(t))),
+                null, x.Registro.Ip, x.Registro.Dispositivo, x.Registro.CorrelationId))];
+    }
+
+    /// <summary>Sobre qué recayó el evento de identidad: la passkey, la sesión o el ingreso (códigos, ingresos e invitaciones).</summary>
+    private static string EntidadDeIdentidad(EventoDeIngreso evento) => evento switch
+    {
+        EventoDeIngreso.PasskeyRegistrada or EventoDeIngreso.PasskeyRevocada or EventoDeIngreso.PasskeyEliminada => "Passkey",
+        EventoDeIngreso.SesionCerrada or EventoDeIngreso.SesionRevocada or EventoDeIngreso.ReusoDeSesion => "Sesion",
+        _ => "Ingreso"
+    };
 
     private static async Task<List<RegistroAuditoriaDto>> ConNombresAsync(SesionDeEmpresa empresa, IReadOnlyList<RegistroAuditoriaDto> registros,
         CancellationToken ct)
@@ -110,10 +152,12 @@ public static class AuditoriaEndpoints
             return Configuracion;
         if (tipo.Equals(Acceso, StringComparison.OrdinalIgnoreCase))
             return Acceso;
-        if (tipo.Equals("Dominio", StringComparison.OrdinalIgnoreCase) || tipo.Equals("Identidad", StringComparison.OrdinalIgnoreCase))
+        if (tipo.Equals(Identidad, StringComparison.OrdinalIgnoreCase))
+            return Identidad;
+        if (tipo.Equals("Dominio", StringComparison.OrdinalIgnoreCase))
             throw ReglaDeNegocioException.Validacion("tipo-no-disponible",
-                "Los eventos de dominio se consultan en el historial de cada vínculo o expediente; la auditoría de identidad aún no se registra.");
-        throw ReglaDeNegocioException.Validacion("tipo-invalido", $"'{tipo}' no es un tipo de auditoría (Configuracion o Acceso).");
+                "Los eventos de dominio se consultan en el historial de cada vínculo o expediente.");
+        throw ReglaDeNegocioException.Validacion("tipo-invalido", $"'{tipo}' no es un tipo de auditoría (Configuracion, Acceso o Identidad).");
     }
 
     private static async Task<List<RegistroAuditoriaDto>> ConfiguracionAsync(SesionDeEmpresa empresa, string? entidad, string? entidadId, string? actor,

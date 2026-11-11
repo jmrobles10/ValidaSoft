@@ -134,7 +134,7 @@ C:\Fuentes_Git\Validasoft\
 │   ├── Validasoft.Api.ContractTests/      # Verify: snapshot de OpenAPI y payloads
 │   ├── Validasoft.Arquitectura.Tests/     # NetArchTest
 │   ├── e2e/                               # Playwright
-│   └── carga/                             # k6
+│   └── carga/                             # k6 (certificacion.k6.js: consulta de certificación, tests/carga/README.md)
 ├── infra/
 │   ├── compose/{compose.yaml, compose.dev.yaml, compose.prod.yaml, .env.example}
 │   ├── grafana/                           # dashboards versionados
@@ -440,7 +440,7 @@ services:
 | Ruta | Qué sirve | Configuración |
 |---|---|---|
 | `/app/` (`/app` redirige 301 a `/app/`) | `apps/web` (embebible; rutas con `#`, build con `base: './'`). Cualquier ruta sin extensión o `.html` bajo `/app/` ⇒ `index.html` con `Cache-Control: no-cache` y `Content-Security-Policy: frame-ancestors 'self' {orígenes de los sistemas activos}; base-uri 'self'; object-src 'none'` | `Validasoft:Apps:Web` = carpeta del `dist/` (relativa a la raíz de contenido) |
-| `/` | `apps/public` (tercero; rutas con historial, p. ej. `/e/{token}`). Fallback a `index.html` con `frame-ancestors 'self'` salvo en `/api`, `/public`, `/health`, `/openapi`, `/docs` y `/app` | `Validasoft:Apps:Publica` |
+| `/` | `apps/public` (tercero; rutas con historial, p. ej. `/e/{token}`). Fallback a `index.html` con `frame-ancestors 'self'` (en `/embed/{componente}`, que es la que va en el iframe de un sistema, además los orígenes de los sistemas activos: IO-5) salvo en `/api`, `/public`, `/health`, `/openapi`, `/docs` y `/app` | `Validasoft:Apps:Publica` |
 | `…/assets/*` | Archivos con hash: `Cache-Control: public, max-age=31536000, immutable` y `X-Content-Type-Options: nosniff` | — |
 
 Vacías, la API no sirve esa app (en desarrollo se usa Vite: `/app` y `/` no existen en la API). Configuradas y sin `index.html` ⇒ la API no arranca. Con este despliegue `UrlPublica` es el mismo host, `apps/public` y `apps/web` llaman a `/public/v1` y `/api/v1` del mismo origen y no hace falta CORS; `Validasoft:Cors:OrigenesPermitidos[]` solo para dominios separados ([07 §2.6](07-seguridad-identidad-y-tenancy.md) punto 8). Detrás de un proxy o balanceador, `Validasoft:Proxies:Confiables[]` (IP o CIDR) y `Validasoft:Proxies:Saltos` para que el límite por IP use la IP real.

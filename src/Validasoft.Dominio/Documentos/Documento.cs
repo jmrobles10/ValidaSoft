@@ -39,6 +39,9 @@ public sealed class VersionDocumento
 
     public string? MotivoRetiro { get; set; }
 
+    /// <summary>Cuándo el tercero retiró la versión; nula si no está retirada (o se retiró antes de que se guardara la fecha).</summary>
+    public DateTimeOffset? RetiradaEn { get; set; }
+
     /// <summary>Alguna empresa emitió una descarga de esta versión: su binario ya no se elimina al retirarla (docs/02 §10.3).</summary>
     public bool AccedidaPorEmpresa { get; set; }
 
@@ -402,21 +405,40 @@ public sealed class Documento
     }
 
     /// <summary>
-    /// El tercero retira una versión: no vuelve a usarse ni a compartirse. Si era la actual, la superada más reciente
-    /// vuelve a serlo (I-11). Devuelta o ya retirada ⇒ 409. (Las aceptaciones y certificados que lo impedirían llegan con H3/H4.)
+    /// ¿Se puede retirar la versión? Solo la actual, una superada o una vencida; una devuelta o ya retirada ⇒ 409
+    /// <c>estado-invalido</c>. Lo usan el retiro y la consulta de su impacto, que deben coincidir.
     /// </summary>
-    public IReadOnlyList<object> RetirarVersion(int numero, string? motivo, DateTimeOffset ahora)
+    public VersionDocumento VersionRetirable(int numero)
     {
         var version = VersionRequerida(numero);
         if (version.Estado is not (EstadoVersion.Actual or EstadoVersion.Superada or EstadoVersion.Vencida))
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se puede retirar una versión {version.Estado}.");
+        return version;
+    }
+
+    /// <summary>
+    /// La versión que quedaría vigente si se retirara <paramref name="numero"/> (I-11): la misma actual si era otra; si era la
+    /// actual, la superada más reciente, o ninguna si no hay. No comprueba que se pueda retirar.
+    /// </summary>
+    public int? VersionTrasRetirar(int numero) =>
+        VersionActual == numero
+            ? Versiones.Where(v => v.Estado == EstadoVersion.Superada && v.Numero != numero).MaxBy(v => v.Numero)?.Numero
+            : VersionActual;
+
+    /// <summary>
+    /// El tercero retira una versión: no vuelve a usarse ni a compartirse. Si era la actual, la superada más reciente
+    /// vuelve a serlo (I-11). Devuelta o ya retirada ⇒ 409; sin motivo ⇒ 422. Qué pasa con las empresas que la tenían (revalidar,
+    /// volver a revisar) lo calcula la aplicación (<c>ImpactoDeRetiro</c>) y lo dispara la sincronización de requisitos.
+    /// </summary>
+    public IReadOnlyList<object> RetirarVersion(int numero, string? motivo, DateTimeOffset ahora)
+    {
+        VersionRetirable(numero);
         if (string.IsNullOrWhiteSpace(motivo))
             throw ReglaDeNegocioException.Validacion("motivo-requerido", "Indica por qué retiras la versión.");
 
         var eventos = new List<object> { new VersionRetirada(numero, motivo.Trim(), ahora) };
-        if (VersionActual == numero &&
-            Versiones.Where(v => v.Estado == EstadoVersion.Superada).MaxBy(v => v.Numero) is { } anterior)
-            eventos.Add(new VersionActualRestituida(anterior.Numero, numero, ahora));
+        if (VersionActual == numero && VersionTrasRetirar(numero) is { } anterior)
+            eventos.Add(new VersionActualRestituida(anterior, numero, ahora));
         return eventos;
     }
 
@@ -645,6 +667,7 @@ public sealed class Documento
         var version = VersionRequerida(e.Numero);
         version.Estado = EstadoVersion.Retirada;
         version.MotivoRetiro = e.Motivo;
+        version.RetiradaEn = e.Fecha;
         if (VersionActual == e.Numero)
             VersionActual = null;
         ActualizadoEn = e.Fecha;

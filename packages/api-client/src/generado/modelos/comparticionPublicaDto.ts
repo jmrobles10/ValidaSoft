@@ -17,4 +17,7 @@ export interface ComparticionPublicaDto {
   /** @nullable */
   compartidaEn: string | null;
   vigencia?: null | VigenciaDto;
+  situacion?: string;
+  /** @nullable */
+  otraVersion?: number | null;
 }

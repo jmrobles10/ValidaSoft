@@ -1,9 +1,28 @@
 {
   "name": "@validasoft/sdk",
   "version": "1.0.0",
-  "description": "Cliente de la API v1 de Validasoft para sistemas integradores (SRM, Marco, Portal u otro ERP) y verificador de webhooks. Sin dependencias; fetch y Web Crypto (Node 20+ o navegador).",
+  "description": "Cliente de la API v1 de Validasoft para sistemas integradores (SRM, Marco, Portal u otro ERP), sandbox y verificador de webhooks. Sin dependencias; fetch y Web Crypto (Node 20+ o navegador).",
+  "keywords": [
+    "validasoft",
+    "sdk",
+    "api",
+    "webhooks",
+    "sagrilaft",
+    "validacion-documental",
+    "proveedores"
+  ],
   "type": "module",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "author": "Validasoft",
+  "homepage": "https://github.com/jmrobles10/ValidaSoft/tree/main/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/jmrobles10/ValidaSoft/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jmrobles10/ValidaSoft.git",
+    "directory": "packages/sdk"
+  },
   "sideEffects": false,
   "engines": {
     "node": ">=20"
@@ -12,20 +31,33 @@
     ".": "./src/index.ts"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE.md"
   ],
   "publishConfig": {
+    "access": "public",
+    "provenance": true,
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
+        "import": {
+          "types": "./dist/esm/index.d.ts",
+          "default": "./dist/esm/index.js"
+        },
+        "require": {
+          "types": "./dist/cjs/index.d.ts",
+          "default": "./dist/cjs/index.js"
+        }
       }
     },
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts"
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/index.js",
+    "types": "./dist/esm/index.d.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node ../../infra/sdk/preparar-npm.mjs",
+    "verificar": "pnpm run build && node ../../infra/sdk/verificar-paquete.mjs",
     "typecheck": "tsc -p tsconfig.json"
   }
 }

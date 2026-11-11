@@ -21,20 +21,38 @@ namespace Validasoft.Aplicacion.Vinculos;
 /// <summary>Terceros: datos globales visibles solo para el tenant que los registró o tiene un vínculo con ellos.</summary>
 public static class TercerosEndpoints
 {
+    /// <summary>
+    /// Crea el tercero (201). Con <c>referenciaExterna</c> (el sistema lo fija la API key) la creación es idempotente: si esa clave ya
+    /// identifica a un tercero con la misma identificación, responde 200 con él; si identifica a otro, 409 <c>referencia-duplicada</c>.
+    /// </summary>
     [WolverinePost("/api/v1/terceros")]
     [Authorize(Policy = Permisos.TercerosEscribir)]
     public static async Task<IResult> Crear(CrearTerceroDto dto, ISesiones sesiones, IContextoSolicitud contexto,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = ConstruirTercero(dto, contexto.TenantRequerido(), reloj.GetUtcNow());
+        var ahora = reloj.GetUtcNow();
+        var tercero = ConstruirTercero(dto, contexto.TenantRequerido(), contexto.EsSandbox, ahora);
+        var referencia = VinculosEndpoints.ReferenciaDeLaCredencial(dto.ReferenciaExterna, contexto);
 
         await using var sesion = sesiones.DelTenant();
+        if (referencia is not null &&
+            await sesion.LoadAsync<ReferenciaDeTercero>(ReferenciaDeTercero.IdPara(referencia.Sistema, referencia.Id), ct) is { } previa)
+        {
+            var yaRegistrado = await sesion.LoadAsync<Tercero>(previa.TerceroId, ct);
+            return yaRegistrado is not null && yaRegistrado.ClaveIdentificacion == tercero.ClaveIdentificacion
+                ? Results.Ok(yaRegistrado.ADto())
+                : throw ReglaDeNegocioException.Conflicto("referencia-duplicada",
+                    $"La clave {referencia.Id} de {referencia.Sistema} ya identifica a otro tercero.");
+        }
+
         var existente = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == tercero.ClaveIdentificacion, ct);
         if (existente is not null)
             throw new ReglaDeNegocioException(TipoFalla.Conflicto, "tercero-duplicado",
                 "Ese tercero ya existe en la plataforma; vincúlalo con POST /vinculos indicando su identificación.");
 
         sesion.Store(tercero);
+        if (referencia is not null)
+            await ReferenciasDeTerceroEndpoints.RegistrarAsync(sesion, tercero.Id, referencia.Sistema, referencia.Id, ahora, ct);
         await sesion.SaveChangesAsync(ct);
         return Results.Created($"/api/v1/terceros/{tercero.Id}", tercero.ADto());
     }
@@ -56,7 +74,7 @@ public static class TercerosEndpoints
     public static async Task<TerceroDto> PorIdentificacion(string pais, string tipo, string numero, ISesiones sesiones,
         IContextoSolicitud contexto, CancellationToken ct)
     {
-        var clave = new IdentificacionDto(pais, tipo, numero).ADominio().Clave;
+        var clave = contexto.ClaveDeTercero(new IdentificacionDto(pais, tipo, numero).ADominio().Clave);
         await using var sesion = sesiones.DelTenant();
         var tercero = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == clave, ct);
         return tercero is not null && await EsVisibleAsync(sesion, tercero, contexto, ct)
@@ -64,7 +82,11 @@ public static class TercerosEndpoints
             : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
     }
 
-    internal static Tercero ConstruirTercero(CrearTerceroDto dto, Guid tenantId, DateTimeOffset ahora)
+    /// <summary>
+    /// El tercero que se registra desde un tenant. En un sandbox (<paramref name="esSandbox"/>, SB-4) queda aislado: su clave lleva el
+    /// tenant sandbox por delante y no choca con el tercero real que tenga la misma identificación.
+    /// </summary>
+    internal static Tercero ConstruirTercero(CrearTerceroDto dto, Guid tenantId, bool esSandbox, DateTimeOffset ahora)
     {
         if (!Enum.TryParse<TipoPersona>(dto.TipoPersona, true, out var tipoPersona))
             throw ReglaDeNegocioException.Validacion("tipo-persona-invalido", "El tipo de persona debe ser Natural, Juridica o Consorcio.");
@@ -72,11 +94,22 @@ public static class TercerosEndpoints
         var tercero = Tercero.Crear(dto.Identificacion.ADominio(), tipoPersona, dto.Nombre, dto.NombreComercial,
             dto.Contactos?.Select(c => new Contacto(c.Nombre, c.Correo.Trim().ToLowerInvariant(), c.Telefono, c.Rol)), ahora);
         tercero.CreadoPorTenant = tenantId;
+        if (esSandbox)
+            tercero.AislarEnSandbox(tenantId);
         return tercero;
     }
 
-    private static async Task<bool> EsVisibleAsync(IDocumentSession sesion, Tercero tercero, IContextoSolicitud contexto, CancellationToken ct) =>
+    private static async Task<bool> EsVisibleAsync(IQuerySession sesion, Tercero tercero, IContextoSolicitud contexto, CancellationToken ct) =>
         tercero.CreadoPorTenant == contexto.TenantId || await sesion.Query<Vinculo>().AnyAsync(v => v.TerceroId == tercero.Id, ct);
+
+    /// <summary>El tercero si es visible para el tenant (lo registró o tiene un vínculo con él); si no, 404 (anti-cosecha).</summary>
+    internal static async Task<Tercero> CargarVisibleAsync(IQuerySession sesion, Guid id, IContextoSolicitud contexto, CancellationToken ct)
+    {
+        var tercero = await sesion.LoadAsync<Tercero>(id, ct);
+        return tercero is not null && await EsVisibleAsync(sesion, tercero, contexto, ct)
+            ? tercero
+            : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
+    }
 }
 
 /// <summary>
@@ -185,16 +218,20 @@ public static class VinculosEndpoints
         return new PaginaDto<VinculoDto>([.. pagina.Take(tamano).Select(v => v.ADto(tipos.FirstOrDefault(t => t.Id == v.TipoVinculoId)))], siguiente);
     }
 
-    /// <summary>Busca el vínculo de la empresa activa por la referencia de un sistema integrado.</summary>
+    /// <summary>
+    /// Busca el vínculo de la empresa activa por la clave externa de un sistema integrador: <c>?sistema=SRM&amp;clave=ADP-00123</c>
+    /// (<c>id</c> es el nombre anterior del mismo parámetro y se sigue aceptando).
+    /// </summary>
     [WolverineGet("/api/v1/vinculos/por-referencia")]
     [Authorize(Policy = Permisos.VinculosLeer)]
-    public static async Task<VinculoDto> PorReferencia(string sistema, string id, SesionDeEmpresa empresa, CancellationToken ct)
+    public static async Task<VinculoDto> PorReferencia(string sistema, string? clave, string? id, SesionDeEmpresa empresa, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(sistema) || string.IsNullOrWhiteSpace(id))
-            throw ReglaDeNegocioException.Validacion("referencia-externa-invalida", "Indica sistema e id de la referencia.");
+        var claveExterna = string.IsNullOrWhiteSpace(clave) ? id : clave;
+        if (string.IsNullOrWhiteSpace(sistema) || string.IsNullOrWhiteSpace(claveExterna))
+            throw ReglaDeNegocioException.Validacion("referencia-externa-invalida", "Indica el sistema y la clave de la referencia.");
 
-        var clave = new ReferenciaExterna(sistema.Trim().ToUpperInvariant(), id.Trim()).Clave();
-        var vinculo = await empresa.Vinculos().FirstOrDefaultAsync(v => v.ClavesReferencia.Contains(clave), ct)
+        var clavePlana = new ReferenciaExterna(sistema.Trim().ToUpperInvariant(), claveExterna.Trim()).Clave();
+        var vinculo = await empresa.Vinculos().FirstOrDefaultAsync(v => v.ClavesReferencia.Contains(clavePlana), ct)
                       ?? throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No hay un vínculo con esa referencia en la empresa.");
         return vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct));
     }
@@ -239,16 +276,22 @@ public static class VinculosEndpoints
             guardado.Invitacion ?? new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, 1));
     }
 
-    /// <summary>Bloquear suspende el certificado en la misma transacción (B-5); no lo revoca.</summary>
+    /// <summary>
+    /// Bloquear suspende el certificado en la misma transacción (B-5); no lo revoca. Con fecha de fin programa en la misma
+    /// transacción el desbloqueo automático (<see cref="DesbloquearAlLlegarLaFecha"/>, VV-5), que hace lo mismo que el manual.
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/bloquear")]
     [Authorize(Policy = Permisos.VinculosBloquear)]
     public static async Task<VinculoDto> Bloquear(Guid id, BloquearVinculoDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
+        empresa.UsarMensajeria(mensajes);
         var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
         var evento = stream.Aggregate!.Bloquear(dto.Motivo, dto.Hasta, ahora);
         await CicloDeCertificados.AlBloquearAsync(empresa.Sesion, id, evento.Motivo, ahora, ct);
+        if (evento.Hasta is { } hasta)
+            await mensajes.ScheduleAsync(new DesbloquearAlLlegarLaFecha(contexto.TenantRequerido(), id, hasta), hasta);
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 
@@ -389,7 +432,7 @@ public static class VinculosEndpoints
     /// El sistema de la referencia lo fija la API key (ADR-0011): el cuerpo puede omitirlo, pero si lo trae debe coincidir.
     /// Una credencial sin sistema integrado no puede registrar referencias.
     /// </summary>
-    private static ReferenciaExterna? ReferenciaDeLaCredencial(ReferenciaExternaDto? dto, IContextoSolicitud contexto)
+    internal static ReferenciaExterna? ReferenciaDeLaCredencial(ReferenciaExternaDto? dto, IContextoSolicitud contexto)
     {
         if (dto is null)
             return null;
@@ -417,7 +460,7 @@ public static class VinculosEndpoints
     }
 
     /// <summary>Una referencia identifica un solo vínculo en la empresa (la usa <c>por-referencia</c>).</summary>
-    private static async Task AsegurarReferenciaLibreAsync(SesionDeEmpresa empresa, ReferenciaExterna referencia, CancellationToken ct)
+    internal static async Task AsegurarReferenciaLibreAsync(SesionDeEmpresa empresa, ReferenciaExterna referencia, CancellationToken ct)
     {
         var clave = referencia.Clave();
         var otro = await empresa.Vinculos().FirstOrDefaultAsync(v => v.ClavesReferencia.Contains(clave), ct);
@@ -440,7 +483,7 @@ public static class VinculosEndpoints
         if (dto.Tercero is null)
             throw ReglaDeNegocioException.Validacion("tercero-requerido", "Indica terceroId o los datos del tercero.");
 
-        var nuevo = TercerosEndpoints.ConstruirTercero(dto.Tercero, contexto.TenantRequerido(), ahora);
+        var nuevo = TercerosEndpoints.ConstruirTercero(dto.Tercero, contexto.TenantRequerido(), contexto.EsSandbox, ahora);
         var existente = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == nuevo.ClaveIdentificacion, ct);
         if (existente is not null)
             return existente; // Ya existe en la plataforma: se reutiliza sin tocar sus datos maestros (P-1-7).
@@ -449,7 +492,7 @@ public static class VinculosEndpoints
         return nuevo;
     }
 
-    private static async Task<VinculoDto> GuardarAsync(SesionDeEmpresa empresa, IEventStream<Vinculo> stream, object evento, CancellationToken ct)
+    internal static async Task<VinculoDto> GuardarAsync(SesionDeEmpresa empresa, IEventStream<Vinculo> stream, object evento, CancellationToken ct)
     {
         stream.AppendOne(evento);
         await empresa.Sesion.SaveChangesAsync(ct);

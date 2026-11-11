@@ -151,6 +151,21 @@ describe('Inicio', () => {
     expect(urls).toContain('/api/v1/indicadores?dias=30');
   });
 
+  it('muestra cuántos vínculos están por vencer (vigencia periódica) y enlaza a su lista; en cero no hay tarjeta', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
+    montar(AL_DIA, { ...INDICADORES, vinculosPorVencer: 7 });
+    const vinculos = await screen.findByRole('region', { name: 'Vínculos' });
+    expect(within(vinculos).getByText('7')).toBeInTheDocument();
+    expect(within(vinculos).getByRole('link', { name: 'Por vencer' })).toHaveAttribute('href', '/e/emp/vinculos?estado=PorVencer');
+  });
+
+  it('sin vínculos por vencer no aparece la tarjeta «Por vencer»', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
+    montar(AL_DIA, { ...INDICADORES, vinculosPorVencer: 0 });
+    const vinculos = await screen.findByRole('region', { name: 'Vínculos' });
+    expect(within(vinculos).queryByText('Por vencer')).not.toBeInTheDocument();
+  });
+
   it('sin vinculos:leer los indicadores de vínculos no enlazan', async () => {
     permisos.scopes = new Set([SCOPES.expedientesLeer]);
     montar(AL_DIA);

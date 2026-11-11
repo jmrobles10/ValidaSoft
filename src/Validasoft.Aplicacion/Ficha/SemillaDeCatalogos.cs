@@ -114,10 +114,10 @@ public static class SemillaDeCatalogos
     /// <summary>Bancos con su código de compensación CENIT (Banco de la República).</summary>
     public static readonly IReadOnlyList<FilaDeCatalogo> Bancos =
     [
-        new("1001", "Banco de Bogotá"),
+        new("1001", "Banco de Bogotá", Swift: "BBOGCOBB"),
         new("1002", "Banco Popular"),
         new("1006", "Banco Itaú"),
-        new("1007", "Bancolombia"),
+        new("1007", "Bancolombia", Swift: "COLOCOBM"),
         new("1009", "Banco Citibank"),
         new("1012", "Banco GNB Sudameris"),
         new("1013", "Banco BBVA"),

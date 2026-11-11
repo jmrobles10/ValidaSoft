@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { EstadoVinculo } from './estadoVinculo';
 import type { ReintentoPublicoDto } from './reintentoPublicoDto';
@@ -20,4 +21,8 @@ export interface VinculoPublicoDto {
   /** @nullable */
   expedienteId?: string | null;
   reintento?: null | ReintentoPublicoDto;
+  /** @nullable */
+  contactos?: ContactoDeEmpresaDto[] | null;
+  /** @nullable */
+  vigenteHasta?: string | null;
 }

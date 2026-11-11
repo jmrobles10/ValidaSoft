@@ -65,14 +65,16 @@ public static class ConfiguracionMarten
 
                 // plataforma (global)
                 opts.Schema.For<Tenant>().DatabaseSchemaName("plataforma")
-                    .UniqueIndex(UniqueIndexType.Computed, "ux_tenant_slug", x => x.Slug);
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_tenant_slug", x => x.Slug)
+                    .Index(x => x.TenantDeProduccionId); // el sandbox de un grupo (SB-1)
                 opts.Schema.For<Empresa>().DatabaseSchemaName("plataforma")
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_identificacion", x => x.TenantId, x => x.ClaveIdentificacion)
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_prefijo", x => x.TenantId, x => x.PrefijoFolio);
 
                 // boveda (global)
                 opts.Schema.For<Tercero>().DatabaseSchemaName("boveda")
-                    .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion);
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion)
+                    .Index(x => x.SandboxTenantId); // terceros de pruebas (SB-4): el reinicio del sandbox los busca por aquí
 
                 // Documentos de la bóveda: streams Documento-{id} en el tenant técnico "boveda" (ambos ámbitos; el PorVinculo
                 // guarda su tenant como dato). Clave natural única: (tercero, canónico) o (vínculo, tipo del tenant).
@@ -96,9 +98,12 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Validasoft.Dominio.Ficha.EntradaDeCatalogo>().DatabaseSchemaName("plataforma")
                     .Index(x => x.Catalogo)
                     .Index(x => x.Padre);
-                // Importador del Portal (F4, FM-39): corridas con su cursor y su informe, y el JSON de las de origen archivo.
-                opts.Schema.For<Aplicacion.Ficha.CorridaDeImportacionPortal>().DatabaseSchemaName("plataforma");
-                opts.Schema.For<Aplicacion.Ficha.ArchivoDeCorridaPortal>().DatabaseSchemaName("plataforma");
+                // Importador genérico (F4, FM-39): corridas con su cursor y su informe, y el JSON de las de fuente archivo.
+                opts.Schema.For<Aplicacion.Importacion.CorridaDeImportacion>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<Aplicacion.Importacion.ArchivoDeCorrida>().DatabaseSchemaName("plataforma");
+                // Claves de un tercero en un sistema externo (referencias externas): por tenant, con id único {SISTEMA}|{clave} dentro de
+                // él; las del importador de la plataforma viven en el tenant técnico "boveda".
+                opts.Schema.For<ReferenciaDeTercero>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
 
                 // identidad
                 opts.Schema.For<ApiKey>().DatabaseSchemaName("identidad").MultiTenanted().Index(x => x.Prefijo);
@@ -127,6 +132,16 @@ public static class ConfiguracionMarten
                 opts.Schema.For<AsercionUsada>().DatabaseSchemaName("identidad").Index(x => x.ExpiraEn);
                 // Límite de enlaces pedidos con el correo (RE-2): un documento por correo (hash), con concurrencia optimista.
                 opts.Schema.For<LimiteDeAccesoPorCorreo>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
+                // Ingreso directo sin contraseñas (ING-1…ING-6): ceremonias de ingreso (código y passkey), passkeys, sesiones de las
+                // personas y registro de identidad. Globales: el ingreso empieza sin saber de qué grupo es la persona.
+                opts.Schema.For<DesafioDeIngreso>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true).Index(x => x.Expira);
+                opts.Schema.For<Passkey>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_passkey_credencial", x => x.CredencialId)
+                    .Index(x => x.SujetoId);
+                opts.Schema.For<SesionDeUsuario>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true)
+                    .Index(x => x.SujetoId)
+                    .Index(x => x.ExpiraEn);
+                opts.Schema.For<RegistroDeIngreso>().DatabaseSchemaName("identidad").Index(x => x.Fecha).Index(x => x.SujetoId);
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")
@@ -142,7 +157,9 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_vinculo_natural", TenancyScope.PerTenant,
                         x => x.EmpresaId, x => x.TerceroId, x => x.TipoVinculoId)
                     .Index(x => x.EmpresaId)
-                    .Index(x => x.CreadoEn);
+                    .Index(x => x.CreadoEn)
+                    // Barrido del job de vigencias de vínculos (VV-1): solo los que tienen algo pendiente llevan valor.
+                    .Index(x => x.ProximaRevisionDeVigencia);
 
                 // Motivos propios del tenant (los de la plataforma viven en código) y flujos aprobatorios versionados.
                 opts.Schema.For<Motivo>().MultiTenanted()
@@ -179,6 +196,8 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()
                     .Index(x => x.VinculoId)
                     .Index(x => x.TerceroId);
+                // Buzón de pruebas del sandbox (SB-4): los correos que no salieron; un reinicio los borra con el resto del tenant.
+                opts.Schema.For<CorreoDePrueba>().MultiTenanted().Index(x => x.RecibidoEn);
                 opts.Schema.For<FilaBandeja>().MultiTenanted()
                     .Index(x => x.EmpresaId)
                     .Index(x => x.ExpedienteId)

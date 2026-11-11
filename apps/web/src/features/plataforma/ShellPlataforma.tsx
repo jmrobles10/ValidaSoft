@@ -6,12 +6,15 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, Navigate, Outlet, useLocation } from 'react-router';
 import { RELLENO_CONTENIDO } from '../../app/rellenoContenido';
+import { AvisoDePasskey } from '../cuenta/AvisoDePasskey';
+import { MenuDeCuenta } from '../cuenta/MenuDeCuenta';
 import { useAlturaFija, useScrollPropio } from '../../sesion/alturaFija';
 import { useSesion } from '../../sesion/sesionStore';
 import { usePreferencias } from '../../shared/preferencias';
 
 const PESTANAS = [
   { clave: 'grupos', ruta: '/plataforma/grupos' },
+  { clave: 'operadores', ruta: '/plataforma/operadores' },
   { clave: 'secretos', ruta: '/plataforma/secretos' },
 ] as const;
 
@@ -115,9 +118,12 @@ export function ShellPlataforma() {
           })}
         </Box>
         <Box sx={{ flex: 1 }} />
-        <Typography component="span" sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline' }, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}>
-          {t('plataforma.sesion', { persona: sesion.nombre ?? sesion.usuarioId, sistema: sesion.sistema ?? '—' })}
-        </Typography>
+        {sesion.sistema && (
+          <Typography component="span" sx={{ color: 'text.secondary', display: { xs: 'none', md: 'inline' }, fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap' }}>
+            {t('plataforma.sesion', { persona: sesion.nombre ?? sesion.usuarioId, sistema: sesion.sistema })}
+          </Typography>
+        )}
+        <MenuDeCuenta rutaMiCuenta="/plataforma/mi-cuenta" />
         {!temaDelContenedor && (
           <Tooltip title={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')}>
             <IconButton aria-label={modo === 'dark' ? t('app.tema.claro') : t('app.tema.oscuro')} onClick={() => fijarModo(modo === 'dark' ? 'light' : 'dark')}>
@@ -126,6 +132,7 @@ export function ShellPlataforma() {
           </Tooltip>
         )}
       </Box>
+      <AvisoDePasskey rutaMiCuenta="/plataforma/mi-cuenta" />
       <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }) }}>
         <Outlet />
       </Box>

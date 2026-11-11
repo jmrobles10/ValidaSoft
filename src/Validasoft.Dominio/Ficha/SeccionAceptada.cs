@@ -8,7 +8,7 @@ public enum OrigenDeAceptacion
     /// <summary>La aprobación de un expediente (F2).</summary>
     Expediente,
 
-    /// <summary>La importación del Portal (F4): el tercero estaba Completada o en Actualizacion para la constructora.</summary>
+    /// <summary>La importación de un sistema de origen (F4): el tercero estaba aprobado en la unidad de origen que corresponde a la empresa.</summary>
     Importacion
 }
 
@@ -43,20 +43,20 @@ public sealed class SeccionAceptada
 
     public DateTimeOffset AceptadaEn { get; set; }
 
-    /// <summary>Expediente que la aprobó; <see cref="Guid.Empty"/> si la aceptación viene de la importación del Portal.</summary>
+    /// <summary>Expediente que la aprobó; <see cref="Guid.Empty"/> si la aceptación viene de la importación de un sistema de origen.</summary>
     public Guid ExpedienteId { get; set; }
 
     /// <summary>Folio del expediente; vacío si viene de la importación.</summary>
     public string Folio { get; set; } = string.Empty;
 
     /// <summary>
-    /// De dónde sale: la aprobación de un expediente (F2) o la importación del Portal (F4, FM-42), cuando el tercero estaba
-    /// <c>Completada</c> o en <c>Actualizacion</c> para la constructora que corresponde a la empresa. La importada no publica
-    /// <c>seccion.aceptada</c> (el SRM ya la aplicó en AyF) ni se mueve en las corridas siguientes.
+    /// De dónde sale: la aprobación de un expediente (F2) o la importación de un sistema de origen (F4, FM-42), cuando el tercero
+    /// estaba aprobado en la unidad de origen que corresponde a la empresa. La importada no publica <c>seccion.aceptada</c> (el
+    /// sistema de origen ya la aplicó en su ERP) ni se mueve en las corridas siguientes.
     /// </summary>
     public OrigenDeAceptacion Origen { get; set; } = OrigenDeAceptacion.Expediente;
 
-    /// <summary>Clave del legado de la que sale una aceptación importada (p. ej. <c>portal:48112|constructora:7</c>).</summary>
+    /// <summary>Clave del legado de la que sale una aceptación importada (<c>{sistema}:{clave}|unidad:{unidad}</c>).</summary>
     public string? ClaveLegado { get; set; }
 
     public static string Clave(Guid vinculoId, string seccion, int? periodo) =>

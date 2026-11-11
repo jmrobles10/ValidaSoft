@@ -52,12 +52,14 @@ export function iniciarSesionDePrueba() {
     tenantId: 't-1',
     nombre: null,
     sistema: 'SRM',
+    sesionId: null,
+    metodoIngreso: null,
     actorTipo: 'Usuario',
     scopesDeTenant: new Set(),
     scopesPorEmpresa: new Map(),
     empresas: '*',
   };
-  useSesion.setState({ sesion, estado: 'activa', empresaSugerida: null });
+  useSesion.setState({ sesion, estado: 'activa', empresaSugerida: null, sugerirPasskey: false });
 }
 
 /** Monta `elemento` en `/e/emp/bandeja` con rutas de destino que muestran a dónde se navegó. */

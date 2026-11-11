@@ -127,23 +127,31 @@ public static class MapeosDocumentos
 
     public static CompartidoDto ADto(this VersionCompartida c, Documento d) => new(d.Id, d.Codigo(), c.Numero, c.VinculoId, c.EmpresaId);
 
-    /// <summary>Estado del documento con cada vínculo de la sesión del tercero (empresa, versión compartida más reciente y su vigencia).</summary>
+    /// <summary>
+    /// Estado del documento con cada vínculo de la sesión del tercero: la versión más reciente que la empresa recibió y no está
+    /// retirada, su vigencia y, con <paramref name="expedientes"/>, qué hizo la empresa con ella (<see cref="SituacionDelDocumento"/>).
+    /// </summary>
     public static IReadOnlyList<ComparticionPublicaDto> PorEmpresa(this Documento d, IReadOnlyList<(Guid VinculoId, Empresa? Empresa, Guid EmpresaId)> vinculos,
-        DateOnly? hoy = null) =>
+        IReadOnlyDictionary<Guid, ExpedientesDelVinculo>? expedientes = null, DateOnly? hoy = null) =>
     [
         .. vinculos
             .Where(v => d.Ambito == AmbitoDocumento.Global || d.VinculoId == v.VinculoId)
             .Select(v =>
             {
-                var ultima = d.Comparticiones.Where(c => c.VinculoId == v.VinculoId).MaxBy(c => c.Numero);
-                var vigencia = ultima is null ? null : d.Buscar(ultima.Numero)?.VigenciaPara(v.VinculoId);
-                return new ComparticionPublicaDto(v.VinculoId, v.Empresa.APublica(v.EmpresaId), ultima is not null, ultima?.Numero,
-                    ultima is not null && ultima.Numero == d.VersionActual, ultima?.Fecha,
-                    vigencia?.ADto(hoy ?? CalculadoraDeVigencia.Fecha(TimeProvider.System.GetUtcNow())));
+                var hechos = ExpedientesDeLaBoveda.HechosDe(d, v.VinculoId, expedientes?.GetValueOrDefault(v.VinculoId));
+                var lectura = SituacionDelDocumento.Calcular(hechos);
+                var ultima = hechos.Recibida is { } recibida
+                    ? d.Comparticiones.Where(c => c.VinculoId == v.VinculoId && c.Numero == recibida).MaxBy(c => c.Fecha)
+                    : null;
+                var vigencia = hechos.Recibida is { } numero ? d.Buscar(numero)?.VigenciaPara(v.VinculoId) : null;
+                return new ComparticionPublicaDto(v.VinculoId, v.Empresa.APublica(v.EmpresaId), hechos.Recibida is not null, hechos.Recibida,
+                    hechos.Recibida is not null && hechos.Recibida == d.VersionActual, ultima?.Fecha,
+                    vigencia?.ADto(hoy ?? CalculadoraDeVigencia.Fecha(TimeProvider.System.GetUtcNow())), lectura.Situacion.ToString(), lectura.Otra);
             })
     ];
 
-    public static DocumentoDto ADto(this Documento d, IReadOnlyList<(Guid VinculoId, Empresa? Empresa, Guid EmpresaId)> vinculos, DateOnly? hoy = null) =>
+    public static DocumentoDto ADto(this Documento d, IReadOnlyList<(Guid VinculoId, Empresa? Empresa, Guid EmpresaId)> vinculos,
+        IReadOnlyDictionary<Guid, ExpedientesDelVinculo>? expedientes = null, DateOnly? hoy = null) =>
         new(d.Id, d.TerceroId, d.Resumen(), d.Clase.ToString(), d.Ambito.ToString(), d.VinculoId, d.VersionActual,
-            [.. d.Versiones.OrderBy(v => v.Numero).Select(v => v.ADto(d.Id, null, hoy))], d.PorEmpresa(vinculos, hoy));
+            [.. d.Versiones.OrderBy(v => v.Numero).Select(v => v.ADto(d.Id, null, hoy))], d.PorEmpresa(vinculos, expedientes, hoy));
 }

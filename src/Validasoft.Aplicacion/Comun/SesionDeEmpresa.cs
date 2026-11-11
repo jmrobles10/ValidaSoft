@@ -27,6 +27,9 @@ public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud conte
     /// <summary>Límites globales de carga (para las reglas efectivas de los tipos de documento, TD-1).</summary>
     public ReglasDeCarga Reglas => reglas;
 
+    /// <summary>El tenant sandbox cuando la credencial es de pruebas (SB-4); nulo en producción.</summary>
+    public Guid? TenantSandbox => contexto.TenantSandbox;
+
     /// <summary>Hoy en UTC (para el estado de las vigencias, TD-6).</summary>
     public DateOnly Hoy => Dominio.Documentos.CalculadoraDeVigencia.Fecha(reloj.GetUtcNow());
 

@@ -1,4 +1,5 @@
 import { canjearEnlace, esErrorApi, esErrorDeRed, type OtpRequeridoDto, type SesionTerceroDto } from '@validasoft/api-client';
+import { normalizarCodigoNumerico } from '@validasoft/ui';
 
 /** Lo que devuelve el canje: la sesión, o que el tipo de vínculo exige un código y ya salió al correo. */
 export type ResultadoCanje = { tipo: 'sesion'; sesion: SesionTerceroDto } | { tipo: 'otp'; expira: string };
@@ -66,7 +67,7 @@ export function intentosRestantesDe(error: unknown): number | null {
 
 /** Solo dígitos y como mucho 6: el código se pega o se escribe en el celular. */
 export function normalizarCodigo(texto: string): string {
-  return texto.replace(/\D/g, '').slice(0, 6);
+  return normalizarCodigoNumerico(texto, 6);
 }
 
 /**

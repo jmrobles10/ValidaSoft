@@ -41,17 +41,17 @@ public static class ContenidoParaErp
     public static ContenidoDeSeccionDto Normalizar(string seccion, JsonElement canonico, ICatalogosDeFicha catalogos) =>
         Normalizar(Datos(seccion, canonico), catalogos);
 
-    /// <summary>El representante legal que va a AyF, como DTO (nulo si no hay).</summary>
+    /// <summary>El representante legal principal, como DTO (nulo si no hay).</summary>
     public static RepresentanteLegalErpDto? Representante(RepresentanteLegalPrincipal? r) => r is null
         ? null
         : new RepresentanteLegalErpDto(r.Origen == OrigenDelRepresentante.General ? CodigosDeSeccion.General : CodigosDeSeccion.Legal, r.Indice, r.Nombre,
             r.Persona.Nombres, r.Persona.Apellidos, r.Persona.TipoIdentificacion, r.Persona.Numero, r.Persona.Dv, r.Persona.TipoRepresentacion,
-            r.Persona.Cargo, r.Persona.FechaExpedicion, r.Persona.Correo, r.Persona.Telefono);
+            r.Persona.Cargo, r.Persona.FechaExpedicion, r.Persona.Correo, r.Persona.Telefono, r.Persona.LugarExpedicion);
 
     private static ContenidoGeneralDto General(DatosGenerales g, ICatalogosDeFicha catalogos)
     {
         var nombre = g.RazonSocial ?? (string.Join(' ', new[] { g.Nombres, g.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))) is { Length: > 0 } n ? n : null);
-        // En persona natural el representante que recibe AyF es el propio tercero (FM-34); en jurídica sale de la legal.
+        // En persona natural el representante es el propio tercero (FM-34); en jurídica sale de la legal.
         var representante = g.TipoPersona == Dominio.Terceros.TipoPersona.Natural
             ? Representante(RepresentanteLegalPrincipal.Elegir(g.TipoPersona, g, null))
             : null;
@@ -72,10 +72,10 @@ public static class ContenidoParaErp
             [.. (t.Responsabilidades ?? []).Select(r => Codigo(catalogos, CatalogoDePlataforma.ResponsabilidadesDian, r)!)],
             new CalidadesTributariasDto(c.ResponsableIva, c.Autorretenedor, c.DeclaranteRenta, c.GranContribuyente, c.AutorretenedorIca, c.RegimenSimple,
                 c.GranContribuyenteBogota, c.RegimenEspecial, c.AutorretenedorRft, c.DescuentoSenaFic, c.ProfesionalIndependiente, c.ExentoRetencion,
-                c.AgenteRetenedorIva, c.ObligadoAFacturar),
+                c.AgenteRetenedorIva, c.ObligadoAFacturar, c.ExentoReteCree),
             [
                 .. CalidadesTributarias.Tabla
-                    .Where(r => r.Origen == OrigenDeCalidad.NoDerivable || (r.Origen == OrigenDeCalidad.DatoDeLaSeccion && t.AutorretenedorIca is null))
+                    .Where(r => r.Origen == OrigenDeCalidad.NoDerivable || (r.Origen == OrigenDeCalidad.DatoDeLaSeccion && c.ValorDe(r.Calidad) is null))
                     .Select(r => new CalidadSinDerivarDto(r.Calidad, r.Nota))
             ],
             Resolucion(t.ResolucionGranContribuyente), Resolucion(t.ResolucionAutorretenedor), t.ResponsableIca, t.AutorretenedorIca,
@@ -88,7 +88,7 @@ public static class ContenidoParaErp
             [
                 .. (l.Personas ?? []).Select(p => new PersonaRelacionadaDto(p.Rol?.ToString(), p.TipoRepresentacion, p.TipoIdentificacion, p.Numero, p.Dv,
                     p.Nombres, p.Apellidos, p.Cargo, p.Porcentaje, p.Pep, p.VinculoPep, p.FechaExpedicion, p.FechaNacimiento, p.Nacionalidad, p.Residencia,
-                    p.Correo, p.Telefono))
+                    p.Correo, p.Telefono, p.LugarExpedicion))
             ],
             l.RevisorFiscalFirma is { } firma ? new FirmaRevisoraDto(firma.Nit, firma.RazonSocial) : null);
 

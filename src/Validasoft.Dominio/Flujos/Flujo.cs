@@ -41,10 +41,14 @@ public sealed record EtapaDeFlujo(int Orden, IReadOnlyList<AreaDeEtapa> Areas);
 /// Con <see cref="Seccion"/> el requisito pide una sección de la ficha maestra (F2, FM-25) en vez de un documento:
 /// <see cref="TipoDocumentoTenantId"/> va vacío y <see cref="CodigoTipo"/> es el código de la sección; <see cref="Periodos"/>
 /// (solo la financiera, 1 por omisión = el último cierre) y <see cref="ExigeSoporte"/> (la versión debe traer soporte).
+/// En una sección, <see cref="VigenciaDias"/> (opcional) es cuántos días vale lo que la empresa aceptó: pasados, la sección vence y
+/// entra a la renovación del vínculo para que el tercero la ratifique o la actualice (VV-1); <see cref="DiasRevalidacion"/>
+/// (opcional) es el plazo para resolver una actualización que la incluye (RV-4; en un documento lo da su tipo).
 /// </summary>
 public sealed record RequisitoDelFlujo(
     Guid Id, Guid TipoDocumentoTenantId, string CodigoTipo, bool Obligatorio, IReadOnlyList<Guid> AreasQueRevisan, int? AprobadoresRequeridos,
-    CondicionDeExigencia? Condicion = null, string? Seccion = null, int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null)
+    CondicionDeExigencia? Condicion = null, string? Seccion = null, int? Periodos = null, bool ExigeSoporte = false, bool? UsarComoSoporte = null,
+    int? VigenciaDias = null, int? DiasRevalidacion = null)
 {
     [JsonIgnore]
     public bool EsSeccion => Seccion is not null;
@@ -66,7 +70,8 @@ public sealed record DefinicionDeFlujo(
     IReadOnlyList<RequisitoDelFlujo>? Requisitos = null,
     IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null,
     PlazoDeCargue? PlazoCargue = null,
-    ReintentoTrasRechazo? Reintento = null)
+    ReintentoTrasRechazo? Reintento = null,
+    VigenciaDelVinculo? VigenciaVinculo = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -74,6 +79,9 @@ public sealed record DefinicionDeFlujo(
     public const int MaximoVigenciaDias = 3650;
 
     public const int MaximoMesesReconsulta = 60;
+
+    /// <summary>Plazo máximo configurable para resolver una revalidación (RV-4).</summary>
+    public const int MaximoDiasRevalidacion = 365;
 
     /// <summary>Por defecto (P-4-4): una sola etapa con todas las áreas activas en paralelo, un aprobador cada una.</summary>
     public static DefinicionDeFlujo TodasEnParalelo(IEnumerable<Area> areas, PoliticaDevolucion politica = PoliticaDevolucion.Inmediata,
@@ -137,13 +145,20 @@ public sealed record DefinicionDeFlujo(
         }
 
         // Sin plazo indicado, el de P-4-2 (30 días, recordatorios a 15/7/1); 0 días es «sin plazo» (LT-1).
+        var requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo);
+        var vigencia = (VigenciaVinculo ?? VigenciaDelVinculo.Sin).Validar();
+        // La vigencia periódica se renueva ratificando secciones de la ficha: sin ninguna no habría qué ratificar (VV-2).
+        if (vigencia.Activa && !requisitos.Any(r => r.EsSeccion))
+            throw ReglaDeNegocioException.Validacion("vigencia-sin-secciones",
+                "La vigencia del vínculo se renueva ratificando las secciones de la ficha: el flujo debe pedir al menos una.");
         return this with
         {
             Etapas = etapas,
-            Requisitos = ValidarRequisitos(etapas, tiposDelTenant ?? [], tipoVinculo),
+            Requisitos = requisitos,
             Verificaciones = ValidarVerificaciones(),
             PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar(),
-            Reintento = (Reintento ?? ReintentoTrasRechazo.PorDefecto).Validar()
+            Reintento = (Reintento ?? ReintentoTrasRechazo.PorDefecto).Validar(),
+            VigenciaVinculo = vigencia
         };
     }
 
@@ -208,6 +223,10 @@ public sealed record DefinicionDeFlujo(
                     resultado.Add(ValidarSeccion(requisito, areasDelFlujo, seccionesVistas, idsVistos, tipoVinculo));
                     continue;
                 }
+
+                if (requisito.VigenciaDias is not null || requisito.DiasRevalidacion is not null)
+                    throw ReglaDeNegocioException.Validacion("vigencia-no-aplica",
+                        "La vigencia y el plazo de revalidación se configuran en el tipo de documento; en el flujo solo valen para las secciones de la ficha.");
 
                 var tipo = tipos.FirstOrDefault(t => t.Id == requisito.TipoDocumentoTenantId);
                 if (tipo is not { Activo: true })
@@ -288,6 +307,12 @@ public sealed record DefinicionDeFlujo(
         if (requisito.Periodos is < 1 or > Expedientes.RequisitosDeSeccion.MaximoPeriodos)
             throw ReglaDeNegocioException.Validacion("periodos-invalidos",
                 $"Se piden entre 1 y {Expedientes.RequisitosDeSeccion.MaximoPeriodos} periodos de {definicion.Nombre}.");
+        if (requisito.VigenciaDias is < 1 or > VigenciaDelVinculo.DiasMaximos)
+            throw ReglaDeNegocioException.Validacion("vigencia-seccion-invalida",
+                $"La vigencia de {definicion.Nombre} va de 1 a {VigenciaDelVinculo.DiasMaximos} días (vacía = no vence).");
+        if (requisito.DiasRevalidacion is < 1 or > MaximoDiasRevalidacion)
+            throw ReglaDeNegocioException.Validacion("dias-revalidacion-invalidos",
+                $"El plazo de revalidación de {definicion.Nombre} va de 1 a {MaximoDiasRevalidacion} días (vacío = el del flujo, 15).");
 
         var id = requisito.Id == Guid.Empty ? Guid.CreateVersion7() : requisito.Id;
         if (!idsVistos.Add(id))
@@ -346,6 +371,14 @@ public sealed class FlujoVersion
 
     public ReintentoTrasRechazo ReintentoEfectivo() => Reintento ?? ReintentoTrasRechazo.PorDefecto;
 
+    /// <summary>
+    /// Vigencia periódica del vínculo (VV-1). Nula en las versiones guardadas antes: sin vencimiento periódico.
+    /// </summary>
+    public VigenciaDelVinculo? VigenciaVinculo { get; set; }
+
+    /// <summary>La vigencia que rige (la guardada o «sin vencimiento periódico»).</summary>
+    public VigenciaDelVinculo VigenciaEfectiva() => VigenciaVinculo ?? VigenciaDelVinculo.Sin;
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
@@ -353,7 +386,7 @@ public sealed class FlujoVersion
     public DateTimeOffset? RetiradaEn { get; set; }
 
     public DefinicionDeFlujo Definicion() =>
-        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo());
+        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo(), VigenciaEfectiva());
 }
 
 /// <summary>
@@ -439,6 +472,7 @@ public sealed class Flujo
             borrador.Verificaciones = [.. validada.Verificaciones ?? []];
             borrador.PlazoCargue = validada.PlazoCargue;
             borrador.Reintento = validada.Reintento;
+            borrador.VigenciaVinculo = validada.VigenciaVinculo;
         }
 
         ActualizadoEn = ahora;
@@ -467,6 +501,7 @@ public sealed class Flujo
         borrador.Verificaciones = [.. validada.Verificaciones ?? []];
         borrador.PlazoCargue = validada.PlazoCargue;
         borrador.Reintento = validada.Reintento;
+        borrador.VigenciaVinculo = validada.VigenciaVinculo;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -485,6 +520,7 @@ public sealed class Flujo
         Verificaciones = [.. definicion.Verificaciones ?? []],
         PlazoCargue = definicion.PlazoCargue,
         Reintento = definicion.Reintento,
+        VigenciaVinculo = definicion.VigenciaVinculo,
         CreadaEn = ahora
     };
 

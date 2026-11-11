@@ -13,6 +13,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY apps/public/package.json apps/public/
 COPY packages/api-client/package.json packages/api-client/
+COPY packages/sdk/package.json packages/sdk/
 COPY packages/ui/package.json packages/ui/
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json tsconfig.json ./

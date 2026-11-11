@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { accionesDisponibles, accionPermitidaPorEstado } from './dominio';
-import { accedeAEmpresa, esSesionDePlataforma, leerSesion, msRestantes, puede, scopesEn, TokenInvalido } from './sesion';
+import { accedeAEmpresa, esSesionDePlataforma, esSesionDirecta, leerSesion, msRestantes, puede, scopesEn, TokenInvalido } from './sesion';
 
 function base64Url(texto: string): string {
   return Buffer.from(texto, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -50,6 +50,21 @@ describe('leerSesion', () => {
   it('lee nombres con tildes (UTF-8 en base64url)', () => {
     const sesion = leerSesion(token({ ...base, 'validasoft:sistema': 'Compañía' }));
     expect(sesion.sistema).toBe('Compañía');
+  });
+
+  it('reconoce la sesión de ingreso directo por la familia y el método (ING-1)', () => {
+    const delegada = leerSesion(token(base));
+    expect(esSesionDirecta(delegada)).toBe(false);
+    expect(delegada.metodoIngreso).toBeNull();
+
+    const directa = leerSesion(token({ ...base, 'validasoft:sistema': undefined, 'validasoft:sesion-id': 'sesion-1', 'validasoft:metodo': 'Passkey' }));
+    expect(esSesionDirecta(directa)).toBe(true);
+    expect(directa.sesionId).toBe('sesion-1');
+    expect(directa.metodoIngreso).toBe('Passkey');
+    expect(directa.sistema).toBeNull();
+
+    // Un método desconocido no se toma por válido.
+    expect(leerSesion(token({ ...base, 'validasoft:sesion-id': 's', 'validasoft:metodo': 'Otro' })).metodoIngreso).toBeNull();
   });
 
   it('calcula el tiempo restante', () => {

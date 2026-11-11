@@ -94,6 +94,13 @@ public static class EjemplosDeCorreo
                 redactor.RedactarDesaprobacion(new CorreoDeDesaprobacionPendiente(Para, empresa, folio)), VariablesDe(empresa, folio)),
             CatalogoDePlantillas.Reintegro => new(
                 redactor.RedactarReintegro(new CorreoDeReintegroPendiente(Para, empresa, folio, ModoDeReintegro.ConRenovacion)), VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.RetiroDeVersion => new(
+                redactor.RedactarNotificacion(new CorreoDeNotificacionPendiente("revisor@ejemplo.co", "Laura", $"Versión retirada por el tercero: {folio}",
+                [
+                    $"Eléctricos del Caribe S.A.S. retiró la versión 2 de {Documento} (motivo: Subí el archivo equivocado), vuelve la 1. Se abrió una actualización para revisarla.",
+                    $"Expediente {folio} de {empresa}.", "Tu área: Compras."
+                ], $"/e/{Guid.Empty}/expedientes/{Guid.Empty}")),
+                VariablesDe(empresa, folio, documento: Documento)),
             _ => throw new ArgumentOutOfRangeException(nameof(evento), evento, "Evento sin plantilla.")
         };
     }

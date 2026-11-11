@@ -1,6 +1,7 @@
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Identificaciones;
+using Validasoft.Dominio.Plataforma;
 
 namespace Validasoft.Dominio.Terceros;
 
@@ -39,14 +40,22 @@ public sealed class Tercero
 
     public Guid? SucesorDe { get; set; }
 
-    /// <summary>
-    /// Clave del legado de donde se importó (docs/08 §6.2), p. ej. <c>portal:48112</c> (F4, FM-39); nula si nació en Validasoft.
-    /// Un tercero importado del Portal tiene como id el UUID v5 de esta clave, salvo que ya existiera por su identificación.
-    /// </summary>
-    public string? ClaveLegado { get; set; }
-
     /// <summary>Tenant que lo registró; junto con los vínculos define quién puede leer sus datos (anti-cosecha, docs/07 §10).</summary>
     public Guid? CreadoPorTenant { get; set; }
+
+    /// <summary>
+    /// Si es un tercero de pruebas (SB-4): el tenant sandbox al que pertenece. Su <see cref="ClaveIdentificacion"/> lleva ese
+    /// tenant por delante, así no choca con el tercero real que tenga la misma identificación; la identificación sin prefijo
+    /// sigue en <see cref="Identificacion"/>. Nulo en los terceros reales.
+    /// </summary>
+    public Guid? SandboxTenantId { get; set; }
+
+    /// <summary>Marca al tercero como de pruebas de ese sandbox y namespacea su clave (SB-4).</summary>
+    public void AislarEnSandbox(Guid tenantSandboxId)
+    {
+        SandboxTenantId = tenantSandboxId;
+        ClaveIdentificacion = AislamientoDeSandbox.ClaveDeTercero(Identificacion.Clave, tenantSandboxId);
+    }
 
     public DateTimeOffset CreadoEn { get; set; }
 

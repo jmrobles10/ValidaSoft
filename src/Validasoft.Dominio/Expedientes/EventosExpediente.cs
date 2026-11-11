@@ -150,13 +150,22 @@ public sealed record ExpedienteEnviadoARevision(DateTimeOffset Fecha);
 public sealed record VersionDeRequisito(Guid DocumentoId, int Numero, string Sha256, DateTimeOffset CargadaEn);
 
 /// <summary>
+/// El tercero retiró la versión <see cref="Numero"/> que cubría o había aprobado el requisito (RT-3): con su
+/// <see cref="Motivo"/>, para que la empresa entienda por qué la versión vuelve atrás. Viaja con la versión que la reemplaza
+/// (<see cref="VersionAdjuntadaARequisito"/>) o con el requisito de una actualización que se abre por el retiro.
+/// </summary>
+public sealed record RetiroDeVersion(int Numero, string Motivo, DateTimeOffset Fecha);
+
+/// <summary>
 /// Foto de un requisito al abrir el expediente: el tipo del tenant (con su canónico y ámbito, para casar documentos de la
 /// bóveda), si es obligatorio, las áreas que lo revisan (ya resueltas: vacío en el flujo ⇒ todas) y la versión que lo
 /// cubre si el tercero ya la tenía compartida con el vínculo. Un requisito de <see cref="TipoDeRequisito.Seccion"/> (F2)
 /// pide una sección de la ficha (<see cref="Seccion"/>, <see cref="Periodo"/>): la versión es la de la sección
 /// (<c>DocumentoId</c> = id del stream, <c>Sha256</c> = huella) y solo la cubre si es completa para la empresa
 /// (<see cref="Completitud"/>, que se guarda); <see cref="Aceptada"/> es la que la empresa ya había aceptado en el vínculo (base
-/// de la comparación anterior → nuevo de una actualización).
+/// de la comparación anterior → nuevo de una actualización). <see cref="ExigeRatificacion"/>: en una renovación periódica del
+/// vínculo (VV-1) la sección nace pendiente aunque la versión vigente sea completa: el tercero debe ratificarla (confirmar que sigue
+/// igual) o actualizarla; <see cref="DiasRevalidacion"/> es el plazo para resolver una revalidación que incluya el requisito (RV-4).
 /// </summary>
 public sealed record RequisitoCalculado(
     Guid RequisitoId,
@@ -175,7 +184,10 @@ public sealed record RequisitoCalculado(
     int? Periodo = null,
     bool ExigeSoporte = false,
     VersionDeRequisito? Aceptada = null,
-    CompletitudParaEmpresa? Completitud = null);
+    CompletitudParaEmpresa? Completitud = null,
+    RetiroDeVersion? Retiro = null,
+    bool ExigeRatificacion = false,
+    int? DiasRevalidacion = null);
 
 /// <summary>
 /// La misma empresa ya aprobó esa misma versión del documento en otro expediente del mismo tercero (otro tipo de vínculo,
@@ -196,8 +208,12 @@ public sealed record RequisitosCalculados(IReadOnlyList<RequisitoCalculado> Requ
 /// </summary>
 public sealed record RequisitosAgregados(IReadOnlyList<RequisitoCalculado> Requisitos, DateTimeOffset Fecha);
 
-/// <summary>Una versión actual compartida con el vínculo pasa a cubrir el requisito (la anterior queda en su historial).</summary>
-public sealed record VersionAdjuntadaARequisito(Guid RequisitoId, VersionDeRequisito Version, int? NumeroAnterior, DateTimeOffset Fecha);
+/// <summary>
+/// Una versión actual compartida con el vínculo pasa a cubrir el requisito (la anterior queda en su historial).
+/// <see cref="Retiro"/>: la anterior la retiró el tercero y esta es la que vuelve (RT-3); nulo si solo llegó una versión nueva.
+/// </summary>
+public sealed record VersionAdjuntadaARequisito(Guid RequisitoId, VersionDeRequisito Version, int? NumeroAnterior, DateTimeOffset Fecha,
+    RetiroDeVersion? Retiro = null);
 
 /// <summary>Los veredictos vigentes del requisito eran sobre la versión anterior: dejan de contar (solo ese requisito).</summary>
 public sealed record VeredictosInvalidadosPorNuevaVersion(Guid RequisitoId, int VersionAnterior, IReadOnlyList<Guid> AreasAfectadas,

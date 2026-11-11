@@ -31,6 +31,38 @@ public interface IContextoSolicitud
 
     Guid EmpresaRequerida() => EmpresaId
         ?? throw ReglaDeNegocioException.Validacion("empresa-requerida", "Indica la empresa con la cabecera X-Empresa.");
+
+    /// <summary>La credencial opera en el sandbox del grupo (SB-1): una API key <c>vsk_test_…</c> o una sesión de ese tenant.</summary>
+    bool EsSandbox => false;
+
+    /// <summary>
+    /// La clave del tercero tal como se guarda para este tenant (SB-4): la identificación normalizada en producción; en el sandbox,
+    /// con el tenant sandbox por delante, para que un tercero de pruebas nunca sea el real.
+    /// </summary>
+    string ClaveDeTercero(string clave) =>
+        EsSandbox ? Dominio.Plataforma.AislamientoDeSandbox.ClaveDeTercero(clave, TenantRequerido()) : clave;
+
+    /// <summary>El tenant sandbox al que pertenecen los terceros que cree esta petición; nulo en producción.</summary>
+    Guid? TenantSandbox => EsSandbox ? TenantId : null;
+}
+
+/// <summary>
+/// Qué tenants son un sandbox (SB-1). El dato no cambia nunca para un tenant, así que se guarda en memoria al primer uso y los
+/// flujos que no tienen petición HTTP (correo del outbox, consulta de listas, tareas) lo preguntan por aquí.
+/// </summary>
+public interface IEntornos
+{
+    /// <summary>¿El tenant es el sandbox de un grupo? Falso si no existe.</summary>
+    ValueTask<bool> EsSandboxAsync(Guid tenantId, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Envío real del correo (SMTP). <see cref="IEnviadorDeCorreo"/> decide antes si el correo sale o se retiene en el buzón del
+/// sandbox (SB-4); solo lo que sale pasa por aquí.
+/// </summary>
+public interface ITransporteDeCorreo
+{
+    Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct);
 }
 
 /// <summary>Emite la sesión corta de Validasoft para las pantallas embebidas (ADR-0011, ID-3).</summary>
@@ -41,6 +73,15 @@ public interface IEmisorDeSesiones
 
     /// <summary>Sesión de la consola de Plataforma para un operador ya verificado (PT-4): sin tenant, solo <c>plataforma:tenants</c>.</summary>
     Contratos.SesionUsuarioDto EmitirPlataforma(OperadorDePlataforma operador, DateTimeOffset ahora);
+
+    /// <summary>
+    /// Token de acceso de un usuario que entró directo (ING-1): los mismos reclamos que la sesión delegada (tenant, scopes efectivos de sus
+    /// roles, empresas) más la familia de su sesión y cómo se autenticó. Vence en minutos; se renueva con la cookie de refresco.
+    /// </summary>
+    Contratos.SesionUsuarioDto EmitirDeUsuario(Usuario usuario, Guid tenantId, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora);
+
+    /// <summary>Token de acceso de un operador de Plataforma de ingreso directo (ING-4): sin tenant, solo <c>plataforma:tenants</c>.</summary>
+    Contratos.SesionUsuarioDto EmitirDeOperador(OperadorDePlataforma operador, Guid sesionId, MetodoDeIngreso metodo, TimeSpan vigencia, DateTimeOffset ahora);
 }
 
 /// <summary>

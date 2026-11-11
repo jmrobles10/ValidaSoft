@@ -376,10 +376,12 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
             (await CodigoAsync(await ApiAsync("GET", ruta, new Credencial(e.Admin), null, 422))).ShouldBe("empresa-requerida");
         // 25 del proceso de validación (3 de cuenta designada, CB-3; caducado y reabierto, LT-2/LT-3; vinculo.reintegrado y
         // expediente.desaprobado, DS-7) + 7 del certificado (NW-13, RV-3) + seccion.aceptada (FM-32) + invitaciones.lote_terminado
-        // (LT-9) + 3 de verificaciones (VE-13).
-        tipos.Count.ShouldBe(37);
+        // (LT-9) + 3 de verificaciones (VE-13) + vinculo.por_vencer y vinculo.vencido (VV-6).
+        tipos.Count.ShouldBe(40);
         tipos.Select(t => t.Tipo).ShouldContain("expediente.desaprobado");
         tipos.Select(t => t.Tipo).ShouldContain("vinculo.reintegrado");
+        tipos.Select(t => t.Tipo).ShouldContain("vinculo.por_vencer");
+        tipos.Select(t => t.Tipo).ShouldContain("vinculo.vencido");
     }
 
     // ---------- preparación ----------

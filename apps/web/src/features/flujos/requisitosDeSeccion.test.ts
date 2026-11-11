@@ -45,6 +45,8 @@ describe('requisitos de sección en el editor de flujos (FM-25)', () => {
       seccion: 'FICHA_FINANCIERA',
       periodos: 1,
       exigeSoporte: true,
+      vigenciaDias: null,
+      diasRevalidacion: null,
     });
     expect(dto[1]).toMatchObject({ seccion: 'FICHA_LEGAL', periodos: null, exigeSoporte: false });
     // Un documento sigue yendo como antes, sin los campos de sección.

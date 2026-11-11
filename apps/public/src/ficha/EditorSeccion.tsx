@@ -24,11 +24,13 @@ import { FormularioDeSeccion } from './FormularioDeSeccion';
 import { ALTO_CABECERA, entradaSeccion, MARGEN_SUPERIOR } from './movimiento';
 import { ObservacionesDeEmpresas } from './ObservacionesDeEmpresas';
 import { PropuestaDesdeDocumento } from './PropuestaDesdeDocumento';
+import { RatificacionesDeSeccion } from './RatificacionesDeSeccion';
 import { DialogoSalidaSinGuardar } from './SalidaSinGuardar';
 import { enlaceSeccion, esFaltanteDeSoporte, periodosElegibles, type DefinicionSeccion } from './secciones';
 import { SelectorSoporte } from './SelectorSoporte';
 import { useEditorSeccion } from './useEditorSeccion';
 import { useObservacionesDeSeccion } from './useObservacionesDeSeccion';
+import { deLaSeccion, useRatificacionesPendientes } from './useRatificacionesPendientes';
 import { useSalidaSinGuardar } from './useSalidaSinGuardar';
 
 interface Props {
@@ -55,6 +57,8 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
   // Lo que alguna empresa observó de esta sección (F2): arriba del formulario, con sus campos marcados.
   const observaciones = useObservacionesDeSeccion(definicion.codigo, periodo);
   const senalados = observaciones.flatMap((o) => o.observacion.campos ?? []);
+  // Lo que alguna empresa le pide ratificar de esta sección en la renovación de su vínculo (VV-3).
+  const ratificaciones = deLaSeccion(useRatificacionesPendientes(), definicion.codigo, periodo);
   const editor = useEditorSeccion(definicion.codigo, periodo, inicial, senalados.length > 0 ? { campos: senalados, mensaje: t('ficha.observada.campoSenalado') } : null);
   // Cada guardado incompleto lleva el foco (y la vista) a la lista de faltantes.
   const [senalFaltantes, setSenalFaltantes] = useState(0);
@@ -143,6 +147,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
             />
           )}
           <ObservacionesDeEmpresas observaciones={observaciones} />
+          <RatificacionesDeSeccion pendientes={ratificaciones} />
           {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
           <PropuestaDesdeDocumento
             codigo={definicion.codigo}
@@ -157,6 +162,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
           <SelectorSoporte
             definicion={definicion}
             soportes={editor.soportes}
+            retirados={editor.soportesRetirados}
             onCambiar={editor.cambiarSoportes}
             faltaSoporte={faltaSoporte}
             error={editor.errorEn('soportes')}

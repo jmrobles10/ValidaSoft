@@ -129,7 +129,7 @@ public static class VencimientosEndpoints
                     .Select(x => new DocumentoPorVencer(x.Vencimiento.Documento, [new VencimientoPorEmpresa(nombreEmpresa, x.Vencimiento.VigenteHasta)]))
             ],
             // Un solo tercero detrás del correo: puede apagar este tipo de correo (NT-1); con varios no se sabe de quién es la preferencia.
-            grupo.Select(x => x.Vencimiento.Tercero.Id).Distinct().ToList() is [var terceroId] ? terceroId : null));
+            grupo.Select(x => x.Vencimiento.Tercero.Id).Distinct().ToList() is [var terceroId] ? terceroId : null, contexto.TenantId));
         await empresa.Sesion.SaveChangesAsync(ct);
         return new RecordatorioEnviadoDto(enviar.Select(x => x.Correo).Distinct().Count(), enviar.Count, omitidos);
     }
@@ -177,7 +177,7 @@ public static class VencimientosEndpoints
                 var tercero = terceros.GetValueOrDefault(vinculo.TerceroId);
                 var tipo = tipos.GetValueOrDefault(vinculo.TipoVinculoId);
                 filas.Add(new VencimientoDto(vinculo.Id, documento.Id,
-                    new TerceroResumenDto(vinculo.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.ClaveIdentificacion ?? string.Empty),
+                    new TerceroResumenDto(vinculo.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.Identificacion.Clave ?? string.Empty),
                     new TipoVinculoResumenDto(vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
                     documento.NombreTipo, numero, hasta, hasta.DayNumber - hoy.DayNumber, estadoVigencia.ToString(), vigencia.Base.ToString(),
                     vigencia.FinDeGracia, permite,

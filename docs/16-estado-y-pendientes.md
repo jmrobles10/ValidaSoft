@@ -69,9 +69,26 @@ llega con su verificación completa; se revisa, se abre su PR y se fusiona con e
 
 | Rama | Huecos | Contenido |
 |---|---|---|
-| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones**; plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. Registro VV- |
+| `feature/vigencia-vinculo` | 2, 5 y desbloqueo | Vencimiento periódico del vínculo (días desde la última aprobación, avisos, gracia), estado `PorVencer`, vigencia opcional por sección, renovación con **ratificación de secciones** que se abre en el primer aviso (**pre-vencimiento**); plazo de revalidación configurable (`DiasRevalidacion`); desbloqueo automático al llegar la fecha `Hasta`. **Terminada y verificada; falta su PR.** Registro VV- (sección «5-unquadragies») |
 | `feature/desaprobar-y-reintegrar` | 3, reintegrar y reinicio | **Terminada, con la verificación completa (§4.10).** Reabrir una etapa ya aprobada, desaprobar un expediente aprobado y volver a la fase inicial, con justificación; reintegrar sin revalidar; «Volver a postularme» tras un rechazo. Más los e2e que faltaban: varias etapas, dos aprobadores, separación de funciones, anular veredicto, desvincular, reintegrar, anular. Registro DS- |
+| `feature/integracion-abierta` | Principio de producto | **Integración abierta (IO-1…IO-10).** El núcleo no nombra ni asume el SRM, el Portal ni AyF: importador genérico con adaptador de origen (el Portal es un adaptador opcional), referencias externas por sistema (tercero y vínculo, idempotentes y privadas de cada tenant), contactos por empresa (nombre, cargo, correo, teléfono, rol), datos de pago genéricos (banco del catálogo con código de compensación y SWIFT, contacto de pagos, lugar de expedición, `ExentoReteCree`) y embebido genérico del tercero (`POST /sesiones-tercero`, `/embed/:componente`, `montarEmbebido`). Guía «integrar un sistema nuevo en 5 pasos» y contrato del interruptor en [integracion.md](integracion.md) §1.1 y §8.1 y en [08](08-integracion-y-migracion.md) §3.4; auditoría de acoplamiento en §9 |
 | `feature/novedades-tercero` | 4 | Campana del tercero en el portal (de todas sus empresas), preferencias de correo, recordatorio de observaciones pendientes individual y masivo (uno al día por expediente), y aviso a las áreas cuando el tercero responde. Registro NT- |
+
+### 3.1.1 Integración por API (rama `feature/integracion-sandbox`)
+Deja **bien definida la forma de integrarse** (SB-1…SB-10, [registro](decisiones/registro.md)): **sandbox** con datos aislados (tenant hermano, buzón de correo, IA y listas simuladas, reinicio), **SDK publicables** (versión única, README/CHANGELOG, ESM + CJS, workflow `sdk-publicar.yml`; no se publicó nada), **prueba de carga k6** de la consulta de certificación (consulta de cuatro viajes a uno; el p99 < 100 ms a 500 rps queda por certificar en un entorno dedicado), la **[guía de integración](integracion.md)** de punta a punta y la **e2e de integración completa con el SDK** en el sandbox. Detalle en §4.5.
+
+### 3.1.2 Retiro de versión por el tercero (rama `feature/aviso-retiro-version`)
+El tercero ve el **impacto antes de retirar** una versión de su bóveda (qué versión queda vigente, qué empresas ya la recibieron, aprobaron o revisan y qué
+revalidaciones se abren) y la empresa recibe el aviso (campana y correo, plantilla `retiro-version`) con el motivo, que también ve en la línea de tiempo, el requisito y
+las revalidaciones; una sección cuyo soporte se retiró queda con una advertencia, no como faltante (RT-1…RT-6, sección 5-sexquadragies del [registro](decisiones/registro.md)).
+
+### 3.1.3 Lote de integración (`integracion/lote-2026-11-11`)
+Las cinco ramas anteriores —`feature/aviso-retiro-version` (RT), `feature/integracion-sandbox` (SB), `feature/integracion-abierta` (IO), `feature/vigencia-vinculo` (VV) y
+`feature/ingreso-sin-contrasena` (ING; §3.3)— se fusionaron en ese orden sobre `main` en una sola rama y se verificó **la mezcla**, no cada rama por separado. Lo que la mezcla
+obligó a decidir: los correos a terceros llevan a la vez la preferencia del tercero (NT-5) y el tenant que los origina (el sandbox los retiene, SB-4); el permiso
+`sesiones-tercero:crear` (IO-6) se ofrece en el diálogo de API keys junto a `sandbox:administrar`; el embebido del tercero y la guía de cinco pasos viven en
+[integracion.md §8.1 y §1.1](integracion.md) (08 §2.3 es solo un puntero); y el stream de la campana se corta cuando se cierra o se revoca la sesión directa (ING-3).
+Verificación de la mezcla: 929 pruebas web, 790 de dominio, 20 del SDK, 72 del adaptador del Portal, 233 de integración y 99 e2e, con lint, tipos, build y compilación .NET sin advertencias.
 
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
@@ -92,6 +109,28 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
   - equivalencias de bancos (nombre → `BcoCod`);
   - lugar de expedición del representante;
   - cifrar los secretos que el SRM guarda en claro.
+
+### 3.3 Ingreso sin contraseñas (`feature/ingreso-sin-contrasena`, 2026-11-11)
+Rama lista para revisar, **sin push ni PR**. Decisiones **ING-1…ING-9** en el [registro](decisiones/registro.md); diseño en
+[07 §2.7](07-seguridad-identidad-y-tenancy.md), contrato en [05 §2.10](05-api-contratos-y-webhooks.md).
+- **Qué hace:**
+  - ingreso directo por correo, código de 6 dígitos y **passkey** (WebAuthn, Fido2NetLib 4.3.2), sin contraseñas;
+  - la passkey sola vale por dos factores; es obligatoria para `Administrador`, `OficialCumplimiento`, `Auditor` y
+    Plataforma (y para todos si el grupo lo pide);
+  - modos por grupo `Delegado`, `Directo` o ambos (los grupos existentes quedan en `Delegado`); duración e
+    inactividad de la sesión por grupo; refresco rotativo con detección de reuso en la cookie `vs_usuario`;
+  - operadores de Plataforma con ingreso directo (la clave de arranque solo da de alta al primero);
+  - administración: invitar, desactivar, ver y cerrar sesiones, ver y revocar passkeys (la recuperación);
+  - web: pantalla de ingreso, registro guiado de la passkey, «Mi cuenta», Configuración › Usuarios y operadores;
+  - auditoría de identidad (ingresos exitosos y fallidos, passkeys, sesiones, con dispositivo e IP) y abstracción
+    `IProveedorDeIdentidad` lista para OIDC/WorkOS (no integrado).
+- **Verificación** (rebasada sobre `main` en `3b81cd4`): dominio 758/758; integración 205/206 (la que falla,
+  `Reintegrar_avisa_al_tercero_segun_el_modo…`, también falla en `main` sin esta rama); Vitest 815/815; e2e de ingreso,
+  tiempo real, novedades del tercero y decisiones 17/17 (63/63 antes del rebase); lint, tipos y build en verde. El e2e usa el
+  autenticador virtual de Chrome (CDP) para registrar y firmar de verdad. Se arregló de paso la intermitencia de
+  `decisiones.spec` (el token del enlace podía contener «Olga»): el chequeo de «no nombra áreas» ahora ignora las direcciones.
+- **Queda fuera** (§4.6): WorkOS/OIDC, autocompletado de passkeys en el campo del correo (conditional UI), reautenticación
+  para acciones sensibles, avisos por correo de cambios de passkey y consulta de la auditoría de ingreso de Plataforma.
 
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
@@ -129,23 +168,33 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 
 **Huecos** (los numerados están en curso, §3):
 1. **Aplicación en AyF:** en espera (§3.2).
-2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** en curso.
+2. **Vencimiento periódico del vínculo y de las secciones; `PorVencer` nunca se asigna:** **resuelto** en
+   `feature/vigencia-vinculo` (VV-1..VV-12, [03 §5.4](03-dominio-y-eventos.md)): el flujo configura días, avisos y gracia
+   (`dias = 0` mantiene el comportamiento anterior); el vínculo pasa a `PorVencer` en el primer aviso (**pre-vencimiento**) y
+   ahí se abre la renovación, que pide **ratificar** (sin cambiar datos) o **actualizar** las secciones de la ficha y los
+   documentos obligatorios no vigentes; si se aprueba antes de la fecha el vínculo nunca vence y la vigencia nueva cuenta
+   desde esa aprobación; si no, vence con su certificado y la misma renovación sigue abierta; cada sección puede traer su vigencia.
 3. **Desaprobar una etapa ya aprobada o volver a la fase inicial:** resuelto en `feature/desaprobar-y-reintegrar`
    (§4.10), a la espera de su PR.
 4. **Campana del tercero y recordatorio de observaciones:** en curso.
-5. **Plazo de revalidación configurable:** en curso.
-6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** el desbloqueo sigue en curso
-   (`feature/vigencia-vinculo`); reintegrar sin revalidar y el reinicio tras un rechazo están resueltos en
+5. **Plazo de revalidación configurable:** **resuelto** en la misma rama (VV-7): rige el menor `diasRevalidacion` de los
+   requisitos de la actualización (tipo de documento o sección del flujo), 15 por omisión.
+6. **Desbloqueo automático, reintegrar sin revalidar, reinicio tras rechazo:** el desbloqueo automático está **resuelto**
+   en `feature/vigencia-vinculo` (VV-8: mensaje programado de Wolverine al bloquear con fecha, respaldado por el barrido
+   del job de vigencias); reintegrar sin revalidar y el reinicio tras un rechazo están resueltos en
    `feature/desaprobar-y-reintegrar` (§4.10).
+
+**Pendiente de lo resuelto en `feature/vigencia-vinculo`:** un vínculo vencido por dos documentos a la vez solo abre la renovación con el primero
+(RN-1); el aviso de vigencia aún no es una plantilla personalizable (PL-1); los vínculos con vigencia o bloqueo anteriores
+al cambio se indexan con su próximo evento (o reconstruyendo la proyección del vínculo).
 
 ### 4.2 F6 — sin empezar
 - Personas relacionadas (representantes, socios) con **bóveda propia**: su cédula y sus documentos se comparten entre
   las empresas como los del tercero.
-- **Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.
+- ~~**Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.~~ Resuelto en `feature/integracion-abierta` (IO-4): contactos por vínculo con cargo, correo, teléfono y rol.
 
 ### 4.3 Ficha — pendientes (FM-38, FM-55)
-- Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos, que hoy envía el SRM a AyF.
-- Lugar de expedición del documento del representante (AyF `Expedicion`). `ExentoReteCREE`.
+- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`. Pendiente: el lugar y la fecha de expedición cuando el representante es el propio tercero (persona natural).
 - Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).
 - Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.
 - La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.
@@ -168,17 +217,23 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
   - rotar la credencial expuesta en ADPRO ([15 §2](15-infolaft.md)).
 
 ### 4.5 H9 — pendientes
-- Sandbox con datos aislados (hoy `sandbox` solo cambia el prefijo de la llave).
-- Embebido del tercero para el Portal: `POST /sesiones-tercero` y el componente `<validasoft-expediente>`.
+- ~~Sandbox con datos aislados~~ **Hecho (SB-1…SB-6, 2026-11-11):** tenant hermano con la configuración del grupo, buzón de correo, IA y listas simuladas y reinicio ([05 §2.6.3](05-api-contratos-y-webhooks.md), [07 §5.4](07-seguridad-identidad-y-tenancy.md)). Falta, como mejora, una pantalla en la consola con el buzón y el botón de reinicio (hoy es por API y SDK; la llave de prueba sí se emite desde Configuración › API keys).
+- ~~Embebido del tercero para el Portal: `POST /sesiones-tercero` y el componente `<validasoft-expediente>`.~~ Resuelto en `feature/integracion-abierta` (IO-6) para cualquier sistema: `POST /sesiones-tercero`, `/embed/:componente` (bóveda, expediente, ficha) y `montarEmbebido` en el SDK. Pendiente: los eventos de negocio del iframe (`documento-subido`, `expediente-completo`) y un Web Component empaquetado.
 - `POST /documentos` para integraciones.
-- Proyección `EstadoCertificacionTercero` medida con k6 (500 rps, p99 < 100 ms).
-- Publicar los paquetes NuGet y npm (el SRM portó el verificador de firma porque el SDK no está publicado).
+- **Carga de la consulta de certificación:** el script k6 (`tests/carga`) y su medida local están hechos; la consulta pasó de cuatro viajes a la base a uno (p50 secuencial 23,5 → 8,1 ms), pero **p99 < 100 ms a 500 rps no se pudo certificar** en la máquina de desarrollo compartida ([11, H9](11-trazabilidad-por-hito.md)). Falta repetirla en un entorno dedicado; si no llega, la proyección persistida `EstadoCertificacionTercero` es el siguiente paso.
+- **Publicar los paquetes NuGet y npm:** el empaquetado, la versión única, los README/CHANGELOG, ESM + CJS y el workflow `sdk-publicar.yml` están listos y probados sin publicar. Faltan **la decisión de licencia de Legal** (hoy `LICENCIA-SDK.md` es provisional), crear el entorno `publicacion-sdk` y los secretos `NUGET_API_KEY` y `NPM_TOKEN`, y poner el primer tag `sdk-v1.0.0` ([08 §2.4](08-integracion-y-migracion.md)). El SRM portó el verificador de firma porque el SDK no está publicado: cuando lo esté, debe adoptarlo.
 - La caché de API keys se invalida al instante solo en el nodo que rota.
+- Sandbox: las llaves de prueba emitidas antes de SB-2 (sin sandbox creado) responden 401 hasta que se cree con `POST /api/v1/sandbox`; no hay límite de tamaño del buzón ni retención automática del sandbox.
 
 ### 4.6 Plataforma e identidad
-- Login propio de Plataforma con OIDC y 2FA; hoy entra con la clave de arranque más identidad delegada.
-- 2FA de usuarios (P-14-4): definir si lo resuelve el sistema integrador o Validasoft.
-- Desactivar sistemas y operadores de Plataforma por API; agregar empresas a un grupo desde la consola.
+- Plataforma ya entra **directo** (correo, código y passkey obligatoria; ING-4). Falta **desactivar la clave de arranque en producción** una vez
+  creado el primer operador (hoy es dejar vacía la variable `VALIDASOFT__PLATAFORMA__CLAVEBOOTSTRAP`; una acción en la consola sería mejor) y, más adelante,
+  federar con OIDC/WorkOS (ING-7: la abstracción existe, no está integrada).
+- 2FA de usuarios (P-14-4): **resuelta** con las passkeys (ING-2). Pendiente a evaluar: reautenticación (step-up) para acciones sensibles,
+  códigos de recuperación y avisos por correo cuando se registra o revoca una passkey.
+- Conditional UI: ofrecer las passkeys del sitio en el propio campo del correo (hoy hay un botón «Entrar con una passkey»).
+- Consultar en la consola la auditoría de ingreso de los operadores de Plataforma (hoy se registra; la consulta es la del grupo).
+- Desactivar sistemas de Plataforma por API (los operadores ya se desactivan, ING-4); agregar empresas a un grupo desde la consola.
 - `POST /api-keys` y `POST /sesiones-usuario` todavía guardan su respuesta en el registro de idempotencia 24 h.
 - Ayuda por documento **por empresa** (hoy es por tenant, B-4).
 
@@ -205,8 +260,8 @@ empresa (NT-11) y la guardia de edición en otros formularios que no sean la fic
 La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del proceso de validación. Faltan, como mínimo:
 - **Persona natural y jurídica en el wizard:** la natural no ve Legal ni Financiera y la jurídica exige socio.
 - **Multiempresa con la ficha:** dos empresas validan la misma sección y una revalida tras un cambio.
-- **Integración externa completa con el SDK:** sistema → invitación → webhooks → consulta de certificación →
-  embebido.
+- ~~**Integración externa completa con el SDK:** sistema → invitación → webhooks → consulta de certificación →
+  embebido.~~ **Hecha en el sandbox** (`e2e/pruebas/integracion-sandbox.spec.ts`, 2026-11-11).
 - **Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación →
   certificado.
 - **IA con el proveedor simulado:** cupo agotado y escalamiento.

@@ -117,6 +117,47 @@ describe('EditorRequisitos: secciones de la información del tercero (F2)', () =
     expect(within(segunda).getByText('Esa sección ya está en la lista.')).toBeInTheDocument();
   });
 
+  it('una sección trae su vigencia propia y el plazo de revalidación (vacíos: no vence y 15 días); un documento no', () => {
+    const onCambiar = vi.fn();
+    editor([financiera, requisitoNuevo('rut')], onCambiar);
+    const fila = within(screen.getByRole('region', { name: 'Información financiera' }));
+    expect(fila.getByRole('textbox', { name: 'Vigencia (días)' })).toHaveValue('');
+    expect(fila.getByRole('textbox', { name: 'Vigencia (días)' })).toHaveAttribute('placeholder', 'No vence');
+    expect(fila.getByRole('textbox', { name: 'Plazo de revalidación (días)' })).toHaveAttribute('placeholder', '15');
+
+    fireEvent.change(fila.getByRole('textbox', { name: 'Vigencia (días)' }), { target: { value: '180' } });
+    expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ seccion: 'FICHA_FINANCIERA', vigenciaDias: 180 }), expect.anything()]);
+    fireEvent.change(fila.getByRole('textbox', { name: 'Plazo de revalidación (días)' }), { target: { value: '7' } });
+    expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ diasRevalidacion: 7 }), expect.anything()]);
+    fireEvent.change(fila.getByRole('textbox', { name: 'Vigencia (días)' }), { target: { value: '' } });
+    expect(onCambiar).toHaveBeenLastCalledWith([expect.objectContaining({ vigenciaDias: null }), expect.anything()]);
+
+    // El documento no los lleva: su vigencia y su revalidación se configuran en el tipo.
+    expect(screen.getAllByRole('textbox', { name: 'Vigencia (días)' })).toHaveLength(1);
+  });
+
+  it('muestra los errores de vigencia y de revalidación de la sección en su campo', () => {
+    render(
+      <ThemeProvider theme={createValidasoftTheme('light')}>
+        <EditorRequisitos
+          requisitos={[{ ...financiera, vigenciaDias: 0, diasRevalidacion: 400 }]}
+          etapas={[{ clave: 'e1', areas: [areaNueva('compras')] }]}
+          areas={[area('compras', 'Compras')]}
+          tiposDocumento={[]}
+          onCambiar={vi.fn()}
+          errores={[
+            { codigo: 'vigencia-seccion-invalida', campo: 'requisito.0.vigencia' },
+            { codigo: 'dias-revalidacion-invalidos', campo: 'requisito.0.revalidacion' },
+          ]}
+          soloLectura={false}
+        />
+      </ThemeProvider>,
+    );
+    const fila = within(screen.getByRole('region', { name: 'Información financiera' }));
+    expect(fila.getByRole('textbox', { name: 'Vigencia (días)' })).toHaveAccessibleDescription('Entre 1 y 3650 días, o vacío si no vence.');
+    expect(fila.getByRole('textbox', { name: 'Plazo de revalidación (días)' })).toHaveAccessibleDescription('Entre 1 y 365 días, o vacío para 15.');
+  });
+
   it('«Usar como soporte» aparece solo en documentos que respaldan secciones, activo por omisión, y se apaga', () => {
     const onCambiar = vi.fn();
     editor([requisitoNuevo('rut')], onCambiar, [tipoRut]);

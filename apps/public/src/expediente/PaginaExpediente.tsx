@@ -119,7 +119,11 @@ export function PaginaExpediente() {
         )}
       </Card>
 
-      {expediente.tipo === 'Renovacion' && expediente.estado === 'Abierto' && situacion === 'vigente' && (
+      {/* El aviso habla de documentos vencidos: una renovación periódica del vínculo que solo pide secciones de la ficha ya lo explica el resumen de arriba. */}
+      {expediente.tipo === 'Renovacion' &&
+        expediente.estado === 'Abierto' &&
+        situacion === 'vigente' &&
+        (expediente.requisitos ?? []).some((r) => r.tipoRequisito !== 'Seccion') && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           <AlertTitle>{t('expediente.renovacion.titulo', { empresa })}</AlertTitle>
           {t('expediente.renovacion.texto', { empresa })}

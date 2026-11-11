@@ -10,6 +10,7 @@ using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Identificaciones;
 using Validasoft.Dominio.Invitaciones;
+using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
@@ -40,7 +41,7 @@ public static class ProcesarTandaDeLoteHandler
 
     public static async Task Handle(ProcesarTandaDeLote mensaje, IDocumentStore store, ISesiones sesiones, IWolverineRuntime runtime,
         IMessageContext mensajes, IProtectorDeSecretos protector, IConfiguration configuracion, TimeProvider reloj,
-        ILogger<LoteDeInvitacion> logger, CancellationToken ct)
+        ILogger<LoteDeInvitacion> logger, IEntornos entornos, CancellationToken ct)
     {
         var tamano = Math.Clamp(configuracion.GetValue("Validasoft:Lotes:TamanoTanda", TandaPorOmision), 1, 1000);
         LoteDeInvitacion? lote;
@@ -57,12 +58,13 @@ public static class ProcesarTandaDeLoteHandler
         }
 
         var catalogo = await CatalogoDeLote.CargarAsync(store, mensaje.TenantId, lote.EmpresaId, ct);
+        Guid? sandbox = await entornos.EsSandboxAsync(mensaje.TenantId, ct) ? mensaje.TenantId : null; // terceros de pruebas (SB-4)
         for (var i = 0; i < filas.Count; i++)
         {
             // Cada 10 filas mira si lo pausaron o cancelaron: la pausa no espera a que termine la tanda.
             if (i > 0 && i % 10 == 0 && !await SigueVigenteAsync(store, mensaje, ct))
                 break;
-            await ProcesarFilaAsync(sesiones, runtime, protector, mensaje.TenantId, lote, filas[i], catalogo, reloj, logger, ct);
+            await ProcesarFilaAsync(sesiones, runtime, protector, mensaje.TenantId, sandbox, lote, filas[i], catalogo, reloj, logger, ct);
         }
 
         // Avance de la tanda y, si queda trabajo, la siguiente (por el outbox de este mensaje).
@@ -99,7 +101,7 @@ public static class ProcesarTandaDeLoteHandler
     }
 
     private static async Task ProcesarFilaAsync(ISesiones sesiones, IWolverineRuntime runtime, IProtectorDeSecretos protector, Guid tenantId,
-        LoteDeInvitacion lote, FilaDeLote fila, CatalogoDeLote catalogo, TimeProvider reloj, ILogger logger, CancellationToken ct)
+        Guid? sandbox, LoteDeInvitacion lote, FilaDeLote fila, CatalogoDeLote catalogo, TimeProvider reloj, ILogger logger, CancellationToken ct)
     {
         for (var intento = 1; ; intento++)
         {
@@ -117,7 +119,7 @@ public static class ProcesarTandaDeLoteHandler
                 if (actual is not { Estado: EstadoFilaLote.Pendiente })
                     return;
 
-                var resultado = await InvitarAsync(sesion, bus, protector, tenantId, lote, actual.Datos, catalogo, ahora, ct);
+                var resultado = await InvitarAsync(sesion, bus, protector, tenantId, sandbox, lote, actual.Datos, catalogo, ahora, ct);
                 actual.MarcarExitosa(resultado.Accion, resultado.TerceroId, resultado.VinculoId, resultado.TerceroCreado, resultado.Detalle, ahora);
                 sesion.Store(actual);
                 await sesion.SaveChangesAsync(ct);
@@ -160,13 +162,13 @@ public static class ProcesarTandaDeLoteHandler
     /// no acepta ⇒ reenvío al correo de la fila; tercero que ya aceptó ⇒ nada (<c>SinCambios</c>). Bloqueado o terminado ⇒ 409.
     /// </summary>
     public static async Task<ResultadoDeFila> InvitarAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Guid tenantId,
-        LoteDeInvitacion lote, FilaDeLoteEntrada datos, CatalogoDeLote catalogo, DateTimeOffset ahora, CancellationToken ct)
+        Guid? sandbox, LoteDeInvitacion lote, FilaDeLoteEntrada datos, CatalogoDeLote catalogo, DateTimeOffset ahora, CancellationToken ct)
     {
         var tipo = catalogo.Tipo(datos.TipoVinculo)
                    ?? throw ReglaDeNegocioException.Validacion("tipo-vinculo-invalido", $"El tipo de vínculo «{datos.TipoVinculo}» no existe o está inactivo.");
         var identificacion = Identificacion.Crear(datos.Pais ?? "CO", datos.TipoIdentificacion ?? string.Empty, datos.NumeroIdentificacion ?? string.Empty,
             datos.DigitoVerificacion);
-        var clave = identificacion.Clave;
+        var clave = AislamientoDeSandbox.ClaveDeTercero(identificacion.Clave, sandbox);
         var vigencia = TimeSpan.FromHours(lote.VigenciaHoras);
 
         var tercero = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == clave, ct);
@@ -178,7 +180,7 @@ public static class ProcesarTandaDeLoteHandler
             var contactos = datos.Contacto is null ? null : new[] { new ContactoDto(datos.Contacto, datos.Correo!, datos.Telefono, "Contacto") };
             tercero = TercerosEndpoints.ConstruirTercero(new CrearTerceroDto(new IdentificacionDto(identificacion.Pais, identificacion.Tipo,
                 identificacion.Numero, identificacion.DigitoVerificacion), tipoPersona.ToString(), datos.Nombre ?? string.Empty, datos.NombreComercial, contactos),
-                tenantId, ahora);
+                tenantId, sandbox is not null, ahora);
             sesion.Store(tercero);
         }
 

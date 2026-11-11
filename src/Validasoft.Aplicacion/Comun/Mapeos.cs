@@ -1,4 +1,5 @@
 using Validasoft.Contratos;
+using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Consentimientos;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Identidad;
@@ -21,7 +22,26 @@ public static class Mapeos
         new(t.Pais, t.Codigo, t.Nombre, t.AplicaA.ToString(), t.Patron, t.TieneDv);
 
     public static TenantDto ADto(this Tenant t) =>
-        new(t.Id, t.Slug, t.Nombre, t.Region, t.Plan, t.ZonaHoraria, t.Idioma, t.Activo, t.CreadoEn);
+        new(t.Id, t.Slug, t.Nombre, t.Region, t.Plan, t.ZonaHoraria, t.Idioma, t.Activo, t.CreadoEn, t.IngresoADto());
+
+    public static ConfiguracionDeIngresoDto IngresoADto(this Tenant t) =>
+        new([.. Enum.GetValues<ModoDeIngreso>().Where(m => m != ModoDeIngreso.Ninguno && t.ModosDeIngreso.HasFlag(m)).Select(m => m.ToString())],
+            t.SesionHoras, t.InactividadMinutos, t.PasskeyParaTodos);
+
+    /// <summary>Modos de ingreso del DTO (<c>Delegado</c>, <c>Directo</c>) como banderas; un nombre desconocido ⇒ 422.</summary>
+    public static ModoDeIngreso ModosADominio(IEnumerable<string>? modos)
+    {
+        var resultado = ModoDeIngreso.Ninguno;
+        foreach (var modo in modos ?? [])
+        {
+            if (!Enum.TryParse<ModoDeIngreso>(modo, true, out var m) || m == ModoDeIngreso.Ninguno || !Enum.IsDefined(m))
+                throw Dominio.Comun.ReglaDeNegocioException.Validacion("modos-de-ingreso-invalidos",
+                    $"'{modo}' no es un modo de ingreso (Delegado, Directo).");
+            resultado |= m;
+        }
+
+        return resultado;
+    }
 
     public static EmpresaDto ADto(this Empresa e) =>
         new(e.Id, e.TenantId, e.Identificacion.ADto(), e.Nombre, e.LogoUrl, e.ReplyTo, e.PrefijoFolio, e.Activa, e.ColorMarca);
@@ -40,10 +60,10 @@ public static class Mapeos
             : throw Dominio.Comun.ReglaDeNegocioException.Validacion("rol-invalido",
                 $"'{r.Rol}' no es un rol ({string.Join(", ", Enum.GetNames<Rol>())}).");
 
-    public static UsuarioDto ADto(this Usuario u) =>
+    public static UsuarioDto ADto(this Usuario u, bool passkeyParaTodos = false, int passkeys = 0) =>
         new(u.Id, u.Nombre, u.Correo, u.Identificacion?.ADto(), u.Activo,
             [.. u.Identidades.Select(i => new IdentidadExternaDto(i.SistemaId, i.IdExterno))],
-            [.. u.Roles.Select(ADto)], u.CreadoEn, u.UltimoAcceso);
+            [.. u.Roles.Select(ADto)], u.CreadoEn, u.UltimoAcceso, u.ExigePasskey(passkeyParaTodos), passkeys, u.InvitadoEn);
 
     public static AreaDto ADto(this Area a) => new(a.Id, a.EmpresaId, a.Codigo, a.Nombre, a.Miembros, a.Activa);
 
@@ -72,7 +92,19 @@ public static class Mapeos
             v.Bloqueo is null ? null : new BloqueoDto(v.Bloqueo.Motivo, v.Bloqueo.Desde, v.Bloqueo.Hasta),
             [.. v.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))],
             v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version, v.ExpedienteAbiertoId, v.AperturaDeExpedientePendiente,
-            v.UltimoResultado?.ToString());
+            v.UltimoResultado?.ToString(),
+            v.Contactos.ADto(), v.VigenteHasta);
+
+    /// <summary>Los contactos del tercero con la empresa como los ve la API (rol en texto).</summary>
+    public static IReadOnlyList<ContactoDeEmpresaDto> ADto(this IEnumerable<ContactoDeEmpresa> contactos) =>
+        [.. contactos.Select(c => new ContactoDeEmpresaDto(c.Nombre, c.Cargo, c.Correo, c.Telefono, c.Rol.ToString()))];
+
+    /// <summary>Los contactos que llegan por la API a dominio: el rol debe ser uno de los cuatro (422 si no).</summary>
+    public static IReadOnlyList<ContactoDeEmpresa> ADominio(this IEnumerable<ContactoDeEmpresaDto>? contactos) =>
+        [.. (contactos ?? []).Select(c => new ContactoDeEmpresa(c.Nombre, c.Cargo, c.Correo, c.Telefono,
+            Enum.TryParse<RolDeContacto>(c.Rol, true, out var rol) && Enum.IsDefined(rol)
+                ? rol
+                : throw ReglaDeNegocioException.Validacion("contacto-rol-invalido", "El rol del contacto es Comercial, Pagos, Cumplimiento o Notificaciones.")))];
 
     public static TextoLegalDto ADto(this TextoLegal t) =>
         new(t.Id, t.Ambito.ToString(), t.EmpresaId, t.Tipo.ToString(), t.Version, t.Hash, t.Contenido, t.PublicadoEn, t.PublicadoPor);
@@ -84,5 +116,5 @@ public static class Mapeos
     public static VinculoPublicoDto APublico(this Vinculo v, Empresa? empresa, TipoVinculo? tipo) =>
         new(v.Id, empresa.APublica(v.EmpresaId),
             new TipoVinculoResumenDto(v.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
-            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId);
+            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId, null, v.Contactos.ADto(), v.VigenteHasta);
 }

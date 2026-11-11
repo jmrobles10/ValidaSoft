@@ -10,4 +10,7 @@ export interface SoporteSeccionDto {
   version: number;
   /** @nullable */
   tipoDocumento?: string | null;
+  retirado?: boolean;
+  /** @nullable */
+  nombre?: string | null;
 }

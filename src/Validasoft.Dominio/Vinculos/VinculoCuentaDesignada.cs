@@ -15,7 +15,7 @@ public enum EstadoCuentaDesignada
 /// aprobó la empresa no cambia aunque el tercero retire la cuenta después. El número viaja protegido.
 /// </summary>
 public sealed record CuentaParaDesignar(Guid CuentaId, string Banco, string TipoCuenta, string NumeroProtegido, string Ultimos4, string Titular,
-    string IdentificacionTitular, string Moneda);
+    string IdentificacionTitular, string Moneda, string? BancoCodigo = null, string? BancoSwift = null, Terceros.ContactoDePagos? ContactoPagos = null);
 
 /// <summary>Una aprobación de un usuario de la empresa (cuatro ojos, P-4-7).</summary>
 public sealed record AprobacionDeCuenta(string UsuarioId, DateTimeOffset Fecha);

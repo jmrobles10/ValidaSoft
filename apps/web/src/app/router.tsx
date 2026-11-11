@@ -32,8 +32,16 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaPlanIa').then((m) => ({ Component: m.PaginaPlanIa })),
         },
         {
+          path: 'operadores',
+          lazy: () => import('../features/plataforma/PaginaOperadores').then((m) => ({ Component: m.PaginaOperadores })),
+        },
+        {
           path: 'secretos',
           lazy: () => import('../features/plataforma/PaginaSecretos').then((m) => ({ Component: m.PaginaSecretos })),
+        },
+        {
+          path: 'mi-cuenta',
+          lazy: () => import('../features/cuenta/PaginaMiCuenta').then((m) => ({ Component: m.PaginaMiCuenta })),
         },
       ],
     },
@@ -115,6 +123,10 @@ export function crearRouter() {
               lazy: () => import('../features/auditoria/PaginaAuditoria').then((m) => ({ Component: m.PaginaAuditoria })),
             },
             {
+              path: 'mi-cuenta',
+              lazy: () => import('../features/cuenta/PaginaMiCuenta').then((m) => ({ Component: m.PaginaMiCuenta })),
+            },
+            {
               element: <LayoutConfiguracion />,
               children: [
                 {
@@ -181,6 +193,10 @@ export function crearRouter() {
                 {
                   path: 'tipos-vinculo',
                   lazy: () => import('../features/configuracion/tiposVinculo/PaginaTiposVinculo').then((m) => ({ Component: m.PaginaTiposVinculo })),
+                },
+                {
+                  path: 'ingreso',
+                  lazy: () => import('../features/configuracion/ingreso/PaginaIngreso').then((m) => ({ Component: m.PaginaIngreso })),
                 },
               ],
             },

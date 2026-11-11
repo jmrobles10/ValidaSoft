@@ -41,8 +41,8 @@ public static class CorreoDeRecordatorioDeObservacionesPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Recordatorio, ct))
             return;
         var mensaje = redactor.RedactarRecordatorioDeObservaciones(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.RecordatorioObservaciones, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.RecordatorioObservaciones, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 

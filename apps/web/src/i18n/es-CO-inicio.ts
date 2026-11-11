@@ -39,6 +39,7 @@ export const inicio = {
     expedientes: 'Expedientes',
     certificados: 'Certificados',
     activos: 'Activos',
+    porVencer: 'Por vencer',
     enValidacion: 'En validación',
     invitados: 'Invitados sin aceptar',
     vencidos: 'Vencidos',

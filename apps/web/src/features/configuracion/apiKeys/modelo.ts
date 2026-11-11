@@ -20,12 +20,14 @@ export interface BorradorApiKey {
   expira: string;
   /** Id del sistema integrado o vacío. */
   sistemaId: string;
+  /** Llave de prueba: opera en el sandbox del grupo (SB-2) y se emite como `vsk_test_…`. */
+  sandbox: boolean;
 }
 
 export type ErrorApiKey = 'nombre-requerido' | 'scopes-requeridos' | 'empresas-requeridas' | 'expiracion-invalida';
 
 export function borradorApiKeyNuevo(): BorradorApiKey {
-  return { nombre: '', scopes: [], empresas: [TODO_EL_GRUPO], expira: '', sistemaId: '' };
+  return { nombre: '', scopes: [], empresas: [TODO_EL_GRUPO], expira: '', sistemaId: '', sandbox: false };
 }
 
 /** Fin del día elegido en Bogotá, en ISO (la llave vale todo ese día). */
@@ -56,6 +58,7 @@ export function cuerpoCrearApiKey(b: BorradorApiKey): CrearApiKeyDto {
     empresas: b.empresas.includes(TODO_EL_GRUPO) ? null : b.empresas,
     expiraEn: b.expira ? finDelDia(b.expira) : null,
     sistemaId: b.sistemaId || null,
+    sandbox: b.sandbox,
   };
 }
 

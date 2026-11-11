@@ -58,7 +58,7 @@ public static class ServiciosInfraestructura
     public const string ColaIa = "ia";
 
     /// <summary>
-    /// Cola local durable y <b>secuencial</b> del importador del Portal (F4): una corrida a la vez, que se reanuda desde su cursor si
+    /// Cola local durable y <b>secuencial</b> del importador genérico (F4): una corrida a la vez, que se reanuda desde su cursor si
     /// el proceso cae.
     /// </summary>
     public const string ColaImportacion = "importacion";
@@ -83,16 +83,34 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<IContextoSolicitud, ContextoDesdeHttp>();
         servicios.AddSingleton<IGeneradorDeApiKeys, GeneradorDeApiKeys>();
         servicios.AddSingleton<ICacheDeCredenciales, CacheDeCredenciales>();
-        // Origen del importador y del sincronizador del Portal (F4, FM-39): configuración Validasoft:Importacion:Portal.
-        servicios.AddSingleton<Aplicacion.Ficha.IFabricaDeOrigenesPortal, Portal.FabricaDeOrigenesPortal>();
+        // Los adaptadores de origen (IAdaptadorDeOrigen) los registra quien compone la aplicación; sin ninguno el importador responde 404.
+        servicios.AddSingleton<Aplicacion.Importacion.RegistroDeAdaptadores>();
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
         servicios.AddHostedService<VerificacionDeClaveMaestra>(); // sin clave maestra de secretos la API no arranca (PT-1)
-        servicios.AddSingleton<IEnviadorDeCorreo, EnviadorSmtp>();
+        // El correo pasa primero por EnviadorDeCorreo, que retiene en el buzón del sandbox el de un tenant sandbox (SB-4); solo lo
+        // que sale va al transporte SMTP.
+        servicios.AddSingleton<IEntornos, Sandbox.Entornos>();
+        servicios.AddSingleton<CacheDeEmpresas>(); // la empresa de X-Empresa, 30 s por nodo
+        servicios.AddSingleton<Aplicacion.Integracion.IndiceDeVinculosConsultados>(); // consulta de certificación en un solo viaje (CN-1)
+        servicios.AddSingleton<ITransporteDeCorreo, EnviadorSmtp>();
+        servicios.AddSingleton<IEnviadorDeCorreo, Sandbox.EnviadorDeCorreo>();
+        servicios.AddScoped<Aplicacion.Sandbox.ServicioDeSandbox>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
+        // Ingreso directo sin contraseñas (ING-1…ING-7): código por correo, passkeys (WebAuthn) y sesiones propias de las personas del grupo.
+        servicios.AddSingleton<CookieDeSesionDeUsuario>();
+        servicios.AddSingleton<PoliticaDeIngreso>();
+        servicios.AddSingleton<IServicioDePasskeys, ServicioDePasskeysFido2>();
+        servicios.AddSingleton<VerificadorDeSesionesDirectas>();
+        servicios.AddSingleton<ICacheDeSesionesDirectas>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDirectas>());
+        servicios.AddSingleton<IProveedorDeIdentidad, ProveedorLocalDeCodigos>();
+        servicios.AddSingleton<RegistroDeIngresos>();
+        servicios.AddSingleton<CuentasDeIngreso>();
+        servicios.AddScoped<ServicioDeIngreso>();
+        servicios.AddHostedService<LimpiezaDeIngresos>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
         servicios.AddScoped<IVerificadorDeOperadores, VerificadorDeOperadores>(); // operadores de Plataforma (PT-4)
@@ -152,19 +170,18 @@ public static class ServiciosInfraestructura
         servicios.AddHttpClient(Verificaciones.VerificadorCompliance.Cliente);
         // Plazos de cargue del expediente inicial (P-4-2, LT-4): barrido periódico (Validasoft:PlazosDeCargue:Intervalo).
         servicios.AddHostedService<ProgramadorDePlazosDeCargue>();
+        // Vigencia periódica del vínculo y fin de los bloqueos con fecha (VV-1…VV-5): barrido periódico (Validasoft:VigenciasDeVinculos:Intervalo).
+        servicios.AddHostedService<Aplicacion.Vinculos.ProgramadorDeVigenciasDeVinculos>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
-        // Validasoft:IA:Proveedor = Simulado: sin red (e2e y demos, PT-6). Por defecto, OpenAI con la llave de cada empresa.
-        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], "Simulado", StringComparison.OrdinalIgnoreCase))
-        // Validasoft:IA:Proveedor = Simulado: analizador determinista que lee marcas del propio archivo (desarrollo y e2e, F5);
-        // por omisión, OpenAI.
-        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], AnalizadorSimulado.Proveedor, StringComparison.OrdinalIgnoreCase))
-            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorSimulado>();
-        else
-            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
+        // Validasoft:IA:Proveedor = Simulado: analizador determinista que lee marcas del propio archivo (desarrollo y e2e, F5; PT-6),
+        // sin red. Por omisión, OpenAI con la llave de cada empresa; las llaves de prueba del sandbox van siempre al simulado (SB-4).
+        servicios.AddSingleton<AnalizadorOpenAi>();
+        servicios.AddSingleton<AnalizadorSimulado>();
+        servicios.AddSingleton<IAnalizadorDeDocumentos, Sandbox.AnalizadorPorEntorno>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)
@@ -182,6 +199,16 @@ public static class ServiciosInfraestructura
                 // La clave se lee al primer uso del esquema: sin Validasoft:Sesiones:ClaveFirma solo falla el Bearer.
                 opciones.MapInboundClaims = false;
                 opciones.TokenValidationParameters = EmisorDeSesiones.ParametrosDeValidacion(configuracion);
+                // Una sesión directa cerrada o revocada deja de valer en segundos, aunque su token de acceso no haya vencido (ING-3).
+                opciones.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async contexto =>
+                    {
+                        if (Guid.TryParse(contexto.Principal?.FindFirst(Reclamos.SesionId)?.Value, out var sesionId) &&
+                            !await contexto.HttpContext.RequestServices.GetRequiredService<VerificadorDeSesionesDirectas>().VigenteAsync(sesionId, contexto.HttpContext.RequestAborted))
+                            contexto.Fail("La sesión se cerró.");
+                    }
+                };
             })
             .AddJwtBearer(EmisorDeSesionesTercero.Esquema, opciones =>
             {
@@ -246,10 +273,14 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.RevisarVigenciasDeVinculos>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.RevisarVigenciaDeVinculo>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.DesbloquearAlLlegarLaFecha>().ToLocalQueue(ColaVigencias).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Vinculos.CorreoDeVigenciaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
-        opciones.PublishMessage<Aplicacion.Ficha.EjecutarImportacionDePortal>().ToLocalQueue(ColaImportacion);
+        opciones.PublishMessage<Aplicacion.Importacion.EjecutarImportacion>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()
             .RetryWithCooldown(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(30))

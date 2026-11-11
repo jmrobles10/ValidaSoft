@@ -23,7 +23,7 @@ public sealed record PaisDto(string Codigo, string Nombre, IReadOnlyList<TipoIde
 /// </summary>
 public sealed record CrearTenantDto(
     string Slug, string Nombre, string? Region, string? ZonaHoraria, CrearEmpresaDto? Empresa = null, AdministradorInicialDto? Administrador = null,
-    CrearSistemaIntegradoDto? Sistema = null);
+    CrearSistemaIntegradoDto? Sistema = null, ConfiguracionDeIngresoDto? Ingreso = null);
 
 /// <summary>
 /// Administrador inicial del grupo (rol <c>Administrador</c> de todo el tenant). <see cref="IdExterno"/> es su <c>sub</c> en el
@@ -32,7 +32,8 @@ public sealed record CrearTenantDto(
 public sealed record AdministradorInicialDto(string Nombre, string Correo, string? IdExterno = null);
 
 public sealed record TenantDto(
-    Guid Id, string Slug, string Nombre, string Region, string Plan, string ZonaHoraria, string Idioma, bool Activo, DateTimeOffset CreadoEn);
+    Guid Id, string Slug, string Nombre, string Region, string Plan, string ZonaHoraria, string Idioma, bool Activo, DateTimeOffset CreadoEn,
+    ConfiguracionDeIngresoDto? Ingreso = null);
 
 /// <summary>
 /// Respuesta del alta de tenant: incluye la primera API key de administración y, si se pidió el sistema integrado, su API
@@ -116,17 +117,22 @@ public sealed record RolAsignadoDto(string Rol, Guid? EmpresaId);
 
 public sealed record IdentidadExternaDto(Guid SistemaId, string IdExterno);
 
-/// <summary>Alta anticipada: permite asignar roles antes del primer acceso; la aserción delegada lo enlaza por correo.</summary>
+/// <summary>
+/// Alta anticipada: permite asignar roles antes del primer acceso; la aserción delegada lo enlaza por correo. Con
+/// <see cref="Invitar"/> (y un grupo que admita el ingreso directo) se le envía un correo para que entre con el suyo (ING-5).
+/// </summary>
 public sealed record CrearUsuarioDto(
     string Nombre, string Correo, IdentificacionDto? Identificacion, IReadOnlyList<RolAsignadoDto>? Roles,
-    IReadOnlyList<IdentidadExternaDto>? Identidades);
+    IReadOnlyList<IdentidadExternaDto>? Identidades, bool? Invitar = null);
 
 public sealed record AsignarRolesDto(IReadOnlyList<RolAsignadoDto> Roles);
 
+/// <param name="ExigePasskey">Un rol suyo (o el grupo) le exige passkey para entrar directo.</param>
+/// <param name="Passkeys">Passkeys activas que tiene registradas.</param>
 public sealed record UsuarioDto(
     Guid Id, string Nombre, string Correo, IdentificacionDto? Identificacion, bool Activo,
     IReadOnlyList<IdentidadExternaDto> Identidades, IReadOnlyList<RolAsignadoDto> Roles, DateTimeOffset CreadoEn,
-    DateTimeOffset? UltimoAcceso);
+    DateTimeOffset? UltimoAcceso, bool ExigePasskey = false, int Passkeys = 0, DateTimeOffset? InvitadoEn = null);
 
 /// <summary>Sesión corta de Validasoft para pantallas embebidas: se envía como <c>Authorization: Bearer {token}</c>.</summary>
 public sealed record SesionUsuarioDto(string Token, DateTimeOffset Expira);
@@ -174,8 +180,12 @@ public sealed record TipoVinculoResumenDto(Guid Id, string Codigo, string Nombre
 
 public sealed record ContactoDto(string Nombre, string Correo, string? Telefono, string Rol);
 
+/// <summary>
+/// <see cref="ReferenciaExterna"/> (opcional): la clave del tercero en el sistema de la API key; con ella la creación es idempotente.
+/// </summary>
 public sealed record CrearTerceroDto(
-    IdentificacionDto Identificacion, string TipoPersona, string Nombre, string? NombreComercial, IReadOnlyList<ContactoDto>? Contactos);
+    IdentificacionDto Identificacion, string TipoPersona, string Nombre, string? NombreComercial, IReadOnlyList<ContactoDto>? Contactos,
+    ReferenciaExternaDto? ReferenciaExterna = null);
 
 public sealed record TerceroDto(
     Guid Id, IdentificacionDto Identificacion, string TipoPersona, string Nombre, string? NombreComercial,
@@ -226,6 +236,15 @@ public sealed record EnlaceInvitacionDto(string CorreoDestino, DateTimeOffset Ex
 
 public sealed record BloqueoDto(string Motivo, DateTimeOffset Desde, DateTimeOffset? Hasta);
 
+/// <summary>
+/// Contacto del tercero con una empresa (IO-3), distinto del de las demás empresas. <see cref="Rol"/>: Comercial, Pagos,
+/// Cumplimiento o Notificaciones; <see cref="Cargo"/> y <see cref="Telefono"/> son opcionales.
+/// </summary>
+public sealed record ContactoDeEmpresaDto(string Nombre, string? Cargo, string Correo, string? Telefono, string Rol);
+
+/// <summary>Reemplaza la lista de contactos del tercero con la empresa (hasta 20; lista vacía = quitarlos todos).</summary>
+public sealed record ActualizarContactosDto(IReadOnlyList<ContactoDeEmpresaDto> Contactos);
+
 public sealed record VinculoDto(
     Guid Id,
     Guid EmpresaId,
@@ -246,7 +265,9 @@ public sealed record VinculoDto(
     long Version,
     Guid? ExpedienteAbiertoId = null,
     bool AperturaDeExpedientePendiente = false,
-    string? UltimoResultado = null);
+    string? UltimoResultado = null,
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null,
+    DateOnly? VigenteHasta = null);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -310,10 +331,38 @@ public sealed record OtpRequeridoDto(bool RequiereOtp, DateTimeOffset Expira);
 
 public sealed record VerificarOtpDto(string Codigo);
 
+/// <summary>Componentes que un sistema integrador puede embeber del tercero (IO-5).</summary>
+public static class ComponentesEmbebibles
+{
+    public const string Boveda = "boveda";
+
+    public const string Expediente = "expediente";
+
+    public const string Ficha = "ficha";
+
+    public static readonly IReadOnlyList<string> Todos = [Boveda, Expediente, Ficha];
+}
+
+/// <summary>
+/// Pide una sesión del tercero para un iframe (<c>POST /api/v1/sesiones-tercero</c>, scope <c>sesiones-tercero:crear</c>). El vínculo
+/// debe ser de la empresa (<c>X-Empresa</c>), llevar la referencia del sistema de la API key y tener la invitación aceptada.
+/// <see cref="Origen"/>: el origen exacto de la página que aloja el iframe; debe estar entre los orígenes permitidos del sistema (403
+/// <c>origen-no-permitido</c>). <see cref="Componente"/>: <c>boveda</c>, <c>expediente</c> o <c>ficha</c>. <see cref="Minutos"/>: vigencia,
+/// de 1 a 15 (10 por omisión).
+/// </summary>
+public sealed record CrearSesionEmbebidaDto(Guid VinculoId, string Componente, string Origen, int? Minutos = null);
+
+/// <summary>
+/// La sesión embebida: <see cref="Token"/> (JWT firmado, ligado al tercero, al vínculo, al origen y al componente; se pasa al iframe
+/// por <c>postMessage</c>, nunca en la URL), <see cref="Url"/> (la del iframe, sin el token) y <see cref="Expira"/>.
+/// </summary>
+public sealed record SesionEmbebidaDto(string Token, DateTimeOffset Expira, string Url, string Origen, string Componente, Guid VinculoId, Guid TerceroId);
+
 /// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
-    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null);
+    DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null,
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null);
 
 /// <summary>
 /// Lo que el tercero ve de un rechazo (DS-4): cuándo y con qué motivos (los textos al tercero, sin áreas ni revisores). Con
@@ -367,16 +416,26 @@ public sealed record SolicitarAccesoDto(string? Correo);
 
 // ---------- Cuentas bancarias y cuenta designada (CB-1, CB-2) ----------
 
-/// <summary>Lo que declara el tercero de una cuenta. <see cref="TipoCuenta"/>: Ahorros o Corriente; moneda ISO (COP por defecto).</summary>
+/// <summary>A quién escribir por los pagos de una cuenta (IO-4): nombre y correo obligatorios, teléfono opcional.</summary>
+public sealed record ContactoDePagosDto(string Nombre, string Correo, string? Telefono);
+
+/// <summary>
+/// Lo que declara el tercero de una cuenta. <see cref="TipoCuenta"/>: Ahorros o Corriente; moneda ISO (COP por defecto). El banco se
+/// toma del catálogo <c>bancos</c>: con <see cref="BancoCodigo"/> (código de compensación local, CENIT en Colombia) el nombre sale del
+/// catálogo (422 <c>banco-no-encontrado</c> si no existe) y <see cref="Banco"/> se ignora; sin él, <see cref="Banco"/> es el nombre libre
+/// de un banco fuera del catálogo. <see cref="BancoSwift"/>: SWIFT/BIC (8 u 11 caracteres); si se omite se usa el del catálogo.
+/// <see cref="ContactoPagos"/>: a quién escribir por los pagos de esta cuenta.
+/// </summary>
 public sealed record RegistrarCuentaBancariaDto(string? Banco, string? TipoCuenta, string? Numero, string? Titular, string? IdentificacionTitular,
-    string? Moneda = null, string? Pais = null);
+    string? Moneda = null, string? Pais = null, string? BancoCodigo = null, string? BancoSwift = null, ContactoDePagosDto? ContactoPagos = null);
 
 /// <summary>Con qué empresa está designada (o propuesta, o rechazada) una cuenta del tercero.</summary>
 public sealed record DesignacionDeCuentaDto(Guid VinculoId, Guid EmpresaId, string Empresa, string Estado, string? MotivoRechazo);
 
 /// <summary>Cuenta del tercero, siempre enmascarada, con las empresas a las que la designó.</summary>
 public sealed record CuentaBancariaPublicaDto(Guid Id, string Banco, string TipoCuenta, string NumeroEnmascarado, string Titular,
-    string IdentificacionTitular, string Moneda, string Estado, DateTimeOffset RegistradaEn, IReadOnlyList<DesignacionDeCuentaDto> DesignadaEn);
+    string IdentificacionTitular, string Moneda, string Estado, DateTimeOffset RegistradaEn, IReadOnlyList<DesignacionDeCuentaDto> DesignadaEn,
+    string? BancoCodigo = null, string? BancoSwift = null, ContactoDePagosDto? ContactoPagos = null);
 
 public sealed record DesignarCuentaDto(Guid CuentaId);
 
@@ -388,7 +447,7 @@ public sealed record AprobacionDeCuentaDto(string UsuarioId, string? Nombre, Dat
 /// </summary>
 public sealed record CuentaDesignadaDto(Guid CuentaId, string Banco, string TipoCuenta, string NumeroEnmascarado, string? Numero, string Titular,
     string IdentificacionTitular, string Moneda, string Estado, DateTimeOffset PropuestaEn, IReadOnlyList<AprobacionDeCuentaDto> Aprobaciones,
-    DateTimeOffset? AprobadaEn, string? MotivoRechazo);
+    DateTimeOffset? AprobadaEn, string? MotivoRechazo, string? BancoCodigo = null, string? BancoSwift = null, ContactoDePagosDto? ContactoPagos = null);
 
 /// <summary>
 /// La cuenta designada del vínculo: la aprobada vigente, la propuesta pendiente y la última rechazada.
@@ -435,4 +494,5 @@ public sealed record MisPendientesDto(IReadOnlyList<PendientesDeAreaDto> PorArea
 /// </summary>
 public sealed record IndicadoresDto(int Dias, int VinculosActivos, int VinculosEnValidacion, int VinculosInvitados, int VinculosVencidos,
     int VinculosBloqueados, int ExpedientesEnCurso, int ExpedientesObservados, int ExpedientesAprobados, int ExpedientesRechazados,
-    double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos);
+    double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos,
+    int VinculosPorVencer = 0);

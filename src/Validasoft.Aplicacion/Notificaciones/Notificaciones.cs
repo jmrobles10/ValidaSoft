@@ -77,6 +77,9 @@ public static class TiposNotificacion
     public const string NuevoEnArea = "expediente.nuevo_en_area";
     public const string TerceroRespondio = "expediente.tercero_respondio";
     public const string VersionNueva = "expediente.version_nueva";
+
+    /// <summary>El tercero retiró una versión que la empresa tenía aprobada o en revisión: el expediente cambia de versión o se abre una revalidación (RT-2).</summary>
+    public const string VersionRetirada = "documento.version_retirada";
     public const string Aprobado = "expediente.aprobado";
     public const string Rechazado = "expediente.rechazado";
     public const string Caducado = "expediente.caducado";
@@ -103,12 +106,12 @@ public static class TiposNotificacion
     public const string CuentaPropuesta = "vinculo.cuenta_propuesta";
 
     public static readonly IReadOnlyList<string> Todos =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
+        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
             CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -118,7 +121,8 @@ public static class TiposNotificacion
 /// Correo a una persona del tenant (revisor o administrador), ya consolidado: uno por persona y hecho (NW-9). Cola
 /// <c>correo</c>; <see cref="Ruta"/> es la de <c>apps/web</c> y el redactor le antepone la URL de la app.
 /// </summary>
-public sealed record CorreoDeNotificacionPendiente(string Para, string Nombre, string Asunto, IReadOnlyList<string> Lineas, string? Ruta);
+public sealed record CorreoDeNotificacionPendiente(string Para, string Nombre, string Asunto, IReadOnlyList<string> Lineas, string? Ruta,
+    string? Plantilla = null, Guid? TenantId = null, Guid? EmpresaId = null, string? Empresa = null, string? Folio = null, string? Documento = null);
 
 /// <summary>Texto aceptado para la constancia del tercero.</summary>
 public sealed record TextoAceptadoParaCorreo(string Titulo, int Version, string Hash);
@@ -290,6 +294,13 @@ public sealed class PlanificadorDeNotificaciones
             ids = [.. ids.Concat(expediente.Requisitos.Where(r => requisitosReabiertos.Contains(r.Id)).SelectMany(r => r.AreasQueRevisan)).Distinct()];
         var deLasAreas = (await contexto.AreasAsync(tenantId, [.. ids], ct)).Where(a => a.EmpresaId == expediente.EmpresaId).ToList();
         var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+
+        // Una actualización que se abrió porque el tercero retiró una versión no es «un expediente nuevo»: se avisa de lo que pasó (RT-2).
+        if (tipo == TiposNotificacion.NuevoEnArea && expediente.Tipo == TipoExpediente.Actualizacion &&
+            expediente.Requisitos.Where(ConRetiroAlAbrir).ToList() is { Count: > 0 } conRetiro)
+            return await RetiroAsync(evento, contexto, tenantId, expediente, empresa?.Nombre, conRetiro.Select(r => (r.Nombre, r.Retiro!, r.VersionActual?.Numero)).ToList(),
+                "Se abrió una actualización para revisarla.", deLasAreas, orden, ct);
+
         var (titulo, mensaje) = tipo switch
         {
             TiposNotificacion.NuevoEnArea => ("Nuevo expediente en tu área", $"{expediente.TerceroNombre} ({expediente.TipoVinculoNombre}) espera tu revisión."),
@@ -306,18 +317,28 @@ public sealed class PlanificadorDeNotificaciones
     /// <summary>
     /// El tercero subió una versión nueva de un documento mientras el expediente está en revisión (p. ej. una revalidación
     /// ya abierta): avisa a las áreas que revisan ese requisito, porque lo decidido sobre la versión anterior quedó sin efecto
-    /// (RQ-10). Con el expediente observado no avisa: de eso se encarga «El tercero respondió» al reenviar.
+    /// (RQ-10). Con el expediente observado no avisa: de eso se encarga «El tercero respondió» al reenviar. Si la versión
+    /// anterior la retiró el tercero (<see cref="VersionAdjuntadaARequisito.Retiro"/>), el aviso lo dice con su motivo (RT-2) y
+    /// también llega con el expediente observado: lo que se había pedido corregir era sobre una versión que ya no existe.
     /// </summary>
     private static async Task<PlanDeNotificaciones> VersionNuevaAsync(IEvent evento, VersionAdjuntadaARequisito adjuntada, IContextoDeEventos contexto,
         long orden, CancellationToken ct)
     {
         if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.ExpedienteAsync(tenantId, evento.StreamId, ct) is not { } expediente ||
-            expediente.Estado != EstadoExpediente.EnRevision || expediente.Requisitos.FirstOrDefault(r => r.Id == adjuntada.RequisitoId) is not { } requisito)
+            expediente.Requisitos.FirstOrDefault(r => r.Id == adjuntada.RequisitoId) is not { } requisito)
             return PlanDeNotificaciones.Vacio;
 
         var ids = requisito.AreasQueRevisan.Count > 0 ? requisito.AreasQueRevisan : expediente.AreaIds;
         var deLasAreas = (await contexto.AreasAsync(tenantId, [.. ids], ct)).Where(a => a.EmpresaId == expediente.EmpresaId).ToList();
         var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+        if (adjuntada.Retiro is { } retiro)
+            return expediente.Estado is EstadoExpediente.EnRevision or EstadoExpediente.Observado
+                ? await RetiroAsync(evento, contexto, tenantId, expediente, empresa?.Nombre, [(requisito.Nombre, retiro, adjuntada.Version.Numero)],
+                    "Lo que se había decidido sobre ella quedó sin efecto y hay que revisarla de nuevo.", deLasAreas, orden, ct)
+                : PlanDeNotificaciones.Vacio;
+        if (expediente.Estado != EstadoExpediente.EnRevision)
+            return PlanDeNotificaciones.Vacio;
+
         var mensaje = $"{expediente.TerceroNombre} subió la versión {adjuntada.Version.Numero} de {requisito.Nombre} (antes la " +
                       $"{adjuntada.NumeroAnterior}): lo decidido sobre la anterior quedó sin efecto y hay que revisarla de nuevo.";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
@@ -328,7 +349,8 @@ public sealed class PlanificadorDeNotificaciones
     /// <summary>
     /// La actualización abierta sumó requisitos que cambiaron después de abrirse (RV-1): avisa a las áreas que los revisan, porque
     /// lo que ya habían decidido en el expediente no cubre lo nuevo y vuelven a tener algo pendiente. Con el expediente devuelto al
-    /// tercero no avisa: de eso se encarga «El tercero respondió» al reenviar.
+    /// tercero no avisa: de eso se encarga «El tercero respondió» al reenviar. Si lo que se sumó es por un retiro del tercero, el
+    /// aviso lo dice con su motivo (RT-2).
     /// </summary>
     private static async Task<PlanDeNotificaciones> RequisitosAgregadosAsync(IEvent evento, RequisitosAgregados agregados, IContextoDeEventos contexto,
         long orden, CancellationToken ct)
@@ -344,11 +366,41 @@ public sealed class PlanificadorDeNotificaciones
         var ids = nuevos.SelectMany(r => r.AreasQueRevisan).Distinct().ToList();
         var deLasAreas = (await contexto.AreasAsync(tenantId, ids, ct)).Where(a => a.EmpresaId == expediente.EmpresaId).ToList();
         var empresa = await contexto.EmpresaAsync(expediente.EmpresaId, ct);
+        if (nuevos.Where(ConRetiroAlAbrir).ToList() is { Count: > 0 } conRetiro)
+            return await RetiroAsync(evento, contexto, tenantId, expediente, empresa?.Nombre, conRetiro.Select(r => (r.Nombre, r.Retiro!, r.VersionActual?.Numero)).ToList(),
+                "Se sumó a la actualización que ya estaba abierta y hay que revisarlo, aunque tu área ya hubiera decidido lo demás.", deLasAreas, orden, ct);
+
         var mensaje = $"{expediente.TerceroNombre} actualizó {string.Join(", ", nuevos.Select(r => r.Nombre))}: se sumó a la actualización que ya estaba " +
                       "abierta y hay que revisarlo, aunque tu área ya hubiera decidido lo demás.";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
             "Requisitos nuevos en una actualización", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
             deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+    }
+
+    /// <summary>
+    /// El requisito nació con el retiro (la actualización se abrió, o lo sumó, porque el tercero retiró la versión que la empresa
+    /// había aprobado): su historial está vacío. Un retiro que llegó después (<see cref="VersionAdjuntadaARequisito.Retiro"/>) deja
+    /// versiones en el historial y lo avisa su propio evento; así un evento viejo que se procese tarde no repite ese aviso.
+    /// </summary>
+    private static bool ConRetiroAlAbrir(RequisitoDeExpediente requisito) => requisito.Retiro is not null && requisito.Historial.Count == 0;
+
+    /// <summary>
+    /// El tercero retiró una versión que la empresa tenía aprobada o en revisión (RT-2): campana y correo (plantilla
+    /// <c>retiro-version</c>) a las áreas que revisan ese documento, con qué versión se retiró, el motivo y cuál vuelve; el
+    /// <paramref name="siguiente"/> dice qué pasa con el expediente. Una persona recibe un solo aviso aunque esté en varias áreas
+    /// y, si el retiro es de varios documentos, uno por expediente.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> RetiroAsync(IEvent evento, IContextoDeEventos contexto, Guid tenantId, Expediente expediente,
+        string? empresa, IReadOnlyList<(string Documento, RetiroDeVersion Retiro, int? Vuelve)> retiros, string siguiente, IReadOnlyList<Area> areas, long orden,
+        CancellationToken ct)
+    {
+        var detalle = string.Join("; ", retiros.Select(r =>
+            $"la versión {r.Retiro.Numero} de {r.Documento} (motivo: {r.Retiro.Motivo.Trim().TrimEnd('.')}){(r.Vuelve is { } v ? $", vuelve la {v}" : string.Empty)}"));
+        var mensaje = $"{expediente.TerceroNombre} retiró {detalle}. {siguiente}";
+        return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa, TiposNotificacion.VersionRetirada,
+            "Versión retirada por el tercero", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
+            areas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct, plantilla: CatalogoDePlantillas.RetiroDeVersion,
+            documento: string.Join(", ", retiros.Select(r => r.Documento)));
     }
 
     private static async Task<PlanDeNotificaciones> PorVencerAsync(IEvent evento, VencimientoAvisado aviso, IContextoDeEventos contexto, long orden,
@@ -466,7 +518,8 @@ public sealed class PlanificadorDeNotificaciones
     /// </summary>
     private static async Task<PlanDeNotificaciones> APersonasAsync(IEvent evento, IContextoDeEventos contexto, Guid tenantId, Guid empresaId,
         string? empresa, string tipo, string titulo, string mensaje, Guid expedienteId, Guid vinculoId, string folio,
-        IReadOnlyList<(string Area, List<Guid> Miembros)> areas, long orden, CancellationToken ct, string? ruta = null)
+        IReadOnlyList<(string Area, List<Guid> Miembros)> areas, long orden, CancellationToken ct, string? ruta = null, string? plantilla = null,
+        string? documento = null)
     {
         var porPersona = areas.SelectMany(a => a.Miembros.Select(m => (Usuario: m, a.Area))).GroupBy(x => x.Usuario)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Area).Distinct().Order(StringComparer.Ordinal).ToList());
@@ -502,7 +555,7 @@ public sealed class PlanificadorDeNotificaciones
                     // «de Constructora Sur S.A.S.» ya termina en punto: no se agrega otro («S.A.S..»).
                     ConPunto($"Expediente {folio}{(empresa is null ? string.Empty : $" de {empresa}")}"),
                     (areasDe.Count == 1 ? "Tu área: " : "Tus áreas: ") + string.Join(", ", areasDe) + "."
-                ], ruta));
+                ], ruta, plantilla, tenantId, plantilla is null ? null : empresaId, empresa, folio, documento));
             }
         }
 
@@ -548,7 +601,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         };
         List<object> correos = TiposNotificacion.QuiereCorreo(await contexto.PreferenciasAsync(tenantId, usuario.Id, ct), TiposNotificacion.LoteTerminado)
-            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta)]
+            ? [new CorreoDeNotificacionPendiente(usuario.Correo, usuario.Nombre, titulo, [mensaje], ruta, TenantId: tenantId)]
             : [];
         return new PlanDeNotificaciones([(tenantId, notificacion)], correos);
     }
@@ -598,7 +651,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         })).ToList();
         var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.WebhookDeshabilitado))
-            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, "Webhook deshabilitado: " + suscripcion.Sistema, [mensaje], null))
+            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, "Webhook deshabilitado: " + suscripcion.Sistema, [mensaje], null, TenantId: tenantId))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }
@@ -636,7 +689,7 @@ public sealed class PlanificadorDeNotificaciones
             Orden = orden
         })).ToList();
         var correos = administradores.Where(u => TiposNotificacion.QuiereCorreo(preferencias(u.Id), TiposNotificacion.CupoIa))
-            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}: {empresa ?? mes}", [mensaje], ruta))
+            .Select(u => (object)new CorreoDeNotificacionPendiente(u.Correo, u.Nombre, $"{titulo}: {empresa ?? mes}", [mensaje], ruta, TenantId: tenantId))
             .ToList();
         return new PlanDeNotificaciones(campana, correos);
     }
@@ -644,8 +697,19 @@ public sealed class PlanificadorDeNotificaciones
 
 public static class CorreoDeNotificacionPendienteHandler
 {
-    public static Task Handle(CorreoDeNotificacionPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarNotificacion(correo), ct);
+    /// <summary>
+    /// Sale como se redactó; si el correo es de un evento del catálogo (<c>retiro-version</c>, RT-2) lleva la plantilla de la empresa
+    /// (asunto, cabecera y pie, PL-1) con <c>{{empresa}}</c>, <c>{{folio}}</c> y <c>{{documento}}</c>.
+    /// </summary>
+    public static async Task Handle(CorreoDeNotificacionPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
+        Comun.PlantillasDeCorreo plantillas, CancellationToken ct)
+    {
+        var mensaje = redactor.RedactarNotificacion(correo);
+        if (correo.Plantilla is { } evento)
+            mensaje = await plantillas.AplicarAsync(mensaje, evento, correo.TenantId, correo.EmpresaId,
+                Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio, documento: correo.Documento), ct);
+        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId), ct);
+    }
 }
 
 /// <summary>
@@ -670,8 +734,8 @@ public static class CorreoDeCertificadoPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Certificado, ct))
             return;
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarCertificado(correo), CatalogoDePlantillas.Certificado,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -705,8 +769,8 @@ public static class CorreoDeDesaprobacionPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Desaprobado, ct))
             return;
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarDesaprobacion(correo), CatalogoDePlantillas.Desaprobacion,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarDesaprobacion(correo), CatalogoDePlantillas.Desaprobacion,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -717,8 +781,8 @@ public static class CorreoDeReintegroPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Reintegrado, ct))
             return;
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarReintegro(correo), CatalogoDePlantillas.Reintegro,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarReintegro(correo), CatalogoDePlantillas.Reintegro,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -729,8 +793,8 @@ public static class CorreoDeVencidoPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.DocumentoVencido, ct))
             return;
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarVencido(correo), CatalogoDePlantillas.Vencido,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa, documento: correo.Documento), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -738,6 +802,6 @@ public static class CorreoDeConstanciaPendienteHandler
 {
     public static async Task Handle(CorreoDeConstanciaPendiente correo, Comun.IEnviadorDeCorreo enviador, Comun.RedactorDeCorreos redactor,
         Comun.PlantillasDeCorreo plantillas, CancellationToken ct) =>
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
-            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarConstancia(correo), CatalogoDePlantillas.ConsentimientoEmpresa,
+            correo.TenantId, correo.EmpresaId, Comun.EjemplosDeCorreo.VariablesDe(correo.Empresa), ct)).DeTenant(correo.TenantId), ct);
 }

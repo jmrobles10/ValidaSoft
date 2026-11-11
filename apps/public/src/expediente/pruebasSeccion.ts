@@ -43,6 +43,31 @@ export const FINANCIERA_PENDIENTE: RequisitoPublicoDto = {
   }),
 };
 
+/**
+ * La información general en la renovación periódica del vínculo (VV-3): la empresa ya la aceptó (versión 1) y sigue completa, pero no
+ * cubre la renovación hasta que el tercero la ratifique o la actualice.
+ */
+export const GENERAL_POR_RATIFICAR: RequisitoPublicoDto = {
+  id: 'r-general',
+  tipoRequisito: 'Seccion',
+  tipoDocumento: { id: 'x', codigo: 'FICHA_GENERAL', nombre: 'Información general', tipoCanonico: 'FICHA_GENERAL', ambito: 'Global', modo: 'Formulario' },
+  obligatorio: true,
+  estado: 'Pendiente',
+  versionActual: null,
+  observaciones: [],
+  puedeRatificar: true,
+  seccion: seccionDeRequisito('FICHA_GENERAL', 'Información general', {
+    completitud: { completa: true, faltantes: [], reglaVersion: 1 },
+    versionEvaluada: 1,
+    versionAceptada: 1,
+  }),
+};
+
+/** Expediente de renovación abierto que espera la ratificación del tercero. */
+export function renovacionConSecciones(requisitos: RequisitoPublicoDto[]): ExpedientePublicoDto {
+  return { ...expedienteConSecciones(requisitos, 'Abierto'), tipo: 'Renovacion', requisitosFaltantes: requisitos.length };
+}
+
 export function expedienteConSecciones(requisitos: RequisitoPublicoDto[], estado: ExpedientePublicoDto['estado'] = 'Observado'): ExpedientePublicoDto {
   return {
     id: 'e1',

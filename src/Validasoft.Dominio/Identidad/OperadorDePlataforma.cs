@@ -73,6 +73,11 @@ public sealed class OperadorDePlataforma
 {
     public const int LongitudMaximaSub = 128;
 
+    /// <summary>Sistema de los operadores que entran directo (correo, código y passkey, ING-4): su <c>sub</c> es su correo.</summary>
+    public const string SistemaDirecto = "DIRECTO";
+
+    public bool EsDirecto => Sistema == SistemaDirecto;
+
     public string Id { get; set; } = string.Empty;
 
     public string Sistema { get; set; } = string.Empty;
@@ -106,6 +111,35 @@ public sealed class OperadorDePlataforma
             CreadoEn = ahora,
             UltimoAcceso = ahora
         };
+    }
+
+    /// <summary>
+    /// Operador de ingreso directo (ING-4): se da de alta con la credencial de arranque o por otro operador y entra con correo, código
+    /// y passkey (obligatoria). Su id es <c>DIRECTO:{correo}</c>.
+    /// </summary>
+    public static OperadorDePlataforma RegistrarDirecto(string nombre, string correo, DateTimeOffset ahora)
+    {
+        if (string.IsNullOrWhiteSpace(nombre))
+            throw ReglaDeNegocioException.Validacion("nombre-requerido", "El nombre del operador es obligatorio.");
+        var normalizado = Usuario.NormalizarCorreo(correo);
+        if (normalizado.Length > LongitudMaximaSub)
+            throw ReglaDeNegocioException.Validacion("correo-invalido", $"El correo del operador admite hasta {LongitudMaximaSub} caracteres.");
+        return new OperadorDePlataforma
+        {
+            Id = Clave(SistemaDirecto, normalizado),
+            Sistema = SistemaDirecto,
+            IdExterno = normalizado,
+            Nombre = nombre.Trim(),
+            Correo = normalizado,
+            CreadoEn = ahora
+        };
+    }
+
+    public void Desactivar()
+    {
+        if (!Activo)
+            throw ReglaDeNegocioException.Conflicto("operador-inactivo", "El operador ya está desactivado.");
+        Activo = false;
     }
 
     /// <summary>El sistema es la fuente de nombre y correo; devuelve si cambiaron.</summary>

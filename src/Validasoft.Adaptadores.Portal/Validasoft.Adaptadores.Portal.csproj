@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Adaptador de origen para el Portal de Proveedores de Sinco (F4, docs/08 §6.6): traduce sus terceros a la ficha y los lee de
+    SQL Server (solo lectura) o de un JSON. Es opcional: el núcleo de Validasoft no lo referencia (solo la API lo registra) y
+    funciona igual sin él. Otro sistema de origen se integra con otro adaptador de esta misma forma (IAdaptadorDeOrigen).
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
+  </ItemGroup>
+</Project>

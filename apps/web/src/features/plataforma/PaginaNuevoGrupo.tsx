@@ -1,4 +1,4 @@
-import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import type { TenantCreadoDto } from '@validasoft/api-client';
 import { DosColumnas, FaltaParaEnviar } from '@validasoft/ui';
 import { useState, type ReactNode, type SubmitEvent } from 'react';
@@ -153,6 +153,29 @@ export function PaginaNuevoGrupo() {
                 requerido: false,
               })}
             </Seccion>
+            <Seccion titulo={t('ingresoPlataforma.etiqueta')} ayuda={t('ingresoPlataforma.ayuda')}>
+              <Box component="fieldset" sx={{ border: 0, m: 0, p: 0, minWidth: 0 }}>
+                <Typography component="legend" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+                  {t('ingresoPlataforma.etiqueta')}
+                </Typography>
+                <Stack>
+                  <FormControlLabel
+                    control={<Checkbox checked={b.ingresoDelegado} onChange={(e) => { cambiar({ ingresoDelegado: e.target.checked }); tocar('modos-requeridos'); }} />}
+                    label={t('ingresoPlataforma.Delegado')}
+                  />
+                  <FormControlLabel
+                    control={<Checkbox checked={b.ingresoDirecto} onChange={(e) => { cambiar({ ingresoDirecto: e.target.checked }); tocar('modos-requeridos'); }} />}
+                    label={t('ingresoPlataforma.Directo')}
+                  />
+                </Stack>
+                {error('modos-requeridos') && (
+                  <Typography variant="body2" sx={{ color: 'error.main', mt: 0.5 }}>
+                    {error('modos-requeridos')}
+                  </Typography>
+                )}
+              </Box>
+            </Seccion>
+            {b.ingresoDelegado && (
             <Seccion titulo={t('plataforma.alta.sistema')} ayuda={t('plataforma.alta.sistemaAyuda')}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                 {campo(t('plataforma.alta.sistemaCodigo'), b.sistemaCodigo, (v) => cambiar({ sistemaCodigo: v.toUpperCase() }), ['sistema-codigo-invalido'], {
@@ -173,6 +196,7 @@ export function PaginaNuevoGrupo() {
                 requerido: false,
               })}
             </Seccion>
+            )}
           </>
         }
       />

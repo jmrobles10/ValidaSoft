@@ -170,7 +170,7 @@ describe('clienteValidasoft', () => {
 
     expect(error.codigo).toBe('no-autenticado');
     expect(error.esNoAutenticado).toBe(true);
-    expect(alNoAutenticado).toHaveBeenCalledWith(error);
+    expect(alNoAutenticado).toHaveBeenCalledWith(error, expect.stringContaining('/api/v1/vinculos'));
   });
 
   it('convierte las fallas de red en ErrorDeRed', async () => {

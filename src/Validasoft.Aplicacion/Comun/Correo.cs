@@ -6,10 +6,21 @@ using Validasoft.Dominio.Configuracion;
 
 namespace Validasoft.Aplicacion.Comun;
 
-/// <summary>Correo listo para enviar (texto plano y HTML).</summary>
-public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html);
+/// <summary>
+/// Correo listo para enviar (texto plano y HTML). <see cref="TenantId"/>: el tenant de quien lo origina; si es un sandbox el correo
+/// no sale a su destinatario sino al buzón de pruebas (SB-4). Nulo = no es de un tenant (acceso del tercero sin empresa).
+/// </summary>
+public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html, Guid? TenantId = null)
+{
+    /// <summary>El mismo correo atribuido al tenant que lo origina (lo usan todos los manejadores de la cola <c>correo</c>).</summary>
+    public MensajeDeCorreo DeTenant(Guid? tenantId) => this with { TenantId = tenantId };
+}
 
 /// <summary>Envío de correo; la implementación (SMTP con MailKit) vive en infraestructura.</summary>
+/// <remarks>
+/// Los manejadores envían por aquí. La implementación (<c>EnviadorDeCorreo</c>) retiene en el buzón del sandbox los correos de un
+/// tenant sandbox y entrega los demás al <see cref="ITransporteDeCorreo"/>.
+/// </remarks>
 public interface IEnviadorDeCorreo
 {
     Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct);
@@ -27,7 +38,13 @@ public enum PlantillaCorreo
     AccesoAutorregistro,
 
     /// <summary>Enlace para volver a entrar pedido con el correo (<c>POST /public/v1/acceso</c>, RE-1).</summary>
-    AccesoPorCorreo
+    AccesoPorCorreo,
+
+    /// <summary>Código de 6 dígitos del ingreso directo de una persona de un grupo o de un operador de Plataforma (ING-1).</summary>
+    CodigoDeIngreso,
+
+    /// <summary>Invitación a entrar directo a Validasoft con el correo (ING-5): sin enlace ni secreto, remite a la app.</summary>
+    InvitacionDeUsuario
 }
 
 /// <summary>
@@ -107,6 +124,14 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                 "Tu enlace para entrar a Validasoft",
                 "Pediste entrar a Validasoft. Con este enlace ves las empresas con las que tienes un vínculo y respondes lo que te pidan.",
                 $"{UrlPublica}/e/{secreto}", vence),
+            PlantillaCorreo.CodigoDeIngreso => new MensajeDeCorreo(correo.Para,
+                "Tu código para ingresar a Validasoft",
+                $"Tu código para ingresar es {secreto}. Vence el {vence} y solo sirve una vez.\n\n" +
+                "Si no pediste ingresar, ignora este correo: sin este código nadie entra a tu cuenta.",
+                $"<p>Tu código para ingresar es</p><p style=\"font-size:24px;letter-spacing:4px\"><b>{secreto}</b></p>" +
+                $"<p>Vence el {WebUtility.HtmlEncode(vence)} y solo sirve una vez.</p>" +
+                "<p>Si no pediste ingresar, ignora este correo: sin este código nadie entra a tu cuenta.</p>"),
+            PlantillaCorreo.InvitacionDeUsuario => Invitar(correo),
             PlantillaCorreo.CodigoOtp => new MensajeDeCorreo(correo.Para,
                 "Tu código de acceso a Validasoft",
                 $"Tu código de acceso es {secreto}. Vence el {vence} y solo sirve para el enlace que acabas de abrir.\n\n" +
@@ -116,6 +141,26 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                 "<p>Si no fuiste tú, ignora este correo.</p>"),
             _ => throw new ArgumentOutOfRangeException(nameof(correo), correo.Plantilla, "Plantilla desconocida.")
         };
+    }
+
+    /// <summary>
+    /// Invitación a entrar directo (ING-5): <c>Empresa</c> trae el nombre del grupo y <c>TipoVinculo</c>, sus roles. No hay contraseña que crear ni enlace de un
+    /// solo uso: la persona entra a la app con este mismo correo y pide su código allí.
+    /// </summary>
+    private MensajeDeCorreo Invitar(CorreoDeAccesoPendiente correo)
+    {
+        var rol = string.IsNullOrWhiteSpace(correo.TipoVinculo) ? string.Empty : $" como {correo.TipoVinculo}";
+        var url = UrlApp;
+        return new MensajeDeCorreo(correo.Para,
+            $"{correo.Empresa} te invitó a Validasoft",
+            $"{correo.Empresa} te dio acceso a Validasoft{rol}.\n\nEntra a {url} con este mismo correo: te enviaremos un código de 6 dígitos cada vez que ingreses. " +
+            "No hay contraseña que crear; si tu rol lo exige, te guiaremos para registrar una passkey (tu huella, tu rostro o una llave de seguridad).\n\n" +
+            "Si no esperabas esta invitación, ignora este correo.",
+            $"<p>{WebUtility.HtmlEncode(correo.Empresa ?? "Una empresa")} te dio acceso a Validasoft{WebUtility.HtmlEncode(rol)}.</p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(url)}\">Entrar a Validasoft</a></p>" +
+            "<p>Usa este mismo correo: te enviaremos un código de 6 dígitos cada vez que ingreses. No hay contraseña que crear; si tu rol lo exige, " +
+            "te guiaremos para registrar una passkey (tu huella, tu rostro o una llave de seguridad).</p>" +
+            "<p>Si no esperabas esta invitación, ignora este correo.</p>");
     }
 
     private static MensajeDeCorreo ConEnlace(string para, string asunto, string introduccion, string url, string vence) =>
@@ -382,8 +427,8 @@ public static class CorreoDeObservacionPendienteHandler
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Observado, ct))
             return;
         var mensaje = redactor.RedactarObservacion(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Observacion, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -401,8 +446,8 @@ public static class CorreoDeResultadoPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Resultado, ct))
             return;
-        await enviador.EnviarAsync(await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
-            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct), ct);
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(redactor.RedactarResultado(correo), CatalogoDePlantillas.Resultado, correo.TenantId,
+            correo.EmpresaId, EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
     }
 }
 
@@ -417,6 +462,6 @@ public static class CorreoDeAccesoPendienteHandler
         if (correo.Plantilla == PlantillaCorreo.Invitacion)
             mensaje = await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.Invitacion, correo.TenantId, correo.EmpresaId,
                 EjemplosDeCorreo.VariablesDe(correo.Empresa, tipoVinculo: correo.TipoVinculo), ct);
-        await enviador.EnviarAsync(mensaje, ct);
+        await enviador.EnviarAsync(mensaje.DeTenant(correo.TenantId), ct);
     }
 }

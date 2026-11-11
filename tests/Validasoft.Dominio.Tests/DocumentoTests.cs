@@ -161,6 +161,33 @@ public class DocumentoTests
         Should.Throw<ReglaDeNegocioException>(() => rut.RetirarVersion(9, "no existe", Ahora)).Codigo.ShouldBe("version-no-encontrada");
     }
 
+    [Fact]
+    public void La_version_que_quedaria_vigente_se_calcula_antes_de_retirar_y_coincide_con_lo_que_pasa_despues()
+    {
+        var rut = Rut();
+        Cargar(rut, "a1");
+        Cargar(rut, "b2");
+        Cargar(rut, "c3");
+
+        // Retirar la actual (3) deja la superada más reciente (2); retirar otra deja la actual donde está; la 1 también.
+        rut.VersionTrasRetirar(3).ShouldBe(2);
+        rut.VersionTrasRetirar(2).ShouldBe(3);
+        rut.VersionTrasRetirar(1).ShouldBe(3);
+        rut.VersionRetirable(3).Numero.ShouldBe(3);
+
+        foreach (var e in rut.RetirarVersion(3, "Subí el archivo equivocado", Ahora))
+            rut.Aplicar(e);
+        rut.VersionActual.ShouldBe(2);
+        rut.VersionRequerida(3).MotivoRetiro.ShouldBe("Subí el archivo equivocado");
+        rut.VersionRequerida(3).RetiradaEn.ShouldBe(Ahora);
+
+        // Con una sola versión no queda ninguna; una devuelta o ya retirada no se puede retirar (el impacto responde igual que el retiro).
+        var sola = Rut();
+        Cargar(sola, "a1");
+        sola.VersionTrasRetirar(1).ShouldBeNull();
+        Should.Throw<ReglaDeNegocioException>(() => rut.VersionRetirable(3)).Codigo.ShouldBe("estado-invalido");
+    }
+
     // ---------- compartición ----------
 
     [Fact]

@@ -34,7 +34,7 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
     public const string CabeceraEmpresa = "X-Empresa";
     public const string CabeceraCorrelacion = "X-Correlation-Id";
 
-    public async Task InvokeAsync(HttpContext http, IDocumentStore store)
+    public async Task InvokeAsync(HttpContext http, IDocumentStore store, IEntornos entornos, CacheDeEmpresas empresas)
     {
         var contexto = ContextoDesdeHttp.De(http);
         contexto.CorrelationId = Correlacion(http);
@@ -49,11 +49,18 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
             contexto.Sistema = usuario.FindFirstValue(Reclamos.Sistema);
             contexto.Empresas = usuario.FindAll(Reclamos.Empresa).Select(c => c.Value).ToHashSet();
 
+            // Una credencial de prueba opera en el sandbox del grupo (SB-1): toda respuesta lo dice, para que nadie lo confunda con producción.
+            if (contexto.TenantId is { } tenantDeLaCredencial && await entornos.EsSandboxAsync(tenantDeLaCredencial, http.RequestAborted))
+            {
+                contexto.EsSandbox = true;
+                http.Response.Headers[AislamientoDeSandbox.CabeceraEntorno] = AislamientoDeSandbox.Entorno;
+            }
+
             var cabeceraEmpresa = http.Request.Headers[CabeceraEmpresa].ToString();
             if (!string.IsNullOrWhiteSpace(cabeceraEmpresa))
             {
                 var empresa = Guid.TryParse(cabeceraEmpresa, out var empresaId) && contexto.TenantId is not null
-                    ? await CargarEmpresaAsync(store, empresaId, http.RequestAborted)
+                    ? await empresas.ObtenerAsync(store, empresaId, http.RequestAborted)
                     : null;
 
                 var permitida = empresa is not null && empresa.Activa && empresa.TenantId == contexto.TenantId &&
@@ -85,11 +92,6 @@ public sealed class MiddlewareDeContexto(RequestDelegate siguiente)
         return string.IsNullOrWhiteSpace(correlacion) || correlacion.Length > 100 ? http.TraceIdentifier : correlacion;
     }
 
-    private static async Task<Empresa?> CargarEmpresaAsync(IDocumentStore store, Guid id, CancellationToken ct)
-    {
-        await using var sesion = store.QuerySession();
-        return await sesion.LoadAsync<Empresa>(id, ct);
-    }
 }
 
 /// <summary>Clave de idempotencia ya usada (docs/05 §3.1). Global; vence a las 24 horas.</summary>
@@ -118,10 +120,10 @@ public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
 {
     /// <summary>
     /// Respuestas con un secreto que no se guardan en el registro: el secreto de un webhook (NW-4), la clave nueva de una API
-    /// key rotada (CN-3), las API keys del alta de un grupo y la sesión de un operador de Plataforma (PT-5, PT-4). Repetir el
+    /// key rotada (CN-3), las API keys del alta de un grupo y la sesión de un operador de Plataforma (PT-5, PT-4) y las sesiones embebidas (IO-5: tercero y usuario). Repetir el
     /// alta responde 409 <c>slug-duplicado</c>; rotar dos veces, 409 <c>api-key-ya-rotada</c>.
     /// </summary>
-    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|api-keys/[^/]+/rotar|plataforma/tenants|plataforma/sesiones)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|api-keys/[^/]+/rotar|plataforma/tenants|plataforma/sesiones|sesiones-tercero|sesiones-usuario)$", RegexOptions.IgnoreCase)]
     private static partial Regex RutaConSecreto();
 
     public const string Cabecera = "Idempotency-Key";
@@ -301,15 +303,24 @@ public sealed class ManejadorDeErrores(IProblemDetailsService problemas, ILogger
 /// </summary>
 public static class LimiteDePeticionesPublicas
 {
+    /// <summary>Rutas del ingreso directo: anónimas, con su propio límite por IP.</summary>
+    public const string RutaIngreso = "/api/v1/ingreso";
+
     public static IServiceCollection AgregarLimiteDePeticionesPublicas(this IServiceCollection servicios, IConfiguration configuracion)
     {
         var peticiones = Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:Peticiones", 60));
         var ventana = TimeSpan.FromSeconds(Math.Max(1, configuracion.GetValue("Validasoft:LimitePublico:VentanaSegundos", 60)));
+        // El ingreso directo (/api/v1/ingreso, ING-1) tiene su propio cupo por IP: 30 peticiones por minuto por omisión.
+        var peticionesIngreso = Math.Max(1, configuracion.GetValue("Validasoft:LimiteIngreso:Peticiones", 30));
+        var ventanaIngreso = TimeSpan.FromSeconds(Math.Max(1, configuracion.GetValue("Validasoft:LimiteIngreso:VentanaSegundos", 60)));
 
         return servicios.AddRateLimiter(opciones =>
         {
             opciones.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
             {
+                if (http.Request.Path.StartsWithSegments(RutaIngreso, StringComparison.OrdinalIgnoreCase))
+                    return RateLimitPartition.GetFixedWindowLimiter("ingreso:" + (http.Connection.RemoteIpAddress?.ToString() ?? "desconocida"),
+                        _ => new FixedWindowRateLimiterOptions { PermitLimit = peticionesIngreso, Window = ventanaIngreso, QueueLimit = 0 });
                 if (!http.Request.Path.StartsWithSegments(ServiciosInfraestructura.RutaPublica, StringComparison.OrdinalIgnoreCase))
                     return RateLimitPartition.GetNoLimiter("sin-limite");
                 var ip = http.Connection.RemoteIpAddress?.ToString() ?? "desconocida";

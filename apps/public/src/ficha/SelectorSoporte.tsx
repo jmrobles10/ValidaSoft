@@ -10,6 +10,8 @@ import { documentosDeSoporte, SOPORTE_FICHA, type DefinicionSeccion } from './se
 interface Props {
   definicion: DefinicionSeccion;
   soportes: readonly SoporteSeccionDto[];
+  /** Soportes de la versión guardada que el tercero retiró de su bóveda (RT-4): no se pueden elegir ni se reenvían. */
+  retirados?: readonly SoporteSeccionDto[];
   onCambiar: (soportes: SoporteSeccionDto[]) => void;
   /** «Falta el soporte del cambio» (FM-20), tal como lo devolvió el servidor. */
   faltaSoporte: string | null;
@@ -32,7 +34,7 @@ const mismo = (a: SoporteSeccionDto, b: SoporteSeccionDto) => a.documentoId === 
  * sección (FM-20), en su versión vigente, más los soportes que ya tenía la versión guardada. «Subir un soporte» usa la
  * carga de siempre con el canónico `SOPORTE_FICHA` y vuelve a la sección.
  */
-export function SelectorSoporte({ definicion, soportes, onCambiar, faltaSoporte, error, volver, deshabilitado }: Props) {
+export function SelectorSoporte({ definicion, soportes, retirados = [], onCambiar, faltaSoporte, error, volver, deshabilitado }: Props) {
   const { t } = useTranslation();
   const boveda = useBoveda();
   const documentos = boveda.data?.documentos ?? [];
@@ -64,6 +66,16 @@ export function SelectorSoporte({ definicion, soportes, onCambiar, faltaSoporte,
         <FormLabel component="legend" sx={{ fontWeight: 600, color: 'text.primary' }}>
           {t('ficha.soporte.titulo')}
         </FormLabel>
+        {retirados.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 1.5 }}>
+            {retirados.map((s) => (
+              <Typography key={`${s.documentoId}-${String(s.version)}`} sx={{ fontSize: 14 }}>
+                {t('ficha.soporte.retirado', { tipo: s.nombre ?? s.tipoDocumento ?? '', n: String(s.version) })}
+              </Typography>
+            ))}
+            <Typography sx={{ fontSize: 14 }}>{t('ficha.soporte.retiradoAyuda')}</Typography>
+          </Alert>
+        )}
         <FormHelperText sx={{ mx: 0, mb: 1 }}>{definicion.soportes === null ? t('ficha.soporte.ayudaOpcional') : t('ficha.soporte.ayuda')}</FormHelperText>
         {boveda.isPending ? (
           <Skeleton variant="rounded" height={44} />

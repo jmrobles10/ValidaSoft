@@ -10,7 +10,7 @@ namespace Validasoft.Integracion.Tests;
 
 public sealed partial class RequisitosApiTests
 {
-    // ---------- importador del Portal y sincronizador de coexistencia (F4: FM-39…) ----------
+    // ---------- importador genérico con el adaptador del Portal y sincronizador de coexistencia (F4: FM-39…; IO-1) ----------
 
     private const string RutaImportacion = "/api/v1/plataforma/importacion/portal";
 
@@ -40,16 +40,16 @@ public sealed partial class RequisitosApiTests
     }
 
     /// <summary>Encola una corrida con el JSON del fixture y espera (hasta 60 s) a que termine.</summary>
-    private async Task<CorridaImportacionPortalDto> ImportarPortalAsync(string json, bool dryRun, IReadOnlyList<ConstructoraEmpresaDto>? constructoras = null)
+    private async Task<CorridaImportacionDto> ImportarPortalAsync(string json, bool dryRun, IReadOnlyList<UnidadEmpresaDto>? unidades = null)
     {
         var plataforma = new Credencial(ApiFixture.ClavePlataforma);
-        var encolada = await ApiAsync<CorridaImportacionPortalDto>("POST", RutaImportacion, plataforma,
-            new ImportarPortalDto(dryRun, "Archivo", JsonDocument.Parse(json).RootElement.Clone(), constructoras, TamanoLote: 2), 202);
+        var encolada = await ApiAsync<CorridaImportacionDto>("POST", RutaImportacion, plataforma,
+            new ImportarTercerosDto(dryRun, "Archivo", JsonDocument.Parse(json).RootElement.Clone(), unidades, TamanoLote: 2), 202);
         encolada.Estado.ShouldBeOneOf("Encolada", "EnCurso", "Completada");
         var limite = DateTime.UtcNow.AddSeconds(60);
         while (true)
         {
-            var corrida = await ApiAsync<CorridaImportacionPortalDto>("GET", $"{RutaImportacion}/{encolada.Id}", plataforma, null, 200);
+            var corrida = await ApiAsync<CorridaImportacionDto>("GET", $"{RutaImportacion}/{encolada.Id}", plataforma, null, 200);
             if (corrida.Estado is "Completada" or "Fallida")
             {
                 corrida.Error.ShouldBeNull();
@@ -63,7 +63,7 @@ public sealed partial class RequisitosApiTests
         }
     }
 
-    private static ResumenSeccionImportadaDto Seccion(CorridaImportacionPortalDto c, string seccion) => c.Resumen.Secciones.Single(s => s.Seccion == seccion);
+    private static ResumenSeccionImportadaDto Seccion(CorridaImportacionDto c, string seccion) => c.Resumen.Secciones.Single(s => s.Seccion == seccion);
 
     private async Task<T?> CargarAsync<T>(object id, string? tenant = null) where T : class
     {
@@ -79,7 +79,7 @@ public sealed partial class RequisitosApiTests
     }
 
     [Fact]
-    public async Task Importador_del_portal_dry_run_corrida_idempotente_version_nueva_aceptacion_y_sincronizador_que_abre_la_revalidacion()
+    public async Task Importador_generico_con_el_adaptador_del_portal_dry_run_corrida_idempotente_version_nueva_aceptacion_y_sincronizador_que_abre_la_revalidacion()
     {
         var norte = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
         await FlujoConAsync(norte, "CLIENTE", [new RequisitoDelFlujoDto(Seccion: "FICHA_GENERAL")]);
@@ -88,22 +88,25 @@ public sealed partial class RequisitosApiTests
         // La empresa ya tenía al jurídico como vínculo (sin aceptar): el importador lo encuentra por su NIT y no lo duplica.
         var correo = CorreoNuevo();
         var vinculo = await CrearVinculoAsync(norte, "CLIENTE", correo, f.NitJ);
-        var constructoras = new[] { new ConstructoraEmpresaDto(7, norte.Datos.Id) };
+        var constructoras = new[] { new UnidadEmpresaDto("7", norte.Datos.Id) };
 
         // Validaciones de la entrada.
         var plataforma = new Credencial(ApiFixture.ClavePlataforma);
-        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarPortalDto(Origen: "Excel"), 422))).ShouldBe("origen-invalido");
-        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarPortalDto(Origen: "Archivo"), 422))).ShouldBe("archivo-requerido");
-        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarPortalDto(Origen: "SqlServer"), 409)))
-            .ShouldBe("origen-portal-no-configurado");
+        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarTercerosDto(Fuente: "Excel"), 422))).ShouldBe("fuente-invalida");
+        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarTercerosDto(Fuente: "Archivo"), 422))).ShouldBe("archivo-requerido");
+        (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma, new ImportarTercerosDto(Fuente: "Conectado"), 409)))
+            .ShouldBe("origen-no-configurado");
+        // Un sistema de origen sin adaptador registrado no existe: el núcleo funciona igual sin él.
+        (await CodigoAsync(await ApiAsync("POST", "/api/v1/plataforma/importacion/erp-desconocido", plataforma,
+            new ImportarTercerosDto(Archivo: JsonDocument.Parse(f.Json()).RootElement.Clone()), 404))).ShouldBe("origen-no-registrado");
         (await CodigoAsync(await ApiAsync("POST", RutaImportacion, plataforma,
-            new ImportarPortalDto(Archivo: JsonDocument.Parse(f.Json()).RootElement.Clone(), Constructoras: [new ConstructoraEmpresaDto(7, Guid.NewGuid())]), 422)))
+            new ImportarTercerosDto(Archivo: JsonDocument.Parse(f.Json()).RootElement.Clone(), Unidades: [new UnidadEmpresaDto("7", Guid.NewGuid())]), 422)))
             .ShouldBe("empresa-no-encontrada");
-        await ApiAsync("POST", RutaImportacion, Admin(norte), new ImportarPortalDto(Origen: "Archivo"), 403);
+        await ApiAsync("POST", RutaImportacion, Admin(norte), new ImportarTercerosDto(Fuente: "Archivo"), 403);
 
         // 1. Dry-run: reporta lo que haría y no escribe nada.
         var simulada = await ImportarPortalAsync(f.Json(), dryRun: true, constructoras);
-        (simulada.DryRun, simulada.Lotes, simulada.Cursor).ShouldBe((true, 2, (int?)f.TeridE));
+        (simulada.Origen, simulada.DryRun, simulada.Lotes, simulada.Cursor).ShouldBe(("portal", true, 2, (string?)f.TeridE.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         (simulada.Resumen.TercerosLeidos, simulada.Resumen.TercerosCreados, simulada.Resumen.TercerosEncontrados, simulada.Resumen.TercerosRechazados)
             .ShouldBe((3, 2, 1, 0));
         Seccion(simulada, "FICHA_GENERAL").Creadas.ShouldBe(3);
@@ -112,11 +115,11 @@ public sealed partial class RequisitosApiTests
         simulada.Resumen.SinVinculo.ShouldBe(1); // la natural estaba Completada en la constructora 7, pero Norte no la tiene vinculada
         simulada.Resumen.Catalogos.Single(c => c.Catalogo == "especialidades").Creados.ShouldBe(4);
         simulada.Resumen.Rechazos.ShouldBeGreaterThan(0);
-        (await CargarAsync<Tercero>(IdDeLegado.TerceroPortal(f.TeridN))).ShouldBeNull();
+        (await CargarAsync<Tercero>(IdDeLegado.Tercero("portal", f.TeridN.ToString(System.Globalization.CultureInfo.InvariantCulture)))).ShouldBeNull();
         (await CargarAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(vinculo.TerceroId, "FICHA_GENERAL", null), "boveda")).ShouldBeNull();
         (await CargarAsync<EntradaDeCatalogo>("Especialidades|PE9301")).ShouldBeNull();
 
-        // 2. Corrida real: crea los terceros nuevos (id UUID v5 de portal:{Terid}) y la versión 1 de cada sección, con origen Importada.
+        // 2. Corrida real: crea los terceros nuevos (id UUID v5 de portal:{clave}) y la versión 1 de cada sección, con origen Importada.
         var real = await ImportarPortalAsync(f.Json(), dryRun: false, constructoras);
         (real.Resumen.TercerosCreados, real.Resumen.TercerosEncontrados, real.Resumen.TercerosRechazados).ShouldBe((2, 1, 0));
         Seccion(real, "FICHA_GENERAL").ShouldBe(new ResumenSeccionImportadaDto("FICHA_GENERAL", 3, 0, 0));
@@ -124,14 +127,17 @@ public sealed partial class RequisitosApiTests
         (real.Resumen.Aceptaciones, real.Resumen.SinVinculo).ShouldBe((7, 1));
         (await CargarAsync<EntradaDeCatalogo>("Especialidades|PE9301")).ShouldNotBeNull().Padre.ShouldBe("PC9201");
 
-        var natural = (await CargarAsync<Tercero>(IdDeLegado.TerceroPortal(f.TeridN))).ShouldNotBeNull();
-        (natural.ClaveIdentificacion, natural.TipoPersona, natural.Nombre, natural.ClaveLegado).ShouldBe(
-            ($"CO|CC|{f.CcN}", TipoPersona.Natural, "María López Díaz", $"portal:{f.TeridN}"));
+        var natural = (await CargarAsync<Tercero>(IdDeLegado.Tercero("portal", f.TeridN.ToString(System.Globalization.CultureInfo.InvariantCulture)))).ShouldNotBeNull();
+        (natural.ClaveIdentificacion, natural.TipoPersona, natural.Nombre).ShouldBe(($"CO|CC|{f.CcN}", TipoPersona.Natural, "María López Díaz"));
+        // La clave del tercero en el sistema de origen queda como su referencia externa de la plataforma (tenant técnico «boveda»).
+        (await CargarAsync<ReferenciaDeTercero>($"PORTAL|{f.TeridN}", "boveda")).ShouldNotBeNull().TerceroId.ShouldBe(natural.Id);
         var juridico = (await CargarAsync<Tercero>(vinculo.TerceroId)).ShouldNotBeNull();
-        juridico.ClaveLegado.ShouldBe($"portal:{f.TeridJ}");
-        (await CargarAsync<Tercero>(IdDeLegado.TerceroPortal(f.TeridJ))).ShouldBeNull(); // no se duplicó con otro id
-        real.Resumen.DetalleAdvertencias.ShouldContain(a => a.Terid == f.TeridJ && a.Codigo == "dv-recalculado" && a.Dato == "0");
-        real.Resumen.DetalleAdvertencias.ShouldContain(a => a.Terid == f.TeridJ && a.Codigo == "persona-duplicada");
+        (await CargarAsync<ReferenciaDeTercero>($"PORTAL|{f.TeridJ}", "boveda")).ShouldNotBeNull().TerceroId.ShouldBe(juridico.Id);
+        // La referencia de la plataforma no la ve ningún tenant: viven en espacios distintos.
+        (await CargarAsync<ReferenciaDeTercero>($"PORTAL|{f.TeridJ}", norte.Datos.TenantId.ToString("N"))).ShouldBeNull();
+        (await CargarAsync<Tercero>(IdDeLegado.Tercero("portal", f.TeridJ.ToString(System.Globalization.CultureInfo.InvariantCulture)))).ShouldBeNull(); // no se duplicó con otro id
+        real.Resumen.DetalleAdvertencias.ShouldContain(a => a.Clave == f.TeridJ.ToString(System.Globalization.CultureInfo.InvariantCulture) && a.Codigo == "dv-recalculado" && a.Dato == "0");
+        real.Resumen.DetalleAdvertencias.ShouldContain(a => a.Clave == f.TeridJ.ToString(System.Globalization.CultureInfo.InvariantCulture) && a.Codigo == "persona-duplicada");
 
         // Lo importado del jurídico en Tercero 360: versión 1 de origen Importada, aceptada por importación (sin expediente).
         var ficha = await ApiAsync<FichaTerceroDto>("GET", $"/api/v1/terceros/{vinculo.TerceroId}/ficha", Admin(norte), null, 200);
@@ -154,7 +160,7 @@ public sealed partial class RequisitosApiTests
         // CSV de rechazos: solo el tercero con errores (ciudad sin DANE, correo y teléfono inválidos, fecha y porcentaje de texto).
         var csv = await (await ApiAsync("GET", $"{RutaImportacion}/{real.Id}/rechazos", plataforma, null, 200)).ReadAsTextAsync();
         var filas = csv.TrimStart('﻿').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
-        filas[0].ShouldBe("claveLegado,terid,seccion,periodo,campo,codigo,motivo,dato,accionSugerida");
+        filas[0].ShouldBe("claveLegado,clave,seccion,periodo,campo,codigo,motivo,dato,accionSugerida");
         filas.Skip(1).ShouldAllBe(x => x.StartsWith($"portal:{f.TeridE},{f.TeridE},", StringComparison.Ordinal));
         var codigos = filas.Skip(1).Select(x => x.Split(',')[5]).ToList();
         codigos.ShouldContain("ciudad-sin-dane");
@@ -195,12 +201,13 @@ public sealed partial class RequisitosApiTests
             "FICHA_GENERAL");
         (aprobada.VersionAceptada, aprobada.Origen, aprobada.ExpedienteId).ShouldBe(((int?)2, "Expediente", (Guid?)expedienteId));
 
-        // 6. Coexistencia: el Portal guarda una dirección nueva y llama al sincronizador ⇒ versión 3 con origen Portal ⇒ la
+        // 6. Coexistencia: el Portal guarda una dirección nueva y llama al sincronizador ⇒ versión 3 con origen SistemaExterno ⇒ la
         //    revalidación de F2 se abre solo con la general.
         var rutaSincronizar = $"{RutaImportacion}/terceros/{f.TeridJ}/sincronizar";
         await File.WriteAllTextAsync(fixture.ArchivoPortal, f.Json(telefono: "6017778899", direccion: "Carrera 7 # 80-12"));
-        var sincronizado = await ApiAsync<SincronizacionPortalDto>("POST", rutaSincronizar, plataforma, null, 200);
+        var sincronizado = await ApiAsync<SincronizacionDto>("POST", rutaSincronizar, plataforma, null, 200);
         (sincronizado.TerceroId, sincronizado.TerceroCreado, sincronizado.ClaveLegado).ShouldBe(((Guid?)vinculo.TerceroId, false, $"portal:{f.TeridJ}"));
+        sincronizado.Origen.ShouldBe("portal");
         sincronizado.Secciones.Where(s => s.Creada).Select(s => (s.Seccion, s.Version)).ShouldBe([("FICHA_GENERAL", (int?)3)]);
 
         var actualizacionId = await AbiertoEnAsync(norte, vinculo.Id, expedienteId);
@@ -210,11 +217,11 @@ public sealed partial class RequisitosApiTests
         (requisito.TipoDocumento.Codigo, requisito.VersionActual!.N, requisito.Seccion!.VersionAceptada).ShouldBe(("FICHA_GENERAL", 3, (int?)2));
         requisito.Seccion.Cambios.ShouldBe([new CambioDeCampoDto("direccion", "Dirección", "Calle 45 # 12-08", "Carrera 7 # 80-12", "Modificado")]);
         (await ApiAsync<FichaTerceroDto>("GET", $"/api/v1/terceros/{vinculo.TerceroId}/ficha", Admin(norte), null, 200)).Secciones!
-            .Single(s => s.Seccion == "FICHA_GENERAL").Origen.ShouldBe("Portal");
+            .Single(s => s.Seccion == "FICHA_GENERAL").Origen.ShouldBe("SistemaExterno");
 
         // Sincronizar otra vez sin cambios no hace nada; un Terid que el Portal no tiene es 404.
-        (await ApiAsync<SincronizacionPortalDto>("POST", rutaSincronizar, plataforma, null, 200)).Secciones.ShouldAllBe(s => !s.Creada);
-        (await CodigoAsync(await ApiAsync("POST", $"{RutaImportacion}/terceros/1/sincronizar", plataforma, null, 404))).ShouldBe("tercero-portal-no-encontrado");
+        (await ApiAsync<SincronizacionDto>("POST", rutaSincronizar, plataforma, null, 200)).Secciones.ShouldAllBe(s => !s.Creada);
+        (await CodigoAsync(await ApiAsync("POST", $"{RutaImportacion}/terceros/1/sincronizar", plataforma, null, 404))).ShouldBe("tercero-origen-no-encontrado");
         (await CodigoAsync(await ApiAsync("POST", $"{RutaImportacion}/{real.Id}/reanudar", plataforma, null, 409))).ShouldBe("corrida-completada");
     }
 }

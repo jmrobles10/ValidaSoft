@@ -5,18 +5,28 @@ import type {
   CertificadoDelVinculoDto,
   CertificadoDto,
   ConsultaCertificacionDto,
+  ContactoDeEmpresaDto,
+  CorreoDePruebaDto,
+  CrearSesionEmbebidaDto,
+  CrearTerceroDto,
   CrearVinculoDto,
   DescargaDto,
   EnlaceInvitacionDto,
   EventoPublicoDto,
   ExpedienteDto,
+  FichaDelVinculoDto,
   InvitacionDto,
   JustificacionDto,
+  PaginaDto,
   PaginaEventosDto,
+  ReferenciaExternaDto,
+  SandboxDto,
   SesionUsuarioDto,
+  TerceroDto,
   TipoEventoPublicoDto,
   VinculoDto,
 } from './tipos.js';
+import type { SesionEmbebidaDto } from './embebido.js';
 
 /** Respuesta de error de la API (Problem Details): `codigo` es el código estable de la regla para decidir en el integrador. */
 export class ErrorValidasoft extends Error {
@@ -151,6 +161,24 @@ export interface FiltroEventos {
   limite?: number;
 }
 
+/** Filtros del buzón de pruebas del sandbox: destinatario, parte del asunto, tamaño de página (1–200) y cursor de la página anterior. */
+export interface FiltroCorreos {
+  para?: string;
+  asunto?: string;
+  limite?: number;
+  cursor?: string;
+}
+
+function correosDe(ctx: Contexto, filtro: FiltroCorreos): Promise<PaginaDto<CorreoDePruebaDto>> {
+  const parametros = new URLSearchParams();
+  if (filtro.para) parametros.set('para', filtro.para);
+  if (filtro.asunto) parametros.set('asunto', filtro.asunto);
+  if (filtro.limite !== undefined) parametros.set('limite', String(filtro.limite));
+  if (filtro.cursor) parametros.set('cursor', filtro.cursor);
+  const consulta = parametros.toString();
+  return obtener<PaginaDto<CorreoDePruebaDto>>(ctx, { metodo: 'GET', ruta: `api/v1/sandbox/correos${consulta ? `?${consulta}` : ''}`, conEmpresa: false });
+}
+
 async function* recorrer(cliente: ClienteValidasoft, filtro: FiltroEventos): AsyncGenerator<EventoPublicoDto> {
   let desde = filtro.desde;
   for (;;) {
@@ -195,7 +223,15 @@ export class ClienteValidasoft {
       obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/vinculos', cuerpo: vinculo, claveIdempotencia, reintentable: claveIdempotencia !== undefined }),
     obtener: (id: string) => obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/${q(id)}` }),
     porReferencia: (sistema: string, id: string) =>
-      obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/por-referencia?sistema=${q(sistema)}&id=${q(id)}` }),
+      obtener<VinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/por-referencia?sistema=${q(sistema)}&clave=${q(id)}` }),
+    /** Agrega al vínculo la clave del sistema de la API key (idempotente; el mismo sistema con otra clave es 409). */
+    agregarReferencia: (id: string, referencia: Pick<ReferenciaExternaDto, 'id'> & Partial<ReferenciaExternaDto>) =>
+      obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/referencias`, cuerpo: referencia }),
+    /** Reemplaza los contactos del tercero con la empresa (lista completa; vacía = quitarlos). */
+    actualizarContactos: (id: string, contactos: ContactoDeEmpresaDto[]) =>
+      obtener<VinculoDto>(this.ctx, { metodo: 'PUT', ruta: `api/v1/vinculos/${q(id)}/contactos`, cuerpo: { contactos } }),
+    /** Lo aceptado por la empresa, el representante, la cuenta designada, los contactos y las referencias del vínculo. */
+    ficha: (id: string) => obtener<FichaDelVinculoDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/vinculos/${q(id)}/ficha` }),
     bloquear: (id: string, bloqueo: BloquearVinculoDto) => obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/bloquear`, cuerpo: bloqueo }),
     desbloquear: (id: string, justificacion: JustificacionDto) =>
       obtener<VinculoDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(id)}/desbloquear`, cuerpo: justificacion }),
@@ -263,7 +299,62 @@ export class ClienteValidasoft {
     tipos: () => obtener<TipoEventoPublicoDto[]>(this.ctx, { metodo: 'GET', ruta: 'api/v1/eventos/tipos' }),
   };
 
+  /**
+   * El sandbox del grupo (docs/08 §2.2): un entorno de pruebas aislado al que apuntan las API keys `vsk_test_…`, con la configuración del
+   * grupo, ningún dato real, los correos retenidos en un buzón consultable y los proveedores de IA y de listas simulados. Piden el
+   * permiso `sandbox:administrar`; sirven con la llave de producción y con la de prueba, siempre sobre el sandbox.
+   */
+  readonly sandbox = {
+    /** Si existe, sus empresas (el `X-Empresa` de una llave de prueba es el `id` de cada una) y cuántos correos tiene. */
+    obtener: () => obtener<SandboxDto>(this.ctx, { metodo: 'GET', ruta: 'api/v1/sandbox', conEmpresa: false }),
+    /** Lo crea con la configuración del grupo o, si ya existe, le agrega lo que le falte de producción. Idempotente. */
+    asegurar: () => obtener<SandboxDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sandbox', conEmpresa: false, reintentable: true }),
+    /** Borra todo lo hecho en el sandbox y lo siembra de nuevo con la configuración de producción de ahora. */
+    reiniciar: () => obtener<SandboxDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sandbox/reiniciar', conEmpresa: false }),
+    /** Los correos que el sandbox habría enviado, los más nuevos primero. */
+    correos: (filtro: FiltroCorreos = {}) => correosDe(this.ctx, filtro),
+    /**
+     * Espera a que llegue al buzón un correo para `para` (y, si se indica, con `asunto` en el asunto) y lo devuelve; falla si no llega en
+     * `esperaMs` (20 s por omisión). El de la invitación trae el enlace del tercero en `enlaces`.
+     */
+    esperarCorreo: async (para: string, opciones: { asunto?: string; esperaMs?: number } = {}): Promise<CorreoDePruebaDto> => {
+      const limite = Date.now() + (opciones.esperaMs ?? 20_000);
+      for (;;) {
+        const pagina = await correosDe(this.ctx, { para, asunto: opciones.asunto, limite: 1 });
+        const primero = pagina.datos[0];
+        if (primero) return primero;
+        if (Date.now() >= limite) throw new Error(`No llegó al buzón del sandbox ningún correo para ${para}.`);
+        await esperar(250);
+      }
+    },
+    /** Un correo del buzón. */
+    correo: (id: string) => obtener<CorreoDePruebaDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/sandbox/correos/${q(id)}`, conEmpresa: false }),
+    /** Vacía el buzón. */
+    vaciarCorreos: async (): Promise<void> => {
+      await obtener<null>(this.ctx, { metodo: 'DELETE', ruta: 'api/v1/sandbox/correos', conEmpresa: false });
+    },
+  };
+
+  readonly terceros = {
+    /** Crea el tercero; con `referenciaExterna` (clave en el sistema de la API key) la creación es idempotente. */
+    crear: (tercero: CrearTerceroDto, claveIdempotencia?: string) =>
+      obtener<TerceroDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/terceros', cuerpo: tercero, claveIdempotencia, reintentable: claveIdempotencia !== undefined }),
+    /** Registra la clave del tercero en el sistema de la API key (idempotente); devuelve las claves del tenant. */
+    agregarReferencia: (id: string, referencia: Pick<ReferenciaExternaDto, 'id'> & Partial<ReferenciaExternaDto>) =>
+      obtener<ReferenciaExternaDto[]>(this.ctx, { metodo: 'POST', ruta: `api/v1/terceros/${q(id)}/referencias`, cuerpo: referencia }),
+    referencias: (id: string) => obtener<ReferenciaExternaDto[]>(this.ctx, { metodo: 'GET', ruta: `api/v1/terceros/${q(id)}/referencias` }),
+    /** Busca el tercero por la clave que le dio el sistema. 404 si no existe (o no es visible para el tenant). */
+    porReferencia: (sistema: string, clave: string) =>
+      obtener<TerceroDto>(this.ctx, { metodo: 'GET', ruta: `api/v1/terceros/por-referencia?sistema=${q(sistema)}&clave=${q(clave)}`, conEmpresa: false }),
+  };
+
   readonly sesiones = {
+    /**
+     * Abre una sesión corta del tercero para embeber su bóveda, su expediente o su ficha en el iframe de la página `origen`
+     * (`POST /api/v1/sesiones-tercero`). El token se entrega al iframe por `postMessage` (ver `montarEmbebido`), nunca en la URL.
+     */
+    crearDelTercero: (sesion: CrearSesionEmbebidaDto) =>
+      obtener<SesionEmbebidaDto>(this.ctx, { metodo: 'POST', ruta: 'api/v1/sesiones-tercero', cuerpo: sesion }),
     /**
      * Canjea la identidad delegada por un token de 30 minutos para el iframe (`Authorization: Bearer`). Solo desde
      * {@link ClienteValidasoft.comoUsuario}.

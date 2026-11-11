@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Validasoft.Adaptadores.Portal/Validasoft.Adaptadores.Portal.csproj" />
     <Project Path="src/Validasoft.Api/Validasoft.Api.csproj" />
     <Project Path="src/Validasoft.Aplicacion/Validasoft.Aplicacion.csproj" />
     <Project Path="src/Validasoft.Contratos/Validasoft.Contratos.csproj" />
@@ -11,6 +12,7 @@
     <Project Path="docs/ejemplos/IntegradorSrm/IntegradorSrm.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Validasoft.Adaptadores.Portal.Tests/Validasoft.Adaptadores.Portal.Tests.csproj" />
     <Project Path="tests/Validasoft.Dominio.Tests/Validasoft.Dominio.Tests.csproj" />
     <Project Path="tests/Validasoft.Integracion.Tests/Validasoft.Integracion.Tests.csproj" />
     <Project Path="tests/Validasoft.Sdk.Tests/Validasoft.Sdk.Tests.csproj" />

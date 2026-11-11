@@ -18,7 +18,9 @@
  * como respaldo: se suma en desarrollo o si la consulta falla.
  */
 
-export const VERSION_PROTOCOLO = 1;
+import { VERSION_PROTOCOLO as VERSION_DEL_SDK } from '@validasoft/sdk';
+
+export const VERSION_PROTOCOLO = VERSION_DEL_SDK;
 
 export type MotivoSesionRequerida = 'inicial' | 'por-vencer' | 'vencida' | 'rechazada';
 
@@ -56,75 +58,14 @@ export function interpretarMensaje(datos: unknown): MensajeEntrante | null {
   }
 }
 
-/** Ruta pública (sin credencial) con los orígenes que pueden alojar las pantallas embebidas. */
-export const RUTA_ORIGENES_PERMITIDOS = '/public/v1/embed/origenes-permitidos';
-
-/**
- * Lista de orígenes permitidos: el propio (la demo embebida vive en el mismo origen), los que publica la API y los de
- * `VITE_ORIGENES_CONTENEDOR`. Estos últimos son respaldo: entran si aún no hay lista de la API (`remotos` nulo, porque
- * falló o no ha llegado) o si `incluirConfigurados` (desarrollo).
- */
-export function origenesPermitidos(
-  configurados: string | undefined,
-  propio: string,
-  remotos: readonly string[] | null = null,
-  incluirConfigurados = false,
-): string[] {
-  const lista = (configurados ?? '')
-    .split(',')
-    .map((o) => o.trim().replace(/\/$/, ''))
-    .filter(Boolean);
-  const respaldo = remotos === null || incluirConfigurados ? lista : [];
-  return [...new Set([propio, ...(remotos ?? []), ...respaldo])];
-}
-
-/**
- * Pide a la API los orígenes permitidos. Devuelve `null` si no responde o la respuesta no tiene la forma esperada
- * (`{ origenes: string[] }`): en ese caso se usa el respaldo.
- */
-export async function cargarOrigenesPermitidos(baseUrl = '', fetchFn: typeof fetch = (...a) => globalThis.fetch(...a)): Promise<string[] | null> {
-  try {
-    const respuesta = await fetchFn(`${baseUrl}${RUTA_ORIGENES_PERMITIDOS}`, { headers: { Accept: 'application/json' } });
-    if (!respuesta.ok) return null;
-    const datos: unknown = await respuesta.json();
-    if (!esRegistro(datos) || !Array.isArray(datos.origenes)) return null;
-    return datos.origenes.filter((o): o is string => typeof o === 'string' && /^https?:\/\/[^/]+$/.test(o));
-  } catch {
-    return null;
-  }
-}
-
-/** Cada cuánto se vuelve a pedir la lista (la API la publica con `vigenciaSegundos: 60`). */
-export const RECARGA_ORIGENES_MS = 60_000;
-
-/**
- * Lista vigente tras una consulta: si falló, se queda la última buena (y si nunca hubo, `null` = respaldo); si no
- * cambió, la misma referencia, para no volver a anunciar `ready` al contenedor cada minuto.
- */
-export function siguienteListaDeOrigenes(previa: readonly string[] | null | undefined, nueva: string[] | null): readonly string[] | null {
-  if (nueva === null) return previa ?? null;
-  if (previa?.length === nueva.length && previa.every((o, i) => o === nueva[i])) return previa;
-  return nueva;
-}
-
-export function origenPermitido(origen: string, permitidos: readonly string[]): boolean {
-  return origen !== 'null' && permitidos.includes(origen);
-}
-
-/**
- * Origen del contenedor: `ancestorOrigins` (Chromium) o el `referrer`. Solo se usa si está permitido, para no
- * entregar mensajes a una página que no debería alojar a Validasoft.
- */
-export function origenDelContenedor(ventana: Pick<Window, 'location' | 'document'>, permitidos: readonly string[]): string | null {
-  const ancestros = ventana.location.ancestorOrigins as DOMStringList | undefined;
-  const candidato = ancestros?.[0] ?? (ventana.document.referrer ? new URL(ventana.document.referrer).origin : null);
-  return candidato && origenPermitido(candidato, permitidos) ? candidato : null;
-}
-
-export function estaEmbebida(ventana: Window = window): boolean {
-  try {
-    return ventana.self !== ventana.top;
-  } catch {
-    return true; // acceder a `top` de otro origen lanza: estamos en un iframe
-  }
-}
+// Lo que no depende del tipo de mensaje (orígenes permitidos, contenedor, ¿embebida?) es del SDK, que lo comparten las dos apps embebibles.
+export {
+  cargarOrigenesPermitidos,
+  estaEmbebida,
+  origenDelContenedor,
+  origenesPermitidos,
+  origenPermitido,
+  RECARGA_ORIGENES_MS,
+  RUTA_ORIGENES_PERMITIDOS,
+  siguienteListaDeOrigenes,
+} from '@validasoft/sdk';

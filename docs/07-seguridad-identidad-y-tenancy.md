@@ -2,7 +2,7 @@
 
 | Estado | Fecha | Responsable |
 |---|---|---|
-| Borrador (decisiones del registro propagadas) | 2026-10-28 | Arquitectura |
+| Borrador (decisiones del registro propagadas; ingreso sin contraseñas ING-1…ING-9 al 2026-11-11) | 2026-11-11 | Arquitectura |
 
 **Propósito.** Definir cómo se autentican y autorizan usuarios, terceros e integraciones; cómo se aísla cada tenant (grupo empresarial) **y cada empresa dentro del tenant** (ADR-0008) mientras se comparte la bóveda del tercero; cómo se protegen binarios, secretos y datos personales; qué se registra; y qué amenazas se mitigan. **Este documento es el dueño de los nombres de roles y permisos.**
 
@@ -14,7 +14,7 @@
 
 1. **Todo endpoint exige autenticación y autorización por defecto.** Excepciones explícitas: `/health/live|ready`, `/public/v1/verificar/{folio}`, canje de enlaces/OTP, autorregistro (con rate limit). No existe "modo desarrollo" que fije un usuario.
 2. **Tenant y empresa salen de la credencial** (y del header `X-Empresa` validado contra ella). Recurso de otro tenant o empresa ⇒ `404`.
-3. **El tercero no tiene contraseña.** Enlace de un solo uso, OTP opcional, sesión corta.
+3. **Nadie tiene contraseña** (ING-1, 2026-11-11). El tercero entra con un enlace de un solo uso y OTP opcional; las personas de un grupo y los operadores de Plataforma, con un código al correo y passkeys (§2.7); las integraciones, con API key o identidad delegada.
 4. **Secretos fuera del repositorio y de tablas en claro.**
 5. **Los binarios nunca pasan por la API.** URLs prefirmadas auditadas.
 6. **Lo que una empresa decide es privado**, incluso frente a otras empresas del mismo tenant.
@@ -32,12 +32,12 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 
 | Cliente | Flujo | Tokens |
 |---|---|---|
-| `apps/web` (revisor/admin/plataforma) | Authorization Code + PKCE | Access JWT 15 min; refresh rotativo 8 h deslizante con detección de reuso; solo en memoria |
+| `apps/web` (empresa y Plataforma), **ingreso directo** | Correo → código de 6 dígitos → cuenta → passkey, o solo passkey (§2.7). Sustituye al Authorization Code + PKCE previsto: no hay contraseñas | **Implementado (ING-1…ING-3):** access JWT HS256 de ≤ 15 min con los mismos reclamos que la sesión delegada (+ `sesion-id` y `metodo`), en memoria; refresco opaco rotativo en la cookie `vs_usuario` (`HttpOnly; SameSite=Strict`), con detección de reuso, duración máxima e inactividad por grupo |
 | `apps/public` (tercero) | Grant `urn:validasoft:magic-link` | Access JWT 30 min ligado a `terceroId` y vínculos; refresh deslizante máx. 8 h; cookie `HttpOnly; Secure; SameSite=Lax` (**implementado**: §2.2 «Reingreso», RE-1…RE-7) |
 | SRM/Portal dentro del marco ERP | Grant `urn:validasoft:erp-token` (token exchange) | Access JWT 15 min con `tenant`, `empresas[]`, `sub`, roles |
 | Integraciones servidor-a-servidor | `X-Api-Key` | §4 |
 | Persona de un sistema integrado (SRM, Marco, Portal…) | `X-Api-Key` del sistema + `X-Usuario-Delegado` (JWT ≤ 5 min firmado por el sistema) | §2.6; pantallas embebidas: sesión de Validasoft HS256 de 30 min (`POST /sesiones-usuario`) |
-| Operador de Plataforma (consola `/plataforma`) | Credencial de Plataforma (`X-Api-Key`, clave de arranque) + `X-Usuario-Delegado` firmado por un **sistema de Plataforma** | **Implementado (PT-4):** `POST /plataforma/sesiones` ⇒ sesión HS256 de 30 min sin tenant ni empresas, actor `Plataforma`, solo `plataforma:tenants`; el operador queda registrado para la auditoría. Mientras llega el login OIDC con 2FA (§2.4) |
+| Operador de Plataforma (consola `/plataforma`) | Credencial de Plataforma (`X-Api-Key`, clave de arranque) + `X-Usuario-Delegado` firmado por un **sistema de Plataforma** | **Implementado (PT-4):** `POST /plataforma/sesiones` ⇒ sesión HS256 de 30 min sin tenant ni empresas, actor `Plataforma`, solo `plataforma:tenants`; el operador queda registrado para la auditoría. Además, desde ING-4 los operadores entran **directo** con correo, código y passkey obligatoria (§2.7); la clave de arranque queda solo para dar de alta al primero |
 | CLI de importación | Client Credentials con `importacion:escribir` | 15 min |
 
 ### 2.2 Grant `urn:validasoft:magic-link`
@@ -69,9 +69,9 @@ Validasoft es su propio proveedor OIDC (módulo `Identidad`, esquema `identidad`
 Validación del token del marco contra el endpoint de introspección del ERP del tenant (cache 5 min) o firma compartida rotable; mapeo a usuario Validasoft del tenant con roles por empresa según mapeo configurado; nunca se guarda el token del ERP. **Precisado por ADR-0011:** Marco es un sistema integrado más y usa la identidad delegada de §2.6; los roles no vienen del ERP.
 
 ### 2.4 Usuarios internos
-- Contraseñas Argon2id; mínimo 12 caracteres; bloqueo progresivo.
-- **2FA TOTP obligatorio** para `Administrador`, `Auditor`, `Plataforma` y revisores del área **Cumplimiento**; opcional (recomendado) para el resto; el tenant puede exigirlo a todos (P-14-4). Códigos de recuperación; passkeys en H8 (decisión abierta).
-- Recuperación por enlace de un solo uso (30 min). Sesiones listables y revocables.
+- **Sin contraseñas** (ING-1): se entra con el código del correo y, cuando corresponde, con una **passkey** (§2.7). Reemplaza a las contraseñas Argon2id, al TOTP y a los códigos de recuperación que preveía esta sección.
+- **Passkey obligatoria** (P-14-4, ING-2) para `Administrador`, `OficialCumplimiento` y `Auditor` y siempre para los operadores de `Plataforma`; opcional (recomendada) para el resto; el grupo puede exigirla a todos (`PasskeyParaTodos`).
+- **Recuperación:** un administrador del grupo revoca la passkey perdida y la persona vuelve a entrar con el código y registra otra, con auditoría. **Sesiones** listables y revocables por la persona y por los administradores (§2.7).
 - **Delegación** temporal por usuario (fechas, área, empresa) auditada (P-4-6).
 
 ### 2.5 Federación futura
@@ -93,6 +93,34 @@ Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cue
    - **Un solo origen recomendado; CORS opcional (SE-5).** La API puede servir las apps (SE-3) y así no hace falta CORS. Para dominios separados, `Validasoft:Cors:OrigenesPermitidos[]` con orígenes exactos (sin comodines; con `PermitirCredenciales` nunca se combina `*`) y sin admitir `X-Api-Key` ni `X-Usuario-Delegado` en el preflight: las credenciales de sistema no pueden viajar desde un navegador.
    - **IP real detrás de un proxy (SE-6).** `X-Forwarded-For` / `X-Forwarded-Proto` se leen solo si la conexión llega desde `Validasoft:Proxies:Confiables[]` (IP o CIDR; se quitan los valores por defecto de loopback), tomando como máximo `Validasoft:Proxies:Saltos` (1) entradas desde la derecha: lo que el cliente anteponga en la cabecera no cuenta. Sin proxies configurados el middleware ni se registra.
 
+### 2.7 Ingreso directo sin contraseñas (2026-11-11, ING-1…ING-9)
+
+**Decisión de Producto:** Validasoft es multi-tenant y también se integra por API; **no habrá contraseñas**. Hay tres formas de entrar y **cada grupo elige cuáles admite** (`Tenant.ModosDeIngreso`; los grupos existentes quedan solo con `Delegado`, ING-8):
+
+| Modo | Quién | Cómo |
+|---|---|---|
+| `Delegado` | Las personas del grupo desde su sistema integrado | Identidad delegada (§2.6): `POST /sesiones-usuario`, `X-Usuario-Delegado`, pantallas embebidas. **No cambia.** Sin este modo, `403 modo-de-ingreso-no-admitido` |
+| `Directo` | Las personas del grupo y los operadores de Plataforma, en `apps/web` | Correo → código → cuenta → passkey (abajo) |
+| API key | Integraciones servidor a servidor | §4 (no son personas) |
+
+**Flujo (contrato en [05 §2.10](05-api-contratos-y-webhooks.md)).**
+1. **Código.** `POST /api/v1/ingreso/codigo`: 6 dígitos al correo, 5 min, un solo uso, 5 intentos, 5 envíos por correo y hora y un cupo por IP. La respuesta es idéntica exista o no la cuenta (un correo sin cuenta recibe un desafío señuelo). Reutiliza el outbox, `ProtectorDeSecretos` y las plantillas de correo del portal (ING-1).
+2. **Cuenta.** El correo puede tener cuentas en varios grupos (y ser operador): si hay más de una se elige con cuál se entra. Solo cuentan los grupos que admiten `Directo`.
+3. **Passkey (ING-2).** Credencial detectable con verificación de usuario obligatoria: **por sí sola vale por dos factores** (posesión + huella, rostro o PIN) y resiste el phishing; el código por correo es **un** factor. Por eso: con passkey registrada se entra **solo con ella** (sin correo ni código; el navegador ofrece las del sitio) o, si se empezó por el correo, con código **y** passkey; el código solo **no** abre sesión a una cuenta con passkey ni a un rol que la exija. Sin passkey y con rol que la exige (`Administrador`, `OficialCumplimiento`, `Auditor`, todos si `PasskeyParaTodos`, siempre Plataforma) el código solo sirve para **registrar la primera**; si no la exige, se entra con el código y se sugiere registrar una.
+4. **Sesión (ING-3).** El mismo JWT HS256 de la identidad delegada (+ `sesion-id`, `metodo`), ≤ 15 min; refresco opaco en la cookie `vs_usuario` (`HttpOnly`, `SameSite=Strict`, `Path=/api/v1/ingreso/sesion`) que rota en cada renovación, tolera 10 s el token anterior (petición duplicada) y **revoca la familia ante un reuso**. Duración máxima e inactividad **por grupo**; cada renovación relee a la persona. Cerrar o revocar una sesión corta su token en segundos.
+
+**Passkeys (WebAuthn).** Fido2NetLib 4.3.2 en el servidor y `navigator.credentials` en la web, sin atestación. El `rp.id` y los orígenes salen de `Validasoft:Ingreso:Passkeys` (por omisión, de `Validasoft:Correo:UrlPublica`): una passkey solo sirve en el sitio donde se registró. Un contador de firmas que no crece (credencial clonada) ⇒ `401 passkey-clonada`. Hasta 10 por cuenta; cada una con nombre, sincronización y último uso.
+
+**Quién gestiona qué (ING-3, ING-5).** Cada persona ve y cierra sus sesiones y registra, renombra y elimina sus passkeys (no la última si su cuenta la exige) en «Mi cuenta». Los administradores del grupo (`usuarios:administrar`, rol de todo el grupo) invitan por correo, ven y cierran las sesiones de una persona, ven y **revocan sus passkeys** (la recuperación: se cierran sus sesiones y vuelve a entrar con el código para registrar otra) y configuran los modos, la duración y la inactividad (`GET/PUT /configuracion/ingreso`). Un operador de Plataforma hace lo mismo con otro operador (ING-4).
+
+**Operadores de Plataforma (ING-4).** Entran con correo + código + passkey obligatoria. **La clave de arranque** (`Validasoft:Plataforma:ClaveBootstrap`) solo se usa para dar de alta al primer operador (`POST /plataforma/operadores`); después se **desactiva en producción** dejándola vacía o quitando la variable `VALIDASOFT__PLATAFORMA__CLAVEBOOTSTRAP` (sin una clave de al menos 32 caracteres la credencial deja de existir). La identidad delegada de operadores (PT-4) sigue para backoffices propios.
+
+**Auditoría de identidad (ING-6).** Cada código, ingreso (exitoso o fallido con su motivo), passkey y sesión queda en `RegistroDeIngreso` con IP, navegador, método y actor; nunca el código ni el token. Se consulta en `GET /auditoria?tipo=Identidad`.
+
+**Preparado para OIDC/WorkOS (ING-7).** El primer paso (verificar quién es la persona) está detrás de `IProveedorDeIdentidad`; un proveedor federado entregaría la misma `IdentidadVerificada` y el resto (cuentas por correo, política del grupo, passkeys, sesiones y tokens) no cambia. No está integrado.
+
+**Límites y ajustes** (`appsettings`): `Validasoft:LimiteIngreso:{Peticiones, VentanaSegundos}` (30/min por IP), `Validasoft:Ingreso:MinutosAcceso` (15), `Validasoft:Ingreso:Plataforma:{SesionHoras, InactividadMinutos}` (8 h, 30 min), `Validasoft:Ingreso:CookieSegura` (por omisión la de `SesionTercero`) y `Validasoft:Ingreso:Passkeys:{RpId, Origenes, Nombre}`.
+
 ---
 
 ## 3. Autorización: roles, alcance y permisos
@@ -101,7 +129,7 @@ Proveedor externo OIDC/SAML por tenant; mapeo de grupos a roles por empresa; cue
 
 | Rol | Alcance posible | Descripción |
 |---|---|---|
-| `Plataforma` | Global (`tenant_id = NULL`) | Crea tenants y empresas, administra el catálogo canónico y las propuestas, ve uso y costos agregados; **nunca accede a documentos ni decisiones por defecto**. Para un incidente, un `Administrador` del tenant le concede un **acceso temporal de soporte** (`AccesoSoporteDto`: alcance empresa/expediente/tercero, 1–72 h, justificación) que se registra con actor `Plataforma` en auditoría de configuración y en `DocumentoAccedido`; expira solo y es revocable (B-6). Sección `/plataforma` (P-15-2). **Implementado (PT-4…PT-7):** consola con grupos y empresas, alta de un grupo con su empresa, administrador y sistema integrado, plan de IA de cada empresa con su llave de OpenAI de solo escritura y secretos en reposo. |
+| `Plataforma` | Global (`tenant_id = NULL`) | Crea tenants y empresas, administra el catálogo canónico y las propuestas, ve uso y costos agregados; **nunca accede a documentos ni decisiones por defecto**. Para un incidente, un `Administrador` del tenant le concede un **acceso temporal de soporte** (`AccesoSoporteDto`: alcance empresa/expediente/tercero, 1–72 h, justificación) que se registra con actor `Plataforma` en auditoría de configuración y en `DocumentoAccedido`; expira solo y es revocable (B-6). Sección `/plataforma` (P-15-2). **Implementado (PT-4…PT-7):** consola con grupos y empresas, alta de un grupo con su empresa, administrador y sistema integrado, plan de IA de cada empresa con su llave de OpenAI de solo escritura y secretos en reposo; **operadores de ingreso directo** con passkey obligatoria (ING-4). |
 | `Administrador` | Tenant o empresa | Configuración, usuarios, API keys, webhooks, override con justificación, bloqueos, reaperturas |
 | `Revisor` | Empresa + área(s) | Veredictos en sus áreas; ve expedientes cuyos flujos incluyen un área suya |
 | `Auditor` | Tenant o empresa | Solo lectura total, auditoría de accesos, exportaciones |
@@ -119,6 +147,7 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 |---|---|---|---|---|---|---|---|
 | `plataforma:tenants` · `plataforma:catalogo` · `plataforma:uso` | ✓ | — | — | — | — | — | — |
 | `empresas:administrar` | — | ✓ (tenant) | — | — | — | — | — |
+| `sandbox:administrar` (crear, reiniciar y leer el buzón del sandbox, SB-6) | — | ✓ (tenant) | — | — | — | scope (también una llave de prueba sobre su propio sandbox) | — |
 | `configuracion:leer` / `escribir` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | — |
 | `usuarios:administrar` · `api-keys:administrar` · `webhooks:administrar` | — | ✓ | — | — | — | scope (webhooks) | — |
 | `terceros:leer` / `escribir` (campos privados) | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | propio (maestros) |
@@ -135,6 +164,8 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `verificaciones:escribir` | — | ✓ | — | ✓ | — | scope | — |
 | `certificados:leer` / `revocar` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope / — | propios |
 | `consultas:leer` · `eventos:leer` · `sesiones-tercero:crear` | — | ✓ | ✓ | ✓ | ✓ | scope | — |
+
+> `sesiones-tercero:crear` (IO-6) solo sirve a la API key de un **sistema integrador**: abre la sesión de un tercero cuyo vínculo lleva la referencia de ese sistema, para un origen de los que el sistema registró, con un token de ≤ 15 minutos ligado a ese vínculo, origen y componente. Las llaves ya emitidas no la tienen: se crea o rota una con ella.
 | `vencimientos:leer` / `escribir` | — | ✓ / ✓ | ✓ / ✓ | ✓ / ✓ | ✓ / — | scope | — |
 | `auditoria:leer` (dominio, configuración, identidad y accesos; alcance por empresa o tenant) | — | ✓ | — | ✓ | ✓ | scope (solo referencias) | — |
 | `auditoria:exportar` (Excel con los filtros de la pantalla, IF-4; ZIP firmado pendiente) | — | ✓ | — | — | ✓ | — | — |
@@ -162,7 +193,8 @@ Reglas: la **separación de funciones** (quien invita no aprueba) es configurabl
 | **Precedencia con webhooks** | El alcance efectivo de una suscripción es `apiKey.empresas[] ∩ webhook.empresas[]`; intersección vacía ⇒ `422 empresas-fuera-de-alcance` al crear/editar; si una rotación o edición posterior de la llave la deja vacía, la suscripción se deshabilita (`webhook.deshabilitado`, causa `empresas-fuera-de-alcance`) y el administrador recibe correo |
 | Rotación / revocación | `POST /api-keys/{id}/rotar`: la anterior vale 24 h por defecto (de 0 a 30 días, CN-3); revocación inmediata; la caché de verificaciones (5 min) vence con el reloj de Validasoft y se olvida en el nodo al rotar o revocar (otros nodos, ≤ 5 min) |
 | Registro | `ultimoUsoEn`, `ultimaIp`, contador; alerta por uso de llave inactiva 90 días |
-| Restricción | IPs/CIDR, `expiraEn`; **sandbox** por llave de prueba (`vsk_test_…`) en H9 (P-11-4) |
+| Restricción | IPs/CIDR, `expiraEn` |
+| **Sandbox** (SB-1…SB-5) | Una llave `vsk_test_{grupo}_…` (marca `sandbox`, emitida como cualquier llave) **vive en el grupo de producción** —se lista, rota y revoca allí— pero **autentica en el sandbox del grupo**: un tenant hermano (`Tenant.TenantDeProduccionId`) con copias de las empresas (otro id; `empresas` de la llave se traducen a los ids de las copias), la configuración heredada y ningún dato. El prefijo y la marca deben coincidir (`test` ⇔ `sandbox`); sin sandbox la llave responde 401 (se crea al emitir la primera o con `POST /sandbox`). Toda respuesta lleva `Validasoft-Entorno: sandbox`; una credencial del sandbox no crea, lista, rota ni revoca llaves (422 `no-disponible-en-sandbox`). §5.4 |
 | Prohibido | API keys en navegadores; el embed usa `POST /sesiones-usuario` servidor a servidor. El CORS opcional (SE-5) no admite `X-Api-Key` ni `X-Usuario-Delegado` |
 
 ---
@@ -217,6 +249,22 @@ Puede(empresa E del tenant T, leer versión V del documento D del tercero X) ⇔
 | KPIs | — | los suyos | los suyos | ✗ | scope | agregados del tenant sin detalle de decisiones | agregados por tenant |
 | Auditoría de accesos a documentos | accesos a sus documentos (empresa, fecha, motivo) | los de A1 | los de A2 | los de B1 | — | ✓ | — |
 | Prompts/respuestas de IA | ✗ | evidencia resumida | evidencia resumida | ídem | — | ✓ completa | sin contenido |
+
+### 5.4 Sandbox: un tenant hermano con lo global aislado (SB-1…SB-5)
+
+El sandbox de un grupo es **otro tenant** (`Tenant.TenantDeProduccionId = {grupo}`, slug `{slug}~sandbox`, que ningún slug real admite): todo lo que Marten parte por `tenant_id` —vínculos, expedientes, certificados, configuración, usuarios, eventos, webhooks, informes, KPIs, auditoría— queda aislado sin tocar una sola consulta. Lo que **no** se parte por tenant se aísla aparte:
+
+| Lo global | Cómo se aísla en un sandbox |
+|---|---|
+| **Terceros y bóveda** (`boveda`, únicos por identificación) | El tercero de un sandbox es otro: `Tercero.SandboxTenantId` y una clave única con el tenant por delante (`sbx:{tenant}|CO|NIT|…`), así su NIT no choca con el real y su bóveda (documentos, ficha, cuentas, avisos), sus enlaces de acceso y sus sesiones cuelgan del tercero de pruebas. Las búsquedas por identificación del tenant usan `IContextoSolicitud.ClaveDeTercero`; la identificación visible no cambia |
+| **Correo** | `IEnviadorDeCorreo` decide por `MensajeDeCorreo.TenantId`: el de un sandbox se guarda en su buzón (`CorreoDePrueba`, `GET /sandbox/correos`) y **nunca** llega a `ITransporteDeCorreo` (SMTP). Todos los manejadores de la cola `correo` atribuyen el tenant de su mensaje |
+| **IA** | Los planes del sandbox llevan la «llave» `sk-sandbox-…`; el analizador por entorno la manda al proveedor simulado: ningún documento de prueba sale a OpenAI |
+| **Listas restrictivas** | El proveedor del sandbox es siempre el simulado, aunque la instalación no lo permita y sin gastar la cuota de la empresa |
+| **Verificación pública de certificados** | La búsqueda por folio descarta los certificados de un tenant sandbox (404): no son verificables ni cuentan para decidir si un folio es ambiguo |
+| **Acceso con el correo** (`POST /public/v1/acceso`) | Ignora los vínculos de terceros de un sandbox: el correo real de quien probó una integración no recibe enlaces de pruebas |
+| **Consola de Plataforma** | Las listas de tenants y de grupos no incluyen sandboxes |
+
+El sandbox se **crea y siembra al pedirlo** con la configuración de producción (empresas, tipos de vínculo y de documento, áreas sin miembros, flujos, motivos, plantillas y sistemas integrados con su id y clave pública), y se **reinicia** borrando su partición y los terceros de pruebas con todo lo que cuelga de ellos ([08 §2.2](08-integracion-y-migracion.md) y la [guía de integración](integracion.md) lo explican al integrador). Las personas que llegan por identidad delegada nacen administradoras del sandbox, acotadas por los scopes de su llave.
 
 ---
 
@@ -310,8 +358,14 @@ Firma HMAC con timestamp; secretos de 256 bits con rotación solapada; payloads 
 | Divulgación | Enumerar correos con «pedir acceso» | Respuesta idéntica (`202`) exista o no; límite por IP y 3 envíos por hora por correo sin revelarlo; la carrera entre dos solicitudes se resuelve sin cambiar la respuesta |
 | Denegación | Bombardear el buzón de un tercero con «pedir acceso» | 3 enlaces por hora por correo (RE-2) además de 60/min por IP |
 | Suplantación | Token del ERP falsificado | Introspección/firma por tenant |
+| Suplantación | Adivinar el código de ingreso o agotarlo con un correo ajeno | 6 dígitos de un solo uso, 5 min y 5 intentos por código; 5 códigos por correo y hora y cupo por IP: como mucho 25 intentos por hora y correo; el código solo no abre sesión a cuentas con passkey (ING-1, ING-2) |
+| Suplantación | Phishing del código por correo | Con passkey registrada se entra con ella (ligada al sitio y a la persona con verificación de usuario); el código solo nunca abre una cuenta con passkey ni un rol que la exija |
+| Divulgación | Enumerar correos con «ingresar» | Respuesta idéntica exista o no la cuenta, desafío señuelo con los mismos intentos y mensajes; una passkey detectable no lista credenciales (ING-1) |
+| Suplantación | Cookie `vs_usuario` robada | `HttpOnly; SameSite=Strict`, rotación en cada renovación, reuso ⇒ familia revocada, duración máxima e inactividad por grupo, sesiones listables y revocables (ING-3) |
+| Elevación | Passkey de un dispositivo perdido o robado | Revocación por un administrador (o por su dueño): deja de valer y cierra las sesiones; contador de firmas para detectar clones; auditoría (ING-2, ING-5, ING-6) |
+| Elevación | Operador de Plataforma con solo la clave de arranque | La clave solo da de alta al primero y se desactiva en producción; los demás entran con passkey obligatoria (ING-4) |
 | Suplantación | Aserción `X-Usuario-Delegado` capturada (log, proxy) y repetida dentro de sus 5 min | `jti` obligatorio de un solo uso por sistema (SE-4): segundo uso ⇒ `401 asercion-reutilizada`, también en paralelo |
-| Manipulación | Clickjacking: un sitio ajeno enmarca las pantallas de Validasoft | `frame-ancestors 'self'` + orígenes registrados de sistemas activos (SE-1); la app del tercero solo `'self'` |
+| Manipulación | Clickjacking: un sitio ajeno enmarca las pantallas de Validasoft | `frame-ancestors 'self'` + orígenes registrados de sistemas activos (SE-1); la app del tercero solo `'self'`, salvo `/embed/{componente}` (la ruta de su iframe: IO-5), que admite además esos mismos orígenes |
 | Suplantación | Página ajena que aloja el iframe le entrega una sesión o recibe sus mensajes | El puente solo acepta y envía `postMessage` a orígenes publicados por la API (SE-2) |
 | Denegación | Evadir el límite por IP falseando `X-Forwarded-For` | La cabecera solo cuenta desde proxies confiables configurados y se toma la entrada que agregó el proxy (SE-6) |
 | Suplantación | Cambio de cuenta bancaria fraudulento | Solo el tercero propone; certificación con `IdentidadCoincide`; 2 aprobadores de la empresa; evento al ERP |
@@ -342,7 +396,7 @@ Dependabot, `dotnet list package --vulnerable`, `pnpm audit` en GitHub Actions; 
 ## Decisiones abiertas
 
 1. ~~2FA para `Revisor`~~ **Cerrada** por P-14-4: obligatorio Administrador/Auditor/Cumplimiento; opcional para el resto; política por tenant.
-2. **Passkeys/WebAuthn.** Propuesta: H8. Quién decide: Producto.
+2. ~~Passkeys/WebAuthn~~ **Cerrada** (2026-11-11, ING-2): obligatorias para `Administrador`, `OficialCumplimiento`, `Auditor` y Plataforma, opcionales para el resto, exigibles a todos por grupo; la passkey sola vale por dos factores.
 3. ~~Retención de binarios no referenciados~~ **Cerrada**: 90 días.
 4. ~~Región del proveedor de IA y cláusulas~~ **Cerrada** por P-6-5/P-14-2: consentimiento expreso; región del tenant; Legal redacta el texto.
 5. ~~Exclusión de empresas por el tercero~~ **Cerrada** por A-8: sin exclusión para ningún tipo.

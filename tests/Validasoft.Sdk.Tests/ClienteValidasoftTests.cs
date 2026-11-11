@@ -165,6 +165,45 @@ public sealed class ClienteValidasoftTests
     }
 
     [Fact]
+    public async Task Integracion_abierta_referencias_contactos_ficha_y_sesion_del_tercero()
+    {
+        var (cliente, servidor) = Crear();
+        var tercero = Guid.NewGuid();
+        var vinculo = Guid.NewGuid();
+        servidor.Responder(HttpStatusCode.Created, """{"id":"0195f1c2-7d3e-7a00-8000-000000000002","nombre":"Aceros"}""");
+        servidor.Responder(HttpStatusCode.Created, """[{"sistema":"ERPX","id":"C-1"}]""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000002"}""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000001","contactos":[]}""");
+        servidor.Responder(HttpStatusCode.OK, """{"id":"0195f1c2-7d3e-7a00-8000-000000000001","contactos":[]}""");
+        servidor.Responder(HttpStatusCode.OK, """{"vinculoId":"0195f1c2-7d3e-7a00-8000-000000000001"}""");
+        servidor.Responder(HttpStatusCode.Created, """{"token":"a.b.c","expira":"2026-11-11T12:10:00Z","url":"https://valida.acme.co/embed/boveda","origen":"https://anfitrion.test","componente":"boveda","vinculoId":"0195f1c2-7d3e-7a00-8000-000000000001","terceroId":"0195f1c2-7d3e-7a00-8000-000000000002"}""");
+
+        await cliente.Terceros.CrearAsync(new CrearTerceroDto(new IdentificacionDto("CO", "NIT", "900123456"), "Juridica", "Aceros", null, null, new ReferenciaExternaDto("", "C-1")), "erpx-c-1");
+        (await cliente.Terceros.AgregarReferenciaAsync(tercero, new ReferenciaExternaDto("", "C-1"))).ShouldBe([new ReferenciaExternaDto("ERPX", "C-1")]);
+        await cliente.Terceros.PorReferenciaAsync("ERPX", "C 1");
+        await cliente.Vinculos.AgregarReferenciaAsync(vinculo, new ReferenciaExternaDto("", "S-1"));
+        await cliente.Vinculos.ActualizarContactosAsync(vinculo, [new ContactoDeEmpresaDto("Ana", null, "ana@aceros.co", null, "Pagos")]);
+        await cliente.Vinculos.FichaAsync(vinculo);
+        var sesion = await cliente.Sesiones.CrearDelTerceroAsync(new CrearSesionEmbebidaDto(vinculo, "boveda", "https://anfitrion.test", 5));
+        sesion.Token.ShouldBe("a.b.c");
+
+        var r = servidor.Recibidas;
+        (r[0].Peticion.Method, r[0].Peticion.RequestUri!.AbsolutePath, Cabecera(r[0].Peticion, "Idempotency-Key")).ShouldBe((HttpMethod.Post, "/api/v1/terceros", "erpx-c-1"));
+        r[0].Cuerpo!.ShouldContain("\"referenciaExterna\":{\"sistema\":\"\",\"id\":\"C-1\"}");
+        r[1].Peticion.RequestUri!.AbsolutePath.ShouldBe($"/api/v1/terceros/{tercero}/referencias");
+        r[2].Peticion.RequestUri!.PathAndQuery.ShouldBe("/api/v1/terceros/por-referencia?sistema=ERPX&clave=C%201");
+        Cabecera(r[2].Peticion, "X-Empresa").ShouldBeNull(); // el tercero es del tenant, no de una empresa
+        (r[3].Peticion.Method, r[3].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Post, $"/api/v1/vinculos/{vinculo}/referencias"));
+        (r[4].Peticion.Method, r[4].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Put, $"/api/v1/vinculos/{vinculo}/contactos"));
+        r[4].Cuerpo!.ShouldContain("\"contactos\":[{\"nombre\":\"Ana\"");
+        Cabecera(r[4].Peticion, "X-Empresa").ShouldBe(Empresa.ToString());
+        r[5].Peticion.RequestUri!.AbsolutePath.ShouldBe($"/api/v1/vinculos/{vinculo}/ficha");
+        (r[6].Peticion.Method, r[6].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Post, "/api/v1/sesiones-tercero"));
+        r[6].Cuerpo!.ShouldContain("\"origen\":\"https://anfitrion.test\"");
+        Cabecera(r[6].Peticion, "X-Usuario-Delegado").ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Para_empresa_cambia_x_empresa_y_la_url_base_puede_tener_ruta()
     {
         var (cliente, servidor) = Crear(urlBase: "https://erp.acme.co/validasoft");
@@ -173,7 +212,7 @@ public sealed class ClienteValidasoftTests
         await cliente.ParaEmpresa(otra).Vinculos.PorReferenciaAsync("SRM", "ADP 00123");
 
         var peticion = servidor.Recibidas.Single().Peticion;
-        peticion.RequestUri!.AbsoluteUri.ShouldBe("https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&id=ADP%2000123");
+        peticion.RequestUri!.AbsoluteUri.ShouldBe("https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&clave=ADP%2000123");
         Cabecera(peticion, "X-Empresa").ShouldBe(otra.ToString());
     }
 
@@ -205,6 +244,54 @@ public sealed class ClienteValidasoftTests
         await cliente.Eventos.ListarAsync(empresaId: Empresa);
         Cabecera(servidor.Recibidas[^1].Peticion, "X-Empresa").ShouldBeNull();
         servidor.Recibidas[^1].Peticion.RequestUri!.Query.ShouldBe($"?empresaId={Empresa}");
+    }
+
+    [Fact]
+    public async Task El_sandbox_se_consulta_sin_empresa_y_su_buzon_se_filtra_y_se_espera()
+    {
+        var (cliente, servidor) = Crear();
+        var empresaDePrueba = Guid.NewGuid();
+        var sandbox = new
+        {
+            existe = true, entorno = "produccion", tenantId = Guid.NewGuid(), creadoEn = DateTimeOffset.UtcNow, reiniciadoEn = (DateTimeOffset?)null,
+            empresas = new[] { new { id = empresaDePrueba, produccionId = Empresa, nombre = "Norte (sandbox)", prefijoFolio = "TN", activa = true } },
+            sistemas = new[] { "SRM" }, correos = 0
+        };
+        servidor.Responder(HttpStatusCode.OK, sandbox);
+        servidor.Responder(HttpStatusCode.Created, sandbox);
+        servidor.Responder(HttpStatusCode.OK, sandbox);
+
+        var estado = await cliente.Sandbox.ObtenerAsync();
+        await cliente.Sandbox.AsegurarAsync();
+        await cliente.Sandbox.ReiniciarAsync();
+
+        estado.Empresas.Single().Id.ShouldBe(empresaDePrueba);
+        estado.Sistemas.ShouldBe(["SRM"]);
+        servidor.Recibidas.Select(r => (r.Peticion.Method.Method, r.Peticion.RequestUri!.AbsolutePath)).ShouldBe(
+            [("GET", "/api/v1/sandbox"), ("POST", "/api/v1/sandbox"), ("POST", "/api/v1/sandbox/reiniciar")]);
+        // Son rutas de la credencial, no de una empresa: no llevan X-Empresa.
+        servidor.Recibidas.ShouldAllBe(r => Cabecera(r.Peticion, "X-Empresa") == null);
+
+        object Correo(string para) => new
+        {
+            id = Guid.NewGuid(), para, asunto = "Te invitan", texto = "https://valida.acme.co/e/abc", html = "<p>x</p>",
+            enlaces = new[] { "https://valida.acme.co/e/abc" }, recibidoEn = DateTimeOffset.UtcNow
+        };
+
+        // Sin el correo todavía: la espera consulta de nuevo y lo devuelve cuando llega.
+        servidor.Responder(HttpStatusCode.OK, new { datos = Array.Empty<object>(), siguienteCursor = (string?)null });
+        servidor.Responder(HttpStatusCode.OK, new { datos = new[] { Correo("ana@aceros.co") }, siguienteCursor = (string?)null });
+        var correo = await cliente.Sandbox.EsperarCorreoAsync("ana@aceros.co", "invita", TimeSpan.FromSeconds(5));
+        correo.Enlaces.ShouldBe(["https://valida.acme.co/e/abc"]);
+        servidor.Recibidas[^1].Peticion.RequestUri!.Query.ShouldBe("?para=ana%40aceros.co&asunto=invita&limite=1");
+
+        // Si nunca llega, TimeoutException.
+        servidor.Responder(HttpStatusCode.OK, new { datos = Array.Empty<object>(), siguienteCursor = (string?)null });
+        await Should.ThrowAsync<TimeoutException>(() => cliente.Sandbox.EsperarCorreoAsync("nadie@aceros.co", espera: TimeSpan.Zero));
+
+        servidor.Responder(HttpStatusCode.NoContent);
+        await cliente.Sandbox.VaciarCorreosAsync();
+        (servidor.Recibidas[^1].Peticion.Method, servidor.Recibidas[^1].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Delete, "/api/v1/sandbox/correos"));
     }
 
     [Fact]

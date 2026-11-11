@@ -682,6 +682,19 @@ Hacia atrás: `ConsultaCertificacionDto` (H5) se completa; `ExpedienteDto.requis
 | Nombres | Saga `CambioCuentaDesignada` emite `CuentaDesignadaAprobada` / `CuentaDesignadaRechazada`; rutas del tercero `POST /public/v1/boveda/cuentas-bancarias` y `POST /public/v1/vinculos/{id}/cuenta-designada` (ambas en H6, #25) | 04 §5, 06 §4(g) |
 | Evento | `EstadoDeVinculoRecalculado` (I-15), `CertificadoSuspendido` (B-5), `RevalidacionCancelada`; eliminado `VinculoPorVencer(Causa: RevalidacionVencida)` (T-8) | 03 §5, §7 |
 
+#### H6 — Vigencia del vínculo, plazo de revalidación y desbloqueo automático (2026-11-10, VV-1…VV-12)
+Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones en el [registro](decisiones/registro.md), «5-unquadragies»; modelo en 03 §5.4). La renovación se abre en el primer aviso (**pre-vencimiento**, VV-12) y la vigencia nueva cuenta desde la aprobación.
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Configuración | `VigenciaVinculoDto { dias, diasAviso[], diasGracia }` en `CrearFlujoDto` / `EditarFlujoDto` / `FlujoVersionDto` (por versión de flujo; `dias = 0` = sin vencimiento periódico); `RequisitoDelFlujoDto.vigenciaDias` y `diasRevalidacion` (solo secciones). 422 `vigencia-vinculo-invalida`, `aviso-vigencia-invalido`, `gracia-vigencia-invalida`, `vigencia-sin-secciones`, `vigencia-seccion-invalida`, `dias-revalidacion-invalidos`, `vigencia-no-aplica` | 05 §2.2, 03 §5.4 |
+| Evento | `VigenciaDelVinculoFijada`, `VinculoPorVencer(VigenteHasta, DiasRestantes, AvisosCumplidos)`, `VinculoVencido(…, Causa: Documento \| Vigencia)` (en el stream `Vinculo`); públicos `vinculo.por_vencer`, `vinculo.vencido` | 03 §5.4, 05 §7 |
+| Job | `RevisarVigenciasDeVinculos` / `RevisarVigenciaDeVinculo` / `DesbloquearAlLlegarLaFecha` (cola durable `vigencias`), `ProgramadorDeVigenciasDeVinculos` (`Validasoft:VigenciasDeVinculos:Intervalo`), índice `Vinculo.ProximaRevisionDeVigencia`; `POST /plataforma/vigencias-de-vinculos/revisar` (`fecha` simulada solo en Development; `incluirDocumentos`) | 05 §2.7, 03 §5.4 |
+| Endpoint | `POST /public/v1/expedientes/{id}/requisitos/{rid}/ratificar` también para secciones de la ficha (renovación periódica); `POST /vinculos/{id}/bloquear` con `hasta` programa el desbloqueo | 05 §2.4 |
+| DTO | `VinculoDto.vigenteHasta`, `VinculoPublicoDto.vigenteHasta`, `RequisitoPublicoDto.puedeRatificar` (también secciones), `IndicadoresDto.vinculosPorVencer` | 05 §4 |
+| Pantalla | web: editor de flujos (vigencia del vínculo y de cada sección), detalle del vínculo (vigente hasta, aviso, historial), inicio («Por vencer»); portal: «Ratificar» en el expediente, en Mi información y en el wizard de la sección, «En pre-vencimiento» y «Ratifica tu información» en Mis empresas | 06 |
+| Prueba | dominio (`VigenciaDelVinculoTests`: reloj simulado aviso → PorVencer con la renovación abierta → aprobada a tiempo → Activo sin vencer, o vence con ella abierta (la misma sigue), desbloqueo por fecha; plazo de revalidación y ratificación de secciones en `RequisitosExpedienteTests.Vigencias`), integración (`RequisitosApiTests.Vigencias`) y e2e (`vigencias.spec.ts`: ratificar en pre-vencimiento y no vencer, vencer con la renovación abierta, bloqueo con fecha, mensaje programado, renovación por documento) | — |
+
 ### H7 — Verificaciones externas, cumplimiento y revisión automática
 
 #### 2.7.1 Agregados y eventos
@@ -921,7 +934,7 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | `Validasoft.Contratos` (NuGet) | DTOs de 05 §4 + `EventoPublicoDto` + enums |
 | `Validasoft.Sdk` (NuGet multi-target `net7.0;net8.0;net10.0`, T-16: el SRM sigue en .NET 7) | `IValidasoftClient` tipado (Kiota/Refit desde OpenAPI), `Idempotency-Key` automático, Polly solo en idempotentes, `WebhookVerifier.Validar(headers, body, secreto)` + dedupe por `Validasoft-Event-Id` (T-6), `X-Empresa` por cliente |
 | `@validasoft/sdk` | `openapi-typescript` + `openapi-fetch` + `verificarFirma()` |
-| `ApiKey` modo sandbox | `vsk_test_*` opera sobre datos sintéticos del tenant; eventos marcados `sandbox: true` |
+| `ApiKey` modo sandbox | **Implementado (SB-1…SB-7)**: `vsk_test_*` opera en un **tenant hermano** del grupo (copias de las empresas con otro id, configuración heredada, ningún dato), con correos retenidos en un buzón, IA y listas simuladas y nada que se mezcle con producción. Los eventos del sandbox son los de su propio tenant (no hay marca `sandbox` en el sobre). 05 §2.6.3 y 07 §5.4 |
 | Receptor SRM (`/api/integracion/validasoft/webhook` en el SRM) | firma HMAC, dedupe por `Validasoft-Event-Id`, cola propia, `empresaId` = instancia SRM |
 | Tabla de respaldo en Marco | `adp_cs.validasoft_certificacion_local(identificacion, tipoVinculo, empresaId, folio, estadoVinculo, estadoCertificado, bloqueado, motivoBloqueo, vigenteHasta, actualizadoEn)` alimentada con los nombres de 05 §7 (`certificado.*`, `vinculo.*`); respuesta degradada con `fuenteRespaldo: true` y `antiguedadSegundos` |
 
@@ -997,7 +1010,28 @@ Hacia atrás: política de deprecación de 12 meses sobre v1 (H5). Hacia adelant
 | `@validasoft/sdk` | Hecho, fetch + Web Crypto (CN-6) | `packages/sdk` |
 | Guía de integración y ejemplo ejecutable | Hecho (CN-7) | 08 §2.1, `docs/ejemplos/IntegradorSrm` (`net7.0`) |
 | Pruebas | Unitarias del SDK (.NET y TS), integración con el SDK contra la API en memoria y e2e de consulta, pull + webhook y rotación | `IntegracionSdkApiTests.cs`, `e2e/pruebas/integracion.spec.ts` |
-| Pendiente | Sandbox con datos aislados, `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección `EstadoCertificacionTercero` + k6 (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), publicación de paquetes | — |
+| Pendiente | `legacy.estadoTercero`, `POST /documentos` para integraciones, proyección persistida `EstadoCertificacionTercero` y medida de k6 en un entorno dedicado (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), primera publicación de los paquetes (la hace una persona con los secretos). `POST /sesiones-tercero` (embebido del tercero para cualquier sistema) quedó hecho en IO-6 ([integracion.md §8.1](integracion.md#81-el-tercero-embebido-bóveda-expediente-y-ficha)) | — |
+
+#### H9 — Sandbox, publicación de los SDK, carga y guía (2026-11-11, SB-1…SB-10)
+| Elemento | Estado | Dónde |
+|---|---|---|
+| **Sandbox con datos aislados**: tenant hermano creado al pedirlo (`POST /sandbox` o la primera llave `sandbox: true`), sembrado con la configuración del grupo, **reiniciable** sin perder empresas ni llaves; terceros de pruebas aislados en la bóveda global, correos al buzón (`GET /sandbox/correos`), IA y listas simuladas, certificados no verificables, fuera de la consola de Plataforma y del acceso con el correo | Hecho (SB-1…SB-6); scope `sandbox:administrar` | `Aplicacion/Sandbox`, `Infraestructura/Sandbox`, `Dominio/Plataforma/AislamientoDeSandbox.cs`; 05 §2.6.3, 07 §5.4 |
+| SDK: grupo `Sandbox` (.NET y TS: `ObtenerAsync`/`obtener`, `AsegurarAsync`, `ReiniciarAsync`, `CorreosAsync`, `EsperarCorreoAsync`…) | Hecho | `src/Validasoft.Sdk`, `packages/sdk` |
+| **Paquetes publicables**: versión única (`infra/sdk/version.mjs`), metadatos y README/CHANGELOG por paquete, ESM + CJS en npm, empaquetado en CI sin publicar y workflow `sdk-publicar.yml` (tag `sdk-v*`, secretos `NUGET_API_KEY` y `NPM_TOKEN`) | Hecho; **no se publicó nada**; licencia provisional pendiente de Legal (SB-7) | `src/Empaquetado.props`, `.github/workflows/sdk-publicar.yml`; 08 §2.4 |
+| **Carga de la consulta de certificación**: k6 (`grafana/k6:1.0.0`) con mezcla 200/304 a 500 rps; consulta reducida de cuatro viajes a uno (índice de ids + caché de la empresa) | Medida local hecha; **p99 < 100 ms a 500 rps no se pudo certificar en el entorno de desarrollo** (ver abajo, SB-8) | `tests/carga/`; 04 §12 |
+| **Guía de integración de punta a punta** | Hecha | [integracion.md](integracion.md) |
+| E2E de integración completa con el SDK en el sandbox (sistema → invitación → webhooks → consulta → embebido → reinicio) | Hecho | `e2e/pruebas/integracion-sandbox.spec.ts`, `SandboxApiTests.cs` |
+
+**Medida de k6 (2026-11-11, máquina de desarrollo compartida con otros procesos al 30–80 % de CPU, PostgreSQL 17 en Docker Desktop, API en `Release`, k6 1.0.0 en Docker)**: consulta de certificación a 500 rps durante 60 s (tras 10 s de calentamiento), 80 % con `If-None-Match`.
+
+| | Antes (3–4 viajes a la base por consulta) | Después (un viaje) |
+|---|---|---|
+| Latencia secuencial, una conexión (p50) | 23,5 ms | **8,1 ms** |
+| 500 rps pedidos: rps logrados · p50 · p99 | 345 · 1 195 ms · 3,3 s (saturado) | 447 · 236 ms · 3,0 s (saturado) |
+| 300 rps pedidos: p50 · p95 · p99 | — | 37 ms · 171 ms · 434 ms |
+| CPU del API a 300 rps | — | ≈ 0,4 núcleo (≈ 1,3 ms de CPU por consulta); PostgreSQL ≈ 40 % de un núcleo |
+
+**Lectura.** El umbral (p99 < 100 ms a 500 rps) **no se cumplió** en esta máquina, pero la medida no lo atribuye al endpoint: con CPU, base y generador de carga a medias, el mismo perfil dio entre 222 y 639 rps y latencias que variaron 4× entre corridas, y las dos terceras partes de la espera son de la máquina (`/health/live`, sin base de datos, ya cuesta 2–5 ms). Hace falta repetirla en un entorno dedicado (runner o servidor de pruebas) antes de dar el objetivo de H9 por cumplido; el comando y el entorno están en `tests/carga/README.md`. La **proyección persistida `EstadoCertificacionTercero`** no se implementó: su único beneficio era dejar la consulta en un viaje, que ya se logró leyendo el vínculo y su certificado en vivo (sin una segunda fuente de verdad que pueda quedar vieja justo en lo que decide un pago); si el entorno dedicado sigue sin dar p99 < 100 ms (o < 50 ms en H11), es el siguiente paso (08 §5, ADR-0007).
 
 ### H10 — Importador y piloto de migración
 
@@ -1088,6 +1122,20 @@ Cierra la coexistencia; `legacy.estadoTercero` desaparece del catálogo cuando n
 |---|---|---|
 | Endpoint | `GET /plataforma/operacion/dead-letters`, `POST …/dead-letters/{id}/reintentar`, `POST …/proyecciones/{nombre}/rebuild`, `GET …/salud` (`DeadLetterDto`, `RebuildDto`; permiso `plataforma:operacion`) | 05 §2.1, 07 §3.2 |
 
+### Ingreso sin contraseñas (2026-11-11, ING-1…ING-9)
+
+Decisión de Producto: sin contraseñas; ingreso directo con código y passkeys, identidad delegada sin cambios y modos por grupo. Diseño en [07 §2.7](07-seguridad-identidad-y-tenancy.md), contrato en [05 §2.10](05-api-contratos-y-webhooks.md), pantallas en [06 §3.4](06-frontend-y-ux.md) y decisiones en ING-1…ING-9 del [registro](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Entidad (global, `identidad`) | `DesafioDeIngreso` (código o ceremonia de passkey; señuelo), `Passkey` (credencial detectable, contador, revocación), `SesionDeUsuario` (familia de refresco con inactividad y duración), `RegistroDeIngreso` (auditoría), `LimiteDeAccesoPorCorreo` con `uso`; `Tenant.ModosDeIngreso`, `SesionHoras`, `InactividadMinutos`, `PasskeyParaTodos`; `Usuario.TenantId`, `InvitadoEn`; `OperadorDePlataforma` directo (`DIRECTO:{correo}`) | 03 §2, 07 §2.7 |
+| Servicio | `ServicioDeIngreso`, `IProveedorDeIdentidad` (`ProveedorLocalDeCodigos`), `IServicioDePasskeys` (Fido2NetLib 4.3.2), `CuentasDeIngreso`, `PoliticaDeIngreso`, `ICacheDeSesionesDirectas`, `LimpiezaDeIngresos`; `IEmisorDeSesiones.EmitirDeUsuario/EmitirDeOperador` | 07 §2.7 |
+| Endpoint | `/ingreso/codigo`, `/ingreso/codigo/verificar`, `/ingreso/cuenta`, `/ingreso/passkey/{opciones,verificar,registro}`, `/ingreso/sesion/{renovar,cerrar}`; `/mi-cuenta` (+ `/passkeys`, `/sesiones`); `/usuarios/{id}/{sesiones,passkeys,invitar}`; `/configuracion/ingreso`; `/plataforma/tenants/{id}/ingreso`; `/plataforma/operadores…`; `GET /auditoria?tipo=Identidad` | 05 §2.10 |
+| Correo | Plantillas `CodigoDeIngreso` e `InvitacionDeUsuario` (sin secreto) | 05 §8 |
+| Pantalla | Ingreso (correo, código, cuenta, passkey), Mi cuenta, Configuración › Ingreso, Usuarios (invitar, passkeys y sesiones), Plataforma › Operadores, Auditoría › Ingresos, menú de cuenta y aviso de passkey | 06 §3.1, §3.4 |
+| Configuración | `Validasoft:LimiteIngreso`, `Validasoft:Ingreso:{MinutosAcceso, MinutosLimpieza, CookieSegura, Plataforma, Passkeys}` | 07 §2.7 |
+| Pruebas | Dominio: `IngresoTests` (código, passkeys, sesión, política, correos). Integración: `IngresoApiTests` (vencimiento, un solo uso, límites, no enumeración, modos por grupo, passkey obligatoria por rol, revocación, sesiones, Mi cuenta, gestión, auditoría, operadores) con un autenticador WebAuthn por software. Web: `estado`, `passkeys`, `sesionDirecta`, `CampoCodigo`, política del grupo. E2E: `ingreso.spec.ts` con el autenticador virtual de Chromium (CDP `WebAuthn`) | 04 §12 |
+
 ## 3. Matrices globales
 
 ### 3(a) Endpoint → hito
@@ -1099,7 +1147,7 @@ Cierra la coexistencia; `legacy.estadoTercero` desaparece del catálogo cuando n
 | Configuración | `/tipos-documento*`, `/tipos-documento/propuestas`, `/tipos-documento/{id}/plantilla`, `/empresas/{id}/tipos-documento*` (overrides B-4), `/areas*`, `/motivos*`, `/catalogos/motivos-base`, `/tipos-vinculo*`, `/flujos*`, `/flujos/{id}/simular`, `/flujos/reglas-seleccion*`, `/flujos/por-defecto`, `/flujos/resumen` | H3 | Planificado |
 | Vínculos y expedientes | `/vinculos*` (sin cuenta designada), `/expedientes*` (sin `ratificar`, `verificaciones`, `exportar`), `/expedientes/{id}/areas/{areaId}/rechazar` (B-7), `/expedientes/{id}/cambiar-flujo`, `/flujos/{id}/versiones/{n}/aplicar-a-abiertos`, `/mis-pendientes`, `/terceros/{id}/ficha`, `/novedades*`, `/public/v1/expedientes/{id}`, `/public/v1/invitaciones/{expedienteId}/aceptar` (ADR-0009), `/public/v1/autorregistro` (T-13), `/public/v1/vinculos`, SSE | H4 | Planificado |
 | Certificados, webhooks, notificaciones | `/certificados*`, `/public/v1/verificar/{folio}`, `/public/v1/certificados/{folio}`, `/consultas/certificacion` (MVP), `/webhooks*`, `/eventos`, `/notificaciones*`, `/plantillas-notificacion*` (cabecera/pie), `/usuarios/me/preferencias-notificacion`, `/sesiones-tercero` | H5 | Planificado |
-| Vigencias y revalidación | `/revalidaciones`, `/expedientes/{id}/requisitos/{rid}/ratificar`, `/vencimientos*`, `/vencimientos/proximos`, `/terceros/{id}/frescura`, `/public/v1/frescura`, `/vinculos/{id}/cuenta-designada*`, `/public/v1/vinculos/{id}/cuenta-designada`, `/public/v1/boveda/cuentas-bancarias` POST | H6 | Planificado |
+| Vigencias y revalidación | `/revalidaciones`, `/expedientes/{id}/requisitos/{rid}/ratificar`, `/vencimientos*`, `/vencimientos/proximos`, `/terceros/{id}/frescura`, `/public/v1/frescura`, `/vinculos/{id}/cuenta-designada*`, `/public/v1/vinculos/{id}/cuenta-designada`, `/public/v1/boveda/cuentas-bancarias` POST, `/plataforma/vigencias-de-vinculos/revisar` (VV-6) | H6 | Planificado |
 | Verificaciones y revisión automática | `/expedientes/{id}/verificaciones*`, `/excepciones*`, `/public/v1/expedientes/{id}/requisitos/{rid}/revision-humana`, `/tenant/revision-automatica`, `/kpis` (completo), `/informes/cumplimiento*` | H7 | Parcial: verificaciones, `/cumplimiento/bandeja`, `/configuracion/listas-restrictivas` e `/informes/cumplimiento*` implementados (VE-5…VE-18); excepciones, revisión humana, revisión automática y KPIs planificados |
 | Operación masiva y administración | `/invitaciones/lotes*`, `/campanias*`, `/usuarios/{id}/delegaciones*`, `/expedientes/{id}/exportar`, `/exportaciones/{id}`, `/public/v1/boveda/exportar`, `/public/v1/exportaciones/{id}`, `/public/v1/solicitudes-supresion*`, `/solicitudes-supresion*`, `/auditoria/exportar`, `/auditoria/exportaciones/{id}`, `/plantillas-notificacion*` (Liquid), `/tenant/plan`, `/tenant/uso`, `/empresas/{id}/dominio-correo*`, `/informes/estado-expedientes*`, `/tenant/matriz-riesgo` | H8 | Planificado |
 | Integración | `/api-keys` (sandbox), `POST /documentos` (integraciones con `documentos:escribir`), receptor SRM, tabla `validasoft_certificacion_local` en Marco | H9 | Planificado |
@@ -1117,7 +1165,7 @@ Cierra la coexistencia; `legacy.estadoTercero` desaparece del catálogo cuando n
 | `invitaciones.lote_terminado` | H8 | ✓ | — | — | — | — |
 | `vinculo.creado`, `vinculo.atributos_actualizados`, `vinculo.estado_cambiado` (causa `Vigencia`), `vinculo.bloqueado`, `vinculo.desbloqueado`, `vinculo.desvinculado`, `vinculo.reintegrado`, `vinculo.anulado`, `tercero.autorregistrado`, `documento.compartido`, `expediente.abierto`, `expediente.reabierto`, `expediente.invitacion_enviada`, `expediente.invitacion_aceptada`, `expediente.documento_cargado`, `expediente.enviado_a_revision`, `expediente.reenviado`, `expediente.etapa_activada`, `expediente.area_aprobada`, `expediente.requisito_veredicto`, `expediente.requisito_eximido`, `expediente.requisitos_recalculados`, `expediente.con_observaciones`, `expediente.reenvios_excedidos`, `expediente.aprobado`, `expediente.rechazado`, `expediente.caducado`, `expediente.anulado`, `expediente.sla_incumplido`, `expediente.sla_escalado`, `expediente.recordatorio_cargue` | H4 | ✓ | ✓ | ✓ (H9) | ✓ (H9) | — |
 | `certificado.emitido` (único evento de certificación, T-15), `certificado.reemplazado`, `certificado.revocado`, `notificacion.entregada`, `notificacion.fallida`, `webhook.deshabilitado`, `prueba.ping` | H5 | ✓ | ✓ | ✓ (H9) | — | ✓ (H9) |
-| `vinculo.revalidacion_pendiente`, `vinculo.revalidado`, `vinculo.cambio_menor`, `vinculo.cuenta_designada_propuesta`, `vinculo.cuenta_designada`, `vinculo.cuenta_designada_rechazada`, `expediente.requisito_desactualizado`, `expediente.requisito_vencido`, `documento.ratificado`, `documento.por_vencer`, `documento.vencido`, `certificado.con_pendientes`, `certificado.suspendido`, `certificado.restablecido`, `certificado.vencido` | H6 | ✓ | ✓ | ✓ (H9) | ✓ (H9) | ✓ (H9) |
+| `vinculo.revalidacion_pendiente`, `vinculo.revalidado`, `vinculo.cambio_menor`, `vinculo.cuenta_designada_propuesta`, `vinculo.cuenta_designada`, `vinculo.cuenta_designada_rechazada`, `expediente.requisito_desactualizado`, `expediente.requisito_vencido`, `documento.ratificado`, `documento.por_vencer`, `documento.vencido`, `vinculo.por_vencer`, `vinculo.vencido`, `certificado.con_pendientes`, `certificado.suspendido`, `certificado.restablecido`, `certificado.vencido` | H6 | ✓ | ✓ | ✓ (H9) | ✓ (H9) | ✓ (H9) |
 | `expediente.verificacion_registrada`, `expediente.coincidencia_resuelta`, `expediente.revision_humana_solicitada`, `ia.presupuesto_80`, `ia.presupuesto_agotado`, `exportacion.lista` | H7 | ✓ | ✓ | ✓ (H9) | — | — |
 | `campania.iniciada`, `habeas.solicitud_recibida`, `habeas.solicitud_resuelta` | H8 | ✓ | ✓ | — | — | — |
 | `importacion.lote_terminado` | H10 | ✓ | — | — | — | — |

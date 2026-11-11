@@ -95,6 +95,15 @@ public sealed class EmbebidoApiTests(ApiFixture fixture)
         politica.ShouldContain(" " + primero);
         (await pagina.ReadAsTextAsync()).ShouldContain("<title>web</title>");
 
+        // La app del tercero solo admite a esos orígenes en /embed/{componente} (IO-5); en el resto de sus rutas sigue siendo 'self'.
+        var tercero = await EnviarAsync("GET", "/embed/boveda", null, null, 200);
+        (await tercero.ReadAsTextAsync()).ShouldContain("<title>public</title>");
+        var politicaDelTercero = tercero.Context.Response.Headers.ContentSecurityPolicy.ToString();
+        politicaDelTercero.ShouldStartWith("frame-ancestors 'self' ");
+        politicaDelTercero.ShouldContain(" " + primero);
+        (await EnviarAsync("GET", "/e/token-de-prueba", null, null, 200)).Context.Response.Headers.ContentSecurityPolicy.ToString()
+            .ShouldStartWith("frame-ancestors 'self'; ");
+
         var publico = await EnviarAsync("GET", "/public/v1/embed/origenes-permitidos", null, null, 200);
         publico.Context.Response.Headers.CacheControl.ToString().ShouldBe("public, max-age=60");
         var lista = await publico.ReadAsJsonAsync<OrigenesEmbebidoDto>();
@@ -114,6 +123,7 @@ public sealed class EmbebidoApiTests(ApiFixture fixture)
 
         await EnviarAsync("POST", $"/api/v1/sistemas/{sistema.Id}/desactivar", e.Admin, new { }, 200);
         (await EnviarAsync("GET", "/app/", null, null, 200)).Context.Response.Headers.ContentSecurityPolicy.ToString().ShouldNotContain(segundo);
+        (await EnviarAsync("GET", "/embed/boveda", null, null, 200)).Context.Response.Headers.ContentSecurityPolicy.ToString().ShouldNotContain(segundo);
     }
 
     [Fact]

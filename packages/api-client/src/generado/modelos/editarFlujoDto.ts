@@ -9,6 +9,7 @@ import type { PlazoCargueDto } from './plazoCargueDto';
 import type { ReintentoDto } from './reintentoDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
+import type { VigenciaVinculoDto } from './vigenciaVinculoDto';
 
 export interface EditarFlujoDto {
   /** @nullable */
@@ -25,4 +26,5 @@ export interface EditarFlujoDto {
   verificaciones?: VerificacionRequeridaDto[] | null;
   plazoCargue?: null | PlazoCargueDto;
   reintento?: null | ReintentoDto;
+  vigenciaVinculo?: null | VigenciaVinculoDto;
 }

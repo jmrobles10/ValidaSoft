@@ -42,6 +42,12 @@ public sealed class RequisitoDeExpediente
     /// <summary>Aprobación de esta empresa a esta misma versión en otro expediente del tercero (RQ-11); nula si no la hay.</summary>
     public AprobacionPrevia? AprobacionPrevia { get; set; }
 
+    /// <summary>
+    /// El tercero retiró la versión que este requisito reemplaza (la que la empresa había aprobado o revisaba) y la versión
+    /// actual es la que vuelve (RT-3). Se limpia cuando llega una versión nueva por otra vía.
+    /// </summary>
+    public RetiroDeVersion? Retiro { get; set; }
+
     /// <summary>Ratificación del tercero en una renovación (RN-2); nula si no ratificó.</summary>
     public RatificacionDeRequisito? Ratificacion { get; set; }
 
@@ -79,6 +85,15 @@ public sealed class RequisitoDeExpediente
 
     /// <summary>Versión que la empresa ya había aceptado en el vínculo al abrir el expediente (base de la comparación).</summary>
     public VersionDeRequisito? VersionAceptadaPrevia { get; set; }
+
+    /// <summary>
+    /// Renovación periódica del vínculo (VV-1): la sección no queda cubierta por la versión que la empresa ya había aceptado; hace falta
+    /// una versión nueva o que el tercero ratifique que sigue igual (<see cref="RatificacionDeRequisito"/>).
+    /// </summary>
+    public bool ExigeRatificacion { get; set; }
+
+    /// <summary>Días del plazo para resolver una revalidación que incluya el requisito (RV-4); nulo = el de por omisión.</summary>
+    public int? DiasRevalidacion { get; set; }
 
     /// <summary>Cuándo la empresa aceptó la versión actual (al aprobarse el expediente).</summary>
     public DateTimeOffset? AceptadaEn { get; set; }
@@ -167,8 +182,9 @@ public sealed partial class Expediente
     }
 
     /// <summary>
-    /// El tercero ratifica en una renovación que el documento no cambió (RN-2): solo en un expediente de
-    /// <c>Renovacion</c> abierto y sobre un requisito sin versión (el que venció). Las áreas lo aprueban solas.
+    /// El tercero ratifica en una renovación que el documento no cambió (RN-2) o que la sección de la ficha sigue igual (VV-1): solo
+    /// en un expediente de <c>Renovacion</c> abierto y sobre un requisito sin versión (el que venció o la sección que se renueva).
+    /// Las áreas lo aprueban solas.
     /// </summary>
     public IReadOnlyList<object> RatificarRequisito(Guid requisitoId, VersionDeRequisito version, string por, DateTimeOffset ahora)
     {
@@ -220,9 +236,14 @@ public sealed partial class Expediente
     /// Con requisitos de sección (F2), <paramref name="secciones"/> trae la evaluación de la versión vigente de cada una: si su
     /// completitud para la empresa cambió se guarda (<see cref="CompletitudDeSeccionEvaluada"/>), y solo una versión completa
     /// para la empresa se adjunta (las incompletas no las revisa nadie: el requisito sigue con su motivo legible).
+    /// <para>
+    /// <paramref name="retiradas"/> son las versiones de la bóveda que el tercero retiró, por (documento, número): si la que
+    /// el requisito reemplaza está ahí, <see cref="VersionAdjuntadaARequisito.Retiro"/> lleva el motivo (RT-1).
+    /// </para>
     /// </remarks>
     public IReadOnlyList<object> SincronizarVersiones(IReadOnlyDictionary<Guid, VersionDeRequisito> disponibles, DateTimeOffset ahora,
-        IReadOnlyDictionary<Guid, EvaluacionDeSeccion>? secciones = null)
+        IReadOnlyDictionary<Guid, EvaluacionDeSeccion>? secciones = null,
+        IReadOnlyDictionary<(Guid DocumentoId, int Numero), RetiroDeVersion>? retiradas = null)
     {
         if (!EstaAbierto || !ConRequisitos)
             return [];
@@ -248,6 +269,10 @@ public sealed partial class Expediente
                 continue;
             if (requisito.VersionActual is { } actual && actual.DocumentoId == version.DocumentoId && actual.Numero == version.Numero)
                 continue;
+            // Renovación periódica (VV-1): la versión que la empresa ya aceptó no cubre la sección; solo una nueva o la ratificación.
+            if (requisito is { ExigeRatificacion: true, VersionActual: null, VersionAceptadaPrevia: { } aceptada } &&
+                aceptada.DocumentoId == version.DocumentoId && aceptada.Numero == version.Numero)
+                continue;
             if (requisito.AreasQueRevisan.All(EtapaCerrada))
                 continue;
             cambios.Add((requisito, version));
@@ -264,7 +289,10 @@ public sealed partial class Expediente
             {
                 var afectadas = requisito.Veredictos.Where(v => v.Vigente).Select(v => v.AreaId).OfType<Guid>()
                     .Where(a => !EtapaCerrada(a)).Distinct().ToList();
-                s.Emitir(new VersionAdjuntadaARequisito(requisito.Id, version, requisito.VersionActual?.Numero, ahora));
+                RetiroDeVersion? retiro = null;
+                if (requisito.VersionActual is { } reemplazada)
+                    retiro = retiradas?.GetValueOrDefault((reemplazada.DocumentoId, reemplazada.Numero));
+                s.Emitir(new VersionAdjuntadaARequisito(requisito.Id, version, requisito.VersionActual?.Numero, ahora, retiro));
                 if (afectadas.Count > 0)
                     s.Emitir(new VeredictosInvalidadosPorNuevaVersion(requisito.Id, requisito.VersionActual!.Numero, afectadas, ahora));
             }
@@ -344,6 +372,8 @@ public sealed partial class Expediente
         Periodo = r.Periodo,
         ExigeSoporte = r.ExigeSoporte,
         Completitud = r.Completitud,
+        ExigeRatificacion = r.ExigeRatificacion,
+        DiasRevalidacion = r.DiasRevalidacion,
         VersionAceptadaPrevia = r.Aceptada,
         TipoDocumentoTenantId = r.TipoDocumentoTenantId,
         Codigo = r.Codigo,
@@ -354,7 +384,8 @@ public sealed partial class Expediente
         AreasQueRevisan = [.. r.AreasQueRevisan],
         AprobadoresRequeridos = r.AprobadoresRequeridos,
         VersionActual = r.Version,
-        AprobacionPrevia = r.Previa
+        AprobacionPrevia = r.Previa,
+        Retiro = r.Retiro
     };
 
     /// <summary>
@@ -393,6 +424,7 @@ public sealed partial class Expediente
         }
 
         requisito.VersionActual = e.Version;
+        requisito.Retiro = e.Retiro;
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
@@ -564,7 +596,7 @@ public sealed partial class Expediente
                 if (!area.Automatica && !reutiliza && !ratificado)
                     continue;
                 var nota = ratificado && requisito.Ratificacion is { } ratificacion
-                    ? $"El tercero ratificó el {ratificacion.Fecha:dd/MM/yyyy} que el documento no cambió."
+                    ? $"El tercero ratificó el {ratificacion.Fecha:dd/MM/yyyy} que {(requisito.EsSeccion ? "la información" : "el documento")} no cambió."
                     : reutiliza && requisito.AprobacionPrevia is { } previa
                         ? $"La empresa ya aprobó esta versión en el expediente {previa.Folio} ({previa.TipoVinculo})."
                         : null;

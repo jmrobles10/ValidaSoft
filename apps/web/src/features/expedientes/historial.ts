@@ -35,6 +35,23 @@ function textosDeMotivos(valor: unknown): string[] {
     .filter((m): m is string => m !== null);
 }
 
+/**
+ * «El tercero retiró la versión 8 de RUT (motivo: …); vuelve a la versión 7.» (RT-3). `datos` trae el `retiro` y la `version` que vuelve:
+ * el requisito calculado de una actualización que se abrió por el retiro, o el evento que cambió la versión de un expediente abierto.
+ */
+function textoDeRetiro(datos: Record<string, unknown>, documento: string | null, t: TFunction): string | null {
+  const retiro = campo(datos, 'retiro');
+  if (!retiro || typeof retiro !== 'object') return null;
+  const version = campo(datos, 'version');
+  return t('expedientes.historial.retiro', {
+    documento: documento ?? t('expedientes.historial.documento'),
+    retirada: numero(campo(retiro as Record<string, unknown>, 'numero')),
+    motivo: texto(campo(retiro as Record<string, unknown>, 'motivo')) ?? '',
+    n: version && typeof version === 'object' ? numero(campo(version as Record<string, unknown>, 'numero')) : '',
+  });
+}
+
+
 function tipoDeVerificacion(tipo: string, t: TFunction): string {
   return tipo === 'EstudioDeCumplimiento' ? t('cumplimiento.tipos.EstudioDeCumplimiento') : t('cumplimiento.tipos.ListasRestrictivas');
 }
@@ -122,9 +139,11 @@ export function eventoExpedienteATimeline(
     case 'expediente_anulado':
       return { ...base, despues: 'Anulado', motivo: texto(campo(datos, 'motivo')) };
     case 'requisitos_calculados': {
-      const nombres = lista(campo(datos, 'requisitos'))
-        .map((r) => (r && typeof r === 'object' ? texto(campo(r as Record<string, unknown>, 'nombre')) : null))
-        .filter((n): n is string => n !== null);
+      // Una actualización que se abrió porque el tercero retiró una versión lo dice con su motivo (RT-3); si no, los documentos que pide el flujo.
+      const requisitosDelEvento = lista(campo(datos, 'requisitos')).filter((r): r is Record<string, unknown> => Boolean(r) && typeof r === 'object');
+      const retiros = requisitosDelEvento.map((r) => textoDeRetiro(r, texto(campo(r, 'nombre')), t)).filter((r): r is string => r !== null);
+      if (retiros.length > 0) return { ...base, titulo: retiros.join(' · ') };
+      const nombres = requisitosDelEvento.map((r) => texto(campo(r, 'nombre'))).filter((n): n is string => n !== null);
       return { ...base, detalle: nombres.join(' · ') };
     }
     case 'requisitos_agregados': {
@@ -137,7 +156,9 @@ export function eventoExpedienteATimeline(
     case 'version_adjuntada_a_requisito': {
       const version = campo(datos, 'version');
       const n = version && typeof version === 'object' ? numero(campo(version as Record<string, unknown>, 'numero')) : '';
-      return { ...base, titulo: t('expedientes.historial.versionAdjuntada', { documento: requisito(campo(datos, 'requisitoId')), n }) };
+      const documento = requisito(campo(datos, 'requisitoId'));
+      // Si la versión que reemplaza la retiró el tercero, la línea de tiempo lo dice con su motivo (RT-3).
+      return { ...base, titulo: textoDeRetiro(datos, documento, t) ?? t('expedientes.historial.versionAdjuntada', { documento, n }) };
     }
     case 'veredictos_invalidados_por_nueva_version':
       return {
@@ -156,6 +177,8 @@ export function eventoExpedienteATimeline(
         motivo: texto(campo(datos, 'observacion')) ?? texto(campo(datos, 'justificacion')),
       };
     }
+    case 'requisito_ratificado':
+      return { ...base, titulo: t('expedientes.historial.ratificado', { documento: requisito(campo(datos, 'requisitoId')) }) };
     case 'requisito_eximido':
       return { ...base, titulo: t('expedientes.historial.eximido', { documento: requisito(campo(datos, 'requisitoId')) }), motivo: texto(campo(datos, 'justificacion')) };
     case 'veredicto_anulado_por_administrador':

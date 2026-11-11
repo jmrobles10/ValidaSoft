@@ -19,4 +19,8 @@ export interface UsuarioDto {
   creadoEn: string;
   /** @nullable */
   ultimoAcceso: string | null;
+  exigePasskey?: boolean;
+  passkeys?: number;
+  /** @nullable */
+  invitadoEn?: string | null;
 }
