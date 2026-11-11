@@ -32,6 +32,14 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaPlanIa').then((m) => ({ Component: m.PaginaPlanIa })),
         },
         {
+          path: 'uso-ia',
+          lazy: () => import('../features/plataforma/PaginaConsumoIa').then((m) => ({ Component: m.PaginaConsumoIa })),
+        },
+        {
+          path: 'ingresos',
+          lazy: () => import('../features/plataforma/PaginaIngresosOperadores').then((m) => ({ Component: m.PaginaIngresosOperadores })),
+        },
+        {
           path: 'operadores',
           lazy: () => import('../features/plataforma/PaginaOperadores').then((m) => ({ Component: m.PaginaOperadores })),
         },
@@ -210,6 +218,10 @@ export function crearRouter() {
                 {
                   path: 'ingreso',
                   lazy: () => import('../features/configuracion/ingreso/PaginaIngreso').then((m) => ({ Component: m.PaginaIngreso })),
+                },
+                {
+                  path: 'sso',
+                  lazy: () => import('../features/configuracion/ingreso/sso/PaginaSso').then((m) => ({ Component: m.PaginaSso })),
                 },
               ],
             },

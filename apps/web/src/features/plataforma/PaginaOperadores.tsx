@@ -11,7 +11,7 @@ import {
   type OperadorDePlataformaDto,
 } from '@validasoft/api-client';
 import { AvatarActor, BarraFiltros, CampoBusqueda, enfocarNodo, EstadoVacio, FilasEsqueleto, formatearFechaHora, MarcoTabla, visualmenteOculto } from '@validasoft/ui';
-import { Ban, CircleCheck, KeyRound, Plus, UserX, X } from 'lucide-react';
+import { Ban, CircleCheck, KeyRound, Plus, UserCheck, UserX, X } from 'lucide-react';
 import { useMemo, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { esCorreoPlausible } from '../../ingreso/estado';
@@ -21,6 +21,7 @@ import { mensajeDeError } from '../../shared/errores';
 import { MenuFila } from '../../shared/MenuFila';
 import { useAvisos } from '../../shared/useAvisos';
 import { PanelDeAcceso } from '../configuracion/usuarios/PanelDeAcceso';
+import { useReactivarOperador } from './apiIdentidad';
 
 const RUTA = '/api/v1/plataforma/operadores';
 
@@ -135,6 +136,8 @@ export function PaginaOperadores() {
   const [nuevo, setNuevo] = useState(false);
   const [acceso, setAcceso] = useState<OperadorDePlataformaDto | null>(null);
   const [porDesactivar, setPorDesactivar] = useState<OperadorDePlataformaDto | null>(null);
+  const [porReactivar, setPorReactivar] = useState<OperadorDePlataformaDto | null>(null);
+  const reactivar = useReactivarOperador();
 
   const desactivar = useMutation({
     mutationFn: (operador: OperadorDePlataformaDto) => desactivarOperadorPlataforma(operador.id, { empresa: null }),
@@ -145,6 +148,13 @@ export function PaginaOperadores() {
       return invalidarRuta(cliente, RUTA);
     },
   });
+
+  const confirmarReactivar = (operador: OperadorDePlataformaDto) =>
+    reactivar.mutate(operador.id, {
+      onSuccess: () => mostrar(t('operadores.reactivado', { nombre: operador.nombre })),
+      onError: (error) => mostrar(mensajeDeError(error, t), 'error'),
+      onSettled: () => setPorReactivar(null),
+    });
 
   const visibles = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -240,7 +250,7 @@ export function PaginaOperadores() {
                               ...(o.directo ? [{ etiqueta: t('accesoUsuario.menu'), icono: KeyRound, onClick: () => setAcceso(o) }] : []),
                               { etiqueta: t('operadores.desactivar'), icono: UserX, destructiva: true, onClick: () => setPorDesactivar(o) },
                             ]
-                          : []
+                          : [{ etiqueta: t('operadores.reactivar'), icono: UserCheck, onClick: () => setPorReactivar(o) }]
                       }
                     />
                   </TableCell>
@@ -263,6 +273,19 @@ export function PaginaOperadores() {
           ocupado={desactivar.isPending}
           onConfirmar={() => desactivar.mutate(porDesactivar)}
           onCerrar={() => setPorDesactivar(null)}
+        />
+      )}
+      {porReactivar && (
+        <DialogoConfirmacion
+          titulo={t('operadores.reactivarA', { nombre: porReactivar.nombre })}
+          subtitulo={porReactivar.correo}
+          mensaje={t('operadores.reactivarAyuda')}
+          confirmar={t('operadores.reactivar')}
+          tono="primary"
+          icono={<UserCheck size={16} aria-hidden />}
+          ocupado={reactivar.isPending}
+          onConfirmar={() => confirmarReactivar(porReactivar)}
+          onCerrar={() => setPorReactivar(null)}
         />
       )}
     </>

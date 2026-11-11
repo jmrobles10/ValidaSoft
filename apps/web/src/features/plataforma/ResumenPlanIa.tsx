@@ -35,6 +35,7 @@ export function ResumenPlanIa({ plan, borrador }: { plan: PlanIaEmpresaDto; borr
         <Dato etiqueta={t('plataforma.planIa.resumen.llave')}>{llave}</Dato>
         <Dato etiqueta={t('plataforma.planIa.resumen.cupo')}>{t('plataforma.planIa.resumen.cupoValor', { cupo: borrador.incluidas.trim() || '—' })}</Dato>
         <Dato etiqueta={t('plataforma.planIa.resumen.adicionales')}>{adicionales}</Dato>
+        {borrador.adicional && <Dato etiqueta={t('plataforma.planIa.precio')}>{borrador.precio.trim() ? borrador.precio.trim() : t('plataforma.planIa.resumen.precioGeneral')}</Dato>}
         <Dato etiqueta={t('plataforma.planIa.modeloPorDefecto')}>
           <Typography component="span" variant="mono">
             {borrador.modeloPorDefecto.trim() || '—'}

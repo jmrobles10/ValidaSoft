@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Link, Stack } from '@mui/material';
 import { EsqueletoFormulario } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MarcoMinimo } from '../sesion/MarcoMinimo';
 import { aplicarSesionDirecta } from '../sesion/sesionDirecta';
@@ -10,13 +10,18 @@ import { PasoCodigo } from './PasoCodigo';
 import { PasoCorreo } from './PasoCorreo';
 import { PasoCuenta } from './PasoCuenta';
 import { PasoRegistrarPasskey, PasoVerificarPasskey } from './PasoPasskey';
-import { resolverPaso, type PasoIngreso } from './estado';
+import { PasoCompletarSso } from './PasoSso';
+import { leerRetornoDeSso, resolverPaso, type PasoIngreso } from './estado';
+import { mensajeDeCodigoDeSso, mensajeDeIngreso } from './mensajes';
 import type { PasoDeIngresoDto } from '@validasoft/api-client';
 
 // En el build de producción esta rama se elimina y el formulario (con la firma de aserciones) no se empaqueta.
 const FormularioSesionDev = import.meta.env.DEV ? lazy(() => import('../sesion/FormularioSesionDev').then((m) => ({ default: m.FormularioSesionDev }))) : null;
 const LLAVE_DESARROLLO = 'validasoft.dev.sesion';
 const BANDEJA_DE_DESARROLLO = 'http://localhost:8025';
+
+/** Por qué falló el ingreso con el proveedor de la empresa: un código que dejó el servidor en la dirección, o el error de canjear el retorno. */
+type FalloDeSso = { codigo: string } | { error: unknown };
 
 /** En desarrollo se recuerda si se usó la sesión simulada en esta pestaña, para no repetir un clic en cada recarga. */
 function empezarEnDesarrollo(): boolean {
@@ -58,7 +63,10 @@ function avisoDeSalida(estado: EstadoSesion, t: TFunction): { severidad: 'info' 
  */
 export function PantallaIngreso({ estado }: { estado: EstadoSesion }) {
   const { t } = useTranslation();
-  const [paso, setPaso] = useState<PasoIngreso>({ paso: 'correo' });
+  // De vuelta del proveedor de identidad de la empresa la dirección trae `#/ingreso?sso=…` (listo para canjear) o `?sso_error=…` (falló): se lee una vez.
+  const [retorno] = useState(() => leerRetornoDeSso(window.location.hash));
+  const [paso, setPaso] = useState<PasoIngreso>(retorno?.tipo === 'completar' ? { paso: 'sso', desafio: retorno.desafio } : { paso: 'correo' });
+  const [falloDeSso, setFalloDeSso] = useState<FalloDeSso | null>(retorno?.tipo === 'error' ? { codigo: retorno.codigo } : null);
   const [correo, setCorreo] = useState('');
   const [desarrollo, setDesarrollo] = useState(empezarEnDesarrollo);
 
@@ -68,6 +76,15 @@ export function PantallaIngreso({ estado }: { estado: EstadoSesion }) {
     else setPaso(resultado.paso);
   };
   const volver = () => setPaso({ paso: 'correo' });
+  const fallarSso = (error: unknown) => {
+    setFalloDeSso({ error });
+    setPaso({ paso: 'correo' });
+  };
+
+  // El retorno ya se leyó: la dirección no debe seguir llevando el desafío (ni reabrirlo al recargar).
+  useEffect(() => {
+    if (retorno) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/`);
+  }, [retorno]);
   const cambiarDesarrollo = (valor: boolean) => {
     recordarDesarrollo(valor);
     setDesarrollo(valor);
@@ -99,6 +116,11 @@ export function PantallaIngreso({ estado }: { estado: EstadoSesion }) {
               <strong>{aviso.titulo}.</strong> {aviso.texto}
             </Alert>
           )}
+          {falloDeSso !== null && paso.paso === 'correo' && (
+            <Alert severity="error" role="alert" onClose={() => setFalloDeSso(null)}>
+              {'codigo' in falloDeSso ? mensajeDeCodigoDeSso(falloDeSso.codigo, t) : mensajeDeIngreso(falloDeSso.error, t)}
+            </Alert>
+          )}
           <Box
             sx={(th) => ({ p: 3, border: 1, borderColor: 'divider', borderRadius: `${String(th.radio.md)}px`, bgcolor: 'background.paper' })}
             data-testid="tarjeta-ingreso"
@@ -124,6 +146,7 @@ export function PantallaIngreso({ estado }: { estado: EstadoSesion }) {
                 alVolver={volver}
               />
             )}
+            {paso.paso === 'sso' && <PasoCompletarSso desafio={paso.desafio} alResultado={alResultado} alFallar={fallarSso} />}
             {paso.paso === 'cuenta' && <PasoCuenta desafio={paso.desafio} cuentas={paso.cuentas} alResultado={alResultado} />}
             {paso.paso === 'passkey' && <PasoVerificarPasskey desafio={paso.desafio} opciones={paso.opciones} alResultado={alResultado} alVolver={volver} />}
             {paso.paso === 'registrar' && <PasoRegistrarPasskey desafio={paso.desafio} opciones={paso.opciones} alResultado={alResultado} alVolver={volver} />}

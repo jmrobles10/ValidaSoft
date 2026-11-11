@@ -232,7 +232,7 @@ describe('reautenticación con passkey (PI-13)', () => {
     const alRequerir = vi.fn(() => Promise.resolve(true));
     configurarCliente({ alRequerirReautenticacion: alRequerir });
 
-    const resultado = await revocarApiKey('k1');
+    const resultado = await clienteValidasoft<{ id: string }>({ url: '/api/v1/api-keys/k1', method: 'DELETE' });
 
     expect(alRequerir).toHaveBeenCalledTimes(1);
     expect(alRequerir.mock.calls[0]?.[0]).toMatchObject({ codigo: 'reautenticacion-requerida', extensiones: { accion: 'rotar-api-key', minutos: 5 } });

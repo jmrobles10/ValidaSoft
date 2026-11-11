@@ -7,6 +7,7 @@ import type {
 } from '@validasoft/api-client';
 import { cuerpoCrearEmpresa, validarEmpresa, type BorradorEmpresa, type ErrorEmpresa } from '../configuracion/empresas/modelo';
 import { origenesDeTexto } from '../configuracion/sistemas/origenes';
+import { aNumero, leerPrecio, precioDePlan } from './modeloConsumo';
 
 /**
  * Consola de Plataforma (PT-5, PT-6): alta de un grupo con su primera empresa, su administrador y su sistema integrado, y
@@ -162,6 +163,8 @@ export interface BorradorPlanIa {
   adicional: boolean;
   /** Vacío = sin tope. */
   tope: string;
+  /** Precio propio de cada validación adicional de esta empresa (PI-18); vacío = el de la tarifa general. */
+  precio: string;
   modeloPorDefecto: string;
   modeloEscalamiento: string;
   umbral: string;
@@ -169,7 +172,7 @@ export interface BorradorPlanIa {
   llave: CambioDeLlave;
 }
 
-export type ErrorPlanIa = 'incluidas-invalidas' | 'tope-invalido' | 'modelo-invalido' | 'umbral-invalido' | 'llave-invalida';
+export type ErrorPlanIa = 'incluidas-invalidas' | 'tope-invalido' | 'precio-invalido' | 'modelo-invalido' | 'umbral-invalido' | 'llave-invalida';
 
 /** Un plan sin configurar se propone activo: quien lo abre es porque lo va a contratar. */
 export function borradorDesdePlan(plan: PlanIaEmpresaDto): BorradorPlanIa {
@@ -177,6 +180,7 @@ export function borradorDesdePlan(plan: PlanIaEmpresaDto): BorradorPlanIa {
     incluidas: String(plan.validacionesIncluidasMes),
     adicional: plan.adicionalHabilitado,
     tope: plan.topeAdicionalMes === null ? '' : String(plan.topeAdicionalMes),
+    precio: plan.precioAdicional === null || plan.precioAdicional === undefined ? '' : String(aNumero(plan.precioAdicional)),
     modeloPorDefecto: plan.modeloPorDefecto,
     modeloEscalamiento: plan.modeloEscalamiento,
     umbral: String(plan.umbralConfianza),
@@ -213,6 +217,7 @@ export function validarPlanIa(b: BorradorPlanIa): ErrorPlanIa[] {
     const tope = entero(b.tope);
     if (tope === null || tope > MAXIMO_VALIDACIONES) errores.push('tope-invalido');
   }
+  if (b.adicional && b.precio.trim() && leerPrecio(b.precio) === null) errores.push('precio-invalido');
   if (!modeloValido(b.modeloPorDefecto) || !modeloValido(b.modeloEscalamiento)) errores.push('modelo-invalido');
   const umbral = decimal(b.umbral);
   if (umbral === null || umbral > 1) errores.push('umbral-invalido');
@@ -226,6 +231,8 @@ export function cuerpoPlanIa(b: BorradorPlanIa): ActualizarPlanIaEmpresaDto {
     validacionesIncluidasMes: entero(b.incluidas) ?? 0,
     adicionalHabilitado: b.adicional,
     topeAdicionalMes: b.adicional && b.tope.trim() ? entero(b.tope) : null,
+    // Nulo = sin precio propio: se cobra con la tarifa general.
+    precioAdicional: precioDePlan(b.precio) ?? null,
     apiKeyOpenAi: b.llave.tipo === 'conservar' ? null : b.llave.tipo === 'quitar' ? '' : b.llave.valor.trim(),
     modeloPorDefecto: b.modeloPorDefecto.trim(),
     modeloEscalamiento: b.modeloEscalamiento.trim(),

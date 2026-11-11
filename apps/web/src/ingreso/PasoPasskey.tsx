@@ -5,6 +5,7 @@ import { Fingerprint, KeyRound } from 'lucide-react';
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../shared/componentes';
+import { FormularioDeRecuperacion } from './FormularioDeRecuperacion';
 import type { OpcionesJson } from './estado';
 import { mensajeDeIngreso } from './mensajes';
 import { crearPasskey, firmarConPasskey, nombreSugeridoDePasskey } from './passkeys';
@@ -43,6 +44,8 @@ export function PasoVerificarPasskey({ desafio, opciones, alResultado, alVolver 
     onSuccess: alResultado,
   });
   const intentada = useRef(false);
+  // Sin la passkey a la mano, un código de recuperación lleva a registrar otra (PI-15).
+  const [recuperando, setRecuperando] = useState(false);
 
   useEffect(() => {
     // Una vez al llegar (StrictMode monta dos veces): el navegador ofrece la passkey sin pedir otro clic.
@@ -51,6 +54,8 @@ export function PasoVerificarPasskey({ desafio, opciones, alResultado, alVolver 
     verificar.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (recuperando) return <FormularioDeRecuperacion desafio={desafio} alResultado={alResultado} alCancelar={() => setRecuperando(false)} />;
 
   return (
     <Stack spacing={2.5}>
@@ -62,6 +67,9 @@ export function PasoVerificarPasskey({ desafio, opciones, alResultado, alVolver 
       )}
       <Button variant="contained" size="large" fullWidth disabled={verificar.isPending} onClick={() => verificar.mutate()} startIcon={verificar.isPending ? <IconoCarga /> : undefined}>
         {verificar.isPending ? t('ingreso.esperandoPasskey') : t('ingreso.usarPasskey')}
+      </Button>
+      <Button variant="text" size="small" onClick={() => setRecuperando(true)} disabled={verificar.isPending} sx={{ alignSelf: 'center' }}>
+        {t('ingreso.recuperacion.sinPasskey')}
       </Button>
       <Button variant="text" size="small" onClick={alVolver} disabled={verificar.isPending} sx={{ alignSelf: 'center' }}>
         {t('ingreso.otroCorreo')}

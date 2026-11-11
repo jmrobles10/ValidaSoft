@@ -170,15 +170,30 @@ export async function crearPasskey(opciones: Json): Promise<RespuestaDeRegistro>
   }
 }
 
-/** `navigator.credentials.get` con las opciones del servidor; devuelve la firma lista para enviar. */
-export async function firmarConPasskey(opciones: Json, senal?: AbortSignal): Promise<RespuestaDeFirma> {
+/**
+ * `navigator.credentials.get` con las opciones del servidor; devuelve la firma lista para enviar. `condicional`: sin ventana, el navegador ofrece las passkeys en
+ * el autocompletado del campo del correo y la petición queda abierta hasta que la persona elige una (o se aborta con `senal`).
+ */
+export async function firmarConPasskey(opciones: Json, senal?: AbortSignal, condicional = false): Promise<RespuestaDeFirma> {
   if (!soportaPasskeys()) throw new ErrorDePasskey('no-soportada', 'Este navegador no admite passkeys.');
   try {
-    const credencial = await navigator.credentials.get({ publicKey: opcionesDeFirma(opciones), ...(senal && { signal: senal }) });
+    const credencial = await navigator.credentials.get({ publicKey: opcionesDeFirma(opciones), ...(senal && { signal: senal }), ...(condicional && { mediation: 'conditional' as const }) });
     if (!(credencial instanceof PublicKeyCredential)) throw new ErrorDePasskey('otra', 'El navegador no devolvió una passkey.');
     return respuestaDeFirma(credencial);
   } catch (error) {
     throw traducirFalloDelNavegador(error);
+  }
+}
+
+/** El navegador sabe ofrecer las passkeys dentro del campo del correo (WebAuthn condicional, PI-14). */
+export async function soportaPasskeysCondicional(): Promise<boolean> {
+  if (!soportaPasskeys()) return false;
+  const consulta = (PublicKeyCredential as { isConditionalMediationAvailable?: () => Promise<boolean> }).isConditionalMediationAvailable;
+  if (typeof consulta !== 'function') return false;
+  try {
+    return await consulta.call(PublicKeyCredential);
+  } catch {
+    return false;
   }
 }
 

@@ -18,6 +18,9 @@ import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
+import { consola } from './es-CO-consola';
+import { sso } from './es-CO-identidad';
+import { erroresSeguridad, reautenticacion } from './es-CO-seguridad';
 import { plataforma } from './es-CO-plataforma';
 import { erroresRecordatorios, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
@@ -63,6 +66,7 @@ export const esCO = {
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
     ingreso: 'Ingreso',
+    sso: 'Inicio de sesión único',
     'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
@@ -331,6 +335,9 @@ export const esCO = {
   ia,
   revisionAutomatica,
   plataforma,
+  sso,
+  consola,
+  reautenticacion,
   motivos,
   flujos,
   historial: {
@@ -670,6 +677,7 @@ export const esCO = {
     ...erroresRecordatorios,
     ...erroresIngreso,
     ...erroresRevisionAutomatica,
+    ...erroresSeguridad,
   },
 } as const;
 

@@ -9,7 +9,9 @@ export type PasoIngreso =
   | { paso: 'codigo'; correo: string; desafio: string; expira: Date }
   | { paso: 'cuenta'; desafio: string; cuentas: readonly CuentaDeIngresoDto[] }
   | { paso: 'passkey'; desafio: string; opciones: OpcionesJson }
-  | { paso: 'registrar'; desafio: string; opciones: OpcionesJson };
+  | { paso: 'registrar'; desafio: string; opciones: OpcionesJson }
+  // De vuelta del proveedor de identidad de la empresa: falta canjear el retorno por la sesión (PI-1).
+  | { paso: 'sso'; desafio: string };
 
 export type ResultadoDePaso = { tipo: 'siguiente'; paso: PasoIngreso } | { tipo: 'sesion'; sesion: SesionDirectaDto };
 
@@ -61,4 +63,33 @@ export function esCorreoPlausible(texto: string): boolean {
 /** Segundos que faltan para poder pedir otro código; 0 cuando ya se puede. */
 export function segundosParaReenviar(enviadoEn: number, ahora: number): number {
   return Math.max(0, ESPERA_REENVIO_S - Math.floor((ahora - enviadoEn) / 1000));
+}
+
+/** Lo que el servidor le devuelve al navegador al volver del proveedor de identidad de la empresa (PI-1): `#/ingreso?sso={desafio}` o `#/ingreso?sso_error={código}`. */
+export type RetornoDeSso = { tipo: 'completar'; desafio: string } | { tipo: 'error'; codigo: string };
+
+const DESAFIO_DE_SSO = /^[0-9a-f]{8}-?(?:[0-9a-f]{4}-?){3}[0-9a-f]{12}$/i;
+const CODIGO_DE_SSO = /^[a-z0-9-]{1,60}$/;
+
+/** Lee el retorno del SSO en el hash de la dirección; `null` si la dirección no es un retorno (o viene mal formada: nunca se confía en ella). */
+export function leerRetornoDeSso(hash: string): RetornoDeSso | null {
+  const ruta = hash.startsWith('#') ? hash.slice(1) : hash;
+  const corte = ruta.indexOf('?');
+  if (corte < 0 || ruta.slice(0, corte) !== '/ingreso') return null;
+  const parametros = new URLSearchParams(ruta.slice(corte + 1));
+  const desafio = parametros.get('sso');
+  if (desafio !== null) return DESAFIO_DE_SSO.test(desafio) ? { tipo: 'completar', desafio } : { tipo: 'error', codigo: 'sso-estado-invalido' };
+  const codigo = parametros.get('sso_error');
+  if (codigo !== null) return { tipo: 'error', codigo: CODIGO_DE_SSO.test(codigo) ? codigo : 'sso-error-interno' };
+  return null;
+}
+
+/** Formato de un código de recuperación: dos grupos de cinco letras y números, con guion (lo que escribe la persona se normaliza antes de enviar). */
+export function normalizarCodigoDeRecuperacion(texto: string): string {
+  const limpio = texto.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  return limpio.length > 5 ? `${limpio.slice(0, 5)}-${limpio.slice(5, 10)}` : limpio;
+}
+
+export function codigoDeRecuperacionCompleto(texto: string): boolean {
+  return /^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(texto);
 }
