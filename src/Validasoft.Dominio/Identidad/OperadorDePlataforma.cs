@@ -61,6 +61,15 @@ public sealed partial class SistemaDePlataforma
         ActualizadoEn = ahora;
     }
 
+    /// <summary>Vuelve a activar el sistema de Plataforma (PI-7). 409 <c>sistema-activo</c> si ya estaba activo.</summary>
+    public void Reactivar(DateTimeOffset ahora)
+    {
+        if (Activo)
+            throw ReglaDeNegocioException.Conflicto("sistema-activo", "El sistema ya está activo.");
+        Activo = true;
+        ActualizadoEn = ahora;
+    }
+
     [GeneratedRegex("^[A-Z][A-Z0-9_]{1,19}$")]
     private static partial Regex RegexCodigo();
 }
@@ -140,6 +149,14 @@ public sealed class OperadorDePlataforma
         if (!Activo)
             throw ReglaDeNegocioException.Conflicto("operador-inactivo", "El operador ya está desactivado.");
         Activo = false;
+    }
+
+    /// <summary>Vuelve a activar al operador (PI-7): entra de nuevo con sus passkeys. 409 <c>operador-activo</c> si ya estaba activo.</summary>
+    public void Reactivar()
+    {
+        if (Activo)
+            throw ReglaDeNegocioException.Conflicto("operador-activo", "El operador ya está activo.");
+        Activo = true;
     }
 
     /// <summary>El sistema es la fuente de nombre y correo; devuelve si cambiaron.</summary>

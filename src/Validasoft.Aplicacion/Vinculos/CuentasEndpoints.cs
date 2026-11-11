@@ -89,8 +89,8 @@ public static class CuentasPublicasEndpoints
     /// </summary>
     [WolverinePost("/public/v1/vinculos/{id}/cuenta-designada")]
     [Authorize(Policy = ReclamosTercero.Politica)]
-    public static async Task<CuentaBancariaPublicaDto> Designar(Guid id, DesignarCuentaDto dto, HttpContext http, ISesiones sesiones, TimeProvider reloj,
-        CancellationToken ct)
+    public static async Task<CuentaBancariaPublicaDto> Designar(Guid id, DesignarCuentaDto dto, HttpContext http, ISesiones sesiones, IProtectorDeSecretos protector,
+        IProtectorDeCamposDelGrupo campos, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var enSesion = tercero.VinculoRequerido(id);
@@ -115,7 +115,7 @@ public static class CuentasPublicasEndpoints
             var stream = await sesion.Events.FetchForWriting<Vinculo>(id, ct);
             if (stream.Aggregate is not { } vinculo || vinculo.TerceroId != tercero.TerceroId)
                 throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo.");
-            if (vinculo.ProponerCuenta(ParaDesignar(cuenta), reloj.GetUtcNow()) is { } propuesta)
+            if (vinculo.ProponerCuenta(ParaDesignar(cuenta, enSesion.TenantId, protector, campos), reloj.GetUtcNow()) is { } propuesta)
             {
                 stream.AppendOne(propuesta);
                 await sesion.SaveChangesAsync(ct);
@@ -129,8 +129,12 @@ public static class CuentasPublicasEndpoints
         return APublica(cuenta, vistos);
     }
 
-    private static CuentaParaDesignar ParaDesignar(CuentaBancaria c) =>
-        new(c.Id, c.Banco, c.TipoCuenta.ToString(), c.NumeroProtegido, c.Ultimos4, c.Titular, c.IdentificacionTitular, c.Moneda, c.BancoCodigo, c.BancoSwift,
+    /// <summary>
+    /// La copia congelada que viaja en los eventos del vínculo (PI-11): el número de la cuenta se descifra con la clave general de la bóveda y se vuelve a cifrar con la
+    /// <b>clave del grupo</b> de la empresa (un evento de un grupo no se puede leer con la clave de otro).
+    /// </summary>
+    private static CuentaParaDesignar ParaDesignar(CuentaBancaria c, Guid tenantId, IProtectorDeSecretos protector, IProtectorDeCamposDelGrupo campos) =>
+        new(c.Id, c.Banco, c.TipoCuenta.ToString(), campos.Proteger(tenantId, protector.Desproteger(c.NumeroProtegido)), c.Ultimos4, c.Titular, c.IdentificacionTitular, c.Moneda, c.BancoCodigo, c.BancoSwift,
             c.ContactoPagos);
 
     private static ContactoDePagosDto? ADto(ContactoDePagos? c) => c is null ? null : new ContactoDePagosDto(c.Nombre, c.Correo, c.Telefono);
@@ -152,32 +156,32 @@ public static class CuentaDesignadaEndpoints
     [WolverineGet("/api/v1/vinculos/{id}/cuenta-designada")]
     [Authorize(Policy = Permisos.VinculosLeer)]
     public static async Task<CuentaDesignadaDelVinculoDto> Obtener(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, CancellationToken ct) =>
-        await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, protector, ct);
+        IProtectorDeCamposDelGrupo campos, CancellationToken ct) =>
+        await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, campos, ct);
 
     /// <summary>Aprueba la cuenta propuesta (una persona con <c>cuentas:aprobar</c>); con la segunda persona queda designada.</summary>
     [WolverinePost("/api/v1/vinculos/{id}/cuenta-designada/aprobar")]
     [Authorize(Policy = Permisos.CuentasAprobar)]
     public static async Task<CuentaDesignadaDelVinculoDto> Aprobar(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, TimeProvider reloj, CancellationToken ct)
     {
         var usuario = UsuarioRequerido(contexto);
         var stream = await empresa.VinculoParaEscribirAsync(id, null, ct);
         stream.AppendMany(stream.Aggregate!.AprobarCuenta(usuario, reloj.GetUtcNow()));
         await empresa.Sesion.SaveChangesAsync(ct);
-        return await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, protector, ct);
+        return await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, campos, ct);
     }
 
     [WolverinePost("/api/v1/vinculos/{id}/cuenta-designada/rechazar")]
     [Authorize(Policy = Permisos.CuentasAprobar)]
     public static async Task<CuentaDesignadaDelVinculoDto> Rechazar(Guid id, MotivoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, TimeProvider reloj, CancellationToken ct)
     {
         var usuario = UsuarioRequerido(contexto);
         var stream = await empresa.VinculoParaEscribirAsync(id, null, ct);
         stream.AppendOne(stream.Aggregate!.RechazarCuenta(usuario, dto.Motivo, reloj.GetUtcNow()));
         await empresa.Sesion.SaveChangesAsync(ct);
-        return await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, protector, ct);
+        return await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, campos, ct);
     }
 
     /// <summary>Las aprobaciones son de personas: una integración sin identidad delegada no aprueba cuentas.</summary>
@@ -188,7 +192,7 @@ public static class CuentaDesignadaEndpoints
                 "Las cuentas las aprueba una persona: actúa con la identidad delegada (X-Usuario-Delegado) o con su sesión.");
 
     internal static async Task<CuentaDesignadaDelVinculoDto> DtoAsync(SesionDeEmpresa empresa, Vinculo vinculo, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, CancellationToken ct)
     {
         var puedeAprobar = contexto.Scopes.Contains(Permisos.CuentasAprobar);
         var ids = new[] { vinculo.CuentaDesignada, vinculo.CuentaPropuesta }
@@ -204,7 +208,7 @@ public static class CuentaDesignadaEndpoints
         CuentaDesignadaDto? Dto(CuentaDesignada? c) => c is null
             ? null
             : new CuentaDesignadaDto(c.Cuenta.CuentaId, c.Cuenta.Banco, c.Cuenta.TipoCuenta, CuentaBancaria.Enmascarar(c.Cuenta.Ultimos4),
-                puedeAprobar ? protector.Desproteger(c.Cuenta.NumeroProtegido) : null, c.Cuenta.Titular, c.Cuenta.IdentificacionTitular,
+                puedeAprobar ? campos.Desproteger(contexto.TenantRequerido(), c.Cuenta.NumeroProtegido) : null, c.Cuenta.Titular, c.Cuenta.IdentificacionTitular,
                 c.Cuenta.Moneda, c.Estado.ToString(), c.PropuestaEn,
                 [.. c.Aprobaciones.Select(a => new AprobacionDeCuentaDto(a.UsuarioId, nombres.GetValueOrDefault(a.UsuarioId), a.Fecha))],
                 c.AprobadaEn, c.MotivoRechazo, c.Cuenta.BancoCodigo, c.Cuenta.BancoSwift,

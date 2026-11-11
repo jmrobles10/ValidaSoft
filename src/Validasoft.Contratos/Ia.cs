@@ -8,15 +8,18 @@ namespace Validasoft.Contratos;
 /// </summary>
 public sealed record PlanIaEmpresaDto(
     Guid EmpresaId, bool Configurado, int ValidacionesIncluidasMes, bool AdicionalHabilitado, int? TopeAdicionalMes, bool LlaveConfigurada,
-    string? UltimosCuatro, string ModeloPorDefecto, string ModeloEscalamiento, decimal UmbralConfianza, bool Activo, DateTimeOffset? ActualizadoEn);
+    string? UltimosCuatro, string ModeloPorDefecto, string ModeloEscalamiento, decimal UmbralConfianza, bool Activo, DateTimeOffset? ActualizadoEn,
+    decimal? PrecioAdicional = null);
 
 /// <summary>
 /// Crea o reemplaza el plan. <see cref="TopeAdicionalMes"/> nulo = sin tope. <see cref="ApiKeyOpenAi"/> nula conserva la
 /// llave actual y vacía la quita. Modelos y umbral nulos conservan los actuales (o los por defecto).
+/// <see cref="PrecioAdicional"/> es lo que se cobra por cada validación adicional de esta empresa (PI-12); nulo = el precio de la tarifa general.
 /// </summary>
 public sealed record ActualizarPlanIaEmpresaDto(
     int ValidacionesIncluidasMes, bool AdicionalHabilitado, int? TopeAdicionalMes = null, string? ApiKeyOpenAi = null, string? ModeloPorDefecto = null,
-    string? ModeloEscalamiento = null, decimal? UmbralConfianza = null, bool Activo = true);
+    string? ModeloEscalamiento = null, decimal? UmbralConfianza = null, bool Activo = true,
+    decimal? PrecioAdicional = null);
 
 /// <summary>El plan de la empresa activa, sin la llave (solo si está configurada).</summary>
 public sealed record PlanIaResumenDto(

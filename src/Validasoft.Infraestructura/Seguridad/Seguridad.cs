@@ -169,16 +169,34 @@ public sealed class GeneradorDeApiKeys(IHostEnvironment entorno) : IGeneradorDeA
 
 /// <summary>
 /// Marca en la caché del nodo el momento en que cambió una API key (revocada o rotada, CN-3): una verificación guardada antes
-/// de esa marca se descarta y la llave se vuelve a verificar contra la base.
+/// de esa marca se descarta y la llave se vuelve a verificar contra la base. El cambio se avisa a <b>todos</b> los servidores (PI-8,
+/// PostgreSQL <c>LISTEN/NOTIFY</c>): revocar o rotar una llave la corta en todos a la vez, no solo en el que atendió el cambio.
 /// </summary>
-public sealed class CacheDeCredenciales(IMemoryCache cache, TimeProvider reloj) : ICacheDeCredenciales
+public sealed class CacheDeCredenciales(IMemoryCache cache, TimeProvider reloj, IBusDeInvalidaciones? bus = null) : ICacheDeCredenciales, IReceptorDeInvalidaciones
 {
+    private const string ClaveDeReinicio = "apikey-cambio:*";
+
     private static string Clave(string apiKeyId) => "apikey-cambio:" + apiKeyId;
 
-    public void Olvidar(Guid apiKeyId) => cache.Set(Clave(apiKeyId.ToString()), reloj.GetUtcNow(), TimeSpan.FromMinutes(10));
+    public string Tipo => TiposDeInvalidacion.ApiKey;
+
+    public void Olvidar(Guid apiKeyId)
+    {
+        Marcar(apiKeyId.ToString());
+        bus?.Publicar(Tipo, apiKeyId.ToString());
+    }
+
+    /// <summary>Un aviso de otro servidor: la llave cambió allá, aquí hay que volver a verificarla.</summary>
+    public void Recibir(string id) => Marcar(id);
+
+    /// <summary>Se perdió la escucha de avisos: toda verificación guardada antes de ahora se repite contra la base.</summary>
+    public void Reiniciar() => cache.Set(ClaveDeReinicio, reloj.GetUtcNow(), TimeSpan.FromMinutes(10));
+
+    private void Marcar(string apiKeyId) => cache.Set(Clave(apiKeyId), reloj.GetUtcNow(), TimeSpan.FromMinutes(10));
 
     internal static bool CambioDespuesDe(IMemoryCache cache, string apiKeyId, DateTimeOffset verificadaEn) =>
-        cache.TryGetValue(Clave(apiKeyId), out DateTimeOffset cambio) && cambio >= verificadaEn;
+        (cache.TryGetValue(Clave(apiKeyId), out DateTimeOffset cambio) && cambio >= verificadaEn) ||
+        (cache.TryGetValue(ClaveDeReinicio, out DateTimeOffset reinicio) && reinicio >= verificadaEn);
 }
 
 /// <summary>
@@ -195,7 +213,8 @@ public sealed class AutenticacionPorApiKey(
     IMemoryCache cache,
     IConfiguration configuracion,
     TimeProvider reloj,
-    VerificadorDeIdentidadDelegada delegacion) : AuthenticationHandler<AuthenticationSchemeOptions>(opciones, logger, codificador)
+    VerificadorDeIdentidadDelegada delegacion,
+    ICacheDeClaveDeArranque claveDeArranque) : AuthenticationHandler<AuthenticationSchemeOptions>(opciones, logger, codificador)
 {
     public const string Esquema = "ApiKey";
     public const string Cabecera = "X-Api-Key";
@@ -220,6 +239,9 @@ public sealed class AutenticacionPorApiKey(
 
         if (EsClaveDePlataforma(valor))
         {
+            // Plataforma puede apagar la clave de arranque desde su consola (PI-17): con ella apagada, ya no autentica aunque siga en la configuración del servidor.
+            if (await claveDeArranque.DesactivadaAsync(Context.RequestAborted))
+                return AuthenticateResult.Fail("La clave de arranque de Plataforma está desactivada.");
             var soporte = Request.Headers[CabeceraAccesoSoporte].ToString();
             if (string.IsNullOrWhiteSpace(soporte))
                 return Exito([new(Reclamos.Scope, Permisos.PlataformaTenants), new(Reclamos.ActorTipo, ActorTipo.Plataforma.ToString()),

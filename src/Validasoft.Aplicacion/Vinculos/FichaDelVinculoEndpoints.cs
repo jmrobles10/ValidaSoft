@@ -21,7 +21,7 @@ public static class FichaDelVinculoEndpoints
     [Authorize(Policy = Permisos.VinculosLeer)]
     [Authorize(Policy = Permisos.TercerosLeer)]
     public static async Task<FichaDelVinculoDto> Obtener(Guid id, SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto,
-        IProtectorDeSecretos protector, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, CancellationToken ct)
     {
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
         var tercero = await empresa.Sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct)
@@ -64,7 +64,7 @@ public static class FichaDelVinculoEndpoints
 
         var representante = RepresentanteLegalPrincipal.Elegir(tercero.TipoPersona,
             filas.Select(f => f.Datos).OfType<DatosGenerales>().FirstOrDefault(), filas.Select(f => f.Datos).OfType<DatosLegales>().FirstOrDefault());
-        var cuenta = (await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, protector, ct)).Actual;
+        var cuenta = (await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, campos, ct)).Actual;
 
         var referenciasDelTercero = await ReferenciasDeTerceroEndpoints.ListarAsync(empresa.Sesion, vinculo.TerceroId, ct);
 

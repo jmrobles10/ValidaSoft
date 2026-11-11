@@ -78,10 +78,14 @@ public sealed class ProveedorLocalDeCodigos(IProtectorDeSecretos protector) : IP
 /// un correo sin cuenta (o de un grupo que no admite el modo directo) recibe la misma respuesta que uno con cuenta. La sesión es la misma que
 /// emite la identidad delegada (JWT HS256 con los scopes efectivos del usuario) más un token de refresco en cookie.
 /// </summary>
-public sealed class ServicioDeIngreso(
-    ISesiones sesiones, IProveedorDeIdentidad proveedor, CuentasDeIngreso cuentas, IServicioDePasskeys passkeys, IEmisorDeSesiones emisor,
-    CookieDeSesionDeUsuario cookie, ICacheDeSesionesDirectas cache, RegistroDeIngresos registro, IConfiguration configuracion, TimeProvider reloj)
+public sealed partial class ServicioDeIngreso(
+    ISesiones sesiones, IEnumerable<IProveedorDeIdentidad> proveedores, CuentasDeIngreso cuentas, IServicioDePasskeys passkeys, IEmisorDeSesiones emisor,
+    CookieDeSesionDeUsuario cookie, ICacheDeSesionesDirectas cache, RegistroDeIngresos registro, IConfiguration configuracion, TimeProvider reloj,
+    ConfiguracionesDeSso sso, PoliticaDeIngreso politica, CookieDeSso cookieSso, OpcionesDeSso opcionesDeSso)
 {
+    /// <summary>El proveedor propio (código por correo); los federados (SSO) se eligen por la configuración del grupo.</summary>
+    private IProveedorDeIdentidad Local => proveedores.First(p => p.Id == ProveedorLocalDeCodigos.Codigo);
+
     public const string CabeceraCliente = "X-Validasoft-Cliente";
     public const string ValorCliente = "web";
 
@@ -92,7 +96,7 @@ public sealed class ServicioDeIngreso(
     {
         var normalizado = NormalizarCorreo(correo);
         var ahora = reloj.GetUtcNow();
-        var disponibles = await cuentas.PorCorreoAsync(normalizado, ct);
+        var disponibles = await PorCorreoParaCodigoAsync(normalizado, ct);
 
         InicioDeIngreso inicio;
         try
@@ -105,7 +109,7 @@ public sealed class ServicioDeIngreso(
             if (mensajes is MessageContext contexto)
                 await contexto.ClearAllAsync();
             await using var senuelo = sesiones.Global();
-            inicio = await proveedor.IniciarAsync(senuelo, mensajes, normalizado, conCuenta: false, cliente, ahora, ct);
+            inicio = await Local.IniciarAsync(senuelo, mensajes, normalizado, conCuenta: false, cliente, ahora, ct);
             await senuelo.SaveChangesAsync(ct);
         }
 
@@ -117,7 +121,7 @@ public sealed class ServicioDeIngreso(
     {
         await using var sesion = sesiones.Global(mensajes);
         var enviar = disponibles.Count > 0 && await RegistrarEnvioAsync(sesion, correo, ahora, ct);
-        var inicio = await proveedor.IniciarAsync(sesion, mensajes, correo, enviar, cliente, ahora, ct);
+        var inicio = await Local.IniciarAsync(sesion, mensajes, correo, enviar, cliente, ahora, ct);
 
         if (enviar)
         {
@@ -164,7 +168,7 @@ public sealed class ServicioDeIngreso(
         IdentidadVerificada? identidad;
         try
         {
-            identidad = await proveedor.CompletarAsync(desafio, dto.Codigo, ahora, ct);
+            identidad = await Local.CompletarAsync(desafio, dto.Codigo, ahora, ct);
         }
         catch (ReglaDeNegocioException e)
         {
@@ -184,7 +188,7 @@ public sealed class ServicioDeIngreso(
             };
         }
 
-        var disponibles = await cuentas.PorCorreoAsync(identidad.Correo, ct);
+        var disponibles = await PorCorreoParaCodigoAsync(identidad.Correo, ct);
         if (disponibles.Count == 0)
         {
             await registro.RegistrarAsync(EventoDeIngreso.IngresoFallido, false, cliente, correo: identidad.Correo, motivo: "sin-cuenta", ct: ct);
@@ -227,11 +231,14 @@ public sealed class ServicioDeIngreso(
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
         var desafio = await CargarAsync(sesion, dto.Desafio, ct);
+        // El inicio de sesión de una empresa solo entra a esa empresa: su proveedor demuestra la identidad dentro de sus dominios, no en otros grupos.
+        if (desafio.Sso is not null)
+            throw ReglaDeNegocioException.Prohibido("sso-cuenta-fija", "Este ingreso es del inicio de sesión de tu empresa: solo entra a su grupo.");
         desafio.AsegurarEtapa(EtapaDeIngreso.CodigoVerificado, ahora);
         if (desafio.Cuenta is not null)
             throw ReglaDeNegocioException.Conflicto("cuenta-ya-elegida", "Ya elegiste la cuenta de este ingreso.");
 
-        var disponibles = await cuentas.PorCorreoAsync(desafio.Correo ?? string.Empty, ct);
+        var disponibles = await PorCorreoParaCodigoAsync(desafio.Correo ?? string.Empty, ct);
         var elegida = disponibles.FirstOrDefault(c => c.Id == dto.Cuenta)
                       ?? throw ReglaDeNegocioException.Validacion("cuenta-invalida", "Esa cuenta no corresponde a tu correo.");
         return await ContinuarAsync(sesion, desafio, elegida, cliente, respuesta, ahora, ct);
@@ -245,6 +252,11 @@ public sealed class ServicioDeIngreso(
         HttpResponse respuesta, DateTimeOffset ahora, CancellationToken ct)
     {
         desafio.ElegirCuenta(cuenta.Cuenta, ahora);
+
+        // El proveedor de identidad del cliente declaró más de un factor (PI-3, PI-4): vale por sí solo, también para los roles que exigen passkey.
+        if (desafio.Sso is { Multifactor: true })
+            return await AbrirSesionDeSsoAsync(sesion, desafio, cuenta, cliente, respuesta, ahora, ct);
+
         var registradas = await cuentas.PasskeysAsync(cuenta.Cuenta, ct);
 
         if (registradas.Count > 0)
@@ -267,7 +279,7 @@ public sealed class ServicioDeIngreso(
 
         desafio.Consumir(ahora);
         sesion.Store(desafio);
-        var abierta = AbrirSesion(sesion, cuenta, MetodoDeIngreso.Codigo, cliente, respuesta, ahora);
+        var abierta = AbrirSesion(sesion, cuenta, desafio.Sso is not null ? MetodoDeIngreso.Sso : MetodoDeIngreso.Codigo, cliente, respuesta, ahora);
         await sesion.SaveChangesAsync(ct);
         await RegistrarUltimoAccesoAsync(cuenta, ahora, ct);
         return new PasoDeIngresoDto("Sesion", desafio.Id, Sesion: abierta);
@@ -297,7 +309,8 @@ public sealed class ServicioDeIngreso(
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
         var desafio = await CargarAsync(sesion, dto.Desafio, ct);
-        if (desafio.Etapa is not (EtapaDeIngreso.PasskeyPendiente or EtapaDeIngreso.CodigoVerificado) || desafio.OpcionesDePasskey is null)
+        // Un desafío de reautenticación (step-up) solo confirma una acción: nunca abre una sesión.
+        if (desafio.EsReautenticacion || desafio.Etapa is not (EtapaDeIngreso.PasskeyPendiente or EtapaDeIngreso.CodigoVerificado) || desafio.OpcionesDePasskey is null)
             throw ReglaDeNegocioException.Expirado("desafio-usado", "Este ingreso ya se usó o no espera una passkey. Empieza de nuevo.");
         desafio.AsegurarVigente(ahora);
 
@@ -314,12 +327,15 @@ public sealed class ServicioDeIngreso(
 
             var cuenta = await cuentas.CargarAsync(cuentaPasskey, ct)
                          ?? throw ReglaDeNegocioException.Prohibido("cuenta-no-disponible", "Esa cuenta ya no puede ingresar directo. Pide ayuda a un administrador.");
+            // Con el SSO exclusivo (PI-5) tampoco se entra solo con la passkey: la persona pasa antes por el inicio de sesión de su empresa.
+            if (desafio.Sso is null)
+                await AsegurarSinSsoExclusivoAsync(cuenta, ct);
             passkey.Usar(aserto.Contador, ahora, cliente.Ip);
             sesion.Store(passkey);
             desafio.Consumir(ahora);
             sesion.Store(desafio);
 
-            var metodo = desafio.Cuenta is null ? MetodoDeIngreso.Passkey : MetodoDeIngreso.CodigoYPasskey;
+            var metodo = desafio.Sso is not null ? MetodoDeIngreso.SsoYPasskey : desafio.Cuenta is null ? MetodoDeIngreso.Passkey : MetodoDeIngreso.CodigoYPasskey;
             var abierta = AbrirSesion(sesion, cuenta, metodo, cliente, respuesta, ahora);
             await sesion.SaveChangesAsync(ct);
             await RegistrarUltimoAccesoAsync(cuenta, ahora, ct);
@@ -337,7 +353,8 @@ public sealed class ServicioDeIngreso(
     /// Registra la passkey de un ingreso que la exige y aún no tenía (alta o recuperación tras revocar la anterior) y abre la sesión
     /// (<c>CodigoYPasskey</c>). 401 <c>passkey-invalida</c>; 409 <c>passkey-duplicada</c>.
     /// </summary>
-    public async Task<PasoDeIngresoDto> RegistrarPasskeyAsync(RegistrarPasskeyDto dto, ContextoDeCliente cliente, HttpResponse respuesta, CancellationToken ct)
+    public async Task<PasoDeIngresoDto> RegistrarPasskeyAsync(RegistrarPasskeyDto dto, ContextoDeCliente cliente, HttpResponse respuesta, IMessageBus mensajes,
+        CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
@@ -347,9 +364,10 @@ public sealed class ServicioDeIngreso(
         if (cuenta is null || desafio.OpcionesDePasskey is null)
             throw ReglaDeNegocioException.Expirado("desafio-usado", "Este ingreso no espera registrar una passkey. Empieza de nuevo.");
 
+        Passkey nueva;
         try
         {
-            await RegistrarVerificadaAsync(sesion, desafio, cuenta, dto.Respuesta, dto.Nombre, cliente, ahora, ct);
+            nueva = await RegistrarVerificadaAsync(sesion, desafio, cuenta, dto.Respuesta, dto.Nombre, cliente, ahora, ct);
         }
         catch (ReglaDeNegocioException e)
         {
@@ -360,9 +378,10 @@ public sealed class ServicioDeIngreso(
 
         desafio.Consumir(ahora);
         sesion.Store(desafio);
-        var abierta = AbrirSesion(sesion, cuenta, MetodoDeIngreso.CodigoYPasskey, cliente, respuesta, ahora);
+        var abierta = AbrirSesion(sesion, cuenta, desafio.Sso is not null ? MetodoDeIngreso.SsoYPasskey : MetodoDeIngreso.CodigoYPasskey, cliente, respuesta, ahora);
         await sesion.SaveChangesAsync(ct);
         await RegistrarUltimoAccesoAsync(cuenta, ahora, ct);
+        await AvisosDeSeguridad.PasskeyRegistradaAsync(mensajes, cuenta, nueva, cliente, ahora);
         return new PasoDeIngresoDto("Sesion", desafio.Id, Sesion: abierta);
     }
 
@@ -384,7 +403,8 @@ public sealed class ServicioDeIngreso(
     }
 
     /// <summary>Verifica y guarda la passkey de una persona ya dentro (Mi cuenta).</summary>
-    public async Task<Passkey> ConfirmarRegistroAsync(CuentaResuelta cuenta, RegistrarPasskeyDto dto, ContextoDeCliente cliente, CancellationToken ct)
+    public async Task<Passkey> ConfirmarRegistroAsync(CuentaResuelta cuenta, RegistrarPasskeyDto dto, ContextoDeCliente cliente, IMessageBus mensajes,
+        CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
@@ -397,6 +417,7 @@ public sealed class ServicioDeIngreso(
         desafio.Consumir(ahora);
         sesion.Store(desafio);
         await sesion.SaveChangesAsync(ct);
+        await AvisosDeSeguridad.PasskeyRegistradaAsync(mensajes, cuenta, nueva, cliente, ahora);
         return nueva;
     }
 

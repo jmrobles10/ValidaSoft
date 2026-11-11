@@ -111,25 +111,31 @@ public static class SecretosEndpoints
     /// <summary>Usuario y clave de los proveedores de listas de cada empresa: cifrados con la clave del grupo (CU-20).</summary>
     public const string TipoCredencialDeListas = "credenciales-listas";
 
+    /// <summary>El número de cuenta congelado en los eventos de un vínculo (PI-11): se re-cifra con la clave del grupo.</summary>
+    public const string TipoCuentaEnEventos = "cuenta-en-eventos";
+
+    /// <summary>El mismo número en el documento del vínculo que proyecta esos eventos (PI-11).</summary>
+    public const string TipoCuentaEnVinculos = "cuenta-en-vinculos";
+
     /// <summary>Solo cuenta (no re-cifra): clave vigente, claves anteriores y, por tipo, cuántos secretos ya usan la vigente.</summary>
     [WolverineGet("/api/v1/plataforma/secretos")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
-    public static Task<EstadoDeSecretosDto> Estado(ISesiones sesiones, IProtectorDeSecretos protector, CancellationToken ct) =>
-        RecorrerAsync(sesiones, protector, simular: true, ct);
+    public static Task<EstadoDeSecretosDto> Estado(ISesiones sesiones, IProtectorDeSecretos protector, IRecifradorDeCuentasDeVinculos recifrador, CancellationToken ct) =>
+        RecorrerAsync(sesiones, protector, recifrador, simular: true, ct);
 
     /// <summary>
     /// Re-cifra con la clave maestra vigente las llaves de OpenAI de los planes de IA, los secretos de los webhooks (vigente y
     /// anterior en solapamiento) y los números de las cuentas bancarias de la bóveda. Idempotente: lo que ya está con la vigente
     /// no se toca. Lo que no se puede descifrar (su clave ya no está configurada) se cuenta en <c>fallidos</c> y se deja igual.
-    /// Las copias congeladas en eventos (la cuenta designada de un vínculo) no se reescriben: siguen legibles mientras su clave
-    /// siga en <c>ClavesAnteriores</c> (docs/07 §6.3).
+    /// El número de cuenta congelado en los eventos de un vínculo (y en el documento que los proyecta) también pasa a la clave del grupo (PI-11): migración controlada del
+    /// valor protegido, idempotente.
     /// </summary>
     [WolverinePost("/api/v1/plataforma/secretos/recifrar")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
-    public static async Task<EstadoDeSecretosDto> Recifrar(ISesiones sesiones, IProtectorDeSecretos protector, IContextoSolicitud contexto,
+    public static async Task<EstadoDeSecretosDto> Recifrar(ISesiones sesiones, IProtectorDeSecretos protector, IRecifradorDeCuentasDeVinculos recifrador, IContextoSolicitud contexto,
         TimeProvider reloj, CancellationToken ct)
     {
-        var resultado = await RecorrerAsync(sesiones, protector, simular: false, ct);
+        var resultado = await RecorrerAsync(sesiones, protector, recifrador, simular: false, ct);
         await using var sesion = sesiones.Global();
         Auditoria.Registrar(sesion, contexto, "Secretos", "clave-maestra", AccionConfiguracion.Rotado, null, resultado, reloj.GetUtcNow());
         await sesion.SaveChangesAsync(ct);
@@ -171,12 +177,15 @@ public static class SecretosEndpoints
         public SecretosPorTipoDto ADto() => new(tipo, Total, Vigentes, Recifrados, Fallidos);
     }
 
-    private static async Task<EstadoDeSecretosDto> RecorrerAsync(ISesiones sesiones, IProtectorDeSecretos protector, bool simular, CancellationToken ct)
+    private static async Task<EstadoDeSecretosDto> RecorrerAsync(ISesiones sesiones, IProtectorDeSecretos protector, IRecifradorDeCuentasDeVinculos recifrador, bool simular,
+        CancellationToken ct)
     {
         var llaves = new Conteo(TipoLlaveOpenAi);
         var webhooks = new Conteo(TipoSecretoWebhook);
         var cuentas = new Conteo(TipoCuentaBancaria);
         var listas = new Conteo(TipoCredencialDeListas);
+        var enEventos = new ConteoDeRecifrado(0, 0, 0, 0);
+        var enVinculos = new ConteoDeRecifrado(0, 0, 0, 0);
 
         List<Guid> tenants;
         await using (var consulta = sesiones.ConsultaGlobal())
@@ -226,6 +235,11 @@ public static class SecretosEndpoints
 
             if (cambios)
                 await sesion.SaveChangesAsync(ct);
+
+            // El número de cuenta de los eventos de un vínculo pasa de la clave general a la del grupo (PI-11).
+            var (eventos, vinculos) = await recifrador.RecorrerAsync(tenantId, simular, ct);
+            enEventos = Sumar(enEventos, eventos);
+            enVinculos = Sumar(enVinculos, vinculos);
         }
 
         await using (var boveda = sesiones.Boveda())
@@ -244,6 +258,11 @@ public static class SecretosEndpoints
                 await boveda.SaveChangesAsync(ct);
         }
 
-        return new EstadoDeSecretosDto(protector.ClaveVigente, protector.ClavesAnteriores, simular, [llaves.ADto(), webhooks.ADto(), cuentas.ADto(), listas.ADto()]);
+        return new EstadoDeSecretosDto(protector.ClaveVigente, protector.ClavesAnteriores, simular,
+            [llaves.ADto(), webhooks.ADto(), cuentas.ADto(), listas.ADto(), Dto(TipoCuentaEnEventos, enEventos), Dto(TipoCuentaEnVinculos, enVinculos)]);
     }
+
+    private static ConteoDeRecifrado Sumar(ConteoDeRecifrado a, ConteoDeRecifrado b) => new(a.Total + b.Total, a.Vigentes + b.Vigentes, a.Recifrados + b.Recifrados, a.Fallidos + b.Fallidos);
+
+    private static SecretosPorTipoDto Dto(string tipo, ConteoDeRecifrado c) => new(tipo, c.Total, c.Vigentes, c.Recifrados, c.Fallidos);
 }

@@ -67,6 +67,16 @@ public sealed class SistemaIntegrado
     }
 
     /// <summary>
+    /// Vuelve a activar el sistema (PI-7). Sus llaves se revocaron al desactivarlo y no se restauran: hay que emitir otras. 409 <c>sistema-activo</c> si ya estaba activo.
+    /// </summary>
+    public void Reactivar()
+    {
+        if (Activo)
+            throw ReglaDeNegocioException.Conflicto("sistema-activo", "El sistema ya está activo.");
+        Activo = true;
+    }
+
+    /// <summary>
     /// Reemplaza los orígenes que pueden alojar las pantallas embebidas. Cada uno se valida y normaliza con
     /// <see cref="OrigenWeb.Normalizar"/>; los repetidos se descartan. Lista vacía = nadie puede embeber (salvo Validasoft).
     /// </summary>

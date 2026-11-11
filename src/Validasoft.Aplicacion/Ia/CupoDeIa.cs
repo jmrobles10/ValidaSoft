@@ -149,8 +149,7 @@ public sealed class CupoDeIa(ISesiones sesiones, TimeProvider reloj)
             await using var sesion = sesiones.ParaTenant(empresa.TenantId);
             var mes = UsoMensualIa.MesDe(dia);
             var uso = await sesion.LoadAsync<UsoMensualIa>(UsoMensualIa.Clave(empresa.EmpresaId, mes), ct) ?? UsoMensualIa.Nuevo(empresa.EmpresaId, mes);
-            uso.RegistrarCosto(llamadas.Sum(l => l.TokensEntrada), llamadas.Sum(l => l.TokensEntradaEnCache), llamadas.Sum(l => l.TokensSalida),
-                llamadas.Sum(l => l.CostoUsd), dia, analisisRegistrado);
+            uso.RegistrarLlamadas(llamadas, dia, analisisRegistrado);
             sesion.Store(uso);
             await sesion.SaveChangesAsync(ct);
             return true;

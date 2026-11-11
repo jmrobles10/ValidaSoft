@@ -71,6 +71,9 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_identificacion", x => x.TenantId, x => x.ClaveIdentificacion)
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_prefijo", x => x.TenantId, x => x.PrefijoFolio);
 
+                // Tarifa general de las validaciones adicionales de IA (PI-12): un solo documento global.
+                opts.Schema.For<Validasoft.Dominio.Ia.TarifaDeIa>().DatabaseSchemaName("plataforma");
+
                 // boveda (global)
                 opts.Schema.For<Tercero>().DatabaseSchemaName("boveda")
                     .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion)
@@ -142,6 +145,14 @@ public static class ConfiguracionMarten
                     .Index(x => x.SujetoId)
                     .Index(x => x.ExpiraEn);
                 opts.Schema.For<RegistroDeIngreso>().DatabaseSchemaName("identidad").Index(x => x.Fecha).Index(x => x.SujetoId);
+                // Inicio de sesión con el proveedor de identidad del cliente (SSO, PI-1): un documento por grupo (id = grupo) y el índice global de
+                // dominios ya verificados, con el dominio como id (un dominio verificado es de un solo grupo).
+                opts.Schema.For<ConfiguracionDeSso>().DatabaseSchemaName("identidad");
+                opts.Schema.For<DominioVerificadoDeSso>().DatabaseSchemaName("identidad").Index(x => x.TenantId);
+                // Códigos de recuperación de una cuenta (PI-18): global, con concurrencia optimista (dos usos del mismo código no pasan los dos).
+                opts.Schema.For<CodigosDeRecuperacion>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
+                // Configuración global de la instalación que cambia la consola (PI-17).
+                opts.Schema.For<ConfiguracionDePlataforma>().DatabaseSchemaName("plataforma");
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")

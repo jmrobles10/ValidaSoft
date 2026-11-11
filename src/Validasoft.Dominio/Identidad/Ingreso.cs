@@ -27,7 +27,16 @@ public enum MetodoDeIngreso
     Passkey,
 
     /// <summary>Código del correo y, en el mismo ingreso, el registro de una passkey nueva (alta o recuperación).</summary>
-    CodigoYPasskey
+    CodigoYPasskey,
+
+    /// <summary>
+    /// Inicio de sesión de la empresa del cliente (SSO, PI-3): su proveedor de identidad verificó a la persona y declaró que ya usó más de un factor
+    /// (<c>amr</c> con <c>mfa</c>, llave o código de un solo uso). Vale por sí solo, también para los roles que exigen passkey (PI-4).
+    /// </summary>
+    Sso,
+
+    /// <summary>Inicio de sesión de la empresa del cliente sin segundo factor declarado, más la passkey de Validasoft (verificada o recién registrada).</summary>
+    SsoYPasskey
 }
 
 /// <summary>De quién es una passkey o una sesión directa: un usuario de un grupo o un operador de Plataforma.</summary>
@@ -59,6 +68,12 @@ public enum EtapaDeIngreso
 
     /// <summary>Ingreso solo con passkey: espera la aserción del navegador.</summary>
     PasskeyPendiente,
+
+    /// <summary>Inicio de sesión con el proveedor de identidad del cliente (SSO): el navegador salió hacia él y se espera su regreso (PI-3).</summary>
+    SsoPendiente,
+
+    /// <summary>El proveedor de identidad devolvió a la persona y su identidad quedó verificada: falta que la app complete el ingreso (cuenta y passkey).</summary>
+    SsoVerificado,
 
     /// <summary>La ceremonia terminó (con sesión o sin ella): no vuelve a servir.</summary>
     Consumido
@@ -105,6 +120,21 @@ public sealed class DesafioDeIngreso
     /// <summary>Correo sin cuenta (o sin ingreso directo): simula el envío pero ningún código lo verifica.</summary>
     public bool EsSenuelo { get; set; }
 
+    /// <summary>
+    /// Desafío de una reautenticación con passkey (step-up, PI-13): solo sirve para confirmar una acción sensible en la sesión <see cref="SesionId"/>, nunca
+    /// para abrir una sesión.
+    /// </summary>
+    public bool EsReautenticacion { get; set; }
+
+    /// <summary>La sesión directa que se reautentica (solo en <see cref="EsReautenticacion"/>).</summary>
+    public Guid? SesionId { get; set; }
+
+    /// <summary>Intentos incorrectos con un código de recuperación en este ingreso (PI-18); al llegar a <see cref="IntentosMaximos"/> ya no se aceptan más.</summary>
+    public int IntentosDeRecuperacion { get; set; }
+
+    /// <summary>Datos del inicio de sesión con el proveedor de identidad del cliente (SSO, PI-3); nulo en los demás ingresos.</summary>
+    public IngresoSso? Sso { get; set; }
+
     /// <summary>Código nuevo para un correo. Sin cuenta devuelve un señuelo y un código nulo (no se envía nada).</summary>
     public static (DesafioDeIngreso Desafio, string? Codigo) ParaCorreo(string correo, bool conCuenta, DateTimeOffset ahora, string? ip, string? dispositivo)
     {
@@ -147,6 +177,123 @@ public sealed class DesafioDeIngreso
         Ip = Recortar(ip, 64),
         Dispositivo = Recortar(dispositivo, 300)
     };
+
+    /// <summary>
+    /// Desafío para confirmar con la passkey una acción sensible de una sesión ya abierta (step-up, PI-13): nace en la etapa de la passkey, con la cuenta de la
+    /// sesión fijada, y no abre ninguna sesión.
+    /// </summary>
+    public static DesafioDeIngreso ParaReautenticacion(CuentaDeIngreso cuenta, string correo, Guid sesionId, DateTimeOffset ahora, string? ip, string? dispositivo) => new()
+    {
+        Id = Guid.NewGuid(),
+        Correo = correo,
+        Etapa = EtapaDeIngreso.PasskeyPendiente,
+        Cuenta = cuenta,
+        EsReautenticacion = true,
+        SesionId = sesionId,
+        CreadoEn = ahora,
+        Expira = ahora + VigenciaDelCodigo,
+        Ip = Recortar(ip, 64),
+        Dispositivo = Recortar(dispositivo, 300)
+    };
+
+    /// <summary>
+    /// Inicio de sesión con el proveedor de identidad de un grupo (SSO, PI-3). Devuelve el desafío, el <c>state</c> que viaja a ese proveedor (<c>{id}.{secreto}</c>,
+    /// solo se guarda su hash) y el secreto de navegador que va en una cookie para ligar el regreso al mismo navegador (evita que alguien te haga completar su
+    /// propio inicio de sesión).
+    /// </summary>
+    public static (DesafioDeIngreso Desafio, string Estado, string SecretoDeNavegador) ParaSso(Guid tenantId, string proveedor, string? correo, string nonce,
+        string verificadorProtegido, string retorno, DateTimeOffset ahora, string? ip, string? dispositivo)
+    {
+        var id = Guid.NewGuid();
+        var secretoDeEstado = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(24));
+        var secretoDeNavegador = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(24));
+        var desafio = new DesafioDeIngreso
+        {
+            Id = id,
+            Correo = string.IsNullOrWhiteSpace(correo) ? null : Usuario.NormalizarCorreo(correo),
+            Etapa = EtapaDeIngreso.SsoPendiente,
+            CreadoEn = ahora,
+            Expira = ahora + VigenciaDeLaCeremonia,
+            Ip = Recortar(ip, 64),
+            Dispositivo = Recortar(dispositivo, 300),
+            Sso = new IngresoSso
+            {
+                TenantId = tenantId,
+                Proveedor = proveedor,
+                EstadoHash = HashSimple(secretoDeEstado),
+                Nonce = nonce,
+                VerificadorProtegido = verificadorProtegido,
+                Retorno = retorno,
+                NavegadorHash = HashSimple(secretoDeNavegador)
+            }
+        };
+        return (desafio, $"{id:N}.{secretoDeEstado}", secretoDeNavegador);
+    }
+
+    /// <summary>
+    /// El proveedor devolvió a la persona: el <c>state</c> y la cookie del navegador deben ser los del inicio y el desafío seguir vigente y sin usar. 410
+    /// <c>desafio-usado</c> / <c>desafio-vencido</c>; 403 <c>sso-estado-invalido</c> (otro navegador, o un <c>state</c> que no es el de este inicio).
+    /// </summary>
+    public void VerificarRetornoSso(string? estado, string? secretoDeNavegador, DateTimeOffset ahora)
+    {
+        if (Etapa != EtapaDeIngreso.SsoPendiente || Sso is null)
+            throw ReglaDeNegocioException.Expirado("desafio-usado", "Este inicio de sesión ya se usó. Empieza de nuevo.");
+        AsegurarVigente(ahora);
+
+        var partes = (estado ?? string.Empty).Split('.', 2);
+        var estadoCorrecto = partes.Length == 2 && IgualesEnTiempoConstante(HashSimple(partes[1]), Sso.EstadoHash);
+        var navegadorCorrecto = !string.IsNullOrEmpty(secretoDeNavegador) && IgualesEnTiempoConstante(HashSimple(secretoDeNavegador), Sso.NavegadorHash);
+        if (!estadoCorrecto || !navegadorCorrecto)
+            throw ReglaDeNegocioException.Prohibido("sso-estado-invalido",
+                "Este inicio de sesión no lo empezaste en este navegador o ya no es válido. Empieza de nuevo desde Validasoft.");
+    }
+
+    /// <summary>La identidad que declaró el proveedor tras el regreso: el desafío queda a la espera de que la app complete el ingreso.</summary>
+    public void RegistrarIdentidadSso(string correo, string? nombre, string? sujeto, IEnumerable<string> grupos, bool gruposDeclarados, bool multifactor, DateTimeOffset ahora)
+    {
+        if (Etapa != EtapaDeIngreso.SsoPendiente || Sso is null)
+            throw ReglaDeNegocioException.Expirado("desafio-usado", "Este inicio de sesión ya se usó. Empieza de nuevo.");
+        AsegurarVigente(ahora);
+        Sso.Correo = Usuario.NormalizarCorreo(correo);
+        Sso.Nombre = Recortar(nombre, 200);
+        Sso.Sujeto = Recortar(sujeto, 256);
+        Sso.Grupos = [.. grupos.Where(g => !string.IsNullOrWhiteSpace(g)).Select(g => g.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Take(200)];
+        Sso.GruposDeclarados = gruposDeclarados;
+        Sso.Multifactor = multifactor;
+        Correo = Sso.Correo;
+        Etapa = EtapaDeIngreso.SsoVerificado;
+        Expira = ahora + VigenciaDeLaCeremonia;
+    }
+
+    /// <summary>La app completa el ingreso con la identidad ya verificada: de aquí en adelante sigue como tras verificar el código (cuenta, passkey, sesión).</summary>
+    public void ConfirmarSso(DateTimeOffset ahora)
+    {
+        if (Etapa != EtapaDeIngreso.SsoVerificado || Sso?.Correo is null)
+            throw ReglaDeNegocioException.Expirado("desafio-usado", "Este inicio de sesión ya se usó o no terminó. Empieza de nuevo.");
+        AsegurarVigente(ahora);
+        Etapa = EtapaDeIngreso.CodigoVerificado;
+        Expira = ahora + VigenciaDeLaCeremonia;
+    }
+
+    /// <summary>Cierra el inicio de sesión con el proveedor tras un fallo: ya no sirve para nada (el siguiente intento empieza de nuevo).</summary>
+    public void Anular() => Etapa = EtapaDeIngreso.Consumido;
+
+    /// <summary>Cuenta un intento incorrecto con un código de recuperación (PI-18). Agotados ⇒ 429 <c>recuperacion-bloqueada</c>.</summary>
+    public void ContarFalloDeRecuperacion()
+    {
+        IntentosDeRecuperacion++;
+    }
+
+    public void AsegurarRecuperacionDisponible()
+    {
+        if (IntentosDeRecuperacion >= IntentosMaximos)
+            throw ReglaDeNegocioException.DemasiadosIntentos("recuperacion-bloqueada", "Se agotaron los intentos con códigos de recuperación en este ingreso. Empieza de nuevo.");
+    }
+
+    private static string HashSimple(string valor) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(valor)));
+
+    private static bool IgualesEnTiempoConstante(string a, string b) =>
+        CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(a), Encoding.ASCII.GetBytes(b));
 
     /// <summary>
     /// <c>true</c> si el código es correcto (pasa a <see cref="EtapaDeIngreso.CodigoVerificado"/>); <c>false</c> si no lo es (cuenta un
@@ -224,6 +371,48 @@ public sealed class DesafioDeIngreso
 
     public static string? Recortar(string? texto, int maximo) =>
         string.IsNullOrWhiteSpace(texto) ? null : texto.Length <= maximo ? texto : texto[..maximo];
+}
+
+/// <summary>
+/// Lo que el inicio de sesión con el proveedor de identidad de un grupo (SSO, PI-3) guarda en su desafío: con qué grupo y proveedor se empezó, lo que
+/// hay que comprobar al regreso (<c>state</c>, <c>nonce</c>, PKCE y el navegador) y, tras el regreso, la identidad que declaró el proveedor.
+/// </summary>
+public sealed class IngresoSso
+{
+    public Guid TenantId { get; set; }
+
+    /// <summary>Código del proveedor (<c>oidc</c> o <c>workos</c>).</summary>
+    public string Proveedor { get; set; } = string.Empty;
+
+    /// <summary>SHA-256 del secreto del <c>state</c>; el valor nunca se guarda.</summary>
+    public string EstadoHash { get; set; } = string.Empty;
+
+    public string Nonce { get; set; } = string.Empty;
+
+    /// <summary>El <c>code_verifier</c> de PKCE, cifrado con la clave maestra de secretos.</summary>
+    public string VerificadorProtegido { get; set; } = string.Empty;
+
+    /// <summary>La <c>redirect_uri</c> con la que se empezó (el canje del código exige la misma).</summary>
+    public string Retorno { get; set; } = string.Empty;
+
+    /// <summary>SHA-256 del secreto de la cookie del navegador que empezó el inicio de sesión.</summary>
+    public string NavegadorHash { get; set; } = string.Empty;
+
+    // Lo que declaró el proveedor tras el regreso.
+    public string? Correo { get; set; }
+
+    public string? Nombre { get; set; }
+
+    /// <summary>El identificador estable de la persona en el proveedor (<c>sub</c>).</summary>
+    public string? Sujeto { get; set; }
+
+    public List<string> Grupos { get; set; } = [];
+
+    /// <summary>El token traía el reclamo de grupos (aunque fuera vacío): sin él no se tocan los roles de la persona.</summary>
+    public bool GruposDeclarados { get; set; }
+
+    /// <summary>El proveedor declaró más de un factor (<c>amr</c>).</summary>
+    public bool Multifactor { get; set; }
 }
 
 /// <summary>
@@ -420,6 +609,20 @@ public sealed class SesionDeUsuario
 
     public string? Dispositivo { get; set; }
 
+    /// <summary>
+    /// Cuándo la persona confirmó con su passkey una acción sensible en esta sesión (step-up, PI-13). Las acciones sensibles piden haberlo hecho en los últimos
+    /// <see cref="VentanaDeReautenticacion"/>.
+    /// </summary>
+    public DateTimeOffset? ReautenticadaEn { get; set; }
+
+    /// <summary>Cuánto vale una reautenticación con passkey para las acciones sensibles de la sesión.</summary>
+    public static readonly TimeSpan VentanaDeReautenticacion = TimeSpan.FromMinutes(5);
+
+    public bool ReautenticadaVigente(DateTimeOffset ahora) =>
+        ReautenticadaEn is { } cuando && ahora >= cuando && ahora - cuando <= VentanaDeReautenticacion;
+
+    public void Reautenticar(DateTimeOffset ahora) => ReautenticadaEn = ahora;
+
     public bool Revocada => RevocadaEn is not null;
 
     public bool VigenteEn(DateTimeOffset ahora) =>
@@ -517,7 +720,24 @@ public enum EventoDeIngreso
     SesionCerrada,
     SesionRevocada,
     ReusoDeSesion,
-    UsuarioInvitado
+    UsuarioInvitado,
+
+    /// <summary>Confirmó con su passkey una acción sensible (step-up, PI-13).</summary>
+    ReautenticacionExitosa,
+
+    ReautenticacionFallida,
+
+    /// <summary>Generó un juego nuevo de códigos de recuperación (los anteriores dejaron de valer, PI-18).</summary>
+    CodigosDeRecuperacionGenerados,
+
+    /// <summary>Usó un código de recuperación para volver a entrar sin su passkey (PI-18).</summary>
+    CodigoDeRecuperacionUsado,
+
+    /// <summary>Su proveedor de identidad (SSO) lo dio de alta en el grupo en su primer ingreso (PI-4).</summary>
+    UsuarioAprovisionadoPorSso,
+
+    /// <summary>Sus roles se pusieron al día con los grupos de su proveedor de identidad (SSO, PI-4).</summary>
+    RolesSincronizadosPorSso
 }
 
 /// <summary>
