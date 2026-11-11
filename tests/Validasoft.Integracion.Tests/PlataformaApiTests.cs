@@ -15,7 +15,7 @@ using Validasoft.Dominio.Ia;
 namespace Validasoft.Integracion.Tests;
 
 /// <summary>
-/// Consola de Plataforma (PT-1…PT-8): operadores por identidad delegada sin tenant, alta de un grupo operable de punta a
+/// Consola de Plataforma (PT-1…PT-10): operadores por identidad delegada sin tenant, alta de un grupo operable de punta a
 /// punta, plan de IA con su llave de solo escritura (nunca vuelve en claro ni va a la auditoría), «Probar llave» y
 /// re-cifrado de los secretos con la clave maestra.
 /// </summary>
