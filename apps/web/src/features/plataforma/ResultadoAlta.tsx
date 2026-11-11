@@ -47,10 +47,10 @@ export function ResultadoAlta({ alta }: { alta: TenantCreadoDto }) {
   return (
     <>
       <EncabezadoPagina titulo={t('plataforma.alta.listo.titulo', { nombre: alta.tenant.nombre })} subtitulo={alta.tenant.slug} />
-      <Stack spacing={2} sx={{ maxWidth: 760 }}>
+      <Stack spacing={2}>
         <Alert severity="warning">{t('plataforma.alta.listo.aviso')}</Alert>
         <Tarjeta>
-          <Stack spacing={2.5}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }, gap: 2.5 }}>
             {alta.apiKeySistema?.valor && alta.sistema && (
               <ValorCopiable
                 etiqueta={t('plataforma.alta.listo.llaveSistema', { sistema: alta.sistema.codigo })}
@@ -61,7 +61,7 @@ export function ResultadoAlta({ alta }: { alta: TenantCreadoDto }) {
             {alta.apiKeyAdministrador.valor && (
               <ValorCopiable etiqueta={t('plataforma.alta.listo.llaveAdministracion')} ayuda={t('plataforma.alta.listo.llaveAdministracionAyuda')} valor={alta.apiKeyAdministrador.valor} />
             )}
-          </Stack>
+          </Box>
         </Tarjeta>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           {empresa && (

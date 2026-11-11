@@ -1,5 +1,6 @@
-import { Box, Button, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { useVirtualizer, useWindowVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
+import { EsqueletoTarjeta } from '@validasoft/ui';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { contenedorConScroll, useAlturaFija } from '../sesion/alturaFija';
 
@@ -25,7 +26,10 @@ export interface ListaVirtualProps<T> {
   /** La última página pedida falló: no se insiste sola, se ofrece reintentar. */
   errorAlCargarMas?: boolean;
   alCargarMas: () => void;
+  /** Nombre accesible del pie mientras llega la siguiente página (no se ve: lo que se ve es el esqueleto). */
   textoCargandoMas: string;
+  /** Esqueleto de la fila que viene (por omisión, una tarjeta genérica). */
+  esqueletoCargandoMas?: ReactNode;
   textoErrorMas: string;
   textoReintentar: string;
 }
@@ -135,7 +139,7 @@ function useMargenSuperior(lista: RefObject<HTMLElement | null>, raiz: HTMLEleme
 }
 
 function CuerpoDeLista<T>({ cuerpo, lista, margen, ventana }: { cuerpo: CuerpoProps<T>; lista: RefObject<HTMLDivElement | null>; margen: number; ventana: Ventana }) {
-  const { etiqueta, filas, renderFila, hayMas, cargandoMas, errorAlCargarMas = false, alCargarMas, textoCargandoMas, textoErrorMas, textoReintentar } = cuerpo;
+  const { etiqueta, filas, renderFila, hayMas, cargandoMas, errorAlCargarMas = false, alCargarMas, textoCargandoMas, esqueletoCargandoMas, textoErrorMas, textoReintentar } = cuerpo;
   const ultimaVisible = ventana.items.at(-1)?.index ?? -1;
   useEffect(() => {
     if (hayMas && !cargandoMas && !errorAlCargarMas && ultimaVisible >= filas.length - FILAS_ANTES_DEL_FINAL) alCargarMas();
@@ -157,7 +161,7 @@ function CuerpoDeLista<T>({ cuerpo, lista, margen, ventana }: { cuerpo: CuerpoPr
             sx={{ position: 'absolute', top: 0, left: 0, width: '100%' }}
           >
             {fila === undefined ? (
-              <PieDeCarga error={errorAlCargarMas} texto={textoCargandoMas} textoError={textoErrorMas} textoReintentar={textoReintentar} onReintentar={alCargarMas} />
+              <PieDeCarga error={errorAlCargarMas} texto={textoCargandoMas} esqueleto={esqueletoCargandoMas} textoError={textoErrorMas} textoReintentar={textoReintentar} onReintentar={alCargarMas} />
             ) : (
               renderFila(fila)
             )}
@@ -168,22 +172,30 @@ function CuerpoDeLista<T>({ cuerpo, lista, margen, ventana }: { cuerpo: CuerpoPr
   );
 }
 
-function PieDeCarga({ error, texto, textoError, textoReintentar, onReintentar }: { error: boolean; texto: string; textoError: string; textoReintentar: string; onReintentar: () => void }) {
+interface PropsPie {
+  error: boolean;
+  texto: string;
+  esqueleto?: ReactNode;
+  textoError: string;
+  textoReintentar: string;
+  onReintentar: () => void;
+}
+
+/** Pie de la lista: el esqueleto de la fila que viene mientras carga (nunca un spinner con texto) o el error con su reintento. */
+function PieDeCarga({ error, texto, esqueleto, textoError, textoReintentar, onReintentar }: PropsPie) {
+  if (error) {
+    return (
+      <Box role="alert" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 2, color: 'text.secondary' }}>
+        <Typography variant="body2">{textoError}</Typography>
+        <Button size="small" variant="outlined" onClick={onReintentar}>
+          {textoReintentar}
+        </Button>
+      </Box>
+    );
+  }
   return (
-    <Box role={error ? 'alert' : 'status'} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, py: 2, color: 'text.secondary' }}>
-      {error ? (
-        <>
-          <Typography variant="body2">{textoError}</Typography>
-          <Button size="small" variant="outlined" onClick={onReintentar}>
-            {textoReintentar}
-          </Button>
-        </>
-      ) : (
-        <>
-          <CircularProgress size={16} color="inherit" aria-hidden />
-          <Typography variant="body2">{texto}</Typography>
-        </>
-      )}
+    <Box role="status" aria-busy="true" aria-label={texto}>
+      {esqueleto ?? <EsqueletoTarjeta lineas={2} />}
     </Box>
   );
 }

@@ -1,4 +1,5 @@
-import { Alert, Chip, InputAdornment, Paper, Skeleton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Chip, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
+import { LineasEsqueleto } from '@validasoft/ui';
 import { Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +59,9 @@ export function FormularioEspecialidades({ datos, onCambiar, mensaje, deshabilit
       />
       <Paper variant="outlined" sx={{ maxHeight: 480, overflowY: 'auto' }}>
         {catalogo.isPending ? (
-          <Skeleton variant="rounded" height={160} />
+          <Box role="status" aria-busy="true" aria-label="Cargando" sx={{ p: 2 }}>
+            <LineasEsqueleto lineas={6} />
+          </Box>
         ) : catalogo.isError ? (
           <ErrorRecuperable error={catalogo.error} onReintentar={() => void catalogo.refetch()} />
         ) : arbol.length === 0 ? (

@@ -1,8 +1,10 @@
 /* Validasoft: tema MUI v6 (dirección Registro). createValidasoftTheme(modo, { app, colorEmpresa }). */
 import { createTheme, type Theme } from '@mui/material';
-import type { CSSProperties } from 'react';
+import { esES } from '@mui/material/locale';
+import { createElement, type CSSProperties } from 'react';
 import { BORDE, COLOR, DENSIDAD, FUENTE, MOVIMIENTO, RADIO, SOMBRA, TIPOGRAFIA, type Modo, type TokenColor } from './tokens';
 import type { TonoEstado } from './estados';
+import { OpcionesEnCarga } from './esqueletos';
 import { derivarPaletaEmpresa, type PaletaEmpresa } from './marcaEmpresa';
 
 export type App = 'web' | 'public';
@@ -82,7 +84,27 @@ export interface OpcionesTema {
 const TONOS: readonly TonoEstado[] = ['encurso', 'exito', 'advertencia', 'error', 'info', 'neutro'];
 /** public en escritorio (bp-sm): densidad media; por debajo, densidad cómoda táctil. */
 const ESCRITORIO = '@media (min-width:600px)';
+const MOVIL = '@media (max-width:599.95px)';
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/**
+ * Textos por omisión de MUI en español (UI-3): `esES` traduce los de todos los componentes (paginador, migas, aviso…); aquí se
+ * ajusta lo del autocompletar a la voz de Validasoft («Abrir», no «Abierto») y, mientras busca, muestra un esqueleto de opciones
+ * en lugar del texto «Cargando…».
+ */
+const textosPropios = {
+  components: {
+    MuiAutocomplete: {
+      defaultProps: {
+        openText: 'Abrir',
+        closeText: 'Cerrar',
+        clearText: 'Limpiar',
+        noOptionsText: 'Sin resultados',
+        loadingText: createElement(OpcionesEnCarga),
+      },
+    },
+  },
+};
 
 export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', colorEmpresa = null }: OpcionesTema = {}): Theme {
   const c = COLOR[modo];
@@ -177,13 +199,30 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
         },
       },
       MuiButtonBase: { defaultProps: { disableRipple: true } },
+      // Botones sobrios (UI-2): `medium` por omisión y el mismo alto que el campo de al lado (32 px en web, 36 en el tercero
+      // en escritorio). `small` es para avisos, filas y tarjetas; `large` solo para la acción principal de una pantalla. En el
+      // celular el botón del tercero sube un poco su relleno (40 / 32 / 44 px) y el área táctil de 44 px se completa con un
+      // pseudoelemento invisible: el botón no se infla.
       MuiButton: {
-        defaultProps: { disableElevation: true, size: web ? 'small' : 'large' },
+        defaultProps: { disableElevation: true, size: 'medium' },
         styleOverrides: {
-          root: { borderRadius: radioControl, minHeight: control, gap: 6, fontWeight: 600, whiteSpace: 'nowrap', '& .MuiButton-startIcon, & .MuiButton-endIcon': { margin: 0 } },
-          sizeSmall: { padding: '4px 12px', fontSize: 14, lineHeight: '20px' },
-          sizeMedium: { padding: '6px 14px' },
-          sizeLarge: { padding: '10px 16px', fontSize: 15, lineHeight: '20px', [ESCRITORIO]: { minHeight: DENSIDAD.controlMedio, padding: '6px 14px', fontSize: 14 } },
+          root: {
+            borderRadius: radioControl,
+            gap: 6,
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            '& .MuiButton-startIcon, & .MuiButton-endIcon': { margin: 0 },
+            ...(web ? {} : { [MOVIL]: { '&::after': { content: '""', position: 'absolute', left: 0, right: 0, top: '50%', height: DENSIDAD.objetivoTactil, transform: 'translateY(-50%)' } } }),
+          },
+          sizeSmall: web
+            ? { minHeight: 28, padding: '3px 10px', fontSize: 13, lineHeight: '18px' }
+            : { minHeight: 32, padding: '5px 12px', fontSize: 14, lineHeight: '20px', [ESCRITORIO]: { minHeight: 30, padding: '4px 12px', fontSize: 13, lineHeight: '18px' } },
+          sizeMedium: web
+            ? { minHeight: control, padding: '5px 12px', fontSize: 14, lineHeight: '20px' }
+            : { minHeight: 40, padding: '9px 16px', [ESCRITORIO]: { minHeight: DENSIDAD.controlMedio, padding: '7px 14px', fontSize: 14, lineHeight: '20px' } },
+          sizeLarge: web
+            ? { minHeight: DENSIDAD.controlMedio, padding: '7px 16px', fontSize: 14, lineHeight: '20px' }
+            : { minHeight: DENSIDAD.objetivoTactil, padding: '11px 18px', fontSize: 15, lineHeight: '22px', [ESCRITORIO]: { minHeight: 40, padding: '9px 16px', fontSize: 14, lineHeight: '22px' } },
           outlined: { borderColor: c.bordeControl, color: c.textoPrimario, backgroundColor: c.superficieNivel1, '&:hover': { borderColor: c.bordeControl, backgroundColor: c.superficieNivel2 } },
           text: { color: acento, '&:hover': { backgroundColor: primario ? primario.tinte : c.acentoTinte } },
           contained: { '&.MuiButton-colorPrimary:hover': { backgroundColor: primario ? primario.accion : c.accionPrimariaHover } },
@@ -231,17 +270,19 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
           root: { margin: '4px 0 0', fontSize: web ? 12 : 14, lineHeight: web ? '16px' : '20px', color: c.textoSecundario, '&.Mui-error': { color: c.estadoErrorTexto } },
         },
       },
+      // El ícono de abrir queda centrado en el alto del campo (la posición por omisión de MUI: `calc(50% - .5em)`).
       MuiSelect: {
-        styleOverrides: { icon: { top: 'calc(50% - 8px)', right: 10, color: c.textoSecundario }, select: { minHeight: 0 } },
+        styleOverrides: { icon: { right: 8, color: c.textoSecundario }, select: { minHeight: 0 } },
       },
       MuiAutocomplete: {
         styleOverrides: {
           paper: { backgroundColor: c.superficieElevada, border: `1px solid ${c.bordeSutil}`, boxShadow: s.menu, borderRadius: RADIO.sm },
           listbox: { padding: 4, '& .MuiAutocomplete-option': { minHeight: control, borderRadius: RADIO.xs, fontSize: 14 } },
           tag: { height: 24, borderRadius: RADIO.xs, margin: 2 },
-          endAdornment: { top: 'calc(50% - 14px)', right: 6 },
-          popupIndicator: { padding: 4 },
-          clearIndicator: { padding: 4 },
+          // MUI 9 ya centra el adorno (`top: 50%` + `translateY(-50%)`): sin tocar `top`, queda dentro del campo y a su altura media.
+          endAdornment: { right: 6 },
+          popupIndicator: { '&&': { width: 28, height: 28, padding: 0, marginRight: 0 } },
+          clearIndicator: { '&&': { width: 28, height: 28, padding: 0, marginRight: 0 } },
           // Mismo alto que los demás campos (32 web, 44 public móvil, 36 public escritorio): el relleno lo pone el input,
           // no el contenedor (MUI le suma 9 px arriba y abajo al contenedor, más en size="small").
           inputRoot: {
@@ -372,7 +413,28 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
           icon: { marginLeft: 6, marginRight: -2 },
         },
       },
-      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { backgroundImage: 'none' }, outlined: { borderColor: c.bordeSutil } } },
+      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { backgroundImage: 'none' }, rounded: { borderRadius: radioMarco }, outlined: { borderColor: c.bordeSutil } } },
+      // Plegable (UI-4): mismo borde y radio que las tarjetas en cualquier posición (MUI solo redondea el primero y el último
+      // de una pila) y sin la línea superior que dibuja entre acordeones.
+      MuiAccordion: {
+        defaultProps: { disableGutters: true, elevation: 0, square: false },
+        styleOverrides: {
+          root: {
+            '&, &:first-of-type, &:last-of-type': { borderRadius: radioMarco },
+            border: `1px solid ${c.bordeSutil}`,
+            backgroundColor: c.superficieNivel1,
+            '&::before': { display: 'none' },
+            '&.Mui-expanded': { margin: 0 },
+          },
+        },
+      },
+      MuiAccordionSummary: {
+        styleOverrides: {
+          root: { minHeight: web ? 44 : 52, padding: '0 16px', borderRadius: radioMarco, '&.Mui-expanded': { minHeight: web ? 44 : 52, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 } },
+          content: { margin: '10px 0', '&.Mui-expanded': { margin: '10px 0' } },
+        },
+      },
+      MuiAccordionDetails: { styleOverrides: { root: { padding: '8px 16px 16px' } } },
       MuiCard: { defaultProps: { variant: 'outlined' }, styleOverrides: { root: { borderRadius: radioMarco } } },
       MuiCardHeader: { styleOverrides: { root: { padding: '12px 16px 4px' }, title: TIPOGRAFIA.titulo4, subheader: { fontSize: 13, lineHeight: '18px', color: c.textoSecundario }, action: { margin: 0, alignSelf: 'center' } } },
       MuiCardContent: { styleOverrides: { root: { padding: '12px 16px', '&:last-child': { paddingBottom: 12 } } } },
@@ -389,5 +451,5 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
       MuiLinearProgress: { styleOverrides: { root: { height: 4, borderRadius: RADIO.xs, backgroundColor: c.superficieNivel2 } } },
       MuiTypography: { defaultProps: { variantMapping: { mono: 'span', monoTabla: 'span', kpi: 'span' } } },
     },
-  });
+  }, esES, textosPropios);
 }

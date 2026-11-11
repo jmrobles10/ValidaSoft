@@ -1,5 +1,5 @@
-import { Box, CircularProgress, Skeleton, Stack, Typography } from '@mui/material';
-import { Isotipo, PaginaEstado } from '@validasoft/ui';
+import { Box, Skeleton, Stack, Typography } from '@mui/material';
+import { EsqueletoFormulario, Isotipo, PaginaEstado } from '@validasoft/ui';
 import { Clock, Link2, LogOut, ShieldAlert } from 'lucide-react';
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +53,7 @@ export function PantallaSesion({ estado, embebida }: { estado: EstadoSesion; emb
 
   if (!embebida && FormularioSesionDev) {
     return (
-      <Suspense fallback={<CircularProgress sx={{ m: 4 }} aria-label={t('comun.cargando')} />}>
+      <Suspense fallback={<EsqueletoFormulario campos={3} conTarjeta sx={{ maxWidth: 420, mx: 'auto', mt: 4 }} />}>
         <FormularioSesionDev vencida={estado === 'vencida'} />
       </Suspense>
     );

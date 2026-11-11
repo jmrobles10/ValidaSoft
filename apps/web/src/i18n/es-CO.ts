@@ -547,6 +547,7 @@ export const esCO = {
     plantilla: {
       ayuda: 'Un formato que el proveedor descarga, llena, firma y sube. PDF, Word (DOCX) o Excel (XLSX).',
       sinPlantilla: 'Sin plantilla.',
+      cargando: 'Buscando la plantilla',
       detalle: 'Versión {{version}} · {{peso}} · {{fecha}}',
       descargar: 'Descargar',
       retirar: 'Retirar',

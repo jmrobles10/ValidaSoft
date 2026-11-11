@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Card, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Card, Skeleton, Stack, Typography } from '@mui/material';
 import type { CertificadoPublicoDto } from '@validasoft/api-client';
 import { visualmenteOculto } from '@validasoft/ui';
 import { CircleAlert, CircleCheck, CircleHelp, CircleX, RotateCcw, type LucideIcon } from 'lucide-react';
@@ -81,10 +81,17 @@ export function PasosVerificacion({ certificado: c, huella }: { certificado: Cer
           <DetallesTecnicos certificado={c} hashCalculado={resultado.hashCalculado} />
         </>
       ) : (
-        <Stack direction="row" spacing={1.5} role="status" sx={{ alignItems: 'center', py: 1 }}>
-          <CircularProgress size={20} aria-hidden />
-          <Typography sx={{ color: 'text.secondary' }}>{t('verificacion.cripto.verificando')}</Typography>
-        </Stack>
+        <Box role="status" aria-busy="true" aria-label={t('verificacion.cripto.verificando')}>
+          {[0, 1, 2, 3].map((i) => (
+            <Stack key={i} direction="row" spacing={1.5} sx={{ py: 1.25, borderTop: 1, borderColor: 'divider' }}>
+              <Skeleton variant="circular" width={20} height={20} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton variant="rounded" height={14} width={`${String(34 + i * 6)}%`} sx={{ mb: 0.75 }} />
+                <Skeleton variant="rounded" height={12} width="70%" />
+              </Box>
+            </Stack>
+          ))}
+        </Box>
       )}
     </Card>
   );

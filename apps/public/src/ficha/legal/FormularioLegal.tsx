@@ -44,7 +44,7 @@ export function FormularioLegal({ datos, onCambiar, mensaje, deshabilitado }: Pr
           ))}
         </Stack>
       )}
-      <Button variant="outlined" startIcon={<Plus size={18} aria-hidden />} onClick={() => setEditando(personas.length)} disabled={deshabilitado} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, minHeight: 44 }}>
+      <Button variant="outlined" startIcon={<Plus size={18} aria-hidden />} onClick={() => setEditando(personas.length)} disabled={deshabilitado} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' } }}>
         {t('ficha.legal.agregar')}
       </Button>
       <Subtitulo>{t('ficha.legal.firma')}</Subtitulo>
@@ -97,10 +97,10 @@ function TarjetaPersona({ persona, indice, mensaje, onEditar, onQuitar, deshabil
           {errorFila && <Typography sx={{ color: 'error.main', fontSize: 14 }}>{errorFila}</Typography>}
         </Stack>
         <Stack direction="row" spacing={1}>
-          <Button variant="outlined" startIcon={<Pencil size={16} aria-hidden />} onClick={onEditar} disabled={deshabilitado} aria-label={t('ficha.legal.editarAccesible', { nombre })} sx={{ minHeight: 44, flex: { xs: 1, sm: 'none' } }}>
+          <Button variant="outlined" startIcon={<Pencil size={16} aria-hidden />} onClick={onEditar} disabled={deshabilitado} aria-label={t('ficha.legal.editarAccesible', { nombre })} sx={{ flex: { xs: 1, sm: 'none' } }}>
             {t('ficha.editar')}
           </Button>
-          <Button variant="text" color="inherit" startIcon={<Trash2 size={16} aria-hidden />} onClick={onQuitar} disabled={deshabilitado} aria-label={t('ficha.legal.quitarAccesible', { nombre })} sx={{ minHeight: 44, flex: { xs: 1, sm: 'none' } }}>
+          <Button variant="text" color="inherit" startIcon={<Trash2 size={16} aria-hidden />} onClick={onQuitar} disabled={deshabilitado} aria-label={t('ficha.legal.quitarAccesible', { nombre })} sx={{ flex: { xs: 1, sm: 'none' } }}>
             {t('ficha.quitar')}
           </Button>
         </Stack>

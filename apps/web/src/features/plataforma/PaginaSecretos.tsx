@@ -48,7 +48,7 @@ export function PaginaSecretos() {
       />
       {estado.isError && <ErrorRecuperable mensaje={mensajeDeError(estado.error, t)} onReintentar={() => void estado.refetch()} />}
       {datos && (
-        <Stack spacing={2} sx={{ maxWidth: 860 }}>
+        <Stack spacing={2}>
           <Tarjeta>
             <RejillaDatos columnas={2}>
               <Dato etiqueta={t('plataforma.secretos.claveVigente')}>

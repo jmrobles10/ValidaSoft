@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Skeleton, Stack, Typography } from '@mui/material';
 import { formatearFecha } from '@validasoft/ui';
 import { Download, FileUp, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -54,9 +54,13 @@ export function SeccionPlantilla({ tipoId }: { tipoId: string }) {
           </Button>
         </Stack>
       ) : (
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {consulta.isPending ? t('comun.cargando') : t('tiposDocumento.plantilla.sinPlantilla')}
-        </Typography>
+        consulta.isPending ? (
+          <Skeleton variant="rounded" height={56} role="status" aria-label={t('tiposDocumento.plantilla.cargando')} />
+        ) : (
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {t('tiposDocumento.plantilla.sinPlantilla')}
+          </Typography>
+        )
       )}
       <Box>
         <input ref={entrada} hidden type="file" accept={MIMES_PLANTILLA.join(',')} onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ''; }} />

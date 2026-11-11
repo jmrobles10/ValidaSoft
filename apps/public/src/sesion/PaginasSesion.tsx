@@ -1,5 +1,5 @@
-import { Button, CircularProgress, Stack, Typography } from '@mui/material';
-import { PaginaEstado } from '@validasoft/ui';
+import { Button } from '@mui/material';
+import { EsqueletoFormulario, PaginaEstado } from '@validasoft/ui';
 import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, Link as RouterLink } from 'react-router';
@@ -9,12 +9,7 @@ import { useSesionTercero } from './sesionTercero';
 /** Mientras se intenta recuperar la sesión con la cookie (al arrancar), un instante de espera. */
 function Restaurando() {
   const { t } = useTranslation();
-  return (
-    <Stack spacing={2} sx={{ alignItems: 'center', py: 10 }} role="status">
-      <CircularProgress size={28} aria-hidden />
-      <Typography sx={{ color: 'text.secondary' }}>{t('acceso.restaurando')}</Typography>
-    </Stack>
-  );
+  return <EsqueletoFormulario campos={1} conTarjeta etiqueta={t('acceso.restaurando')} sx={{ maxWidth: 420, mx: 'auto', mt: 4 }} />;
 }
 
 /** Rutas que necesitan la sesión del tercero: sin ella, «Entrar con mi correo» (no hay usuario ni contraseña). */

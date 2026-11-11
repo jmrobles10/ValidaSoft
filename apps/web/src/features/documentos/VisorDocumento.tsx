@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Dialog, IconButton, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Dialog, IconButton, Skeleton, Stack, Typography } from '@mui/material';
 import type { DatoDeclaradoDto, HechosDto, VigenciaDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
 import { Download, X } from 'lucide-react';
@@ -109,9 +109,8 @@ function ArchivoEnVisor({ contenido, mime, titulo, errorAlPedir }: { contenido: 
           {t('documentos.sinVisor')}
         </Typography>
       ) : contenido.estado === 'cargando' ? (
-        <Stack sx={{ alignItems: 'center' }} spacing={1} role="status">
-          <CircularProgress size={24} aria-hidden />
-          <Typography sx={{ color: 'text.secondary' }}>{t('documentos.cargando')}</Typography>
+        <Stack role="status" aria-busy="true" aria-label={t('documentos.cargando')} sx={{ width: 'min(92%, 640px)', height: '92%' }}>
+          <Skeleton variant="rounded" sx={{ flex: 1, height: 'auto', transform: 'none' }} />
         </Stack>
       ) : contenido.estado === 'error' ? (
         <Alert severity="error" sx={{ m: 3 }}>

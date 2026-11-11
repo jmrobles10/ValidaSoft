@@ -1,6 +1,6 @@
 import { Box, Button, Skeleton, Stack, Typography } from '@mui/material';
 import { esErrorApi, SCOPES, type FichaTerceroDto } from '@validasoft/api-client';
-import { PaginaEstado } from '@validasoft/ui';
+import { EsqueletoTarjeta, PaginaEstado } from '@validasoft/ui';
 import { SearchX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
@@ -45,8 +45,8 @@ export function PaginaFichaTercero() {
         <Skeleton variant="rounded" width={320} height={28} sx={{ mb: 1 }} />
         <Skeleton variant="rounded" width={220} height={14} sx={{ mb: 3 }} />
         <Box sx={REJILLA}>
-          <Skeleton variant="rounded" height={320} />
-          <Skeleton variant="rounded" height={220} />
+          <EsqueletoTarjeta alto={320} />
+          <EsqueletoTarjeta alto={220} />
         </Box>
       </Box>
     );

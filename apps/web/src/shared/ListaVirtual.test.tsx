@@ -77,7 +77,11 @@ describe('ListaVirtual', () => {
 
     desplazarVentana(1500);
     expect(alCargarMas).toHaveBeenCalled();
-    expect(screen.getByRole('status')).toHaveTextContent('Cargando más filas…');
+    // Mientras llega la página se ve un esqueleto de la fila que viene, no un texto ni un spinner.
+    const pie = screen.getByRole('status', { name: 'Cargando más filas…' });
+    expect(pie).toHaveAttribute('aria-busy', 'true');
+    expect(pie).toHaveTextContent('');
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   });
 
   it('no pide nada si el servidor no tiene más ni mientras ya está pidiendo', () => {

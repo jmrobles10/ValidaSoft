@@ -1,4 +1,5 @@
-import { Box, Skeleton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Box, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { EsqueletoTarjeta } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { ErrorRecuperable } from '../../shared/componentes';
@@ -64,7 +65,7 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
       ) : !datos ? (
         <Stack spacing={1.5} aria-busy>
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} variant="rounded" height={112} />
+            <EsqueletoTarjeta key={i} alto={112} lineas={2} />
           ))}
         </Stack>
       ) : (

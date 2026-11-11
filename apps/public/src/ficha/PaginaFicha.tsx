@@ -45,7 +45,7 @@ export function PaginaFicha() {
       variant="contained"
       size="large"
       endIcon={<ArrowRight size={18} aria-hidden />}
-      sx={{ width: { xs: '100%', sm: 'auto' }, minHeight: 48 }}
+      sx={{ width: { xs: '100%', sm: 'auto' } }}
     >
       {t('ficha.continuar')}
     </Button>
@@ -106,9 +106,10 @@ function FilaSeccion({ fila }: { fila: EstadoSeccionFichaDto }) {
           component={RouterLink}
           to={enlaceSeccion(fila.seccion, fila.periodo)}
           variant={estado === 'completa' ? 'text' : 'outlined'}
+          size="small"
           endIcon={<ChevronRight size={18} aria-hidden />}
           aria-label={t('ficha.abrirSeccion', { seccion: nombre })}
-          sx={{ flex: 'none', minHeight: 44 }}
+          sx={{ flex: 'none' }}
         >
           {estado === 'sin-diligenciar' ? t('ficha.diligenciar') : t('ficha.abrir')}
         </Button>

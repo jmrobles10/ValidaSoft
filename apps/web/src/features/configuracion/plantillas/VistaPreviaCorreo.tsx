@@ -1,4 +1,4 @@
-import { Alert, Box, LinearProgress, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Skeleton, Stack, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../../../shared/errores';
@@ -33,14 +33,14 @@ export function VistaPreviaCorreo({ empresaId, evento, nombre, borrador }: { emp
           <ToggleButton value="texto">{t('plantillas.formato.texto')}</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
-      <Box sx={{ height: 4 }}>{previa.isFetching && <LinearProgress aria-label={t('plantillas.vistaPreviaCargando')} />}</Box>
+      {previa.isPending && <Skeleton variant="rounded" height={320} role="status" aria-busy="true" aria-label={t('plantillas.vistaPreviaCargando')} />}
       {previa.isError && (
         <Alert severity="warning">
           {t('plantillas.vistaPreviaError')} {mensajeDeError(previa.error, t)}
         </Alert>
       )}
       {datos && (
-        <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', opacity: previa.isPlaceholderData ? 0.6 : 1 }}>
+        <Box aria-busy={previa.isFetching} sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', opacity: previa.isFetching ? 0.6 : 1, transition: 'opacity 120ms' }}>
           <Typography data-testid="asunto-previa" sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider', bgcolor: 'action.hover', fontSize: 13 }}>
             {t('plantillas.asuntoPrevia', { asunto: datos.asunto })}
           </Typography>

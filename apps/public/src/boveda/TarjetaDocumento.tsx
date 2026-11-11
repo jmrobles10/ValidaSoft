@@ -53,7 +53,6 @@ export function TarjetaDocumento({ documento }: { documento: DocumentoBovedaDto 
               to={enlaceSubirVersion(documento)}
               variant="text"
               startIcon={<Upload size={16} aria-hidden />}
-              sx={{ minHeight: 44, '@media (min-width:600px)': { minHeight: 36 } }}
             >
               {t('boveda.nuevaVersion')}
             </Button>

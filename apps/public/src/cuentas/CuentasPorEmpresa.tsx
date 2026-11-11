@@ -60,7 +60,6 @@ export function CuentasPorEmpresa({ vinculos, cuentas }: { vinculos: readonly Vi
                       disabled={!hayActivas}
                       onClick={() => setDesignando(v)}
                       aria-label={`${tieneCuenta ? t('cuentas.porEmpresa.cambiar') : t('cuentas.porEmpresa.elegir')}: ${v.empresa.nombre}`}
-                      sx={{ minHeight: 44, ml: -1, '@media (min-width:600px)': { minHeight: 32, ml: 0 } }}
                     >
                       {tieneCuenta ? t('cuentas.porEmpresa.cambiar') : t('cuentas.porEmpresa.elegir')}
                     </Button>

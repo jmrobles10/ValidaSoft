@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Skeleton, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, Stack, Typography } from '@mui/material';
 import { EncabezadoFijo, ErrorEnLinea, PaginaEstado, type EncabezadoFijoProps } from '@validasoft/ui';
 import { ChevronLeft, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -74,22 +74,8 @@ export function Tarjeta({
   );
 }
 
-/** Esqueleto de una línea de tiempo mientras carga el historial. */
-export function EsqueletoHistorial() {
-  return (
-    <Stack spacing={2} aria-busy>
-      {[0, 1, 2].map((i) => (
-        <Stack key={i} direction="row" spacing={1.5}>
-          <Skeleton variant="circular" width={28} height={28} />
-          <Box sx={{ flex: 1 }}>
-            <Skeleton variant="rounded" height={14} width="60%" sx={{ mb: 1 }} />
-            <Skeleton variant="rounded" height={12} width="40%" />
-          </Box>
-        </Stack>
-      ))}
-    </Stack>
-  );
-}
+/** Esqueleto de una línea de tiempo mientras carga el historial (ver `esqueletos.tsx` de `@validasoft/ui`). */
+export { EsqueletoHistorial } from '@validasoft/ui';
 
 /** Spinner solo dentro del botón que ejecuta la acción. */
 export function IconoCarga() {

@@ -1,4 +1,5 @@
-import { Skeleton, Stack } from '@mui/material';
+import { Stack } from '@mui/material';
+import { EsqueletoTarjetas } from '@validasoft/ui';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
@@ -29,10 +30,7 @@ export function PaginaVerificacion() {
 
   if (consulta.isPending) {
     return (
-      <Stack spacing={2} aria-busy aria-label={t('verificacion.cargando')}>
-        <Skeleton variant="rounded" height={260} />
-        <Skeleton variant="rounded" height={220} />
-      </Stack>
+      <EsqueletoTarjetas cantidad={2} lineas={4} etiqueta={t('verificacion.cargando')} />
     );
   }
   if (consulta.isError) return <FalloVerificacion error={consulta.error} onReintentar={() => void consulta.refetch()} />;

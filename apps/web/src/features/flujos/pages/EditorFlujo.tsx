@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Skeleton, Stack } from '@mui/material';
 import { esErrorApi, SCOPES, type FlujoDto } from '@validasoft/api-client';
-import { PaginaEstado } from '@validasoft/ui';
+import { EsqueletoTarjeta, PaginaEstado } from '@validasoft/ui';
 import { Pencil, Rocket, SearchX, Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -75,7 +75,7 @@ export function EditorFlujo() {
       <Box aria-busy>
         {volver}
         <Skeleton variant="rounded" width={320} height={28} sx={{ mb: 3 }} />
-        <Skeleton variant="rounded" height={360} />
+        <EsqueletoTarjeta alto={360} />
       </Box>
     );
   }

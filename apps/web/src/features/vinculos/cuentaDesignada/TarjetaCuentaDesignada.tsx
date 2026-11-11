@@ -1,6 +1,6 @@
-import { Divider, Skeleton, Stack, Typography } from '@mui/material';
+import { Divider, Stack, Typography } from '@mui/material';
 import { SCOPES, type CuentaDesignadaDelVinculoDto, type CuentaDesignadaDto, type VinculoDto } from '@validasoft/api-client';
-import { EstadoVacio, formatearFechaHora } from '@validasoft/ui';
+import { EsqueletoTarjeta, EstadoVacio, formatearFechaHora } from '@validasoft/ui';
 import { Landmark } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +27,7 @@ export function TarjetaCuentaDesignada({ vinculo }: { vinculo: Pick<VinculoDto, 
 
   return (
     <Tarjeta titulo={t('cuentas.titulo')}>
-      {consulta.isPending && <Skeleton variant="rounded" height={96} aria-busy />}
+      {consulta.isPending && <EsqueletoTarjeta alto={96} />}
       {consulta.isError && <ErrorRecuperable mensaje={`${t('cuentas.errorCarga')} ${mensajeErrorCuenta(consulta.error, t)}`} onReintentar={() => void consulta.refetch()} />}
       {consulta.data && <ContenidoCuenta datos={consulta.data} empresaId={empresa.id} vinculoId={vinculo.id} tienePermiso={permisos.puede(SCOPES.cuentasAprobar)} />}
     </Tarjeta>
