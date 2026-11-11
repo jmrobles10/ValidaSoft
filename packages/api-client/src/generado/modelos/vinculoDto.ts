@@ -41,4 +41,6 @@ export interface VinculoDto {
   ultimoResultado?: string | null;
   /** @nullable */
   contactos?: ContactoDeEmpresaDto[] | null;
+  /** @nullable */
+  vigenteHasta?: string | null;
 }

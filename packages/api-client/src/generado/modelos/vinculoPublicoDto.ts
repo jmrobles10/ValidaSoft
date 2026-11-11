@@ -23,4 +23,6 @@ export interface VinculoPublicoDto {
   reintento?: null | ReintentoPublicoDto;
   /** @nullable */
   contactos?: ContactoDeEmpresaDto[] | null;
+  /** @nullable */
+  vigenteHasta?: string | null;
 }
