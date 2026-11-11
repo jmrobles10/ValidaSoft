@@ -233,6 +233,7 @@ export const esCO = {
       sinRevalidarAyuda: 'Restituye el estado que tenía al desvincularse y emite su certificado de nuevo con lo que ya se había aprobado.',
       noSePuede: 'No se puede reintegrar sin revalidar:',
       sinViabilidad: 'No pudimos comprobar si se puede reintegrar sin revalidar. Puedes revalidar.',
+      cargando: 'Comprobando si se puede reintegrar sin revalidar',
     },
     anular: {
       boton: 'Anular',

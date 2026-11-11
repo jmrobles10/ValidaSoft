@@ -163,14 +163,13 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
             {borrador.reintentoPermitido && (
               <TextField
                 size="small"
-                type="number"
                 label={t('flujoReintento.dias')}
                 helperText={t('flujoReintento.diasAyuda')}
                 value={borrador.reintentoDias}
                 disabled={soloLectura}
-                onChange={(e) => onCambiar({ ...borrador, reintentoDias: e.target.value })}
-                slotProps={{ htmlInput: { min: 0, max: 365 } }}
-                sx={{ mt: 1.5, width: { xs: '100%', md: 320 } }}
+                onChange={(e) => onCambiar({ ...borrador, reintentoDias: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                slotProps={{ htmlInput: { inputMode: 'numeric', maxLength: 3, autoComplete: 'off' } }}
+                sx={{ mt: 1.5, width: { xs: '100%', md: 160 } }}
               />
             )}
           </Box>

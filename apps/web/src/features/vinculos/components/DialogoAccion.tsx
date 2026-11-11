@@ -143,9 +143,16 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
             {accion === 'reintegrar' && !yaNoAplica && (
               <Box>
                 {viabilidad.isPending ? (
-                  <Stack spacing={1} aria-busy>
-                    <Skeleton variant="rounded" height={44} />
-                    <Skeleton variant="rounded" height={44} />
+                  <Stack spacing={1.5} role="status" aria-busy="true" aria-label={t('acciones.reintegrar.cargando')}>
+                    {[0, 1].map((i) => (
+                      <Stack key={i} direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
+                        <Skeleton variant="circular" width={18} height={18} />
+                        <Stack spacing={0.75} sx={{ flex: 1 }}>
+                          <Skeleton variant="rounded" height={12} width="38%" />
+                          <Skeleton variant="rounded" height={10} width={i === 0 ? '72%' : '58%'} />
+                        </Stack>
+                      </Stack>
+                    ))}
                   </Stack>
                 ) : (
                   <>

@@ -310,6 +310,7 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
                 value={etapaDestino}
                 onChange={(e) => setEtapaDestino(e.target.value)}
                 disabled={!aplica}
+                slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
               >
                 <MenuItem value="">{t('expedientes.desaprobacion.ultimaEtapa')}</MenuItem>
                 {[...expediente.etapas]
