@@ -103,6 +103,8 @@ export const apiKeys = {
     sistema: 'Sistema integrado (opcional)',
     sistemaAyuda: 'Si es la llave de un sistema registrado. Al desactivar el sistema, deja de autenticar.',
     sinSistema: 'Ninguno',
+    sandbox: 'Llave de sandbox (pruebas)',
+    sandboxAyuda: 'Opera en un entorno de pruebas aislado de tu grupo: sin datos reales y con los correos retenidos en un buzón. Se crea al emitir la primera.',
   },
   errores: {
     'nombre-requerido': 'Escribe el nombre.',
@@ -144,6 +146,7 @@ export const apiKeys = {
     eventosLeer: 'Leer eventos (consulta y SSE)',
     webhooksAdministrar: 'Administrar webhooks',
     consultasLeer: 'Consultar la certificación (Marco y ERP)',
+    sandboxAdministrar: 'Administrar el sandbox y leer su buzón de correo de pruebas',
     verificacionesEscribir: 'Consultar listas restrictivas',
     cumplimientoDecidir: 'Resolver coincidencias y registrar el estudio de cumplimiento',
     auditoriaLeer: 'Leer la auditoría',

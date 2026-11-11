@@ -36,6 +36,7 @@ export * from './publico/publico';
 export * from './quien-soy/quien-soy';
 export * from './recalculo-de-fichas/recalculo-de-fichas';
 export * from './revalidaciones/revalidaciones';
+export * from './sandbox/sandbox';
 export * from './secretos/secretos';
 export * from './sesiones-usuario/sesiones-usuario';
 export * from './sistemas/sistemas';

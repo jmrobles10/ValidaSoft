@@ -1,4 +1,4 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, FormHelperText, MenuItem, Stack, Switch, TextField } from '@mui/material';
 import type { ApiKeyDto, EmpresaDto, SistemaIntegradoDto } from '@validasoft/api-client';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { useState, type SubmitEvent } from 'react';
@@ -54,6 +54,13 @@ export function DialogoApiKey({ claveIdempotencia, empresas, sistemas, onCerrar,
               error={errorNombre}
               helperText={errorNombre ? t('apiKeys.errores.nombre-requerido') : t('apiKeys.campos.nombreAyuda')}
             />
+            <div>
+              <FormControlLabel
+                control={<Switch checked={b.sandbox} onChange={(e) => cambiar({ sandbox: e.target.checked })} />}
+                label={t('apiKeys.campos.sandbox')}
+              />
+              <FormHelperText sx={{ mt: 0, ml: 0 }}>{t('apiKeys.campos.sandboxAyuda')}</FormHelperText>
+            </div>
             <SelectorPermisos valor={b.scopes} onCambiar={(scopes) => cambiar({ scopes })} />
             <SelectorAlcance valor={b.empresas} empresas={empresas} onCambiar={(seleccion) => cambiar({ empresas: seleccion })} />
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>

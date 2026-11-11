@@ -27,7 +27,7 @@ const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
   'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer', 'auditoria:exportar',
   'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'expedientes:exportar', 'documentos:leer', 'documentos:descargar',
-  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'verificaciones:escribir', 'cumplimiento:decidir',
+  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'sandbox:administrar', 'verificaciones:escribir', 'cumplimiento:decidir',
 ];
 
 const EMPRESAS = [
@@ -86,14 +86,14 @@ describe('permisos de una API key', () => {
     expect(resumen.todos).toBe(false);
     expect(resumen.grupos).toEqual([
       { grupo: 'vinculos', cuantos: 2, total: 6 },
-      { grupo: 'integracion', cuantos: 1, total: 3 },
+      { grupo: 'integracion', cuantos: 1, total: 4 },
     ]);
     expect(resumen.desconocidos).toEqual(['nuevo:scope']);
   });
 
   it('marcar un grupo agrega los que faltan; con el grupo completo, lo desmarca', () => {
     const integracion = scopesDeGrupo('integracion');
-    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar', 'consultas:leer']);
+    expect(alternarGrupo(['eventos:leer', 'vinculos:leer'], 'integracion')).toEqual(['eventos:leer', 'vinculos:leer', 'webhooks:administrar', 'consultas:leer', 'sandbox:administrar']);
     expect(alternarGrupo([...integracion, 'vinculos:leer'], 'integracion')).toEqual(['vinculos:leer']);
   });
 });
@@ -114,8 +114,10 @@ describe('modelo de API keys', () => {
   it('arma el cuerpo: todo el grupo viaja como null, la expiración al final del día y los scopes en orden estable', () => {
     expect(finDelDia('2026-12-31')).toBe('2027-01-01T04:59:59.000Z');
     expect(finDelDia('31/12/2026')).toBeNull();
-    const cuerpo = cuerpoCrearApiKey({ nombre: '  SRM producción ', scopes: ['vinculos:escribir', 'empresas:administrar'], empresas: [TODO_EL_GRUPO], expira: '2026-12-31', sistemaId: '' });
-    expect(cuerpo).toEqual({ nombre: 'SRM producción', scopes: ['empresas:administrar', 'vinculos:escribir'], empresas: null, expiraEn: '2027-01-01T04:59:59.000Z', sistemaId: null });
+    const cuerpo = cuerpoCrearApiKey({ nombre: '  SRM producción ', scopes: ['vinculos:escribir', 'empresas:administrar'], empresas: [TODO_EL_GRUPO], expira: '2026-12-31', sistemaId: '', sandbox: false });
+    expect(cuerpo).toEqual({ nombre: 'SRM producción', scopes: ['empresas:administrar', 'vinculos:escribir'], empresas: null, expiraEn: '2027-01-01T04:59:59.000Z', sistemaId: null, sandbox: false });
+    // Una llave de prueba viaja con sandbox = true (SB-2).
+    expect(cuerpoCrearApiKey({ ...borradorApiKeyNuevo(), nombre: 'SRM sandbox', scopes: ['vinculos:leer'], sandbox: true })).toMatchObject({ sandbox: true });
     expect(cuerpoCrearApiKey({ ...borradorApiKeyNuevo(), nombre: 'x', scopes: ['vinculos:leer'], empresas: ['e2'], sistemaId: 's1' })).toMatchObject({ empresas: ['e2'], expiraEn: null, sistemaId: 's1' });
   });
 
@@ -206,7 +208,7 @@ describe('crear una API key', () => {
       {
         url: '/api/v1/api-keys',
         metodo: 'POST',
-        cuerpo: { nombre: 'SRM producción', scopes: ['vinculos:leer', 'vinculos:escribir'], empresas: ['e2'], expiraEn: null, sistemaId: null },
+        cuerpo: { nombre: 'SRM producción', scopes: ['vinculos:leer', 'vinculos:escribir'], empresas: ['e2'], expiraEn: null, sistemaId: null, sandbox: false },
       },
     ]);
 
