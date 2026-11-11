@@ -4,16 +4,16 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
-import type { ConstructoraEmpresaDto } from './constructoraEmpresaDto';
+import type { UnidadEmpresaDto } from './unidadEmpresaDto';
 
-export interface ImportarPortalDto {
+export interface ImportarTercerosDto {
   /** @nullable */
   dryRun?: boolean | null;
   /** @nullable */
-  origen?: string | null;
+  fuente?: string | null;
   archivo?: unknown;
   /** @nullable */
-  constructoras?: ConstructoraEmpresaDto[] | null;
+  unidades?: UnidadEmpresaDto[] | null;
   /** @nullable */
   tamanoLote?: number | null;
   /** @nullable */

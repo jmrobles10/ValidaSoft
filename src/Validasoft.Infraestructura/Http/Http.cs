@@ -118,10 +118,10 @@ public sealed partial class MiddlewareDeIdempotencia(RequestDelegate siguiente)
 {
     /// <summary>
     /// Respuestas con un secreto que no se guardan en el registro: el secreto de un webhook (NW-4), la clave nueva de una API
-    /// key rotada (CN-3), las API keys del alta de un grupo y la sesión de un operador de Plataforma (PT-5, PT-4). Repetir el
+    /// key rotada (CN-3), las API keys del alta de un grupo y la sesión de un operador de Plataforma (PT-5, PT-4) y las sesiones embebidas (IO-5: tercero y usuario). Repetir el
     /// alta responde 409 <c>slug-duplicado</c>; rotar dos veces, 409 <c>api-key-ya-rotada</c>.
     /// </summary>
-    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|api-keys/[^/]+/rotar|plataforma/tenants|plataforma/sesiones)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("^/api/v1/(webhooks(/[^/]+/rotar-secreto)?|api-keys/[^/]+/rotar|plataforma/tenants|plataforma/sesiones|sesiones-tercero|sesiones-usuario)$", RegexOptions.IgnoreCase)]
     private static partial Regex RutaConSecreto();
 
     public const string Cabecera = "Idempotency-Key";

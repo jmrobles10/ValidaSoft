@@ -60,6 +60,12 @@ public static class Permisos
     /// pagar o contratar. Solo devuelve el resumen (sin documentos ni datos personales); por eso va aparte de los demás.
     /// </summary>
     public const string ConsultasLeer = "consultas:leer";
+
+    /// <summary>
+    /// Abrir una sesión corta del tercero para embeber su bóveda, su expediente o su ficha en el iframe de un sistema integrador
+    /// (<c>POST /sesiones-tercero</c>, IO-5). Solo la API key de un sistema integrador la usa.
+    /// </summary>
+    public const string SesionesTerceroCrear = "sesiones-tercero:crear";
     /// <summary>Consultar o reconsultar las listas restrictivas de un expediente (VE-15).</summary>
     public const string VerificacionesEscribir = "verificaciones:escribir";
 
@@ -72,7 +78,7 @@ public static class Permisos
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
         TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
-        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, VerificacionesEscribir, CumplimientoDecidir
+        CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, SesionesTerceroCrear, VerificacionesEscribir, CumplimientoDecidir
     ];
 
     public static readonly IReadOnlyList<string> Todos = [PlataformaTenants, .. DelTenant];

@@ -324,6 +324,33 @@ public sealed record OtpRequeridoDto(bool RequiereOtp, DateTimeOffset Expira);
 
 public sealed record VerificarOtpDto(string Codigo);
 
+/// <summary>Componentes que un sistema integrador puede embeber del tercero (IO-5).</summary>
+public static class ComponentesEmbebibles
+{
+    public const string Boveda = "boveda";
+
+    public const string Expediente = "expediente";
+
+    public const string Ficha = "ficha";
+
+    public static readonly IReadOnlyList<string> Todos = [Boveda, Expediente, Ficha];
+}
+
+/// <summary>
+/// Pide una sesión del tercero para un iframe (<c>POST /api/v1/sesiones-tercero</c>, scope <c>sesiones-tercero:crear</c>). El vínculo
+/// debe ser de la empresa (<c>X-Empresa</c>), llevar la referencia del sistema de la API key y tener la invitación aceptada.
+/// <see cref="Origen"/>: el origen exacto de la página que aloja el iframe; debe estar entre los orígenes permitidos del sistema (403
+/// <c>origen-no-permitido</c>). <see cref="Componente"/>: <c>boveda</c>, <c>expediente</c> o <c>ficha</c>. <see cref="Minutos"/>: vigencia,
+/// de 1 a 15 (10 por omisión).
+/// </summary>
+public sealed record CrearSesionEmbebidaDto(Guid VinculoId, string Componente, string Origen, int? Minutos = null);
+
+/// <summary>
+/// La sesión embebida: <see cref="Token"/> (JWT firmado, ligado al tercero, al vínculo, al origen y al componente; se pasa al iframe
+/// por <c>postMessage</c>, nunca en la URL), <see cref="Url"/> (la del iframe, sin el token) y <see cref="Expira"/>.
+/// </summary>
+public sealed record SesionEmbebidaDto(string Token, DateTimeOffset Expira, string Url, string Origen, string Componente, Guid VinculoId, Guid TerceroId);
+
 /// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,

@@ -4,6 +4,8 @@ import { Building2, FolderCheck, IdCard, Landmark, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
 import { Campana } from '../notificaciones/Campana';
+import { MODO_EMBEBIDO } from '../embebido/modo';
+import { usePuenteEmbebido } from '../embebido/usePuenteEmbebido';
 import { useSesionTercero } from '../sesion/sesionTercero';
 
 const SECCIONES = [
@@ -18,6 +20,22 @@ const SECCIONES = [
  * una columna (máx. 720 px), pie "con Validasoft" y, con sesión, navegación inferior en el celular y superior en escritorio.
  */
 export function Shell() {
+  // Dentro del iframe de un sistema integrador: sin cabecera, navegación ni pie (el sistema pone su propio marco) y con el puente de mensajes.
+  usePuenteEmbebido();
+  if (MODO_EMBEBIDO) return <ShellEmbebido />;
+  return <ShellNormal />;
+}
+
+/** El contenido solo, a todo el ancho del iframe y sin saltos laterales. */
+function ShellEmbebido() {
+  return (
+    <Box component="main" sx={{ minHeight: '100dvh', bgcolor: 'background.default', px: { xs: 1.5, sm: 2 }, py: { xs: 1.5, sm: 2 }, maxWidth: 960, mx: 'auto' }}>
+      <Outlet />
+    </Box>
+  );
+}
+
+function ShellNormal() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const activa = useSesionTercero((s) => s.estado === 'activa');

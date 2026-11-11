@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ContactoDePagosDto } from './contactoDePagosDto';
 import type { DesignacionDeCuentaDto } from './designacionDeCuentaDto';
 
 export interface CuentaBancariaPublicaDto {
@@ -17,4 +18,9 @@ export interface CuentaBancariaPublicaDto {
   estado: string;
   registradaEn: string;
   designadaEn: DesignacionDeCuentaDto[];
+  /** @nullable */
+  bancoCodigo?: string | null;
+  /** @nullable */
+  bancoSwift?: string | null;
+  contactoPagos?: null | ContactoDePagosDto;
 }

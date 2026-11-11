@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { AprobacionDeCuentaDto } from './aprobacionDeCuentaDto';
+import type { ContactoDePagosDto } from './contactoDePagosDto';
 
 export interface CuentaDesignadaDto {
   cuentaId: string;
@@ -23,4 +24,9 @@ export interface CuentaDesignadaDto {
   aprobadaEn: string | null;
   /** @nullable */
   motivoRechazo: string | null;
+  /** @nullable */
+  bancoCodigo?: string | null;
+  /** @nullable */
+  bancoSwift?: string | null;
+  contactoPagos?: null | ContactoDePagosDto;
 }

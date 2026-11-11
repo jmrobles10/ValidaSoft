@@ -7,7 +7,7 @@
 
 export interface AvisoImportacionDto {
   claveLegado: string;
-  terid: number;
+  clave: string;
   /** @nullable */
   seccion: string | null;
   /** @nullable */

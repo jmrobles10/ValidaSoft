@@ -43,4 +43,6 @@ export interface PersonaRelacionadaDto {
   correo: string | null;
   /** @nullable */
   telefono: string | null;
+  /** @nullable */
+  lugarExpedicion?: string | null;
 }

@@ -8,7 +8,7 @@ import type { AvisoImportacionDto } from './avisoImportacionDto';
 import type { ResultadoImportacionCatalogoDto } from './resultadoImportacionCatalogoDto';
 import type { ResumenSeccionImportadaDto } from './resumenSeccionImportadaDto';
 
-export interface ResumenImportacionPortalDto {
+export interface ResumenImportacionDto {
   tercerosLeidos: number;
   tercerosCreados: number;
   tercerosEncontrados: number;

@@ -158,12 +158,68 @@ describe('cliente de la API', () => {
   it('paraEmpresa cambia X-Empresa y la URL base puede tener ruta', async () => {
     const { cliente: c, recibidas } = cliente([json({ id: 'v1' })], { urlBase: 'https://erp.acme.co/validasoft' });
     await c.paraEmpresa('otra').vinculos.porReferencia('SRM', 'ADP 00123');
-    expect(recibidas[0]?.url).toBe('https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&id=ADP%2000123');
+    expect(recibidas[0]?.url).toBe('https://erp.acme.co/validasoft/api/v1/vinculos/por-referencia?sistema=SRM&clave=ADP%2000123');
     expect(recibidas[0]?.cabeceras['X-Empresa']).toBe('otra');
   });
 
   it('sin API key o sin URL no se construye', () => {
     expect(() => new ClienteValidasoft({ urlBase: 'https://x.co', apiKey: '' })).toThrow(/API key/);
     expect(() => new ClienteValidasoft({ urlBase: '', apiKey: LLAVE })).toThrow(/URL/);
+  });
+});
+
+describe('integración abierta: referencias, contactos, ficha y sesión embebida', () => {
+  it('los terceros se crean y se buscan por la clave del sistema, de forma idempotente', async () => {
+    const { cliente: c, recibidas } = cliente([
+      json({ id: 't1', nombre: 'Aceros' }, 201),
+      json([{ sistema: 'ERPX', id: 'C-1' }], 201),
+      json({ id: 't1' }),
+      json([{ sistema: 'ERPX', id: 'C-1' }]),
+    ]);
+    const identificacion = { pais: 'CO', tipo: 'NIT', numero: '900123456' };
+    await c.terceros.crear({ identificacion, tipoPersona: 'Juridica', nombre: 'Aceros', referenciaExterna: { sistema: '', id: 'C-1' } }, 'erpx-c-1');
+    expect(recibidas[0]).toMatchObject({ metodo: 'POST', url: 'https://valida.acme.co/api/v1/terceros' });
+    expect(recibidas[0]?.cabeceras['Idempotency-Key']).toBe('erpx-c-1');
+    expect((recibidas[0]?.cuerpo as { referenciaExterna: unknown }).referenciaExterna).toEqual({ sistema: '', id: 'C-1' });
+
+    await c.terceros.agregarReferencia('t1', { id: 'C-1' });
+    expect(recibidas[1]).toMatchObject({ metodo: 'POST', url: 'https://valida.acme.co/api/v1/terceros/t1/referencias', cuerpo: { id: 'C-1' } });
+
+    await c.terceros.porReferencia('ERPX', 'C 1');
+    expect(recibidas[2]?.url).toBe('https://valida.acme.co/api/v1/terceros/por-referencia?sistema=ERPX&clave=C%201');
+    expect(recibidas[2]?.cabeceras['X-Empresa']).toBeUndefined(); // el tercero es del tenant, no de una empresa
+
+    expect(await c.terceros.referencias('t1')).toEqual([{ sistema: 'ERPX', id: 'C-1' }]);
+    expect(recibidas[3]?.url).toBe('https://valida.acme.co/api/v1/terceros/t1/referencias');
+  });
+
+  it('el vínculo suma referencias, reemplaza contactos por empresa y entrega la ficha para el ERP', async () => {
+    const { cliente: c, recibidas } = cliente([json({ id: 'v1' }), json({ id: 'v1', contactos: [] }), json({ vinculoId: 'v1', contactos: [] })]);
+    await c.vinculos.agregarReferencia('v1', { id: 'S-1' });
+    expect(recibidas[0]).toMatchObject({ metodo: 'POST', url: 'https://valida.acme.co/api/v1/vinculos/v1/referencias', cuerpo: { id: 'S-1' } });
+
+    await c.vinculos.actualizarContactos('v1', [{ nombre: 'Ana', correo: 'ana@aceros.co', rol: 'Pagos' }]);
+    expect(recibidas[1]).toMatchObject({
+      metodo: 'PUT',
+      url: 'https://valida.acme.co/api/v1/vinculos/v1/contactos',
+      cuerpo: { contactos: [{ nombre: 'Ana', correo: 'ana@aceros.co', rol: 'Pagos' }] },
+    });
+    expect(recibidas[1]?.cabeceras['X-Empresa']).toBe(EMPRESA);
+
+    await c.vinculos.ficha('v1');
+    expect(recibidas[2]).toMatchObject({ metodo: 'GET', url: 'https://valida.acme.co/api/v1/vinculos/v1/ficha' });
+  });
+
+  it('la sesión del tercero se pide con el origen de la página y el componente, sin delegar a una persona', async () => {
+    const sesion = { token: 'a.b.c', expira: '2026-11-11T12:10:00Z', url: 'https://valida.acme.co/embed/boveda', origen: 'https://anfitrion.test', componente: 'boveda', vinculoId: 'v1', terceroId: 't1' };
+    const { cliente: c, recibidas } = cliente([json(sesion, 201)]);
+    expect(await c.sesiones.crearDelTercero({ vinculoId: 'v1', componente: 'boveda', origen: 'https://anfitrion.test', minutos: 5 })).toEqual(sesion);
+    expect(recibidas[0]).toMatchObject({
+      metodo: 'POST',
+      url: 'https://valida.acme.co/api/v1/sesiones-tercero',
+      cuerpo: { vinculoId: 'v1', componente: 'boveda', origen: 'https://anfitrion.test', minutos: 5 },
+    });
+    expect(recibidas[0]?.cabeceras['X-Empresa']).toBe(EMPRESA);
+    expect(recibidas[0]?.cabeceras['X-Usuario-Delegado']).toBeUndefined();
   });
 });

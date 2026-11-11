@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { CuentaDesignadaDto } from './cuentaDesignadaDto';
 import type { ReferenciaExternaDto } from './referenciaExternaDto';
 import type { RepresentanteLegalErpDto } from './representanteLegalErpDto';
@@ -18,4 +19,8 @@ export interface FichaDelVinculoDto {
   secciones: SeccionAceptadaDto[];
   representanteLegal: null | RepresentanteLegalErpDto;
   cuentaDesignada: null | CuentaDesignadaDto;
+  /** @nullable */
+  contactos?: ContactoDeEmpresaDto[] | null;
+  /** @nullable */
+  referenciasDelTercero?: ReferenciaExternaDto[] | null;
 }

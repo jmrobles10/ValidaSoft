@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ContactoDePagosDto } from './contactoDePagosDto';
 
 export interface RegistrarCuentaBancariaDto {
   /** @nullable */
@@ -20,4 +21,9 @@ export interface RegistrarCuentaBancariaDto {
   moneda?: string | null;
   /** @nullable */
   pais?: string | null;
+  /** @nullable */
+  bancoCodigo?: string | null;
+  /** @nullable */
+  bancoSwift?: string | null;
+  contactoPagos?: null | ContactoDePagosDto;
 }

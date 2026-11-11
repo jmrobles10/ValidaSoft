@@ -1,7 +1,8 @@
 import { Box, Button, Card, Stack, Typography } from '@mui/material';
 import type { VinculoPublicoDto } from '@validasoft/api-client';
 import { ChipEstado, EstadoVacio, formatearFecha } from '@validasoft/ui';
-import { Building2, ChevronRight, Upload } from 'lucide-react';
+import { Building2, ChevronRight, Contact, Upload } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { useExpedientePublico, useVinculosPublicos } from '../shared/api';
@@ -9,6 +10,7 @@ import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas, LogoEmpresa } from
 import { avanceDelTercero } from './avance';
 import { AvisoRechazo } from './AvisoRechazo';
 import { ChipAvance } from './ChipAvance';
+import { DialogoContactos } from './DialogoContactos';
 import { useTextoAvance } from './useTextoAvance';
 import { situacionDelVinculo } from './situacion';
 
@@ -51,6 +53,7 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
   const avance = avanceDelTercero(v, conExpediente ? expediente.data : null);
   // Mientras llega el expediente no se muestra «En validación»: el chip espera (salvo que el vínculo ya diga algo propio).
   const esperando = conExpediente && expediente.isPending && avance === null;
+  const [editandoContactos, setEditandoContactos] = useState(false);
 
   return (
     <Card component="li" sx={{ p: 2 }}>
@@ -101,7 +104,13 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
             {avance?.tipo === 'faltan' ? t('empresas.subirDocumentos') : avance?.tipo === 'observado' ? t('empresas.verObservaciones') : t('empresas.verExpediente')}
           </Button>
         )}
+        {v.invitacionAceptada && situacion !== 'terminada' && (
+          <Button variant="outlined" startIcon={<Contact size={18} aria-hidden />} onClick={() => setEditandoContactos(true)} aria-label={t('contactos.abrirCon', { empresa: v.empresa.nombre })}>
+            {t('contactos.abrir')} · {t('contactos.resumen', { count: v.contactos?.length ?? 0 })}
+          </Button>
+        )}
       </Stack>
+      {editandoContactos && <DialogoContactos vinculo={v} onCerrar={() => setEditandoContactos(false)} />}
     </Card>
   );
 }

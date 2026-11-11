@@ -39,6 +39,11 @@ function cuenta(id: string, cambios: Partial<CuentaBancariaPublicaDto> = {}): Cu
   };
 }
 
+const BANCOS = [
+  { codigo: '1007', nombre: 'Bancolombia', activo: true },
+  { codigo: '1051', nombre: 'Banco Davivienda', activo: true },
+];
+
 const VINCULOS = [vinculo('v1', 'Constructora Norte'), vinculo('v2', 'Ferretería Sur'), vinculo('v3', 'Minera Andina', { invitacionAceptada: false })];
 
 interface Peticion {
@@ -54,6 +59,7 @@ function montar(cuentas: CuentaBancariaPublicaDto[], alMutar: (p: Peticion) => R
     fetch: vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const direccion = url instanceof Request ? url.url : url.toString();
       const metodo = init?.method ?? 'GET';
+      if (metodo === 'GET' && direccion.includes('/catalogos/bancos')) return Promise.resolve(json(200, { datos: BANCOS, siguienteCursor: null }));
       if (metodo === 'GET') return Promise.resolve(json(200, direccion.includes('/cuentas-bancarias') ? cuentas : VINCULOS));
       const peticion: Peticion = { metodo, url: direccion, cuerpo: typeof init?.body === 'string' ? JSON.parse(init.body) : null };
       mutaciones.push(peticion);
@@ -76,6 +82,12 @@ function montar(cuentas: CuentaBancariaPublicaDto[], alMutar: (p: Peticion) => R
 async function escribir(usuario: ReturnType<typeof userEvent.setup>, campo: HTMLElement, texto: string) {
   await usuario.click(campo);
   await usuario.paste(texto);
+}
+
+/** El banco se elige de la lista del catálogo (autocompletar con el código de compensación detrás). */
+async function elegirBanco(usuario: ReturnType<typeof userEvent.setup>, dialogo: HTMLElement, nombre: string) {
+  await usuario.click(within(dialogo).getByRole('combobox', { name: /Banco/ }));
+  await usuario.click(await screen.findByRole('option', { name: nombre }));
 }
 
 afterEach(() => reiniciarCliente());
@@ -123,12 +135,14 @@ describe('mis cuentas bancarias', () => {
     await usuario.click(await screen.findByRole('button', { name: 'Agregar cuenta' }));
     const dialogo = screen.getByRole('dialog', { name: 'Agregar cuenta bancaria' });
     await usuario.click(within(dialogo).getByRole('button', { name: 'Guardar cuenta' }));
-    expect(dialogo).toHaveTextContent('Escribe el banco de la cuenta.');
+    expect(dialogo).toHaveTextContent('Elige el banco de la cuenta.');
     expect(dialogo).toHaveTextContent('Elige si la cuenta es de ahorros o corriente.');
     expect(mutaciones).toHaveLength(0);
 
-    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Banco/ }), ' Bancolombia ');
+    await elegirBanco(usuario, dialogo, 'Bancolombia');
     await usuario.click(within(dialogo).getByRole('radio', { name: 'Corriente' }));
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: 'Nombre' }), ' Marta Ríos ');
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: 'Correo' }), ' PAGOS@aceros.co ');
     await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Número de cuenta/ }), '123-456 78');
     await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Titular de la cuenta/ }), 'Aceros del Norte S.A.S.');
     await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Identificación del titular/ }), '900123456-7');
@@ -137,7 +151,11 @@ describe('mis cuentas bancarias', () => {
     await vi.waitFor(() => expect(mutaciones).toHaveLength(1));
     expect(mutaciones[0]?.url).toContain('/public/v1/boveda/cuentas-bancarias');
     expect(mutaciones[0]?.cuerpo).toEqual({
-      banco: 'Bancolombia',
+      banco: null,
+      bancoCodigo: '1007',
+      bancoSwift: null,
+      pais: null,
+      contactoPagos: { nombre: 'Marta Ríos', correo: 'PAGOS@aceros.co', telefono: null },
       tipoCuenta: 'Corriente',
       numero: '123-456 78',
       titular: 'Aceros del Norte S.A.S.',
@@ -147,13 +165,32 @@ describe('mis cuentas bancarias', () => {
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
+  it('un banco que no está en la lista se escribe con su país y su SWIFT, sin código de compensación', async () => {
+    const usuario = userEvent.setup();
+    const mutaciones = montar([], () => json(201, cuenta('nueva')));
+
+    await usuario.click(await screen.findByRole('button', { name: 'Agregar cuenta' }));
+    const dialogo = screen.getByRole('dialog', { name: 'Agregar cuenta bancaria' });
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Mi banco no está en la lista' }));
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Nombre del banco/ }), 'Chase');
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Código SWIFT/ }), 'chas us33');
+    await usuario.click(within(dialogo).getByRole('radio', { name: 'Corriente' }));
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Número de cuenta/ }), '123456789');
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Titular de la cuenta/ }), 'Ana Pérez');
+    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Identificación del titular/ }), '1020304050');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Guardar cuenta' }));
+
+    await vi.waitFor(() => expect(mutaciones).toHaveLength(1));
+    expect(mutaciones[0]?.cuerpo).toMatchObject({ banco: 'Chase', bancoCodigo: null, bancoSwift: 'CHASUS33', pais: 'CO', contactoPagos: null });
+  });
+
   it('un error de validación de la API se muestra en su campo', async () => {
     const usuario = userEvent.setup();
     montar([], () => json(422, { status: 422, codigo: 'moneda-invalida', detail: 'La moneda es un código ISO de tres letras (COP, USD…).' }));
 
     await usuario.click(await screen.findByRole('button', { name: 'Agregar cuenta' }));
     const dialogo = screen.getByRole('dialog');
-    await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Banco/ }), 'Bancolombia');
+    await elegirBanco(usuario, dialogo, 'Bancolombia');
     await usuario.click(within(dialogo).getByRole('radio', { name: 'Ahorros' }));
     await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Número de cuenta/ }), '12345678');
     await escribir(usuario, within(dialogo).getByRole('textbox', { name: /Titular de la cuenta/ }), 'Ana Pérez');

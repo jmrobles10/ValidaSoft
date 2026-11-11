@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { BloqueoDto } from './bloqueoDto';
+import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { EnlaceInvitacionDto } from './enlaceInvitacionDto';
 import type { EstadoVinculo } from './estadoVinculo';
 import type { OrigenVinculo } from './origenVinculo';
@@ -38,4 +39,6 @@ export interface VinculoDto {
   aperturaDeExpedientePendiente?: boolean;
   /** @nullable */
   ultimoResultado?: string | null;
+  /** @nullable */
+  contactos?: ContactoDeEmpresaDto[] | null;
 }

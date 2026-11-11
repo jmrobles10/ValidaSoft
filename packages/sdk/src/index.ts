@@ -3,3 +3,4 @@ export * from './tipos.js';
 export * from './cliente.js';
 export * from './asercion.js';
 export * from './webhooks.js';
+export * from './embebido.js';

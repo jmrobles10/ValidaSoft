@@ -41,7 +41,7 @@ export const usePropuestasDeFicha = () => useQuery({ ...getListarPropuestasFicha
 export const usePropuestasDeSeccion = (codigo: string, periodo: number | null) =>
   useQuery({ ...getObtenerPropuestasSeccionQueryOptions(codigo, parametrosPeriodo(periodo)), staleTime: 0, refetchInterval: esperarLectura });
 
-export type Catalogo = 'ciudades' | 'actividades-economicas' | 'responsabilidades-dian' | 'especialidades';
+export type Catalogo = 'ciudades' | 'actividades-economicas' | 'bancos' | 'responsabilidades-dian' | 'especialidades';
 
 /** Estado de la ficha: orden por tipo de persona, la siguiente sección incompleta y el estado de cada una (FM-21). */
 export const useEstadoFicha = () => useQuery(getObtenerFichaQueryOptions());

@@ -7,8 +7,9 @@
 import type { AvisoImportacionDto } from './avisoImportacionDto';
 import type { SeccionSincronizadaDto } from './seccionSincronizadaDto';
 
-export interface SincronizacionPortalDto {
-  terid: number;
+export interface SincronizacionDto {
+  origen: string;
+  clave: string;
   claveLegado: string;
   /** @nullable */
   terceroId: string | null;

@@ -7,5 +7,6 @@
 
 export type ObtenerVinculoPorReferenciaParams = {
   sistema?: string;
+  clave?: string;
   id?: string;
 };

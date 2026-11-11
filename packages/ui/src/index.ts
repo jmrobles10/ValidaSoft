@@ -23,3 +23,4 @@ export * from './usePaginacionCursor';
 export * from './esqueletos';
 export * from './disposicion';
 export * from './AvisoCambiosNuevos';
+export * from './EditorDeContactos';
