@@ -205,7 +205,7 @@ describe('Cruce con el documento en el requisito (F5)', () => {
 });
 
 describe('Requisito de sección: un cambio sin soporte (FM-15, FD-4)', () => {
-  const CAMBIOS = [{ campo: 'razon_social', etiqueta: 'Razón social', anterior: 'Aceros del Norte S.A.S.', nuevo: 'Aceros del Sur S.A.S.', tipoCambio: 'Modificado' }];
+  const CAMBIOS = [{ campo: 'razon_social', etiqueta: 'Razón social', anterior: 'Aceros del Norte S.A.S.', nuevo: 'Aceros del Sur S.A.S.', tipoCambio: 'Modificado' as const }];
 
   it('lo marca con los campos que cambiaron y avisa que aprobarlo pide una justificación si es crítico', () => {
     const tarjeta = montar(requisitoSeccion({}, { sinSoporte: { critico: true, cambios: CAMBIOS } }));

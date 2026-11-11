@@ -1153,6 +1153,17 @@ Decisión de Producto: sin contraseñas; ingreso directo con código y passkeys,
 | Configuración | `Validasoft:LimiteIngreso`, `Validasoft:Ingreso:{MinutosAcceso, MinutosLimpieza, CookieSegura, Plataforma, Passkeys}` | 07 §2.7 |
 | Pruebas | Dominio: `IngresoTests` (código, passkeys, sesión, política, correos). Integración: `IngresoApiTests` (vencimiento, un solo uso, límites, no enumeración, modos por grupo, passkey obligatoria por rol, revocación, sesiones, Mi cuenta, gestión, auditoría, operadores) con un autenticador WebAuthn por software. Web: `estado`, `passkeys`, `sesionDirecta`, `CampoCodigo`, política del grupo. E2E: `ingreso.spec.ts` con el autenticador virtual de Chromium (CDP `WebAuthn`) | 04 §12 |
 
+### Ficha: pendientes (2026-11-11, FD-1…FD-9)
+
+Cierra los pendientes de la ficha de F3, F5 y la integración abierta: General prellenada, observaciones en el DTO de la ficha, la ficha aceptada del vínculo en la web, el cambio «sin soporte», la cédula y la certificación bancaria en el mapa de respaldo, y la persona natural frente a la jurídica. Decisiones en la sección `5-octoquadragies` del [registro](decisiones/registro.md), diseño en [14](14-ficha-maestra-del-tercero.md) §4, §5.1, §5.3 y §7, contratos en [05 §2.4](05-api-contratos-y-webhooks.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Dominio | `PrellenadoDeGeneral` (FD-1); `SeccionDeFicha.SinSoporte` y `SinSoporteDelCambio` (FD-4); `MapaDeRespaldo` con `CEDULA` → General y Legal y `CERTIFICACION_BANCARIA` → `CuentasBancarias` (FD-5, FD-6); `CruceConDocumento.CruzarCuenta`, el cruce de la cédula con la Legal y `PropuestaDesdeDocumento` con las fechas de la cédula; `DatosGenerales` con `pep`, `vinculo_pep`, `fecha_expedicion` y `lugar_expedicion` solo de la persona natural y `campo-no-aplica` (FD-8) | 14 §4, §5.1, §6 |
+| Endpoint | `GET /vinculos/{id}/ficha-aceptada` (`FichaAceptadaDelVinculoDto`); `GET /public/v1/ficha` con `observaciones[]`; `GET /public/v1/ficha/{seccion}` con `prellenado` y `sinSoporte`; `seccion.sinSoporte` en el requisito del expediente; `soporteDeSecciones.secciones[]` con las cuentas (`CUENTAS_BANCARIAS`) en el requisito de la certificación | 05 §2.4 |
+| Pantalla | `web:/e/:empresaId/vinculos/:vinculoId/ficha` (ficha aceptada) y su tarjeta en el vínculo; aviso «Cambio sin soporte» en el requisito y justificación al aprobar; cuentas en «Soporte de la información»; grupos «Información del tercero» e «Invitaciones» en los webhooks; `public:/ficha/general` prellenada y con lo propio de la persona natural | 06 |
+| Pruebas | Dominio: `FichaPendientesTests`. Integración: `RequisitosApiTests.FichaPendientes`. Adaptador del Portal: la fila propia de la persona natural. Vitest de `apps/web` y `apps/public`. e2e: `ficha-pendientes.spec.ts` | registro FD-9 |
+
 ## 3. Matrices globales
 
 ### 3(a) Endpoint → hito

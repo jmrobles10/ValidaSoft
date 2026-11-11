@@ -35,7 +35,7 @@ describe('cruce sección ↔ documento en la revisión (F5)', () => {
   });
 
   it('un cambio crítico sin documento nuevo también pide justificación, pero uno que no es crítico no (FM-15)', () => {
-    const cambios = [{ campo: 'razon_social', etiqueta: 'Razón social', anterior: 'A', nuevo: 'B', tipoCambio: 'Modificado' }];
+    const cambios = [{ campo: 'razon_social', etiqueta: 'Razón social', anterior: 'A', nuevo: 'B', tipoCambio: 'Modificado' as const }];
     const critico = requisitoSeccion({}, { sinSoporte: { critico: true, cambios } });
     const comun = requisitoSeccion({ id: 'r-comun' }, { sinSoporte: { critico: false, cambios } });
 

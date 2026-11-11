@@ -153,7 +153,7 @@ test('un RUT cuya razón social difiere de la general: la empresa no aprueba sin
   // «Aprobar área» pide la justificación: sin ella no se puede enviar; con ella el expediente se aprueba.
   await regionDeArea(sofia, 'Revisión').getByRole('button', { name: /^Aprobar área/ }).click();
   const dialogo = sofia.getByRole('dialog', { name: /^Aprobar Revisión/ });
-  await expect(dialogo.getByRole('alert')).toContainText('difiere en campos críticos');
+  await expect(dialogo.getByRole('alert')).toContainText('no tienen soporte');
   await expect(dialogo.getByRole('button', { name: /^Aprobar área/ })).toBeDisabled();
   await dialogo.getByRole('textbox', { name: /Justificación de la aprobación/ }).fill('La razón social cambió por fusión; verificado con la Cámara.');
   await dialogo.getByRole('button', { name: /^Aprobar área/ }).click();
