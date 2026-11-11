@@ -3,6 +3,7 @@ import { llamar } from '../soporte/api';
 import { pdf } from '../soporte/archivos';
 import { esperarCorreo } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
+import { escribirFecha } from '../soporte/fechas';
 import { abrirDesdeBandeja, aprobarArea } from '../soporte/empresa';
 import { abrirEmpresa, aceptarInvitacion, completarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, revisarVigencias, SST, type Escenario, type Invitacion } from '../soporte/semilla';
@@ -266,7 +267,7 @@ test('un bloqueo con fecha se levanta solo: el job lo restituye al llegar el dí
   await ana.getByRole('menuitem', { name: /^Bloquear/ }).click();
   const bloquear = ana.getByRole('dialog', { name: /^Bloquear vínculo/ });
   await bloquear.getByRole('textbox', { name: 'Motivo' }).fill('Revisión temporal de sanciones.');
-  await bloquear.getByLabel('Bloquear hasta (opcional)').fill(manana);
+  await escribirFecha(paginaAna, 'Bloquear hasta (opcional)', manana, bloquear);
   await bloquear.getByRole('button', { name: 'Bloquear vínculo' }).click();
   await expect(bloquear).toBeHidden();
   await expect(ana.getByText('Vínculo bloqueado', { exact: true }).first()).toBeVisible();

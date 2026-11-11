@@ -88,6 +88,7 @@ Las cinco ramas anteriores —`feature/aviso-retiro-version` (RT), `feature/inte
 obligó a decidir: los correos a terceros llevan a la vez la preferencia del tercero (NT-5) y el tenant que los origina (el sandbox los retiene, SB-4); el permiso
 `sesiones-tercero:crear` (IO-6) se ofrece en el diálogo de API keys junto a `sandbox:administrar`; el embebido del tercero y la guía de cinco pasos viven en
 [integracion.md §8.1 y §1.1](integracion.md) (08 §2.3 es solo un puntero); y el stream de la campana se corta cuando se cierra o se revoca la sesión directa (ING-3).
+Verificación de la mezcla: 929 pruebas web, 790 de dominio, 20 del SDK, 72 del adaptador del Portal, 233 de integración y 99 e2e, con lint, tipos, build y compilación .NET sin advertencias.
 
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
