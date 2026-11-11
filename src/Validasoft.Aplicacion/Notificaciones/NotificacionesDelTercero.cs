@@ -134,6 +134,10 @@ public static class PlanificadorDeNotificacionesDelTercero
                     "Recordatorio: observaciones pendientes",
                     $"{empresa} te recuerda que tu validación {e.Folio} " +
                     (recordatorio.DiasObservado > 0 ? $"lleva {Dias(recordatorio.DiasObservado)} con observaciones por corregir." : "tiene observaciones por corregir.")));
+            case ExpedienteAbierto { Tipo: TipoExpediente.Renovacion, AbiertoPor.Tipo: not ActorTipo.Sistema }:
+                // La empresa abrió la renovación a mano (campaña de renovación, OP-1): lo del sistema (vigencia, vencimiento) ya avisa por su evento.
+                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Vigencia,
+                    "Tu empresa abrió tu renovación", $"{empresa} abrió la renovación de tu validación {e.Folio}: ratifica o actualiza tu información."));
             case ExpedienteAbierto { Tipo: TipoExpediente.Actualizacion }:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Actualizacion,
                     "Hay información por actualizar", $"{empresa} necesita que actualices {Lista(e.Requisitos.Select(r => r.Nombre).ToList(), "tu información")}."));

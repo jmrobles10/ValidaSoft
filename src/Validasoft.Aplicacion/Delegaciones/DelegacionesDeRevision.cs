@@ -52,7 +52,7 @@ public static class DelegacionesDeRevision
 }
 
 /// <summary>
-/// Delegación de revisión por ausencias (OP-7…OP-9): crear, consultar y revocar. Quien tiene <c>expedientes:revisar</c> delega lo suyo; un administrador
+/// Delegación de revisión por ausencias (OP-7, OP-8): crear, consultar y revocar. Quien tiene <c>expedientes:revisar</c> delega lo suyo; un administrador
 /// de expedientes puede delegar en nombre de otra persona. Cada alta y cada revocación queda en la auditoría de configuración y cada decisión tomada en
 /// delegación lleva en el historial de eventos de quién era (<c>delegadoDe</c>).
 /// </summary>
