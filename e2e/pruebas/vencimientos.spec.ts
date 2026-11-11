@@ -4,6 +4,7 @@ import { pdf } from '../soporte/archivos';
 import { esperarCorreo, literal } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja, regionDeArea } from '../soporte/empresa';
+import { escribirFecha } from '../soporte/fechas';
 import { aceptarInvitacion, completarInvitacion, entrarPorInvitacion, esperarTarjeta, tarjeta } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST, type Escenario, type Invitacion } from '../soporte/semilla';
 
@@ -108,7 +109,7 @@ test('una fecha de expedición futura no se admite', async ({ page }) => {
   await entrarPorInvitacion(page, invitacion);
   await aceptarInvitacion(page, invitacion);
   await tarjeta(page, SST.nombre).getByRole('link', { name: /^Subir/ }).click();
-  await page.getByLabel(/Fecha de expedición/).fill(fecha(3));
+  await escribirFecha(page, /Fecha de expedición/, fecha(3));
   // Se valida antes de elegir el archivo: no se puede subir con una expedición futura.
   await expect(page.getByRole('status')).toHaveText('Para subir el archivo, corrige: Fecha de expedición.');
   await expect(page.getByRole('button', { name: 'Elegir archivo' })).toBeDisabled();

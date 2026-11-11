@@ -156,7 +156,7 @@ Convención por feature: `api/` (hooks TanStack sobre el cliente generado + quer
 | Decisión automática | Banner informativo | "Aprobado automáticamente: sin cambios frente a la versión del 02/03. Puedes revertirlo." |
 | Sin permiso | Página 403 propia | "Esta sección es de Configuración. Pide acceso a un administrador." |
 
-### 2.4 Reglas visuales de toda la aplicación (UI-1…UI-6)
+### 2.4 Reglas visuales de toda la aplicación (UI-1…UI-9)
 
 Normas del proyecto para `apps/web`, `apps/public` y el tema (`packages/ui/src/tema.ts`); detalle y motivos en el [registro](decisiones/registro.md#5-novotricies-reglas-visuales-de-toda-la-aplicación-2026-11-10). Las comprueban `packages/ui/src/pulido.test.tsx` y `e2e/pruebas/pulido-visual.spec.ts`.
 
@@ -165,7 +165,10 @@ Normas del proyecto para `apps/web`, `apps/public` y el tema (`packages/ui/src/t
 3. **Selects y autocompletar** con el ícono dentro del campo y los textos de MUI en español (`esES` + «Abrir», «Cerrar», «Limpiar», «Sin resultados»).
 4. **Nada cuadrado suelto**: acordeones y papeles con el radio de las tarjetas (12 px) y sin la línea superior de MUI.
 5. **Sin layouts volcados a la izquierda**: `DosColumnas` desde `lg` (Plan de IA, Nuevo grupo); a 1920×1080 una pantalla de configuración cabe sin desplazarse.
-6. **Avisos de documento más nuevo**: uno por documento, con las secciones que afecta; en el wizard, una línea por documento dentro de un solo aviso.
+6. **Avisos de documento más nuevo**: uno por documento, con las secciones que afecta; en el wizard, un bloque por documento dentro de un solo aviso (ver 9).
+7. **Ningún control nativo del navegador** (fecha, hora, mes, número con flechas, `select`): fecha con `CampoFecha` (`@mui/x-date-pickers` + `dayjs`, `dd/mm/aaaa`, calendario en español, valor ISO `aaaa-mm-dd`), entero con `CampoNumero` (solo dígitos) y listas con el `Select`/`Autocomplete` de MUI. Lo vigila `pulido.test.tsx`.
+8. **Los campos cortos no ocupan todo el ancho**: un año, una fecha, un código, un porcentaje o un NIT van en columnas (dos por fila) o con ancho acotado; texto largo, listas y sí/no ocupan la fila.
+9. **Aviso de documentos más nuevos**: cada documento es un bloque con su borde (nombre y versión, estado en chips —«No pudimos leerlo»—, secciones que afecta como chips y la acción pequeña a la derecha) y el subtítulo del aviso cabe en una línea.
 
 ---
 
