@@ -268,7 +268,9 @@ public static class EnviarAvisosDeVencimientoHandler
                     ]))
                     .OrderBy(l => l.Vencimientos.Min(v => v.VigenteHasta))
                     .ToList();
-                await mensajes.PublishAsync(new CorreoDeVencimientoPendiente(grupo.Key, mensaje.Fecha, lineas, terceroId));
+                // El tenant de uno de sus vínculos: un tercero de pruebas solo tiene vínculos en su sandbox, y el correo va a su buzón (SB-4).
+                var tenantDelAviso = empresas.TryGetValue(vinculos[grupo.First().Vigencia.VinculoId].EmpresaId, out var deAviso) ? deAviso.TenantId : (Guid?)null;
+                await mensajes.PublishAsync(new CorreoDeVencimientoPendiente(grupo.Key, mensaje.Fecha, lineas, terceroId, tenantDelAviso));
             }
 
             // Constancia por documento y vínculo para el evento público documento.por_vencer y las notificaciones (NW-1).
@@ -318,7 +320,8 @@ public sealed record DocumentoPorVencer(string Documento, IReadOnlyList<Vencimie
 public sealed record VencimientoPorEmpresa(string Empresa, DateOnly VigenteHasta);
 
 /// <summary>Correo de aviso de vencimiento (cola durable <c>correo</c>, por el outbox de la transacción del aviso).</summary>
-public sealed record CorreoDeVencimientoPendiente(string Para, DateOnly Fecha, IReadOnlyList<DocumentoPorVencer> Documentos, Guid? TerceroId = null);
+public sealed record CorreoDeVencimientoPendiente(string Para, DateOnly Fecha, IReadOnlyList<DocumentoPorVencer> Documentos, Guid? TerceroId = null,
+    Guid? TenantId = null);
 
 public static class CorreoDeVencimientoPendienteHandler
 {
@@ -327,6 +330,6 @@ public static class CorreoDeVencimientoPendienteHandler
     {
         if (!await preferencias.QuiereAsync(correo.TerceroId, Notificaciones.TiposNotificacionTercero.DocumentoPorVencer, ct))
             return;
-        await enviador.EnviarAsync(redactor.RedactarAvisoDeVencimiento(correo), ct);
+        await enviador.EnviarAsync(redactor.RedactarAvisoDeVencimiento(correo).DeTenant(correo.TenantId), ct);
     }
 }

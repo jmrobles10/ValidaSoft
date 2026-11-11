@@ -162,6 +162,49 @@ describe('cliente de la API', () => {
     expect(recibidas[0]?.cabeceras['X-Empresa']).toBe('otra');
   });
 
+  it('el sandbox se consulta sin empresa y su buzón se filtra y se espera', async () => {
+    const sandbox = {
+      existe: true,
+      entorno: 'produccion',
+      tenantId: 't1',
+      creadoEn: '2026-11-10T00:00:00Z',
+      reiniciadoEn: null,
+      empresas: [{ id: 'e-prueba', produccionId: EMPRESA, nombre: 'Norte (sandbox)', prefijoFolio: 'TN', activa: true }],
+      sistemas: ['SRM'],
+      correos: 0,
+    };
+    const correo = { id: 'c1', para: 'ana@aceros.co', asunto: 'Te invitan', texto: 'https://valida.acme.co/e/abc', html: '<p>x</p>', enlaces: ['https://valida.acme.co/e/abc'], recibidoEn: '2026-11-10T00:00:00Z' };
+    const { cliente: c, recibidas } = cliente([
+      json(sandbox),
+      json(sandbox, 201),
+      json(sandbox),
+      json({ datos: [], siguienteCursor: null }),
+      json({ datos: [correo], siguienteCursor: null }),
+      json({ datos: [], siguienteCursor: null }),
+      () => new Response(null, { status: 204 }),
+    ]);
+
+    expect((await c.sandbox.obtener()).empresas[0]?.id).toBe('e-prueba');
+    await c.sandbox.asegurar();
+    await c.sandbox.reiniciar();
+    expect(recibidas.map((r) => [r.metodo, r.url])).toEqual([
+      ['GET', 'https://valida.acme.co/api/v1/sandbox'],
+      ['POST', 'https://valida.acme.co/api/v1/sandbox'],
+      ['POST', 'https://valida.acme.co/api/v1/sandbox/reiniciar'],
+    ]);
+    // Son rutas de la credencial, no de una empresa: no llevan X-Empresa.
+    expect(recibidas.every((r) => r.cabeceras['X-Empresa'] === undefined)).toBe(true);
+
+    // Sin el correo todavía: la espera consulta de nuevo y lo devuelve cuando llega.
+    expect((await c.sandbox.esperarCorreo('ana@aceros.co', { asunto: 'invita', esperaMs: 5_000 })).enlaces).toEqual(['https://valida.acme.co/e/abc']);
+    expect(recibidas.at(-1)?.url).toBe('https://valida.acme.co/api/v1/sandbox/correos?para=ana%40aceros.co&asunto=invita&limite=1');
+
+    // Si nunca llega, falla; vaciar el buzón responde 204.
+    await expect(c.sandbox.esperarCorreo('nadie@aceros.co', { esperaMs: 0 })).rejects.toThrow(/No llegó al buzón/);
+    await c.sandbox.vaciarCorreos();
+    expect(recibidas.at(-1)).toMatchObject({ metodo: 'DELETE', url: 'https://valida.acme.co/api/v1/sandbox/correos' });
+  });
+
   it('sin API key o sin URL no se construye', () => {
     expect(() => new ClienteValidasoft({ urlBase: 'https://x.co', apiKey: '' })).toThrow(/API key/);
     expect(() => new ClienteValidasoft({ urlBase: '', apiKey: LLAVE })).toThrow(/URL/);

@@ -131,7 +131,8 @@ public static class TenantsEndpoints
     public static async Task<IReadOnlyList<TenantDto>> Listar(ISesiones sesiones, CancellationToken ct)
     {
         await using var consulta = sesiones.ConsultaGlobal();
-        var tenants = await consulta.Query<Tenant>().OrderBy(t => t.Slug).ToListAsync(ct);
+        // Los sandbox (SB-1) no son clientes: no salen en la consola ni en sus cuentas.
+        var tenants = await consulta.Query<Tenant>().Where(t => t.TenantDeProduccionId == null).OrderBy(t => t.Slug).ToListAsync(ct);
         return [.. tenants.Select(t => t.ADto())];
     }
 
@@ -167,7 +168,7 @@ public static class TenantsEndpoints
         List<Tenant> tenants;
         await using (var consulta = sesiones.ConsultaGlobal())
         {
-            IQueryable<Tenant> consultaTenants = consulta.Query<Tenant>();
+            IQueryable<Tenant> consultaTenants = consulta.Query<Tenant>().Where(t => t.TenantDeProduccionId == null); // sin los sandbox (SB-1)
             if (!string.IsNullOrEmpty(texto))
             {
                 var numero = NumeroBuscado(texto);

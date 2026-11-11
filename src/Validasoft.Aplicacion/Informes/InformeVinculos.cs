@@ -144,7 +144,7 @@ public static class InformeVinculosEndpoints
             }
 
             return new FilaInformeVinculoDto(v.Id,
-                new TerceroResumenDto(v.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.ClaveIdentificacion ?? string.Empty),
+                new TerceroResumenDto(v.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.Identificacion.Clave ?? string.Empty),
                 new TipoVinculoResumenDto(v.TipoVinculoId, tipoVinculo?.Codigo ?? string.Empty, tipoVinculo?.Nombre ?? string.Empty),
                 v.Estado.ToString(), v.CreadoEn, v.InvitacionAceptada, certificado,
                 expediente is null ? null : new ExpedienteDelInformeDto(expediente.Id, expediente.Folio, expediente.Tipo.ToString(), expediente.Estado.ToString()),

@@ -65,14 +65,16 @@ public static class ConfiguracionMarten
 
                 // plataforma (global)
                 opts.Schema.For<Tenant>().DatabaseSchemaName("plataforma")
-                    .UniqueIndex(UniqueIndexType.Computed, "ux_tenant_slug", x => x.Slug);
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_tenant_slug", x => x.Slug)
+                    .Index(x => x.TenantDeProduccionId); // el sandbox de un grupo (SB-1)
                 opts.Schema.For<Empresa>().DatabaseSchemaName("plataforma")
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_identificacion", x => x.TenantId, x => x.ClaveIdentificacion)
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_prefijo", x => x.TenantId, x => x.PrefijoFolio);
 
                 // boveda (global)
                 opts.Schema.For<Tercero>().DatabaseSchemaName("boveda")
-                    .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion);
+                    .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion)
+                    .Index(x => x.SandboxTenantId); // terceros de pruebas (SB-4): el reinicio del sandbox los busca por aquí
 
                 // Documentos de la bóveda: streams Documento-{id} en el tenant técnico "boveda" (ambos ámbitos; el PorVinculo
                 // guarda su tenant como dato). Clave natural única: (tercero, canónico) o (vínculo, tipo del tenant).
@@ -179,6 +181,8 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()
                     .Index(x => x.VinculoId)
                     .Index(x => x.TerceroId);
+                // Buzón de pruebas del sandbox (SB-4): los correos que no salieron; un reinicio los borra con el resto del tenant.
+                opts.Schema.For<CorreoDePrueba>().MultiTenanted().Index(x => x.RecibidoEn);
                 opts.Schema.For<FilaBandeja>().MultiTenanted()
                     .Index(x => x.EmpresaId)
                     .Index(x => x.ExpedienteId)

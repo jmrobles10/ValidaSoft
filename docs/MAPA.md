@@ -41,7 +41,7 @@ flowchart TD
     F1[06 Frontend y UX] --> F2[05 API · contratos de lectura y SSE] --> F3[11 · pantallas por hito]
   end
   subgraph IN[Integrador SRM / Portal / Marco]
-    I1[01 Análisis del legado · mapa de endpoints] --> I2[05 API · webhooks y SDK] --> I3[08 Integración y migración]
+    I1[01 Análisis del legado · mapa de endpoints] --> I2[integracion.md · guía de punta a punta] --> I3[05 API · webhooks y SDK] --> I4[08 Integración y migración]
   end
   subgraph QA[QA / DevOps]
     Q1[04 · testing, compose, CI] --> Q2[09 · criterios de aceptación] --> Q3[11 · pruebas por hito]

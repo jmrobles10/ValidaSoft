@@ -16,7 +16,7 @@ public sealed record AsercionDelegada(string IdExterno, string Nombre, string Co
 /// enlaza al usuario con el mismo correo o la crea <b>sin roles</b> (JIT). Corre durante la autenticación, antes de que
 /// exista el contexto de la petición, por eso abre su propia sesión con el sistema como actor.
 /// </summary>
-public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, TimeProvider reloj)
+public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, IEntornos entornos, TimeProvider reloj)
 {
     /// <summary>Evita escribir en cada petición: el último acceso se actualiza como mucho una vez por minuto.</summary>
     private static readonly TimeSpan IntervaloUltimoAcceso = TimeSpan.FromMinutes(1);
@@ -91,6 +91,11 @@ public sealed class RegistroDeUsuariosDelegados(IDocumentStore store, TimeProvid
         else
         {
             usuario = Usuario.CrearDesdeSistema(sistema.Id, asercion.IdExterno, nombre, correo, ahora);
+
+            // En el sandbox (SB-3) quien llega por identidad delegada nace administrador del grupo de pruebas: no hay a quién pedirle los
+            // roles. El permiso efectivo sigue siendo la intersección con los scopes de la llave, así que la llave lo acota.
+            if (await entornos.EsSandboxAsync(contexto.TenantId!.Value, ct))
+                usuario.AsignarRoles([new RolAsignado(Rol.Administrador, null)]);
             Auditoria.Registrar(sesion, contexto, "Usuario", usuario.Id.ToString(), AccionConfiguracion.Creado, null, usuario.ADto(), ahora);
         }
 

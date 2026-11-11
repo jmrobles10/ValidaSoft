@@ -7,6 +7,7 @@ using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Identidad;
+using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
 using Wolverine.Http;
@@ -222,6 +223,17 @@ public static class AccesoPorCorreoEndpoints
                 .ToListAsync(ct))
             .Where(v => !Terminales.Contains(v.Estado))
             .ToList();
+
+        // Un tercero de pruebas (SB-4) no entra por aquí: el correo de un sandbox nunca sale a su destinatario, y el enlace de su
+        // invitación está en el buzón del sandbox. Así el correo real de alguien que probó una integración no recibe enlaces de pruebas.
+        var terceroIds = vinculos.Select(v => v.TerceroId).Distinct().ToArray();
+        if (terceroIds.Length > 0)
+        {
+            var deSandbox = (await sesion.Query<Tercero>().Where(t => t.Id.IsOneOf(terceroIds) && t.SandboxTenantId != null).Select(t => t.Id)
+                .ToListAsync(ct)).ToHashSet();
+            vinculos = [.. vinculos.Where(v => !deSandbox.Contains(v.TerceroId))];
+        }
+
         if (vinculos.Count == 0)
             return;
 

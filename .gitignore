@@ -14,3 +14,9 @@ dist/
 *.tsbuildinfo
 coverage/
 apps/web/.semilla.local.json
+
+# SDK: copia generada por infra/sdk/preparar-npm.mjs (la fuente es LICENCIA-SDK.md)
+packages/sdk/LICENSE.md
+
+# Resultado de la última corrida de k6 (tests/carga)
+tests/carga/resultado-carga.json

@@ -1676,6 +1676,198 @@
         }
       }
     },
+    "/api/v1/sandbox": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "GET_api_v1_sandbox",
+        "description": "GET_api_v1_sandbox",
+        "operationId": "GET_api_v1_sandbox",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "POST_api_v1_sandbox",
+        "description": "POST_api_v1_sandbox",
+        "operationId": "POST_api_v1_sandbox",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/sandbox/reiniciar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "POST_api_v1_sandbox_reiniciar",
+        "description": "POST_api_v1_sandbox_reiniciar",
+        "operationId": "POST_api_v1_sandbox_reiniciar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SandboxDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/sandbox/correos": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "GET_api_v1_sandbox_correos",
+        "description": "GET_api_v1_sandbox_correos",
+        "operationId": "GET_api_v1_sandbox_correos",
+        "parameters": [
+          {
+            "name": "para",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asunto",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfCorreoDePruebaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "DELETE_api_v1_sandbox_correos",
+        "description": "DELETE_api_v1_sandbox_correos",
+        "operationId": "DELETE_api_v1_sandbox_correos",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/sandbox/correos/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
+        ],
+        "summary": "GET_api_v1_sandbox_correos_id",
+        "description": "GET_api_v1_sandbox_correos_id",
+        "operationId": "GET_api_v1_sandbox_correos_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorreoDePruebaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/sistemas/{codigo}": {
       "put": {
         "tags": [
@@ -13109,6 +13301,46 @@
           }
         }
       },
+      "CorreoDePruebaDto": {
+        "required": [
+          "id",
+          "para",
+          "asunto",
+          "texto",
+          "html",
+          "enlaces",
+          "recibidoEn"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "para": {
+            "type": "string"
+          },
+          "asunto": {
+            "type": "string"
+          },
+          "texto": {
+            "type": "string"
+          },
+          "html": {
+            "type": "string"
+          },
+          "enlaces": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recibidoEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "CorridaImportacionPortalDto": {
         "required": [
           "id",
@@ -15095,6 +15327,35 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "EmpresaDeSandboxDto": {
+        "required": [
+          "id",
+          "produccionId",
+          "nombre",
+          "prefijoFolio",
+          "activa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "produccionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "prefijoFolio": {
+            "type": "string"
+          },
+          "activa": {
+            "type": "boolean"
           }
         }
       },
@@ -19151,6 +19412,27 @@
           }
         }
       },
+      "PaginaDtoOfCorreoDePruebaDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CorreoDePruebaDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PaginaDtoOfEntradaCatalogoDto": {
         "required": [
           "datos",
@@ -22310,6 +22592,68 @@
         "properties": {
           "clavePublicaPem": {
             "type": "string"
+          }
+        }
+      },
+      "SandboxDto": {
+        "required": [
+          "existe",
+          "entorno",
+          "tenantId",
+          "creadoEn",
+          "reiniciadoEn",
+          "empresas",
+          "sistemas",
+          "correos"
+        ],
+        "type": "object",
+        "properties": {
+          "existe": {
+            "type": "boolean"
+          },
+          "entorno": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "creadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reiniciadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaDeSandboxDto"
+            }
+          },
+          "sistemas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -25570,6 +25914,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Sandbox.SandboxEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Plataforma.OperadoresDePlataformaEndpoints"

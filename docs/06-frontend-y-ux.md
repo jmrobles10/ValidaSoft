@@ -303,7 +303,7 @@ Además: SSE `/api/v1/eventos/stream` (filtrado por empresa activa), `/public/v1
 | H6 | `/revalidaciones`, `/vencimientos`, ficha 360 completa (aceptaciones, cuenta designada), `/configuracion/tenant/tipos-documento` (vigencias) | `/cuentas`, bóveda con vencimientos y `AvisoConsolidado`, ratificar | `TarjetaCuentaBancaria`, `AvisoConsolidado` |
 | H7 | `/excepciones`, `/configuracion/tenant/revision-automatica`, verificaciones (listas, estudio, UBO/PEP) en `/expedientes/:id`, certificado `Suspendido` por bloqueo en `/certificados` (B-5), informe SAGRILAFT | "Pedir revisión humana", formularios UBO/PEP | — |
 | H8 | Invitación masiva, campañas, delegaciones, conflicto de intereses, `/auditoria` con exportación ZIP, plantillas Liquid, dominio propio, planes y uso, matriz de riesgo, `/configuracion/empresa` completa | Exportar mi bóveda, PWA offline, embed `/embed/*`, trazo opcional | — |
-| H9–H11 | Sandbox de API keys, vistas de entregas por integración, panel de dead letters | Sin pantallas nuevas | `sdk-ts` |
+| H9–H11 | Sandbox de API keys (interruptor «Llave de sandbox» en Configuración › API keys; el buzón y el reinicio, por API y SDK), vistas de entregas por integración, panel de dead letters | Sin pantallas nuevas | `sdk-ts` |
 
 ---
 

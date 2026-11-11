@@ -174,6 +174,31 @@ public sealed class AlmacenS3(FabricaClienteS3 clientes, TimeProvider reloj) : I
         }
     }
 
+    public async Task EliminarPrefijoAsync(string bucket, string prefijo, CancellationToken ct)
+    {
+        try
+        {
+            string? continuacion = null;
+            do
+            {
+                var pagina = await clientes.Interno.ListObjectsV2Async(
+                    new ListObjectsV2Request { BucketName = bucket, Prefix = prefijo, ContinuationToken = continuacion }, ct);
+                if (pagina.S3Objects is { Count: > 0 } objetos)
+                {
+                    await clientes.Interno.DeleteObjectsAsync(
+                        new DeleteObjectsRequest { BucketName = bucket, Objects = [.. objetos.Select(o => new KeyVersion { Key = o.Key })] }, ct);
+                }
+
+                continuacion = pagina.IsTruncated == true ? pagina.NextContinuationToken : null;
+            }
+            while (continuacion is not null);
+        }
+        catch (AmazonS3Exception e) when (e.StatusCode == HttpStatusCode.NotFound)
+        {
+            // El bucket aún no existe (nació sin cargas): no hay nada que borrar.
+        }
+    }
+
     public async Task AsegurarBucketAsync(string bucket, CancellationToken ct)
     {
         if (_buckets.ContainsKey(bucket))

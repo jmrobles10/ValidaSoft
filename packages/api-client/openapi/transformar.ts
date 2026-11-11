@@ -138,6 +138,13 @@ const NOMBRES: Record<string, string> = {
   // Integración con SRM y Marco (H9, CN-1…CN-3).
   'POST /api/v1/api-keys/{id}/rotar': 'rotarApiKey',
   'GET /api/v1/consultas/certificacion': 'consultarCertificacion',
+  // Sandbox del grupo y su buzón de correo de pruebas (SB-1…SB-6).
+  'GET /api/v1/sandbox': 'obtenerSandbox',
+  'POST /api/v1/sandbox': 'asegurarSandbox',
+  'POST /api/v1/sandbox/reiniciar': 'reiniciarSandbox',
+  'GET /api/v1/sandbox/correos': 'listarCorreosDePrueba',
+  'GET /api/v1/sandbox/correos/{id}': 'obtenerCorreoDePrueba',
+  'DELETE /api/v1/sandbox/correos': 'vaciarCorreosDePrueba',
   'POST /api/v1/tipos-vinculo': 'crearTipoVinculo',
   'GET /api/v1/tipos-vinculo': 'listarTiposVinculo',
   'GET /api/v1/tipos-vinculo/{id}': 'obtenerTipoVinculo',
@@ -326,8 +333,11 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearEmpresa: { '201': 'EmpresaDto' },
   crearApiKey: { '201': 'ApiKeyDto' },
   revocarApiKey: { '204': null },
+  vaciarCorreosDePrueba: { '204': null },
   // La nueva llave con su `valor` (una sola vez); la anterior sigue valiendo hasta la fecha pedida (CN-3).
   rotarApiKey: { '201': 'ApiKeyDto' },
+  // 201 al crear el sandbox; 200 si ya existía (SB-6).
+  asegurarSandbox: { '200': 'SandboxDto', '201': 'SandboxDto' },
   // 304 sin cuerpo con `If-None-Match` igual al ETag (CN-1).
   consultarCertificacion: { '200': 'ConsultaCertificacionDto', '304': null },
   crearTipoVinculo: { '201': 'TipoVinculoDto' },

@@ -921,7 +921,7 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | `Validasoft.Contratos` (NuGet) | DTOs de 05 §4 + `EventoPublicoDto` + enums |
 | `Validasoft.Sdk` (NuGet multi-target `net7.0;net8.0;net10.0`, T-16: el SRM sigue en .NET 7) | `IValidasoftClient` tipado (Kiota/Refit desde OpenAPI), `Idempotency-Key` automático, Polly solo en idempotentes, `WebhookVerifier.Validar(headers, body, secreto)` + dedupe por `Validasoft-Event-Id` (T-6), `X-Empresa` por cliente |
 | `@validasoft/sdk` | `openapi-typescript` + `openapi-fetch` + `verificarFirma()` |
-| `ApiKey` modo sandbox | `vsk_test_*` opera sobre datos sintéticos del tenant; eventos marcados `sandbox: true` |
+| `ApiKey` modo sandbox | **Implementado (SB-1…SB-7)**: `vsk_test_*` opera en un **tenant hermano** del grupo (copias de las empresas con otro id, configuración heredada, ningún dato), con correos retenidos en un buzón, IA y listas simuladas y nada que se mezcle con producción. Los eventos del sandbox son los de su propio tenant (no hay marca `sandbox` en el sobre). 05 §2.6.3 y 07 §5.4 |
 | Receptor SRM (`/api/integracion/validasoft/webhook` en el SRM) | firma HMAC, dedupe por `Validasoft-Event-Id`, cola propia, `empresaId` = instancia SRM |
 | Tabla de respaldo en Marco | `adp_cs.validasoft_certificacion_local(identificacion, tipoVinculo, empresaId, folio, estadoVinculo, estadoCertificado, bloqueado, motivoBloqueo, vigenteHasta, actualizadoEn)` alimentada con los nombres de 05 §7 (`certificado.*`, `vinculo.*`); respuesta degradada con `fuenteRespaldo: true` y `antiguedadSegundos` |
 
@@ -997,7 +997,28 @@ Hacia atrás: política de deprecación de 12 meses sobre v1 (H5). Hacia adelant
 | `@validasoft/sdk` | Hecho, fetch + Web Crypto (CN-6) | `packages/sdk` |
 | Guía de integración y ejemplo ejecutable | Hecho (CN-7) | 08 §2.1, `docs/ejemplos/IntegradorSrm` (`net7.0`) |
 | Pruebas | Unitarias del SDK (.NET y TS), integración con el SDK contra la API en memoria y e2e de consulta, pull + webhook y rotación | `IntegracionSdkApiTests.cs`, `e2e/pruebas/integracion.spec.ts` |
-| Pendiente | Sandbox con datos aislados, `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección `EstadoCertificacionTercero` + k6 (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), publicación de paquetes | — |
+| Pendiente | `legacy.estadoTercero`, `POST /sesiones-tercero` (embebido del tercero para el Portal), `POST /documentos` para integraciones, proyección persistida `EstadoCertificacionTercero` y medida de k6 en un entorno dedicado (H11), receptor en el SRM y tabla local en Marco (en sus repositorios), primera publicación de los paquetes (la hace una persona con los secretos) | — |
+
+#### H9 — Sandbox, publicación de los SDK, carga y guía (2026-11-11, SB-1…SB-10)
+| Elemento | Estado | Dónde |
+|---|---|---|
+| **Sandbox con datos aislados**: tenant hermano creado al pedirlo (`POST /sandbox` o la primera llave `sandbox: true`), sembrado con la configuración del grupo, **reiniciable** sin perder empresas ni llaves; terceros de pruebas aislados en la bóveda global, correos al buzón (`GET /sandbox/correos`), IA y listas simuladas, certificados no verificables, fuera de la consola de Plataforma y del acceso con el correo | Hecho (SB-1…SB-6); scope `sandbox:administrar` | `Aplicacion/Sandbox`, `Infraestructura/Sandbox`, `Dominio/Plataforma/AislamientoDeSandbox.cs`; 05 §2.6.3, 07 §5.4 |
+| SDK: grupo `Sandbox` (.NET y TS: `ObtenerAsync`/`obtener`, `AsegurarAsync`, `ReiniciarAsync`, `CorreosAsync`, `EsperarCorreoAsync`…) | Hecho | `src/Validasoft.Sdk`, `packages/sdk` |
+| **Paquetes publicables**: versión única (`infra/sdk/version.mjs`), metadatos y README/CHANGELOG por paquete, ESM + CJS en npm, empaquetado en CI sin publicar y workflow `sdk-publicar.yml` (tag `sdk-v*`, secretos `NUGET_API_KEY` y `NPM_TOKEN`) | Hecho; **no se publicó nada**; licencia provisional pendiente de Legal (SB-7) | `src/Empaquetado.props`, `.github/workflows/sdk-publicar.yml`; 08 §2.3 |
+| **Carga de la consulta de certificación**: k6 (`grafana/k6:1.0.0`) con mezcla 200/304 a 500 rps; consulta reducida de cuatro viajes a uno (índice de ids + caché de la empresa) | Medida local hecha; **p99 < 100 ms a 500 rps no se pudo certificar en el entorno de desarrollo** (ver abajo, SB-8) | `tests/carga/`; 04 §12 |
+| **Guía de integración de punta a punta** | Hecha | [integracion.md](integracion.md) |
+| E2E de integración completa con el SDK en el sandbox (sistema → invitación → webhooks → consulta → embebido → reinicio) | Hecho | `e2e/pruebas/integracion-sandbox.spec.ts`, `SandboxApiTests.cs` |
+
+**Medida de k6 (2026-11-11, máquina de desarrollo compartida con otros procesos al 30–80 % de CPU, PostgreSQL 17 en Docker Desktop, API en `Release`, k6 1.0.0 en Docker)**: consulta de certificación a 500 rps durante 60 s (tras 10 s de calentamiento), 80 % con `If-None-Match`.
+
+| | Antes (3–4 viajes a la base por consulta) | Después (un viaje) |
+|---|---|---|
+| Latencia secuencial, una conexión (p50) | 23,5 ms | **8,1 ms** |
+| 500 rps pedidos: rps logrados · p50 · p99 | 345 · 1 195 ms · 3,3 s (saturado) | 447 · 236 ms · 3,0 s (saturado) |
+| 300 rps pedidos: p50 · p95 · p99 | — | 37 ms · 171 ms · 434 ms |
+| CPU del API a 300 rps | — | ≈ 0,4 núcleo (≈ 1,3 ms de CPU por consulta); PostgreSQL ≈ 40 % de un núcleo |
+
+**Lectura.** El umbral (p99 < 100 ms a 500 rps) **no se cumplió** en esta máquina, pero la medida no lo atribuye al endpoint: con CPU, base y generador de carga a medias, el mismo perfil dio entre 222 y 639 rps y latencias que variaron 4× entre corridas, y las dos terceras partes de la espera son de la máquina (`/health/live`, sin base de datos, ya cuesta 2–5 ms). Hace falta repetirla en un entorno dedicado (runner o servidor de pruebas) antes de dar el objetivo de H9 por cumplido; el comando y el entorno están en `tests/carga/README.md`. La **proyección persistida `EstadoCertificacionTercero`** no se implementó: su único beneficio era dejar la consulta en un viaje, que ya se logró leyendo el vínculo y su certificado en vivo (sin una segunda fuente de verdad que pueda quedar vieja justo en lo que decide un pago); si el entorno dedicado sigue sin dar p99 < 100 ms (o < 50 ms en H11), es el siguiente paso (08 §5, ADR-0007).
 
 ### H10 — Importador y piloto de migración
 

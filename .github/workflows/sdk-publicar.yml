@@ -1,0 +1,154 @@
+# Publicación de los SDK (docs/08 §2.3): al crear un tag `sdk-v<versión>` (p. ej. sdk-v1.2.0) se publican, con la misma versión,
+#   Validasoft.Contratos y Validasoft.Sdk en NuGet.org, y @validasoft/sdk en npm.
+#
+# Antes del primer tag, un administrador del repositorio configura (Settings › Secrets and variables › Actions):
+#   NUGET_API_KEY  API key de nuget.org con permiso «Push new packages and package versions» para Validasoft.*
+#   NPM_TOKEN      token de npm «Automation» (o «Granular» con escritura sobre @validasoft/sdk)
+# y, si quiere una aprobación humana antes de publicar, protege el entorno `publicacion-sdk` (Settings › Environments › Required reviewers).
+# Los secretos nunca se escriben en el repositorio.
+#
+# Para publicar:  node infra/sdk/version.mjs 1.2.0   (fija la versión en los dos manifiestos)
+#                 editar «## [1.2.0]» en src/Validasoft.Sdk/CHANGELOG.md y packages/sdk/CHANGELOG.md
+#                 commit y merge a main;  git tag sdk-v1.2.0 && git push origin sdk-v1.2.0
+name: sdk-publicar
+
+on:
+  push:
+    tags:
+      - "sdk-v*"
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  verificar:
+    name: Verificar y empaquetar
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: El tag, los manifiestos y el CHANGELOG dicen lo mismo
+        id: version
+        run: |
+          node infra/sdk/version.mjs --verificar "$GITHUB_REF_NAME"
+          echo "version=${GITHUB_REF_NAME#sdk-v}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      # El SDK .NET compila también para net7.0 y net8.0: el SDK de .NET 10 los compila sin sus runtimes (solo se ejecutan las
+      # pruebas, que corren en net10.0).
+      - name: Pruebas del SDK .NET
+        run: dotnet test tests/Validasoft.Sdk.Tests/Validasoft.Sdk.Tests.csproj --configuration Release
+
+      - name: Empaquetar NuGet
+        run: |
+          dotnet pack src/Validasoft.Contratos/Validasoft.Contratos.csproj --configuration Release --output artefactos/nuget
+          dotnet pack src/Validasoft.Sdk/Validasoft.Sdk.csproj --configuration Release --output artefactos/nuget
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      - name: Pruebas del SDK TypeScript
+        run: pnpm exec vitest run packages/sdk
+
+      - name: Construir y verificar el paquete npm (ESM y CJS)
+        run: pnpm --filter @validasoft/sdk verificar
+
+      - name: Empaquetar npm
+        working-directory: packages/sdk
+        run: pnpm pack --pack-destination ../../artefactos/npm
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sdk-${{ steps.version.outputs.version }}
+          path: artefactos/
+          retention-days: 30
+
+  nuget:
+    name: Publicar en NuGet
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment: publicacion-sdk
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sdk-${{ needs.verificar.outputs.version }}
+          path: artefactos
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      # Contratos primero: Sdk depende de él. --skip-duplicate hace repetible el workflow si falló a medias.
+      - name: Publicar
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          test -n "$NUGET_API_KEY" || { echo "Falta el secreto NUGET_API_KEY."; exit 1; }
+          for paquete in artefactos/nuget/Validasoft.Contratos.*.nupkg artefactos/nuget/Validasoft.Sdk.*.nupkg; do
+            dotnet nuget push "$paquete" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+          done
+
+  npm:
+    name: Publicar en npm
+    needs: verificar
+    runs-on: ubuntu-latest
+    environment: publicacion-sdk
+    permissions:
+      contents: read
+      id-token: write # procedencia (provenance) del paquete
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: sdk-${{ needs.verificar.outputs.version }}
+          path: artefactos
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Publicar
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN" || { echo "Falta el secreto NPM_TOKEN."; exit 1; }
+          npm publish artefactos/npm/validasoft-sdk-*.tgz --access public --provenance
+
+  release:
+    name: Release en GitHub
+    needs: [verificar, nuget, npm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: sdk-${{ needs.verificar.outputs.version }}
+          path: artefactos
+
+      - name: Crear el release con las notas del CHANGELOG
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verificar.outputs.version }}
+        run: |
+          node infra/sdk/version.mjs --notas "$VERSION" > notas.md
+          gh release create "$GITHUB_REF_NAME" --title "SDK $VERSION" --notes-file notas.md artefactos/nuget/*.nupkg artefactos/npm/*.tgz

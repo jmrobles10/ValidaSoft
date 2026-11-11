@@ -89,7 +89,14 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
         servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
         servicios.AddHostedService<VerificacionDeClaveMaestra>(); // sin clave maestra de secretos la API no arranca (PT-1)
-        servicios.AddSingleton<IEnviadorDeCorreo, EnviadorSmtp>();
+        // El correo pasa primero por EnviadorDeCorreo, que retiene en el buzón del sandbox el de un tenant sandbox (SB-4); solo lo
+        // que sale va al transporte SMTP.
+        servicios.AddSingleton<IEntornos, Sandbox.Entornos>();
+        servicios.AddSingleton<CacheDeEmpresas>(); // la empresa de X-Empresa, 30 s por nodo
+        servicios.AddSingleton<Aplicacion.Integracion.IndiceDeVinculosConsultados>(); // consulta de certificación en un solo viaje (CN-1)
+        servicios.AddSingleton<ITransporteDeCorreo, EnviadorSmtp>();
+        servicios.AddSingleton<IEnviadorDeCorreo, Sandbox.EnviadorDeCorreo>();
+        servicios.AddScoped<Aplicacion.Sandbox.ServicioDeSandbox>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
@@ -157,14 +164,11 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
-        // Validasoft:IA:Proveedor = Simulado: sin red (e2e y demos, PT-6). Por defecto, OpenAI con la llave de cada empresa.
-        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], "Simulado", StringComparison.OrdinalIgnoreCase))
-        // Validasoft:IA:Proveedor = Simulado: analizador determinista que lee marcas del propio archivo (desarrollo y e2e, F5);
-        // por omisión, OpenAI.
-        if (string.Equals(configuracion["Validasoft:IA:Proveedor"], AnalizadorSimulado.Proveedor, StringComparison.OrdinalIgnoreCase))
-            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorSimulado>();
-        else
-            servicios.AddSingleton<IAnalizadorDeDocumentos, AnalizadorOpenAi>();
+        // Validasoft:IA:Proveedor = Simulado: analizador determinista que lee marcas del propio archivo (desarrollo y e2e, F5; PT-6),
+        // sin red. Por omisión, OpenAI con la llave de cada empresa; las llaves de prueba del sandbox van siempre al simulado (SB-4).
+        servicios.AddSingleton<AnalizadorOpenAi>();
+        servicios.AddSingleton<AnalizadorSimulado>();
+        servicios.AddSingleton<IAnalizadorDeDocumentos, Sandbox.AnalizadorPorEntorno>();
         servicios.AgregarPersistencia(configuracion);
 
         servicios.AddAuthentication(EsquemaPorDefecto)

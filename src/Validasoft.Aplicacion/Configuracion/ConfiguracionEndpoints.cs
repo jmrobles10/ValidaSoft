@@ -2,6 +2,7 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Sandbox;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
@@ -60,8 +61,8 @@ public static class EmpresasEndpoints
     /// <summary>Datos y marca (contacto de soporte, color y logo). La identificación, la razón social y el prefijo no cambian.</summary>
     [WolverinePut("/api/v1/empresas/{id}")]
     [Authorize(Policy = Permisos.EmpresasAdministrar)]
-    public static async Task<EmpresaDto> Actualizar(Guid id, ActualizarEmpresaDto dto, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj,
-        CancellationToken ct)
+    public static async Task<EmpresaDto> Actualizar(Guid id, ActualizarEmpresaDto dto, ISesiones sesiones, IContextoSolicitud contexto, CacheDeEmpresas cache,
+        TimeProvider reloj, CancellationToken ct)
     {
         var empresa = await CargarAsync(id, sesiones, contexto, ct);
         var antes = empresa.ADto();
@@ -71,12 +72,14 @@ public static class EmpresasEndpoints
         sesion.Store(empresa);
         Auditoria.Registrar(sesion, contexto, "Empresa", empresa.Id.ToString(), AccionConfiguracion.Modificado, antes, empresa.ADto(), reloj.GetUtcNow(), empresa.Id);
         await sesion.SaveChangesAsync(ct);
+        cache.Olvidar(empresa.Id);
         return empresa.ADto();
     }
 
     [WolverinePost("/api/v1/empresas/{id}/desactivar")]
     [Authorize(Policy = Permisos.EmpresasAdministrar)]
-    public static async Task<EmpresaDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+    public static async Task<EmpresaDto> Desactivar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, CacheDeEmpresas cache, TimeProvider reloj,
+        CancellationToken ct)
     {
         var empresa = await CargarAsync(id, sesiones, contexto, ct);
         var antes = empresa.ADto();
@@ -86,6 +89,7 @@ public static class EmpresasEndpoints
         sesion.Store(empresa);
         Auditoria.Registrar(sesion, contexto, "Empresa", empresa.Id.ToString(), AccionConfiguracion.Desactivado, antes, empresa.ADto(), reloj.GetUtcNow(), empresa.Id);
         await sesion.SaveChangesAsync(ct);
+        cache.Olvidar(empresa.Id); // el corte vale ya en este nodo (en los demás, a lo sumo 30 s)
         return empresa.ADto();
     }
 
@@ -106,8 +110,9 @@ public static class ApiKeysEndpoints
     [WolverinePost("/api/v1/api-keys")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
     public static async Task<IResult> Crear(CrearApiKeyDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves,
-        IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, ServicioDeSandbox sandbox, TimeProvider reloj, CancellationToken ct)
     {
+        ExigirProduccion(contexto);
         var tenantId = contexto.TenantRequerido();
         var ahora = reloj.GetUtcNow();
 
@@ -140,6 +145,10 @@ public static class ApiKeysEndpoints
         if (dto.SistemaId is { } sistemaId && await sesion.LoadAsync<SistemaIntegrado>(sistemaId, ct) is not { Activo: true })
             throw ReglaDeNegocioException.Validacion("sistema-invalido", "El sistema integrado no existe en el tenant o está desactivado.");
 
+        // Una llave de prueba opera en el sandbox del grupo (SB-2): se crea —o se pone al día con las empresas nuevas— al emitirla.
+        if (dto.Sandbox)
+            await sandbox.AsegurarAsync(tenantId, ct);
+
         var (llave, valor) = llaves.Generar(tenant.Slug, dto.Nombre.Trim(), dto.Scopes, empresas, dto.ExpiraEn, dto.Sandbox, ahora);
         llave.SistemaId = dto.SistemaId;
         sesion.Store(llave);
@@ -151,8 +160,9 @@ public static class ApiKeysEndpoints
 
     [WolverineGet("/api/v1/api-keys")]
     [Authorize(Policy = Permisos.ApiKeysAdministrar)]
-    public static async Task<IReadOnlyList<ApiKeyDto>> Listar(ISesiones sesiones, CancellationToken ct)
+    public static async Task<IReadOnlyList<ApiKeyDto>> Listar(ISesiones sesiones, IContextoSolicitud contexto, CancellationToken ct)
     {
+        ExigirProduccion(contexto);
         await using var sesion = sesiones.DelTenant();
         var llaves = await sesion.Query<ApiKey>().Where(k => k.RevocadaEn == null).OrderBy(k => k.CreadaEn).ToListAsync(ct);
         return [.. llaves.Select(k => k.ADto())];
@@ -163,6 +173,7 @@ public static class ApiKeysEndpoints
     public static async Task<IResult> Revocar(Guid id, ISesiones sesiones, IContextoSolicitud contexto, ICacheDeCredenciales cache, TimeProvider reloj,
         CancellationToken ct)
     {
+        ExigirProduccion(contexto);
         await using var sesion = sesiones.DelTenant();
         var llave = await sesion.LoadAsync<ApiKey>(id, ct);
         if (llave is null || llave.RevocadaEn is not null)
@@ -188,6 +199,7 @@ public static class ApiKeysEndpoints
     public static async Task<IResult> Rotar(Guid id, RotarApiKeyDto dto, ISesiones sesiones, IGeneradorDeApiKeys llaves, IContextoSolicitud contexto,
         ICacheDeCredenciales cache, TimeProvider reloj, CancellationToken ct)
     {
+        ExigirProduccion(contexto);
         var tenantId = contexto.TenantRequerido();
         await using var sesion = sesiones.DelTenant();
         var anterior = await sesion.LoadAsync<ApiKey>(id, ct);
@@ -214,6 +226,17 @@ public static class ApiKeysEndpoints
         cache.Olvidar(anterior.Id);
 
         return Results.Created($"/api/v1/api-keys/{nueva.Id}", nueva.ADto(valor));
+    }
+
+    /// <summary>
+    /// Las API keys —también las de prueba— viven en el grupo de producción y se administran con sus credenciales: una credencial del
+    /// sandbox (SB-2) no las crea, lista, rota ni revoca. 422 <c>no-disponible-en-sandbox</c>.
+    /// </summary>
+    private static void ExigirProduccion(IContextoSolicitud contexto)
+    {
+        if (contexto.EsSandbox)
+            throw ReglaDeNegocioException.Validacion("no-disponible-en-sandbox",
+                "Las API keys se administran con las credenciales de producción del grupo (también las de prueba); esta credencial opera en el sandbox.");
     }
 
     /// <summary>Una credencial no puede emitir (ni rotar) una llave con más empresas que las suyas (anti-escalada).</summary>

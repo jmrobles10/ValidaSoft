@@ -124,10 +124,10 @@ public static class VerificacionPublicaEndpoints
     [WolverineGet("/public/v1/verificar/{folio}")]
     [AllowAnonymous]
     public static async Task<CertificadoPublicoDto> Verificar(string folio, string? huella, ISesiones sesiones, EmisorDeCertificados emisor,
-        HttpContext http, CancellationToken ct)
+        IEntornos entornos, HttpContext http, CancellationToken ct)
     {
         await using var consulta = sesiones.ConsultaGlobal();
-        var (certificado, emision) = await BuscarAsync(consulta, folio, huella, ct);
+        var (certificado, emision) = await BuscarAsync(consulta, entornos, folio, huella, ct);
         http.Response.Headers.CacheControl = "no-store";
         return certificado.APublico(emision, await consulta.LoadAsync<Empresa>(certificado.EmpresaId, ct), emisor);
     }
@@ -140,12 +140,12 @@ public static class VerificacionPublicaEndpoints
     [WolverinePost("/public/v1/verificar/{folio}/descarga")]
     [AllowAnonymous]
     public static async Task<DescargaDto> Descargar(string folio, string? huella, ISesiones sesiones, HttpContext http, ArchivoDeCertificados archivo,
-        IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
+        IAlmacenDeArchivos almacen, ReglasDeCarga reglas, IEntornos entornos, TimeProvider reloj, CancellationToken ct)
     {
         Certificado certificado;
         EmisionDeCertificado emision;
         await using (var consulta = sesiones.ConsultaGlobal())
-            (certificado, emision) = await BuscarAsync(consulta, folio, huella, ct);
+            (certificado, emision) = await BuscarAsync(consulta, entornos, folio, huella, ct);
         if (emision.Estado != EstadoCertificado.Vigente)
             throw ReglaDeNegocioException.Conflicto("certificado-no-vigente", $"El certificado está {emision.Estado}: su PDF no se entrega.");
 
@@ -176,7 +176,7 @@ public static class VerificacionPublicaEndpoints
             ]);
     }
 
-    private static async Task<(Certificado, EmisionDeCertificado)> BuscarAsync(IQuerySession consulta, string folio, string? huella,
+    private static async Task<(Certificado, EmisionDeCertificado)> BuscarAsync(IQuerySession consulta, IEntornos entornos, string folio, string? huella,
         CancellationToken ct)
     {
         var leido = FoliosDeCertificado.Leer(folio) ?? throw CertificadosEndpoints.NoEncontrado();
@@ -185,7 +185,14 @@ public static class VerificacionPublicaEndpoints
             throw ReglaDeNegocioException.Validacion("huella-invalida", "La huella son 12 caracteres hexadecimales (xxxx·xxxx·xxxx).");
 
         var raiz = leido.Raiz;
-        var candidatos = await consulta.Query<Certificado>().Where(c => c.AnyTenant() && c.FolioRaiz == raiz).ToListAsync(ct);
+        var todos = await consulta.Query<Certificado>().Where(c => c.AnyTenant() && c.FolioRaiz == raiz).ToListAsync(ct);
+
+        // Un certificado de un sandbox (SB-4) no es verificable: ni lo encuentra ni cuenta para decidir si el folio es ambiguo.
+        var candidatos = new List<Certificado>(todos.Count);
+        foreach (var certificado in todos)
+            if (!await entornos.EsSandboxAsync(certificado.Tenant, ct))
+                candidatos.Add(certificado);
+
         var coincidencias = candidatos
             .SelectMany(c => Emisiones(c, leido.Emision, prefijo).Select(e => (Certificado: c, Emision: e)))
             .Where(x => prefijo is null || x.Emision.HashContenido.StartsWith(prefijo, StringComparison.Ordinal))
@@ -311,7 +318,7 @@ public static class ListaDeCertificadosEndpoints
                 var tercero = terceros.GetValueOrDefault(c.TerceroId);
                 var tipo = vinculos.TryGetValue(c.VinculoId, out var vinculo) ? tipos.GetValueOrDefault(vinculo.TipoVinculoId) : null;
                 return new FilaCertificadoDto(c.Id, actual.Folio, actual.Numero, c.VinculoId,
-                    new TerceroResumenDto(c.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.ClaveIdentificacion ?? string.Empty),
+                    new TerceroResumenDto(c.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.Identificacion.Clave ?? string.Empty),
                     new TipoVinculoResumenDto(tipo?.Id ?? Guid.Empty, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
                     c.Estado.ToString(), c.Bloqueante, actual.EmitidoEn, actual.VigenteHasta, actual.EstadoDesde);
             })

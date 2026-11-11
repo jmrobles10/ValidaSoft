@@ -208,6 +208,54 @@ public sealed class ClienteValidasoftTests
     }
 
     [Fact]
+    public async Task El_sandbox_se_consulta_sin_empresa_y_su_buzon_se_filtra_y_se_espera()
+    {
+        var (cliente, servidor) = Crear();
+        var empresaDePrueba = Guid.NewGuid();
+        var sandbox = new
+        {
+            existe = true, entorno = "produccion", tenantId = Guid.NewGuid(), creadoEn = DateTimeOffset.UtcNow, reiniciadoEn = (DateTimeOffset?)null,
+            empresas = new[] { new { id = empresaDePrueba, produccionId = Empresa, nombre = "Norte (sandbox)", prefijoFolio = "TN", activa = true } },
+            sistemas = new[] { "SRM" }, correos = 0
+        };
+        servidor.Responder(HttpStatusCode.OK, sandbox);
+        servidor.Responder(HttpStatusCode.Created, sandbox);
+        servidor.Responder(HttpStatusCode.OK, sandbox);
+
+        var estado = await cliente.Sandbox.ObtenerAsync();
+        await cliente.Sandbox.AsegurarAsync();
+        await cliente.Sandbox.ReiniciarAsync();
+
+        estado.Empresas.Single().Id.ShouldBe(empresaDePrueba);
+        estado.Sistemas.ShouldBe(["SRM"]);
+        servidor.Recibidas.Select(r => (r.Peticion.Method.Method, r.Peticion.RequestUri!.AbsolutePath)).ShouldBe(
+            [("GET", "/api/v1/sandbox"), ("POST", "/api/v1/sandbox"), ("POST", "/api/v1/sandbox/reiniciar")]);
+        // Son rutas de la credencial, no de una empresa: no llevan X-Empresa.
+        servidor.Recibidas.ShouldAllBe(r => Cabecera(r.Peticion, "X-Empresa") == null);
+
+        object Correo(string para) => new
+        {
+            id = Guid.NewGuid(), para, asunto = "Te invitan", texto = "https://valida.acme.co/e/abc", html = "<p>x</p>",
+            enlaces = new[] { "https://valida.acme.co/e/abc" }, recibidoEn = DateTimeOffset.UtcNow
+        };
+
+        // Sin el correo todavía: la espera consulta de nuevo y lo devuelve cuando llega.
+        servidor.Responder(HttpStatusCode.OK, new { datos = Array.Empty<object>(), siguienteCursor = (string?)null });
+        servidor.Responder(HttpStatusCode.OK, new { datos = new[] { Correo("ana@aceros.co") }, siguienteCursor = (string?)null });
+        var correo = await cliente.Sandbox.EsperarCorreoAsync("ana@aceros.co", "invita", TimeSpan.FromSeconds(5));
+        correo.Enlaces.ShouldBe(["https://valida.acme.co/e/abc"]);
+        servidor.Recibidas[^1].Peticion.RequestUri!.Query.ShouldBe("?para=ana%40aceros.co&asunto=invita&limite=1");
+
+        // Si nunca llega, TimeoutException.
+        servidor.Responder(HttpStatusCode.OK, new { datos = Array.Empty<object>(), siguienteCursor = (string?)null });
+        await Should.ThrowAsync<TimeoutException>(() => cliente.Sandbox.EsperarCorreoAsync("nadie@aceros.co", espera: TimeSpan.Zero));
+
+        servidor.Responder(HttpStatusCode.NoContent);
+        await cliente.Sandbox.VaciarCorreosAsync();
+        (servidor.Recibidas[^1].Peticion.Method, servidor.Recibidas[^1].Peticion.RequestUri!.AbsolutePath).ShouldBe((HttpMethod.Delete, "/api/v1/sandbox/correos"));
+    }
+
+    [Fact]
     public void Sin_api_key_no_se_construye()
     {
         Should.Throw<ArgumentException>(() => new ClienteValidasoft(new HttpClient(), new OpcionesValidasoft { UrlBase = new Uri("https://x.co") }));

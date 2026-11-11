@@ -39,6 +39,7 @@ export * from './recalculo-de-fichas/recalculo-de-fichas';
 export * from './recordatorios-automaticos/recordatorios-automaticos';
 export * from './recordatorios-de-observaciones/recordatorios-de-observaciones';
 export * from './revalidaciones/revalidaciones';
+export * from './sandbox/sandbox';
 export * from './secretos/secretos';
 export * from './sesiones-usuario/sesiones-usuario';
 export * from './sistemas/sistemas';
