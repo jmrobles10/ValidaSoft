@@ -88,6 +88,48 @@ public static class Peticiones
         }
     }
 
+    /// <summary>
+    /// Reintenta una operación que borra muchas filas a la vez (reinicio del sandbox) mientras otros procesos siguen escribiendo en lo
+    /// mismo, cuando PostgreSQL la aborta por ese cruce (<see cref="EsConflictoDeBorrado"/>). La transacción abortada se revierte
+    /// completa, así que repetirla es seguro; cada intento debe abrir su propia sesión o conexión. Un error de otra clase, o el último
+    /// intento, se propaga.
+    /// </summary>
+    public static async Task ReintentarSiHayConflictoAsync(Func<Task> accion, CancellationToken ct = default, int intentos = 8)
+    {
+        for (var intento = 1; ; intento++)
+        {
+            try
+            {
+                await accion();
+                return;
+            }
+            catch (Exception e) when (intento < intentos && EsConflictoDeBorrado(e))
+            {
+                await Task.Delay(Random.Shared.Next(25, 100 * intento), ct);
+            }
+        }
+    }
+
+    /// <summary>
+    /// PostgreSQL abortó la transacción por un interbloqueo (<c>40P01</c>) o un fallo de serialización (<c>40001</c>): otra transacción
+    /// tomó las mismas filas en otro orden. No cambió nada y volver a intentarla es seguro. Marten puede envolver el error.
+    /// </summary>
+    public static bool EsInterbloqueo(Exception e) =>
+        TieneEstadoSql(e, Npgsql.PostgresErrorCodes.DeadlockDetected, Npgsql.PostgresErrorCodes.SerializationFailure);
+
+    /// <summary>
+    /// Un borrado masivo perdió contra la actividad concurrente: un interbloqueo (<see cref="EsInterbloqueo"/>) o una llave foránea
+    /// (<c>23503</c>) porque otro proceso agregó un evento a un flujo entre que se borraron los eventos y se iba a borrar el flujo.
+    /// </summary>
+    public static bool EsConflictoDeBorrado(Exception e) => EsInterbloqueo(e) || TieneEstadoSql(e, Npgsql.PostgresErrorCodes.ForeignKeyViolation);
+
+    private static bool TieneEstadoSql(Exception e, params string[] estados) => e switch
+    {
+        Npgsql.PostgresException postgres => estados.Contains(postgres.SqlState),
+        AggregateException agregada => agregada.InnerExceptions.Any(interna => TieneEstadoSql(interna, estados)),
+        _ => e.InnerException is not null && TieneEstadoSql(e.InnerException, estados)
+    };
+
     /// <summary>La escritura perdió una carrera (concurrencia optimista, stream o clave única).</summary>
     public static bool EsCarrera(Exception e) =>
         e is ConcurrencyException or EventStreamUnexpectedMaxEventIdException or DocumentAlreadyExistsException ||

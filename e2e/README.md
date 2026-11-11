@@ -12,6 +12,8 @@ Con una API ya levantada que sirva las dos apps: `E2E_BASE_URL=http://localhost:
 
 En local las pruebas corren **aisladas** del entorno de desarrollo: base `validasoft_e2e` (se crea sola) y Mailpit propio (perfil `e2e` del compose, bandeja en http://localhost:8026). Así sus invitaciones y códigos no llegan al Mailpit de desarrollo, y la API de desarrollo no toma sus mensajes de la cola. Para usar la base y el Mailpit de desarrollo: `E2E_COMPARTIDO=1`. Para correr dos suites a la vez: otro `E2E_PUERTO` y otra `E2E_BASE_DATOS` (letras minúsculas y guion bajo). En CI no hace falta: el entorno ya es limpio.
 
+Para correr **exactamente lo del CI**, en un contenedor Linux y con los servicios en una red propia (sin tocar ningún puerto de la máquina), usa la réplica local: `infra/ci-local/ci-local.sh --solo e2e` (ver `infra/ci-local/README.md`).
+
 ## Cómo se arma cada caso
 
 - **Empresa** (`soporte/semilla.ts`): grupo con Constructora Norte (Compras y Cumplimiento; Cumplimiento puede rechazar) y Constructora Sur (Revisión), el sistema integrado E2E con sus claves y personas con roles distintos.
