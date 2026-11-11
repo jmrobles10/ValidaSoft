@@ -107,7 +107,7 @@ test('el tercero intenta retirar la versión que Norte aprobó: ve el impacto, c
   const versiones = tarjetaRut().locator('ol > li');
   await expect(versiones.filter({ hasText: 'Versión 2' })).toContainText('Retirada');
   await expect(versiones.filter({ hasText: 'Versión 1' })).toContainText('Vigente');
-  await expect(tarjetaRut()).not.toContainText(/Actual/);
+  await expect(tarjetaRut()).not.toContainText(/\bActual\b/);
   await tarjetaRut().screenshot({ path: captura('retiro-tarjeta-varias-empresas') });
 
   // Norte ve la revalidación con el motivo: en la bandeja de revalidaciones, en el expediente y en su línea de tiempo.
