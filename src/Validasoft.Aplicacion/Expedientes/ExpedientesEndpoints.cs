@@ -57,11 +57,11 @@ public static class ExpedientesEndpoints
         return Results.Created($"/api/v1/expedientes/{resultado.Id}", resultado);
     }
 
-    /// <summary>Lista con filtros por estado, área y vínculo; cursor opaco.</summary>
+    /// <summary>Lista con filtros por estado, área, vínculo y <c>desaprobados</c> (los devueltos a revisión por un administrador); cursor opaco.</summary>
     [WolverineGet("/api/v1/expedientes")]
     [Authorize(Policy = Permisos.ExpedientesLeer)]
-    public static async Task<PaginaDto<ExpedienteDto>> Listar(SesionDeEmpresa empresa, string? estado, Guid? area, Guid? vinculoId, int? limite,
-        string? cursor, CancellationToken ct)
+    public static async Task<PaginaDto<ExpedienteDto>> Listar(SesionDeEmpresa empresa, string? estado, Guid? area, Guid? vinculoId, bool? desaprobados,
+        int? limite, string? cursor, CancellationToken ct)
     {
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
         var desde = Peticiones.LeerDesplazamiento(cursor);
@@ -78,6 +78,9 @@ public static class ExpedientesEndpoints
             consulta = consulta.Where(e => e.AreaIds.Contains(areaId));
         if (vinculoId is { } vinculo)
             consulta = consulta.Where(e => e.VinculoId == vinculo);
+        // Los que un administrador devolvió a revisión alguna vez (DS-1, DS-2): la bandeja de desaprobados.
+        if (desaprobados == true)
+            consulta = consulta.Where(e => e.Desaprobaciones > 0);
 
         var pagina = await consulta.OrderBy(e => e.AbiertoEn).ThenBy(e => e.Id).Skip(desde).Take(tamano + 1).ToListAsync(ct);
         var siguiente = pagina.Count > tamano ? Peticiones.EscribirDesplazamiento(desde + tamano) : null;
@@ -287,6 +290,85 @@ public static class ExpedientesEndpoints
             var eventos = stream.Aggregate!.AnularVeredicto(areaId, dto.VeredictoId, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
             return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
         });
+    }
+
+    /// <summary>
+    /// Reabre una etapa ya aprobada de un expediente en revisión o devuelto al tercero (DS-1, <c>DesaprobarAFlujo</c> del SRM): sus
+    /// áreas vuelven a quedar pendientes y las etapas posteriores esperan; los veredictos de esas etapas dejan de contar (quedan
+    /// en el historial). Justificación obligatoria.
+    /// </summary>
+    [WolverinePost("/api/v1/expedientes/{id}/etapas/{orden}/reabrir")]
+    [Authorize(Policy = Permisos.ExpedientesAdministrar)]
+    public static async Task<ExpedienteDto> ReabrirEtapa(Guid id, int orden, JustificacionDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate!, ct);
+            var eventos = stream.Aggregate!.ReabrirEtapa(orden, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarDevolucionAsync(empresa, stream, eventos, contexto, mensajes, protector, http, reloj, ct);
+        });
+    }
+
+    /// <summary>
+    /// Desaprueba un expediente ya aprobado (DS-2, <c>DesaprobarTercero</c> del SRM): el mismo expediente vuelve a revisión desde
+    /// <c>etapa</c> (por omisión la última), el vínculo pasa a <c>EnValidacion</c> y su certificado se revoca, todo en la misma
+    /// transacción. 409 si el vínculo está bloqueado o terminado, tiene otro expediente abierto o este no es su último aprobado.
+    /// </summary>
+    [WolverinePost("/api/v1/expedientes/{id}/desaprobar")]
+    [Authorize(Policy = Permisos.ExpedientesAdministrar)]
+    public static async Task<ExpedienteDto> Desaprobar(Guid id, DesaprobarExpedienteDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            var eventos = stream.Aggregate!.Desaprobar(dto.Etapa, contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarDevolucionAsync(empresa, stream, eventos, contexto, mensajes, protector, http, reloj, ct);
+        });
+    }
+
+    /// <summary>
+    /// Devuelve todo el expediente a su fase inicial (DS-1, <c>DesaprobarAEstadoInicial</c> del SRM): los veredictos vigentes
+    /// dejan de contar y las etapas se repiten desde la primera. En revisión, devuelto al tercero o ya aprobado (entonces es
+    /// también una desaprobación, DS-2).
+    /// </summary>
+    [WolverinePost("/api/v1/expedientes/{id}/fase-inicial")]
+    [Authorize(Policy = Permisos.ExpedientesAdministrar)]
+    public static async Task<ExpedienteDto> VolverAFaseInicial(Guid id, JustificacionDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        HttpContext http, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        return await empresa.ReintentarAnteCarreraAsync(async () =>
+        {
+            var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
+            if (stream.Aggregate!.Estado != EstadoExpediente.Aprobado)
+                await AsegurarVinculoNoBloqueadoAsync(empresa, stream.Aggregate, ct);
+            var eventos = stream.Aggregate.VolverAFaseInicial(contexto.ActorId, dto.Justificacion, reloj.GetUtcNow());
+            return await GuardarDevolucionAsync(empresa, stream, eventos, contexto, mensajes, protector, http, reloj, ct);
+        });
+    }
+
+    /// <summary>
+    /// Guarda una devolución a revisión. Si deshizo la aprobación del expediente, el vínculo y el certificado cambian en la misma
+    /// transacción (<see cref="ProcesoDeValidacion.DesaprobarAsync"/>); si no, es una decisión más del expediente.
+    /// </summary>
+    private static async Task<ExpedienteDto> GuardarDevolucionAsync(SesionDeEmpresa empresa, JasperFx.Events.IEventStream<Expediente> stream,
+        IReadOnlyList<object> eventos, IContextoSolicitud contexto, IMessageBus mensajes, IProtectorDeSecretos protector, HttpContext http,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        if (!eventos.OfType<ExpedienteDesaprobado>().Any())
+            return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
+
+        await ProcesoDeValidacion.DesaprobarAsync(empresa.Sesion, stream, eventos, contexto.ActorId, new CorreoAlTercero(mensajes, protector),
+            empresa.Certificados, reloj.GetUtcNow(), ct);
+        await empresa.Sesion.SaveChangesAsync(ct);
+        var detalle = await DetalleAsync(empresa, stream.Id, ct);
+        Peticiones.EscribirETag(http, detalle.Version);
+        return detalle;
     }
 
     private static Veredicto LeerVeredicto(VeredictoDto dto) =>

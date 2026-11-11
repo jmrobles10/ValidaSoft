@@ -63,6 +63,7 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/vinculos/{id}/desbloquear': 'desbloquearVinculo',
   'POST /api/v1/vinculos/{id}/desvincular': 'desvincularVinculo',
   'POST /api/v1/vinculos/{id}/reintegrar': 'reintegrarVinculo',
+  'GET /api/v1/vinculos/{id}/reintegro': 'obtenerViabilidadDeReintegro',
   'POST /api/v1/vinculos/{id}/anular': 'anularVinculo',
   'GET /api/v1/vinculos/{id}/historial': 'obtenerHistorialVinculo',
   'POST /api/v1/plataforma/tenants': 'crearTenant',
@@ -168,6 +169,10 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/expedientes/{id}/rechazar': 'rechazarExpediente',
   'POST /api/v1/expedientes/{id}/reenviar': 'reenviarExpediente',
   'POST /api/v1/expedientes/{id}/anular': 'anularExpediente',
+  // Desaprobar (DS-1, DS-2): reabrir una etapa aprobada, desaprobar un expediente aprobado y volver a la fase inicial.
+  'POST /api/v1/expedientes/{id}/etapas/{orden}/reabrir': 'reabrirEtapaExpediente',
+  'POST /api/v1/expedientes/{id}/desaprobar': 'desaprobarExpediente',
+  'POST /api/v1/expedientes/{id}/fase-inicial': 'volverAFaseInicialExpediente',
   'GET /api/v1/bandeja': 'listarBandeja',
   'GET /api/v1/bandeja/aperturas-pendientes': 'listarAperturasPendientes',
   'GET /api/v1/revalidaciones': 'listarRevalidaciones',
@@ -229,6 +234,8 @@ const NOMBRES: Record<string, string> = {
   'POST /public/v1/boveda/cuentas-bancarias': 'registrarCuentaBancaria',
   'POST /public/v1/boveda/cuentas-bancarias/{id}/retirar': 'retirarCuentaBancaria',
   'POST /public/v1/vinculos/{id}/cuenta-designada': 'designarCuenta',
+  // Reinicio tras un rechazo (DS-4): el tercero vuelve a postularse.
+  'POST /public/v1/vinculos/{id}/reintentar': 'reintentarPostulacion',
   'GET /api/v1/vinculos/{id}/cuenta-designada': 'obtenerCuentaDesignada',
   'GET /api/v1/vinculos/{id}/ficha': 'obtenerFichaDelVinculo',
   'POST /api/v1/vinculos/{id}/cuenta-designada/aprobar': 'aprobarCuentaDesignada',

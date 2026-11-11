@@ -238,6 +238,8 @@ public static partial class ExportacionDeExpedienteEndpoints
         ExpedienteRechazado r => $"Expediente rechazado: {r.Justificacion}",
         ExpedienteAnulado a => $"Expediente anulado: {a.Motivo}",
         VeredictoAnuladoPorAdministrador a => $"Veredicto anulado: {a.Justificacion}",
+        EtapaReabierta e => $"{(e.FaseInicial ? "Vuelve a la fase inicial" : $"Etapa {e.Orden} reabierta")}: {e.Justificacion}",
+        ExpedienteDesaprobado d => $"Expediente desaprobado ({(d.FaseInicial ? "fase inicial" : $"desde la etapa {d.Orden}")}): {d.Justificacion}",
         _ => Separar(datos.GetType().Name)
     };
 

@@ -64,7 +64,7 @@ public sealed record CondicionDto(
 public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
     bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
-    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null);
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
@@ -73,12 +73,18 @@ public sealed record CrearFlujoDto(
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
     IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null,
-    PlazoCargueDto? PlazoCargue = null);
+    PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
     DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
-    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null);
+    IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null);
+
+/// <summary>
+/// Reintento del tercero tras un rechazo (DS-4): con <see cref="Permitido"/> el tercero rechazado ve los motivos en su portal y
+/// puede «Volver a postularse» pasados <see cref="DiasEspera"/> días desde el rechazo (0 = de inmediato). Por defecto no se permite.
+/// </summary>
+public sealed record ReintentoDto(bool Permitido, int DiasEspera = 0);
 
 /// <summary>Flujo con su versión publicada y su borrador (si existen) y si es el flujo por defecto de su tipo de vínculo.</summary>
 public sealed record FlujoDto(
@@ -102,12 +108,13 @@ public sealed record TerceroResumenDto(Guid Id, string Nombre, string Identifica
 /// <see cref="Superado"/>: dejó de contar porque el tercero reenvió tras la observación (o se eximió el requisito).
 /// En un requisito: <see cref="SobreVersion"/> (número de la versión decidida) e <see cref="Invalidado"/> (llegó una
 /// versión nueva). <see cref="Derivado"/>: aprobación del área que el sistema dedujo de sus requisitos. <see cref="Campos"/>:
-/// campos de la sección señalados al observarla (F2).
+/// campos de la sección señalados al observarla (F2). <see cref="Revertido"/>: un administrador devolvió a revisión la etapa del
+/// área (reapertura, fase inicial o desaprobación, DS-1): ya no cuenta.
 /// </summary>
 public sealed record VeredictoEmitidoDto(
     Guid Id, string Veredicto, string Origen, string? Usuario, DateTimeOffset Fecha, IReadOnlyList<string> Motivos, string? Observacion,
     string? Justificacion, bool Vigente, bool Superado, bool Anulado, string? AnuladoPor, int? SobreVersion = null, bool Invalidado = false,
-    bool Derivado = false, IReadOnlyList<string>? Campos = null);
+    bool Derivado = false, IReadOnlyList<string>? Campos = null, bool Revertido = false);
 
 /// <summary>
 /// Documento (o sección de la ficha, F2) que «Aprobar área» decidiría y la versión vigente que debe acompañarlo en
@@ -213,7 +220,22 @@ public sealed record ExpedienteDto(
     IReadOnlyList<RequisitoExpedienteDto>? Requisitos = null,
     IReadOnlyList<VerificacionDto>? Verificaciones = null,
     bool EsperandoVerificaciones = false,
-    PlazoCargueExpedienteDto? PlazoCargue = null);
+    PlazoCargueExpedienteDto? PlazoCargue = null,
+    int Desaprobaciones = 0,
+    DesaprobacionDto? UltimaDesaprobacion = null);
+
+/// <summary>
+/// Última vez que un administrador devolvió a revisión lo ya decidido del expediente (DS-1, DS-2). <see cref="Alcance"/>:
+/// <c>Etapa</c> (reabrió una etapa aprobada), <c>FaseInicial</c> (repite todo el flujo) o <c>ExpedienteAprobado</c> (deshizo la
+/// aprobación del expediente). <see cref="Etapa"/>: la etapa desde la que se revisa de nuevo.
+/// </summary>
+public sealed record DesaprobacionDto(int Etapa, string Alcance, string Usuario, string Justificacion, DateTimeOffset Fecha);
+
+/// <summary>
+/// Desaprueba un expediente ya aprobado (DS-2): vuelve a revisión desde <see cref="Etapa"/> (por omisión la última etapa, la que
+/// lo cerró; la primera equivale a volver a la fase inicial). La justificación es obligatoria y queda en el historial.
+/// </summary>
+public sealed record DesaprobarExpedienteDto(string Justificacion, int? Etapa = null);
 
 /// <summary>
 /// <see cref="Veredicto"/>: <c>Aprobado</c> u <c>Observado</c>. El área (y el requisito) van en la ruta.

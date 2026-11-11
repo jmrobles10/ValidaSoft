@@ -6,6 +6,7 @@
  */
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { EstadoVinculo } from './estadoVinculo';
+import type { ReintentoPublicoDto } from './reintentoPublicoDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
 
 export interface VinculoPublicoDto {
@@ -18,4 +19,5 @@ export interface VinculoPublicoDto {
   invitacionAceptadaEn: string | null;
   /** @nullable */
   expedienteId?: string | null;
+  reintento?: null | ReintentoPublicoDto;
 }

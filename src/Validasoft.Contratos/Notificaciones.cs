@@ -43,7 +43,7 @@ public sealed record DatosInvitacionAceptadaDto(
 
 /// <summary>
 /// <c>vinculo.activado</c> · <c>vinculo.bloqueado</c> · <c>vinculo.desbloqueado</c> · <c>vinculo.desvinculado</c> ·
-/// <c>vinculo.anulado</c>: estado resultante y el anterior (si se conoce), motivo o justificación, fin del bloqueo y el
+/// <c>vinculo.reintegrado</c> · <c>vinculo.anulado</c>: estado resultante y el anterior (si se conoce), motivo o justificación, fin del bloqueo y el
 /// expediente que activó el vínculo.
 /// </summary>
 /// <summary>
@@ -63,15 +63,17 @@ public sealed record DatosReferenciaAgregadaDto(Guid VinculoId, IReadOnlyList<Re
 
 /// <summary>
 /// <c>expediente.abierto</c> · <c>expediente.en_revision</c> · <c>expediente.observado</c> · <c>expediente.reenviado</c> ·
-/// <c>expediente.aprobado</c> · <c>expediente.rechazado</c> · <c>expediente.caducado</c> · <c>expediente.reabierto</c>. <see cref="Estado"/>
-/// es el del expediente tras el evento; <see cref="PlazoHasta"/> (caducado, reabierto): el plazo de cargue que venció o el nuevo.
+/// <c>expediente.aprobado</c> · <c>expediente.rechazado</c> · <c>expediente.caducado</c> · <c>expediente.reabierto</c> ·
+/// <c>expediente.desaprobado</c>. <see cref="Estado"/> es el del expediente tras el evento; <see cref="PlazoHasta"/> (caducado, reabierto): el plazo de cargue que venció o el nuevo.
 /// <see cref="Causa"/> (en_revision): <c>CargaCompleta</c> o <c>RevisionReanudada</c>; (reenviado): <c>Tercero</c> o
-/// <c>Integrador</c>. <see cref="Requisitos"/>: observados (observado) o reabiertos (reenviado).
+/// <c>Integrador</c>; (desaprobado): <c>EtapaReabierta</c>, <c>FaseInicial</c> o <c>ExpedienteAprobado</c> (deshizo la aprobación), con la
+/// <see cref="Justificacion"/> y la <see cref="Etapa"/> desde la que se revisa de nuevo. <see cref="Requisitos"/>: observados
+/// (observado) o reabiertos (reenviado).
 /// </summary>
 public sealed record DatosExpedienteDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string TipoExpediente, string Estado,
     string? Causa = null, IReadOnlyList<RequisitoEnEventoDto>? Requisitos = null, IReadOnlyList<MotivoEnEventoDto>? Motivos = null,
-    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null, DateTimeOffset? PlazoHasta = null);
+    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null, DateTimeOffset? PlazoHasta = null, int? Etapa = null);
 
 /// <summary>
 /// <c>documento.compartido</c> · <c>documento.por_vencer</c> · <c>documento.vencido</c>. <see cref="Tipo"/>: código del

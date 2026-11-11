@@ -89,6 +89,9 @@ public sealed class VeredictoRegistrado
 
     public bool Anulado { get; set; }
 
+    /// <summary>Un administrador devolvió a revisión la etapa de esta área (reapertura, fase inicial o desaprobación, DS-1): ya no cuenta.</summary>
+    public bool Revertido { get; set; }
+
     public string? AnuladoPor { get; set; }
 
     public string? JustificacionAnulacion { get; set; }
@@ -816,6 +819,8 @@ public sealed partial class Expediente
             case RecordatorioDeCargueEnviado e: Apply(e); break;
             case ExpedienteCaducado e: Apply(e); break;
             case ExpedienteReabierto e: Apply(e); break;
+            case ExpedienteDesaprobado e: Apply(e); break;
+            case EtapaReabierta e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento desconocido para el expediente: {evento.GetType().Name}.");
         }
     }

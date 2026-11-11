@@ -31,7 +31,7 @@ public static class MapeosDeValidacion
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
                     r.AprobadoresRequeridos, r.Condicion?.ADto(), UsarComoSoporte: r.UsarComoSoporte))],
             [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
-            v.PlazoEfectivo().ADto());
+            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto());
 
     /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
     public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
@@ -40,6 +40,10 @@ public static class MapeosDeValidacion
                 : throw ReglaDeNegocioException.Validacion("verificacion-invalida",
                     $"«{v.Tipo}» no es una verificación ({string.Join(", ", Enum.GetNames<TipoVerificacion>())})."),
             v.Bloqueante, v.VigenciaDias, v.FrecuenciaReconsultaMeses);
+
+    public static ReintentoDto ADto(this ReintentoTrasRechazo r) => new(r.Permitido, r.DiasEspera);
+
+    public static ReintentoTrasRechazo ADominio(this ReintentoDto r) => new(r.Permitido, r.DiasEspera);
 
     public static PlazoCargueDto ADto(this PlazoDeCargue p) => new(p.Dias, [.. p.Recordatorios]);
 
@@ -95,7 +99,10 @@ public static class MapeosDeValidacion
     public static VeredictoEmitidoDto ADto(this VeredictoRegistrado v) =>
         new(v.Id, v.Veredicto.ToString(), v.Origen.ToString(), v.RevisorId, v.Fecha, [.. v.Motivos.Select(m => m.Codigo)], v.Observacion,
             v.Justificacion, v.Vigente, v.Superado, v.Anulado, v.AnuladoPor, v.SobreVersion, v.Invalidado, v.Derivado,
-            v.Campos.Count > 0 ? [.. v.Campos] : null);
+            v.Campos.Count > 0 ? [.. v.Campos] : null, v.Revertido);
+
+    public static DesaprobacionDto ADto(this DesaprobacionDeExpediente d) =>
+        new(d.Etapa, d.ExpedienteAprobado ? "ExpedienteAprobado" : d.FaseInicial ? "FaseInicial" : "Etapa", d.AdministradorId, d.Justificacion, d.Fecha);
 
     /// <summary>
     /// <paramref name="miembros"/>: miembros actuales de cada área (para listar quién falta por pronunciarse).
@@ -120,7 +127,9 @@ public static class MapeosDeValidacion
             [.. e.Requisitos.Select(r => r.ADto(e, documentacion))],
             [.. e.Verificaciones.Select(v => v.ADto())],
             e.EsperandoVerificaciones,
-            e.PlazoDto());
+            e.PlazoDto(),
+            e.Desaprobaciones,
+            e.UltimaDesaprobacion?.ADto());
 
     /// <summary>Plazo de cargue del expediente inicial (LT-2); nulo si no tiene (otros tipos, o un flujo sin plazo).</summary>
     public static PlazoCargueExpedienteDto? PlazoDto(this Expediente e) =>

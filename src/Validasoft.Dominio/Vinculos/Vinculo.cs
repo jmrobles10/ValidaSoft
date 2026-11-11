@@ -73,6 +73,12 @@ public sealed partial class Vinculo
     public ResultadoExpediente? UltimoResultado { get; set; }
 
     /// <summary>
+    /// Estado que tenía al desvincularse (el previo al bloqueo si estaba bloqueado): con él se sabe si se puede reintegrar sin
+    /// revalidar (DS-3). Nulo mientras no esté desvinculado.
+    /// </summary>
+    public EstadoVinculo? EstadoAlDesvincular { get; set; }
+
+    /// <summary>
     /// El tercero aceptó pero no se pudo abrir el expediente (no había flujo explícito ni por defecto publicado): un
     /// administrador debe abrirlo (FL-6). Derivado; no es un estado ni un evento.
     /// </summary>
@@ -256,16 +262,49 @@ public sealed partial class Vinculo
     }
 
     /// <summary>
-    /// Desde <c>Desvinculado</c>: si alguna vez fue aprobado vuelve a validación (renovación); si no, a
-    /// <c>Invitado</c> para empezar de nuevo.
+    /// Desde <c>Desvinculado</c>: si alguna vez fue aprobado vuelve a validación (renovación con todos los documentos); si
+    /// no, a <c>Invitado</c> para empezar de nuevo. Con <paramref name="sinRevalidar"/> (DS-3) restituye el estado que tenía al
+    /// desvincularse sin abrir expediente, solo si estaba <c>Activo</c> o <c>PorVencer</c>
+    /// (409 <c>reintegro-sin-aprobacion-vigente</c>); que lo aprobado siga vigente lo verifica la aplicación.
     /// </summary>
-    public VinculoReintegrado Reintegrar(string justificacion, DateTimeOffset ahora)
+    public VinculoReintegrado Reintegrar(string justificacion, DateTimeOffset ahora, bool sinRevalidar = false)
     {
         RequerirTexto(justificacion, "justificacion-requerida", "El reintegro necesita una justificación.");
         if (Estado != EstadoVinculo.Desvinculado)
             throw ReglaDeNegocioException.Conflicto("estado-invalido", "Solo se reintegra un vínculo desvinculado.");
 
+        if (sinRevalidar)
+        {
+            if (!TuvoAprobacion || EstadoAlDesvincular is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer))
+                throw ReglaDeNegocioException.Conflicto("reintegro-sin-aprobacion-vigente",
+                    "Solo se reintegra sin revalidar un vínculo que estaba aprobado y vigente al desvincularse; este debe revalidarse.");
+            return new VinculoReintegrado(EstadoAlDesvincular.Value, justificacion.Trim(), ahora, true);
+        }
+
         return new VinculoReintegrado(TuvoAprobacion ? EstadoVinculo.EnValidacion : EstadoVinculo.Invitado, justificacion.Trim(), ahora);
+    }
+
+    /// <summary>
+    /// Un administrador desaprobó el último expediente aprobado (DS-2): el mismo expediente vuelve a revisión y el vínculo a
+    /// <c>EnValidacion</c>. Solo con ese expediente como último aprobado y sin otro abierto, y con el vínculo vigente (ni
+    /// bloqueado ni terminado): 409 <c>vinculo-bloqueado</c>, <c>estado-terminal</c>, <c>expediente-abierto-existente</c>,
+    /// <c>no-es-el-ultimo-aprobado</c>.
+    /// </summary>
+    public VinculoDesaprobado Desaprobar(Guid expedienteId, string justificacion, DateTimeOffset ahora)
+    {
+        RequerirTexto(justificacion, "justificacion-requerida", "Desaprobar necesita una justificación.");
+        if (Estado == EstadoVinculo.Bloqueado)
+            throw ReglaDeNegocioException.Conflicto("vinculo-bloqueado", "El vínculo está bloqueado: desbloquéalo antes de desaprobar su expediente.");
+        AsegurarNoTerminal("desaprobar el expediente de");
+
+        if (ExpedienteAbiertoId is { } abierto)
+            throw ReglaDeNegocioException.Conflicto("expediente-abierto-existente",
+                $"El vínculo ya tiene el expediente {abierto} abierto: resuélvelo o anúlalo antes de desaprobar el último aprobado.");
+
+        if (UltimoExpedienteId != expedienteId || UltimoResultado != ResultadoExpediente.Aprobado)
+            throw ReglaDeNegocioException.Conflicto("no-es-el-ultimo-aprobado", "Solo se desaprueba el último expediente aprobado del vínculo.");
+
+        return new VinculoDesaprobado(expedienteId, Estado, justificacion.Trim(), ahora);
     }
 
     /// <summary>
@@ -300,16 +339,19 @@ public sealed partial class Vinculo
 
         if (tipo is TipoExpediente.Actualizacion or TipoExpediente.Renovacion)
         {
-            if (!TuvoAprobacion || Estado is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer or EstadoVinculo.Vencido))
+            // Una renovación también se abre sobre un vínculo reintegrado que debe revalidarse (EnValidacion con aprobación previa, DS-3).
+            var reintegrado = tipo == TipoExpediente.Renovacion && Estado == EstadoVinculo.EnValidacion;
+            if (!TuvoAprobacion || (!reintegrado && Estado is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer or EstadoVinculo.Vencido)))
                 throw ReglaDeNegocioException.Conflicto("estado-invalido",
                     $"Una actualización o renovación se abre sobre un vínculo que ya fue aprobado; este está {Estado}.");
             return new ExpedienteVinculado(expedienteId, tipo, folio, ahora);
         }
 
-
-        if (Estado != EstadoVinculo.Invitado || TuvoAprobacion)
+        // Un vínculo que ya tuvo una aprobación vuelve a Invitado si el expediente reabierto al desaprobarlo se rechaza o se anula (DS-2):
+        // un expediente inicial nuevo es el camino de vuelta (también tras un rechazo, DS-4).
+        if (Estado != EstadoVinculo.Invitado)
             throw ReglaDeNegocioException.Conflicto("estado-invalido",
-                $"Un expediente inicial se abre sobre un vínculo Invitado sin aprobación previa; este está {Estado}.");
+                $"Un expediente inicial se abre sobre un vínculo Invitado; este está {Estado}.");
 
         return new ExpedienteVinculado(expedienteId, tipo, folio, ahora);
     }
@@ -406,6 +448,13 @@ public sealed partial class Vinculo
         ActualizadoEn = e.Fecha;
     }
 
+    public void Apply(VinculoDesaprobado e)
+    {
+        Estado = EstadoVinculo.EnValidacion;
+        ExpedienteAbiertoId = e.ExpedienteId;
+        ActualizadoEn = e.Fecha;
+    }
+
     public void Apply(VinculoVencido e)
     {
         Estado = EstadoVinculo.Vencido;
@@ -431,6 +480,7 @@ public sealed partial class Vinculo
     public void Apply(VinculoDesvinculado e)
     {
         CerrarExpedientePorTerminacion();
+        EstadoAlDesvincular = e.EstadoPrevio == EstadoVinculo.Bloqueado ? EstadoPrevioAlBloqueo : e.EstadoPrevio;
         Estado = EstadoVinculo.Desvinculado;
         EstadoPrevioAlBloqueo = null;
         Bloqueo = null;
@@ -440,6 +490,7 @@ public sealed partial class Vinculo
     public void Apply(VinculoReintegrado e)
     {
         Estado = e.EstadoResultante;
+        EstadoAlDesvincular = null;
         if (e.EstadoResultante == EstadoVinculo.Invitado)
         {
             InvitacionAceptada = false;

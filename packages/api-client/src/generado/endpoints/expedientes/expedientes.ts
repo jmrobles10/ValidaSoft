@@ -26,6 +26,7 @@ import type {
 import type {
   AbrirExpedienteDto,
   AnularVeredictoDto,
+  DesaprobarExpedienteDto,
   EventoHistorialDto,
   ExpedienteDto,
   JustificacionDto,
@@ -883,4 +884,191 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAnularVeredictoMutationOptions(options), queryClient);
+    }
+    export const reabrirEtapaExpediente = (
+    id: string,
+    orden: number,
+    justificacionDto: BodyType<JustificacionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExpedienteDto>(
+      {url: `/api/v1/expedientes/${id}/etapas/${orden}/reabrir`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: justificacionDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getReabrirEtapaExpedienteMutationKey = () => ['reabrirEtapaExpediente'] as const;
+
+export const getReabrirEtapaExpedienteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reabrirEtapaExpediente>>, TError,ReabrirEtapaExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof reabrirEtapaExpediente>>, TError,ReabrirEtapaExpedienteMutationVariables, TContext> => {
+
+const mutationKey = getReabrirEtapaExpedienteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reabrirEtapaExpediente>>, ReabrirEtapaExpedienteMutationVariables> = (props) => {
+          const {id,orden,data} = props ?? {};
+
+          return  reabrirEtapaExpediente(id,orden,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReabrirEtapaExpedienteMutationResult = NonNullable<Awaited<ReturnType<typeof reabrirEtapaExpediente>>>
+    export type ReabrirEtapaExpedienteMutationBody = BodyType<JustificacionDto>
+    export type ReabrirEtapaExpedienteMutationError = ErrorType<void>
+    export type ReabrirEtapaExpedienteMutationVariables = {id: string;orden: number;data: BodyType<JustificacionDto>}
+
+    export const useReabrirEtapaExpediente = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reabrirEtapaExpediente>>, TError,ReabrirEtapaExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof reabrirEtapaExpediente>>,
+        TError,
+        ReabrirEtapaExpedienteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReabrirEtapaExpedienteMutationOptions(options), queryClient);
+    }
+    export const desaprobarExpediente = (
+    id: string,
+    desaprobarExpedienteDto: BodyType<DesaprobarExpedienteDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExpedienteDto>(
+      {url: `/api/v1/expedientes/${id}/desaprobar`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: desaprobarExpedienteDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getDesaprobarExpedienteMutationKey = () => ['desaprobarExpediente'] as const;
+
+export const getDesaprobarExpedienteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof desaprobarExpediente>>, TError,DesaprobarExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof desaprobarExpediente>>, TError,DesaprobarExpedienteMutationVariables, TContext> => {
+
+const mutationKey = getDesaprobarExpedienteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof desaprobarExpediente>>, DesaprobarExpedienteMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  desaprobarExpediente(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DesaprobarExpedienteMutationResult = NonNullable<Awaited<ReturnType<typeof desaprobarExpediente>>>
+    export type DesaprobarExpedienteMutationBody = BodyType<DesaprobarExpedienteDto>
+    export type DesaprobarExpedienteMutationError = ErrorType<void>
+    export type DesaprobarExpedienteMutationVariables = {id: string;data: BodyType<DesaprobarExpedienteDto>}
+
+    export const useDesaprobarExpediente = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof desaprobarExpediente>>, TError,DesaprobarExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof desaprobarExpediente>>,
+        TError,
+        DesaprobarExpedienteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDesaprobarExpedienteMutationOptions(options), queryClient);
+    }
+    export const volverAFaseInicialExpediente = (
+    id: string,
+    justificacionDto: BodyType<JustificacionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExpedienteDto>(
+      {url: `/api/v1/expedientes/${id}/fase-inicial`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: justificacionDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getVolverAFaseInicialExpedienteMutationKey = () => ['volverAFaseInicialExpediente'] as const;
+
+export const getVolverAFaseInicialExpedienteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof volverAFaseInicialExpediente>>, TError,VolverAFaseInicialExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof volverAFaseInicialExpediente>>, TError,VolverAFaseInicialExpedienteMutationVariables, TContext> => {
+
+const mutationKey = getVolverAFaseInicialExpedienteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof volverAFaseInicialExpediente>>, VolverAFaseInicialExpedienteMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  volverAFaseInicialExpediente(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VolverAFaseInicialExpedienteMutationResult = NonNullable<Awaited<ReturnType<typeof volverAFaseInicialExpediente>>>
+    export type VolverAFaseInicialExpedienteMutationBody = BodyType<JustificacionDto>
+    export type VolverAFaseInicialExpedienteMutationError = ErrorType<void>
+    export type VolverAFaseInicialExpedienteMutationVariables = {id: string;data: BodyType<JustificacionDto>}
+
+    export const useVolverAFaseInicialExpediente = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof volverAFaseInicialExpediente>>, TError,VolverAFaseInicialExpedienteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof volverAFaseInicialExpediente>>,
+        TError,
+        VolverAFaseInicialExpedienteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVolverAFaseInicialExpedienteMutationOptions(options), queryClient);
     }
