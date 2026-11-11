@@ -32,7 +32,7 @@ public static class MapeosDeValidacion
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
                     r.AprobadoresRequeridos, r.Condicion?.ADto(), UsarComoSoporte: r.UsarComoSoporte))],
             [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
-            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto(), v.VigenciaEfectiva().ADto());
+            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto(), v.VigenciaEfectiva().ADto(), RecordatorioADto(v.RecordatorioObservacionesDias));
 
     /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
     public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
@@ -54,6 +54,18 @@ public static class MapeosDeValidacion
     /// </summary>
     public static VigenciaDelVinculo ADominio(this VigenciaVinculoDto v) =>
         new(v.Dias, v.DiasAviso ?? [.. VigenciaDelVinculo.AvisosPorOmision.Where(a => v.Dias <= 0 || a < v.Dias)], v.DiasGracia);
+
+    public static RecordatorioDeFlujoDto RecordatorioADto(int? dias) =>
+        dias switch { null => new RecordatorioDeFlujoDto("Empresa"), 0 => new RecordatorioDeFlujoDto("Apagado"), var d => new RecordatorioDeFlujoDto("CadaDias", d) };
+
+    /// <summary>Del cuerpo al dominio: <c>Empresa</c> = nulo, <c>Apagado</c> = 0 y <c>CadaDias</c> = los días (422 <c>dias-invalidos</c> si faltan o no son de 1 a 60).</summary>
+    public static int? ADominio(this RecordatorioDeFlujoDto r) => r.Modo switch
+    {
+        "Empresa" => null,
+        "Apagado" => 0,
+        "CadaDias" => DefinicionDeFlujo.ValidarRecordatorio(r.CadaDias ?? 0) is { } d and > 0 ? d : throw ReglaDeNegocioException.Validacion("dias-invalidos", "El recordatorio automático sale cada 1 a 60 días."),
+        _ => throw ReglaDeNegocioException.Validacion("modo-invalido", "El recordatorio del flujo es Empresa, Apagado o CadaDias.")
+    };
 
     public static PlazoCargueDto ADto(this PlazoDeCargue p) => new(p.Dias, [.. p.Recordatorios]);
 
@@ -218,11 +230,23 @@ public static class MapeosDeValidacion
             a.SlaVence, [.. a.Veredictos.Select(ADto)], a.RequisitosPorDecidir, porDecidir);
     }
 
-    public static FilaBandejaDto ADto(this FilaBandeja f) =>
+    /// <summary>
+    /// La fila de la bandeja. <paramref name="ahora"/> y <paramref name="porcentajeAviso"/> dicen cómo va su plazo (SLA, OP-12): <c>EnTiempo</c>,
+    /// <c>PorVencer</c> o <c>Vencido</c>; nulo si el área no tiene plazo corriendo.
+    /// </summary>
+    public static FilaBandejaDto ADto(this FilaBandeja f, DateTimeOffset? ahora = null, int porcentajeAviso = Expediente.PorcentajeDeAvisoPorOmision) =>
         new(f.ExpedienteId, f.Folio, f.VinculoId, new TerceroResumenDto(f.TerceroId, f.TerceroNombre, f.TerceroIdentificacion),
             new TipoVinculoResumenDto(f.TipoVinculoId, f.TipoVinculoCodigo, f.TipoVinculoNombre), f.AreaId, f.AreaCodigo, f.AreaNombre,
             f.Etapa, f.EstadoArea.ToString(), f.EstadoExpediente.ToString(), f.Aprobaciones, f.AprobadoresRequeridos, f.Desde, f.ActualizadoEn,
-            f.RequisitosPendientes, f.Desaprobaciones > 0);
+            f.RequisitosPendientes, f.Desaprobaciones > 0, f.SlaHoras, f.SlaVence, EstadoSla(f, ahora, porcentajeAviso));
+
+    private static string? EstadoSla(FilaBandeja f, DateTimeOffset? ahora, int porcentajeAviso)
+    {
+        if (ahora is not { } hoy || f.EstadoArea != EstadoAreaExpediente.Pendiente || f.EstadoExpediente != EstadoExpediente.EnRevision ||
+            f.SlaVence is not { } vence || f.Desde is not { } desde)
+            return null;
+        return (hoy >= vence ? EstadoDeSla.Vencido : hoy >= Expediente.UmbralDeAviso(desde, vence, porcentajeAviso) ? EstadoDeSla.PorVencer : EstadoDeSla.EnTiempo).ToString();
+    }
 
     /// <summary>
     /// Vista del tercero: estado, observaciones vigentes con el texto del motivo (y el documento observado) y los

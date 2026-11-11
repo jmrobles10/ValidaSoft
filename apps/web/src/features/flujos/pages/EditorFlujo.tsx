@@ -15,6 +15,7 @@ import { useTiposVinculo } from '../../vinculos/api';
 import { useCrearFlujo, useTiposDocumento, useDefinirPorDefecto, useEditarFlujo, useFlujo, usePublicarFlujo, useVersionesFlujo } from '../api';
 import { FormularioFlujo } from '../components/FormularioFlujo';
 import { VersionesFlujo } from '../components/VersionesFlujo';
+import { recordatorioADto } from '../recordatorio';
 import { errorDeApiEnRequisitos } from '../requisitosDeSeccion';
 import {
   borradorDesdeVersion,
@@ -117,6 +118,7 @@ export function EditorFlujo() {
       separacionDeFunciones: borrador.separacionDeFunciones,
       plazoCargue: plazoADto(borrador),
       reintento: reintentoADto(borrador),
+      recordatorioObservaciones: recordatorioADto(borrador),
       vigenciaVinculo: vigenciaADto(borrador),
       requisitos: requisitosADto(borrador.requisitos),
       verificaciones: verificacionesADto(borrador.verificaciones),

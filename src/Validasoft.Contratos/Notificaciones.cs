@@ -80,7 +80,8 @@ public sealed record DatosReferenciaAgregadaDto(Guid VinculoId, IReadOnlyList<Re
 public sealed record DatosExpedienteDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string TipoExpediente, string Estado,
     string? Causa = null, IReadOnlyList<RequisitoEnEventoDto>? Requisitos = null, IReadOnlyList<MotivoEnEventoDto>? Motivos = null,
-    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null, DateTimeOffset? PlazoHasta = null, int? Etapa = null);
+    string? Justificacion = null, Guid? TerceroId = null, string? TipoVinculo = null, DateTimeOffset? PlazoHasta = null, int? Etapa = null,
+    string? Area = null, DateTimeOffset? SlaVence = null);
 
 /// <summary>
 /// <c>documento.compartido</c> · <c>documento.por_vencer</c> · <c>documento.vencido</c>. <see cref="Tipo"/>: código del

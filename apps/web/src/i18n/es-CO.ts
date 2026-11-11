@@ -1,8 +1,11 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
 import { auditoria } from './es-CO-auditoria';
+import { ayudas } from './es-CO-ayudas';
+import { campanias, erroresCampanias } from './es-CO-campanias';
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { certificadosLista } from './es-CO-certificados-lista';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
+import { delegaciones, erroresDelegaciones } from './es-CO-delegaciones';
 import { cumplimiento, erroresCumplimiento } from './es-CO-cumplimiento';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
@@ -14,12 +17,13 @@ import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
 import { matrizRiesgo } from './es-CO-matriz-riesgo';
+import { erroresSla, sla } from './es-CO-sla';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
 import { plataforma } from './es-CO-plataforma';
-import { erroresRecordatorios, recordatorios } from './es-CO-recordatorios';
+import { erroresRecordatorios, flujoRecordatorio, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { erroresRevisionAutomatica, revisionAutomatica } from './es-CO-revision-automatica';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
@@ -63,6 +67,9 @@ export const esCO = {
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
     ingreso: 'Ingreso',
+    delegaciones: 'Delegación de revisión',
+    'plazos-de-revision': 'Plazos de revisión',
+    'ayuda-de-documentos': 'Ayuda de documentos',
     'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
@@ -297,9 +304,11 @@ export const esCO = {
   cumplimiento,
   matrizRiesgo,
   lotes,
+  campanias,
   plazoCargue,
   flujoPlazo,
   flujoReintento,
+  flujoRecordatorio,
   flujoVigencia,
   vigenciaVinculo,
   informes,
@@ -328,6 +337,9 @@ export const esCO = {
   auditoria,
   plantillas,
   recordatorios,
+  delegaciones,
+  sla,
+  ayudas,
   ia,
   revisionAutomatica,
   plataforma,
@@ -665,9 +677,12 @@ export const esCO = {
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
     ...erroresLotes,
+    ...erroresCampanias,
     ...erroresVigencias,
     ...erroresCruce,
     ...erroresRecordatorios,
+    ...erroresDelegaciones,
+    ...erroresSla,
     ...erroresIngreso,
     ...erroresRevisionAutomatica,
   },

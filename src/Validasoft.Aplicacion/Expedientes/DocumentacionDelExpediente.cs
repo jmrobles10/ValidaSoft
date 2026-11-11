@@ -23,6 +23,9 @@ public sealed record DocumentacionDelExpediente(
     /// <summary>Cruces sección ↔ documento que ve la empresa (F5); solo en la vista de la empresa, nunca en la del tercero.</summary>
     public CrucesDelExpediente? Cruces { get; init; }
 
+    /// <summary>Ayuda que la empresa del expediente escribió para cada tipo (OP-15); manda sobre la del grupo (<c>TextoAyuda</c> del tipo).</summary>
+    public IReadOnlyDictionary<Guid, string>? Ayudas { get; init; }
+
     /// <summary><paramref name="tipos"/>: cualquier sesión (los tipos se buscan con <c>AnyTenant</c>); <paramref name="boveda"/>: el tenant técnico <c>boveda</c>.</summary>
     public static async Task<DocumentacionDelExpediente> CargarAsync(IQuerySession tipos, IQuerySession boveda, Expediente expediente,
         ReglasDeCarga reglas, DateOnly hoy, CancellationToken ct)
@@ -42,7 +45,10 @@ public sealed record DocumentacionDelExpediente(
             ? new Dictionary<Guid, SeccionDeFicha>()
             : (await boveda.LoadManyAsync<SeccionDeFicha>(ct, deSeccion.Select(s => s.SeccionId).Distinct().ToArray())).ToDictionary(s => s.Id);
         var porRequisito = deSeccion.Where(s => secciones.ContainsKey(s.SeccionId)).ToDictionary(s => s.Id, s => secciones[s.SeccionId]);
-        return new DocumentacionDelExpediente(cargados.ToDictionary(t => t.Id), documentos.ToDictionary(d => d.Id), reglas, hoy, porRequisito);
+        return new DocumentacionDelExpediente(cargados.ToDictionary(t => t.Id), documentos.ToDictionary(d => d.Id), reglas, hoy, porRequisito)
+        {
+            Ayudas = await Validasoft.Aplicacion.Documentos.AyudaDeDocumentoDeEmpresa.DeLaEmpresaAsync(tipos, expediente.EmpresaId, tipoIds, ct)
+        };
     }
 
     /// <summary>Tipo del requisito para el DTO, con lo que el tercero necesita para entregarlo.</summary>
@@ -51,7 +57,7 @@ public sealed record DocumentacionDelExpediente(
             ? new TipoDocumentoRequisitoDto(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString(), tipo.Modo.ToString(),
                 [.. tipo.Campos.Select(c => c.ADto())],
                 tipo.PideArchivo ? tipo.ReglasEfectivas(Reglas.TamanoMaximoBytes, Reglas.MaximoPaginas).ADto() : null,
-                tipo.Plantilla is not null, tipo.TextoAyuda)
+                tipo.Plantilla is not null, Ayudas?.GetValueOrDefault(r.TipoDocumentoTenantId) ?? tipo.TextoAyuda)
             : new TipoDocumentoRequisitoDto(r.TipoDocumentoTenantId, r.Codigo, r.Nombre, r.TipoCanonico, r.Ambito.ToString());
 
     /// <summary>

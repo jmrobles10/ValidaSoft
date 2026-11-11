@@ -151,7 +151,10 @@ public class NotificacionesDelTerceroTests
         ampliada.Mensaje.ShouldBe("Norte S.A.S. sumó Registro Único Tributario a la actualización que tienes abierta.");
 
         (await PlanearAsync(AperturaDe(TipoExpediente.Inicial), ExpedienteId, contexto)).Campana.ShouldBeEmpty();
-        (await PlanearAsync(AperturaDe(TipoExpediente.Renovacion), ExpedienteId, contexto)).Campana.ShouldBeEmpty();
+        // La renovación que abre el sistema (vigencia, vencimiento) avisa por su propio evento; la que abre una persona (campaña de renovación, OP-4) avisa aquí.
+        (await PlanearAsync(AperturaDe(TipoExpediente.Renovacion, ActorTipo.Sistema), ExpedienteId, contexto)).Campana.ShouldBeEmpty();
+        var porCampania = Unica(await PlanearAsync(AperturaDe(TipoExpediente.Renovacion), ExpedienteId, contexto));
+        (porCampania.Tipo, porCampania.Titulo).ShouldBe((TiposNotificacionTercero.Vigencia, "Tu empresa abrió tu renovación"));
     }
 
     [Fact]
@@ -572,9 +575,9 @@ public class NotificacionesDelTerceroTests
 
     // ---------- utilidades ----------
 
-    private static ExpedienteAbierto AperturaDe(TipoExpediente tipo) =>
+    private static ExpedienteAbierto AperturaDe(TipoExpediente tipo, ActorTipo actor = ActorTipo.Usuario) =>
         new(ExpedienteId, EmpresaA, VinculoA, tipo, "NORTE-E-2026-000001", TerceroId, "Aceros del Norte", "CO|NIT|900123456", Guid.NewGuid(), "PROVEEDOR",
-            "Proveedor", new ActorDeExpediente(ActorTipo.Usuario, Revisor), [Revisor], Ahora);
+            "Proveedor", new ActorDeExpediente(actor, actor == ActorTipo.Usuario ? Revisor : "vigencia-vinculo"), [Revisor], Ahora);
 
     private static RequisitoCalculado Calculado(Guid id, string codigo, string nombre) =>
         new(id, Guid.NewGuid(), codigo, nombre, codigo, AmbitoDocumento.Global, true, [], null, null);

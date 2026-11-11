@@ -2,7 +2,7 @@ import { Alert, Box, Button } from '@mui/material';
 import { esErrorApi, SCOPES, type VencimientoDto } from '@validasoft/api-client';
 import { BarraFiltros, EstadoVacio, FiltroMenu, TablaConCursor, usePaginacionCursor } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { BellRing, Download } from 'lucide-react';
+import { BellRing, Download, Megaphone } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -13,7 +13,7 @@ import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
 import { guardarArchivo, useDescargarExcelVencimientos, useRecordarVencimientos, useVencimientos } from './api';
 import { useColumnasVencimientos } from './columnas';
-import { claveVencimiento, ESTADOS_VENCIMIENTO, HORIZONTE_POR_DEFECTO, HORIZONTES, leerFiltros, lote, MAXIMO_POR_RECORDATORIO, mensajeRecordatorio } from './modelo';
+import { claveVencimiento, ESTADOS_VENCIMIENTO, HORIZONTE_POR_DEFECTO, HORIZONTES, leerFiltros, lote, MAXIMO_POR_RECORDATORIO, mensajeRecordatorio, tercerosDelLote } from './modelo';
 
 /** Los códigos de lote son compartidos con otras acciones en lote: aquí se explican en términos de recordatorios. */
 function errorAlRecordar(error: unknown, t: TFunction): string {
@@ -33,6 +33,7 @@ export function PaginaVencimientos() {
   const permisos = usePermisos(empresa.id);
   const puede = permisos.puede(SCOPES.documentosLeer);
   const puedeRecordar = permisos.puede(SCOPES.vinculosEscribir);
+  const puedeVerCampanias = permisos.puede(SCOPES.expedientesLeer);
   const mostrar = useAvisos((s) => s.mostrar);
   const [parametros, setParametros] = useSearchParams();
   const { dias, estado } = leerFiltros(parametros);
@@ -108,7 +109,12 @@ export function PaginaVencimientos() {
         titulo={t('vencimientos.titulo')}
         subtitulo={t('vencimientos.subtitulo', { empresa: empresa.nombre })}
         acciones={
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {puedeVerCampanias && (
+              <Button variant="outlined" startIcon={<Megaphone size={16} aria-hidden />} onClick={() => void navegar(`/e/${empresa.id}/vencimientos/campanias`)}>
+                {t('campanias.irACampanias')}
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<Download size={16} aria-hidden />} disabled={excel.isPending || filas.length === 0} onClick={descargar}>
               {t('vencimientos.excel')}
             </Button>
@@ -173,7 +179,7 @@ export function PaginaVencimientos() {
         <DialogoConfirmacion
           tono="primary"
           titulo={t('vencimientos.confirmarTitulo', { count: porRecordar.length })}
-          mensaje={t('vencimientos.confirmarTexto')}
+          mensaje={t('vencimientos.confirmarTexto', { count: tercerosDelLote(porRecordar) })}
           confirmar={t('vencimientos.confirmar')}
           ocupado={recordar.isPending}
           onConfirmar={confirmar}

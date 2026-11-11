@@ -58,6 +58,18 @@ export const notificaciones = {
       titulo: 'Lote de invitaciones terminado',
       explicacion: 'Cuando termina un lote de invitación masiva que creaste, con cuántas filas se invitaron y cuántas fallaron.',
     },
+    campaniaTerminada: {
+      titulo: 'Campaña de renovación terminada',
+      explicacion: 'Cuando termina una campaña de renovación que creaste, con a cuántos terceros se les abrió la renovación o se les recordó y cuántos fallaron.',
+    },
+    slaPorVencer: {
+      titulo: 'Plazo de revisión por vencer',
+      explicacion: 'Cuando un expediente lleva buena parte del plazo de revisión de un área tuya y aún no se decide.',
+    },
+    slaIncumplido: {
+      titulo: 'Plazo de revisión vencido',
+      explicacion: 'Cuando venció el plazo de revisión de un área tuya sin que se decidiera. A los administradores también les llega si la empresa lo configuró así.',
+    },
     porVencer: {
       titulo: 'Documento por vencer',
       explicacion: 'Cuando un documento de un vínculo de tus áreas está cerca de vencer.',

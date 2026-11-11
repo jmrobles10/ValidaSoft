@@ -181,7 +181,7 @@ public sealed partial class RequisitosApiTests
 
         var inicial = await TerceroAsync<PreferenciasNotificacionDto>("GET", "/public/v1/preferencias-notificacion", sesion.AccessToken, null, 200);
         inicial.TiposConCorreo.ShouldBe(["tercero.observado", "tercero.recordatorio", "tercero.resultado", "tercero.documento_por_vencer", "tercero.documento_vencido",
-            "tercero.certificado", "tercero.plazo_de_cargue", "tercero.desaprobado", "tercero.reintegrado"]);
+            "tercero.certificado", "tercero.plazo_de_cargue", "tercero.desaprobado", "tercero.reintegrado", "tercero.vigencia"]);
         inicial.Correo.Values.ShouldAllBe(v => v);
         (await CodigoAsync(await TerceroAsync("PUT", "/public/v1/preferencias-notificacion", sesion.AccessToken,
             new ActualizarPreferenciasNotificacionDto(new Dictionary<string, bool> { ["tercero.invitacion"] = false }), 422))).ShouldBe("tipo-notificacion-invalido");

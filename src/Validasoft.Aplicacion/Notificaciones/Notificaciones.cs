@@ -86,6 +86,9 @@ public static class TiposNotificacion
 
     /// <summary>Terminó un lote de invitación masiva (a quien lo creó, LT-9).</summary>
     public const string LoteTerminado = "invitaciones.lote_terminado";
+
+    /// <summary>Terminó una campaña de renovación (a quien la creó, OP-5).</summary>
+    public const string CampaniaTerminada = "campanias.terminada";
     public const string PorVencer = "documento.por_vencer";
     public const string Vencido = "documento.vencido";
     public const string WebhookDeshabilitado = "webhook.deshabilitado";
@@ -105,13 +108,19 @@ public static class TiposNotificacion
     /// <summary>El tercero propuso la cuenta bancaria con la que le cobra a la empresa: a quienes pueden aprobarla (<c>cuentas:aprobar</c>), solo campana (NT-12).</summary>
     public const string CuentaPropuesta = "vinculo.cuenta_propuesta";
 
+    /// <summary>El plazo de revisión de un área está por vencer o venció (SLA, OP-12).</summary>
+    public const string SlaPorVencer = "expediente.sla_por_vencer";
+
+    public const string SlaIncumplido = "expediente.sla_incumplido";
+
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
-            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta];
+            CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente];
+        [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer, CampaniaTerminada,
+            SlaIncumplido];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -146,7 +155,7 @@ public sealed record PlanDeNotificaciones(IReadOnlyList<(Guid TenantId, Notifica
 /// respondió» (reenvío, a las áreas que vuelven a revisar), expediente aprobado o rechazado y documento por vencer (a las
 /// áreas del expediente) y la constancia al tercero al aceptar. Solo miembros activos con rol en la empresa.
 /// </summary>
-public sealed class PlanificadorDeNotificaciones
+public sealed partial class PlanificadorDeNotificaciones
 {
     /// <summary>
     /// Lo que el hecho produce para las personas de las empresas y, además, para el tercero (campana de su portal, NT-1; sus
@@ -184,6 +193,8 @@ public sealed class PlanificadorDeNotificaciones
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Caducado, null, orden, ct);
             case ExpedienteRechazado:
                 return await AAreasAsync(evento, contexto, TiposNotificacion.Rechazado, null, orden, ct);
+            case Dominio.Campanias.CampaniaTerminada campaniaTerminada:
+                return await CampaniaTerminadaAsync(evento, campaniaTerminada, contexto, orden, ct);
             case Dominio.Invitaciones.LoteTerminado terminado:
                 return await LoteTerminadoAsync(evento, terminado, contexto, orden, ct);
             case VencimientoAvisado aviso:
@@ -205,6 +216,10 @@ public sealed class PlanificadorDeNotificaciones
                 return await EstudioPendienteAsync(evento, contexto, orden, ct);
             case CuentaDesignadaPropuesta propuesta:
                 return await CuentaPropuestaAsync(evento, propuesta, contexto, orden, ct);
+            case SlaPorVencer porVencer:
+                return await SlaAsync(evento, contexto, porVencer.AreaId, porVencer.Vence, vencido: false, orden, ct);
+            case SlaIncumplido incumplido:
+                return await SlaAsync(evento, contexto, incumplido.AreaId, incumplido.Vence, vencido: true, orden, ct);
             case VerificacionExpirada expirada:
                 return await ACumplimientoAsync(evento, contexto, TiposNotificacion.VerificacionExpirada, "Verificación vencida",
                     t => expirada.Tipo == TipoVerificacion.ListasRestrictivas
@@ -311,7 +326,7 @@ public sealed class PlanificadorDeNotificaciones
             _ => ("Expediente rechazado", $"Se rechazó la validación de {expediente.TerceroNombre}.")
         };
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, tipo, titulo, mensaje, expediente.Id,
-            expediente.VinculoId, expediente.Folio, deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+            expediente.VinculoId, expediente.Folio, deLasAreas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(), orden, ct);
     }
 
     /// <summary>
@@ -343,7 +358,7 @@ public sealed class PlanificadorDeNotificaciones
                       $"{adjuntada.NumeroAnterior}): lo decidido sobre la anterior quedó sin efecto y hay que revisarla de nuevo.";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
             "Versión nueva de un documento", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
-            deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+            deLasAreas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(), orden, ct);
     }
 
     /// <summary>
@@ -374,7 +389,7 @@ public sealed class PlanificadorDeNotificaciones
                       "abierta y hay que revisarlo, aunque tu área ya hubiera decidido lo demás.";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa?.Nombre, TiposNotificacion.VersionNueva,
             "Requisitos nuevos en una actualización", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
-            deLasAreas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct);
+            deLasAreas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(), orden, ct);
     }
 
     /// <summary>
@@ -399,7 +414,7 @@ public sealed class PlanificadorDeNotificaciones
         var mensaje = $"{expediente.TerceroNombre} retiró {detalle}. {siguiente}";
         return await APersonasAsync(evento, contexto, tenantId, expediente.EmpresaId, empresa, TiposNotificacion.VersionRetirada,
             "Versión retirada por el tercero", mensaje, expediente.Id, expediente.VinculoId, expediente.Folio,
-            areas.Select(a => (a.Nombre, a.Miembros)).ToList(), orden, ct, plantilla: CatalogoDePlantillas.RetiroDeVersion,
+            areas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(), orden, ct, plantilla: CatalogoDePlantillas.RetiroDeVersion,
             documento: string.Join(", ", retiros.Select(r => r.Documento)));
     }
 
@@ -422,7 +437,7 @@ public sealed class PlanificadorDeNotificaciones
         var mensaje = $"El documento {documento.NombreTipo} de {expediente.TerceroNombre} vence el {aviso.VigenteHasta:yyyy-MM-dd} " +
                       $"({aviso.DiasRestantes} días).";
         return await APersonasAsync(evento, contexto, destino.TenantId, vinculo.EmpresaId, empresa?.Nombre, TiposNotificacion.PorVencer,
-            "Documento por vencer", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros)).ToList(),
+            "Documento por vencer", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(),
             orden, ct, $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}");
     }
 
@@ -507,7 +522,7 @@ public sealed class PlanificadorDeNotificaciones
         var areas = (await contexto.AreasAsync(destino.TenantId, expediente.AreaIds, ct)).Where(a => a.EmpresaId == vinculo.EmpresaId).ToList();
         var mensaje = $"El documento {documento.NombreTipo} de {expediente.TerceroNombre} venció el {vencida.VigenteHasta:yyyy-MM-dd}.";
         var plan = await APersonasAsync(evento, contexto, destino.TenantId, vinculo.EmpresaId, empresa?.Nombre, TiposNotificacion.Vencido,
-            "Documento vencido", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros)).ToList(),
+            "Documento vencido", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(),
             orden, ct, $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}");
         return plan with { Correos = [.. plan.Correos, .. alTercero] };
     }
@@ -518,9 +533,15 @@ public sealed class PlanificadorDeNotificaciones
     /// </summary>
     private static async Task<PlanDeNotificaciones> APersonasAsync(IEvent evento, IContextoDeEventos contexto, Guid tenantId, Guid empresaId,
         string? empresa, string tipo, string titulo, string mensaje, Guid expedienteId, Guid vinculoId, string folio,
-        IReadOnlyList<(string Area, List<Guid> Miembros)> areas, long orden, CancellationToken ct, string? ruta = null, string? plantilla = null,
+        IReadOnlyList<(string Area, List<Guid> Miembros, Guid AreaId)> areas, long orden, CancellationToken ct, string? ruta = null, string? plantilla = null,
         string? documento = null)
     {
+        // Lo que llega a un área le llega también a quien revisa en lugar de uno de sus miembros (delegación, OP-8).
+        var delegaciones = await contexto.DelegacionesAsync(tenantId, empresaId, ct);
+        if (delegaciones.Count > 0)
+            areas = [.. areas.Select(a => a.AreaId == Guid.Empty
+                ? a
+                : (a.Area, (List<Guid>)[.. Delegaciones.DelegacionesDeRevision.QuienesRevisan(a.AreaId, a.Miembros, delegaciones, Dominio.Documentos.CalculadoraDeVigencia.Fecha(evento.Timestamp))], a.AreaId))];
         var porPersona = areas.SelectMany(a => a.Miembros.Select(m => (Usuario: m, a.Area))).GroupBy(x => x.Usuario)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Area).Distinct().Order(StringComparer.Ordinal).ToList());
         var usuarios = (await contexto.UsuariosAsync(tenantId, porPersona.Keys, ct)).Where(u => u.Activo && u.TieneRolEn(empresaId)).ToList();

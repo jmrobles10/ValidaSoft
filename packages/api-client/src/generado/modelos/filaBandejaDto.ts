@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { EstadoAreaExpediente } from './estadoAreaExpediente';
+import type { EstadoDeSla } from './estadoDeSla';
 import type { EstadoExpediente } from './estadoExpediente';
 import type { TerceroResumenDto } from './terceroResumenDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
@@ -28,4 +29,9 @@ export interface FilaBandejaDto {
   actualizadoEn: string;
   requisitosPendientes?: number;
   desaprobado?: boolean;
+  /** @nullable */
+  slaHoras?: number | null;
+  /** @nullable */
+  slaVence?: string | null;
+  sla?: EstadoDeSla;
 }

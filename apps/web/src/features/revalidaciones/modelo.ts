@@ -32,3 +32,16 @@ export function tonoPlazo(f: Pick<RevalidacionDto, 'bloqueante' | 'diasRestantes
   if (f.bloqueante) return 'bloqueante';
   return f.diasRestantes <= DIAS_URGENTE ? 'urgente' : 'normal';
 }
+
+/**
+ * La revalidación está devuelta al tercero (el documento quedó observado): solo entonces se le puede recordar. El servidor
+ * tiene la última palabra: si el expediente ya no está devuelto, lo omite y el resumen del envío dice por qué.
+ */
+export function esDevuelta(f: Pick<RevalidacionDto, 'estadoRequisito'>): boolean {
+  return f.estadoRequisito === 'Observado';
+}
+
+/** Los expedientes (sin repetir) de las revalidaciones devueltas que están seleccionadas: a quienes se les recuerda. */
+export function devueltosSeleccionados(filas: readonly RevalidacionDto[], seleccion: ReadonlySet<string>): Set<string> {
+  return new Set(filas.filter((f) => esDevuelta(f) && seleccion.has(claveRevalidacion(f))).map((f) => f.expedienteId));
+}

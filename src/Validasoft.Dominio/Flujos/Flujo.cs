@@ -71,7 +71,8 @@ public sealed record DefinicionDeFlujo(
     IReadOnlyList<Expedientes.VerificacionRequeridaDelFlujo>? Verificaciones = null,
     PlazoDeCargue? PlazoCargue = null,
     ReintentoTrasRechazo? Reintento = null,
-    VigenciaDelVinculo? VigenciaVinculo = null)
+    VigenciaDelVinculo? VigenciaVinculo = null,
+    int? RecordatorioObservacionesDias = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -158,9 +159,14 @@ public sealed record DefinicionDeFlujo(
             Verificaciones = ValidarVerificaciones(),
             PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar(),
             Reintento = (Reintento ?? ReintentoTrasRechazo.PorDefecto).Validar(),
-            VigenciaVinculo = vigencia
+            VigenciaVinculo = vigencia,
+            RecordatorioObservacionesDias = ValidarRecordatorio(RecordatorioObservacionesDias)
         };
     }
+
+    /// <summary>Recordatorio automático de observaciones del flujo (OP-19): nulo = el de la empresa; 0 = apagado; 1 a 60 = cada tantos días (422 <c>dias-invalidos</c>).</summary>
+    public static int? ValidarRecordatorio(int? dias) =>
+        dias is null or 0 ? dias : dias is >= 1 and <= 60 ? dias : throw ReglaDeNegocioException.Validacion("dias-invalidos", "El recordatorio automático sale cada 1 a 60 días.");
 
     /// <summary>
     /// Verificaciones externas que pide el flujo (VE-6): una por tipo (422 <c>verificacion-duplicada</c>), vigencia de 1 a
@@ -379,6 +385,9 @@ public sealed class FlujoVersion
     /// <summary>La vigencia que rige (la guardada o «sin vencimiento periódico»).</summary>
     public VigenciaDelVinculo VigenciaEfectiva() => VigenciaVinculo ?? VigenciaDelVinculo.Sin;
 
+    /// <summary>Recordatorio automático de observaciones de este flujo (OP-19): nulo = el de la empresa; 0 = apagado; 1 a 60 = cada tantos días.</summary>
+    public int? RecordatorioObservacionesDias { get; set; }
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
@@ -386,7 +395,7 @@ public sealed class FlujoVersion
     public DateTimeOffset? RetiradaEn { get; set; }
 
     public DefinicionDeFlujo Definicion() =>
-        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo(), VigenciaEfectiva());
+        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo(), VigenciaEfectiva(), RecordatorioObservacionesDias);
 }
 
 /// <summary>
@@ -473,6 +482,7 @@ public sealed class Flujo
             borrador.PlazoCargue = validada.PlazoCargue;
             borrador.Reintento = validada.Reintento;
             borrador.VigenciaVinculo = validada.VigenciaVinculo;
+            borrador.RecordatorioObservacionesDias = validada.RecordatorioObservacionesDias;
         }
 
         ActualizadoEn = ahora;
@@ -502,6 +512,7 @@ public sealed class Flujo
         borrador.PlazoCargue = validada.PlazoCargue;
         borrador.Reintento = validada.Reintento;
         borrador.VigenciaVinculo = validada.VigenciaVinculo;
+        borrador.RecordatorioObservacionesDias = validada.RecordatorioObservacionesDias;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -521,6 +532,7 @@ public sealed class Flujo
         PlazoCargue = definicion.PlazoCargue,
         Reintento = definicion.Reintento,
         VigenciaVinculo = definicion.VigenciaVinculo,
+        RecordatorioObservacionesDias = definicion.RecordatorioObservacionesDias,
         CreadaEn = ahora
     };
 

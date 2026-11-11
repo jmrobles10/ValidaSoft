@@ -23,6 +23,7 @@ import { esObservado, observadosDe } from '../../recordatorios/modelo';
 import { useAperturasPendientes, useBandeja } from '../api';
 import { Aprobaciones, ChipEstadoArea, TerceroEnLinea } from '../componentes';
 import { DrawerAperturas } from '../components/DrawerAperturas';
+import { IndicadorSla } from '../components/IndicadorSla';
 
 const TAMANO_PAGINA = 25;
 const ESTADOS_AREA = Object.values(EstadoAreaExpediente);
@@ -109,6 +110,13 @@ export function Bandeja() {
             )}
           </Box>
         ),
+      },
+      {
+        // Plazo de revisión del área (OP-12): a tiempo, por vencer o vencido, y cuándo vence; vacío si el área no tiene plazo.
+        id: 'plazo',
+        encabezado: t('sla.indicador.columna'),
+        ancho: 250,
+        celda: (f) => <IndicadorSla sla={f.sla} vence={f.slaVence} />,
       },
       {
         id: 'aprobaciones',

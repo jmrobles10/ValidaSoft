@@ -1,6 +1,6 @@
 import type { RevalidacionDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
-import { claveRevalidacion, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
+import { claveRevalidacion, devueltosSeleccionados, esDevuelta, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
 
 function fila(parcial: Partial<RevalidacionDto>): RevalidacionDto {
   return {
@@ -46,5 +46,20 @@ describe('revalidaciones', () => {
   it('una revalidación de sección de la información (F2) se reconoce por el código de la sección', () => {
     expect(esRevalidacionDeSeccion(fila({ tipoDocumentoCodigo: 'FICHA_FINANCIERA', tipoDocumento: 'Información financiera 2025' }))).toBe(true);
     expect(esRevalidacionDeSeccion(fila({}))).toBe(false);
+  });
+
+  it('solo se le recuerda al tercero lo que está devuelto (observado), una vez por expediente', () => {
+    const observadaA = fila({ expedienteId: 'e1', requisitoId: 'r1', estadoRequisito: 'Observado' });
+    const observadaB = fila({ expedienteId: 'e1', requisitoId: 'r2', estadoRequisito: 'Observado' });
+    const enRevision = fila({ expedienteId: 'e2', requisitoId: 'r3', estadoRequisito: 'EnRevision' });
+    const otra = fila({ expedienteId: 'e3', requisitoId: 'r4', estadoRequisito: 'Observado' });
+    const filas = [observadaA, observadaB, enRevision, otra];
+
+    expect(esDevuelta(observadaA)).toBe(true);
+    expect(esDevuelta(enRevision)).toBe(false);
+    // Lo seleccionado que no está devuelto o ya no está en la página no cuenta; el expediente se repite una sola vez.
+    const seleccion = new Set([claveRevalidacion(observadaA), claveRevalidacion(observadaB), claveRevalidacion(enRevision), 'otro|r9']);
+    expect([...devueltosSeleccionados(filas, seleccion)]).toEqual(['e1']);
+    expect(devueltosSeleccionados(filas, new Set()).size).toBe(0);
   });
 });

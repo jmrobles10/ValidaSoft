@@ -67,7 +67,7 @@ public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
     bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
     IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
-    VigenciaVinculoDto? VigenciaVinculo = null);
+    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
@@ -76,13 +76,14 @@ public sealed record CrearFlujoDto(
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
     IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null,
-    PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null, VigenciaVinculoDto? VigenciaVinculo = null);
+    PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null, VigenciaVinculoDto? VigenciaVinculo = null,
+    RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
     DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
     IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
-    VigenciaVinculoDto? VigenciaVinculo = null);
+    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
 
 /// <summary>
 /// Reintento del tercero tras un rechazo (DS-4): con <see cref="Permitido"/> el tercero rechazado ve los motivos en su portal y
@@ -302,7 +303,8 @@ public sealed record AnularVeredictoDto(string Justificacion, Guid? VeredictoId 
 public sealed record FilaBandejaDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, Guid AreaId,
     string AreaCodigo, string AreaNombre, int Etapa, string EstadoArea, string EstadoExpediente, int Aprobaciones, int AprobadoresRequeridos,
-    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0, bool Desaprobado = false);
+    DateTimeOffset? Desde, DateTimeOffset ActualizadoEn, int RequisitosPendientes = 0, bool Desaprobado = false, int? SlaHoras = null,
+    DateTimeOffset? SlaVence = null, string? Sla = null);
 
 /// <summary>Número y fecha de carga de una versión de la bóveda.</summary>
 public sealed record VersionResumenDto(int Numero, DateTimeOffset Fecha);

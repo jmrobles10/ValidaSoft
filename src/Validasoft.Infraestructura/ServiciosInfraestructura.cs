@@ -72,6 +72,9 @@ public static class ServiciosInfraestructura
     /// </summary>
     public const string ColaLotes = "lotes";
 
+    /// <summary>Cola local durable y <b>secuencial</b> de las campañas de renovación (OP-3): una tanda a la vez, cada una encola la siguiente.</summary>
+    public const string ColaCampanias = "campanias";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -136,6 +139,8 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<PreferenciasDeCorreoDelTercero>(); // el tercero puede apagar cada correo (NT-1)
         // Recordatorio automático de observaciones pendientes (NT-3): barrido periódico (Validasoft:RecordatoriosDeObservaciones:Intervalo).
         servicios.AddHostedService<ProgramadorDeRecordatoriosDeObservaciones>();
+        // Alertas del SLA de revisión (OP-12): barrido periódico (Validasoft:SlaDeRevision:Intervalo).
+        servicios.AddHostedService<ProgramadorDeSlaDeRevision>();
         servicios.AddSingleton<ProcesadorDeEventos>();
         servicios.AddSingleton<OpcionesDeWebhooks>();
         servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
@@ -275,6 +280,8 @@ public static class ServiciosInfraestructura
         opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Invitaciones.ProcesarTandaDeLote>().ToLocalQueue(ColaLotes);
         opciones.LocalQueue(ColaLotes).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Campanias.ProcesarTandaDeCampania>().ToLocalQueue(ColaCampanias);
+        opciones.LocalQueue(ColaCampanias).Sequential().UseDurableInbox();
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
@@ -285,6 +292,8 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlas>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlaDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Importacion.EjecutarImportacion>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

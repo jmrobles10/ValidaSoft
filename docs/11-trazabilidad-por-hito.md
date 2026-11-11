@@ -934,6 +934,18 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | Pantalla | `web:/informes/estado-expedientes` y `/informes/vinculos` (pestaña Informes); «Exportar a Excel» en `/auditoria`; «Exportar expediente» en `/expedientes/:id`; Inicio enlaza al informe con la misma ventana (IF-7) | 06 §3.1 |
 | Pendiente | Exportación asíncrona con `exportacion.lista`, ZIP firmado de auditoría, índice firmado del expediente, proyección `InformeEstadoExpedientes` | registro IF-8 |
 
+#### H8 — Implementado: operación de la revisión (OP, 2026-11-11)
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint | `/campanias*` (vista previa, crear, lista, detalle, filas, pausar, reanudar, cancelar, reintentar, informe), `/delegaciones*` (candidatos, lista, crear, revocar), `/configuracion/sla`, `/informes/sla` (+ `/excel`), `/plataforma/sla/revisar`, `/ayudas-de-documentos*` | 05 §2.7.3; registro OP-1…OP-19 |
+| Dominio | `CampaniaDeRenovacion` (stream) y `FilaDeCampania`; `DelegacionDeRevision`; `Expediente.RevisarSla`, `SlaPorVencer`, `SlaIncumplido`, `AreaDeExpediente.IniciarRonda`, `ProximaRevisionDeSla`; `TiempoDeArea.RondasConSla/RondasFueraDeSla`; `FlujoVersion.RecordatorioObservacionesDias` | registro OP-3, OP-7, OP-9, OP-19 |
+| Proceso | Cola durable `campanias` (tandas), job `ProgramadorDeSlaDeRevision` (`RevisarSlas`, `RevisarSlaDelExpediente`), barrido de recordatorios por flujo | OP-3, OP-12, OP-19 |
+| Notificaciones | Campana y correo: `expediente.sla_por_vencer`, `expediente.sla_incumplido` (áreas, delegados y administradores), `campanias.terminada`; al tercero `tercero.vigencia` (pre-vencimiento, vencimiento, renovación abierta); plantillas `pre-vencimiento`, `vigencia-vencida`, `renovacion` | OP-13, OP-17 |
+| Eventos públicos | `expediente.sla_por_vencer`, `expediente.sla_incumplido` (catálogo: 42 tipos) | OP-13 |
+| Pantalla | `web:/vencimientos/campanias*`, `/delegaciones`, `/plazos-de-revision`, `/ayuda-de-documentos`, `/informes/sla`; columna «Plazo de revisión» en la bandeja; recordatorio masivo en Revalidaciones; recordatorio por flujo en el editor | registro OP-5, OP-10…OP-19 |
+| Pruebas | Dominio (`SlaDeRevisionTests`, `OperacionDeLaRevisionTests`), integración (`RequisitosApiTests.Operacion`), web (`features/campanias`, `configuracion/delegaciones`, `configuracion/plazos`, `configuracion/ayudas`, `informes`, `revalidaciones`), e2e (`e2e/pruebas/operacion.spec.ts`) | OP-20 |
+| Pendiente | Campañas programadas, delegación por expediente, SLA en días hábiles, escalamiento en dos niveles, filtro de la bandeja por plazo | OP-6, OP-21 |
+
 #### H8 — Cierre de huecos (2026-10-28)
 | Tipo | Elemento | Definido en |
 |---|---|---|

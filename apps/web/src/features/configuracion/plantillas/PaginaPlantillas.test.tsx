@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { reiniciarCliente, SCOPES } from '@validasoft/api-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAvisos } from '../../../shared/useAvisos';
-import { json, montar } from './pruebas/montar';
+import { INVITACION, json, montar } from './pruebas/montar';
 
 const permisos = vi.hoisted(() => ({ scopes: new Set<string>() }));
 vi.mock('../../empresas/useEmpresas', () => ({ useEmpresaActiva: () => ({ empresa: { id: 'emp', nombre: 'Constructora Norte' }, empresas: [] }) }));
@@ -79,6 +79,27 @@ describe('Plantillas de correo', () => {
     expect(put?.cuerpo).toEqual({ asunto: '{{empresa}} te espera', cabecera: 'Hola desde {{empresa}}', pie: null });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(useAvisos.getState().actual?.mensaje).toBe('Plantilla guardada. Los próximos correos saldrán así.');
+  });
+
+  it('los avisos de la vigencia (pre-vencimiento, vencida, renovación) traen la variable {{fecha}} y dicen qué es', async () => {
+    editor();
+    const preVencimiento = {
+      ...INVITACION,
+      evento: 'pre-vencimiento',
+      nombre: 'Pre-vencimiento de la validación',
+      descripcion: 'La validación del tercero está por vencer: el aviso, sus recordatorios y el enlace para ratificar o actualizar su información.',
+      asuntoPorDefecto: 'Tu validación con Constructora Norte está por vencer',
+      variablesPermitidas: ['empresa', 'fecha'],
+    };
+    montar(undefined, [preVencimiento]);
+    const { usuario, drawer } = await abrir('Pre-vencimiento de la validación');
+    const fecha = within(drawer).getByRole('button', { name: '{{fecha}}' });
+    await usuario.hover(fecha);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Fecha de vencimiento de la validación');
+
+    await usuario.click(within(drawer).getByRole('textbox', { name: 'Asunto' }));
+    await usuario.click(fecha);
+    expect(within(drawer).getByRole('textbox', { name: 'Asunto' })).toHaveValue('{{fecha}}');
   });
 
   it('un 422 de la API se muestra en su campo', async () => {

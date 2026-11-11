@@ -70,6 +70,7 @@ function montar(filas: VencimientoDto[], recordatorio: RecordatorioEnviadoDto = 
           <Routes>
             <Route path="/e/:empresaId/vencimientos" element={<PaginaVencimientos />} />
             <Route path="/e/:empresaId/vinculos/:vinculoId" element={<UbicacionActual />} />
+            <Route path="/e/:empresaId/vencimientos/campanias" element={<UbicacionActual />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -113,6 +114,23 @@ describe('Vencimientos', () => {
     expect(screen.queryByRole('button', { name: /Recordar al tercero/ })).not.toBeInTheDocument();
   });
 
+  it('con expedientes:leer ofrece ir a las campañas de renovación; sin él no', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer, SCOPES.expedientesLeer]);
+    const usuario = userEvent.setup();
+    montar(FILAS);
+
+    await usuario.click(await screen.findByRole('button', { name: 'Campañas de renovación' }));
+    expect(await screen.findByText('Ubicación: /e/emp/vencimientos/campanias')).toBeInTheDocument();
+  });
+
+  it('sin expedientes:leer no hay botón de campañas', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer]);
+    montar(FILAS);
+
+    await screen.findByText('Póliza');
+    expect(screen.queryByRole('button', { name: 'Campañas de renovación' })).not.toBeInTheDocument();
+  });
+
   it('el horizonte de la URL viaja en la consulta y el vacío lo nombra', async () => {
     permisos.scopes = new Set([SCOPES.documentosLeer]);
     const peticiones = montar([], undefined, '/e/emp/vencimientos?dias=15');
@@ -142,6 +160,9 @@ describe('Vencimientos', () => {
     await usuario.click(screen.getByRole('button', { name: 'Recordar al tercero (3)' }));
     const dialogo = await screen.findByRole('dialog');
     expect(within(dialogo).getByText('¿Recordarle 3 documentos a los terceros?')).toBeInTheDocument();
+    // Antes de enviar dice a cuántos terceros les llega correo (uno por vínculo: dos de los tres documentos son del mismo).
+    expect(within(dialogo).getByText(/Les llega un correo a 2 terceros/)).toBeInTheDocument();
+    expect(within(dialogo).getByText(/a lo sumo una vez por día/)).toBeInTheDocument();
     await usuario.click(within(dialogo).getByRole('button', { name: 'Enviar recordatorio' }));
 
     await waitFor(() =>

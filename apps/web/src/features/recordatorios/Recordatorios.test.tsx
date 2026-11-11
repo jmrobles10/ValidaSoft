@@ -173,6 +173,8 @@ describe('recordatorio automático en Plantillas', () => {
 
     const interruptor = await screen.findByRole('switch', { name: 'Enviar recordatorios automáticos' });
     expect(interruptor).not.toBeChecked();
+    // La tarjeta avisa que cada flujo puede sobrescribirlo (OP-19).
+    expect(screen.getByText(/Cada flujo puede sobrescribirlo/)).toBeInTheDocument();
     expect(screen.getByLabelText('Cada (días)')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
 

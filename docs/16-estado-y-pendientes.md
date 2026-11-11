@@ -91,6 +91,14 @@ obligó a decidir: los correos a terceros llevan a la vez la preferencia del ter
 [integracion.md §8.1 y §1.1](integracion.md) (08 §2.3 es solo un puntero); y el stream de la campana se corta cuando se cierra o se revoca la sesión directa (ING-3).
 Verificación de la mezcla: 929 pruebas web, 790 de dominio, 20 del SDK, 72 del adaptador del Portal, 233 de integración y 99 e2e, con lint, tipos, build y compilación .NET sin advertencias.
 
+### 3.1.4 Operación de la revisión (rama `feature/operacion-revision`, 2026-11-11)
+Sale del lote de integración. Decisiones **OP-1…OP-21** en el [registro](decisiones/registro.md#5-novemquadragies-operación-de-la-revisión-2026-11-11); contratos en [05 §2.7.3](05-api-contratos-y-webhooks.md).
+- **Campañas de renovación masivas:** la empresa elige vínculos por filtro (vencen en N días, tipo de vínculo, estado), ve a quién afecta antes de confirmar y abre su renovación en lote; se procesa por tandas con el patrón de los lotes, es reanudable (pausar, reanudar, cancelar, reintentar) y deja informe por vínculo.
+- **Delegación de revisión:** quien revisa delega sus áreas (o todas) en otra persona entre dos fechas; la persona delegada ve la bandeja y los avisos del área y decide, y la separación de funciones y el conflicto de intereses se le siguen aplicando a ella. Todo queda auditado.
+- **Plazos de revisión (SLA):** plazo por área en el flujo (ya existía) y por defecto en la empresa, alertas en la campana y por correo al acercarse y al vencer (y a los administradores), indicador en la bandeja, informe de cumplimiento y eventos públicos `expediente.sla_por_vencer` / `expediente.sla_incumplido`.
+- **Ayuda por documento por empresa**, **plantillas editables y preferencias del tercero** para los avisos de pre-vencimiento y vigencia (más la campana del tercero), **recordatorio de observaciones desde Revalidaciones y Vencimientos** y **recordatorio automático por flujo**.
+- **Pendiente:** OP-6 y OP-21 (campañas programadas, delegación por expediente, SLA en días hábiles, escalamiento en dos niveles, filtro de la bandeja por plazo).
+
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
 push**). Por decisión de Producto queda en espera hasta validar todo el alcance de Validasoft; no se sube ni se crea
@@ -266,16 +274,16 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
 - Consultar en la consola la auditoría de ingreso de los operadores de Plataforma (hoy se registra; la consulta es la del grupo).
 - Desactivar sistemas de Plataforma por API (los operadores ya se desactivan, ING-4); agregar empresas a un grupo desde la consola.
 - `POST /api-keys` y `POST /sesiones-usuario` todavía guardan su respuesta en el registro de idempotencia 24 h.
-- Ayuda por documento **por empresa** (hoy es por tenant, B-4).
+- ~~Ayuda por documento **por empresa**.~~ Hecho (OP-15, OP-16).
 
 ### 4.7 H8 restante
-- Campañas de renovación.
-- Delegación de revisión.
+- ~~Campañas de renovación.~~ Hecho en `feature/operacion-revision` (OP-1…OP-6, §3.1.4).
+- ~~Delegación de revisión.~~ Hecho (OP-7…OP-9).
 - Habeas Data y supresión.
 - ZIP firmado de la bóveda.
 - Plan y límites por tenant.
 - Dominio de correo propio.
-- SLAs con alertas.
+- ~~SLAs con alertas.~~ Hecho (OP-9…OP-14): plazo por área, alertas, indicador en la bandeja e informe de cumplimiento.
 - Rendimiento de un lote de 1.000 filas.
 
 ### 4.8 Piloto y producción (H10, H11)

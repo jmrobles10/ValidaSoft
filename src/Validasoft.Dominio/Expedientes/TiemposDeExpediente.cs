@@ -7,7 +7,7 @@ namespace Validasoft.Dominio.Expedientes;
 /// sigue abierta).
 /// </summary>
 public sealed record TiempoDeArea(Guid AreaId, string Codigo, string Nombre, int Etapa, double Horas, int Rondas, int? SlaHoras, bool SlaIncumplido,
-    EstadoAreaExpediente Estado);
+    EstadoAreaExpediente Estado, int RondasConSla = 0, int RondasFueraDeSla = 0);
 
 /// <summary>
 /// Tiempos de un expediente medidos sobre sus eventos (IF-2). <see cref="HorasTotales"/>: de la apertura al cierre (o a
@@ -44,6 +44,8 @@ public sealed partial class Expediente
         var rondas = new Dictionary<Guid, int>();
         var inicioRonda = new Dictionary<Guid, DateTimeOffset>();
         var incumplido = new HashSet<Guid>();
+        var rondasConSla = new Dictionary<Guid, int>();
+        var rondasFuera = new Dictionary<Guid, int>();
         IReadOnlySet<Guid> pendientes = new HashSet<Guid>();
 
         void Acumular(DateTimeOffset hasta)
@@ -65,8 +67,13 @@ public sealed partial class Expediente
 
         void CerrarRonda(Guid areaId, DateTimeOffset hasta)
         {
-            if (inicioRonda.Remove(areaId, out var inicio) && estado?.BuscarArea(areaId) is { SlaHoras: { } sla } && (hasta - inicio).TotalHours > sla)
-                incumplido.Add(areaId);
+            if (!inicioRonda.Remove(areaId, out var inicio) || estado?.BuscarArea(areaId) is not { SlaHoras: { } sla })
+                return;
+            rondasConSla[areaId] = rondasConSla.GetValueOrDefault(areaId) + 1;
+            if ((hasta - inicio).TotalHours <= sla)
+                return;
+            incumplido.Add(areaId);
+            rondasFuera[areaId] = rondasFuera.GetValueOrDefault(areaId) + 1;
         }
 
         foreach (var evento in eventos)
@@ -113,7 +120,8 @@ public sealed partial class Expediente
         var total = Math.Max(0, (fin - estado.AbiertoEn).TotalHours);
         var areas = estado.Etapas.OrderBy(e => e.Orden)
             .SelectMany(e => e.Areas.Select(a => new TiempoDeArea(a.AreaId, a.Codigo, a.Nombre, e.Orden, horasPorArea.GetValueOrDefault(a.AreaId),
-                rondas.GetValueOrDefault(a.AreaId), a.SlaHoras, incumplido.Contains(a.AreaId), a.Estado)))
+                rondas.GetValueOrDefault(a.AreaId), a.SlaHoras, incumplido.Contains(a.AreaId), a.Estado, rondasConSla.GetValueOrDefault(a.AreaId),
+                rondasFuera.GetValueOrDefault(a.AreaId))))
             .ToList();
         return new TiemposDeExpediente(total, carga, conTercero, revision, estado.Estado == EstadoExpediente.Aprobado ? total : null, devoluciones, areas);
     }

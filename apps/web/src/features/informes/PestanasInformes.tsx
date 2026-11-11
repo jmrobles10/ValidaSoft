@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { usePermisos } from '../../shared/usePermisos';
 
-export type PestanaInforme = 'estado-expedientes' | 'vinculos';
+export type PestanaInforme = 'estado-expedientes' | 'vinculos' | 'sla';
 
 /** Pestañas de `/informes`: cada informe es una ruta; solo se muestran los que la persona puede ver. */
 export function PestanasInformes({ empresaId, actual }: { empresaId: string; actual: PestanaInforme }) {
@@ -13,6 +13,7 @@ export function PestanasInformes({ empresaId, actual }: { empresaId: string; act
   const pestanas: { valor: PestanaInforme; etiqueta: string }[] = [];
   if (permisos.puede(SCOPES.expedientesLeer)) pestanas.push({ valor: 'estado-expedientes', etiqueta: t('informes.pestanas.estado') });
   if (permisos.puede(SCOPES.vinculosLeer)) pestanas.push({ valor: 'vinculos', etiqueta: t('informes.pestanas.vinculos') });
+  if (permisos.puede(SCOPES.expedientesLeer)) pestanas.push({ valor: 'sla', etiqueta: t('informes.pestanas.sla') });
 
   return (
     <Box sx={{ mb: 1.5, borderBottom: 1, borderColor: 'divider' }}>
