@@ -68,6 +68,21 @@ en `AplicaSarlaft`, ningún cliente pudo seleccionarla. Luego el esfuerzo se fue
 6. Opcional, durante la coexistencia: si el SRM debe usarla antes de migrar, agregar `AplicaSarlaft = 5` con un
    `ApiInfolaft` que reutilice `InfoLabService`, y corregir el filtro del log.
 
+## 5. Estado del adaptador y qué falta confirmar con Infolaft (CU-11)
+
+**Hecho (sin conectarse a Infolaft):** el adaptador vive detrás de `IVerificadorDeListas` y apagado por omisión; en desarrollo y pruebas se usa el simulado. Probado con un manejador HTTP de guion (`VerificadorInfolaftTests`): Basic con las credenciales de la empresa, búsqueda por nombre y por documento, errores 401/403 (credenciales), 429 (límite del plan) y respuesta que no es JSON. La forma de la consulta es **configuración** (`Validasoft:Verificadores:ListasRestrictivas:Proveedores:Infolaft:*`: `RutaBusqueda`, `Exactitud`, `ParametroNombre`, `ModoNombre`, `ParametroDocumento`, `ModoDocumento`, `ParametroTipoDocumento`), así que ajustarla cuando llegue la documentación no necesita código. Mientras tanto el oficial puede consultar en la página de Infolaft y registrar la consulta con su PDF (CU-6).
+
+**Falta confirmar con Infolaft** (cada punto es un supuesto hoy):
+
+1. El plan contratado y si incluye acceso por API.
+2. El formato exacto de la respuesta de `Search/searchPaginated`: dónde está la lista de resultados, cómo se llama la lista restrictiva, el nombre encontrado, el puntaje y la fecha de actualización. Hoy se lee con `LectorDeRespuestaDeListas`, que busca las claves habituales.
+3. La **búsqueda por documento**: nombres de los parámetros, si pide el tipo de documento y si el resultado es exacto. Hoy se asume `queryByDocument` y `searchMode=SearchByDocument`; el modo se elige por empresa (`PorNombre` o `PorDocumento`).
+4. Si entrega un **PDF por API**: en base64, por URL o por un servicio aparte. Hoy se usa el PDF si viene en las claves habituales y la consulta cubre a una sola persona; con varias personas Validasoft genera el suyo y guarda la respuesta cruda con su hash.
+5. Si hay una consulta masiva que dé **un solo PDF** para varias personas, y el límite de consultas por minuto y por mes.
+6. Si se puede buscar por **POST con cuerpo** en vez de la query string (Habeas Data: hoy el nombre o el documento queda en la URL).
+7. El monitoreo con alertas propio (webhooks o consulta de alertas) para no reconsultar a todos los vínculos.
+8. Un **usuario de pruebas** y un ambiente donde validar el adaptador antes de encenderlo en una empresa, y la rotación de la credencial expuesta en ADPRO (§2).
+
 ## Decisiones abiertas
 
 1. ¿Infolaft será el proveedor único para todos los clientes de Sinco o cada cliente elige el suyo? Propuesta: por

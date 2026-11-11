@@ -6,6 +6,7 @@ using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Cumplimiento;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Identidad;
 using Wolverine;
@@ -83,18 +84,31 @@ public static class VerificacionesEndpoints
     public static async Task<ExpedienteDto> RegistrarEstudio(Guid id, RegistrarEstudioCumplimientoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
         HttpContext http, OpcionesDeVerificaciones opciones, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
-        var debida = Enum.TryParse<DebidaDiligencia>(dto.DebidaDiligencia, true, out var d) && Enum.IsDefined(d)
-            ? d
-            : throw ReglaDeNegocioException.Validacion("debida-diligencia-invalida", "La debida diligencia es Simple o Ampliada.");
+        DebidaDiligencia? debidaPedida = string.IsNullOrWhiteSpace(dto.DebidaDiligencia) ? null
+            : Enum.TryParse<DebidaDiligencia>(dto.DebidaDiligencia, true, out var d) && Enum.IsDefined(d)
+                ? d
+                : throw ReglaDeNegocioException.Validacion("debida-diligencia-invalida", "La debida diligencia es Simple, Ordinaria o Ampliada.");
         var concepto = Enum.TryParse<ConceptoCumplimiento>(dto.Concepto, true, out var c) && Enum.IsDefined(c)
             ? c
             : throw ReglaDeNegocioException.Validacion("concepto-invalido", "El concepto es Favorable o Desfavorable.");
         empresa.UsarMensajeria(mensajes);
+        var matriz = await empresa.Sesion.LoadAsync<MatrizDeRiesgoEmpresa>(empresa.EmpresaId, ct);
         return await empresa.ReintentarAnteCarreraAsync(async () =>
         {
             var stream = await empresa.ExpedienteParaEscribirAsync(id, Peticiones.VersionEsperada(http), ct);
             var expediente = stream.Aggregate!;
             var oficial = await OficialAsync(empresa, contexto, ct);
+            // Con la matriz de la empresa activa (CU-17) el nivel y la debida diligencia salen del cálculo; el oficial solo puede ajustarlos con justificación.
+            var calculo = matriz is { Activa: true }
+                ? await MatrizEndpoints.CalcularAsync(empresa, matriz, expediente, dto.Respuestas, ct)
+                : null;
+            var nivel = dto.NivelRiesgo ?? calculo?.Nivel
+                        ?? throw ReglaDeNegocioException.Validacion("nivel-riesgo-requerido", "Indica el nivel de riesgo (1 a 3).");
+            var debida = debidaPedida ?? (calculo is null ? (DebidaDiligencia?)null : matriz!.Niveles.FirstOrDefault(n => n.Nivel == nivel)?.DebidaDiligencia ?? calculo.DebidaDiligencia)
+                         ?? throw ReglaDeNegocioException.Validacion("debida-diligencia-requerida", "Indica la debida diligencia (Simple, Ordinaria o Ampliada).");
+            if (calculo is not null && matriz!.Niveles.FirstOrDefault(n => n.Nivel == nivel) is { } deNivel && debida < deNivel.DebidaDiligencia)
+                throw ReglaDeNegocioException.Validacion("debida-diligencia-insuficiente",
+                    $"El nivel de riesgo {nivel} exige debida diligencia {deNivel.DebidaDiligencia} o más intensa.");
             var evidencias = new List<EvidenciaDeEstudio>();
             foreach (var evidencia in dto.Evidencias ?? [])
             {
@@ -106,8 +120,8 @@ public static class VerificacionesEndpoints
 
             var ahora = reloj.GetUtcNow();
             var dias = expediente.BuscarVerificacion(TipoVerificacion.EstudioDeCumplimiento)?.VigenciaDias ?? opciones.VigenciaEstudioDias;
-            var eventos = expediente.RegistrarEstudio(new DatosDeEstudio(dto.NivelRiesgo, dto.ConflictoDeInteres, debida, dto.Observaciones, evidencias, concepto),
-                oficial, ahora.AddDays(dias), ahora);
+            var eventos = expediente.RegistrarEstudio(new DatosDeEstudio(nivel, dto.ConflictoDeInteres, debida, dto.Observaciones, evidencias, concepto, calculo,
+                    dto.JustificacionDeNivel, dto.Adjuntos), oficial, ahora.AddDays(dias), ahora);
             return await GuardarAsync(empresa, stream, eventos, mensajes, protector, http, reloj, ct);
         });
     }
@@ -211,7 +225,7 @@ public static class VerificacionesEndpoints
             : throw ReglaDeNegocioException.Validacion("decision-invalida", "La decisión es Descartada o Confirmada.");
 
     /// <summary>Quien decide como Cumplimiento: una persona activa con rol en la empresa (con su identificación, I-21).</summary>
-    private static async Task<Revisor> OficialAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct)
+    internal static async Task<Revisor> OficialAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct)
     {
         if (contexto.ActorTipo != ActorTipo.Usuario || !Guid.TryParse(contexto.ActorId, out var usuarioId))
             throw ReglaDeNegocioException.Validacion("usuario-delegado-requerido",
@@ -223,7 +237,7 @@ public static class VerificacionesEndpoints
     }
 
     /// <summary>Nombre de quien consulta para el PDF de evidencia (la persona o la credencial del sistema).</summary>
-    private static async Task<string> QuienAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct)
+    internal static async Task<string> QuienAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct)
     {
         if (contexto.ActorTipo == ActorTipo.Usuario && Guid.TryParse(contexto.ActorId, out var usuarioId) &&
             await empresa.Sesion.LoadAsync<Usuario>(usuarioId, ct) is { } usuario)
@@ -240,14 +254,14 @@ public static class VerificacionesEndpoints
             : throw ReglaDeNegocioException.NoEncontrado("monitoreo-no-encontrado", "El vínculo no tiene monitoreo de listas.");
     }
 
-    private static async Task<DescargaEvidenciaDto> UrlAsync(IAlmacenDeArchivos almacen, ReglasDeCarga reglas, EvidenciaDeVerificacion evidencia,
+    internal static async Task<DescargaEvidenciaDto> UrlAsync(IAlmacenDeArchivos almacen, ReglasDeCarga reglas, EvidenciaDeVerificacion evidencia,
         CancellationToken ct)
     {
         var url = await almacen.UrlDeDescargaAsync(evidencia.Bucket, evidencia.Clave, evidencia.NombreArchivo, evidencia.TipoContenido, reglas.VigenciaDescarga, ct);
         return new DescargaEvidenciaDto(url.Url, url.Expira, evidencia.NombreArchivo);
     }
 
-    private static async Task<ExpedienteDto> GuardarAsync(SesionDeEmpresa empresa, JasperFx.Events.IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
+    internal static async Task<ExpedienteDto> GuardarAsync(SesionDeEmpresa empresa, JasperFx.Events.IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
         IMessageBus mensajes, IProtectorDeSecretos protector, HttpContext http, TimeProvider reloj, CancellationToken ct)
     {
         if (eventos.Count > 0)

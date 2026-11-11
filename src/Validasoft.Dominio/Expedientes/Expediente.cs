@@ -41,7 +41,7 @@ public sealed record FlujoParaExpediente(
 public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
 
 public sealed record RechazoDelExpediente(Guid AreaId, string RevisorId, IReadOnlyList<MotivoAplicado> Motivos, string Justificacion,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha, string? Origen = null);
 
 /// <summary>
 /// Veredicto guardado en el área (sobre el expediente) o en un requisito (con <see cref="AreaId"/> y
@@ -611,16 +611,18 @@ public sealed partial class Expediente
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(ExpedienteRechazado e)
     {
         Estado = EstadoExpediente.Rechazado;
         TerminarPlazo();
-        Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha);
+        Rechazo = new RechazoDelExpediente(e.AreaId, e.RevisorId, e.Motivos, e.Justificacion, e.Fecha, e.Origen);
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(ExpedienteAnulado e)
@@ -631,6 +633,7 @@ public sealed partial class Expediente
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(VeredictoAnuladoPorAdministrador e)
@@ -809,11 +812,14 @@ public sealed partial class Expediente
             case ExpedienteRechazado e: Apply(e); break;
             case ExpedienteAnulado e: Apply(e); break;
             case VeredictoAnuladoPorAdministrador e: Apply(e); break;
+            case RevisionAutomaticaRegistrada e: Apply(e); break;
+            case RevisionAutomaticaResuelta e: Apply(e); break;
             case VerificacionesRequeridas e: Apply(e); break;
             case VerificacionExternaRegistrada e: Apply(e); break;
             case CoincidenciaResuelta e: Apply(e); break;
             case EstudioDeCumplimientoRegistrado e: Apply(e); break;
             case VerificacionExpirada e: Apply(e); break;
+            case AdjuntoDeCumplimientoSubido e: Apply(e); break;
             case ConsultaDeVerificacionFallida e: Apply(e); break;
             case EvidenciaDeVerificacionDescargada e: Apply(e); break;
             case RecordatorioDeCargueEnviado e: Apply(e); break;

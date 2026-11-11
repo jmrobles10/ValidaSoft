@@ -8,7 +8,7 @@ import { crearEscenario } from '../soporte/semilla';
  * la página se desplazan en horizontal; las pestañas que no caben pasan a «Más» y Configuración es un engranaje.
  */
 
-const SECCIONES = ['Inicio', 'Bandeja', 'Revalidaciones', 'Vencimientos', 'Cumplimiento', 'Certificados', 'Vínculos', 'Informes', 'Auditoría'];
+const SECCIONES = ['Inicio', 'Bandeja', 'Excepciones', 'Revalidaciones', 'Vencimientos', 'Cumplimiento', 'Certificados', 'Vínculos', 'Informes', 'Auditoría'];
 const ALTO = 800;
 
 /** Pestañas a la vista y, si hay «Más», el botón (con su texto). */
@@ -53,7 +53,8 @@ for (const ancho of [1536, 1100, 700]) {
     await expect(ana.getByRole('heading', { level: 1, name: 'Inicio' })).toBeVisible();
 
     await sinDesplazamientoHorizontal(ana);
-    expect(await seccionesAlcanzables(page, ana)).toEqual(SECCIONES);
+    // La barra se vuelve a medir cuando llega el contador de Excepciones: se espera a que se asiente antes de comparar.
+    await expect.poll(() => seccionesAlcanzables(page, ana), { timeout: 10_000 }).toEqual(SECCIONES);
     if (ancho <= 1100) expect((await estadoDeLaBarra(ana)).hayMas).toBe(true);
     await expect(ana.getByRole('navigation', { name: 'Secciones' }).getByRole('link', { name: 'Configuración' })).toHaveCount(0);
     const engranaje = ana.getByRole('link', { name: 'Configuración', exact: true });

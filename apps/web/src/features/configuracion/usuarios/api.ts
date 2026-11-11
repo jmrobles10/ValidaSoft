@@ -12,6 +12,16 @@ export function useUsuarios(habilitado = true) {
 const VACIO: ReadonlyMap<string, string> = new Map();
 /** La API acepta hasta 100 ids por llamada (RQ-9). */
 const MAXIMO_IDS = 100;
+const ES_GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Los ids que se pueden resumir: sin repetir, ordenados y solo identificadores de usuario. Quien actúa en un expediente puede ser
+ * el sistema («revision-automatica», «sistema»): la API responde 422 `ids-invalidos` a todo el lote si uno no es un usuario, así que
+ * se descartan antes para no perder los nombres de las personas.
+ */
+export function idsResumibles(ids: readonly string[]): string[] {
+  return [...new Set(ids.filter((id) => ES_GUID.test(id)))].sort().slice(0, MAXIMO_IDS);
+}
 
 /**
  * Nombres de las personas que aparecen en pantalla (`GET /usuarios/resumen?ids=`, RQ-9): basta `expedientes:leer` o
@@ -21,7 +31,7 @@ const MAXIMO_IDS = 100;
 export function useNombresUsuarios(empresaId: string, ids: readonly string[]): ReadonlyMap<string, string> {
   const permisos = usePermisos(empresaId);
   const puede = permisos.puede(SCOPES.expedientesLeer) || permisos.puede(SCOPES.vinculosLeer);
-  const unicos = useMemo(() => [...new Set(ids)].sort().slice(0, MAXIMO_IDS), [ids]);
+  const unicos = useMemo(() => idsResumibles(ids), [ids]);
   const opciones = getResumirUsuariosQueryOptions({ ids: unicos.join(',') }, { request: { empresa: empresaId } });
   const { data } = useQuery({
     ...opciones,

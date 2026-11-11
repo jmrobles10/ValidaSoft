@@ -61,6 +61,8 @@ const entorno = {
   Validasoft__IA__Proveedor: 'Simulado',
   // La consulta automática de listas (proveedor simulado) corre casi al instante tras pasar a revisión.
   Validasoft__Verificadores__SegundosProceso: '1',
+  // La revisión automática con IA (Asistido, Automático) revisa casi al instante los documentos que ya tienen su análisis.
+  Validasoft__RevisionAutomatica__SegundosProceso: '1',
   ...(aislado && {
     ConnectionStrings__Validasoft: `Host=localhost;Port=5432;Database=${BASE_AISLADA};Username=validasoft;Password=validasoft`,
     Validasoft__Correo__Puerto: '1026',

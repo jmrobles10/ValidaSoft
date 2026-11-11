@@ -67,6 +67,9 @@ public sealed class RequisitoDeExpediente
 
     public List<VeredictoRegistrado> Veredictos { get; set; } = [];
 
+    /// <summary>Lo que la revisión automática registró para este documento (una fila por área y versión, ADR-0012).</summary>
+    public List<RevisionAutomaticaDeRequisito> Revisiones { get; set; } = [];
+
     public bool Eximido { get; set; }
 
     // ---------- Requisito de sección (F2) ----------
@@ -552,6 +555,8 @@ public sealed partial class Expediente
                 }
             }
         }
+
+        RecalcularRevisionAutomatica();
     }
 
     private EstadoRequisito EstadoDe(RequisitoDeExpediente requisito)

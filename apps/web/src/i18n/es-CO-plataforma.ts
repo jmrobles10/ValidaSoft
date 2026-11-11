@@ -174,13 +174,18 @@ export const plataforma = {
   secretos: {
     titulo: 'Secretos en reposo',
     subtitulo:
-      'Llaves de OpenAI, secretos de webhooks y números de cuenta se guardan cifrados con la clave maestra. Al rotarla, re-cifra aquí lo que quedó con una anterior.',
+      'Llaves de OpenAI, secretos de webhooks, números de cuenta y credenciales de listas restrictivas se guardan cifrados con la clave maestra. Al rotarla, re-cifra aquí lo que quedó con una anterior.',
     error: 'No pudimos revisar los secretos.',
     claveVigente: 'Clave maestra vigente',
     clavesAnteriores: 'Claves anteriores configuradas',
     ninguna: 'Ninguna',
     columnas: { tipo: 'Secreto', total: 'Guardados', vigentes: 'Con la clave vigente', pendientes: 'Por re-cifrar', fallidos: 'Ilegibles' },
-    tipos: { 'llave-openai': 'Llaves de OpenAI', 'secreto-webhook': 'Secretos de webhooks', 'cuenta-bancaria': 'Números de cuenta' },
+    tipos: {
+      'llave-openai': 'Llaves de OpenAI',
+      'secreto-webhook': 'Secretos de webhooks',
+      'cuenta-bancaria': 'Números de cuenta',
+      'credenciales-listas': 'Credenciales de listas restrictivas',
+    },
     revisar: 'Revisar de nuevo',
     recifrar: 'Re-cifrar con la clave vigente',
     confirmarTitulo: 'Re-cifrar los secretos',

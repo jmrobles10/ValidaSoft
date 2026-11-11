@@ -145,6 +145,9 @@ public static class GuardadoDeSecciones
             // F5: la versión nueva se cruza con los documentos que la respaldan (si ya tienen análisis de IA).
             if (mensajes is not null && definicion.Codigo is not (CodigosDeSeccion.Sst or CodigosDeSeccion.Especialidades))
                 await mensajes.PublishAsync(new CruzarFichaConDocumentos(terceroId));
+            // CU-15: una versión nueva de la ficha legal puede traer otro representante, suplente, socio o PEP: las listas ya consultadas se reevalúan.
+            if (mensajes is not null && definicion.Codigo == CodigosDeSeccion.Legal)
+                await mensajes.PublishAsync(new Verificaciones.PersonasDeFichaCambiaron(terceroId));
             await sesion.SaveChangesAsync(ct);
             return new Resultado(proyectada, true, estado, tercero.TipoPersona);
         }, mensajes);

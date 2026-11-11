@@ -7,10 +7,12 @@ import { cuantasPestanasCaben, SEPARACION_PESTANAS, type MedidasPestanas } from 
 import { useMedidasPestanas } from './useMedidasPestanas';
 
 export interface Pestana {
-  clave: 'inicio' | 'bandeja' | 'revalidaciones' | 'vencimientos' | 'cumplimiento' | 'certificados' | 'vinculos' | 'informes' | 'auditoria';
+  clave: 'inicio' | 'bandeja' | 'excepciones' | 'revalidaciones' | 'vencimientos' | 'cumplimiento' | 'certificados' | 'vinculos' | 'informes' | 'auditoria';
   ruta: string;
   /** Rutas que marcan la pestaña como activa. */
   prefijos: readonly string[];
+  /** Cuántos pendientes tiene la sección (texto, p. ej. «3» o «200+»): se ve junto a su nombre. Sin pendientes, no se pasa. */
+  conteo?: string;
 }
 
 /** Estilo de una pestaña de la barra (el enlace, el botón «Más» y las medidas ocultas): mismo alto y tipografía. */
@@ -73,7 +75,8 @@ export function NavegacionPrincipal({ pestanas, empresaId, activa, medidas: inye
   const { t } = useTranslation();
   const idMenu = useId();
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
-  const etiquetas = pestanas.map((p) => t(`nav.${p.clave}`));
+  const etiquetaDe = (p: Pestana) => (p.conteo ? t('nav.conConteo', { nombre: t(`nav.${p.clave}`), conteo: p.conteo }) : t(`nav.${p.clave}`));
+  const etiquetas = pestanas.map(etiquetaDe);
   const { refBarra, refFila, medidas } = useMedidasPestanas(etiquetas.join('|'), inyectadas);
 
   const indiceActiva = pestanas.findIndex((p) => p.clave === activa);
@@ -98,7 +101,7 @@ export function NavegacionPrincipal({ pestanas, empresaId, activa, medidas: inye
         const actual = activa === p.clave;
         return (
           <Box key={p.clave} component={RouterLink} to={destino(p)} aria-current={actual ? 'page' : undefined} sx={estiloPestana(actual)}>
-            {t(`nav.${p.clave}`)}
+            {etiquetaDe(p)}
           </Box>
         );
       })}
@@ -133,7 +136,7 @@ export function NavegacionPrincipal({ pestanas, empresaId, activa, medidas: inye
               const actual = activa === p.clave;
               return (
                 <MenuItem key={p.clave} component={RouterLink} to={destino(p)} selected={actual} aria-current={actual ? 'page' : undefined} onClick={() => setAncla(null)} sx={{ fontWeight: actual ? 600 : 500 }}>
-                  {t(`nav.${p.clave}`)}
+                  {etiquetaDe(p)}
                 </MenuItem>
               );
             })}

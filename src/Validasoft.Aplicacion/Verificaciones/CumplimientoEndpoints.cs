@@ -46,6 +46,7 @@ public static partial class ListasRestrictivasEndpoints
         ConsultaDeListas consulta, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
+        var grupoId = contexto.TenantRequerido(); // la clave de las credenciales es del grupo (CU-20)
         var mes = UsoMensualListas.MesDe(CalculadoraDeVigencia.Fecha(ahora));
         var existente = await empresa.Sesion.LoadAsync<ListasRestrictivasEmpresa>(empresa.EmpresaId, ct);
         var antes = existente is null ? null : await DtoAsync(empresa, existente, consulta, mes, ct);
@@ -57,7 +58,7 @@ public static partial class ListasRestrictivasEndpoints
                 : Enum.TryParse<ModoBusquedaListas>(c.ModoBusqueda, true, out var m) && Enum.IsDefined(m) ? m
                 : throw ReglaDeNegocioException.Validacion("modo-busqueda-invalido", "El modo de búsqueda es PorNombre o PorDocumento.");
             configuracion.CambiarCredenciales(new CambioDeCredencialesDeListas(c.Proveedor, c.Usuario, c.Clave, c.UrlBase, c.Plan, c.CuotaMensual, modo),
-                protector.Proteger, ahora);
+                clave => protector.ProtegerDeGrupo(grupoId, clave), ahora);
         }
 
         if (dto.Proveedor is { } proveedor)

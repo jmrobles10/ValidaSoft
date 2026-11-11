@@ -4,9 +4,11 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AdjuntoDeCumplimientoDto } from './adjuntoDeCumplimientoDto';
 import type { ConceptoCumplimiento } from './conceptoCumplimiento';
 import type { DebidaDiligencia } from './debidaDiligencia';
 import type { EvidenciaEstudioDto } from './evidenciaEstudioDto';
+import type { ResultadoDeMatrizDto } from './resultadoDeMatrizDto';
 
 export interface EstudioCumplimientoDto {
   verificadoEnListas: boolean;
@@ -20,4 +22,9 @@ export interface EstudioCumplimientoDto {
   oficial: string;
   fecha: string;
   vigenteHasta: string;
+  matriz?: null | ResultadoDeMatrizDto;
+  /** @nullable */
+  justificacionDeNivel?: string | null;
+  /** @nullable */
+  adjuntos?: AdjuntoDeCumplimientoDto[] | null;
 }

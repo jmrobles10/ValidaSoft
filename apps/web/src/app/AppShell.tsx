@@ -8,6 +8,8 @@ import { aOpcion, useEmpresaActiva, type ContextoEmpresa } from '../features/emp
 import { AvisoDePasskey } from '../features/cuenta/AvisoDePasskey';
 import { MenuDeCuenta } from '../features/cuenta/MenuDeCuenta';
 import { Campana } from '../features/notificaciones/Campana';
+import { useConteoExcepciones } from '../features/revisionAutomatica/api';
+import { textoDeConteo } from '../features/revisionAutomatica/modelo';
 import { useAlturaFija } from '../sesion/alturaFija';
 import { BotonConfiguracion } from './BotonConfiguracion';
 import { NavegacionPrincipal, type Pestana } from './NavegacionPrincipal';
@@ -39,11 +41,14 @@ export function AppShell() {
   // pegue arriba de él (ver `sesion/alturaFija.ts`). Si no, desplaza la ventana y se pega bajo esta barra.
   const alturaFija = useAlturaFija((s) => s.altura);
 
+  // Cuántas excepciones de la revisión automática esperan a una persona: el contador de su pestaña.
+  const excepciones = useConteoExcepciones(empresa.id, permisos.puede(SCOPES.expedientesLeer));
   const configuracion = SECCIONES_CONFIGURACION.filter((s) => permisos.puede(s.scope));
   const pestanas: Pestana[] = [];
   if (permisos.puede(SCOPES.expedientesLeer)) {
     pestanas.push({ clave: 'inicio', ruta: 'inicio', prefijos: ['inicio'] });
     pestanas.push({ clave: 'bandeja', ruta: 'bandeja', prefijos: ['bandeja', 'expedientes'] });
+    pestanas.push({ clave: 'excepciones', ruta: 'excepciones', prefijos: ['excepciones'], conteo: excepciones ? textoDeConteo(excepciones) : undefined });
     pestanas.push({ clave: 'revalidaciones', ruta: 'revalidaciones', prefijos: ['revalidaciones'] });
   }
   if (permisos.puede(SCOPES.documentosLeer)) pestanas.push({ clave: 'vencimientos', ruta: 'vencimientos', prefijos: ['vencimientos'] });

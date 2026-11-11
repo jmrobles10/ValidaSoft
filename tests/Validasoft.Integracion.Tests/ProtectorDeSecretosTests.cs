@@ -89,6 +89,72 @@ public sealed class ProtectorDeSecretosTests
         Should.Throw<CryptographicException>(() => Protector(Clave1, firma: nuevaFirma).Desproteger(antiguo));
     }
 
+    private static readonly Guid GrupoNorte = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid GrupoSur = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+    [Fact]
+    public void Las_credenciales_de_un_grupo_se_cifran_con_la_clave_de_ese_grupo_y_no_las_abre_otro()
+    {
+        var protector = Protector(Clave1);
+
+        var norte = protector.ProtegerDeGrupo(GrupoNorte, "clave-de-infolaft-9876");
+        var otra = protector.ProtegerDeGrupo(GrupoNorte, "clave-de-infolaft-9876");
+
+        norte.ShouldStartWith($"vs2.{Kid(Clave1)}.");
+        norte.ShouldNotContain("infolaft");
+        norte.ShouldNotBe(otra); // nonce aleatorio
+        protector.DesprotegerDeGrupo(GrupoNorte, norte).ShouldBe("clave-de-infolaft-9876");
+        protector.EstaCifradoParaGrupoConClaveActual(norte).ShouldBeTrue();
+        // Copiar el texto cifrado a otro grupo no sirve: la clave se deriva del id del grupo.
+        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoSur, norte));
+        // Tampoco el protector general lo lee: no es un secreto de la instalación.
+        Should.Throw<CryptographicException>(() => protector.Desproteger(norte));
+    }
+
+    [Fact]
+    public void Lo_guardado_con_la_clave_de_la_instalacion_se_lee_y_pasa_a_la_del_grupo_al_recifrar()
+    {
+        var protector = Protector(Clave1);
+        var deLaInstalacion = protector.Proteger("clave-antigua-1234");
+
+        protector.DesprotegerDeGrupo(GrupoNorte, deLaInstalacion).ShouldBe("clave-antigua-1234");
+        protector.EstaCifradoParaGrupoConClaveActual(deLaInstalacion).ShouldBeFalse();
+
+        var delGrupo = protector.RecifrarDeGrupo(GrupoNorte, deLaInstalacion);
+        delGrupo.ShouldStartWith("vs2.");
+        protector.DesprotegerDeGrupo(GrupoNorte, delGrupo).ShouldBe("clave-antigua-1234");
+        protector.RecifrarDeGrupo(GrupoNorte, delGrupo).ShouldBe(delGrupo); // ya vigente: igual
+    }
+
+    [Fact]
+    public void Al_rotar_la_clave_maestra_la_del_grupo_cambia_y_la_anterior_sigue_descifrando()
+    {
+        var antes = Protector(Clave1).ProtegerDeGrupo(GrupoSur, "usuario-y-clave-5555");
+        var rotado = Protector(Clave2, [Clave1]);
+
+        rotado.DesprotegerDeGrupo(GrupoSur, antes).ShouldBe("usuario-y-clave-5555");
+        rotado.EstaCifradoParaGrupoConClaveActual(antes).ShouldBeFalse();
+        var nuevo = rotado.RecifrarDeGrupo(GrupoSur, antes);
+        nuevo.ShouldStartWith($"vs2.{Kid(Clave2)}.");
+        Protector(Clave2).DesprotegerDeGrupo(GrupoSur, nuevo).ShouldBe("usuario-y-clave-5555");
+        // Sin la clave anterior configurada, el error dice cuál falta y nunca el secreto.
+        Should.Throw<CryptographicException>(() => Protector(Clave2).DesprotegerDeGrupo(GrupoSur, antes)).Message.ShouldContain(Kid(Clave1));
+    }
+
+    [Fact]
+    public void Un_texto_de_grupo_manipulado_no_se_acepta()
+    {
+        var protector = Protector(Clave1);
+        var cifrado = protector.ProtegerDeGrupo(GrupoNorte, "1234567890");
+        var partes = cifrado.Split('.');
+
+        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, $"vs2.{Kid(Clave2)}.{partes[2]}"));
+        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, "vs2.corto"));
+        // Se altera el primer carácter del cuerpo (el nonce): la etiqueta ya no cuadra siempre, sin depender de cómo terminaba el texto.
+        var alterado = (partes[2][0] == 'A' ? 'B' : 'A') + partes[2][1..];
+        Should.Throw<CryptographicException>(() => protector.DesprotegerDeGrupo(GrupoNorte, $"vs2.{partes[1]}.{alterado}"));
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

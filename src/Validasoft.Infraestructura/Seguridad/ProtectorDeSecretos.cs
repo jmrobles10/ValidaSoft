@@ -111,6 +111,11 @@ public sealed class ClavesDeSecretos
 public sealed class ProtectorDeSecretos(IConfiguration configuracion) : IProtectorDeSecretos
 {
     public const string Prefijo = "vs1";
+
+    /// <summary>Texto cifrado con la clave de un grupo: <c>vs2.{kid}.{base64url(nonce ‖ cifrado ‖ etiqueta)}</c> (CU-20).</summary>
+    public const string PrefijoDeGrupo = "vs2";
+
+    private static readonly byte[] RotuloDeGrupo = Encoding.UTF8.GetBytes("validasoft:secretos-grupo:v1|");
     private const int TamanoNonce = 12;
     private const int TamanoEtiqueta = 16;
 
@@ -135,9 +140,41 @@ public sealed class ProtectorDeSecretos(IConfiguration configuracion) : IProtect
         return $"{Prefijo}.{claves.KidActual}.{Base64Url.EncodeToString(salida)}";
     }
 
+    public string ProtegerDeGrupo(Guid grupoId, string secreto)
+    {
+        var claves = Claves;
+        var plano = Encoding.UTF8.GetBytes(secreto);
+        var salida = new byte[TamanoNonce + plano.Length + TamanoEtiqueta];
+        var nonce = salida.AsSpan(0, TamanoNonce);
+        RandomNumberGenerator.Fill(nonce);
+
+        using var aes = new AesGcm(ClaveDeGrupo(claves.Actual, grupoId), TamanoEtiqueta);
+        aes.Encrypt(nonce, plano, salida.AsSpan(TamanoNonce, plano.Length), salida.AsSpan(TamanoNonce + plano.Length),
+            AsociadosDeGrupo(claves.KidActual, grupoId));
+        return $"{PrefijoDeGrupo}.{claves.KidActual}.{Base64Url.EncodeToString(salida)}";
+    }
+
+    public string DesprotegerDeGrupo(Guid grupoId, string protegido)
+    {
+        if (!protegido.StartsWith(PrefijoDeGrupo + ".", StringComparison.Ordinal))
+            return Desproteger(protegido);
+        var partes = protegido.Split('.');
+        if (partes.Length != 3 || partes[1].Length != 8)
+            throw new CryptographicException("Secreto protegido inválido.");
+        if (!Claves.PorKid.TryGetValue(partes[1], out var maestra))
+            throw new CryptographicException(
+                $"El secreto se cifró con la clave {partes[1]}, que no está configurada (agrégala a Validasoft:Secretos:ClavesAnteriores).");
+        return Descifrar(ClaveDeGrupo(maestra, grupoId), Base64Url.DecodeFromChars(partes[2]), AsociadosDeGrupo(partes[1], grupoId));
+    }
+
+    public bool EstaCifradoParaGrupoConClaveActual(string protegido) =>
+        protegido.StartsWith(PrefijoDeGrupo + ".", StringComparison.Ordinal) && protegido.Split('.') is { Length: 3 } partes && partes[1] == Claves.KidActual;
+
     public string Desproteger(string protegido)
     {
         var claves = Claves;
+        if (protegido.StartsWith(PrefijoDeGrupo + ".", StringComparison.Ordinal))
+            throw new CryptographicException("El secreto está cifrado con la clave de un grupo: usa DesprotegerDeGrupo.");
         if (Partir(protegido) is not { } partes)
             return DesprotegerHeredado(claves, protegido);
 
@@ -193,6 +230,12 @@ public sealed class ProtectorDeSecretos(IConfiguration configuracion) : IProtect
     }
 
     private static byte[] Asociados(string kid) => Encoding.UTF8.GetBytes($"validasoft:secretos:v1|{kid}");
+
+    /// <summary>Clave del grupo: HKDF-SHA256 de la clave maestra con el id del grupo como contexto (cada grupo, una clave distinta).</summary>
+    private static byte[] ClaveDeGrupo(byte[] maestra, Guid grupoId) =>
+        HKDF.DeriveKey(HashAlgorithmName.SHA256, maestra, ClavesDeSecretos.TamanoClave, info: [.. RotuloDeGrupo, .. Encoding.UTF8.GetBytes(grupoId.ToString("N"))]);
+
+    private static byte[] AsociadosDeGrupo(string kid, Guid grupoId) => Encoding.UTF8.GetBytes($"validasoft:secretos:v2|{kid}|{grupoId:N}");
 }
 
 /// <summary>Sin una clave maestra válida la API no arranca (como el sello de los certificados, CE-11).</summary>

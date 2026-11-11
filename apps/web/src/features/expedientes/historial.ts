@@ -2,6 +2,7 @@ import type { EventoHistorialDto, ExpedienteDto } from '@validasoft/api-client';
 import type { EventoTimeline } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { esCO } from '../../i18n/es-CO';
+import { fraseDeRevisionAutomatica } from '../revisionAutomatica/historial';
 import { actorDe, campo, texto, tipoNormalizado, type ContextoHistorial } from '../vinculos/historial';
 
 type TipoEvento = keyof typeof esCO.expedientes.historial.eventos;
@@ -127,10 +128,13 @@ export function eventoExpedienteATimeline(
       return { ...base, antes: 'EnRevision', despues: 'Aprobado' };
     case 'expediente_rechazado': {
       const motivos = textosDeMotivos(campo(datos, 'motivos'));
+      // El oficial rechaza directo (CU-18): no lo hace un área, así que el título lo dice y no se nombra ninguna.
+      const porCumplimiento = campo(datos, 'origen') === 'Cumplimiento';
       return {
         ...base,
+        ...(porCumplimiento ? { titulo: t('expedientes.historial.rechazadoPorCumplimiento') } : {}),
         despues: 'Rechazado',
-        detalle: [area(campo(datos, 'areaId')), motivos.length > 0 ? t('expedientes.historial.motivos', { motivos: motivos.join(' · ') }) : null]
+        detalle: [porCumplimiento ? null : area(campo(datos, 'areaId')), motivos.length > 0 ? t('expedientes.historial.motivos', { motivos: motivos.join(' · ') }) : null]
           .filter(Boolean)
           .join(' · '),
         motivo: texto(campo(datos, 'justificacion')),
@@ -234,6 +238,16 @@ export function eventoExpedienteATimeline(
       return { ...base, detalle: tipoDeVerificacion(texto(campo(datos, 'tipo')) ?? '', t) };
     case 'consulta_de_verificacion_fallida':
       return { ...base, detalle: texto(campo(datos, 'proveedor')), motivo: texto(campo(datos, 'error')) };
+    // El oficial sube un archivo del estudio o de una consulta hecha por fuera (CU-15, CU-16).
+    case 'adjunto_de_cumplimiento_subido': {
+      const adjunto = campo(datos, 'adjunto');
+      const nombre = adjunto && typeof adjunto === 'object' ? texto(campo(adjunto as Record<string, unknown>, 'nombre')) : null;
+      return { ...base, titulo: t('expedientes.historial.adjuntoDeCumplimiento', { nombre: nombre ?? '' }) };
+    }
+    // Revisión automática con IA (ADR-0012): lo que decidió el sistema y lo que una persona resolvió del muestreo.
+    case 'revision_automatica_registrada':
+    case 'revision_automatica_resuelta':
+      return { ...base, ...fraseDeRevisionAutomatica(tipo, datos, { area, requisito }, t) };
     default:
       return base;
   }

@@ -374,6 +374,9 @@ export const expedientes = {
       verificacion_expirada: 'Verificación vencida',
       consulta_de_verificacion_fallida: 'Consulta de listas fallida',
       evidencia_de_verificacion_descargada: 'Evidencia descargada',
+      adjunto_de_cumplimiento_subido: 'Archivo de cumplimiento',
+      revision_automatica_registrada: 'Revisión automática',
+      revision_automatica_resuelta: 'Aprobación automática resuelta',
     },
     reabierta: 'Etapa {{orden}} reabierta: se revisa de nuevo',
     faseInicial: 'Vuelve a la fase inicial: se revisa todo de nuevo',
@@ -397,6 +400,8 @@ export const expedientes = {
     consultaListas_other: '{{proveedor}} · {{personas}} personas · {{count}} coincidencias',
     coincidencia: '{{decision}}: {{lista}}',
     estudio: 'Riesgo {{riesgo}} · {{concepto}}',
+    adjuntoDeCumplimiento: 'El oficial adjuntó un archivo: {{nombre}}',
+    rechazadoPorCumplimiento: 'Rechazado por Cumplimiento',
   },
   abrir: {
     boton: 'Abrir expediente',

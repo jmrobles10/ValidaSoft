@@ -124,6 +124,8 @@ export function usuariosDelExpediente(expediente: ExpedienteDto): string[] {
   for (const r of requisitosDe(expediente)) {
     agregar(r.exencion?.por);
     for (const a of r.areas) for (const v of a.veredictos) agregar(v.usuario);
+    // Quién confirmó o revirtió una aprobación por muestreo de la revisión automática (ADR-0012).
+    for (const revision of r.revisionesAutomaticas ?? []) agregar(revision.resueltaPor);
   }
   // Quién consultó listas, resolvió coincidencias o registró el estudio (H7); «sistema» no es un usuario.
   for (const v of expediente.verificaciones ?? []) {

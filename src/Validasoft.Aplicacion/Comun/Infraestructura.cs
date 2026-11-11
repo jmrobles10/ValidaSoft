@@ -157,6 +157,26 @@ public interface IProtectorDeSecretos
 
     /// <summary>El mismo secreto cifrado con la clave vigente; si ya lo está, lo devuelve tal cual.</summary>
     string Recifrar(string protegido) => EstaConClaveActual(protegido) ? protegido : Proteger(Desproteger(protegido));
+
+    /// <summary>
+    /// Cifra con una clave <b>propia del grupo</b> (tenant), derivada de la clave maestra vigente con el id del grupo (HKDF): lo
+    /// de un grupo no se puede descifrar con la clave de otro aunque se copie el texto cifrado (CU-20). Para credenciales de
+    /// terceros guardadas por grupo (listas restrictivas); lo demás sigue con <see cref="Proteger"/>.
+    /// </summary>
+    string ProtegerDeGrupo(Guid grupoId, string secreto);
+
+    /// <summary>
+    /// Descifra lo cifrado con <see cref="ProtegerDeGrupo"/> para ese grupo; un texto del formato de la instalación (sin clave de
+    /// grupo, guardado antes de CU-20) también se descifra, para no perder lo ya configurado hasta el siguiente re-cifrado.
+    /// </summary>
+    string DesprotegerDeGrupo(Guid grupoId, string protegido);
+
+    /// <summary>El texto ya está cifrado con la clave de grupo derivada de la clave maestra vigente.</summary>
+    bool EstaCifradoParaGrupoConClaveActual(string protegido);
+
+    /// <summary>El mismo secreto con la clave de grupo vigente; si ya lo está, lo devuelve tal cual (migra lo guardado con la de la instalación).</summary>
+    string RecifrarDeGrupo(Guid grupoId, string protegido) =>
+        EstaCifradoParaGrupoConClaveActual(protegido) ? protegido : ProtegerDeGrupo(grupoId, DesprotegerDeGrupo(grupoId, protegido));
 }
 
 /// <summary>

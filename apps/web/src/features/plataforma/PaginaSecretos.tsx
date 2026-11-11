@@ -82,7 +82,7 @@ export function PaginaSecretos() {
                 <TableBody>
                   {datos.porTipo.map((x) => (
                     <TableRow key={x.tipo}>
-                      <TableCell>{t(`plataforma.secretos.tipos.${x.tipo as 'llave-openai' | 'secreto-webhook' | 'cuenta-bancaria'}`)}</TableCell>
+                      <TableCell>{t(`plataforma.secretos.tipos.${x.tipo as 'llave-openai' | 'secreto-webhook' | 'cuenta-bancaria' | 'credenciales-listas'}`)}</TableCell>
                       <TableCell align="right">{x.total}</TableCell>
                       <TableCell align="right">{x.vigentes}</TableCell>
                       <TableCell align="right">{pendientes(x)}</TableCell>

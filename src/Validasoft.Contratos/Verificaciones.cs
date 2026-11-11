@@ -35,7 +35,8 @@ public sealed record ConsultaAnteriorDto(string Proveedor, string ReferenciaExte
 /// </summary>
 public sealed record EstudioCumplimientoDto(
     bool VerificadoEnListas, bool ConflictoDeInteres, string DebidaDiligencia, int NivelRiesgo, string? Observaciones,
-    IReadOnlyList<EvidenciaEstudioDto> Evidencias, string Concepto, string Oficial, DateTimeOffset Fecha, DateTimeOffset VigenteHasta);
+    IReadOnlyList<EvidenciaEstudioDto> Evidencias, string Concepto, string Oficial, DateTimeOffset Fecha, DateTimeOffset VigenteHasta,
+    ResultadoDeMatrizDto? Matriz = null, string? JustificacionDeNivel = null, IReadOnlyList<AdjuntoDeCumplimientoDto>? Adjuntos = null);
 
 /// <summary>Documento del expediente citado como evidencia del estudio.</summary>
 public sealed record EvidenciaEstudioDto(Guid DocumentoId, int Version, string? Nombre = null);
@@ -61,9 +62,16 @@ public sealed record ResolverCoincidenciaDto(string Decision, string Justificaci
 /// observaciones obligatorias con conflicto de interés o concepto desfavorable. <see cref="Evidencias"/>: documentos del
 /// expediente (documento y versión) que soportan el estudio.
 /// </summary>
+/// <remarks>
+/// Con la matriz de riesgo de la empresa activa (CU-17) el nivel y la debida diligencia salen del cálculo: se envían las
+/// <see cref="Respuestas"/> a los factores manuales y los demás pueden ir vacíos. Si se envía un <see cref="NivelRiesgo"/> distinto del
+/// calculado, <see cref="JustificacionDeNivel"/> es obligatoria. Sin matriz activa, nivel y debida diligencia son obligatorios.
+/// <see cref="Adjuntos"/>: ids de archivos subidos antes al expediente para este estudio (CU-16).
+/// </remarks>
 public sealed record RegistrarEstudioCumplimientoDto(
-    int NivelRiesgo, bool ConflictoDeInteres, string DebidaDiligencia, string Concepto, string? Observaciones = null,
-    IReadOnlyList<EvidenciaEstudioDto>? Evidencias = null);
+    int? NivelRiesgo, bool ConflictoDeInteres, string? DebidaDiligencia, string Concepto, string? Observaciones = null,
+    IReadOnlyList<EvidenciaEstudioDto>? Evidencias = null, IReadOnlyList<RespuestaDeMatrizDto>? Respuestas = null, string? JustificacionDeNivel = null,
+    IReadOnlyList<Guid>? Adjuntos = null);
 
 /// <summary>URL prefirmada de corta vida para descargar una evidencia (la descarga queda en la auditoría).</summary>
 public sealed record DescargaEvidenciaDto(string Url, DateTimeOffset Expira, string NombreArchivo);

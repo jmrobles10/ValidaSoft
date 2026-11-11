@@ -66,6 +66,10 @@ export function crearRouter() {
               lazy: () => import('../features/expedientes/pages/Bandeja').then((m) => ({ Component: m.Bandeja })),
             },
             {
+              path: 'excepciones',
+              lazy: () => import('../features/revisionAutomatica/PaginaExcepciones').then((m) => ({ Component: m.PaginaExcepciones })),
+            },
+            {
               path: 'revalidaciones',
               lazy: () => import('../features/revalidaciones/PaginaRevalidaciones').then((m) => ({ Component: m.PaginaRevalidaciones })),
             },
@@ -146,9 +150,18 @@ export function crearRouter() {
                   lazy: () => import('../features/configuracion/usoIa/PaginaUsoIa').then((m) => ({ Component: m.PaginaUsoIa })),
                 },
                 {
+                  path: 'revision-automatica',
+                  lazy: () =>
+                    import('../features/configuracion/revisionAutomatica/PaginaRevisionAutomatica').then((m) => ({ Component: m.PaginaRevisionAutomatica })),
+                },
+                {
                   path: 'listas-restrictivas',
                   lazy: () =>
                     import('../features/configuracion/listasRestrictivas/PaginaListasRestrictivas').then((m) => ({ Component: m.PaginaListasRestrictivas })),
+                },
+                {
+                  path: 'matriz-riesgo',
+                  lazy: () => import('../features/configuracion/matrizRiesgo/PaginaMatrizRiesgo').then((m) => ({ Component: m.PaginaMatrizRiesgo })),
                 },
                 {
                   path: 'motivos',

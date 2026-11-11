@@ -4,6 +4,7 @@ import { ChipEstado, formatearFecha } from '@validasoft/ui';
 import { ClipboardList, Clock, FileText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { hashCorto } from '../../documentos/api';
+import { RevisionesAutomaticasDelRequisito } from '../../revisionAutomatica/components/RevisionesAutomaticasDelRequisito';
 import { etiquetaDeRuta } from '../../terceros/ficha/secciones';
 import { ResumenVersion } from '../../documentos/ResumenVersion';
 import type { DocumentoEnVisor } from '../../documentos/VisorDocumento';
@@ -105,6 +106,8 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
           <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} hechos={visor.sinArchivo ? null : visor.hechos} tipoEsperado={visor.tipoEsperado} />
         </Box>
       )}
+      {/* Lo que decidió la revisión automática en cada área (ADR-0012): sugerencia, aprobación del sistema o pase a una persona. */}
+      {!seccion && <RevisionesAutomaticasDelRequisito expediente={expediente} requisito={requisito} areas={areas} contexto={contexto} nombres={nombres} />}
       {seccion && <DetalleSeccionRequisito requisito={requisito} seccion={seccion} documentos={documentos} puedeVer={puedeVer} onVer={onVer} />}
       {/* Un documento que respalda secciones de la ficha («Usar como soporte», F5): qué respalda y el resultado de su cruce. */}
       {!seccion && requisito.soporteDeSecciones && (

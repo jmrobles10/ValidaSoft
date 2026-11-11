@@ -309,8 +309,9 @@ public sealed record EtapaAprobada(int Orden, DateTimeOffset Fecha);
 public sealed record ExpedienteAprobado(DateTimeOffset Fecha);
 
 /// <summary>Rechazo terminal (B-7, P-5-5): solo un área con <c>PuedeRechazarExpediente</c>, con motivos y justificación.</summary>
+/// <param name="Origen">Nulo si lo rechazó un área; <c>Cumplimiento</c> si lo rechazó directamente el oficial (CU-18; <see cref="AreaId"/> es entonces vacío).</param>
 public sealed record ExpedienteRechazado(Guid AreaId, string RevisorId, IReadOnlyList<MotivoAplicado> Motivos, string Justificacion,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha, string? Origen = null);
 
 public sealed record ExpedienteAnulado(EstadoExpediente EstadoPrevio, string Motivo, DateTimeOffset Fecha);
 

@@ -79,7 +79,9 @@ test('la observación llega a la campana del tercero con su empresa: la abre y l
   await expect(panelDelTercero(page).getByRole('listitem').filter({ hasText: 'Tienes observaciones por corregir' })).not.toContainText('Sin leer');
   await panelDelTercero(page).getByRole('button', { name: 'Marcar todas como leídas' }).click();
   await expect(page.getByText(/Marcamos \d+ notificaci(ón|ones) como leídas?\./)).toBeVisible();
-  await page.keyboard.press('Escape');
+  // El botón que tenía el foco queda deshabilitado y el foco se pierde un instante (el panel lo recupera a los ~50 ms): un Escape
+  // al teclado en ese momento no llega al panel y no lo cierra. Se pulsa sobre el propio panel, que toma el foco antes.
+  await panelDelTercero(page).press('Escape');
   // Con el tiempo real puede entrar otro aviso enseguida (un documento por vencer, por ejemplo): el contador puede volver a
   // encenderse, así que se comprueba que el panel se cerró y no que el contador quede en cero.
   await expect(panelDelTercero(page)).toBeHidden();

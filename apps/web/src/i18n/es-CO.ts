@@ -13,6 +13,7 @@ import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPl
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
+import { matrizRiesgo } from './es-CO-matriz-riesgo';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -20,6 +21,7 @@ import { plantillas } from './es-CO-plantillas';
 import { plataforma } from './es-CO-plataforma';
 import { erroresRecordatorios, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
+import { erroresRevisionAutomatica, revisionAutomatica } from './es-CO-revision-automatica';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
 import { terceros } from './es-CO-terceros';
 import { vencimientos } from './es-CO-vencimientos';
@@ -35,6 +37,7 @@ export const esCO = {
   nav: {
     inicio: 'Inicio',
     bandeja: 'Bandeja',
+    excepciones: 'Excepciones',
     revalidaciones: 'Revalidaciones',
     vencimientos: 'Vencimientos',
     cumplimiento: 'Cumplimiento',
@@ -46,7 +49,9 @@ export const esCO = {
     motivos: 'Motivos',
     plantillas: 'Plantillas de correo',
     'uso-ia': 'Plan y uso de IA',
+    'revision-automatica': 'Revisión automática',
     'listas-restrictivas': 'Listas restrictivas',
+    'matriz-riesgo': 'Matriz de riesgo',
     'tipos-documento': 'Tipos de documento',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
@@ -61,6 +66,7 @@ export const esCO = {
     'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
+    conConteo: '{{nombre}} ({{conteo}})',
     mas: 'Más',
     masSecciones: 'Más secciones',
   },
@@ -289,6 +295,7 @@ export const esCO = {
   revalidaciones,
   vencimientos,
   cumplimiento,
+  matrizRiesgo,
   lotes,
   plazoCargue,
   flujoPlazo,
@@ -322,6 +329,7 @@ export const esCO = {
   plantillas,
   recordatorios,
   ia,
+  revisionAutomatica,
   plataforma,
   motivos,
   flujos,
@@ -661,6 +669,7 @@ export const esCO = {
     ...erroresCruce,
     ...erroresRecordatorios,
     ...erroresIngreso,
+    ...erroresRevisionAutomatica,
   },
 } as const;
 

@@ -78,16 +78,16 @@ test('sin coincidencias: las áreas aprueban y el expediente espera el estudio d
   await aprobarUltimaArea(olga, 'Cumplimiento', /Estudio de cumplimiento \(pendiente\)/);
   await esperarEstadoDelTercero(page, 'EnRevision');
 
-  // El estudio con riesgo alto exige debida diligencia ampliada.
+  // El estudio con riesgo alto exige debida diligencia intensificada.
   await olga.getByRole('button', { name: 'Registrar estudio' }).click();
   const dialogo = olga.getByRole('dialog', { name: /Estudio de cumplimiento/ });
   await dialogo.getByRole('button', { name: '3 · Alto' }).click();
   await dialogo.getByRole('combobox', { name: 'Concepto' }).click();
   await olga.getByRole('option', { name: 'Favorable', exact: true }).click();
   await dialogo.getByRole('button', { name: 'Registrar estudio' }).click();
-  await expect(dialogo.getByText('Con riesgo alto la debida diligencia debe ser ampliada.')).toBeVisible();
+  await expect(dialogo.getByText('Con riesgo alto la debida diligencia debe ser intensificada.')).toBeVisible();
   await dialogo.getByRole('combobox', { name: 'Debida diligencia' }).click();
-  await olga.getByRole('option', { name: 'Ampliada' }).click();
+  await olga.getByRole('option', { name: 'Intensificada' }).click();
   await dialogo.getByRole('textbox', { name: 'Observaciones' }).fill('Sector de alto riesgo; sin hallazgos en listas ni prensa.');
   await dialogo.getByRole('button', { name: 'Registrar estudio' }).click();
   await expect(dialogo).toBeHidden();
@@ -140,6 +140,6 @@ test('con coincidencia: el oficial la ve en su bandeja, la descarta con justific
   await olga.getByRole('tab', { name: 'Informe SAGRILAFT' }).click();
   await expect(olga.getByRole('table', { name: 'Informe SAGRILAFT' })).toContainText(nombre);
   const pagina = olga.owner().page();
-  const [descarga] = await Promise.all([pagina.waitForEvent('download'), olga.getByRole('button', { name: 'Exportar a Excel' }).click()]);
+  const [descarga] = await Promise.all([pagina.waitForEvent('download'), olga.getByRole('button', { name: 'Descargar Excel' }).click()]);
   expect(descarga.suggestedFilename()).toMatch(/\.xlsx$/);
 });
