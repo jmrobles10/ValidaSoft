@@ -327,6 +327,29 @@ Decisiones VE-5…VE-18 del [registro](decisiones/registro.md). Todo con `X-Empr
 
 `VerificacionDto` (implementado): `tipo`, `estado`, `bloqueante`, `requeridaPorElFlujo`, `proveedor`, `resultado`, `referenciaExterna`, `registradaEn`, `registradaPor` (usuario o `sistema`), `vigenteHasta`, `evidencia {nombreArchivo, tipoContenido, tamano, sha256, delProveedor, sha256Respuesta}`, `personas[] {rol, nombre, identificacion}`, `coincidencias[] {id, persona, rol, identificacion, lista, nombreEncontrado, detalle, puntaje, decision, justificacion, resueltaPor, resueltaEn, vigenteHasta, heredada}`, `estudio: EstudioCumplimientoDto`, `anteriores[]`, `ultimoError`, `reintentarDesde`, `vigenciaDias`, `frecuenciaReconsultaMeses`. **Diferencias**: el informe se exporta con un `GET` síncrono (no `POST …/exportar` 202) y la debida diligencia es `Simple|Ampliada` (VE-9, VE-14).
 
+#### 2.7.2 Estado de implementación — campana del tercero y recordatorio de observaciones (NT, 2026-11-10)
+
+Decisiones NT-1…NT-11 del [registro](decisiones/registro.md). Lado tercero (sesión de tercero, `Authorization: Bearer`, solo lo de los vínculos de su sesión):
+
+| Método y ruta | Contrato | Respuestas |
+|---|---|---|
+| `GET /public/v1/notificaciones?soloNoLeidas=&limite=&cursor=` | `BandejaNotificacionesTerceroDto { datos: NotificacionTerceroDto[], siguienteCursor, noLeidas }` (más recientes primero; `noLeidas` es el total de **todas** sus empresas). `NotificacionTerceroDto { id, tipo, titulo, mensaje, empresa?: EmpresaPublicaDto (nombre, logo, color), expedienteId?, vinculoId?, folio?, enlace? (ruta de `apps/public`), creadaEn, leidaEn? }` | 200 |
+| `POST /public/v1/notificaciones/{id}/leida` · `POST /public/v1/notificaciones/leidas` | `NotificacionTerceroDto` · `NotificacionesMarcadasDto { marcadas }` | 200; 404 `notificacion-no-encontrada` (de otro tercero o de un vínculo que no es de su sesión) |
+| `GET /public/v1/preferencias-notificacion` · `PUT /public/v1/preferencias-notificacion` | `PreferenciasNotificacionDto { correo: {tipo: bool}, tiposConCorreo[] }` · `ActualizarPreferenciasNotificacionDto { correo }` (solo los tipos que cambian) | 200; 422 `tipo-notificacion-invalido` |
+
+Tipos (`NotificacionTerceroDto.tipo`; con correo: ✉): `tercero.observado` ✉, `tercero.recordatorio` ✉, `tercero.resultado` ✉, `tercero.documento_por_vencer` ✉, `tercero.documento_vencido` ✉, `tercero.certificado` ✉, `tercero.plazo_de_cargue` ✉, `tercero.actualizacion`, `tercero.propuesta`, `tercero.invitacion`. La campana nunca se apaga; el correo de cada ✉ se respeta al enviarlo (`PreferenciasDelTercero`, documento global). Cada aviso es de la empresa que lo origina (vive en su tenant); `tercero.propuesta` no es de ninguna (sin `empresa` ni `vinculoId`). Los disparadores están en el registro (NT-3): salen de los eventos de dominio por la misma suscripción que alimenta la campana de las personas.
+
+Lado empresa (con `X-Empresa`; permiso `vinculos:escribir` salvo la configuración):
+
+| Método y ruta | Contrato | Respuestas |
+|---|---|---|
+| `POST /expedientes/{id}/recordar-observaciones` | Sin cuerpo. Evento `RecordatorioDeObservacionesEnviado`, correo (plantilla `recordatorio-observaciones`, con un enlace de acceso nuevo) y aviso en la campana del tercero. Devuelve `ExpedienteDto` con `recordatorioObservaciones { ultimoEn, total }` | 200; 409 `expediente-no-observado`; 409 `recordatorio-ya-enviado-hoy` (uno por día y expediente); 404 |
+| `POST /expedientes/recordar-observaciones` | `RecordarObservacionesDto { expedientes?: uuid[] (≤ 200), todos?: bool (≤ 500), area?: uuid }` → `RecordatoriosEnviadosDto { enviados, omitidos, detalle[] ResultadoRecordatorioDto { expedienteId, folio?, resultado: Enviado \| SoloCampana \| NoObservado \| YaRecordadoHoy \| NoEncontrado } }`. Lo que no aplica se omite sin error | 200; 422 `lote-vacio`, `lote-demasiado-grande` |
+| `GET /configuracion/recordatorio-observaciones` · `PUT /configuracion/recordatorio-observaciones` | `RecordatorioAutomaticoDto { activo, cadaDias (1–60), actualizadoEn? }` · `ActualizarRecordatorioAutomaticoDto { activo, cadaDias }`; auditado (`RecordatorioDeObservaciones`) | 200; 422 `dias-invalidos`; `configuracion:leer` / `configuracion:escribir` |
+| `POST /plataforma/recordatorios-observaciones/revisar` | `RevisarRecordatoriosDto { tenantId?, fecha? }` (fecha simulada solo en Development) → `ResultadoRevisionRecordatoriosDto { revisados, enviados }` | 200; 422 `fecha-simulada-no-permitida`; `plataforma:tenants` |
+
+Plantillas: el catálogo suma `recordatorio-observaciones` (variables `{{empresa}}`, `{{folio}}`). `GET /expedientes/{id}` suma `recordatorioObservaciones`. «El tercero respondió» (`expediente.tercero_respondio`) llega ahora también a las áreas que revisan los documentos reabiertos (NT-4).
+
 ### 2.8 Webhooks y eventos
 
 | Método y ruta | Descripción | Permiso | Respuestas | Emite |
@@ -1036,6 +1059,8 @@ Los eventos son **por empresa** (o por tenant cuando no tienen empresa): un inte
 ## 8. Alertas y notificaciones (catálogo P-10-1)
 
 > **Implementado (NW, 2026-11-08)**: campana (`/notificaciones`), correo consolidado a revisores (nuevo expediente en el área y respuesta del tercero), aviso a administradores por webhook deshabilitado, constancia al tercero (`consentimiento-empresa`) y preferencias de correo por tipo; detalle en §6.5. Lo demás de esta tabla sigue pendiente.
+
+> **Implementado (NT, 2026-11-10)**: campana del tercero en `apps/public` (`/public/v1/notificaciones`, filas «campana» de la columna *Tercero* de la tabla de abajo: observación, resultado, por vencer, vencido, certificado, plazo, actualización, propuesta e invitación), preferencias de correo del tercero por tipo (la campana no se apaga) y recordatorio de observaciones pendientes (manual, en lote y automático por empresa). Ver §2.7.2.
 
 Canales MVP: correo, campana, webhook (P-10-2). Consolidación: máximo un correo por tercero y hecho por día; una secuencia de avisos por documento; digest diario opcional para revisores (P-10-3). Remitente: dominio de la plataforma, nombre de la empresa, `Reply-To` de la empresa (P-10-4). Evidencia de entrega en `EntregasNotificacion` (adición 4).
 

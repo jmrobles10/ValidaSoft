@@ -567,6 +567,20 @@ Hacia atrás: la plantilla `aprobado` (H4) se conserva y se suma `certificado`; 
 | Endpoint | `GET/PUT /usuarios/me/preferencias-notificacion` | 05 §2.7 |
 | Regla | Alcance de webhooks = `apiKey.empresas[] ∩ webhook.empresas[]`; vacío ⇒ `422 empresas-fuera-de-alcance`; cambio posterior ⇒ `webhook.deshabilitado {causa}` | 05 §2.8, 07 §4 |
 
+#### H5 — Implementado: campana del tercero y recordatorio de observaciones (NT, 2026-11-10)
+
+Paridad con la campana del Portal y el recordatorio masivo de novedades del SRM; decisiones NT-1…NT-11 del [registro](decisiones/registro.md), contratos en [docs/05 §2.7.2](05-api-contratos-y-webhooks.md).
+
+| Pieza | Qué es | Dónde |
+|---|---|---|
+| Campana del tercero | `Notificacion` con el tercero como destinatario y `TenantId`; lectura entre tenants limitada a los vínculos de su sesión; `GET /public/v1/notificaciones`, `POST …/{id}/leida`, `POST …/leidas` | `Notificaciones/NotificacionesDelTercero.cs`, `apps/public/src/notificaciones/` |
+| Disparadores | `PlanificadorDeNotificacionesDelTercero` (observación, recordatorio, actualización, resultado, por vencer, vencido, certificado, plazo, invitación, propuesta), unido al planificador de las personas en la misma suscripción | `Notificaciones/Notificaciones.cs` |
+| Preferencias de correo | `PreferenciasDelTercero` (global); los manejadores de los correos al tercero consultan por `TerceroId` al enviar; `GET/PUT /public/v1/preferencias-notificacion` | `PreferenciasDeCorreoDelTercero`, `Comun/Correo.cs`, `PlazosDeCargue.cs`, `VigenciasDeDocumentos.cs` |
+| Recordatorio de observaciones | Evento `RecordatorioDeObservacionesEnviado`, regla «uno por día» en `Expediente`, plantilla `recordatorio-observaciones`, individual, en lote y automático por empresa (job y `POST /plataforma/recordatorios-observaciones/revisar`) | `Dominio/Expedientes/ExpedienteRecordatorios.cs`, `Expedientes/RecordatoriosDeObservaciones.cs`, `apps/web/src/features/recordatorios/` |
+| Aviso a las áreas | `expediente.tercero_respondio` suma las áreas que revisan los requisitos reabiertos | `PlanificadorDeNotificaciones.AAreasAsync` |
+
+Pruebas: `NotificacionesDelTerceroTests` y `RecordatorioDeObservacionesTests` (dominio), `RequisitosApiTests.NovedadesTercero` (integración), `apps/public/src/notificaciones/*.test.*` y `apps/web/src/features/recordatorios/*.test.*`, `e2e/pruebas/novedades-tercero.spec.ts`.
+
 ### H6 — Vigencias, revalidación y versiones nuevas
 
 #### 2.6.1 Agregados y eventos

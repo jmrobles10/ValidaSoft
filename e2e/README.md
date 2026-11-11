@@ -36,6 +36,7 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 | `ciclo-vinculo.spec.ts` | Anular el veredicto de un área (cierre manual de una observación), anular el expediente y abrir otro, anular el vínculo (palabra de confirmación) y desvincular con el expediente abierto |
 | `secuencia.spec.ts` | Varias etapas en secuencia (cada área ve el expediente solo cuando le toca), un área con dos aprobadores y la separación de funciones |
 | `reintento.spec.ts` | Reinicio tras un rechazo (DS-4): el tercero ve los motivos y vuelve a postularse, la espera en días y el flujo que no lo permite (la empresa reabre desde la web) |
+| `novedades-tercero.spec.ts` | Campana del portal del tercero: la observación llega con la marca de la empresa, se abre desde ahí al expediente y se apaga el correo del tipo; recordatorio de observaciones individual (desde el expediente) y en lote (desde la bandeja, uno por día, con correo y campana); aviso a las áreas que vuelven a revisar lo corregido cuando el tercero responde |
 | `navegacion.spec.ts` | Barra superior con «Más» adaptativo a 1536, 1100 y 700 px (sin desplazamiento horizontal, todas las secciones a un clic, activa dentro de «Más»), engranaje de Configuración, cambio de ancho en caliente y modo oscuro; deja capturas en `test-results/navegacion-*.png` |
 
 Los vencimientos se prueban sin mover el reloj: el proveedor declara una fecha de expedición vieja y los avisos o vencimientos que caen en el pasado se ejecutan enseguida.
