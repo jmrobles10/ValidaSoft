@@ -8,7 +8,7 @@ import { crearEscenario } from '../soporte/semilla';
  * la página se desplazan en horizontal; las pestañas que no caben pasan a «Más» y Configuración es un engranaje.
  */
 
-const SECCIONES = ['Inicio', 'Bandeja', 'Revalidaciones', 'Vencimientos', 'Cumplimiento', 'Certificados', 'Vínculos', 'Informes', 'Auditoría'];
+const SECCIONES = ['Inicio', 'Bandeja', 'Excepciones', 'Revalidaciones', 'Vencimientos', 'Cumplimiento', 'Certificados', 'Vínculos', 'Informes', 'Auditoría'];
 const ALTO = 800;
 
 /** Pestañas a la vista y, si hay «Más», el botón (con su texto). */

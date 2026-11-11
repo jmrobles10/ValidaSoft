@@ -2,6 +2,7 @@ import type { EventoHistorialDto, ExpedienteDto } from '@validasoft/api-client';
 import type { EventoTimeline } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { esCO } from '../../i18n/es-CO';
+import { fraseDeRevisionAutomatica } from '../revisionAutomatica/historial';
 import { actorDe, campo, texto, tipoNormalizado, type ContextoHistorial } from '../vinculos/historial';
 
 type TipoEvento = keyof typeof esCO.expedientes.historial.eventos;
@@ -234,6 +235,10 @@ export function eventoExpedienteATimeline(
       return { ...base, detalle: tipoDeVerificacion(texto(campo(datos, 'tipo')) ?? '', t) };
     case 'consulta_de_verificacion_fallida':
       return { ...base, detalle: texto(campo(datos, 'proveedor')), motivo: texto(campo(datos, 'error')) };
+    // Revisión automática con IA (ADR-0012): lo que decidió el sistema y lo que una persona resolvió del muestreo.
+    case 'revision_automatica_registrada':
+    case 'revision_automatica_resuelta':
+      return { ...base, ...fraseDeRevisionAutomatica(tipo, datos, { area, requisito }, t) };
     default:
       return base;
   }

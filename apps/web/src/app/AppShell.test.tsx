@@ -7,12 +7,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppShell } from './AppShell';
 
 const permisos = vi.hoisted(() => ({ scopes: new Set<string>() }));
+const excepciones = vi.hoisted(() => ({ conteo: null as number | null }));
 vi.mock('../features/empresas/useEmpresas', () => ({
   useEmpresaActiva: () => ({ empresa: { id: 'emp', nombre: 'Constructora Norte' }, empresas: [] }),
   aOpcion: (e: { id: string; nombre: string }) => ({ id: e.id, nombre: e.nombre, identificacion: '' }),
 }));
 vi.mock('../shared/usePermisos', () => ({ usePermisos: () => ({ scopes: permisos.scopes, puede: (s: string) => permisos.scopes.has(s) }) }));
 vi.mock('../features/notificaciones/Campana', () => ({ Campana: () => null }));
+vi.mock('../features/revisionAutomatica/api', () => ({ useConteoExcepciones: () => excepciones.conteo }));
 vi.mock('../sesion/useYo', () => ({ useYo: () => ({ data: undefined }) }));
 
 function montar(ruta: string) {
@@ -29,6 +31,7 @@ function montar(ruta: string) {
 
 afterEach(() => {
   permisos.scopes = new Set();
+  excepciones.conteo = null;
 });
 
 describe('AppShell', () => {
@@ -72,13 +75,14 @@ describe('AppShell', () => {
     expect(screen.queryByRole('link', { name: 'Configuración' })).not.toBeInTheDocument();
   });
 
-  it('con todos los permisos hay nueve pestañas, en su orden, y sin medidas (jsdom) todas a la vista', () => {
+  it('con todos los permisos hay diez pestañas, en su orden, y sin medidas (jsdom) todas a la vista', () => {
     permisos.scopes = new Set(Object.values(SCOPES));
     montar('/e/emp/inicio');
     const barra = screen.getByRole('navigation', { name: 'Secciones' });
     expect(within(barra).getAllByRole('link').map((e) => e.textContent)).toEqual([
       'Inicio',
       'Bandeja',
+      'Excepciones',
       'Revalidaciones',
       'Vencimientos',
       'Cumplimiento',
@@ -88,5 +92,27 @@ describe('AppShell', () => {
       'Auditoría',
     ]);
     expect(within(barra).queryByRole('button', { name: 'Más' })).not.toBeInTheDocument();
+  });
+
+  it('Excepciones lleva el contador de las que esperan a una persona', () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer]);
+    excepciones.conteo = 3;
+    montar('/e/emp/excepciones');
+    const pestana = screen.getByRole('link', { name: 'Excepciones (3)' });
+    expect(pestana).toHaveAttribute('href', '/e/emp/excepciones');
+    expect(pestana).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('sin excepciones pendientes la pestaña no muestra contador', () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer]);
+    excepciones.conteo = 0;
+    montar('/e/emp/bandeja');
+    expect(screen.getByRole('link', { name: 'Excepciones' })).toBeInTheDocument();
+  });
+
+  it('sin expedientes:leer no aparece la pestaña Excepciones', () => {
+    permisos.scopes = new Set([SCOPES.vinculosLeer]);
+    montar('/e/emp/vinculos');
+    expect(screen.queryByRole('link', { name: /^Excepciones/ })).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,7 @@
 import { SCOPES, type Scope } from '@validasoft/api-client';
 import {
   Building2,
+  ClipboardCheck,
   Sparkles,
   FileText,
   KeyRound,
@@ -35,6 +36,7 @@ export interface SeccionConfiguracion {
     | 'datos-marca'
     | 'plantillas'
     | 'uso-ia'
+    | 'revision-automatica'
     | 'listas-restrictivas'
     | 'accesos-soporte';
   scope: Scope;
@@ -60,6 +62,8 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'plantillas', scope: SCOPES.configuracionLeer, icono: Mail, alcance: 'empresa' },
   // El aviso de cupo de IA (IA-9) enlaza a `/e/{empresa}/uso-ia`: no cambiar la ruta sin cambiar el backend.
   { ruta: 'uso-ia', scope: SCOPES.configuracionLeer, icono: Sparkles, alcance: 'empresa' },
+  // Nivel de la revisión automática con IA (Manual, Asistido, Automático) y su uso del mes (ADR-0012).
+  { ruta: 'revision-automatica', scope: SCOPES.configuracionLeer, icono: ClipboardCheck, alcance: 'empresa' },
   // Proveedor de listas restrictivas, credenciales de la empresa y consumo del mes (VE-7, VE-11).
   { ruta: 'listas-restrictivas', scope: SCOPES.configuracionLeer, icono: ShieldCheck, alcance: 'empresa' },
   { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },

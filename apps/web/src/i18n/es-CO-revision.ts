@@ -374,6 +374,8 @@ export const expedientes = {
       verificacion_expirada: 'Verificación vencida',
       consulta_de_verificacion_fallida: 'Consulta de listas fallida',
       evidencia_de_verificacion_descargada: 'Evidencia descargada',
+      revision_automatica_registrada: 'Revisión automática',
+      revision_automatica_resuelta: 'Aprobación automática resuelta',
     },
     reabierta: 'Etapa {{orden}} reabierta: se revisa de nuevo',
     faseInicial: 'Vuelve a la fase inicial: se revisa todo de nuevo',
