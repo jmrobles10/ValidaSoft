@@ -80,17 +80,20 @@ test('el tercero sube un RUT nuevo, acepta la propuesta en el wizard y la empres
 
   await page.goto('/ficha');
   const aviso = page.getByRole('alert', { name: 'Tienes documentos más nuevos que tu información' });
-  await expect(aviso).toContainText('Tu RUT (versión 2) tiene 1 dato distinto', { timeout: 45_000 });
-  await aviso.getByRole('link', { name: 'Actualizar Información general desde mi RUT' }).click();
+  await expect(aviso).toContainText('Tu RUT · versión 2 — 1 dato distinto', { timeout: 45_000 });
+  // Un solo aviso por documento, con la sección que cambia como chip y una acción pequeña.
+  await expect(aviso.getByRole('link', { name: /^Actualizar desde mi RUT/ })).toHaveCount(1);
+  await aviso.getByRole('link', { name: /^Actualizar desde mi RUT/ }).click();
 
   // La propuesta muestra, campo por campo, lo que tiene y lo que dice el RUT; nada se guarda hasta que el tercero guarde.
-  const propuesta = page.getByRole('alert', { name: 'Actualizar desde mi RUT' });
+  const propuesta = page.getByRole('alert', { name: 'Tienes documentos más nuevos que esta sección' });
+  await propuesta.getByRole('button', { name: 'Ver los cambios de mi RUT' }).click();
   const tabla = propuesta.getByRole('table', { name: 'Datos que cambian según tu RUT' });
   await expect(tabla).toContainText('Calle 45 # 12-08');
   await expect(tabla).toContainText('Cl 80 # 10-20');
   await page.screenshot({ path: 'test-results/ficha-f5-propuesta.png', fullPage: true });
   await expect(page.getByRole('textbox', { name: 'Dirección', exact: true })).toHaveValue('Calle 45 # 12-08');
-  await propuesta.getByRole('button', { name: 'Usar estos valores' }).click();
+  await propuesta.getByRole('button', { name: 'Usar los valores de mi RUT' }).click();
   await expect(page.getByRole('textbox', { name: 'Dirección', exact: true })).toHaveValue('Cl 80 # 10-20');
   await expect(propuesta.getByRole('status')).toContainText('todavía no se ha guardado nada');
   const barra = page.getByRole('group', { name: 'Guardar la sección' });

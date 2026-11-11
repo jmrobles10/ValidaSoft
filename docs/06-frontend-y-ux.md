@@ -150,11 +150,22 @@ Convención por feature: `api/` (hooks TanStack sobre el cliente generado + quer
 | Estado | Patrón | Ejemplo |
 |---|---|---|
 | Vacío | Icono lineal + frase + acción | "No tienes revalidaciones pendientes en Legal." |
-| Carga | Skeleton con la forma del contenido; nunca spinner global | — |
+| Carga | Skeleton con la forma del contenido (tabla, tarjetas, formulario…); nunca el texto «Cargando…» ni un spinner de página o de sección (UI-1) | — |
 | Error recuperable | Inline con reintento | "No pudimos cargar la bandeja. Reintentar." |
 | Error de acción | Snackbar con siguiente paso | "No se notificó al tercero por correo. Copia el enlace y envíalo tú." |
 | Decisión automática | Banner informativo | "Aprobado automáticamente: sin cambios frente a la versión del 02/03. Puedes revertirlo." |
 | Sin permiso | Página 403 propia | "Esta sección es de Configuración. Pide acceso a un administrador." |
+
+### 2.4 Reglas visuales de toda la aplicación (UI-1…UI-6)
+
+Normas del proyecto para `apps/web`, `apps/public` y el tema (`packages/ui/src/tema.ts`); detalle y motivos en el [registro](decisiones/registro.md#5-novotricies-reglas-visuales-de-toda-la-aplicación-2026-11-10). Las comprueban `packages/ui/src/pulido.test.tsx` y `e2e/pruebas/pulido-visual.spec.ts`.
+
+1. **Cargando = esqueleto** (`esqueletos.tsx`: tarjetas, formulario, tabla, detalle, historial, opciones de autocompletar). Nunca «Cargando…» ni spinners de página, sección o lista; el único spinner es el de `IconoCarga`, dentro de un botón que guarda.
+2. **Botones compactos**: `medium` por omisión (web 32 px, tercero 36 en escritorio y 40 en el celular, con el área táctil de 44 px en un pseudoelemento). `large` solo para la acción principal; `small` en avisos, filas y tarjetas. Sin `minHeight` de 44/48 en un botón.
+3. **Selects y autocompletar** con el ícono dentro del campo y los textos de MUI en español (`esES` + «Abrir», «Cerrar», «Limpiar», «Sin resultados»).
+4. **Nada cuadrado suelto**: acordeones y papeles con el radio de las tarjetas (12 px) y sin la línea superior de MUI.
+5. **Sin layouts volcados a la izquierda**: `DosColumnas` desde `lg` (Plan de IA, Nuevo grupo); a 1920×1080 una pantalla de configuración cabe sin desplazarse.
+6. **Avisos de documento más nuevo**: uno por documento, con las secciones que afecta; en el wizard, una línea por documento dentro de un solo aviso.
 
 ---
 
