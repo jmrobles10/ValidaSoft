@@ -58,6 +58,8 @@ export function montar(responder: (p: Peticion) => Response | undefined = () => 
       const propia = responder(peticion);
       if (propia) return Promise.resolve(propia);
       if (url.endsWith('/vista-previa')) return Promise.resolve(previaDe(peticion.cuerpo as Parameters<typeof previaDe>[0]));
+      // El recordatorio automático (NT-3) comparte la pantalla: apagado por omisión.
+      if (url.includes('/configuracion/recordatorio-observaciones')) return Promise.resolve(json({ activo: false, cadaDias: 3, actualizadoEn: null }));
       return Promise.resolve(json(plantillas));
     }),
   });

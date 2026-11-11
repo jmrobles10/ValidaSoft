@@ -15,6 +15,7 @@ import { useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { PanelVerificaciones } from '../../cumplimiento/components/PanelVerificaciones';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { BotonExportarExpediente } from '../../informes/BotonExportarExpediente';
+import { AvisoObservado } from '../../recordatorios/AvisoObservado';
 import { useVinculo } from '../../vinculos/api';
 import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
@@ -190,11 +191,15 @@ export function DetalleExpediente() {
         </Alert>
       )}
       {expediente.estado === 'Observado' && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <AlertTitle>{t('expedientes.avisos.observadoTitulo')}</AlertTitle>
-          {t('expedientes.avisos.observado', { count: observadas.length, areas: observadas.map((a) => a.nombre).join(', ') })}
-          {frenadas.length > 0 && ` ${t('expedientes.avisos.frenadas', { areas: frenadas.map((a) => a.nombre).join(', ') })}`}
-        </Alert>
+        <AvisoObservado
+          expediente={expediente}
+          empresaId={empresa.id}
+          scopes={permisos.scopes}
+          texto={
+            t('expedientes.avisos.observado', { count: observadas.length, areas: observadas.map((a) => a.nombre).join(', ') }) +
+            (frenadas.length > 0 ? ` ${t('expedientes.avisos.frenadas', { areas: frenadas.map((a) => a.nombre).join(', ') })}` : '')
+          }
+        />
       )}
       {expediente.esperandoVerificaciones && (
         <Alert severity="info" sx={{ mb: 2 }}>

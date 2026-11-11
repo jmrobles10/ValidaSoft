@@ -1,4 +1,4 @@
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Checkbox, Typography } from '@mui/material';
 import { EstadoAreaExpediente, SCOPES, type FilaBandejaDto } from '@validasoft/api-client';
 import {
   BarraFiltros,
@@ -18,6 +18,8 @@ import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAreas } from '../../configuracion/areas/api';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { AccionesRecordarEnLote } from '../../recordatorios/AccionesRecordarEnLote';
+import { esObservado, observadosDe } from '../../recordatorios/modelo';
 import { useAperturasPendientes, useBandeja } from '../api';
 import { Aprobaciones, ChipEstadoArea, TerceroEnLinea } from '../componentes';
 import { DrawerAperturas } from '../components/DrawerAperturas';
@@ -41,9 +43,13 @@ export function Bandeja() {
   const { reiniciar } = paginacion;
   const [verAperturas, setVerAperturas] = useState(false);
   const esAdministrador = permisos.puede(SCOPES.expedientesAdministrar);
+  const puedeRecordar = permisos.puede(SCOPES.vinculosEscribir);
+  // Expedientes (no filas: una fila por área) elegidos para recordarles sus observaciones al tercero (NT-2).
+  const [seleccion, setSeleccion] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     reiniciar();
+    setSeleccion(new Set());
   }, [area, estado, empresa.id, reiniciar]);
 
   const consulta = useBandeja(empresa.id, { area: area || undefined, estado: estado || undefined, limite: TAMANO_PAGINA, cursor: paginacion.cursor ?? undefined });
@@ -52,6 +58,34 @@ export function Bandeja() {
 
   const columnas = useMemo<ColumnaTabla<FilaBandejaDto>[]>(
     () => [
+      ...(puedeRecordar
+        ? [
+            {
+              id: 'seleccion',
+              encabezado: t('bandeja.columnas.seleccion'),
+              encabezadoOculto: true,
+              ancho: 44,
+              celda: (f: FilaBandejaDto) =>
+                esObservado(f) ? (
+                  <Checkbox
+                    size="small"
+                    checked={seleccion.has(f.expedienteId)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() =>
+                      setSeleccion((previa) => {
+                        const nueva = new Set(previa);
+                        if (nueva.has(f.expedienteId)) nueva.delete(f.expedienteId);
+                        else nueva.add(f.expedienteId);
+                        return nueva;
+                      })
+                    }
+                    slotProps={{ input: { 'aria-label': t('recordatorios.lote.seleccionar', { folio: f.folio, tercero: f.tercero.nombre }) } }}
+                    sx={{ p: 0.5 }}
+                  />
+                ) : null,
+            },
+          ]
+        : []),
       { id: 'folio', encabezado: t('bandeja.columnas.folio'), ancho: 170, celda: (f) => <Typography variant="monoTabla">{f.folio}</Typography> },
       { id: 'tercero', encabezado: t('bandeja.columnas.tercero'), celda: (f) => <TerceroEnLinea tercero={f.tercero} /> },
       { id: 'tipo', encabezado: t('bandeja.columnas.tipo'), ancho: 110, celda: (f) => f.tipoVinculo.nombre },
@@ -105,7 +139,7 @@ export function Bandeja() {
         celda: (f) => <Typography variant="monoTabla">{f.desde ? formatearFecha(f.desde) : '—'}</Typography>,
       },
     ],
-    [t],
+    [t, puedeRecordar, seleccion],
   );
 
   if (!permisos.puede(SCOPES.expedientesLeer)) return <SinPermiso seccion={t('nav.bandeja')} />;
@@ -124,6 +158,7 @@ export function Bandeja() {
   const hayFiltros = Boolean(area || estado);
   const limpiar = () => setFiltros(new URLSearchParams(), { replace: true });
   const pendientes = aperturas.data?.length ?? 0;
+  const observadosEnPagina = observadosDe(consulta.data?.datos ?? []);
 
   return (
     <>
@@ -131,11 +166,28 @@ export function Bandeja() {
         titulo={t('bandeja.titulo')}
         subtitulo={t('bandeja.subtitulo', { empresa: empresa.nombre })}
         acciones={
-          esAdministrador && pendientes > 0 ? (
-            <Button variant="outlined" color="warning" startIcon={<FolderClock size={16} aria-hidden />} onClick={() => setVerAperturas(true)}>
-              {t('bandeja.aperturas.boton', { count: pendientes })}
-            </Button>
-          ) : undefined
+          <>
+            {puedeRecordar && observadosEnPagina.length > 0 && (
+              <Button variant="outlined" onClick={() => setSeleccion(seleccion.size > 0 ? new Set() : new Set(observadosEnPagina))}>
+                {seleccion.size > 0 ? t('recordatorios.lote.quitarSeleccion') : t('recordatorios.lote.seleccionarObservados')}
+              </Button>
+            )}
+            {puedeRecordar && (
+              <AccionesRecordarEnLote
+                empresaId={empresa.id}
+                empresaNombre={empresa.nombre}
+                seleccion={seleccion}
+                areaId={area}
+                areaNombre={areas.data?.find((a) => a.id === area)?.nombre}
+                onTerminado={() => setSeleccion(new Set())}
+              />
+            )}
+            {esAdministrador && pendientes > 0 && (
+              <Button variant="outlined" color="warning" startIcon={<FolderClock size={16} aria-hidden />} onClick={() => setVerAperturas(true)}>
+                {t('bandeja.aperturas.boton', { count: pendientes })}
+              </Button>
+            )}
+          </>
         }
       />
 

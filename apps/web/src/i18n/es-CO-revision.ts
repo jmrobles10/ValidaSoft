@@ -4,7 +4,7 @@ export const bandeja = {
   titulo: 'Bandeja de revisión',
   subtitulo: 'Expedientes de {{empresa}} que esperan a tus áreas',
   filtros: { area: 'Área', estado: 'Estado del área', limpiar: 'Limpiar filtros' },
-  columnas: { folio: 'Folio', tercero: 'Tercero', tipo: 'Tipo', area: 'Área', estado: 'Estado del área', aprobaciones: 'Aprobaciones', documentos: 'Documentos', desde: 'Desde' },
+  columnas: { folio: 'Folio', tercero: 'Tercero', tipo: 'Tipo', area: 'Área', estado: 'Estado del área', aprobaciones: 'Aprobaciones', documentos: 'Documentos', desde: 'Desde', seleccion: 'Seleccionar' },
   documentos_one: '{{count}} por decidir',
   documentos_other: '{{count}} por decidir',
   documentosAccesible_one: '{{count}} documento por decidir',

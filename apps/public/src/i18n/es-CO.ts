@@ -1,5 +1,6 @@
 import { ficha } from './es-CO-ficha';
 import { camposFicha, fichaObservada, seccionEnExpediente } from './es-CO-ficha-empresas';
+import { notificaciones } from './es-CO-notificaciones';
 
 /** Textos de la app del tercero (es-CO, tuteo, siguiente paso en cada error: docs/06 §2.3). */
 export const esCO = {
@@ -414,6 +415,7 @@ export const esCO = {
     camposSenalados: 'Datos por corregir: {{campos}}',
   },
   ficha: { ...ficha, observada: fichaObservada, campos: camposFicha },
+  notificaciones,
   dev: {
     titulo: 'Correos de desarrollo (Mailpit)',
     sub: 'Solo en desarrollo: lee las invitaciones y los códigos sin salir de la app.',
