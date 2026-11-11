@@ -42,7 +42,8 @@ public static class DominioDeCorreoEndpoints
 {
     public const string Entidad = "DominioDeCorreo";
 
-    private static string LlaveDeCache(Guid empresaId) => "dominio-de-correo:" + empresaId.ToString("N");
+    /// <summary>La clave con la que el enviador recuerda 30 segundos el remitente de la empresa: al cambiar el dominio se olvida (OD-20).</summary>
+    public static string LlaveDelRemitente(Guid empresaId) => "remitente-de-empresa:" + empresaId.ToString("N");
 
     /// <summary>La dirección con la que sale el correo de la plataforma (<c>Validasoft:Correo:Remitente</c>).</summary>
     public static string RemitenteDeLaPlataforma(IConfiguration configuracion) =>
@@ -95,7 +96,7 @@ public static class DominioDeCorreoEndpoints
         var despues = ADto(empresa, nuevo, proveedor, configuracion);
         Auditoria.Registrar(sesion, contexto, Entidad, id.ToString(), actual is null ? AccionConfiguracion.Creado : AccionConfiguracion.Modificado, antes, despues, ahora, id);
         await sesion.SaveChangesAsync(ct);
-        cache.Remove(LlaveDeCache(id));
+        cache.Remove(LlaveDelRemitente(id));
         return despues;
     }
 
@@ -121,7 +122,7 @@ public static class DominioDeCorreoEndpoints
         var despues = ADto(empresa, dominio, proveedor, configuracion);
         Auditoria.Registrar(sesion, contexto, Entidad, id.ToString(), AccionConfiguracion.Modificado, antes, despues, ahora, id);
         await sesion.SaveChangesAsync(ct);
-        cache.Remove(LlaveDeCache(id));
+        cache.Remove(LlaveDelRemitente(id));
         return despues;
     }
 
@@ -139,7 +140,7 @@ public static class DominioDeCorreoEndpoints
         sesion.Delete(dominio);
         Auditoria.Registrar(sesion, contexto, Entidad, id.ToString(), AccionConfiguracion.Desactivado, antes, null, reloj.GetUtcNow(), id);
         await sesion.SaveChangesAsync(ct);
-        cache.Remove(LlaveDeCache(id));
+        cache.Remove(LlaveDelRemitente(id));
         return ADto(empresa, null, proveedor, configuracion);
     }
 }

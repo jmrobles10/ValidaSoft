@@ -38,6 +38,7 @@ public sealed class MedidorDeLlamadasApi(IDocumentStore store, TimeProvider relo
 {
     private readonly ConcurrentDictionary<(Guid Tenant, string Mes), long> _pendientes = new();
     private readonly ConcurrentDictionary<string, bool> _existentes = new();
+    private readonly ConcurrentDictionary<(Guid Tenant, string Mes), long> _volcadas = new();
 
     public static string MesActual(TimeProvider reloj) => UsoMensualDelGrupo.MesDe(CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()));
 
@@ -45,6 +46,9 @@ public sealed class MedidorDeLlamadasApi(IDocumentStore store, TimeProvider relo
 
     /// <summary>Lo que este nodo todavía no volcó a la base.</summary>
     public long Pendientes(Guid tenantId, string mes) => _pendientes.TryGetValue((tenantId, mes), out var n) ? Interlocked.Read(ref n) : 0;
+
+    /// <summary>Lo que este nodo ya volcó a la base desde que arrancó (para no perder cuentas al leer el contador guardado).</summary>
+    public long Volcadas(Guid tenantId, string mes) => _volcadas.TryGetValue((tenantId, mes), out var n) ? Interlocked.Read(ref n) : 0;
 
     /// <summary>Vuelca lo acumulado a la base (también al apagar la API). Lo que no se pueda guardar se conserva para el siguiente intento.</summary>
     public async Task VolcarAsync(CancellationToken ct)
@@ -56,6 +60,7 @@ public sealed class MedidorDeLlamadasApi(IDocumentStore store, TimeProvider relo
             try
             {
                 await SumarAsync(clave.Tenant, clave.Mes, cuantas, ct);
+                _volcadas.AddOrUpdate(clave, cuantas, (_, n) => n + cuantas);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
@@ -233,15 +238,17 @@ public sealed class ControlDePlan(IDocumentStore store, IMemoryCache cache, Medi
 
     private async Task<long> LlamadasDelMesAsync(Guid tenantId, string mes, CancellationToken ct)
     {
+        // Lo guardado se lee como mucho cada 20 s; mientras tanto se suma lo que este nodo ya volcó después de leerlo y lo que aún no volcó.
         var clave = $"llamadas-del-mes:{tenantId:N}:{mes}";
-        if (!cache.TryGetValue(clave, out long persistidas))
+        if (!cache.TryGetValue(clave, out (long Persistidas, long VolcadasAlLeer) leido))
         {
+            var volcadasAntes = llamadas.Volcadas(tenantId, mes);
             await using var consulta = store.QuerySession();
-            persistidas = (await consulta.LoadAsync<UsoMensualDelGrupo>(UsoMensualDelGrupo.Clave(tenantId, mes), ct))?.LlamadasApi ?? 0;
-            cache.Set(clave, persistidas, Vigencia);
+            leido = ((await consulta.LoadAsync<UsoMensualDelGrupo>(UsoMensualDelGrupo.Clave(tenantId, mes), ct))?.LlamadasApi ?? 0, volcadasAntes);
+            cache.Set(clave, leido, Vigencia);
         }
 
-        return persistidas + llamadas.Pendientes(tenantId, mes);
+        return leido.Persistidas + (llamadas.Volcadas(tenantId, mes) - leido.VolcadasAlLeer) + llamadas.Pendientes(tenantId, mes);
     }
 
     private async Task<long> AlmacenamientoAsync(Guid tenantId, PlanDelGrupo? plan, bool refrescar, CancellationToken ct)

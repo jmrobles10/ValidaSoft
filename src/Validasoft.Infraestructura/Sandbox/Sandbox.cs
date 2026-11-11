@@ -46,7 +46,7 @@ public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos e
     /// </summary>
     private async Task<RemitenteDeCorreo?> RemitenteDeLaEmpresaAsync(Guid tenantId, Guid empresaId, CancellationToken ct)
     {
-        var llave = "remitente-de-empresa:" + empresaId.ToString("N");
+        var llave = Aplicacion.Configuracion.DominioDeCorreoEndpoints.LlaveDelRemitente(empresaId);
         if (cache.TryGetValue(llave, out RemitenteDeCorreo? guardado))
             return guardado;
 
