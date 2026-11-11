@@ -212,7 +212,7 @@ La segunda y tercera semana repiten el patrón con los issues restantes; el vier
 
 ## 10. Puerta local antes de subir: la réplica del CI en contenedores Linux
 
-Nada se sube sin pasar, **sobre la rama ya rebasada**, la suite completa igual que el CI. Esa suite es `infra/ci-local/`: corre en esta máquina (Windows con Docker Desktop y WSL2) lo mismo que `.github/workflows/ci.yml`, **dentro de contenedores Linux**, así que los errores de entorno (mayúsculas en las rutas, el SDK de .NET de Linux, Node 22, Testcontainers, Playwright en su imagen, servicios sin `localhost`) aparecen aquí y no en GitHub. Decisiones CI-1 a CI-8 en el [registro](decisiones/registro.md); manual completo en [infra/ci-local/README.md](../infra/ci-local/README.md).
+Nada se sube sin pasar, **sobre la rama ya rebasada**, la suite completa igual que el CI. Esa suite es `infra/ci-local/`: corre en esta máquina (Windows con Docker Desktop y WSL2) lo mismo que `.github/workflows/ci.yml`, **dentro de contenedores Linux**, así que los errores de entorno (mayúsculas en las rutas, el SDK de .NET de Linux, Node 22, Testcontainers, Playwright en su imagen, servicios sin `localhost`) aparecen aquí y no en GitHub. Decisiones CI-1 a CI-9 en el [registro](decisiones/registro.md); manual completo en [infra/ci-local/README.md](../infra/ci-local/README.md).
 
 ```bash
 infra/ci-local/ci-local.sh                         # backend + frontend + e2e sobre esta carpeta (Git Bash)

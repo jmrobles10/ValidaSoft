@@ -273,6 +273,51 @@ public sealed class SandboxApiTests(ApiFixture fixture)
         (await ClienteDe(otro, null).Sandbox.AsegurarAsync()).TenantId.ShouldBe(creado.TenantId); // idempotente
     }
 
+    /// <summary>
+    /// Reiniciar mientras se opera en el sandbox (webhooks, correos y procesos en segundo plano escriben los mismos flujos de eventos que
+    /// el reinicio borra) no puede fallar con 500: cuando PostgreSQL resuelve el cruce de bloqueos abortando la limpieza (40P01), el
+    /// servicio la repite. Antes el reinicio fallaba de forma intermitente con «deadlock detected».
+    /// </summary>
+    [Fact]
+    public async Task Reiniciar_el_sandbox_mientras_se_opera_en_el_no_falla_por_un_interbloqueo()
+    {
+        var g = await PrepararAsync();
+        var copia = (await ClienteDe(g.Prueba.Valor!, null).Sandbox.ObtenerAsync()).Empresas.Single();
+        var sandbox = ClienteDe(g.Prueba.Valor!, copia.Id);
+
+        // Actividad continua: cada vínculo aprobado escribe varios flujos de eventos en una misma transacción. Lo que el reinicio se lleva
+        // por delante a medio hacer responde 404, 409 u otro estado: no importa; solo importa que el reinicio no falle.
+        using var parar = new CancellationTokenSource();
+        var actividad = Enumerable.Range(0, 3).Select(_ => Task.Run(async () =>
+        {
+            while (!parar.IsCancellationRequested)
+            {
+                try
+                {
+                    await CertificarAsync(sandbox, NitNuevo());
+                }
+                catch (Exception)
+                {
+                    await Task.Delay(50);
+                }
+            }
+        })).ToArray();
+
+        try
+        {
+            for (var i = 0; i < 8; i++)
+            {
+                await Task.Delay(400);
+                (await sandbox.Sandbox.ReiniciarAsync()).ReiniciadoEn.ShouldNotBeNull();
+            }
+        }
+        finally
+        {
+            await parar.CancelAsync();
+            await Task.WhenAll(actividad);
+        }
+    }
+
     // ---------- preparación ----------
 
     /// <summary>
