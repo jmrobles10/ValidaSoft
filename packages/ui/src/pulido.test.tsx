@@ -197,3 +197,32 @@ describe('normas de código (UI-1, UI-2)', () => {
     expect(infractores).toEqual([]);
   });
 });
+
+describe('UI-7 · ningún control nativo del navegador', () => {
+  const todos = fuentes();
+  /** Líneas de código (sin los comentarios de documentación, que sí pueden nombrar `<input type="date">`). */
+  const codigo = (texto: string) => texto.split('\n').filter((linea) => !/^\s*(\/\/|\/\*|\*)/.test(linea)).join('\n');
+  const infractores = (patron: RegExp) => todos.filter((f) => patron.test(codigo(f.texto))).map((f) => f.ruta);
+
+  it('ningún campo usa type="date", "time", "month", "week", "datetime-local", "number", "range" ni "color": fecha con CampoFecha y número con CampoNumero', () => {
+    expect(infractores(/\btype\s*=\s*\{?\s*['"](date|time|month|week|datetime-local|number|range|color)['"]/)).toEqual([]);
+    expect(infractores(/\btype\s*:\s*['"](date|time|month|week|datetime-local|number|range|color)['"]/)).toEqual([]);
+    expect(infractores(/[?:]\s*['"](date|time|month|week|datetime-local)['"]/)).toEqual([]);
+  });
+
+  it('ningún select, option ni datalist nativo: siempre el Select o Autocomplete de MUI', () => {
+    expect(infractores(/<(select|option|datalist)\b/)).toEqual([]);
+    expect(infractores(/\bNativeSelect\b|\bnative\s*[:=]\s*\{?\s*true\b/)).toEqual([]);
+  });
+
+  it('el único <input> crudo es el oculto de los archivos (type="file", que lo abre un botón)', () => {
+    const crudos = todos.flatMap((f) => [...codigo(f.texto).matchAll(/<input\b[\s\S]*?\/>/g)].filter((m) => !/\btype="file"/.test(m[0])).map(() => f.ruta));
+    expect(crudos).toEqual([]);
+  });
+
+  it('el tema esconde los adornos del navegador: la «x» del type="search" y el ojo de Edge en las claves', () => {
+    const entrada = createValidasoftTheme('light').components?.MuiInputBase?.styleOverrides as { input: Record<string, Record<string, unknown>> };
+    expect(Object.keys(entrada.input).join(' ')).toContain('::-webkit-search-cancel-button');
+    expect(Object.keys(entrada.input).join(' ')).toContain('::-ms-reveal');
+  });
+});

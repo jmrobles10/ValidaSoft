@@ -9,6 +9,8 @@ export * from './accesibilidad';
 export * from './Isotipo';
 export * from './patrones';
 export * from './campos';
+export * from './campoFecha';
+export * from './campoNumero';
 export * from './encabezado';
 export * from './datos';
 export * from './filtros';
