@@ -138,8 +138,8 @@ describe('Decisión de la revisión automática en el documento', () => {
 
   it('un muestreo ya resuelto dice quién lo resolvió y, si lo revirtió, por qué; sin botones', () => {
     montar(
-      [revision({ resultado: 'AprobadaConMuestreo', resolucion: 'Revertida', resueltaPor: 'u-2', justificacionResolucion: 'El RUT no es el vigente.' })],
-      { nombres: new Map([['u-2', 'Ana Gómez']]) },
+      [revision({ resultado: 'AprobadaConMuestreo', resolucion: 'Revertida', resueltaPor: '0194f6c2-4b1a-7c3e-8d2f-000000000002', justificacionResolucion: 'El RUT no es el vigente.' })],
+      { nombres: new Map([['0194f6c2-4b1a-7c3e-8d2f-000000000002', 'Ana Gómez']]) },
     );
     expect(panel().getByText('Revertida por Ana Gómez · Justificación: El RUT no es el vigente.')).toBeInTheDocument();
     expect(panel().queryByText('Pendiente de confirmar')).not.toBeInTheDocument();

@@ -92,7 +92,7 @@ function montar({
       peticiones.push({ metodo, url, cuerpo: typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : null });
       if (url.pathname === '/api/v1/revision-automatica/excepciones') return json(url.searchParams.get('estado') === 'Resueltas' ? resueltas : pendientes);
       if (url.pathname === '/api/v1/areas') return json(areas);
-      if (url.pathname === '/api/v1/usuarios/resumen') return json([{ id: 'u-2', nombre: 'Ana Gómez' }]);
+      if (url.pathname === '/api/v1/usuarios/resumen') return json([{ id: '0194f6c2-4b1a-7c3e-8d2f-000000000002', nombre: 'Ana Gómez' }]);
       if (metodo === 'POST' && url.pathname.endsWith('/revision-automatica/resolver')) return resolver();
       return json([]);
         })(),
@@ -271,7 +271,7 @@ describe('Excepciones de la revisión automática', () => {
     const usuario = userEvent.setup();
     montar({
       resueltas: [
-        { ...MUESTREO, resuelta: true, resolucion: 'Confirmada', resueltaPor: 'u-2', resueltaEn: '2026-11-11T13:00:00Z' },
+        { ...MUESTREO, resuelta: true, resolucion: 'Confirmada', resueltaPor: '0194f6c2-4b1a-7c3e-8d2f-000000000002', resueltaEn: '2026-11-11T13:00:00Z' },
         { ...EXCEPCION, resuelta: true },
       ],
     });
