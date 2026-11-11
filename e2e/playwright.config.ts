@@ -26,7 +26,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : 3,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
+  // En CI, además de la lista y el informe HTML, `github` deja cada falla como anotación del check run (se lee sin descargar el log).
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never' }]] : [['list']],
+  // En CI, un tope propio por debajo del del trabajo: si la corrida se alarga, Playwright se detiene limpio y alcanza a informar lo que falló
+  // (con el tope del trabajo el runner la cancela sin informe ni anotaciones).
+  globalTimeout: process.env.CI ? 35 * 60_000 : 0,
   use: {
     baseURL,
     locale: 'es-CO',

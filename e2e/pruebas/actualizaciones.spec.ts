@@ -50,24 +50,23 @@ test('quien decide con la pantalla vieja no aprueba una versión superada: se le
     { nombre: CAMARA, archivo: pdf('Camara Maderas v1') },
   ]);
 
-  // Olga abre el expediente con el RUT v1...
+  // Olga abre el expediente con el RUT v1 y empieza a aprobar: el diálogo queda abierto sobre lo que ve.
   const olga = await embebido(browser, e, e.olga, e.norte);
   await abrirDesdeBandeja(olga, invitacion.nombre, 'Cumplimiento');
   await expect(regionDeArea(olga, 'Cumplimiento')).toContainText(`${RUT} · v1`);
-
-  // ...mientras el tercero sube la versión 2.
-  await subirDocumento(page, RUT, pdf('RUT Maderas v2'), { version: 2 });
-  await esperarTarjeta(page, RUT, 'Versión 2');
-
-  // Al aprobar con lo que tenía en pantalla, el servidor responde «versión superada»: no se aprueba nada.
   await regionDeArea(olga, 'Cumplimiento').getByRole('button', { name: /^Aprobar área/ }).click();
   const dialogo = olga.getByRole('dialog', { name: /^Aprobar Cumplimiento/ });
-  await dialogo.getByRole('button', { name: /^Aprobar/ }).last().click();
-  await expect(dialogo.getByText(/Cambió lo que hay por decidir en: Registro Único Tributario \(el tercero subió una versión nueva\)/)).toBeVisible();
+  await expect(dialogo.getByRole('button', { name: /^Aprobar área/ })).toBeEnabled();
+
+  // ...mientras el tercero sube la versión 2. Con el tiempo real (NT-12) la pantalla de Olga se entera sola, sin recargar: el diálogo
+  // avisa que lo que iba a aprobar ya no aplica y no deja confirmar una decisión sobre una versión superada. (Que el servidor la
+  // rechaza con 409 `version-superada` si llegara a pedirla se prueba en integración: ya no hay una pantalla vieja que lo provoque.)
+  await subirDocumento(page, RUT, pdf('RUT Maderas v2'), { version: 2 });
+  await expect(dialogo.getByText('El expediente cambió y esta decisión ya no aplica a su estado actual.')).toBeVisible({ timeout: 30_000 });
   await expect(dialogo.getByRole('button', { name: /^Aprobar área/ })).toBeDisabled();
   await dialogo.getByRole('button', { name: 'Cerrar' }).click();
 
-  // Con el expediente recargado ve la versión 2 y aprueba sobre ella.
+  // Ya ve la versión 2 y aprueba sobre ella.
   await expect(regionDeArea(olga, 'Cumplimiento')).toContainText(`${RUT} · v2`);
   await aprobarArea(olga, 'Cumplimiento');
   await expect(regionDeArea(olga, 'Cumplimiento')).toContainText('Aprobada');

@@ -98,7 +98,8 @@ jobs:
   e2e:
     name: Pruebas de punta a punta (Playwright)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Instalar y compilar (≈ 10 min en el runner) + la suite con 2 trabajadores y 1 reintento (ver e2e/playwright.config.ts).
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
 
@@ -128,7 +129,7 @@ jobs:
         run: pnpm --filter @validasoft/e2e test
 
       - name: Publicar informe y trazas
-        if: failure()
+        if: ${{ !success() }}
         uses: actions/upload-artifact@v7
         with:
           name: e2e-informe
