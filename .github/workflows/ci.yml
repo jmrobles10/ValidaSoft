@@ -108,7 +108,9 @@ jobs:
 
   e2e:
     name: Pruebas de punta a punta (Playwright)
-    runs-on: ubuntu-latest
+    # Ubuntu 24.04 fijo: `ubuntu-latest` está migrando a la 26 y en esa imagen el paso «Navegador» (`playwright install --with-deps`) se cuelga
+    # unos 10 minutos y falla (main 9240d66 y 51cc9a8); Playwright 1.65 soporta oficialmente la 22.04 y la 24.04.
+    runs-on: ubuntu-24.04
     # Instalar y compilar (≈ 10 min en el runner) + la suite con 2 trabajadores y 1 reintento (ver e2e/playwright.config.ts).
     timeout-minutes: 55
     steps:
@@ -132,8 +134,16 @@ jobs:
       - name: Instalar
         run: pnpm install --frozen-lockfile
 
+      # La descarga del navegador y de sus paquetes del sistema depende de la red del runner: cada intento tiene tope y se repite hasta 3 veces.
       - name: Navegador
-        run: pnpm --filter @validasoft/e2e exec playwright install --with-deps chromium
+        timeout-minutes: 20
+        run: |
+          for intento in 1 2 3; do
+            timeout --kill-after=10 300 pnpm --filter @validasoft/e2e exec playwright install --with-deps chromium && exit 0
+            echo "::warning::No se pudo instalar el navegador (intento $intento de 3); se reintenta."
+            sleep 10
+          done
+          exit 1
 
       # playwright.config.ts levanta la API (e2e/soporte/api.mjs): compila las dos apps, publica la API y la sirve en :5090.
       - name: Probar
