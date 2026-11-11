@@ -80,7 +80,10 @@ test('la observación llega a la campana del tercero con su empresa: la abre y l
   await panelDelTercero(page).getByRole('button', { name: 'Marcar todas como leídas' }).click();
   await expect(page.getByText(/Marcamos \d+ notificaciones? como leídas?\./)).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Notificaciones', exact: true })).toBeVisible();
+  // Con el tiempo real puede entrar otro aviso enseguida (un documento por vencer, por ejemplo): el contador puede volver a
+  // encenderse, así que se comprueba que el panel se cerró y no que el contador quede en cero.
+  await expect(panelDelTercero(page)).toBeHidden();
+  await expect(campanaDelTercero(page)).toBeVisible();
 
   // Apaga el correo de las observaciones: queda guardado para todas sus empresas.
   await campanaDelTercero(page).click();
