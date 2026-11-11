@@ -29,6 +29,7 @@ import {
   verificacionesADto,
   type BorradorFlujo,
 } from '../editor';
+import { vigenciaADto } from '../vigencia';
 
 /**
  * Crear (`flujos/nuevo`) o editar un flujo. Con borrador, se edita el borrador; con solo versión publicada, "Editar"
@@ -114,6 +115,7 @@ export function EditorFlujo() {
       politicaDevolucion: borrador.politicaDevolucion,
       separacionDeFunciones: borrador.separacionDeFunciones,
       plazoCargue: plazoADto(borrador),
+      vigenciaVinculo: vigenciaADto(borrador),
       requisitos: requisitosADto(borrador.requisitos),
       verificaciones: verificacionesADto(borrador.verificaciones),
     };

@@ -18,4 +18,6 @@ export interface VinculoPublicoDto {
   invitacionAceptadaEn: string | null;
   /** @nullable */
   expedienteId?: string | null;
+  /** @nullable */
+  vigenteHasta?: string | null;
 }

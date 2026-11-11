@@ -8,18 +8,28 @@ import { situacionDelVinculo } from './situacion';
  * - `faltan`: expediente `Abierto` con documentos pendientes → «Faltan N documentos» y la acción para subirlos.
  * - `enRevision`: la empresa está revisando (o el expediente está abierto sin nada pendiente).
  * - `observado`: la empresa devolvió algo → «Tienes observaciones».
- * - `aprobado`: expediente aprobado o vínculo `Activo`/`PorVencer`.
+ * - `aprobado`: expediente aprobado o vínculo `Activo`.
+ * - `porVencer`: el vínculo está `PorVencer` por su vigencia periódica (VV-1): vence pronto y tendrá que ratificar su información.
+ * - `ratificar`: el vínculo venció y su renovación espera que el tercero ratifique o actualice su información (VV-3).
  * `null` cuando no hay un paso propio que contar (sin aceptar, vínculo suspendido o terminado, expediente cerrado sin
  * aprobar): se muestra el estado tal cual.
  */
-export type AvanceTercero = { tipo: 'faltan'; documentos: number } | { tipo: 'enRevision' } | { tipo: 'observado' } | { tipo: 'aprobado' };
+export type AvanceTercero =
+  | { tipo: 'faltan'; documentos: number }
+  | { tipo: 'enRevision' }
+  | { tipo: 'observado' }
+  | { tipo: 'aprobado' }
+  | { tipo: 'porVencer'; hasta: string | null }
+  | { tipo: 'ratificar' };
 
 export function avanceDelTercero(
-  vinculo: { estado: EstadoVinculo; invitacionAceptada: boolean } | null | undefined,
-  expediente: { estado: EstadoExpediente; requisitosFaltantes?: number } | null | undefined,
+  vinculo: { estado: EstadoVinculo; invitacionAceptada: boolean; vigenteHasta?: string | null } | null | undefined,
+  expediente: { estado: EstadoExpediente; requisitosFaltantes?: number; tipo?: string } | null | undefined,
 ): AvanceTercero | null {
   if (vinculo && (situacionDelVinculo(vinculo.estado) !== 'vigente' || !vinculo.invitacionAceptada)) return null;
-  if (vinculo?.estado === 'Activo' || vinculo?.estado === 'PorVencer' || expediente?.estado === 'Aprobado') return { tipo: 'aprobado' };
+  if (vinculo?.estado === 'PorVencer') return { tipo: 'porVencer', hasta: vinculo.vigenteHasta ?? null };
+  if (vinculo?.estado === 'Vencido' && expediente?.tipo === 'Renovacion' && expediente.estado === 'Abierto') return { tipo: 'ratificar' };
+  if (vinculo?.estado === 'Activo' || expediente?.estado === 'Aprobado') return { tipo: 'aprobado' };
   switch (expediente?.estado) {
     case 'Abierto': {
       const faltantes = expediente.requisitosFaltantes ?? 0;
@@ -35,4 +45,11 @@ export function avanceDelTercero(
 }
 
 /** Estado del chip (da el ícono y el tono) para cada avance; el texto lo pone `avance.<tipo>` en i18n. */
-export const ESTADO_DEL_AVANCE = { faltan: 'ConPendientes', enRevision: 'EnRevision', observado: 'Observado', aprobado: 'Aprobado' } as const;
+export const ESTADO_DEL_AVANCE = {
+  faltan: 'ConPendientes',
+  enRevision: 'EnRevision',
+  observado: 'Observado',
+  aprobado: 'Aprobado',
+  porVencer: 'PorVencer',
+  ratificar: 'Vencido',
+} as const;

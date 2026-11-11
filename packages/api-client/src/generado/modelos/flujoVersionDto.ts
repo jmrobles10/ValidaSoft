@@ -10,6 +10,7 @@ import type { PlazoCargueDto } from './plazoCargueDto';
 import type { PoliticaDevolucion } from './politicaDevolucion';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
+import type { VigenciaVinculoDto } from './vigenciaVinculoDto';
 
 export interface FlujoVersionDto {
   id: string;
@@ -28,4 +29,5 @@ export interface FlujoVersionDto {
   /** @nullable */
   verificaciones?: VerificacionRequeridaDto[] | null;
   plazoCargue?: null | PlazoCargueDto;
+  vigenciaVinculo?: null | VigenciaVinculoDto;
 }

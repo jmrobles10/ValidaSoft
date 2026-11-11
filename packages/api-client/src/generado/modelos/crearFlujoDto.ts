@@ -8,6 +8,7 @@ import type { EtapaDto } from './etapaDto';
 import type { PlazoCargueDto } from './plazoCargueDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
+import type { VigenciaVinculoDto } from './vigenciaVinculoDto';
 
 export interface CrearFlujoDto {
   codigo: string;
@@ -23,4 +24,5 @@ export interface CrearFlujoDto {
   /** @nullable */
   verificaciones?: VerificacionRequeridaDto[] | null;
   plazoCargue?: null | PlazoCargueDto;
+  vigenciaVinculo?: null | VigenciaVinculoDto;
 }

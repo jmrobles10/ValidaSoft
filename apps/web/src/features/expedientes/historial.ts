@@ -156,6 +156,8 @@ export function eventoExpedienteATimeline(
         motivo: texto(campo(datos, 'observacion')) ?? texto(campo(datos, 'justificacion')),
       };
     }
+    case 'requisito_ratificado':
+      return { ...base, titulo: t('expedientes.historial.ratificado', { documento: requisito(campo(datos, 'requisitoId')) }) };
     case 'requisito_eximido':
       return { ...base, titulo: t('expedientes.historial.eximido', { documento: requisito(campo(datos, 'requisitoId')) }), motivo: texto(campo(datos, 'justificacion')) };
     case 'veredicto_anulado_por_administrador':

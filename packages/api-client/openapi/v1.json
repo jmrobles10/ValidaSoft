@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5109/"
+      "url": "http://localhost:5110/"
     }
   ],
   "paths": {
@@ -460,6 +460,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RecordatorioEnviadoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/vigencias-de-vinculos/revisar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.VigenciasDeVinculosEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_vigencias_de_vinculos_revisar",
+        "description": "POST_api_v1_plataforma_vigencias_de_vinculos_revisar",
+        "operationId": "POST_api_v1_plataforma_vigencias_de_vinculos_revisar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarVigenciasDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoRevisionVigenciasDto"
                 }
               }
             }
@@ -12656,6 +12691,16 @@
                 "$ref": "#/components/schemas/PlazoCargueDto"
               }
             ]
+          },
+          "vigenciaVinculo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaVinculoDto"
+              }
+            ]
           }
         }
       },
@@ -14115,6 +14160,16 @@
               },
               {
                 "$ref": "#/components/schemas/PlazoCargueDto"
+              }
+            ]
+          },
+          "vigenciaVinculo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaVinculoDto"
               }
             ]
           }
@@ -16723,6 +16778,16 @@
                 "$ref": "#/components/schemas/PlazoCargueDto"
               }
             ]
+          },
+          "vigenciaVinculo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VigenciaVinculoDto"
+              }
+            ]
           }
         }
       },
@@ -17191,6 +17256,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "vinculosPorVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -19953,6 +20027,24 @@
               "null",
               "boolean"
             ]
+          },
+          "vigenciaDias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasRevalidacion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -20239,6 +20331,49 @@
             "format": "int32"
           },
           "caducados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "ResultadoRevisionVigenciasDto": {
+        "required": [
+          "revisados",
+          "avisados",
+          "vencidos",
+          "desbloqueados"
+        ],
+        "type": "object",
+        "properties": {
+          "revisados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "avisados": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "vencidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "desbloqueados": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -20924,6 +21059,25 @@
         }
       },
       "RevisarPlazosDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "RevisarVigenciasDto": {
         "type": "object",
         "properties": {
           "tenantId": {
@@ -23694,6 +23848,45 @@
           }
         }
       },
+      "VigenciaVinculoDto": {
+        "required": [
+          "dias"
+        ],
+        "type": "object",
+        "properties": {
+          "dias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "diasAviso": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "diasGracia": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          }
+        }
+      },
       "VinculoDeSesionDto": {
         "required": [
           "id",
@@ -23838,6 +24031,13 @@
           "aperturaDeExpedientePendiente": {
             "type": "boolean",
             "default": false
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -23933,6 +24133,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "vigenteHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -24209,6 +24416,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.VencimientosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.VigenciasDeVinculosEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Vinculos.TercerosEndpoints"

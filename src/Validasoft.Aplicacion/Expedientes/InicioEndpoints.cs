@@ -107,6 +107,7 @@ public static class InicioEndpoints
             Informes.Estadistica.Promedio(tiempos), Informes.Estadistica.Mediana(tiempos),
             certificados.Count(c => c.Estado == EstadoCertificado.Vigente),
             certificados.Count(c => c.Estado == EstadoCertificado.ConPendientes),
-            certificados.Count(c => c.Bloqueante));
+            certificados.Count(c => c.Bloqueante),
+            Vinculos(EstadoVinculo.PorVencer));
     }
 }

@@ -2,6 +2,7 @@ import { Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } fr
 import { useTranslation } from 'react-i18next';
 import { MAXIMO_PERIODOS, SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
 import type { RequisitoEnEditor } from '../editor';
+import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from '../vigencia';
 
 interface Props {
   requisito: RequisitoEnEditor;
@@ -33,9 +34,17 @@ export function SelectorSeccion({ requisito, onCambiar, deshabilitado }: Props) 
 
 /**
  * Lo propio de un requisito de sección (FM-25): «Periodos» en la financiera (1–5; vacío = el último cierre), «Exige
- * soporte» y la nota de que Legal y Financiera no se piden a la persona natural.
+ * soporte», la vigencia propia de lo que la empresa acepta (VV-1; vacía = no vence sola), el plazo de revalidación (RV-4; vacío = 15
+ * días) y la nota de que Legal y Financiera no se piden a la persona natural.
  */
-export function OpcionesSeccion({ requisito, onCambiar, deshabilitado, errorPeriodos }: Props & { errorPeriodos: string | null }) {
+export function OpcionesSeccion({
+  requisito,
+  onCambiar,
+  deshabilitado,
+  errorPeriodos,
+  errorVigencia = null,
+  errorRevalidacion = null,
+}: Props & { errorPeriodos: string | null; errorVigencia?: string | null; errorRevalidacion?: string | null }) {
   const { t } = useTranslation();
   const definicion = seccionFicha(requisito.seccion);
   return (
@@ -60,6 +69,32 @@ export function OpcionesSeccion({ requisito, onCambiar, deshabilitado, errorPeri
           control={<Checkbox checked={requisito.exigeSoporte} onChange={(ev) => onCambiar({ exigeSoporte: ev.target.checked })} disabled={deshabilitado} />}
           label={t('fichaEmpresa.editor.exigeSoporte')}
           sx={{ mx: 0, minHeight: 40 }}
+        />
+        <TextField
+          size="small"
+          type="number"
+          label={t('fichaEmpresa.editor.vigenciaDias')}
+          value={requisito.vigenciaDias ?? ''}
+          placeholder={t('fichaEmpresa.editor.noVence')}
+          onChange={(ev) => onCambiar({ vigenciaDias: ev.target.value === '' ? null : Number(ev.target.value) })}
+          error={Boolean(errorVigencia)}
+          helperText={errorVigencia ?? t('fichaEmpresa.editor.vigenciaDiasAyuda')}
+          slotProps={{ htmlInput: { min: 1, max: MAXIMO_VIGENCIA_VINCULO_DIAS } }}
+          disabled={deshabilitado}
+          sx={{ width: 230 }}
+        />
+        <TextField
+          size="small"
+          type="number"
+          label={t('fichaEmpresa.editor.diasRevalidacion')}
+          value={requisito.diasRevalidacion ?? ''}
+          placeholder="15"
+          onChange={(ev) => onCambiar({ diasRevalidacion: ev.target.value === '' ? null : Number(ev.target.value) })}
+          error={Boolean(errorRevalidacion)}
+          helperText={errorRevalidacion ?? t('fichaEmpresa.editor.diasRevalidacionAyuda')}
+          slotProps={{ htmlInput: { min: 1, max: MAXIMO_DIAS_REVALIDACION } }}
+          disabled={deshabilitado}
+          sx={{ width: 230 }}
         />
       </Stack>
       {!definicion?.porPeriodo && errorPeriodos && (

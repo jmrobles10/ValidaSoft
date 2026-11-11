@@ -275,6 +275,7 @@ const NOMBRES: Record<string, string> = {
   // Plazo de cargue del expediente inicial: reapertura del caducado y job de Plataforma (P-4-2, LT-1…LT-4).
   'POST /api/v1/expedientes/{id}/reabrir': 'reabrirExpediente',
   'POST /api/v1/plataforma/plazos-de-cargue/revisar': 'revisarPlazosDeCargue',
+  'POST /api/v1/plataforma/vigencias-de-vinculos/revisar': 'revisarVigenciasDeVinculos',
   // Invitación masiva por lote (H8, LT-5…LT-10).
   'GET /api/v1/invitaciones/lotes/plantilla': 'descargarPlantillaLote',
   'POST /api/v1/invitaciones/lotes/vista-previa': 'previsualizarLote',

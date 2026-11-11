@@ -23,6 +23,15 @@ describe('avance del tercero: lo que le toca, no el estado interno', () => {
     expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true }, null)).toEqual({ tipo: 'aprobado' });
   });
 
+  it('por vencer (vigencia periódica): lo avisa con la fecha; vencido con la renovación abierta: toca ratificar', () => {
+    expect(avanceDelTercero({ estado: 'PorVencer', invitacionAceptada: true, vigenteHasta: '2027-11-06' }, { estado: 'Aprobado' })).toEqual({ tipo: 'porVencer', hasta: '2027-11-06' });
+    expect(avanceDelTercero({ estado: 'PorVencer', invitacionAceptada: true }, null)).toEqual({ tipo: 'porVencer', hasta: null });
+    expect(avanceDelTercero({ estado: 'Vencido', invitacionAceptada: true }, { estado: 'Abierto', tipo: 'Renovacion', requisitosFaltantes: 1 })).toEqual({ tipo: 'ratificar' });
+    // Vencido por un documento sin renovación a la vista (o una renovación ya en revisión) no cambia lo que se contaba.
+    expect(avanceDelTercero({ estado: 'Vencido', invitacionAceptada: true }, null)).toBeNull();
+    expect(avanceDelTercero({ estado: 'Vencido', invitacionAceptada: true }, { estado: 'EnRevision', tipo: 'Renovacion' })).toEqual({ tipo: 'enRevision' });
+  });
+
   it('sin paso propio que contar se deja el estado tal cual', () => {
     expect(avanceDelTercero({ estado: 'Invitado', invitacionAceptada: false }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();
     expect(avanceDelTercero({ estado: 'Bloqueado', invitacionAceptada: true }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();

@@ -1,11 +1,13 @@
 import { esErrorApi, type RequisitoDelFlujoDto } from '@validasoft/api-client';
 import { MAXIMO_PERIODOS, seccionFicha, type CodigoSeccionFicha } from '../terceros/ficha/secciones';
 import type { ErrorFlujo, RequisitoEnEditor } from './editor';
+import { MAXIMO_DIAS_REVALIDACION, MAXIMO_VIGENCIA_VINCULO_DIAS } from './vigencia';
 
 /**
  * Requisitos de sección de la ficha en el editor de flujos (F2, FM-25). Replican `Flujo.ValidarSeccion` del dominio para
  * avisar antes de enviar: sección del catálogo (`seccion-invalida`), sin repetir (`requisito-duplicado`), periodos solo
- * en la financiera (`periodos-no-aplica`) y entre 1 y 5 (`periodos-invalidos`). La API vuelve a validar.
+ * en la financiera (`periodos-no-aplica`) y entre 1 y 5 (`periodos-invalidos`), vigencia propia de 1 a 3650 días
+ * (`vigencia-seccion-invalida`) y plazo de revalidación de 1 a 365 (`dias-revalidacion-invalidos`). La API vuelve a validar.
  */
 
 export function validarRequisitoDeSeccion(requisito: RequisitoEnEditor, campo: string, vistas: Set<string>): ErrorFlujo[] {
@@ -19,6 +21,12 @@ export function validarRequisitoDeSeccion(requisito: RequisitoEnEditor, campo: s
     else if (!Number.isInteger(requisito.periodos) || requisito.periodos < 1 || requisito.periodos > MAXIMO_PERIODOS) {
       errores.push({ codigo: 'periodos-invalidos', campo: `${campo}.periodos` });
     }
+  }
+  if (requisito.vigenciaDias !== null && (!Number.isInteger(requisito.vigenciaDias) || requisito.vigenciaDias < 1 || requisito.vigenciaDias > MAXIMO_VIGENCIA_VINCULO_DIAS)) {
+    errores.push({ codigo: 'vigencia-seccion-invalida', campo: `${campo}.vigencia` });
+  }
+  if (requisito.diasRevalidacion !== null && (!Number.isInteger(requisito.diasRevalidacion) || requisito.diasRevalidacion < 1 || requisito.diasRevalidacion > MAXIMO_DIAS_REVALIDACION)) {
+    errores.push({ codigo: 'dias-revalidacion-invalidos', campo: `${campo}.revalidacion` });
   }
   return errores;
 }
@@ -37,11 +45,21 @@ export function requisitoDeSeccionADto(r: RequisitoEnEditor): RequisitoDelFlujoD
     seccion: r.seccion,
     periodos: porPeriodo ? (r.periodos ?? 1) : null,
     exigeSoporte: r.exigeSoporte,
+    vigenciaDias: r.vigenciaDias,
+    diasRevalidacion: r.diasRevalidacion,
   };
 }
 
 /** Códigos 422 de la API que corresponden a un requisito concreto (FM-25). */
-const CODIGOS_DE_REQUISITO = ['seccion-invalida', 'requisito-duplicado', 'periodos-no-aplica', 'periodos-invalidos', 'requisito-invalido'] as const;
+const CODIGOS_DE_REQUISITO = [
+  'seccion-invalida',
+  'requisito-duplicado',
+  'periodos-no-aplica',
+  'periodos-invalidos',
+  'requisito-invalido',
+  'vigencia-seccion-invalida',
+  'dias-revalidacion-invalidos',
+] as const;
 type CodigoDeRequisito = (typeof CODIGOS_DE_REQUISITO)[number];
 
 const esCodigoDeRequisito = (codigo: string): codigo is CodigoDeRequisito => (CODIGOS_DE_REQUISITO as readonly string[]).includes(codigo);
@@ -55,7 +73,8 @@ export function errorDeApiEnRequisitos(error: unknown, requisitos: readonly Requ
   const indice = error.extensiones.requisito;
   if (typeof indice !== 'number' || !Number.isInteger(indice) || indice < 0 || indice >= requisitos.length) return null;
   const campo = `requisito.${String(indice)}`;
-  return { codigo: error.codigo, campo: error.codigo.startsWith('periodos-') ? `${campo}.periodos` : campo };
+  const sufijo = error.codigo.startsWith('periodos-') ? '.periodos' : error.codigo === 'vigencia-seccion-invalida' ? '.vigencia' : error.codigo === 'dias-revalidacion-invalidos' ? '.revalidacion' : '';
+  return { codigo: error.codigo, campo: `${campo}${sufijo}` };
 }
 
 /**

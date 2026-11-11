@@ -48,5 +48,6 @@ export * from './uso-ia/uso-ia';
 export * from './usuarios/usuarios';
 export * from './vencimientos/vencimientos';
 export * from './verificaciones/verificaciones';
+export * from './vigencias-de-vinculos/vigencias-de-vinculos';
 export * from './vinculos/vinculos';
 export * from './webhooks/webhooks';

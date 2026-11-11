@@ -14,10 +14,12 @@ import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { TarjetaCertificado } from '../../certificados/TarjetaCertificado';
 import { EnlaceFichaTercero } from '../../terceros/EnlaceFichaTercero';
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
+import { formatearFechaDeclarada } from '../../documentos/formatoDatos';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
+import { AvisoDeVigencia } from '../components/AvisoDeVigencia';
 import { DialogoAccion } from '../components/DialogoAccion';
 import { TarjetaCuentaDesignada } from '../cuentaDesignada/TarjetaCuentaDesignada';
 import { identificacionDe } from '../tercero';
@@ -84,6 +86,7 @@ export function DetalleVinculo() {
           })}
         </Alert>
       )}
+      <AvisoDeVigencia vinculo={vinculo} />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} conFicha={permisos.puede(SCOPES.tercerosLeer)} />
@@ -216,6 +219,11 @@ function DatosVinculo({ vinculo, empresaNombre, conFicha }: { vinculo: VinculoDt
           <Mono>{vinculo.invitacion?.correoDestino ?? vinculo.correoTercero}</Mono>
         </Dato>
         <Dato etiqueta={t('vinculos.detalle.invitacion')}>{invitacion}</Dato>
+        {vinculo.vigenteHasta && (
+          <Dato etiqueta={t('vigenciaVinculo.vigenteHasta')}>
+            <Mono>{formatearFechaDeclarada(vinculo.vigenteHasta)}</Mono>
+          </Dato>
+        )}
         <Dato etiqueta={t('vinculos.detalle.creado')}>
           <Mono>{formatearFecha(vinculo.creadoEn)}</Mono> · {t(`vinculos.origen.${vinculo.origen}`)}
         </Dato>

@@ -4,12 +4,13 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configurarCliente, reiniciarCliente } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
+import type { ComponentProps } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmarRatificacion } from './ConfirmarRatificacion';
 
 const json = (estado: number, cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/problem+json' } });
 
-function montar(respuesta: () => Response) {
+function montar(respuesta: () => Response, props: Partial<ComponentProps<typeof ConfirmarRatificacion>> = {}) {
   const urls: string[] = [];
   configurarCliente({
     fetch: vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
@@ -20,7 +21,7 @@ function montar(respuesta: () => Response) {
   render(
     <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-        <ConfirmarRatificacion expedienteId="e1" requisitoId="r1" documento="Registro Único Tributario" empresa="Constructora Norte" />
+        <ConfirmarRatificacion expedienteId="e1" requisitoId="r1" documento="Registro Único Tributario" empresa="Constructora Norte" {...props} />
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -43,6 +44,25 @@ describe('ratificar un documento vencido', () => {
     await vi.waitFor(() => expect(urls).toHaveLength(1));
     expect(urls[0]).toContain('/public/v1/expedientes/e1/requisitos/r1/ratificar');
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('una sección de la ficha en la renovación periódica: explica que la información sigue igual y ratifica el requisito', async () => {
+    const usuario = userEvent.setup();
+    const urls = montar(() => json(200, {}), { tipo: 'seccion', compacto: true, documento: 'Información general' });
+
+    await usuario.click(screen.getByRole('button', { name: 'Ratificar' }));
+    const dialogo = screen.getByRole('dialog', { name: '¿Tu información de Información general sigue igual?' });
+    expect(dialogo).toHaveTextContent('Constructora Norte la da por renovada sin volver a revisarla y su vigencia vuelve a contar desde hoy.');
+    expect(dialogo).toHaveTextContent('Si cambió algo, cierra y actualízala.');
+
+    await usuario.click(screen.getByRole('button', { name: 'Sí, sigue igual' }));
+    await vi.waitFor(() => expect(urls).toHaveLength(1));
+    expect(urls[0]).toContain('/public/v1/expedientes/e1/requisitos/r1/ratificar');
+  });
+
+  it('el botón puede llevar el nombre de la empresa (Mi información con varias empresas)', () => {
+    montar(() => json(200, {}), { tipo: 'seccion', compacto: true, etiqueta: 'Ratificar para Constructora Norte' });
+    expect(screen.getByRole('button', { name: 'Ratificar para Constructora Norte' })).toBeInTheDocument();
   });
 
   it('si la empresa no lo admite, lo dice sin cerrar el diálogo', async () => {
