@@ -122,7 +122,7 @@ Todo llamado lleva:
 |---|---|
 | `X-Api-Key` | Tu credencial. |
 | `X-Empresa` | La empresa sobre la que actúas (obligatoria salvo que tu llave tenga una sola empresa). |
-| `Idempotency-Key` | **Obligatoria en todo `POST` que crea algo**: una cadena que identifica la operación (`srm-sol-00123`). Repetir la misma clave con el mismo cuerpo devuelve la misma respuesta (`Idempotent-Replayed: true`), así un reintento nunca duplica; la misma clave con otro cuerpo da `422 clave-idempotencia-reutilizada`. Vale 24 horas. |
+| `Idempotency-Key` | **Obligatoria en todo `POST` que crea algo**: una cadena que identifica la operación (`srm-sol-00123`). Repetir la misma clave con el mismo cuerpo devuelve la misma respuesta (`Idempotent-Replayed: true`), así un reintento nunca duplica; la misma clave con otro cuerpo da `422 clave-idempotencia-reutilizada`. Vale 24 horas. **Si la respuesta original traía un secreto** (el `valor` de una API key, el `secreto` de un webhook, un `token` de sesión), la repetida lo devuelve **sin él** y lo dice (`Validasoft-Secretos-Omitidos`, `secretosOmitidos`): guárdalo al recibirlo, porque no se vuelve a mostrar. |
 | `X-Correlation-Id` | Opcional: un id tuyo que vuelve en la respuesta y en los registros; cítalo al pedir soporte. |
 | `If-None-Match` | En la consulta de certificación, con el `ETag` que ya tienes (§11). |
 
@@ -582,7 +582,7 @@ El catálogo completo de códigos está en [05 §3.3](05-api-contratos-y-webhook
 
 | Qué | Límite |
 |---|---|
-| Idempotencia | `Idempotency-Key` de hasta 100 caracteres; se recuerda 24 horas; las respuestas con un secreto (webhook, llave rotada, alta de grupo) **no se guardan** |
+| Idempotencia | `Idempotency-Key` de hasta 100 caracteres; se recuerda 24 horas; las respuestas con un secreto (webhook, llave creada o rotada, alta de grupo, tokens de sesión) se guardan **sin el secreto**: repetir la petición con la misma clave devuelve los mismos datos sin él, con `Validasoft-Secretos-Omitidos` y `secretosOmitidos` (el secreto se ve una sola vez) |
 | Aserción delegada | Vale 5 minutos y **una sola vez** (`jti`) |
 | Sesión embebida | 30 minutos |
 | Caché de verificación de la API key | Hasta 5 minutos: una llave revocada o rotada deja de valer de inmediato en el nodo que lo hizo y, como mucho, 5 minutos después en los demás |

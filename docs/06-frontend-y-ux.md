@@ -261,6 +261,20 @@ Fuera de un contenedor la pantalla de sesión es el **ingreso** (dentro de uno, 
 
 Al terminar una sesión la pantalla de ingreso dice por qué: «Cerraste la sesión», «Tu sesión terminó» (duración o inactividad del grupo) o «Cerraron tu sesión» (otro dispositivo o un administrador, o un rol que ahora exige passkey). **En desarrollo** (`vite dev`) el ingreso sigue ofreciendo, abajo, «Usar la sesión de desarrollo» (el formulario de aserciones de siempre, que recuerda la elección en la pestaña) y un enlace a los correos de desarrollo (Mailpit); ese formulario no entra al build de producción.
 
+**Plataforma e identidad (PI-1…PI-19, 2026-11-11).** Lo que se suma a esas pantallas:
+
+| Pantalla | Qué ve la persona |
+|---|---|
+| Correo (SSO y passkeys) | Al escribir un correo cuyo dominio tiene SSO activo aparece «Entrar con {empresa}» junto al código; con el SSO exclusivo es el único botón (sin «Continuar» ni passkey). Si el navegador lo admite, las passkeys del sitio se ofrecen en el autocompletado del propio campo (conditional UI). El navegador sale hacia el proveedor y vuelve a `#/ingreso?sso=…`: «Terminando tu ingreso» y, si algo falla, el motivo en español con el campo de correo de nuevo |
+| Passkey › «No tengo mi passkey» | Pide un código de recuperación `XXXXX-XXXXX` (se escribe en mayúsculas con el guion puesto) y lleva a registrar una passkey nueva |
+| Reautenticación | Diálogo único «Confirma que eres tú» que dice qué acción se confirma («Para rotar una API key, confirma con tu passkey»): se abre solo cuando una acción sensible responde `reautenticacion-requerida`, hace la ceremonia y la acción continúa sin repetir nada a mano; sin ninguna passkey explica cómo registrar una (Mi cuenta) |
+| Mi cuenta › Códigos de recuperación | Cuántos quedan y desde cuándo; «Generar códigos» confirma, muestra los diez una sola vez (copiar, imprimir) y no deja cerrar hasta marcar que se guardaron |
+| Configuración › Inicio de sesión único | Dos columnas: **Proveedor de identidad** (OIDC o WorkOS, nombre del botón, emisor, client id, secreto de solo escritura —«termina en wxyz», cambiar o quitar—, la URL de retorno que se copia al proveedor y «Probar la conexión») y **Dominios** (agregar, el texto a publicar y dónde, verificar, quitar); **Cuándo se usa** (activar y convivencia con el código: complementario o exclusivo) y **Personas y roles** (crear al primer ingreso, roles por omisión, reglas «grupo del proveedor → rol» y «el proveedor manda sobre los roles»). Lo que falta antes de guardar se dice en un solo aviso |
+| Plataforma › Uso de IA | Mes, búsqueda, totales del mes, la tarifa del adicional (editable) y la tabla por grupo con sus empresas desplegables (incluidas, adicionales, tokens, costo del proveedor, valor del adicional, precio propio), exportable a Excel o CSV |
+| Plataforma › Ingresos | La auditoría de ingresos de los operadores, con filtros por operador, evento, resultado y fechas, y «Ver más» |
+| Plataforma › Secretos | Tarjeta «Clave de arranque» (estado, operadores con passkey, desactivar o reactivar) y los tipos de cuenta en eventos y vínculos |
+| Plataforma › Operadores y grupos | Operadores desactivados se reactivan; cada grupo ofrece «Agregar empresa» y «Sistemas» (desactivar y reactivar); el plan de IA de una empresa suma el precio propio por adicional |
+
 ---
 
 ## 4. Flujos críticos (UI ↔ API)
