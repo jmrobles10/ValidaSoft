@@ -1,5 +1,5 @@
 import {
-  Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup, Stack,
+  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup, Stack,
   TextField, Typography, useMediaQuery, useTheme,
 } from '@mui/material';
 import { esErrorApi } from '@validasoft/api-client';
@@ -49,7 +49,7 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
     });
   };
 
-  const campoDeTexto = (campo: CampoDeTexto, etiqueta: string, ayuda?: string, extra?: { inputMode?: 'numeric' | 'text'; autoComplete?: string; maxLength?: number }) => {
+  const campoDeTexto = (campo: CampoDeTexto, etiqueta: string, ayuda?: string, extra?: { inputMode?: 'numeric' | 'text'; autoComplete?: string; maxLength?: number; fila?: boolean }) => {
     const error = errorDe(campo);
     return (
       <TextField
@@ -59,6 +59,7 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
         required={campo !== 'moneda'}
         error={Boolean(error)}
         helperText={error ?? ayuda}
+        sx={extra?.fila ? { gridColumn: '1 / -1' } : undefined}
         slotProps={{ htmlInput: { inputMode: extra?.inputMode, autoComplete: extra?.autoComplete ?? 'off', maxLength: extra?.maxLength ?? 120 } }}
       />
     );
@@ -76,20 +77,23 @@ export function DialogoAgregarCuenta({ onCerrar }: { onCerrar: () => void }) {
           <Stack spacing={2}>
             <Typography sx={{ color: 'text.secondary' }}>{t('cuentas.nueva.ayuda')}</Typography>
             {errorGeneral && <Alert severity="error">{errorGeneral}</Alert>}
-            {campoDeTexto('banco', t('cuentas.nueva.banco'), t('cuentas.nueva.bancoAyuda'))}
-            <FormControl required error={Boolean(errorTipo)}>
-              <FormLabel id="tipo-cuenta">{t('cuentas.nueva.tipo')}</FormLabel>
-              <RadioGroup row aria-labelledby="tipo-cuenta" value={datos.tipoCuenta} onChange={(e) => cambiar('tipoCuenta', esTipoCuenta(e.target.value) ? e.target.value : '')}>
-                {TIPOS_CUENTA.map((tipo) => (
-                  <FormControlLabel key={tipo} value={tipo} control={<Radio />} label={t(`cuentas.tipos.${tipo}`)} />
-                ))}
-              </RadioGroup>
-              {errorTipo && <FormHelperText>{errorTipo}</FormHelperText>}
-            </FormControl>
-            {campoDeTexto('numero', t('cuentas.nueva.numero'), t('cuentas.nueva.numeroAyuda'), { inputMode: 'numeric', maxLength: 40 })}
-            {campoDeTexto('titular', t('cuentas.nueva.titular'), undefined, { autoComplete: 'name' })}
-            {campoDeTexto('identificacionTitular', t('cuentas.nueva.identificacion'), t('cuentas.nueva.identificacionAyuda'), { maxLength: 30 })}
-            {campoDeTexto('moneda', t('cuentas.nueva.moneda'), t('cuentas.nueva.monedaAyuda'), { maxLength: 3 })}
+            {/* Los campos cortos (número, moneda, identificación) van en dos columnas; banco, tipo y titular, uno por fila (UI-8). */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
+              {campoDeTexto('banco', t('cuentas.nueva.banco'), t('cuentas.nueva.bancoAyuda'), { fila: true })}
+              <FormControl required error={Boolean(errorTipo)} sx={{ gridColumn: '1 / -1' }}>
+                <FormLabel id="tipo-cuenta">{t('cuentas.nueva.tipo')}</FormLabel>
+                <RadioGroup row aria-labelledby="tipo-cuenta" value={datos.tipoCuenta} onChange={(e) => cambiar('tipoCuenta', esTipoCuenta(e.target.value) ? e.target.value : '')}>
+                  {TIPOS_CUENTA.map((tipo) => (
+                    <FormControlLabel key={tipo} value={tipo} control={<Radio />} label={t(`cuentas.tipos.${tipo}`)} />
+                  ))}
+                </RadioGroup>
+                {errorTipo && <FormHelperText>{errorTipo}</FormHelperText>}
+              </FormControl>
+              {campoDeTexto('numero', t('cuentas.nueva.numero'), t('cuentas.nueva.numeroAyuda'), { inputMode: 'numeric', maxLength: 40 })}
+              {campoDeTexto('moneda', t('cuentas.nueva.moneda'), t('cuentas.nueva.monedaAyuda'), { maxLength: 3 })}
+              {campoDeTexto('titular', t('cuentas.nueva.titular'), undefined, { autoComplete: 'name' })}
+              {campoDeTexto('identificacionTitular', t('cuentas.nueva.identificacion'), t('cuentas.nueva.identificacionAyuda'), { maxLength: 30 })}
+            </Box>
             <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px' }}>
               {t('cuentas.nueva.protegido')}
             </Typography>

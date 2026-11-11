@@ -1,4 +1,5 @@
 import { Alert, Box, Button, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material';
+import { CampoNumero } from '@validasoft/ui';
 import { SCOPES, type ArchivoDeLoteDto, type VistaPreviaLoteDto } from '@validasoft/api-client';
 import { Download, FileUp, Send } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
@@ -140,16 +141,7 @@ export function PaginaNuevoLote() {
                 slotProps={{ htmlInput: { maxLength: 150 } }}
                 sx={{ width: 360, maxWidth: '100%' }}
               />
-              <TextField
-                size="small"
-                type="number"
-                label={t('lotes.nuevoLote.vigencia')}
-                value={dias}
-                error={!vigenciaValida}
-                onChange={(e) => setDias(e.target.value)}
-                slotProps={{ htmlInput: { min: 1, max: 30 } }}
-                sx={{ width: 240 }}
-              />
+              <CampoNumero etiqueta={t('lotes.nuevoLote.vigencia')} valor={dias} error={!vigenciaValida} onCambiar={setDias} sx={{ width: 240 }} />
             </Box>
             <FormControlLabel
               control={<Switch checked={soloErrores} onChange={(e) => setSoloErrores(e.target.checked)} />}

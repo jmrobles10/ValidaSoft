@@ -1,6 +1,7 @@
 import { Checkbox, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { CampoNumero } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
-import { MAXIMO_PERIODOS, SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
+import { SECCIONES_FICHA, seccionFicha } from '../../terceros/ficha/secciones';
 import type { RequisitoEnEditor } from '../editor';
 
 interface Props {
@@ -42,17 +43,14 @@ export function OpcionesSeccion({ requisito, onCambiar, deshabilitado, errorPeri
     <Stack spacing={0.75} sx={{ mt: 1 }}>
       <Stack direction="row" spacing={2} useFlexGap sx={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {definicion?.porPeriodo && (
-          <TextField
-            size="small"
-            type="number"
-            label={t('fichaEmpresa.editor.periodos')}
-            value={requisito.periodos ?? ''}
+          <CampoNumero
+            etiqueta={t('fichaEmpresa.editor.periodos')}
+            valor={requisito.periodos}
             placeholder="1"
-            onChange={(ev) => onCambiar({ periodos: ev.target.value === '' ? null : Number(ev.target.value) })}
+            onCambiar={(texto) => onCambiar({ periodos: texto === '' ? null : Number(texto) })}
             error={Boolean(errorPeriodos)}
-            helperText={errorPeriodos ?? t('fichaEmpresa.editor.periodosAyuda')}
-            slotProps={{ htmlInput: { min: 1, max: MAXIMO_PERIODOS } }}
-            disabled={deshabilitado}
+            ayuda={errorPeriodos ?? t('fichaEmpresa.editor.periodosAyuda')}
+            deshabilitado={deshabilitado}
             sx={{ width: 200 }}
           />
         )}

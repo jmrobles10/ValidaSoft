@@ -77,7 +77,13 @@ describe('Auditoría', () => {
       hasta: new Date(2026, 10, 9, 23, 59, 59, 999).toISOString(),
       limite: '50',
     });
-    expect(screen.getByLabelText('Desde')).toHaveValue('2026-11-01');
+    // El filtro de fecha es el selector por secciones (dd/mm/aaaa), no un input de fecha del navegador.
+    const desde = within(screen.getByRole('group', { name: 'Desde' }));
+    expect([desde.getByRole('spinbutton', { name: 'Día' }), desde.getByRole('spinbutton', { name: 'Mes' }), desde.getByRole('spinbutton', { name: 'Año' })].map((c) => c.textContent)).toEqual(['01', '11', '2026']);
+    // Escribir otra fecha cambia el filtro de la URL (y la consulta) con la fecha completa.
+    await usuario.click(within(screen.getByRole('group', { name: 'Hasta' })).getByRole('spinbutton', { name: 'Día' }));
+    await usuario.keyboard('10');
+    await waitFor(() => expect(parametrosDe(urls.at(-1) ?? '')).toMatchObject({ hasta: new Date(2026, 10, 10, 23, 59, 59, 999).toISOString() }));
 
     await usuario.click(screen.getByRole('button', { name: /Entidad/ }));
     await usuario.click(await screen.findByRole('menuitem', { name: 'Webhook' }));

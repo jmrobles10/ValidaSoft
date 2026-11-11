@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Chip, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { SCOPES, type ListasRestrictivasConfigDto, type ProveedorListasDto } from '@validasoft/api-client';
+import { CampoNumero } from '@validasoft/ui';
 import { Skeleton } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -154,14 +155,12 @@ function Credenciales({ empresaId, proveedor: p, puedeEscribir }: { empresaId: s
         />
         <TextField size="small" label={t('cumplimiento.configuracion.url')} value={borrador.urlBase} onChange={(e) => cambiar({ urlBase: e.target.value })} disabled={!puedeEscribir} />
         <TextField size="small" label={t('cumplimiento.configuracion.plan')} value={borrador.plan} onChange={(e) => cambiar({ plan: e.target.value })} disabled={!puedeEscribir} />
-        <TextField
-          size="small"
-          type="number"
-          label={t('cumplimiento.configuracion.cuota')}
-          value={borrador.cuotaMensual}
-          onChange={(e) => cambiar({ cuotaMensual: e.target.value })}
-          helperText={t('cumplimiento.configuracion.cuotaAyuda')}
-          disabled={!puedeEscribir}
+        <CampoNumero
+          etiqueta={t('cumplimiento.configuracion.cuota')}
+          valor={borrador.cuotaMensual}
+          onCambiar={(texto) => cambiar({ cuotaMensual: texto })}
+          ayuda={t('cumplimiento.configuracion.cuotaAyuda')}
+          deshabilitado={!puedeEscribir}
         />
         <TextField select size="small" label={t('cumplimiento.configuracion.modo')} value={borrador.modoBusqueda} onChange={(e) => cambiar({ modoBusqueda: e.target.value as BorradorCredenciales['modoBusqueda'] })} disabled={!puedeEscribir}>
           <MenuItem value="PorNombre">{t('cumplimiento.configuracion.modos.PorNombre')}</MenuItem>

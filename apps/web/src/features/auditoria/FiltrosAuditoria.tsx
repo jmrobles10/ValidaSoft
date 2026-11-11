@@ -1,5 +1,5 @@
-import { Box, Button, Tab, Tabs, TextField, Typography } from '@mui/material';
-import { BarraFiltros, CampoBusqueda, FiltroMenu } from '@validasoft/ui';
+import { Box, Button, Tab, Tabs, Typography } from '@mui/material';
+import { BarraFiltros, CampoBusqueda, CampoFecha, FiltroMenu } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 import { useBusquedaEnUrl } from '../../shared/useBusquedaEnUrl';
@@ -41,16 +41,7 @@ export function FiltrosAuditoria({ filtros }: { filtros: FiltrosAuditoria }) {
   const limpiar = () => setParametros(tipo === TIPO_POR_DEFECTO ? new URLSearchParams() : new URLSearchParams({ tipo }), { replace: true });
   const errorRango = rangoInvalido(filtros);
   const campoFecha = (clave: 'desde' | 'hasta') => (
-    <TextField
-      type="date"
-      size="small"
-      label={t(`auditoria.filtros.${clave}`)}
-      value={filtros[clave]}
-      onChange={(e) => cambiar(clave, e.target.value)}
-      error={errorRango}
-      slotProps={{ inputLabel: { shrink: true } }}
-      sx={{ width: 170 }}
-    />
+    <CampoFecha etiqueta={t(`auditoria.filtros.${clave}`)} valor={filtros[clave]} onCambiar={(iso) => cambiar(clave, iso)} error={errorRango} sx={{ width: 170 }} />
   );
 
   return (

@@ -66,6 +66,26 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
     if (!completa) setSenalFaltantes((n) => n + 1);
   };
 
+  // El año va en la misma fila que la fecha de corte (campos cortos): lo pinta el formulario de la sección.
+  const selectorPeriodo =
+    periodo !== null ? (
+      <TextField
+        select
+        label={t('ficha.financiera.periodo')}
+        value={periodo}
+        onChange={(e) => void navegar(enlaceSeccion(definicion.codigo, Number(e.target.value)))}
+        helperText={t('ficha.financiera.periodoAyuda')}
+        disabled={editor.guardando}
+        fullWidth
+      >
+        {periodosElegibles(periodo).map((anio) => (
+          <MenuItem key={anio} value={anio}>
+            {anio}
+          </MenuItem>
+        ))}
+      </TextField>
+    ) : undefined;
+
   const errorArriba = editor.errorCampo
     ? t('ficha.errorCampo', { detalle: editor.errorCampo.mensaje })
     : editor.errorGeneral
@@ -97,23 +117,6 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
           <CabeceraPagina titulo={nombre} sub={paso > 0 ? t('ficha.paso', { n: String(paso), total: String(estado.orden.length) }) : undefined} />
         </Box>
         <Stack spacing={2.5} component="form" noValidate aria-label={nombre} onSubmit={(e) => e.preventDefault()}>
-          {periodo !== null && (
-            <TextField
-              select
-              label={t('ficha.financiera.periodo')}
-              value={periodo}
-              onChange={(e) => void navegar(enlaceSeccion(definicion.codigo, Number(e.target.value)))}
-              helperText={t('ficha.financiera.periodoAyuda')}
-              disabled={editor.guardando}
-              fullWidth
-            >
-              {periodosElegibles(periodo).map((anio) => (
-                <MenuItem key={anio} value={anio}>
-                  {anio}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
           <ObservacionesDeEmpresas observaciones={observaciones} />
           {errorArriba && <Alert severity="error">{errorArriba}</Alert>}
           <PropuestaDesdeDocumento
@@ -125,7 +128,7 @@ export function EditorSeccion({ definicion, periodo, estado, inicial }: Props) {
             deshabilitado={editor.guardando}
           />
           <Faltantes faltantes={editor.faltantes} senal={senalFaltantes} />
-          <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} />
+          <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} selectorPeriodo={selectorPeriodo} />
           <SelectorSoporte
             definicion={definicion}
             soportes={editor.soportes}

@@ -1,6 +1,6 @@
-import { Button, TextField } from '@mui/material';
+import { Button } from '@mui/material';
 import { SCOPES } from '@validasoft/api-client';
-import { BarraFiltros, FiltroMenu } from '@validasoft/ui';
+import { BarraFiltros, CampoFecha, FiltroMenu } from '@validasoft/ui';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -34,15 +34,12 @@ export function FiltrosEstadoExpedientes({ empresaId, filtros }: { empresaId: st
     );
 
   const campoFecha = (clave: 'desde' | 'hasta') => (
-    <TextField
-      type="date"
-      size="small"
-      label={t(`informes.estado.filtros.${clave}`)}
-      value={filtros[clave]}
-      onChange={(e) => cambiar(clave, e.target.value)}
+    <CampoFecha
+      etiqueta={t(`informes.estado.filtros.${clave}`)}
+      valor={filtros[clave]}
+      onCambiar={(iso) => cambiar(clave, iso)}
       error={errorRango}
-      helperText={errorRango && clave === 'hasta' ? t('informes.estado.filtros.rangoInvalido') : undefined}
-      slotProps={{ inputLabel: { shrink: true } }}
+      ayuda={errorRango && clave === 'hasta' ? t('informes.estado.filtros.rangoInvalido') : undefined}
       sx={{ width: 160 }}
     />
   );

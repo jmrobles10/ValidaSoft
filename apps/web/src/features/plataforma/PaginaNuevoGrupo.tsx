@@ -126,15 +126,17 @@ export function PaginaNuevoGrupo() {
                   ))}
                 </TextField>
               </Stack>
-              {campo(t('empresasGrupo.campos.numero'), b.empresa.numero, (v) => cambiarEmpresa({ numero: v }), ['empresa-numero-requerido', 'empresa-numero-invalido'], {
-                ayuda: tipo?.tieneDv ? t('empresasGrupo.campos.numeroAyudaDv') : undefined,
-                mono: true,
-              })}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                {campo(t('empresasGrupo.campos.numero'), b.empresa.numero, (v) => cambiarEmpresa({ numero: v }), ['empresa-numero-requerido', 'empresa-numero-invalido'], {
+                  ayuda: tipo?.tieneDv ? t('empresasGrupo.campos.numeroAyudaDv') : undefined,
+                  mono: true,
+                })}
+                {campo(t('empresasGrupo.campos.prefijo'), b.empresa.prefijo, (v) => cambiarEmpresa({ prefijo: v.toUpperCase().replace(/[^A-Z0-9]/g, '') }), ['empresa-prefijo-invalido'], {
+                  ayuda: t('empresasGrupo.prefijoNoCambia'),
+                  mono: true,
+                })}
+              </Stack>
               {campo(t('empresasGrupo.campos.razonSocial'), b.empresa.nombre, (v) => cambiarEmpresa({ nombre: v }), ['empresa-nombre-requerido'])}
-              {campo(t('empresasGrupo.campos.prefijo'), b.empresa.prefijo, (v) => cambiarEmpresa({ prefijo: v.toUpperCase().replace(/[^A-Z0-9]/g, '') }), ['empresa-prefijo-invalido'], {
-                ayuda: t('empresasGrupo.prefijoNoCambia'),
-                mono: true,
-              })}
             </Seccion>
           </>
         }

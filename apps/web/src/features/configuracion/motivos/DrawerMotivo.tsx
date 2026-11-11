@@ -72,6 +72,7 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
         </Stack>
         <Stack spacing={2} sx={{ p: 2.5, flex: 1, overflowY: 'auto' }}>
           {mutacion.isError && <Alert severity="error">{mensajeDeError(mutacion.error, t)}</Alert>}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <TextField
             label={t('motivos.codigo')}
             value={codigo}
@@ -82,12 +83,15 @@ export function DrawerMotivo({ empresaId, motivo, onCerrar }: { empresaId: strin
             error={tocados.has('codigo') && codigoInvalido}
             helperText={tocados.has('codigo') && codigoInvalido ? t('motivos.codigoInvalido') : t('motivos.codigoAyuda')}
             slotProps={{ htmlInput: { spellCheck: false, autoCapitalize: 'none' } }}
+            sx={{ flex: 1, minWidth: 0 }}
           />
           <TextField label={t('motivos.nombre')} value={nombre} onChange={(e) => setNombre(e.target.value)} required
             onBlur={tocar('nombre')}
             error={tocados.has('nombre') && faltaNombre}
             helperText={tocados.has('nombre') && faltaNombre ? t('motivos.requerido') : undefined}
+            sx={{ flex: 1.4, minWidth: 0 }}
           />
+          </Stack>
           <Stack direction="row" spacing={1.5}>
             <TextField select fullWidth label={t('motivos.categoria')} value={categoria} onChange={(e) => setCategoria(e.target.value as CategoriaMotivo)}>
               {Object.values(CategoriaMotivo).map((c) => (

@@ -1,7 +1,7 @@
 import { Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useCatalogoCompleto } from '../api';
-import { CampoSiNo, CampoTexto, Rejilla, Subtitulo } from '../campos';
+import { CampoFechaFicha, CampoSiNo, CampoTexto, Rejilla, Subtitulo } from '../campos';
 import { SelectorMultiple } from '../selectores';
 import type { DatosTributarios, PropsFormulario, Resolucion } from '../tipos';
 import { FilasIca } from './FilasIca';
@@ -30,7 +30,7 @@ export function FormularioTributaria({ datos, onCambiar, mensaje, deshabilitado 
         <Subtitulo>{titulo}</Subtitulo>
         <Rejilla>
           <CampoTexto etiqueta={t('ficha.tributaria.numeroResolucion')} valor={actual.numero} onCambiar={(numero) => cambiar({ numero })} mensaje={mensaje(`${clave}.numero`)} maxLength={50} deshabilitado={deshabilitado} />
-          <CampoTexto etiqueta={t('ficha.tributaria.fechaResolucion')} valor={actual.fecha} onCambiar={(fecha) => cambiar({ fecha })} mensaje={mensaje(`${clave}.fecha`)} tipo="date" deshabilitado={deshabilitado} />
+          <CampoFechaFicha etiqueta={t('ficha.tributaria.fechaResolucion')} valor={actual.fecha} onCambiar={(fecha) => cambiar({ fecha })} mensaje={mensaje(`${clave}.fecha`)} deshabilitado={deshabilitado} />
         </Rejilla>
       </Stack>
     );

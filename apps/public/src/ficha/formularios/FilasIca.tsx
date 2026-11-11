@@ -2,7 +2,7 @@ import { Alert, Button, Paper, Stack, Typography } from '@mui/material';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CampoCifra, Subtitulo } from '../campos';
+import { CampoCifra, Rejilla, Subtitulo } from '../campos';
 import { CampoCatalogo } from '../selectores';
 import type { FilaIca } from '../tipos';
 
@@ -56,9 +56,11 @@ export function FilasIca({ filas, onCambiar, mensaje, deshabilitado }: Props) {
                 </Button>
               </Stack>
               {mensaje(ruta) && <Alert severity="error">{mensaje(ruta)}</Alert>}
-              <CampoCatalogo catalogo="ciudades" etiqueta={t('ficha.tributaria.municipio')} valor={fila.municipio} onCambiar={(municipio) => cambiar(i, { municipio })} mensaje={mensaje(`${ruta}.municipio`)} deshabilitado={deshabilitado} />
-              <CampoCatalogo catalogo="actividades-economicas" etiqueta={t('ficha.tributaria.ciiu')} valor={fila.ciiu} onCambiar={(ciiu) => cambiar(i, { ciiu })} mensaje={mensaje(`${ruta}.ciiu`)} deshabilitado={deshabilitado} />
-              <CampoCifra etiqueta={t('ficha.tributaria.tarifa')} valor={fila.tarifa_por_mil} onCambiar={(tarifa) => cambiar(i, { tarifa_por_mil: tarifa })} mensaje={mensaje(`${ruta}.tarifa_por_mil`)} deshabilitado={deshabilitado} />
+              <Rejilla>
+                <CampoCatalogo catalogo="ciudades" etiqueta={t('ficha.tributaria.municipio')} valor={fila.municipio} onCambiar={(municipio) => cambiar(i, { municipio })} mensaje={mensaje(`${ruta}.municipio`)} deshabilitado={deshabilitado} />
+                <CampoCatalogo catalogo="actividades-economicas" etiqueta={t('ficha.tributaria.ciiu')} valor={fila.ciiu} onCambiar={(ciiu) => cambiar(i, { ciiu })} mensaje={mensaje(`${ruta}.ciiu`)} deshabilitado={deshabilitado} />
+                <CampoCifra etiqueta={t('ficha.tributaria.tarifa')} valor={fila.tarifa_por_mil} onCambiar={(tarifa) => cambiar(i, { tarifa_por_mil: tarifa })} mensaje={mensaje(`${ruta}.tarifa_por_mil`)} deshabilitado={deshabilitado} />
+              </Rejilla>
             </Stack>
           </Paper>
         );

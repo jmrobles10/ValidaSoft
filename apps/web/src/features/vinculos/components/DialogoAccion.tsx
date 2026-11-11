@@ -4,7 +4,7 @@ import { accionPermitidaPorEstado, esErrorApi, type DefinicionAccion, type Vincu
 import { RotateCcw } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
+import { CampoFecha, CampoNumero, FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { IconoCarga } from '../../../shared/componentes';
 import { invalidarRuta } from '../../../shared/consultas';
 import { mensajeDeError } from '../../../shared/errores';
@@ -240,16 +240,16 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
               disabled={yaNoAplica}
             />
             {accion === 'bloquear' && (
-              <TextField type="date" label={t('acciones.bloquear.hasta')} value={hasta} onChange={(e) => setHasta(e.target.value)} disabled={yaNoAplica} />
+              <CampoFecha etiqueta={t('acciones.bloquear.hasta')} valor={hasta} onCambiar={setHasta} deshabilitado={yaNoAplica} sx={{ maxWidth: 240 }} />
             )}
             {accion === 'invitar' && (
-              <TextField
-                type="number"
-                label={t('acciones.invitar.vigencia')}
-                value={vigencia}
-                onChange={(e) => setVigencia(Math.max(1, Number(e.target.value) || 72))}
-                slotProps={{ htmlInput: { min: 1, max: 720 } }}
-                disabled={yaNoAplica}
+              <CampoNumero
+                etiqueta={t('acciones.invitar.vigencia')}
+                valor={vigencia}
+                onCambiar={(texto) => setVigencia(Math.min(720, Math.max(1, Number(texto) || 72)))}
+                maxDigitos={3}
+                deshabilitado={yaNoAplica}
+                sx={{ maxWidth: 240 }}
               />
             )}
             {accion === 'anular' && (
