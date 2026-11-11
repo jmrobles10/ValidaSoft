@@ -254,6 +254,9 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId)
                     .Index(x => x.DocumentoId);
                 opts.Schema.For<Validasoft.Dominio.Ia.UsoMensualIa>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
+                // Revisión automática con IA (ADR-0012): configuración por empresa (id = empresa) y uso mensual con concurrencia optimista.
+                opts.Schema.For<Validasoft.Dominio.Revision.RevisionAutomaticaEmpresa>().MultiTenanted();
+                opts.Schema.For<Validasoft.Dominio.Revision.UsoRevisionAutomatica>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
 
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);

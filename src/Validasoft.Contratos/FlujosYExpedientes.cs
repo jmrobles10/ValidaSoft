@@ -190,7 +190,8 @@ public sealed record RetiroDeVersionDto(int Numero, string Motivo, DateTimeOffse
 public sealed record RequisitoExpedienteDto(
     Guid Id, TipoDocumentoRequisitoDto TipoDocumento, bool Obligatorio, string Estado, VersionRequisitoDto? VersionActual, int Reenvios,
     ExencionDto? Exencion, IReadOnlyList<AreaDeRequisitoDto> Areas, string TipoRequisito = "Documento", SeccionDeRequisitoDto? Seccion = null,
-    SoporteDeSeccionesDto? SoporteDeSecciones = null, RetiroDeVersionDto? Retiro = null);
+    SoporteDeSeccionesDto? SoporteDeSecciones = null, RetiroDeVersionDto? Retiro = null,
+    IReadOnlyList<RevisionAutomaticaDto>? RevisionesAutomaticas = null);
 
 /// <summary>
 /// Cambio de un campo o fila entre la versión que la empresa aceptó y la nueva (las Actualizaciones del SRM, F2):

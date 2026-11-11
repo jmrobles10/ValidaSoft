@@ -7,6 +7,7 @@ using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Plataforma;
+using Validasoft.Dominio.Revision;
 
 namespace Validasoft.Aplicacion.Comun;
 
@@ -157,7 +158,19 @@ public static class MapeosDeValidacion
                     new AreaDeRequisitoDto(x.Id, x.Area!.Codigo, EstadoEnArea(r, x.Area, e), r.AprobadoresPara(x.Area), r.AprobacionesDe(x.Area),
                         [.. r.Veredictos.Where(v => v.AreaId == x.Id).Select(ADto)]))
             ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion), documentacion?.Cruces?.DeDocumento(r.Id),
-            r.Retiro is { } retiro ? new RetiroDeVersionDto(retiro.Numero, retiro.Motivo, retiro.Fecha) : null);
+            r.Retiro is { } retiro ? new RetiroDeVersionDto(retiro.Numero, retiro.Motivo, retiro.Fecha) : null, r.RevisionesDto(e));
+
+    /// <summary>Lo que la revisión automática registró del documento para su versión vigente (nulo si no registró nada, ADR-0012).</summary>
+    private static IReadOnlyList<RevisionAutomaticaDto>? RevisionesDto(this RequisitoDeExpediente r, Expediente e)
+    {
+        var vigentes = r.Revisiones.Where(v => r.VersionActual?.Numero == v.SobreVersion || v.Resultado == ResultadoDeRevision.AprobadaConMuestreo)
+            .OrderBy(v => v.Fecha).ToList();
+        return vigentes.Count == 0
+            ? null
+            : [.. vigentes.Select(v => new RevisionAutomaticaDto(v.AreaId, e.BuscarArea(v.AreaId)?.Codigo ?? string.Empty, v.SobreVersion, v.Nivel.ToString(),
+                v.Resultado.ToString(), v.Sugerencia?.ToString(), [.. v.Motivos.Select(m => new MotivoDeRevisionDto(m.Codigo, m.Texto))], v.Confianza, v.Fecha,
+                e.RevisionAbierta(v, r), v.Resolucion?.Decision.ToString(), v.Resolucion?.Por, v.Resolucion?.Fecha, v.Resolucion?.Justificacion))];
+    }
 
     /// <summary>Detalle de la sección (F2): con la documentación, datos, soportes y cambios; sin ella, la completitud guardada.</summary>
     private static SeccionDeRequisitoDto? DetalleDeSeccion(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>

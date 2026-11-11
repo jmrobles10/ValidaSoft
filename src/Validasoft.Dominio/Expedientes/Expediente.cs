@@ -611,6 +611,7 @@ public sealed partial class Expediente
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(ExpedienteRechazado e)
@@ -621,6 +622,7 @@ public sealed partial class Expediente
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(ExpedienteAnulado e)
@@ -631,6 +633,7 @@ public sealed partial class Expediente
         CerradoEn = e.Fecha;
         ActualizadoEn = e.Fecha;
         RecalcularVerificaciones();
+        RecalcularRevisionAutomatica();
     }
 
     public void Apply(VeredictoAnuladoPorAdministrador e)
@@ -809,6 +812,8 @@ public sealed partial class Expediente
             case ExpedienteRechazado e: Apply(e); break;
             case ExpedienteAnulado e: Apply(e); break;
             case VeredictoAnuladoPorAdministrador e: Apply(e); break;
+            case RevisionAutomaticaRegistrada e: Apply(e); break;
+            case RevisionAutomaticaResuelta e: Apply(e); break;
             case VerificacionesRequeridas e: Apply(e); break;
             case VerificacionExternaRegistrada e: Apply(e); break;
             case CoincidenciaResuelta e: Apply(e); break;

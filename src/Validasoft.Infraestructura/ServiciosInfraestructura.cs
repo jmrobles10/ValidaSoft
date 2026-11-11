@@ -174,6 +174,10 @@ public static class ServiciosInfraestructura
         servicios.AddHostedService<Aplicacion.Vinculos.ProgramadorDeVigenciasDeVinculos>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
+        // Revisión automática con IA (ADR-0012): Manual / Asistido / Automático por empresa, procesador periódico (SegundosProceso, 0 lo apaga).
+        servicios.AddSingleton<Aplicacion.Revision.OpcionesDeRevisionAutomatica>();
+        servicios.AddSingleton<Aplicacion.Revision.TareasDeRevisionAutomatica>();
+        servicios.AddHostedService<Revision.ProcesadorDeRevisionAutomatica>();
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
