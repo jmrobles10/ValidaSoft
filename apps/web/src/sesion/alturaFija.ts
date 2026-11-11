@@ -74,3 +74,15 @@ export function ventanaDelContenedor(ventana: Window = window): Window | null {
     return null;
   }
 }
+
+/**
+ * El ancestro más cercano de `elemento` con scroll propio (`overflow-y: auto | scroll`); `null` si lo que se desplaza es la
+ * ventana. Lo usan las listas virtuales para saber qué observar: embebida con altura fija es el `main` de la app.
+ */
+export function contenedorConScroll(elemento: HTMLElement | null): HTMLElement | null {
+  for (let padre = elemento?.parentElement ?? null; padre && padre !== document.body && padre !== document.documentElement; padre = padre.parentElement) {
+    const overflow = getComputedStyle(padre).overflowY;
+    if (overflow === 'auto' || overflow === 'scroll') return padre;
+  }
+  return null;
+}

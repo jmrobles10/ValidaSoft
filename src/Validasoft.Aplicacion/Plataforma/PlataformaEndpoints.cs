@@ -145,20 +145,78 @@ public static class TenantsEndpoints
         return tenant.ADto();
     }
 
+    private const int TamanoPaginaGrupos = 20;
+    private const int MaximoPaginaGrupos = 100;
+
     /// <summary>
-    /// Los grupos con sus empresas y el estado del plan de IA de cada una (configurado, activo, llave configurada y sus
-    /// últimos cuatro), para la consola de Plataforma. Ordenados por nombre del grupo y de la empresa.
+    /// Una página de grupos con sus empresas y el estado del plan de IA de cada una (configurado, activo, llave configurada
+    /// y sus últimos cuatro), para la consola de Plataforma. Ordenados por nombre del grupo y su id (orden estable); las
+    /// empresas de cada grupo, por nombre. <paramref name="q"/>: parte del nombre o del identificador del grupo, o de la
+    /// razón social o el número de identificación (NIT) de alguna de sus empresas (el grupo sale con todas las suyas).
+    /// <paramref name="limite"/> por omisión 20 (máximo 100); <paramref name="cursor"/> es el opaco de la página anterior
+    /// (<c>siguienteCursor</c>). Solo se cargan las empresas y los planes de los grupos de la página.
     /// </summary>
     [WolverineGet("/api/v1/plataforma/grupos")]
     [Authorize(Policy = Permisos.PlataformaTenants)]
-    public static async Task<IReadOnlyList<GrupoDto>> Grupos(ISesiones sesiones, CancellationToken ct)
+    public static async Task<PaginaDto<GrupoDto>> Grupos(ISesiones sesiones, string? q, int? limite, string? cursor, CancellationToken ct)
     {
+        var tamano = Math.Clamp(limite ?? TamanoPaginaGrupos, 1, MaximoPaginaGrupos);
+        var desde = Peticiones.LeerDesplazamiento(cursor);
+        var texto = q?.Trim();
+
         List<Tenant> tenants;
-        List<Empresa> empresas;
         await using (var consulta = sesiones.ConsultaGlobal())
         {
-            tenants = [.. await consulta.Query<Tenant>().OrderBy(t => t.Nombre).ToListAsync(ct)];
-            empresas = [.. await consulta.Query<Empresa>().ToListAsync(ct)];
+            IQueryable<Tenant> consultaTenants = consulta.Query<Tenant>();
+            if (!string.IsNullOrEmpty(texto))
+            {
+                var numero = NumeroBuscado(texto);
+                var deEmpresas = (await consulta.Query<Empresa>()
+                        .Where(e => e.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase) ||
+                                    e.Identificacion.Numero.Contains(numero, StringComparison.OrdinalIgnoreCase))
+                        .Select(e => e.TenantId)
+                        .ToListAsync(ct))
+                    .Distinct().ToArray();
+                consultaTenants = consultaTenants.Where(t => t.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase) ||
+                                                             t.Slug.Contains(texto, StringComparison.OrdinalIgnoreCase) ||
+                                                             t.Id.IsOneOf(deEmpresas));
+            }
+
+            tenants = [.. await consultaTenants.OrderBy(t => t.Nombre).ThenBy(t => t.Id).Skip(desde).Take(tamano + 1).ToListAsync(ct)];
+        }
+
+        var hayMas = tenants.Count > tamano;
+        if (hayMas)
+            tenants.RemoveAt(tenants.Count - 1);
+
+        return new PaginaDto<GrupoDto>(await ConSusEmpresasAsync(sesiones, tenants, ct), hayMas ? Peticiones.EscribirDesplazamiento(desde + tamano) : null);
+    }
+
+    /// <summary>
+    /// Un grupo con sus empresas y el estado del plan de IA de cada una: lo que la consola necesita para rotular una
+    /// empresa (la pantalla del plan) sin recorrer la lista de grupos. 404 <c>tenant-no-encontrado</c>.
+    /// </summary>
+    [WolverineGet("/api/v1/plataforma/grupos/{id}")]
+    [Authorize(Policy = Permisos.PlataformaTenants)]
+    public static async Task<GrupoDto> Grupo(Guid id, ISesiones sesiones, CancellationToken ct)
+    {
+        Tenant tenant;
+        await using (var consulta = sesiones.ConsultaGlobal())
+            tenant = await consulta.LoadAsync<Tenant>(id, ct)
+                ?? throw ReglaDeNegocioException.NoEncontrado("tenant-no-encontrado", "No existe ese tenant.");
+
+        return (await ConSusEmpresasAsync(sesiones, [tenant], ct)).Single();
+    }
+
+    /// <summary>Las empresas de esos grupos (una sola consulta) y sus planes de IA, que viven en el tenant de cada grupo.</summary>
+    private static async Task<List<GrupoDto>> ConSusEmpresasAsync(ISesiones sesiones, IReadOnlyList<Tenant> tenants, CancellationToken ct)
+    {
+        var ids = tenants.Select(t => t.Id).ToArray();
+        List<Empresa> empresas = [];
+        if (ids.Length > 0)
+        {
+            await using var consulta = sesiones.ConsultaGlobal();
+            empresas = [.. await consulta.Query<Empresa>().Where(e => e.TenantId.IsOneOf(ids)).ToListAsync(ct)];
         }
 
         var grupos = new List<GrupoDto>(tenants.Count);
@@ -177,6 +235,18 @@ public static class TenantsEndpoints
         }
 
         return grupos;
+    }
+
+    /// <summary>
+    /// El número de identificación como se guarda: sin puntos ni espacios y sin el dígito de verificación
+    /// (<c>900.123.456-7</c> busca <c>900123456</c>).
+    /// </summary>
+    private static string NumeroBuscado(string texto)
+    {
+        var sinSeparadores = texto.Replace(".", string.Empty, StringComparison.Ordinal).Replace(" ", string.Empty, StringComparison.Ordinal);
+        var corte = sinSeparadores.LastIndexOf('-');
+        var numero = corte > 0 && corte == sinSeparadores.Length - 2 ? sinSeparadores[..corte] : sinSeparadores;
+        return numero.Length > 0 ? numero : texto;
     }
 
     private static EmpresaDeGrupoDto EmpresaDeGrupo(Empresa e, PlanDeIaEmpresa? plan) =>

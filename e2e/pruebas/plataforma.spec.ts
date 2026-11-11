@@ -63,15 +63,19 @@ test('Alta de una empresa nueva desde la consola, su plan de IA con llave y su p
   await consola.getByRole('button', { name: 'Probar llave' }).click();
   await expect(consola.getByText(`OpenAI aceptó la llave ••••${ultimos}.`)).toBeVisible();
 
+  // La lista es paginada (con cientos de grupos la nuestra no está en la primera página): se busca por la razón social.
   await consola.getByRole('link', { name: 'Grupos y empresas' }).first().click();
+  await consola.getByRole('searchbox', { name: 'Buscar por grupo, empresa o NIT' }).fill(empresa);
   const fila = consola.getByRole('row', { name: new RegExp(literal(empresa)) });
   await expect(fila).toContainText(`Activo · llave ••••${ultimos}`);
   // La llave nunca se ve en claro en la consola.
   await expect(consola.locator('body')).not.toContainText(llaveOpenAi);
 
   // 4. La empresa nueva opera: su sistema invita a un proveedor en nombre de la administradora.
-  const grupos = await llamar<{ empresas: { id: string; nombre: string }[] }[]>('GET', '/api/v1/plataforma/grupos', { llave: CLAVE_PLATAFORMA });
-  const empresaId = grupos.flatMap((g) => g.empresas).find((e) => e.nombre === empresa)?.id ?? '';
+  const grupos = await llamar<{ datos: { empresas: { id: string; nombre: string }[] }[] }>('GET', `/api/v1/plataforma/grupos?q=${encodeURIComponent(empresa)}`, {
+    llave: CLAVE_PLATAFORMA,
+  });
+  const empresaId = grupos.datos.flatMap((g) => g.empresas).find((e) => e.nombre === empresa)?.id ?? '';
   expect(empresaId).not.toBe('');
   const delegado = () => asercion('ERP', claves.privada, admin);
   const correoProveedor = `compras.${sufijo}@proveedor.e2e`;
@@ -102,4 +106,63 @@ test('Alta de una empresa nueva desde la consola, su plan de IA con llave y su p
   const pagina = await (await browser.newContext()).newPage();
   const app = await abrirEmbebidoCon(pagina, { empresaId, rutaInicial: 'vinculos', sesion: () => sesionDeUsuario(llaveSistema, delegado()) });
   await expect(app.getByRole('row').filter({ hasText: proveedor })).toContainText('Invitado');
+});
+
+/**
+ * La lista de grupos de la consola es paginada (PT-9) y de scroll infinito virtualizado (PT-11): pide la primera página
+ * de 20, trae la siguiente con el cursor al acercarse al final, solo mantiene en el DOM las tarjetas que se ven, y cambiar
+ * a «Secretos» y volver es inmediato aunque la base tenga cientos de grupos.
+ */
+test('La consola pagina los grupos con scroll infinito y cambia de pestaña al instante', async ({ page }) => {
+  const sufijo = randomUUID().replace(/-/g, '').slice(0, 6);
+  const total = 30;
+  const nombre = (i: number) => `Paginado ${sufijo} ${String(i).padStart(2, '0')}`;
+  await Promise.all(
+    Array.from({ length: total }, (_, i) =>
+      llamar('POST', '/api/v1/plataforma/tenants', {
+        llave: CLAVE_PLATAFORMA,
+        cuerpo: { slug: `pg${sufijo}${String(i).padStart(2, '0')}`, nombre: nombre(i), region: 'co', zonaHoraria: 'America/Bogota' },
+      }),
+    ),
+  );
+
+  const peticiones: URL[] = [];
+  page.on('request', (r) => {
+    const url = new URL(r.url());
+    if (url.pathname === '/api/v1/plataforma/grupos') peticiones.push(url);
+  });
+  const consola = await abrirConsolaDePlataforma(page);
+  const texto = `Paginado ${sufijo}`;
+  const delTexto = () => peticiones.filter((p) => p.searchParams.get('q') === texto);
+  await consola.getByRole('searchbox', { name: 'Buscar por grupo, empresa o NIT' }).fill(texto);
+  await expect.poll(() => delTexto().length).toBe(1);
+  await expect(consola.getByText(nombre(0), { exact: true })).toBeVisible();
+
+  // Primera página: 20 grupos pedidos y solo unas pocas tarjetas dibujadas.
+  const consulta = delTexto();
+  expect(consulta[0]?.searchParams.get('limite')).toBe('20');
+  expect(consulta[0]?.searchParams.has('cursor')).toBe(false);
+  const tarjetas = consola.getByRole('list', { name: 'Grupos' }).getByRole('listitem');
+  expect(await tarjetas.count()).toBeLessThan(total);
+  await expect(consola.getByRole('button', { name: /cargar más/i })).toHaveCount(0);
+
+  // Al desplazar hasta el final trae el resto con el cursor; el último grupo aparece y no queda nada más por pedir.
+  await expect(async () => {
+    await consola.locator('main').evaluate((m) => m.scrollTo({ top: m.scrollHeight }));
+    await expect(consola.getByText(nombre(total - 1), { exact: true })).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await expect(consola.getByText(`Eso es todo: ${String(total)} grupos.`)).toBeVisible();
+  const paginas = delTexto();
+  expect(paginas).toHaveLength(2);
+  expect(paginas[1]?.searchParams.get('cursor')).toBeTruthy();
+  expect(await tarjetas.count()).toBeLessThan(total);
+
+  // Pasar a «Secretos» es inmediato (la lista anterior se va con la ruta) y volver muestra lo ya cargado.
+  const inicio = Date.now();
+  await consola.getByRole('link', { name: 'Secretos' }).click();
+  await expect(consola.getByRole('heading', { level: 1, name: 'Secretos en reposo' })).toBeVisible();
+  await expect(consola.getByRole('list', { name: 'Grupos' })).toHaveCount(0);
+  expect(Date.now() - inicio).toBeLessThan(3_000);
+  await consola.getByRole('link', { name: 'Grupos y empresas' }).first().click();
+  await expect(consola.getByRole('heading', { level: 1, name: 'Grupos y empresas' })).toBeVisible();
 });

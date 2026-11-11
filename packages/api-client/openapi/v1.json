@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5107/"
+      "url": "http://localhost:5109/"
     }
   ],
   "paths": {
@@ -1893,16 +1893,77 @@
         "summary": "GET_api_v1_plataforma_grupos",
         "description": "GET_api_v1_plataforma_grupos",
         "operationId": "GET_api_v1_plataforma_grupos",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GrupoDto"
-                  }
+                  "$ref": "#/components/schemas/PaginaDtoOfGrupoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/grupos/{id}": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.TenantsEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_grupos_id",
+        "description": "GET_api_v1_plataforma_grupos_id",
+        "operationId": "GET_api_v1_plataforma_grupos_id",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrupoDto"
                 }
               }
             }
@@ -18221,6 +18282,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FilaLoteDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PaginaDtoOfGrupoDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GrupoDto"
             }
           },
           "siguienteCursor": {

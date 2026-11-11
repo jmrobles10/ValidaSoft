@@ -15,7 +15,7 @@ using Validasoft.Dominio.Ia;
 namespace Validasoft.Integracion.Tests;
 
 /// <summary>
-/// Consola de Plataforma (PT-1…PT-8): operadores por identidad delegada sin tenant, alta de un grupo operable de punta a
+/// Consola de Plataforma (PT-1…PT-10): operadores por identidad delegada sin tenant, alta de un grupo operable de punta a
 /// punta, plan de IA con su llave de solo escritura (nunca vuelve en claro ni va a la auditoría), «Probar llave» y
 /// re-cifrado de los secretos con la clave maestra.
 /// </summary>
@@ -98,7 +98,7 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         invitacion.Asunto.ShouldContain("Andina de Obras");
 
         // La consola ve el grupo con su empresa; la auditoría del alta lleva al operador como actor Plataforma.
-        var grupos = await EnviarAsync<List<GrupoDto>>("GET", "/api/v1/plataforma/grupos", operador, esperado: 200);
+        var grupos = (await EnviarAsync<PaginaDto<GrupoDto>>("GET", $"/api/v1/plataforma/grupos?q={slug}", operador, esperado: 200)).Datos;
         var grupo = grupos.Single(g => g.Tenant.Slug == slug);
         grupo.Empresas.ShouldHaveSingleItem().Nombre.ShouldBe("Andina de Obras S.A.S.");
         grupo.Empresas[0].PlanIaConfigurado.ShouldBeFalse();
@@ -185,7 +185,7 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         plan.UmbralConfianza.ShouldBe(0.9m);
 
         (await (await EnviarAsync("GET", url, operador, esperado: 200)).ReadAsTextAsync()).ShouldNotContain(llave);
-        var grupos = await EnviarAsync<List<GrupoDto>>("GET", "/api/v1/plataforma/grupos", operador, esperado: 200);
+        var grupos = (await EnviarAsync<PaginaDto<GrupoDto>>("GET", $"/api/v1/plataforma/grupos?q={slug}", operador, esperado: 200)).Datos;
         var empresa = grupos.Single(g => g.Tenant.Id == alta.Tenant.Id).Empresas.Single();
         (empresa.PlanIaActivo, empresa.LlaveConfigurada, empresa.UltimosCuatro).ShouldBe((true, true, "WXYZ"));
 
@@ -261,6 +261,130 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         // Repetirlo es inocuo: ya no queda nada de esta empresa por re-cifrar.
         var otraVez = await EnviarAsync<EstadoDeSecretosDto>("GET", "/api/v1/plataforma/secretos", operador, esperado: 200);
         otraVez.PorTipo.Single(t => t.Tipo == "llave-openai").Fallidos.ShouldBe(0);
+    }
+
+    private Task<PaginaDto<GrupoDto>> GruposAsync(Credencial credencial, string? q = null, int? limite = null, string? cursor = null)
+    {
+        var consulta = new List<string>();
+        if (q is not null)
+            consulta.Add("q=" + Uri.EscapeDataString(q));
+        if (limite is not null)
+            consulta.Add($"limite={limite}");
+        if (cursor is not null)
+            consulta.Add("cursor=" + Uri.EscapeDataString(cursor));
+        return EnviarAsync<PaginaDto<GrupoDto>>("GET", "/api/v1/plataforma/grupos" + (consulta.Count > 0 ? "?" + string.Join('&', consulta) : string.Empty),
+            credencial, esperado: 200);
+    }
+
+    [Fact]
+    public async Task La_consola_lista_los_grupos_por_paginas_con_cursor_y_los_busca_por_grupo_empresa_o_NIT()
+    {
+        var (token, _, _) = await SesionDeOperadorAsync("op-5");
+        var operador = new Credencial(null, Bearer: token);
+        var marca = Guid.NewGuid().ToString("N")[..8];
+        var nits = new Dictionary<char, string>();
+        var altas = new Dictionary<char, TenantCreadoDto>();
+        foreach (var letra in "ABCDE")
+        {
+            var nit = "8" + Random.Shared.Next(10_000_000, 99_999_999).ToString();
+            nits[letra] = nit;
+            altas[letra] = await EnviarAsync<TenantCreadoDto>("POST", "/api/v1/plataforma/tenants", operador, new CrearTenantDto(
+                $"g{marca}{char.ToLowerInvariant(letra)}", $"Zeta {marca} {letra}", "co", "America/Bogota",
+                new CrearEmpresaDto(new IdentificacionDto("CO", "NIT", nit), $"Obras {marca} {letra} S.A.S.", $"O{letra}", null, null),
+                new AdministradorInicialDto("Camila Admin", $"camila.{marca}.{letra}@andina.co", null)));
+        }
+
+        // El grupo B tiene una segunda empresa: sale con las dos, ordenadas por nombre.
+        await EnviarAsync<EmpresaDto>("POST", "/api/v1/empresas", new Credencial(altas['B'].ApiKeyAdministrador.Valor),
+            new CrearEmpresaDto(new IdentificacionDto("CO", "NIT", "899999068"), $"Aliada {marca} S.A.S.", "ALIADA", null, null));
+
+        // Páginas de 2: A-B, C-D, E; el cursor solo viene mientras queda algo, y todo sale una sola vez, por nombre del grupo.
+        var primera = await GruposAsync(operador, marca, limite: 2);
+        primera.Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} A", $"Zeta {marca} B"]);
+        primera.SiguienteCursor.ShouldNotBeNull();
+        primera.Datos[1].Empresas.Select(e => e.Nombre).ShouldBe([$"Aliada {marca} S.A.S.", $"Obras {marca} B S.A.S."]);
+        var segunda = await GruposAsync(operador, marca, limite: 2, cursor: primera.SiguienteCursor);
+        segunda.Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} C", $"Zeta {marca} D"]);
+        segunda.SiguienteCursor.ShouldNotBeNull();
+        var tercera = await GruposAsync(operador, marca, limite: 2, cursor: segunda.SiguienteCursor);
+        tercera.Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} E"]);
+        tercera.SiguienteCursor.ShouldBeNull();
+        var todos = await GruposAsync(operador, marca, limite: 5);
+        todos.Datos.Count.ShouldBe(5);
+        todos.SiguienteCursor.ShouldBeNull();
+
+        // Cada grupo trae solo sus empresas (no las de todo el sistema) y el estado de su plan de IA.
+        todos.Datos.Where(g => g.Tenant.Slug != $"g{marca}b").ShouldAllBe(g => g.Empresas.Count == 1);
+        todos.Datos[0].Empresas.Single().PlanIaConfigurado.ShouldBeFalse();
+
+        // Por el nombre o el identificador del grupo (sin distinguir mayúsculas), por la razón social y por el NIT (con o sin formato).
+        (await GruposAsync(operador, $"zeta {marca} c")).Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} C"]);
+        (await GruposAsync(operador, $"G{marca}D")).Datos.Select(g => g.Tenant.Slug).ShouldBe([$"g{marca}d"]);
+        (await GruposAsync(operador, $"obras {marca} e")).Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} E"]);
+        (await GruposAsync(operador, $"Aliada {marca}")).Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} B"]);
+        var nitA = nits['A'];
+        (await GruposAsync(operador, nitA)).Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} A"]);
+        var conFormato = $"{nitA[..3]}.{nitA[3..6]}.{nitA[6..]}-{altas['A'].Empresa!.Identificacion.DigitoVerificacion}";
+        (await GruposAsync(operador, conFormato)).Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Zeta {marca} A"]);
+        (await GruposAsync(operador, nitA[..7])).Datos.ShouldContain(g => g.Tenant.Nombre == $"Zeta {marca} A");
+
+        // Sin coincidencias: página vacía sin cursor. Los comodines de LIKE no abren la búsqueda.
+        var ninguno = await GruposAsync(operador, $"no-existe-{marca}");
+        (ninguno.Datos.Count, ninguno.SiguienteCursor).ShouldBe((0, null));
+        (await GruposAsync(operador, $"%{marca}")).Datos.ShouldBeEmpty();
+        (await GruposAsync(operador, $"{marca[..3]}_{marca[4..]}")).Datos.ShouldBeEmpty();
+
+        // Un cursor que no es nuestro ⇒ 422.
+        var invalido = await EnviarAsync("GET", "/api/v1/plataforma/grupos?cursor=no-es-un-cursor", operador, esperado: 422);
+        (await invalido.ReadAsJsonAsync<JsonElement>()).GetProperty("codigo").GetString().ShouldBe("cursor-invalido");
+    }
+
+    [Fact]
+    public async Task Un_grupo_se_consulta_por_su_id_con_sus_empresas_y_el_plan_de_IA_sin_recorrer_la_lista()
+    {
+        var (token, _, _) = await SesionDeOperadorAsync("op-7");
+        var operador = new Credencial(null, Bearer: token);
+        var slug = "g" + Guid.NewGuid().ToString("N")[..10];
+        var alta = await EnviarAsync<TenantCreadoDto>("POST", "/api/v1/plataforma/tenants", operador, AltaCompleta(slug, RSA.Create(2048), $"c.{slug}@a.co"));
+        await EnviarAsync("PUT", $"/api/v1/plataforma/tenants/{alta.Tenant.Id}/empresas/{alta.Empresa!.Id}/plan-ia", operador,
+            new ActualizarPlanIaEmpresaDto(10, false, null, "sk-proj-" + Guid.NewGuid().ToString("N") + "ABCD"), esperado: 200);
+
+        var grupo = await EnviarAsync<GrupoDto>("GET", $"/api/v1/plataforma/grupos/{alta.Tenant.Id}", operador, esperado: 200);
+        grupo.Tenant.Slug.ShouldBe(slug);
+        var empresa = grupo.Empresas.ShouldHaveSingleItem();
+        (empresa.Id, empresa.LlaveConfigurada, empresa.UltimosCuatro).ShouldBe((alta.Empresa.Id, true, "ABCD"));
+
+        var inexistente = await EnviarAsync("GET", $"/api/v1/plataforma/grupos/{Guid.NewGuid()}", operador, esperado: 404);
+        (await inexistente.ReadAsJsonAsync<JsonElement>()).GetProperty("codigo").GetString().ShouldBe("tenant-no-encontrado");
+        await EnviarAsync("GET", $"/api/v1/plataforma/grupos/{alta.Tenant.Id}", new Credencial(alta.ApiKeyAdministrador.Valor), esperado: 403);
+    }
+
+    [Fact]
+    public async Task La_pagina_de_grupos_es_de_20_por_omision_con_tope_de_100_y_solo_la_ve_Plataforma()
+    {
+        var (token, _, _) = await SesionDeOperadorAsync("op-6");
+        var operador = new Credencial(null, Bearer: token);
+        var marca = Guid.NewGuid().ToString("N")[..8];
+        TenantCreadoDto? ultimo = null;
+        for (var i = 0; i < 21; i++)
+            ultimo = await EnviarAsync<TenantCreadoDto>("POST", "/api/v1/plataforma/tenants", operador,
+                new CrearTenantDto($"p{marca}{i:00}", $"Pagina {marca} {i:00}", "co", null));
+
+        var primera = await GruposAsync(operador, marca);
+        primera.Datos.Count.ShouldBe(20);
+        primera.SiguienteCursor.ShouldNotBeNull();
+        primera.Datos.ShouldAllBe(g => g.Empresas.Count == 0);
+        var resto = await GruposAsync(operador, marca, cursor: primera.SiguienteCursor);
+        resto.Datos.Select(g => g.Tenant.Nombre).ShouldBe([$"Pagina {marca} 20"]);
+        resto.SiguienteCursor.ShouldBeNull();
+
+        (await GruposAsync(operador, marca, limite: 500)).Datos.Count.ShouldBe(21);
+        (await GruposAsync(operador, marca, limite: 0)).Datos.Count.ShouldBe(1);
+        (await GruposAsync(Bootstrap, marca, limite: 3)).Datos.Count.ShouldBe(3);
+
+        // La llave de un grupo no ve la consola; sin credencial, tampoco.
+        await EnviarAsync("GET", "/api/v1/plataforma/grupos", new Credencial(ultimo!.ApiKeyAdministrador.Valor), esperado: 403);
+        await EnviarAsync("GET", "/api/v1/plataforma/grupos", new Credencial(null), esperado: 401);
     }
 
     /// <summary>El protector anterior a PT-1: AES-256-GCM con HKDF-SHA256 de la clave de firma de sesiones, sin versión.</summary>

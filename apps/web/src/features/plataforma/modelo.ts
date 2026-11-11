@@ -15,6 +15,12 @@ import { origenesDeTexto } from '../configuracion/sistemas/origenes';
  */
 
 export const ZONA_POR_DEFECTO = 'America/Bogota';
+/** Un grupo con más empresas que estas muestra su tabla plegada en la lista (PT-11). */
+export const MAX_EMPRESAS_SIN_COLAPSAR = 5;
+/** Alto aproximado (px) de la tarjeta de un grupo con una empresa, mientras la lista virtual no la mide. */
+export const ALTO_ESTIMADO_GRUPO = 200;
+/** Espera (ms) tras dejar de escribir en el buscador antes de pedir al servidor. */
+export const ESPERA_BUSQUEDA_GRUPOS_MS = 300;
 export const MAXIMO_VALIDACIONES = 1_000_000;
 
 // ---------- Alta de grupo ----------

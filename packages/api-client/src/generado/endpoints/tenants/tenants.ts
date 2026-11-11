@@ -26,6 +26,8 @@ import type {
 import type {
   CrearTenantDto,
   GrupoDto,
+  ListarGruposParams,
+  PaginaDtoOfGrupoDto,
   TenantCreadoDto,
   TenantDto
 } from '../../modelos';
@@ -289,13 +291,14 @@ export function useObtenerTenant<TData = Awaited<ReturnType<typeof obtenerTenant
 
 
 export const listarGrupos = (
-
+    params?: ListarGruposParams,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {
 
 
-      return clienteValidasoft<GrupoDto[]>(
-      {url: `/api/v1/plataforma/grupos`, method: 'GET', signal
+      return clienteValidasoft<PaginaDtoOfGrupoDto>(
+      {url: `/api/v1/plataforma/grupos`, method: 'GET',
+        params, signal
     },
       options);
     }
@@ -303,23 +306,23 @@ export const listarGrupos = (
 
 
 
-export const getListarGruposQueryKey = () => {
+export const getListarGruposQueryKey = (params?: ListarGruposParams,) => {
     return [
-    `/api/v1/plataforma/grupos`
+    `/api/v1/plataforma/grupos`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListarGruposQueryOptions = <TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+export const getListarGruposQueryOptions = <TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>(params?: ListarGruposParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListarGruposQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListarGruposQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarGrupos>>> = ({ signal }) => listarGrupos(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarGrupos>>> = ({ signal }) => listarGrupos(params, requestOptions, signal);
 
 
 
@@ -333,7 +336,7 @@ export type ListarGruposQueryError = ErrorType<void>
 
 
 export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>> & Pick<
+ params: undefined |  ListarGruposParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listarGrupos>>,
           TError,
@@ -343,7 +346,7 @@ export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>> & Pick<
+ params?: ListarGruposParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listarGrupos>>,
           TError,
@@ -353,15 +356,100 @@ export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ params?: ListarGruposParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListarGrupos<TData = Awaited<ReturnType<typeof listarGrupos>>, TError = ErrorType<void>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ params?: ListarGruposParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarGrupos>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListarGruposQueryOptions(options)
+  const queryOptions = getListarGruposQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerGrupo = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<GrupoDto>(
+      {url: `/api/v1/plataforma/grupos/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerGrupoQueryKey = (id: string,) => {
+    return [
+    `/api/v1/plataforma/grupos/${id}`
+    ] as const;
+    }
+
+
+export const getObtenerGrupoQueryOptions = <TData = Awaited<ReturnType<typeof obtenerGrupo>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerGrupoQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerGrupo>>> = ({ signal }) => obtenerGrupo(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerGrupoQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerGrupo>>>
+export type ObtenerGrupoQueryError = ErrorType<void>
+
+
+export function useObtenerGrupo<TData = Awaited<ReturnType<typeof obtenerGrupo>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerGrupo>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerGrupo>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerGrupo<TData = Awaited<ReturnType<typeof obtenerGrupo>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerGrupo>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerGrupo>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerGrupo<TData = Awaited<ReturnType<typeof obtenerGrupo>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerGrupo<TData = Awaited<ReturnType<typeof obtenerGrupo>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerGrupo>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerGrupoQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -70,6 +70,7 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plataforma/tenants/{id}': 'obtenerTenant',
   // Consola de Plataforma (PT-3…PT-6): grupos con sus empresas, sistemas y sesión del operador, secretos y prueba de la llave.
   'GET /api/v1/plataforma/grupos': 'listarGrupos',
+  'GET /api/v1/plataforma/grupos/{id}': 'obtenerGrupo',
   'GET /api/v1/plataforma/sistemas': 'listarSistemasPlataforma',
   'PUT /api/v1/plataforma/sistemas/{codigo}': 'fijarSistemaPlataforma',
   'POST /api/v1/plataforma/sesiones': 'crearSesionPlataforma',
