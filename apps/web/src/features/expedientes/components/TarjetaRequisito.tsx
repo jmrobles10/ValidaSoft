@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { SCOPES, type AreaDeRequisitoDto, type AreaExpedienteDto, type DocumentoVistaEmpresaDto, type ExpedienteDto, type HechosDto, type RequisitoExpedienteDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha } from '@validasoft/ui';
 import { ClipboardList, Clock, FileText } from 'lucide-react';
@@ -94,6 +94,12 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
         )}
       </Stack>
 
+      {/* El tercero retiró la versión que este documento reemplaza: por qué cambió la versión y qué hacer (RT-3). */}
+      {requisito.retiro && version && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          {t('expedientes.requisitos.retiro', { retirada: String(requisito.retiro.numero), motivo: requisito.retiro.motivo, n: String(version.n) })}
+        </Alert>
+      )}
       {visor && (
         <Box sx={{ mt: 1 }}>
           <ResumenVersion datos={visor.datosDeclarados ?? []} vigencia={visor.vigencia} limite={6} hechos={visor.sinArchivo ? null : visor.hechos} tipoEsperado={visor.tipoEsperado} />
