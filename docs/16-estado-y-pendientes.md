@@ -93,6 +93,25 @@ WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
   - lugar de expedición del representante;
   - cifrar los secretos que el SRM guarda en claro.
 
+## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
+
+Sale de `main` y cierra los huecos con el SRM + Portal sobre las novedades del tercero. **No tiene PR.** Detalle en el
+[registro](decisiones/registro.md#5-septquadragies-novedades-del-tercero-y-tiempo-real-2026-11-11)
+(NT-1..NT-17) y en [docs/05 §2.7.2](05-api-contratos-y-webhooks.md).
+
+| Bloque | Estado | Registro |
+|---|---|---|
+| **Campana del tercero** en `apps/public` (todas sus empresas, cada aviso con su marca, no leídas, marcar leída, enlace a lo que hay que hacer) y sus preferencias de correo por tipo | Terminado | NT-1, NT-2, NT-3, NT-5 |
+| **Recordatorio de observaciones pendientes**: desde el expediente, en lote desde la bandeja (seleccionados o «todos los observados» con filtro de área), uno por día, plantilla editable y aviso en la campana | Terminado | NT-7, NT-8 |
+| **Recordatorio automático** cada N días mientras siga observado | Terminado, **por empresa** (no por flujo) | NT-9 |
+| **Aviso a las áreas cuando el tercero responde**: también a las que revisan los documentos reabiertos | Terminado y cubierto con e2e | NT-4 |
+| **Avisos al tercero al desaprobar y reintegrar** (DS-10): campana y correo con plantilla editable, según preferencias, sin la justificación interna | Terminado, con integración y e2e | NT-18 |
+| **Tiempo real** entre la empresa y el tercero (SSE de «cambió X» en la web y en el portal, campana del tercero al instante, aviso cuando se designa una cuenta, «Hay cambios nuevos» sin pisar lo que se escribe, reconexión y respaldo) | Terminado y cubierto con e2e de dos navegadores | NT-12…NT-16 |
+
+Pendiente de esta rama: pasar el recordatorio automático a **por flujo** (cuando se integre el plazo de cargue por flujo
+de la otra rama, NT-9), la acción masiva desde Revalidaciones y Vencimientos, la propuesta desde un documento que aún no se compartió con ninguna
+empresa (NT-11) y la guardia de edición en otros formularios que no sean la ficha y la respuesta del portal (NT-17).
+
 ## 4. Qué falta, con detalle
 
 ### 4.1 Proceso de validación frente al SRM (auditoría 2026-11-10)

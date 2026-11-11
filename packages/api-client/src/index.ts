@@ -57,3 +57,7 @@ export * from './generado/endpoints/plazos-de-cargue/plazos-de-cargue';
 export * from './generado/endpoints/informe-estado-expedientes/informe-estado-expedientes';
 export * from './generado/endpoints/informe-vinculos/informe-vinculos';
 export * from './generado/endpoints/exportacion-de-expediente/exportacion-de-expediente';
+export * from './generado/endpoints/recordatorios-de-observaciones/recordatorios-de-observaciones';
+export * from './generado/endpoints/configuracion-de-recordatorios/configuracion-de-recordatorios';
+export * from './generado/endpoints/recordatorios-automaticos/recordatorios-automaticos';
+export * from './tiempoReal';

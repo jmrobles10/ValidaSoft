@@ -139,6 +139,13 @@ internal static class Sse
         await http.Response.Body.FlushAsync(http.RequestAborted);
     }
 
+    /// <summary>Un evento sin <c>id</c>: no mueve el <c>Last-Event-ID</c> con el que se reanuda el stream.</summary>
+    public static async Task EscribirSinIdAsync(HttpContext http, string evento, string datos)
+    {
+        await http.Response.WriteAsync($"event: {evento}\ndata: {datos}\n\n", http.RequestAborted);
+        await http.Response.Body.FlushAsync(http.RequestAborted);
+    }
+
     public static async Task<DateTimeOffset> LatidoAsync(HttpContext http, DateTimeOffset ultimo, TimeProvider reloj)
     {
         var ahora = reloj.GetUtcNow();
@@ -225,7 +232,9 @@ public static class NotificacionesEndpoints
 
     /// <summary>
     /// SSE de la campana: <c>event: notificacion</c> con cada <see cref="NotificacionDto"/> nueva (id = su orden) y
-    /// <c>event: no_leidas</c> con el total cuando cambia. Consulta cada 2 s.
+    /// <c>event: no_leidas</c> con el total cuando cambia. Con <c>X-Empresa</c> también <c>event: cambio</c> (<see cref="CambioEnVivoDto"/>:
+    /// tipo de recurso e id) cada vez que cambia algo de esa empresa —un expediente, un vínculo, su cuenta, un documento, la ficha de un tercero,
+    /// un certificado— para que la pantalla abierta lo refresque sola (NT-12); solo de la empresa activa y su tenant. Consulta cada 2 s.
     /// </summary>
     [WolverineGet("/api/v1/notificaciones/stream")]
     public static async Task<IResult> Stream(HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj)
@@ -233,12 +242,21 @@ public static class NotificacionesEndpoints
         var usuarioId = Persona(contexto);
         var ct = http.RequestAborted;
         var ultimo = http.Request.Headers["Last-Event-ID"].ToString() is { Length: > 0 } reanudar ? EventosEndpoints.LeerCursor(reanudar) : reloj.GetUtcNow().UtcTicks;
+        var tenantId = contexto.TenantRequerido();
+        Guid? empresaActiva = contexto.EmpresaId;
+        var cambios = new CursorDeCambios(CambiosEnVivo.InicioDeUnStream(reloj));
         await Sse.IniciarAsync(http);
 
         int? noLeidasAnterior = null;
         var ultimoLatido = reloj.GetUtcNow();
         while (!ct.IsCancellationRequested)
         {
+            if (empresaActiva is { } empresaId)
+            {
+                await using var global = sesiones.ConsultaGlobal();
+                await CambiosEnVivo.EscribirAsync(http, cambios.Nuevos(await CambiosEnVivo.DeLaEmpresaAsync(global, tenantId, empresaId, cambios.Desde, ct)));
+            }
+
             await using (var sesion = sesiones.DelTenant())
             {
                 var desde = ultimo;

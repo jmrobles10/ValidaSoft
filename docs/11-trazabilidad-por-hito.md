@@ -567,6 +567,23 @@ Hacia atrás: la plantilla `aprobado` (H4) se conserva y se suma `certificado`; 
 | Endpoint | `GET/PUT /usuarios/me/preferencias-notificacion` | 05 §2.7 |
 | Regla | Alcance de webhooks = `apiKey.empresas[] ∩ webhook.empresas[]`; vacío ⇒ `422 empresas-fuera-de-alcance`; cambio posterior ⇒ `webhook.deshabilitado {causa}` | 05 §2.8, 07 §4 |
 
+#### H5 — Implementado: campana del tercero y recordatorio de observaciones (NT, 2026-11-10)
+
+Paridad con la campana del Portal y el recordatorio masivo de novedades del SRM; decisiones NT-1…NT-17 del [registro](decisiones/registro.md), contratos en [docs/05 §2.7.2](05-api-contratos-y-webhooks.md).
+
+| Pieza | Qué es | Dónde |
+|---|---|---|
+| Campana del tercero | `Notificacion` con el tercero como destinatario y `TenantId`; lectura entre tenants limitada a los vínculos de su sesión; `GET /public/v1/notificaciones`, `POST …/{id}/leida`, `POST …/leidas` | `Notificaciones/NotificacionesDelTercero.cs`, `apps/public/src/notificaciones/` |
+| Disparadores | `PlanificadorDeNotificacionesDelTercero` (observación, recordatorio, actualización, resultado, por vencer, vencido, certificado, plazo, invitación, propuesta), unido al planificador de las personas en la misma suscripción | `Notificaciones/Notificaciones.cs` |
+| Preferencias de correo | `PreferenciasDelTercero` (global); los manejadores de los correos al tercero consultan por `TerceroId` al enviar; `GET/PUT /public/v1/preferencias-notificacion` | `PreferenciasDeCorreoDelTercero`, `Comun/Correo.cs`, `PlazosDeCargue.cs`, `VigenciasDeDocumentos.cs` |
+| Recordatorio de observaciones | Evento `RecordatorioDeObservacionesEnviado`, regla «uno por día» en `Expediente`, plantilla `recordatorio-observaciones`, individual, en lote y automático por empresa (job y `POST /plataforma/recordatorios-observaciones/revisar`) | `Dominio/Expedientes/ExpedienteRecordatorios.cs`, `Expedientes/RecordatoriosDeObservaciones.cs`, `apps/web/src/features/recordatorios/` |
+| Aviso a las áreas | `expediente.tercero_respondio` suma las áreas que revisan los requisitos reabiertos | `PlanificadorDeNotificaciones.AAreasAsync` |
+| Desaprobar y reintegrar (NT-18) | `tercero.desaprobado` y `tercero.reintegrado` en la campana del tercero y por correo con las plantillas `desaprobacion` y `reintegro` (tres textos según `ModoDeReintegro`), respetando sus preferencias y sin la justificación | `PlanificadorDeNotificacionesDelTercero`, `PlanificadorDeNotificaciones.DesaprobacionAlTerceroAsync` y `ReintegroAlTerceroAsync`, `Correo.cs` |
+| Cuenta propuesta y decidida | `vinculo.cuenta_propuesta` (campana a quienes tienen `cuentas:aprobar`) y `tercero.cuenta` (aprobada o rechazada, al tercero) | `PlanificadorDeNotificaciones.CuentaPropuestaAsync`, `NotificacionesDelTercero.cs` |
+| Tiempo real | `AvisoDeCambio` (documento global de 30 min) y `event: cambio` (`CambioEnVivoDto { recurso, id, vinculoId? }`) en `GET /api/v1/notificaciones/stream` (empresa activa) y `GET /public/v1/notificaciones/stream` (sesión del tercero); en el cliente, `useTiempoReal`, mapas de invalidación y guardia de edición | `Notificaciones/CambiosEnVivo.cs`, `packages/api-client/src/tiempoReal/`, `apps/*/src/notificaciones/` |
+
+Pruebas: `NotificacionesDelTerceroTests` y `RecordatorioDeObservacionesTests` (dominio), `RequisitosApiTests.NovedadesTercero` y `RequisitosApiTests.TiempoReal` (integración), `packages/api-client/src/tiempoReal/*.test.*`, `apps/public/src/notificaciones/*.test.*`, `apps/web/src/features/notificaciones/*.test.*` y `apps/web/src/features/recordatorios/*.test.*`, `e2e/pruebas/novedades-tercero.spec.ts` y `e2e/pruebas/tiempo-real.spec.ts` (dos navegadores, sin recargar).
+
 ### H6 — Vigencias, revalidación y versiones nuevas
 
 #### 2.6.1 Agregados y eventos

@@ -3,6 +3,7 @@ import { Isotipo } from '@validasoft/ui';
 import { Building2, FolderCheck, IdCard, Landmark, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
+import { Campana } from '../notificaciones/Campana';
 import { useSesionTercero } from '../sesion/sesionTercero';
 
 const SECCIONES = [
@@ -55,6 +56,7 @@ export function Shell() {
               ))}
             </Stack>
           )}
+          {activa && <Campana />}
           {activa && (
             <Button variant="text" onClick={() => void salir()} startIcon={<LogOut size={18} aria-hidden />} sx={{ color: 'text.secondary' }}>
               {t('nav.salir')}

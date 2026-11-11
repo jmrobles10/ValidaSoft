@@ -86,6 +86,14 @@ public static class EjemplosDeCorreo
                 redactor.RedactarPlazoDeCargue(new Expedientes.CorreoDePlazoDeCarguePendiente(Para, empresa, folio, Expedientes.AvisoDePlazo.Recordatorio,
                     ahora.AddDays(7), 7)),
                 VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.RecordatorioObservaciones => new(
+                redactor.RedactarRecordatorioDeObservaciones(new Expedientes.CorreoDeRecordatorioDeObservacionesPendiente(Para, empresa, folio,
+                    [new ObservacionParaCorreo(["El documento está vencido."], "Adjunta el RUT actualizado.", Documento)], 3), "enlace-de-ejemplo"),
+                VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.Desaprobacion => new(
+                redactor.RedactarDesaprobacion(new CorreoDeDesaprobacionPendiente(Para, empresa, folio)), VariablesDe(empresa, folio)),
+            CatalogoDePlantillas.Reintegro => new(
+                redactor.RedactarReintegro(new CorreoDeReintegroPendiente(Para, empresa, folio, ModoDeReintegro.ConRenovacion)), VariablesDe(empresa, folio)),
             _ => throw new ArgumentOutOfRangeException(nameof(evento), evento, "Evento sin plantilla.")
         };
     }

@@ -129,7 +129,8 @@ public static class MapeosDeValidacion
             e.EsperandoVerificaciones,
             e.PlazoDto(),
             e.Desaprobaciones,
-            e.UltimaDesaprobacion?.ADto());
+            e.UltimaDesaprobacion?.ADto(),
+            e.UltimoRecordatorioDeObservaciones is { } ultimo ? new RecordatorioObservacionesDto(ultimo, e.RecordatoriosDeObservaciones) : null);
 
     /// <summary>Plazo de cargue del expediente inicial (LT-2); nulo si no tiene (otros tipos, o un flujo sin plazo).</summary>
     public static PlazoCargueExpedienteDto? PlazoDto(this Expediente e) =>

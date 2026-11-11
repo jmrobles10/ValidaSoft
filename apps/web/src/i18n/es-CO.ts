@@ -16,6 +16,7 @@ import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
 import { plataforma } from './es-CO-plataforma';
+import { erroresRecordatorios, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
 import { terceros } from './es-CO-terceros';
@@ -286,6 +287,7 @@ export const esCO = {
   cruce,
   auditoria,
   plantillas,
+  recordatorios,
   ia,
   plataforma,
   motivos,
@@ -619,6 +621,7 @@ export const esCO = {
     ...erroresFichaEmpresa,
     ...erroresLotes,
     ...erroresCruce,
+    ...erroresRecordatorios,
   },
 } as const;
 

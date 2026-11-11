@@ -8,6 +8,7 @@ import { EncabezadoPagina, ErrorRecuperable, SinPermiso } from '../../../shared/
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { RecordatorioAutomatico } from '../../recordatorios/RecordatorioAutomatico';
 import { usePlantillas } from './api';
 import { DrawerPlantilla } from './DrawerPlantilla';
 import { personalizada } from './modelo';
@@ -30,6 +31,7 @@ export function PaginaPlantillas() {
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
         {t('plantillas.ayuda')}
       </Typography>
+      <RecordatorioAutomatico empresaId={empresa.id} puedeEscribir={puedeEscribir} />
       {consulta.isError && <ErrorRecuperable mensaje={`${t('plantillas.errorLista')} ${mensajeDeError(consulta.error, t)}`} onReintentar={() => void consulta.refetch()} />}
       <MarcoTabla>
         <Table size="small" aria-label={t('plantillas.titulo')}>

@@ -31,7 +31,7 @@
 | Correlación | `X-Correlation-Id` y `traceparent` propagados a metadatos y a `traceId`. |
 | Rate limit | Por credencial (`RateLimit-*`, `429`); `/public/v1/verificar` por IP. |
 | Binarios | Nunca por la API: URLs prefirmadas de MinIO (5–15 min). Límite 20 MB, PDF/JPG/PNG/WebP (HEIC convertido en cliente), 50 páginas (P-16-2). |
-| Tiempo real | SSE `/api/v1/eventos/stream` (usuarios) y `/public/v1/expedientes/{id}/stream` (tercero). Resultado de IA en < 60 s p95 (P-6-9). |
+| Tiempo real | SSE `/api/v1/eventos/stream` (integraciones), `/api/v1/notificaciones/stream` (web de empresa) y `/public/v1/notificaciones/stream` (portal del tercero) con avisos de «cambió X» (§3.4, NT-12…NT-15); `/public/v1/expedientes/{id}/stream` (tercero). Resultado de IA en < 60 s p95 (P-6-9). |
 
 ---
 
@@ -327,6 +327,30 @@ Decisiones VE-5…VE-18 del [registro](decisiones/registro.md). Todo con `X-Empr
 
 `VerificacionDto` (implementado): `tipo`, `estado`, `bloqueante`, `requeridaPorElFlujo`, `proveedor`, `resultado`, `referenciaExterna`, `registradaEn`, `registradaPor` (usuario o `sistema`), `vigenteHasta`, `evidencia {nombreArchivo, tipoContenido, tamano, sha256, delProveedor, sha256Respuesta}`, `personas[] {rol, nombre, identificacion}`, `coincidencias[] {id, persona, rol, identificacion, lista, nombreEncontrado, detalle, puntaje, decision, justificacion, resueltaPor, resueltaEn, vigenteHasta, heredada}`, `estudio: EstudioCumplimientoDto`, `anteriores[]`, `ultimoError`, `reintentarDesde`, `vigenciaDias`, `frecuenciaReconsultaMeses`. **Diferencias**: el informe se exporta con un `GET` síncrono (no `POST …/exportar` 202) y la debida diligencia es `Simple|Ampliada` (VE-9, VE-14).
 
+#### 2.7.2 Estado de implementación — campana del tercero y recordatorio de observaciones (NT, 2026-11-10)
+
+Decisiones NT-1…NT-11 del [registro](decisiones/registro.md). Lado tercero (sesión de tercero, `Authorization: Bearer`, solo lo de los vínculos de su sesión):
+
+| Método y ruta | Contrato | Respuestas |
+|---|---|---|
+| `GET /public/v1/notificaciones?soloNoLeidas=&limite=&cursor=` | `BandejaNotificacionesTerceroDto { datos: NotificacionTerceroDto[], siguienteCursor, noLeidas }` (más recientes primero; `noLeidas` es el total de **todas** sus empresas). `NotificacionTerceroDto { id, tipo, titulo, mensaje, empresa?: EmpresaPublicaDto (nombre, logo, color), expedienteId?, vinculoId?, folio?, enlace? (ruta de `apps/public`), creadaEn, leidaEn? }` | 200 |
+| `POST /public/v1/notificaciones/{id}/leida` · `POST /public/v1/notificaciones/leidas` | `NotificacionTerceroDto` · `NotificacionesMarcadasDto { marcadas }` | 200; 404 `notificacion-no-encontrada` (de otro tercero o de un vínculo que no es de su sesión) |
+| `GET /public/v1/preferencias-notificacion` · `PUT /public/v1/preferencias-notificacion` | `PreferenciasNotificacionDto { correo: {tipo: bool}, tiposConCorreo[] }` · `ActualizarPreferenciasNotificacionDto { correo }` (solo los tipos que cambian) | 200; 422 `tipo-notificacion-invalido` |
+| `GET /public/v1/notificaciones/stream` | SSE con la sesión del tercero (`Authorization: Bearer`, sin `X-Empresa`): `event: notificacion` (`data` = `NotificacionTerceroDto`, `id` = su orden), `event: no_leidas` (el total de todas sus empresas) y `event: cambio` (`CambioEnVivoDto`, §3.4) de sus vínculos. Se cierra al vencer el token (NT-13) | 200 `text/event-stream`; 401 sin sesión |
+
+Tipos (`NotificacionTerceroDto.tipo`; con correo: ✉): `tercero.observado` ✉, `tercero.recordatorio` ✉, `tercero.resultado` ✉, `tercero.documento_por_vencer` ✉, `tercero.documento_vencido` ✉, `tercero.certificado` ✉, `tercero.plazo_de_cargue` ✉, `tercero.desaprobado` ✉, `tercero.reintegrado` ✉, `tercero.actualizacion`, `tercero.propuesta`, `tercero.invitacion`, `tercero.cuenta` (la empresa aprobó o rechazó la cuenta que designó). La campana nunca se apaga; el correo de cada ✉ se respeta al enviarlo (`PreferenciasDelTercero`, documento global). Cada aviso es de la empresa que lo origina (vive en su tenant); `tercero.propuesta` no es de ninguna (sin `empresa` ni `vinculoId`). Los disparadores están en el registro (NT-3): salen de los eventos de dominio por la misma suscripción que alimenta la campana de las personas.
+
+Lado empresa (con `X-Empresa`; permiso `vinculos:escribir` salvo la configuración):
+
+| Método y ruta | Contrato | Respuestas |
+|---|---|---|
+| `POST /expedientes/{id}/recordar-observaciones` | Sin cuerpo. Evento `RecordatorioDeObservacionesEnviado`, correo (plantilla `recordatorio-observaciones`, con un enlace de acceso nuevo) y aviso en la campana del tercero. Devuelve `ExpedienteDto` con `recordatorioObservaciones { ultimoEn, total }` | 200; 409 `expediente-no-observado`; 409 `recordatorio-ya-enviado-hoy` (uno por día y expediente); 404 |
+| `POST /expedientes/recordar-observaciones` | `RecordarObservacionesDto { expedientes?: uuid[] (≤ 200), todos?: bool (≤ 500), area?: uuid (solo los devueltos por los que pasa esa área) }` → `RecordatoriosEnviadosDto { enviados, omitidos, detalle[] ResultadoRecordatorioDto { expedienteId, folio?, resultado: Enviado \| SoloCampana \| NoObservado \| YaRecordadoHoy \| NoEncontrado } }`. Lo que no aplica se omite sin error | 200; 422 `lote-vacio`, `lote-demasiado-grande` |
+| `GET /configuracion/recordatorio-observaciones` · `PUT /configuracion/recordatorio-observaciones` | `RecordatorioAutomaticoDto { activo, cadaDias (1–60), actualizadoEn? }` · `ActualizarRecordatorioAutomaticoDto { activo, cadaDias }`; auditado (`RecordatorioDeObservaciones`) | 200; 422 `dias-invalidos`; `configuracion:leer` / `configuracion:escribir` |
+| `POST /plataforma/recordatorios-observaciones/revisar` | `RevisarRecordatoriosDto { tenantId?, fecha? }` (fecha simulada solo en Development) → `ResultadoRevisionRecordatoriosDto { revisados, enviados }` | 200; 422 `fecha-simulada-no-permitida`; `plataforma:tenants` |
+
+Plantillas: el catálogo suma `recordatorio-observaciones`, `desaprobacion` y `reintegro` (variables `{{empresa}}`, `{{folio}}`; NT-18). La empresa devolvió a revisión una validación aprobada (`expediente.desaprobado` con causa `ExpedienteAprobado`) o reintegró el vínculo (`vinculo.reintegrado`): el tercero lo ve en su campana (`tercero.desaprobado`, `tercero.reintegrado`, con enlace a lo que sigue) y por correo con esa plantilla, respetando su preferencia, nunca con la justificación interna. Reabrir una etapa o volver a la fase inicial de un expediente abierto no le avisa. `GET /expedientes/{id}` suma `recordatorioObservaciones`. «El tercero respondió» (`expediente.tercero_respondio`) llega ahora también a las áreas que revisan los documentos reabiertos (NT-4). La campana de las personas suma `vinculo.cuenta_propuesta` (§6.5; NT-12).
+
 ### 2.8 Webhooks y eventos
 
 | Método y ruta | Descripción | Permiso | Respuestas | Emite |
@@ -519,6 +543,8 @@ Extensiones con datos (IN-12): `otp-invalido` lleva `intentosRestantes`; `versio
 
 ### 3.4 SSE
 `id` = cursor (`Last-Event-ID`), `event` = tipo público, `data` = payload de §7. Reenvío hasta 24 h. Tres streams: `GET /eventos/stream` (usuarios de `apps/web`, filtrado por la empresa activa), `GET /public/v1/expedientes/{id}/stream` (un expediente del tercero) y `GET /public/v1/boveda/stream` (toda la bóveda del tercero; ver §2.9).
+
+**Streams de la campana y avisos de cambio (NT-12, NT-13).** `GET /api/v1/notificaciones/stream` (web de empresa, con `X-Empresa`) y `GET /public/v1/notificaciones/stream` (portal, `Authorization: Bearer` de la sesión del tercero) llevan, además de `event: notificacion` y `event: no_leidas`, `event: cambio` con `CambioEnVivoDto { recurso, id, vinculoId? }`: `recurso` es `expediente`, `vinculo`, `cuenta`, `documento`, `ficha` o `certificado`. **Solo avisa qué cambió, nunca datos**: el cliente vuelve a pedir lo que ya mostraba con sus permisos. La web solo recibe los de la empresa activa y su tenant; el portal, los de los vínculos de su sesión (y, sin vínculo, los de su ficha). El del portal se cierra cuando vence el token de la sesión (el cliente reconecta con el renovado). Los avisos viven 30 minutos (`AvisoDeCambio`): un stream que se cae y vuelve a conectar no recupera lo perdido, el cliente refresca todo. Consulta cada 2 s; `id` solo en `notificacion`.
 
 ---
 
@@ -910,6 +936,7 @@ Todas las altas y cambios quedan en la auditoría de configuración (entidad `We
 | `expediente.nuevo_en_area` «Nuevo expediente en tu área» | `EtapaActivada` (al pasar a revisión o al activarse una etapa siguiente) | miembros activos con rol en la empresa de las áreas de la etapa | sí (consolidado) |
 | `expediente.tercero_respondio` «El tercero respondió» | `ExpedienteReenviado` | miembros de las áreas que vuelven a revisar | sí (consolidado) |
 | `expediente.aprobado` · `expediente.rechazado` | `ExpedienteAprobado` · `ExpedienteRechazado` | miembros de todas las áreas del flujo | no |
+| `vinculo.cuenta_propuesta` «Cuenta bancaria por aprobar» (NT-12) | `CuentaDesignadaPropuesta` | personas activas con `cuentas:aprobar` en la empresa del vínculo (enlace al vínculo) | no |
 | `documento.por_vencer` «Documento por vencer» | `VencimientoAvisado` | miembros de las áreas del expediente abierto (o el último) del vínculo | no |
 | `webhook.deshabilitado` | deshabilitación por fallos | usuarios activos con rol `Administrador` | sí |
 
@@ -920,7 +947,7 @@ Todas las altas y cambios quedan en la auditoría de configuración (entidad `We
 | `GET /api/v1/notificaciones?soloNoLeidas=&limite=30&cursor=` | `BandejaNotificacionesDto { datos: NotificacionDto[], siguienteCursor?, noLeidas }`, más recientes primero (máx. 100). `NotificacionDto { id, tipo, titulo, mensaje, empresaId?, expedienteId?, vinculoId?, folio?, enlace? (ruta de apps/web sin host, p. ej. /e/{empresa}/expedientes/{id}), creadaEn, leidaEn? }`. Con `X-Empresa`, solo las de esa empresa y las del tenant (`empresaId: null`). |
 | `POST /api/v1/notificaciones/{id}/leida` | 200 `NotificacionDto`; 404 `notificacion-no-encontrada` (también si es de otra persona). |
 | `POST /api/v1/notificaciones/leidas` | 200 `NotificacionesMarcadasDto { marcadas }` (las no leídas visibles con el mismo filtro). |
-| `GET /api/v1/notificaciones/stream` | SSE: `event: notificacion` (`data` = `NotificacionDto`, `id` = su orden) por cada nueva desde que se conectó (o desde `Last-Event-ID`) y `event: no_leidas` (`data` = el total) cuando cambia. Consulta cada 2 s. |
+| `GET /api/v1/notificaciones/stream` | SSE: `event: notificacion` (`data` = `NotificacionDto`, `id` = su orden) por cada nueva desde que se conectó (o desde `Last-Event-ID`) y `event: no_leidas` (`data` = el total) cuando cambia, más `event: cambio` (`data` = `CambioEnVivoDto`, §3.4) de la empresa activa (`X-Empresa`). Consulta cada 2 s. |
 | `GET /api/v1/usuarios/me/preferencias-notificacion` · `PUT` | `PreferenciasNotificacionDto { correo: { [tipo]: bool }, tiposConCorreo[] }`; el `PUT` (`ActualizarPreferenciasNotificacionDto { correo }`) cambia solo los tipos que envía; un tipo que no va por correo ⇒ 422 `tipo-notificacion-invalido`. Por defecto todos `true`. La campana no se apaga. |
 
 **Permisos**: `eventos:leer` y `webhooks:administrar` se suman a los scopes del tenant y al rol `Administrador` (no al Auditor todavía). Las llaves ya emitidas no los tienen (como BO-9): se crea una llave nueva con ellos.
@@ -1036,6 +1063,8 @@ Los eventos son **por empresa** (o por tenant cuando no tienen empresa): un inte
 ## 8. Alertas y notificaciones (catálogo P-10-1)
 
 > **Implementado (NW, 2026-11-08)**: campana (`/notificaciones`), correo consolidado a revisores (nuevo expediente en el área y respuesta del tercero), aviso a administradores por webhook deshabilitado, constancia al tercero (`consentimiento-empresa`) y preferencias de correo por tipo; detalle en §6.5. Lo demás de esta tabla sigue pendiente.
+
+> **Implementado (NT, 2026-11-10)**: campana del tercero en `apps/public` (`/public/v1/notificaciones`, filas «campana» de la columna *Tercero* de la tabla de abajo: observación, resultado, por vencer, vencido, certificado, plazo, actualización, propuesta e invitación), preferencias de correo del tercero por tipo (la campana no se apaga) y recordatorio de observaciones pendientes (manual, en lote y automático por empresa). Ver §2.7.2.
 
 Canales MVP: correo, campana, webhook (P-10-2). Consolidación: máximo un correo por tercero y hecho por día; una secuencia de avisos por documento; digest diario opcional para revisores (P-10-3). Remitente: dominio de la plataforma, nombre de la empresa, `Reply-To` de la empresa (P-10-4). Evidencia de entrega en `EntregasNotificacion` (adición 4).
 

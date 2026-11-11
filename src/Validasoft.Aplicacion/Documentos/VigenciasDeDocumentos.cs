@@ -268,7 +268,7 @@ public static class EnviarAvisosDeVencimientoHandler
                     ]))
                     .OrderBy(l => l.Vencimientos.Min(v => v.VigenteHasta))
                     .ToList();
-                await mensajes.PublishAsync(new CorreoDeVencimientoPendiente(grupo.Key, mensaje.Fecha, lineas));
+                await mensajes.PublishAsync(new CorreoDeVencimientoPendiente(grupo.Key, mensaje.Fecha, lineas, terceroId));
             }
 
             // Constancia por documento y vínculo para el evento público documento.por_vencer y las notificaciones (NW-1).
@@ -318,10 +318,15 @@ public sealed record DocumentoPorVencer(string Documento, IReadOnlyList<Vencimie
 public sealed record VencimientoPorEmpresa(string Empresa, DateOnly VigenteHasta);
 
 /// <summary>Correo de aviso de vencimiento (cola durable <c>correo</c>, por el outbox de la transacción del aviso).</summary>
-public sealed record CorreoDeVencimientoPendiente(string Para, DateOnly Fecha, IReadOnlyList<DocumentoPorVencer> Documentos);
+public sealed record CorreoDeVencimientoPendiente(string Para, DateOnly Fecha, IReadOnlyList<DocumentoPorVencer> Documentos, Guid? TerceroId = null);
 
 public static class CorreoDeVencimientoPendienteHandler
 {
-    public static Task Handle(CorreoDeVencimientoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor, CancellationToken ct) =>
-        enviador.EnviarAsync(redactor.RedactarAvisoDeVencimiento(correo), ct);
+    public static async Task Handle(CorreoDeVencimientoPendiente correo, IEnviadorDeCorreo enviador, RedactorDeCorreos redactor,
+        Notificaciones.PreferenciasDeCorreoDelTercero preferencias, CancellationToken ct)
+    {
+        if (!await preferencias.QuiereAsync(correo.TerceroId, Notificaciones.TiposNotificacionTercero.DocumentoPorVencer, ct))
+            return;
+        await enviador.EnviarAsync(redactor.RedactarAvisoDeVencimiento(correo), ct);
+    }
 }
