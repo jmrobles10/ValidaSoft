@@ -13,6 +13,7 @@ import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPl
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
+import { matrizRiesgo } from './es-CO-matriz-riesgo';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
@@ -50,6 +51,7 @@ export const esCO = {
     'uso-ia': 'Plan y uso de IA',
     'revision-automatica': 'Revisión automática',
     'listas-restrictivas': 'Listas restrictivas',
+    'matriz-riesgo': 'Matriz de riesgo',
     'tipos-documento': 'Tipos de documento',
     areas: 'Áreas',
     usuarios: 'Usuarios y roles',
@@ -293,6 +295,7 @@ export const esCO = {
   revalidaciones,
   vencimientos,
   cumplimiento,
+  matrizRiesgo,
   lotes,
   plazoCargue,
   flujoPlazo,

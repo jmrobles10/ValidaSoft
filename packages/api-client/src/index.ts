@@ -68,4 +68,8 @@ export * from './generado/endpoints/ingreso/ingreso';
 export * from './generado/endpoints/mi-cuenta/mi-cuenta';
 export * from './generado/endpoints/gestion-de-ingreso/gestion-de-ingreso';
 export * from './generado/endpoints/operadores-directos/operadores-directos';
+export * from './generado/endpoints/matriz/matriz';
+export * from './generado/endpoints/adjuntos-de-cumplimiento/adjuntos-de-cumplimiento';
+export * from './generado/endpoints/rechazo-de-cumplimiento/rechazo-de-cumplimiento';
+export * from './generado/endpoints/informe-sagrilaft/informe-sagrilaft';
 export * from './generado/endpoints/revision-automatica/revision-automatica';

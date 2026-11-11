@@ -160,6 +160,10 @@ export function crearRouter() {
                     import('../features/configuracion/listasRestrictivas/PaginaListasRestrictivas').then((m) => ({ Component: m.PaginaListasRestrictivas })),
                 },
                 {
+                  path: 'matriz-riesgo',
+                  lazy: () => import('../features/configuracion/matrizRiesgo/PaginaMatrizRiesgo').then((m) => ({ Component: m.PaginaMatrizRiesgo })),
+                },
+                {
                   path: 'motivos',
                   lazy: () => import('../features/configuracion/motivos/PaginaMotivos').then((m) => ({ Component: m.PaginaMotivos })),
                 },

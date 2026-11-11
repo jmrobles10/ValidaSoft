@@ -231,8 +231,10 @@ export function DetalleExpediente() {
       )}
       {expediente.estado === 'Rechazado' && expediente.rechazo && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          <AlertTitle>{t('expedientes.avisos.rechazadoTitulo')}</AlertTitle>
-          {t('expedientes.avisos.rechazado', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })}{' '}
+          <AlertTitle>{expediente.rechazo.origen === 'Cumplimiento' ? t('cumplimiento.rechazo.avisoTitulo') : t('expedientes.avisos.rechazadoTitulo')}</AlertTitle>
+          {expediente.rechazo.origen === 'Cumplimiento'
+            ? t('cumplimiento.rechazo.aviso', { fecha: formatearFecha(expediente.rechazo.fecha) })
+            : t('expedientes.avisos.rechazado', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })}{' '}
           “{expediente.rechazo.justificacion}”
         </Alert>
       )}

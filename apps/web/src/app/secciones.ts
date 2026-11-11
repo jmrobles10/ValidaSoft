@@ -2,6 +2,7 @@ import { SCOPES, type Scope } from '@validasoft/api-client';
 import {
   Building2,
   ClipboardCheck,
+  Gauge,
   Sparkles,
   FileText,
   KeyRound,
@@ -38,6 +39,7 @@ export interface SeccionConfiguracion {
     | 'uso-ia'
     | 'revision-automatica'
     | 'listas-restrictivas'
+    | 'matriz-riesgo'
     | 'accesos-soporte';
   scope: Scope;
   icono: LucideIcon;
@@ -66,6 +68,8 @@ export const SECCIONES_CONFIGURACION: readonly SeccionConfiguracion[] = [
   { ruta: 'revision-automatica', scope: SCOPES.configuracionLeer, icono: ClipboardCheck, alcance: 'empresa' },
   // Proveedor de listas restrictivas, credenciales de la empresa y consumo del mes (VE-7, VE-11).
   { ruta: 'listas-restrictivas', scope: SCOPES.configuracionLeer, icono: ShieldCheck, alcance: 'empresa' },
+  // Factores, límites y niveles con los que se calcula el riesgo SAGRILAFT en el estudio de cumplimiento (CU-17).
+  { ruta: 'matriz-riesgo', scope: SCOPES.configuracionLeer, icono: Gauge, alcance: 'empresa' },
   { ruta: 'areas', scope: SCOPES.configuracionLeer, icono: Workflow, alcance: 'empresa' },
   { ruta: 'flujos', scope: SCOPES.flujosLeer, icono: Route, alcance: 'empresa' },
 ];
