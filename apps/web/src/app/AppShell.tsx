@@ -136,7 +136,7 @@ export function AppShell() {
           </Tooltip>
         )}
       </Box>
-      <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto' }) }}>
+      <Box component="main" sx={{ flex: 1, py: RELLENO_CONTENIDO.y, px: RELLENO_CONTENIDO.x, minWidth: 0, ...(alturaFija !== null && { minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }) }}>
         <Outlet context={contexto satisfies ContextoEmpresa} />
       </Box>
     </Box>

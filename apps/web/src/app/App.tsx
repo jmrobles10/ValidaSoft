@@ -29,6 +29,12 @@ export function App() {
   const usuarioId = useSesion((s) => s.sesion?.usuarioId ?? null);
   const usuarioAnterior = useRef(usuarioId);
 
+  // Embebida, el documento no se desplaza solo (el contenedor estira el iframe o `main` tiene scroll propio): reservar el
+  // espacio de la barra de la ventana (ver el tema) solo dejaría una franja vacía a la derecha.
+  useEffect(() => {
+    document.documentElement.style.scrollbarGutter = embebida ? 'auto' : '';
+  }, [embebida]);
+
   // Otra persona (o ninguna): nada de la caché anterior debe verse. Solo al cambiar de persona o salir: con la primera
   // sesión (de nadie a alguien) la página ya lanzó sus consultas y vaciar la caché las cancelaba (se quedaba en
   // «Cargando…» en el build de producción).

@@ -162,6 +162,14 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
       MuiCssBaseline: {
         styleOverrides: {
           body: { backgroundColor: c.fondo, color: c.textoPrimario, WebkitFontSmoothing: 'antialiased' },
+          // Sin salto lateral al pasar de una pantalla con barra de desplazamiento a una sin ella: el espacio de la barra
+          // queda reservado siempre (invisible). Los diálogos y menús de MUI bloquean el scroll del documento y le suman
+          // al body un `padding-right` del ancho de la barra para que no se corra; con el espacio ya reservado ese
+          // relleno correría todo, así que se anula.
+          '@supports (scrollbar-gutter: stable)': {
+            html: { scrollbarGutter: 'stable' },
+            body: { paddingRight: '0 !important' },
+          },
           ':focus-visible': { outline: `${BORDE.anilloFoco}px solid ${c.foco}`, outlineOffset: BORDE.separacionFoco },
           '@media (prefers-reduced-motion: reduce)': {
             '*, *::before, *::after': { animationDuration: '1ms !important', transitionProperty: 'opacity !important', transitionDuration: `${MOVIMIENTO.duracionCorta} !important` },
