@@ -32,9 +32,12 @@ namespace Validasoft.Aplicacion.Vinculos;
 // VencerPorVigencia, DesbloquearPorFecha) y guarda en el vínculo el próximo momento en que hay algo que hacer
 // (ProximaRevisionDeVigencia, indexado). Un job periódico —como el de plazos de cargue— barre los vínculos con ese momento
 // cumplido y pide por cada uno RevisarVigenciaDeVinculo en la cola durable «vigencias» (la de las vigencias de documentos): un
-// aviso (el vínculo pasa a PorVencer), el vencimiento (Vencido, certificado vencido y expediente de Renovación que pide ratificar las
-// secciones) o el fin de un bloqueo temporal. El bloqueo con fecha además programa su propio mensaje (DesbloquearAlLlegarLaFecha),
-// así no espera al siguiente barrido. Todo es idempotente: vuelve a mirar el estado al dispararse.
+// aviso, el vencimiento o el fin de un bloqueo temporal. La renovación se abre en el primer aviso (pre-vencimiento): el vínculo pasa
+// a PorVencer, con el certificado vigente, y se abre el expediente de Renovación que pide ratificar o actualizar las secciones y los
+// documentos pendientes; si se aprueba antes de la fecha la vigencia se cuenta de nuevo desde esa aprobación y el vínculo nunca vence.
+// Los avisos siguientes solo recuerdan (no abren otro expediente). Al vencer (Vencido, certificado vencido) la misma renovación
+// abierta sigue su curso. El bloqueo con fecha además programa su propio mensaje (DesbloquearAlLlegarLaFecha), así no espera al
+// siguiente barrido. Todo es idempotente: vuelve a mirar el estado al dispararse.
 
 /// <summary>Barre los vínculos con algo pendiente a la hora <see cref="Ahora"/> (o la actual), de todos los tenants o de uno.</summary>
 public sealed record RevisarVigenciasDeVinculos(Guid? TenantId = null, DateTimeOffset? Ahora = null);
@@ -72,10 +75,16 @@ public static class CorreoDeVigenciaPendienteHandler
     internal static MensajeDeCorreo Redactar(CorreoDeVigenciaPendiente correo, string urlPublica, string? token)
     {
         var fecha = correo.VigenteHasta.ToString("d 'de' MMMM 'de' yyyy", Cultura);
+        var cuando = correo.DiasRestantes switch
+        {
+            <= 0 => "hoy",
+            1 => "mañana",
+            var dias => $"en {dias} días"
+        };
         var (asunto, parrafo) = correo.Aviso == AvisoDeVigencia.PorVencer
-            ? ($"Tu validación con {correo.Empresa} vence el {fecha}",
-                $"{correo.Empresa} te pide confirmar tu información cada cierto tiempo. Tu validación vence el {fecha}: cuando venza tendrás que " +
-                "ratificar (confirmar que sigue igual) o actualizar las secciones de tu información para seguir al día.")
+            ? ($"Ratifica tu información con {correo.Empresa} antes del {fecha}",
+                $"Tu validación con {correo.Empresa} está en pre-vencimiento: vence {cuando} ({fecha}). Antes de esa fecha ratifica (confirma que sigue igual) " +
+                "o actualiza las secciones de tu información y sube los documentos pendientes para seguir al día sin interrupciones.")
             : ($"Tu validación con {correo.Empresa} venció: ratifica tu información",
                 $"Tu validación con {correo.Empresa} venció el {fecha}. Para seguir al día ratifica las secciones de tu información que no cambiaron " +
                 "o actualiza las que sí.");
@@ -106,6 +115,9 @@ public static class VigenciasDeVinculos
     public const string Actor = "vigencia-vinculo";
 
     public const string DescripcionDelVencimiento = "Vigencia del vínculo";
+
+    /// <summary>Cuánto vale el enlace del correo de pre-vencimiento y vencimiento: más que el de una observación, porque el aviso llega con días de antelación.</summary>
+    public static readonly TimeSpan VigenciaDelEnlace = TimeSpan.FromDays(7);
 
     /// <summary>Vínculos que revisa un barrido como máximo; el resto queda para el siguiente.</summary>
     public const int MaximoPorBarrido = 2000;
@@ -216,12 +228,7 @@ public static class VigenciasDeVinculos
         if (vinculo.VencerPorVigencia(ahora, DescripcionDelVencimiento) is { } vencido)
             resultado = await VencerAsync(sesion, stream, vinculo, vencido, certificados, mensajes, protector, ahora, ct);
         else if (vinculo.AvisarVigencia(ahora) is { } aviso)
-        {
-            stream.AppendOne(aviso);
-            vinculo.Apply(aviso);
-            await PublicarCorreoAsync(sesion, mensajes, vinculo, AvisoDeVigencia.PorVencer, aviso.VigenteHasta, aviso.DiasRestantes, null, ahora, ct);
-            resultado = ResultadoDeVigencia.Avisado;
-        }
+            resultado = await AvisarAsync(sesion, stream, vinculo, aviso, certificados, mensajes, protector, ahora, ct);
         else if (vinculo is { Estado: EstadoVinculo.Vencido, RenovacionPorVigenciaPendiente: true, ExpedienteAbiertoId: null })
         {
             // Venció por su vigencia y no se pudo abrir la renovación (un expediente ocupaba el lugar, o no había flujo): se reintenta.
@@ -235,19 +242,56 @@ public static class VigenciasDeVinculos
     }
 
     /// <summary>
-    /// Terminó la gracia: si hay secciones (o documentos) por ratificar, el vínculo pasa a <c>Vencido</c>, el certificado vence y se
-    /// abre la renovación; si no hay nada que pedirle al tercero, la vigencia se renueva sola y el vínculo sigue como estaba.
+    /// Llegó un aviso (VV-3). El primero abre el pre-vencimiento: el vínculo queda <c>PorVencer</c> (el certificado sigue vigente) y
+    /// se abre la renovación con lo que el tercero debe ratificar o actualizar antes de la fecha; los siguientes solo le recuerdan
+    /// la renovación pendiente (la abierta no se duplica; si la anterior se cerró sin aprobarse se abre otra). Si no hay nada que
+    /// pedirle, la vigencia se renueva sola desde ahora y el vínculo no llega a <c>PorVencer</c>.
+    /// </summary>
+    private static async Task<ResultadoDeVigencia> AvisarAsync(IDocumentSession sesion, IEventStream<Vinculo> stream, Vinculo vinculo, VinculoPorVencer aviso,
+        EmisorDeCertificados certificados, IMessageBus mensajes, IProtectorDeSecretos protector, DateTimeOffset ahora, CancellationToken ct)
+    {
+        var flujo = vinculo.ExpedienteAbiertoId is null ? await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct) : null;
+        IReadOnlySet<Guid>? porRatificar = null;
+        if (flujo is not null)
+        {
+            porRatificar = await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct);
+            if (porRatificar.Count == 0)
+            {
+                await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
+                return ResultadoDeVigencia.Renovado;
+            }
+        }
+
+        stream.AppendOne(aviso);
+        vinculo.Apply(aviso);
+        if (flujo is not null && porRatificar is not null &&
+            !(await AbrirRenovacionAsync(sesion, stream, flujo, porRatificar, certificados, ahora, ct)).EstaAbierto)
+            return ResultadoDeVigencia.Renovado; // Todo se aprobó solo: el vínculo quedó al día, no hay nada que avisar.
+
+        await AvisarAlTerceroAsync(sesion, mensajes, protector, vinculo, AvisoDeVigencia.PorVencer, aviso.VigenteHasta, aviso.DiasRestantes, ahora, ct);
+        return ResultadoDeVigencia.Avisado;
+    }
+
+    /// <summary>
+    /// Terminó la gracia (VV-3): si hay secciones (o documentos) por ratificar, el vínculo pasa a <c>Vencido</c>, el certificado vence
+    /// y la renovación ya abierta en el pre-vencimiento sigue siendo la misma (no se abre otra; si no la había, se abre ahora); si
+    /// no hay nada que pedirle al tercero, la vigencia se renueva sola y el vínculo sigue como estaba.
     /// </summary>
     private static async Task<ResultadoDeVigencia> VencerAsync(IDocumentSession sesion, IEventStream<Vinculo> stream, Vinculo vinculo, VinculoVencido vencido,
         EmisorDeCertificados certificados, IMessageBus mensajes, IProtectorDeSecretos protector, DateTimeOffset ahora, CancellationToken ct)
     {
-        var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
-        if (flujo is not null && (await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct)).Count == 0)
+        var conRenovacion = vinculo.TieneRenovacionAbierta;
+        if (!conRenovacion)
         {
-            await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
-            return ResultadoDeVigencia.Renovado;
+            var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
+            if (flujo is not null && (await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct)).Count == 0)
+            {
+                await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
+                return ResultadoDeVigencia.Renovado;
+            }
         }
 
+        var hasta = vinculo.VigenteHasta!.Value;
         stream.AppendOne(vencido);
         vinculo.Apply(vencido);
         // El certificado sigue la vigencia del vínculo: pasó su fecha, así que vence (el procesador lo habría hecho por reloj).
@@ -255,15 +299,19 @@ public static class VigenciasDeVinculos
         if (certificado.Aggregate is { Estado: EstadoCertificado.Vigente or EstadoCertificado.ConPendientes, VenceDesde: { } vence } actual && ahora >= vence)
             certificado.AppendOne(actual.Vencer(ahora));
 
-        await RenovarAsync(sesion, stream, vinculo, certificados, mensajes, protector, ahora, ct);
+        if (conRenovacion)
+            await AvisarAlTerceroAsync(sesion, mensajes, protector, vinculo, AvisoDeVigencia.Vencido, hasta, 0, ahora, ct);
+        else
+            await RenovarAsync(sesion, stream, vinculo, certificados, mensajes, protector, ahora, ct);
         return ResultadoDeVigencia.Vencido;
     }
 
     /// <summary>
-    /// Abre la renovación del vínculo vencido por su vigencia (VV-3): un expediente de <c>Renovacion</c> con las secciones de la ficha
-    /// que el flujo pide (el tercero las ratifica o las actualiza) y los documentos obligatorios que ya no están vigentes, abierto por
-    /// el sistema. Devuelve nulo si no se pudo (sin flujo publicado o con otro expediente abierto), <see cref="ResultadoDeVigencia.Renovado"/>
-    /// si no había nada que ratificar y <see cref="ResultadoDeVigencia.Vencido"/> si abrió la renovación.
+    /// Abre la renovación del vínculo vencido por su vigencia cuando no se abrió en el pre-vencimiento (VV-3): un expediente de
+    /// <c>Renovacion</c> con las secciones de la ficha que el flujo pide (el tercero las ratifica o las actualiza) y los documentos
+    /// obligatorios que ya no están vigentes, abierto por el sistema. Devuelve nulo si no se pudo (sin flujo publicado o con otro
+    /// expediente abierto), <see cref="ResultadoDeVigencia.Renovado"/> si no había nada que ratificar y
+    /// <see cref="ResultadoDeVigencia.Vencido"/> si abrió la renovación.
     /// </summary>
     private static async Task<ResultadoDeVigencia?> RenovarAsync(IDocumentSession sesion, IEventStream<Vinculo> stream, Vinculo vinculo,
         EmisorDeCertificados certificados, IMessageBus mensajes, IProtectorDeSecretos protector, DateTimeOffset ahora, CancellationToken ct)
@@ -278,29 +326,21 @@ public static class VigenciasDeVinculos
             return ResultadoDeVigencia.Renovado;
         }
 
-        var expediente = await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, null, certificados, ahora, ct, tipoExpediente: TipoExpediente.Renovacion,
-            soloRequisitos: ids, actor: new ActorDeExpediente(ActorTipo.Sistema, Actor), exigirRatificacion: true);
+        var expediente = await AbrirRenovacionAsync(sesion, stream, flujo, ids, certificados, ahora, ct);
         if (expediente.EstaAbierto && vinculo.VigenteHasta is { } hasta)
-        {
-            string? token = null;
-            DateTimeOffset? expira = null;
-            if (!string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
-            {
-                // Un enlace de acceso a la renovación, creado en esta misma transacción (como el del correo de observación, RE-4).
-                var empresa = await sesion.LoadAsync<Empresa>(vinculo.EmpresaId, ct);
-                var tipo = await sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
-                var (enlace, secreto) = EnlaceDeAcceso.Emitir(empresa?.TenantId, vinculo.Id, vinculo.TerceroId, vinculo.CorreoTercero,
-                    ahora + EnlaceDeAcceso.VigenciaObservacion, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
-                sesion.Store(enlace);
-                token = protector.Proteger(secreto);
-                expira = enlace.Expira;
-            }
-
-            await PublicarCorreoAsync(sesion, mensajes, vinculo, AvisoDeVigencia.Vencido, hasta, 0, token is null ? null : (token, expira!.Value), ahora, ct);
-        }
+            await AvisarAlTerceroAsync(sesion, mensajes, protector, vinculo, AvisoDeVigencia.Vencido, hasta, 0, ahora, ct);
 
         return ResultadoDeVigencia.Vencido;
     }
+
+    /// <summary>
+    /// Abre el expediente de <c>Renovacion</c> del vínculo con <paramref name="requisitos"/>: las secciones que la empresa ya aceptó
+    /// nacen pendientes de ratificación y el sistema lo abre en nombre del job. Si todo se aprueba solo, el expediente nace cerrado.
+    /// </summary>
+    private static Task<Expediente> AbrirRenovacionAsync(IDocumentSession sesion, IEventStream<Vinculo> stream, FlujoResuelto flujo,
+        IReadOnlySet<Guid> requisitos, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct) =>
+        ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, null, certificados, ahora, ct, tipoExpediente: TipoExpediente.Renovacion,
+            soloRequisitos: requisitos, actor: new ActorDeExpediente(ActorTipo.Sistema, Actor), exigirRatificacion: true);
 
     /// <summary>
     /// Sin secciones ni documentos que pedirle al tercero (el flujo ya no los pide, o no aplican a este tercero) la vigencia no tiene
@@ -320,20 +360,22 @@ public static class VigenciasDeVinculos
     }
 
     /// <summary>
-    /// Requisitos de la renovación (VV-3): con la vigencia periódica vencida, todas las secciones que el flujo pide y la empresa ya
-    /// aceptó (o que son obligatorias y nunca se aceptaron) y los documentos obligatorios que ya no tienen una versión vigente; si lo
-    /// que venció fue la vigencia propia de una sección, solo esa sección.
+    /// Requisitos de la renovación (VV-3): si lo que vence es la vigencia periódica, todas las secciones que el flujo pide y la
+    /// empresa ya aceptó (o que son obligatorias y nunca se aceptaron) y los documentos obligatorios que ya no tienen una versión
+    /// vigente; si lo que vence es la vigencia propia de una sección, solo esa sección. En el pre-vencimiento (antes de la fecha) se
+    /// mira lo que habrá vencido el día siguiente al fin de la vigencia: es lo que el tercero debe ratificar o actualizar a tiempo.
     /// </summary>
     internal static async Task<IReadOnlySet<Guid>> RequisitosDeRenovacionAsync(IDocumentSession sesion, Vinculo vinculo, FlujoVersion version,
         DateTimeOffset ahora, CancellationToken ct)
     {
         var contexto = await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct);
         var hoy = CalculadoraDeVigencia.Fecha(ahora);
-        var periodica = VigenciaDeAprobacion.PeriodicaVencida(version.VigenciaEfectiva(), vinculo.UltimaAprobacionEn, hoy);
+        var referencia = vinculo.VigenteHasta is { } fin && fin.AddDays(1) > hoy ? fin.AddDays(1) : hoy;
+        var periodica = VigenciaDeAprobacion.PeriodicaVencida(version.VigenciaEfectiva(), vinculo.UltimaAprobacionEn, referencia);
         var aceptadas = await RequisitosDeExpediente.AceptadasAsync(sesion, vinculo.Id, ct);
         HashSet<Guid> vencidas = periodica
             ? []
-            : [.. VigenciaDeAprobacion.SeccionesVencidas(version.Requisitos, aceptadas.Values.Select(a => new SeccionAceptadaEn(a.Seccion, a.Periodo, a.AceptadaEn)), hoy)
+            : [.. VigenciaDeAprobacion.SeccionesVencidas(version.Requisitos, aceptadas.Values.Select(a => new SeccionAceptadaEn(a.Seccion, a.Periodo, a.AceptadaEn)), referencia)
                 .Select(r => r.Id)];
 
         var ids = new HashSet<Guid>();
@@ -359,15 +401,23 @@ public static class VigenciasDeVinculos
         return ids;
     }
 
-    private static async Task PublicarCorreoAsync(IDocumentSession sesion, IMessageBus mensajes, Vinculo vinculo, AvisoDeVigencia aviso, DateOnly hasta,
-        int diasRestantes, (string Token, DateTimeOffset Expira)? enlace, DateTimeOffset ahora, CancellationToken ct)
+    /// <summary>
+    /// Correo al tercero (aviso del pre-vencimiento, recordatorio o vencimiento) con un enlace de acceso a su renovación, creado en
+    /// esta misma transacción (como el del correo de observación, RE-4). Sin correo del tercero no avisa.
+    /// </summary>
+    private static async Task AvisarAlTerceroAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Vinculo vinculo,
+        AvisoDeVigencia aviso, DateOnly hasta, int diasRestantes, DateTimeOffset ahora, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
             return;
 
         var empresa = await sesion.LoadAsync<Empresa>(vinculo.EmpresaId, ct);
+        var tipo = await sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
+        var (enlace, secreto) = EnlaceDeAcceso.Emitir(empresa?.TenantId, vinculo.Id, vinculo.TerceroId, vinculo.CorreoTercero,
+            ahora + VigenciaDelEnlace, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
+        sesion.Store(enlace);
         await mensajes.PublishAsync(new CorreoDeVigenciaPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", aviso, hasta, diasRestantes,
-            enlace?.Token, enlace?.Expira));
+            protector.Proteger(secreto), enlace.Expira));
     }
 }
 

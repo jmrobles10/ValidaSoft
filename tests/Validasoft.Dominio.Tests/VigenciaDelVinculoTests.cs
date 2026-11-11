@@ -297,6 +297,114 @@ public class VigenciaDelVinculoTests
         vinculo.ProximaRevisionDeVigencia.ShouldBe(Dia(new DateOnly(2028, 11, 9).AddDays(-30), 13));
     }
 
+    // ---------- renovación en el pre-vencimiento (VV-3) ----------
+
+    /// <summary>Vínculo que llegó a su primer aviso (30 días antes) y al que se le abrió la renovación, como lo hace el job.</summary>
+    private static Vinculo EnPreVencimiento(out Guid renovacion)
+    {
+        var vinculo = Activo(gracia: 5);
+        var primerAviso = Dia(Hasta.AddDays(-30), 13);
+        vinculo.Apply(vinculo.AvisarVigencia(primerAviso).ShouldNotBeNull());
+        renovacion = Guid.NewGuid();
+        vinculo.Apply(vinculo.VincularExpediente(renovacion, TipoExpediente.Renovacion, "N-E-2", primerAviso));
+        return vinculo;
+    }
+
+    [Fact]
+    public void Con_el_primer_aviso_se_abre_la_renovacion_y_el_vinculo_sigue_por_vencer_con_los_avisos_en_pie()
+    {
+        var vinculo = EnPreVencimiento(out var renovacion);
+
+        vinculo.Estado.ShouldBe(EstadoVinculo.PorVencer);
+        vinculo.ExpedienteAbiertoId.ShouldBe(renovacion);
+        vinculo.TieneRenovacionAbierta.ShouldBeTrue();
+        vinculo.RenovacionPorVigenciaPendiente.ShouldBeFalse();
+        // La renovación abierta no apaga el reloj: los avisos siguientes recuerdan y el vencimiento llega con ella abierta.
+        vinculo.ProximaRevisionDeVigencia.ShouldBe(Dia(Hasta.AddDays(-15), 13));
+
+        // Un aviso posterior sigue saliendo (recuerda la renovación pendiente) y mantiene el estado y el expediente.
+        var recordatorio = vinculo.AvisarVigencia(Dia(Hasta.AddDays(-15), 14)).ShouldNotBeNull();
+        recordatorio.AvisosCumplidos.ShouldBe([15]);
+        vinculo.Apply(recordatorio);
+        vinculo.Estado.ShouldBe(EstadoVinculo.PorVencer);
+        vinculo.ExpedienteAbiertoId.ShouldBe(renovacion);
+        Codigo(() => vinculo.VincularExpediente(Guid.NewGuid(), TipoExpediente.Renovacion, "N-E-3", Dia(Hasta.AddDays(-15), 14)))
+            .ShouldBe("expediente-abierto-existente"); // nunca dos abiertas
+    }
+
+    [Fact]
+    public void Aprobada_la_renovacion_antes_de_la_fecha_la_vigencia_corre_desde_la_aprobacion_y_el_vinculo_nunca_vence()
+    {
+        var vinculo = EnPreVencimiento(out var renovacion);
+
+        // El tercero ratifica y la empresa aprueba 10 días antes de la fecha.
+        var aprobada = Dia(Hasta.AddDays(-10));
+        Aprobar(vinculo, renovacion, aprobada, new VigenciaDelVinculo(365, [30, 15, 5], 5));
+
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+        vinculo.ExpedienteAbiertoId.ShouldBeNull();
+        vinculo.TieneRenovacionAbierta.ShouldBeFalse();
+        // VV-1: los días se cuentan desde la última aprobación, no desde el vencimiento anterior.
+        vinculo.UltimaAprobacionEn.ShouldBe(aprobada);
+        vinculo.VigenteHasta.ShouldBe(Hasta.AddDays(-10).AddDays(365));
+        vinculo.AvisosDeVigenciaCumplidos.ShouldBeEmpty();
+        vinculo.ProximaRevisionDeVigencia.ShouldBe(Dia(vinculo.VigenteHasta!.Value.AddDays(-30), 13));
+        // La fecha vieja pasa sin efecto: no vence, ni siquiera tras la gracia.
+        vinculo.VencerPorVigencia(Dia(Hasta.AddDays(6), 6), "Vigencia").ShouldBeNull();
+        vinculo.AvisarVigencia(Dia(Hasta.AddDays(6), 6)).ShouldBeNull();
+    }
+
+    [Fact]
+    public void Si_vence_con_la_renovacion_abierta_vence_el_vinculo_y_esa_misma_renovacion_sigue_su_curso()
+    {
+        var vinculo = EnPreVencimiento(out var renovacion);
+        vinculo.Apply(vinculo.AvisarVigencia(Dia(Hasta.AddDays(-5), 13)).ShouldNotBeNull()); // los recordatorios no abren otra
+
+        // Termina la gracia (5 días) con la renovación todavía abierta.
+        var vence = Dia(Hasta.AddDays(6), 5);
+        var vencido = vinculo.VencerPorVigencia(vence, "Vigencia").ShouldNotBeNull();
+        vencido.Causa.ShouldBe(CausaDeVencimiento.Vigencia);
+        vinculo.Apply(vencido);
+
+        vinculo.Estado.ShouldBe(EstadoVinculo.Vencido);
+        vinculo.ExpedienteAbiertoId.ShouldBe(renovacion);
+        vinculo.TieneRenovacionAbierta.ShouldBeTrue();
+        vinculo.RenovacionPorVigenciaPendiente.ShouldBeFalse(); // no hay otra por abrir: el job no reintenta
+        vinculo.ProximaRevisionDeVigencia.ShouldBeNull();
+
+        // Se aprueba ya vencido: vuelve a Activo y la vigencia corre desde esa aprobación.
+        var aprobada = vence.AddDays(4);
+        Aprobar(vinculo, renovacion, aprobada, new VigenciaDelVinculo(365, [30, 15, 5], 5));
+        vinculo.Estado.ShouldBe(EstadoVinculo.Activo);
+        vinculo.VigenteHasta.ShouldBe(Hasta.AddDays(10).AddDays(365));
+    }
+
+    [Fact]
+    public void Una_renovacion_de_pre_vencimiento_rechazada_deja_el_vinculo_por_vencer_y_los_avisos_o_el_vencimiento_siguen()
+    {
+        var vinculo = EnPreVencimiento(out var renovacion);
+
+        vinculo.Apply((ExpedienteCerrado)vinculo.CerrarExpediente(renovacion, ResultadoExpediente.Rechazado, Dia(Hasta.AddDays(-20))).Single());
+
+        vinculo.Estado.ShouldBe(EstadoVinculo.PorVencer);
+        vinculo.TieneRenovacionAbierta.ShouldBeFalse();
+        vinculo.ExpedienteAbiertoTipo.ShouldBeNull();
+        vinculo.ProximaRevisionDeVigencia.ShouldBe(Dia(Hasta.AddDays(-15), 13)); // el siguiente aviso abrirá otra renovación
+        vinculo.VincularExpediente(Guid.NewGuid(), TipoExpediente.Renovacion, "N-E-3", Dia(Hasta.AddDays(-15), 13)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Una_actualizacion_abierta_no_cuenta_como_la_renovacion_y_al_vencer_deja_la_renovacion_por_abrir()
+    {
+        var vinculo = Activo();
+        vinculo.Apply(vinculo.VincularExpediente(Guid.NewGuid(), TipoExpediente.Actualizacion, "N-E-2", Aprobacion.AddDays(10)));
+        vinculo.TieneRenovacionAbierta.ShouldBeFalse();
+
+        vinculo.Apply(vinculo.VencerPorVigencia(Dia(Hasta.AddDays(1), 5), "Vigencia").ShouldNotBeNull());
+
+        vinculo.RenovacionPorVigenciaPendiente.ShouldBeTrue();
+    }
+
     [Fact]
     public void Una_renovacion_rechazada_deja_el_vinculo_vencido_sin_reabrirla_sola()
     {

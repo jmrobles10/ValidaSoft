@@ -72,8 +72,13 @@ public sealed partial class RequisitosApiTests
 
     // ---------- vigencia periódica: aviso, vencimiento y ratificación (VV-1…VV-3) ----------
 
-    [Fact]
-    public async Task La_vigencia_del_vinculo_avisa_vence_con_su_certificado_abre_la_renovacion_y_el_tercero_ratifica_su_ficha_para_volver_a_activo()
+    private sealed record PreVencimiento(Escenario E, Guid TenantId, ClienteAprobado Cliente, DateOnly Hasta, CertificadoDto Emitido, Guid RenovacionId);
+
+    /// <summary>
+    /// Cliente con vigencia de 100 días (avisos a 30 y 5, gracia de 10) llevado hasta su segundo aviso con el reloj simulado: en el
+    /// primero quedó <c>PorVencer</c> y se abrió la renovación (el correo trae el enlace de acceso); el segundo solo la recordó.
+    /// </summary>
+    private async Task<PreVencimiento> EnPreVencimientoAsync()
     {
         var e = await PrepararAsync();
         var tenantId = e.Norte.Datos.TenantId;
@@ -83,79 +88,141 @@ public sealed partial class RequisitosApiTests
         configurada.DiasAviso.ShouldBe([30, 5]);
         var cliente = await ClienteAprobadoAsync(e);
 
+        // Aprobado: queda fijada la vigencia (100 días) y el certificado no vence después que el vínculo.
+        var activo = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+        activo.Estado.ShouldBe("Activo");
+        var hasta = activo.VigenteHasta.ShouldNotBeNull();
+        hasta.ShouldBeInRange(Hoy().AddDays(99), Hoy().AddDays(100));
+        var emitido = await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id);
+        emitido.VigenteHasta.ShouldBe(hasta);
+
+        // Primer aviso (30 días antes): pre-vencimiento. PorVencer con el certificado vigente, la renovación abierta con la ficha por
+        // ratificar y un solo correo con el enlace aunque el job vuelva a pasar.
+        IrA(CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-30)).AddMinutes(10));
+        await BarrerVigenciasAsync(tenantId);
+        await BarrerVigenciasAsync(tenantId);
+        var enPre = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+        enPre.Estado.ShouldBe("PorVencer");
+        var renovacionId = enPre.ExpedienteAbiertoId.ShouldNotBeNull();
+        var primerCorreo = await fixture.Correos.EsperarAsync(cliente.Correo,
+            m => m.Asunto.StartsWith("Ratifica tu información con Norte S.A.S. antes del", StringComparison.Ordinal));
+        primerCorreo.Texto.ShouldContain("pre-vencimiento");
+        RegexToken().IsMatch(primerCorreo.Texto).ShouldBeTrue(); // con el enlace de acceso a la renovación
+        fixture.Correos.Para(cliente.Correo).Count(m => m.Asunto.StartsWith("Ratifica tu información", StringComparison.Ordinal)).ShouldBe(1);
+        var eventos = await EventosAsync(tenantId, cliente.Vinculo.Id);
+        eventos.OfType<VinculoPorVencer>().ShouldHaveSingleItem().AvisosCumplidos.ShouldBe([30]);
+        eventos.OfType<ExpedienteVinculado>().Count(v => v.Tipo == TipoExpediente.Renovacion).ShouldBe(1);
+        (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vigente");
+        var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(e.Norte), null, 200);
+        renovacion.Tipo.ShouldBe("Renovacion");
+        renovacion.Estado.ShouldBe("Abierto"); // espera al tercero: la ficha ya aceptada no lo cubre sola
+        var general = renovacion.Requisitos!.ShouldHaveSingleItem(); // el RUT sigue vigente: no entra
+        (general.TipoDocumento.Codigo, general.Estado).ShouldBe(("FICHA_GENERAL", "Pendiente"));
+
+        // El segundo aviso (5 días antes) solo recuerda: sigue PorVencer, con la misma renovación y sin abrir otra.
+        IrA(CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-5)).AddMinutes(10));
+        await BarrerVigenciasAsync(tenantId);
+        var recordado = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+        (recordado.Estado, recordado.ExpedienteAbiertoId).ShouldBe(("PorVencer", renovacionId));
+        await fixture.Correos.EsperarAsync(cliente.Correo,
+            m => m.Asunto.StartsWith("Ratifica tu información", StringComparison.Ordinal) && m.Texto.Contains("en 5 días", StringComparison.Ordinal));
+        eventos = await EventosAsync(tenantId, cliente.Vinculo.Id);
+        eventos.OfType<VinculoPorVencer>().Count().ShouldBe(2);
+        eventos.OfType<ExpedienteVinculado>().Count(v => v.Tipo == TipoExpediente.Renovacion).ShouldBe(1);
+        (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vigente");
+        return new PreVencimiento(e, tenantId, cliente, hasta, emitido, renovacionId);
+    }
+
+    [Fact]
+    public async Task La_renovacion_se_abre_en_el_primer_aviso_y_si_el_tercero_ratifica_antes_de_la_fecha_la_vigencia_se_renueva_y_el_vinculo_nunca_vence()
+    {
         try
         {
-            // Aprobado: queda fijada la vigencia (100 días) y el certificado no vence después que el vínculo.
-            var activo = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
-            activo.Estado.ShouldBe("Activo");
-            var hasta = activo.VigenteHasta.ShouldNotBeNull();
-            hasta.ShouldBeInRange(Hoy().AddDays(99), Hoy().AddDays(100));
-            var emitido = await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id);
-            emitido.VigenteHasta.ShouldBe(hasta);
+            var p = await EnPreVencimientoAsync();
+            var (e, tenantId, cliente) = (p.E, p.TenantId, p.Cliente);
 
-            // Llega el primer aviso (30 días antes): PorVencer, un correo y solo uno aunque el job vuelva a pasar.
-            IrA(CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-30)).AddMinutes(10));
-            await BarrerVigenciasAsync(tenantId);
-            await BarrerVigenciasAsync(tenantId);
-            (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("PorVencer");
-            await fixture.Correos.EsperarAsync(cliente.Correo, m => m.Asunto.StartsWith("Tu validación con Norte S.A.S. vence", StringComparison.Ordinal));
-            fixture.Correos.Para(cliente.Correo).Count(m => m.Asunto.Contains(" vence el ", StringComparison.Ordinal)).ShouldBe(1);
-            (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VinculoPorVencer>().ShouldHaveSingleItem().AvisosCumplidos.ShouldBe([30]);
-            (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vigente");
-
-            // El segundo aviso (5 días antes) mantiene PorVencer.
-            IrA(CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-5)).AddMinutes(10));
-            await BarrerVigenciasAsync(tenantId);
-            (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("PorVencer");
-            (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VinculoPorVencer>().Count().ShouldBe(2);
-
-            // Pasada la fecha pero dentro de la gracia (10 días) todavía no vence.
-            IrA(CalculadoraDeVigencia.MomentoDeVencimiento(hasta.AddDays(10)).AddHours(-3));
-            await BarrerVigenciasAsync(tenantId);
-            (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("PorVencer");
-
-            // Terminada la gracia: Vencido, certificado vencido y la renovación abierta por el sistema con la ficha por ratificar.
-            IrA(CalculadoraDeVigencia.MomentoDeVencimiento(hasta.AddDays(10)).AddMinutes(10));
-            await BarrerVigenciasAsync(tenantId);
-            var vencido = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
-            vencido.Estado.ShouldBe("Vencido");
-            var renovacionId = vencido.ExpedienteAbiertoId.ShouldNotBeNull();
-            (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vencido");
-            var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(e.Norte), null, 200);
-            renovacion.Tipo.ShouldBe("Renovacion");
-            renovacion.Estado.ShouldBe("Abierto"); // espera al tercero: la ficha ya aceptada no lo cubre sola
-            var general = renovacion.Requisitos!.ShouldHaveSingleItem(); // el RUT sigue vigente: no entra
-            (general.TipoDocumento.Codigo, general.Estado).ShouldBe(("FICHA_GENERAL", "Pendiente"));
-            var evento = (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VinculoVencido>().ShouldHaveSingleItem();
-            evento.Causa.ShouldBe(CausaDeVencimiento.Vigencia);
-            var aviso = await fixture.Correos.EsperarAsync(cliente.Correo, m => m.Asunto.Contains("venció: ratifica tu información", StringComparison.Ordinal));
-            RegexToken().IsMatch(aviso.Texto).ShouldBeTrue(); // con el enlace de acceso a la renovación
-
-            // El tercero ve la sección como ratificable y la ratifica: no cambia ningún dato y la renovación se aprueba sin revisión.
-            var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{renovacionId}", cliente.Sesion.AccessToken, null, 200);
+            // El tercero ve la sección como ratificable y la ratifica antes de la fecha: no cambia ningún dato y la renovación se aprueba.
+            var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{p.RenovacionId}", cliente.Sesion.AccessToken, null, 200);
             var porRatificar = vista.Requisitos!.ShouldHaveSingleItem();
             (vista.Tipo, porRatificar.TipoRequisito, porRatificar.PuedeRatificar).ShouldBe(("Renovacion", "Seccion", true));
             var ratificada = await TerceroAsync<ExpedientePublicoDto>("POST",
-                $"/public/v1/expedientes/{renovacionId}/requisitos/{porRatificar.Id}/ratificar", cliente.Sesion.AccessToken, new { }, 200);
+                $"/public/v1/expedientes/{p.RenovacionId}/requisitos/{porRatificar.Id}/ratificar", cliente.Sesion.AccessToken, new { }, 200);
             ratificada.Estado.ShouldBe("Aprobado");
             ratificada.Requisitos!.Single().RatificadoEn.ShouldNotBeNull();
 
-            // Activo otra vez, con vigencia nueva desde esa aprobación y el certificado reemitido (el mismo ratificó, no se editó nada).
+            // Activo otra vez: la vigencia nueva corre desde esa aprobación (VV-1, no desde la fecha anterior) y el certificado se reemite.
+            var ahora = Hoy(DateTimeOffset.UtcNow + fixture.Reloj.Desfase);
             var renovado = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
             renovado.Estado.ShouldBe("Activo");
             renovado.ExpedienteAbiertoId.ShouldBeNull();
-            renovado.VigenteHasta!.Value.ShouldBeInRange(Hoy(DateTimeOffset.UtcNow + fixture.Reloj.Desfase).AddDays(99), Hoy(DateTimeOffset.UtcNow + fixture.Reloj.Desfase).AddDays(100));
+            renovado.VigenteHasta!.Value.ShouldBeInRange(ahora.AddDays(99), ahora.AddDays(100));
+            renovado.VigenteHasta.Value.ShouldBeGreaterThan(p.Hasta);
             var reemitido = await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id);
-            (reemitido.Estado, reemitido.Emision, reemitido.VigenteHasta).ShouldBe(("Vigente", emitido.Emision + 1, renovado.VigenteHasta));
-            var eventos = await EventosAsync(tenantId, renovacionId);
-            eventos.OfType<RequisitoRatificado>().ShouldHaveSingleItem().Por.ShouldStartWith("tercero:");
-            (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VigenciaDelVinculoFijada>().Count().ShouldBe(2);
+            (reemitido.Estado, reemitido.Emision, reemitido.VigenteHasta).ShouldBe(("Vigente", p.Emitido.Emision + 1, renovado.VigenteHasta));
+            (await EventosAsync(tenantId, p.RenovacionId)).OfType<RequisitoRatificado>().ShouldHaveSingleItem().Por.ShouldStartWith("tercero:");
+            var eventos = await EventosAsync(tenantId, cliente.Vinculo.Id);
+            eventos.OfType<VigenciaDelVinculoFijada>().Count().ShouldBe(2);
             (await ApiAsync<List<EventoHistorialDto>>("GET", $"/api/v1/vinculos/{cliente.Vinculo.Id}/historial", Admin(e.Norte), null, 200))
                 .Select(h => h.Tipo).ShouldContain("vinculo_por_vencer");
+
+            // La fecha anterior pasa sin efecto: el vínculo no vence, ni siquiera terminada la gracia.
+            IrA(CalculadoraDeVigencia.MomentoDeVencimiento(p.Hasta.AddDays(10)).AddMinutes(10));
+            await BarrerVigenciasAsync(tenantId);
+            (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Activo");
+            (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VinculoVencido>().ShouldBeEmpty();
+            (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vigente");
 
             // Y la ficha del tercero no se tocó: la sección sigue en su versión 1 (aceptada de nuevo por la empresa).
             Aceptacion(await ApiAsync<FichaTerceroDto>("GET", $"/api/v1/terceros/{cliente.Vinculo.TerceroId}/ficha", Admin(e.Norte), null, 200), "FICHA_GENERAL")
                 .VersionAceptada.ShouldBe(1);
+        }
+        finally
+        {
+            fixture.Reloj.Desfase = TimeSpan.Zero;
+        }
+    }
+
+    [Fact]
+    public async Task Si_el_tercero_no_ratifica_a_tiempo_el_vinculo_vence_con_su_certificado_y_la_misma_renovacion_abierta_sigue_su_curso()
+    {
+        try
+        {
+            var p = await EnPreVencimientoAsync();
+            var (e, tenantId, cliente) = (p.E, p.TenantId, p.Cliente);
+
+            // Pasada la fecha pero dentro de la gracia (10 días) todavía no vence.
+            IrA(CalculadoraDeVigencia.MomentoDeVencimiento(p.Hasta.AddDays(10)).AddHours(-3));
+            await BarrerVigenciasAsync(tenantId);
+            var enGracia = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+            (enGracia.Estado, enGracia.ExpedienteAbiertoId).ShouldBe(("PorVencer", p.RenovacionId));
+
+            // Terminada la gracia con la renovación abierta: Vencido y certificado vencido, y la MISMA renovación (no se abre otra).
+            IrA(CalculadoraDeVigencia.MomentoDeVencimiento(p.Hasta.AddDays(10)).AddMinutes(10));
+            await BarrerVigenciasAsync(tenantId);
+            var vencido = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+            (vencido.Estado, vencido.ExpedienteAbiertoId).ShouldBe(("Vencido", p.RenovacionId));
+            (await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("Vencido");
+            var eventos = await EventosAsync(tenantId, cliente.Vinculo.Id);
+            eventos.OfType<VinculoVencido>().ShouldHaveSingleItem().Causa.ShouldBe(CausaDeVencimiento.Vigencia);
+            eventos.OfType<ExpedienteVinculado>().Count(v => v.Tipo == TipoExpediente.Renovacion).ShouldBe(1);
+            var aviso = await fixture.Correos.EsperarAsync(cliente.Correo, m => m.Asunto.Contains("venció: ratifica tu información", StringComparison.Ordinal));
+            RegexToken().IsMatch(aviso.Texto).ShouldBeTrue();
+            (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{p.RenovacionId}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Abierto");
+            // El job no vuelve a tocarlo (no hay otra renovación por abrir).
+            (await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", new Credencial(ApiFixture.ClavePlataforma),
+                new RevisarVigenciasDto(tenantId, CalculadoraDeVigencia.MomentoDeVencimiento(p.Hasta.AddDays(10)).AddDays(2)), 200)).Revisados.ShouldBe(0);
+
+            // El tercero ratifica ya vencido: Activo otra vez, con la vigencia nueva desde esa aprobación y el certificado reemitido.
+            var vista = await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{p.RenovacionId}", cliente.Sesion.AccessToken, null, 200);
+            var porRatificar = vista.Requisitos!.ShouldHaveSingleItem();
+            (await TerceroAsync<ExpedientePublicoDto>("POST", $"/public/v1/expedientes/{p.RenovacionId}/requisitos/{porRatificar.Id}/ratificar",
+                cliente.Sesion.AccessToken, new { }, 200)).Estado.ShouldBe("Aprobado");
+            var ahora = Hoy(DateTimeOffset.UtcNow + fixture.Reloj.Desfase);
+            var renovado = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+            (renovado.Estado, renovado.ExpedienteAbiertoId).ShouldBe(("Activo", null));
+            renovado.VigenteHasta!.Value.ShouldBeInRange(ahora.AddDays(99), ahora.AddDays(100));
+            var reemitido = await CertificadoActualAsync(e.Norte, cliente.Vinculo.Id);
+            (reemitido.Estado, reemitido.Emision, reemitido.VigenteHasta).ShouldBe(("Vigente", p.Emitido.Emision + 1, renovado.VigenteHasta));
         }
         finally
         {
@@ -183,18 +250,20 @@ public sealed partial class RequisitosApiTests
         var aviso = await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
             new RevisarVigenciasDto(tenantId, CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-5)).AddMinutes(5)), 200);
         aviso.ShouldBe(new ResultadoRevisionVigenciasDto(1, 1, 0, 0));
-        (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).Estado.ShouldBe("PorVencer");
+        // El aviso abre el pre-vencimiento: PorVencer y la renovación con solo la sección que vence (el RUT sigue vigente).
+        var enPre = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+        enPre.Estado.ShouldBe("PorVencer");
+        var renovacionId = enPre.ExpedienteAbiertoId.ShouldNotBeNull();
+        var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(e.Norte), null, 200);
+        (renovacion.Tipo, renovacion.Requisitos!.Single().TipoDocumento.Codigo).ShouldBe(("Renovacion", "FICHA_GENERAL"));
 
         var vence = await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
             new RevisarVigenciasDto(tenantId, CalculadoraDeVigencia.MomentoDeVencimiento(hasta).AddMinutes(5)), 200);
         vence.ShouldBe(new ResultadoRevisionVigenciasDto(1, 0, 1, 0));
+        // Venció con la renovación abierta: la misma sigue su curso, no se abre otra.
         var vencido = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
-        vencido.Estado.ShouldBe("Vencido");
-
-        // Venció solo la vigencia propia de la sección: la renovación pide solo esa sección (el RUT sigue vigente).
-        var renovacionId = vencido.ExpedienteAbiertoId.ShouldNotBeNull();
-        var renovacion = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{renovacionId}", Admin(e.Norte), null, 200);
-        (renovacion.Tipo, renovacion.Requisitos!.Single().TipoDocumento.Codigo).ShouldBe(("Renovacion", "FICHA_GENERAL"));
+        (vencido.Estado, vencido.ExpedienteAbiertoId).ShouldBe(("Vencido", renovacionId));
+        (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<ExpedienteVinculado>().Count(v => v.Tipo == TipoExpediente.Renovacion).ShouldBe(1);
         // El job no vuelve a tocarlo.
         (await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar", plataforma,
             new RevisarVigenciasDto(tenantId, CalculadoraDeVigencia.MomentoDeVencimiento(hasta).AddDays(2)), 200)).Revisados.ShouldBe(0);
@@ -265,6 +334,31 @@ public sealed partial class RequisitosApiTests
         (vinculo.Estado, vinculo.ExpedienteAbiertoId, vinculo.VigenteHasta).ShouldBe(("Activo", null, null));
         (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VinculoVencido>().ShouldBeEmpty();
         (await EventosAsync(tenantId, cliente.Vinculo.Id)).OfType<VigenciaDelVinculoFijada>().Count().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task Si_en_el_primer_aviso_no_hay_nada_que_ratificar_la_vigencia_se_renueva_sola_y_el_vinculo_no_llega_a_pre_vencimiento()
+    {
+        var e = await PrepararAsync();
+        var tenantId = e.Norte.Datos.TenantId;
+        var flujo = await FlujoConVigenciaAsync(e.Norte, RutYGeneral(e), new VigenciaVinculoDto(100, [30], 0));
+        var cliente = await ClienteAprobadoAsync(e);
+        var hasta = (await VinculoAsync(e.Norte, cliente.Vinculo.Id)).VigenteHasta.ShouldNotBeNull();
+
+        // La empresa publica una versión del flujo sin vigencia periódica: en el aviso no hay qué pedirle al tercero.
+        await ApiAsync<FlujoDto>("PUT", $"/api/v1/flujos/{flujo.Id}", Admin(e.Norte), new EditarFlujoDto(VigenciaVinculo: new VigenciaVinculoDto(0)), 200);
+        await ApiAsync<FlujoDto>("POST", $"/api/v1/flujos/{flujo.Id}/publicar", Admin(e.Norte), new { }, 200);
+
+        var resultado = await ApiAsync<ResultadoRevisionVigenciasDto>("POST", "/api/v1/plataforma/vigencias-de-vinculos/revisar",
+            new Credencial(ApiFixture.ClavePlataforma),
+            new RevisarVigenciasDto(tenantId, CalculadoraDeVigencia.MomentoDeAviso(hasta.AddDays(-30)).AddMinutes(5)), 200);
+
+        resultado.Revisados.ShouldBe(1);
+        var vinculo = await VinculoAsync(e.Norte, cliente.Vinculo.Id);
+        (vinculo.Estado, vinculo.ExpedienteAbiertoId, vinculo.VigenteHasta).ShouldBe(("Activo", null, null));
+        var eventos = await EventosAsync(tenantId, cliente.Vinculo.Id);
+        eventos.OfType<VinculoPorVencer>().ShouldBeEmpty();
+        eventos.OfType<ExpedienteVinculado>().Count(v => v.Tipo == TipoExpediente.Renovacion).ShouldBe(0);
     }
 
     // ---------- plazo de revalidación configurable (RV-4) ----------

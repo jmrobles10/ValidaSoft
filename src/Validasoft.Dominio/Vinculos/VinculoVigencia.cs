@@ -27,7 +27,10 @@ public sealed partial class Vinculo
     /// <summary>Días de aviso que ya se cumplieron con la vigencia actual (no se repiten).</summary>
     public List<int> AvisosDeVigenciaCumplidos { get; set; } = [];
 
-    /// <summary>Venció por su vigencia y aún no se le abrió la renovación (sigue en <c>Vencido</c> sin expediente de renovación).</summary>
+    /// <summary>
+    /// Venció por su vigencia y no había renovación abierta (la del pre-vencimiento, VV-3): sigue en <c>Vencido</c> hasta que el job
+    /// la abre. Falso si la renovación ya estaba abierta al vencer: esa misma sigue su curso.
+    /// </summary>
     public bool RenovacionPorVigenciaPendiente { get; set; }
 
     /// <summary>Cuándo se aprobó por última vez (la base de la vigencia periódica).</summary>
@@ -63,8 +66,9 @@ public sealed partial class Vinculo
     }
 
     /// <summary>
-    /// Llegó el día de un aviso: un vínculo aprobado <c>Activo</c> o <c>PorVencer</c> que aún no vence. Los avisos que ya se pasaron
-    /// (el job se atrasó) se cumplen juntos con un solo evento. Si ya le toca vencer no avisa: vence.
+    /// Llegó el día de un aviso: un vínculo aprobado <c>Activo</c> o <c>PorVencer</c> que aún no vence. El primero abre el
+    /// pre-vencimiento (el vínculo queda <c>PorVencer</c> y se abre la renovación, VV-3) y los siguientes solo recuerdan. Los avisos
+    /// que ya se pasaron (el job se atrasó) se cumplen juntos con un solo evento. Si ya le toca vencer no avisa: vence.
     /// </summary>
     public VinculoPorVencer? AvisarVigencia(DateTimeOffset ahora)
     {
@@ -84,8 +88,9 @@ public sealed partial class Vinculo
     }
 
     /// <summary>
-    /// Terminó la gracia de la vigencia: el vínculo aprobado, <c>Activo</c> o <c>PorVencer</c>, pasa a <c>Vencido</c> (VV-3).
-    /// Nulo si no le toca todavía o ya no está en esos estados (bloqueado, vencido, terminado).
+    /// Terminó la gracia de la vigencia: el vínculo aprobado, <c>Activo</c> o <c>PorVencer</c>, pasa a <c>Vencido</c> (VV-3), tenga
+    /// o no abierta la renovación del pre-vencimiento. Nulo si no le toca todavía o ya no está en esos estados (bloqueado, vencido,
+    /// terminado).
     /// </summary>
     public VinculoVencido? VencerPorVigencia(DateTimeOffset ahora, string descripcion) =>
         TuvoAprobacion && Estado is (EstadoVinculo.Activo or EstadoVinculo.PorVencer) && VencimientoDeVigencia is { } vence && ahora >= vence
@@ -113,7 +118,8 @@ public sealed partial class Vinculo
         DiasAvisoVigencia = [.. e.DiasAviso];
         DiasGraciaVigencia = e.DiasGracia;
         AvisosDeVigenciaCumplidos = [];
-        // Una vigencia nueva (se aprobó otro expediente o no había nada que ratificar) deja al vínculo al día.
+        // Una vigencia nueva (se aprobó la renovación del pre-vencimiento, otro expediente, o no había nada que ratificar) deja al
+        // vínculo al día: la cuenta de los días parte de esa aprobación (VV-1) y no vuelve a vencer.
         if (Estado == EstadoVinculo.PorVencer || (Estado == EstadoVinculo.Vencido && RenovacionPorVigenciaPendiente))
             Estado = EstadoVinculo.Activo;
         RenovacionPorVigenciaPendiente = false;
