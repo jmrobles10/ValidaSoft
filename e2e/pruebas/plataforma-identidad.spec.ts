@@ -255,7 +255,10 @@ test('Configuración › Inicio de sesión único: el secreto no vuelve, el domi
   await page.getByRole('button', { name: 'Escribir secreto' }).click();
   await page.getByLabel('Secreto del cliente').fill('secreto-e2e-12345');
   await page.getByLabel('Dominio', { exact: true }).fill(`sso-${sufijo}.e2e.validasoft.co`);
-// El botón «Agregar» tiene el mismo alto que su campo (no se estira con la etiqueta del campo).  const cajaDelCampo = await page.getByLabel('Dominio', { exact: true }).locator('xpath=ancestor::div[contains(@class, "MuiOutlinedInput-root")]').boundingBox();  const cajaDelBoton = await page.getByRole('button', { name: 'Agregar', exact: true }).boundingBox();  expect(Math.abs((cajaDelBoton?.height ?? 0) - (cajaDelCampo?.height ?? 99))).toBeLessThanOrEqual(2);
+  // El botón «Agregar» tiene el mismo alto que su campo (no se estira con la etiqueta del campo).
+  const cajaDelCampo = await page.getByLabel('Dominio', { exact: true }).locator('xpath=ancestor::div[contains(@class, "MuiOutlinedInput-root")]').boundingBox();
+  const cajaDelBoton = await page.getByRole('button', { name: 'Agregar', exact: true }).boundingBox();
+  expect(Math.abs((cajaDelBoton?.height ?? 0) - (cajaDelCampo?.height ?? 99))).toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: 'Agregar', exact: true }).click();
   // Agregar un dominio puede pedir confirmar con la passkey (configurar el SSO es una acción sensible).
   if (await page.getByRole('dialog', { name: 'Confirma que eres tú' }).isVisible({ timeout: 2_000 }).catch(() => false)) await confirmarConPasskey(page);
