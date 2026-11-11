@@ -233,6 +233,8 @@ export const expedientes = {
     eximido: 'Eximido por {{persona}} el {{fecha}}: “{{justificacion}}”',
     versionesNuevas_one: 'El tercero subió {{count}} versión nueva.',
     versionesNuevas_other: 'El tercero subió {{count}} versiones nuevas.',
+    // El tercero retiró la versión que este documento reemplaza (RT-3): el motivo y cuál vuelve.
+    retiro: 'El tercero retiró la versión {{retirada}} (motivo: {{motivo}}). Vuelve la versión {{n}}: revísala de nuevo.',
     sobreVersion: 'v{{n}}',
     invalidado: 'Sin efecto: era sobre la v{{n}}',
     revertido: 'Revertido por un administrador',
@@ -383,6 +385,7 @@ export const expedientes = {
     reabiertosDocumentos: 'Vuelven a revisión: {{documentos}}',
     documento: 'Documento',
     versionAdjuntada: '{{documento}}: llegó la versión {{n}}',
+    retiro: 'El tercero retiró la versión {{retirada}} de {{documento}} (motivo: {{motivo}}); vuelve a la versión {{n}}.',
     agregados: 'Se suman a la actualización abierta: {{documentos}}',
     invalidados: '{{documento}}: los veredictos sobre la versión {{n}} dejan de contar',
     aproboDocumento: '{{area}} aprobó {{documento}} (v{{n}})',

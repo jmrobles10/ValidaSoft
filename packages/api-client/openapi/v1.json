@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5112/"
+      "url": "http://localhost:5113/"
     }
   ],
   "paths": {
@@ -7443,6 +7443,55 @@
         }
       }
     },
+    "/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/retiro/impacto": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Documentos.BovedaEndpoints"
+        ],
+        "summary": "GET_public_v1_boveda_documentos_documentoId_versiones_numero_retiro_impacto",
+        "description": "GET_public_v1_boveda_documentos_documentoId_versiones_numero_retiro_impacto",
+        "operationId": "GET_public_v1_boveda_documentos_documentoId_versiones_numero_retiro_impacto",
+        "parameters": [
+          {
+            "name": "documentoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImpactoDeRetiroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/boveda/documentos/{documentoId}/versiones/{numero}/descarga": {
       "post": {
         "tags": [
@@ -12103,6 +12152,19 @@
                 "$ref": "#/components/schemas/VigenciaDto"
               }
             ]
+          },
+          "situacion": {
+            "type": "string",
+            "default": "NoRecibe"
+          },
+          "otraVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -14936,6 +14998,36 @@
           }
         }
       },
+      "EmpresaAfectadaPorRetiroDto": {
+        "required": [
+          "vinculoId",
+          "empresa",
+          "situacion",
+          "efecto"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresa": {
+            "$ref": "#/components/schemas/EmpresaPublicaDto"
+          },
+          "situacion": {
+            "type": "string"
+          },
+          "efecto": {
+            "type": "string"
+          },
+          "folio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "EmpresaDeGrupoDto": {
         "required": [
           "id",
@@ -15471,6 +15563,15 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "soportesRetirados": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SoporteSeccionDto"
+            }
           }
         }
       },
@@ -17745,6 +17846,55 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ImpactoDeRetiroDto": {
+        "required": [
+          "documentoId",
+          "numero",
+          "esLaVigente",
+          "versionQueQuedaVigente",
+          "empresas",
+          "secciones"
+        ],
+        "type": "object",
+        "properties": {
+          "documentoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "esLaVigente": {
+            "type": "boolean"
+          },
+          "versionQueQuedaVigente": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaAfectadaPorRetiroDto"
+            }
+          },
+          "secciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeccionAfectadaPorRetiroDto"
+            }
           }
         }
       },
@@ -21050,6 +21200,16 @@
                 "$ref": "#/components/schemas/SoporteDeSeccionesDto"
               }
             ]
+          },
+          "retiro": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RetiroDeVersionDto"
+              }
+            ]
           }
         }
       },
@@ -21776,6 +21936,31 @@
           }
         }
       },
+      "RetiroDeVersionDto": {
+        "required": [
+          "numero",
+          "motivo",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "numero": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "motivo": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "RetiroDto": {
         "required": [
           "documento",
@@ -21956,6 +22141,16 @@
           },
           "bloqueante": {
             "type": "boolean"
+          },
+          "retiro": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RetiroDeVersionDto"
+              }
+            ]
           }
         }
       },
@@ -22191,6 +22386,31 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SeccionAfectadaPorRetiroDto": {
+        "required": [
+          "seccion",
+          "nombre",
+          "periodo"
+        ],
+        "type": "object",
+        "properties": {
+          "seccion": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "periodo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -22820,6 +23040,16 @@
             "format": "int32"
           },
           "tipoDocumento": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "retirado": {
+            "type": "boolean",
+            "default": false
+          },
+          "nombre": {
             "type": [
               "null",
               "string"

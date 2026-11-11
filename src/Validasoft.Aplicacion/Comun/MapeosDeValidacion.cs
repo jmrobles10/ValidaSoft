@@ -147,7 +147,8 @@ public static class MapeosDeValidacion
                 .. r.AreasQueRevisan.Select(id => (Id: id, Area: e.BuscarArea(id))).Where(x => x.Area is not null).Select(x =>
                     new AreaDeRequisitoDto(x.Id, x.Area!.Codigo, EstadoEnArea(r, x.Area, e), r.AprobadoresPara(x.Area), r.AprobacionesDe(x.Area),
                         [.. r.Veredictos.Where(v => v.AreaId == x.Id).Select(ADto)]))
-            ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion), documentacion?.Cruces?.DeDocumento(r.Id));
+            ], r.TipoRequisito.ToString(), r.DetalleDeSeccion(documentacion), documentacion?.Cruces?.DeDocumento(r.Id),
+            r.Retiro is { } retiro ? new RetiroDeVersionDto(retiro.Numero, retiro.Motivo, retiro.Fecha) : null);
 
     /// <summary>Detalle de la sección (F2): con la documentación, datos, soportes y cambios; sin ella, la completitud guardada.</summary>
     private static SeccionDeRequisitoDto? DetalleDeSeccion(this RequisitoDeExpediente r, DocumentacionDelExpediente? documentacion) =>

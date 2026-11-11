@@ -48,10 +48,14 @@ describe('vigencia de un documento', () => {
     expect(estadoDeVigencia(null)).toBeNull();
   });
 
-  it('en la bóveda, cada empresa dice hasta cuándo le sirve el documento', () => {
+  it('en la bóveda, cada empresa dice hasta cuándo le sirve el documento solo si difiere de la cabecera, y por qué', () => {
     const empresa = { id: 'e1', nombre: 'Constructora Norte S.A.S.', logoUrl: null };
-    const fila = { vinculoId: 'v1', empresa, compartido: true, version: 3, versionActualCompartida: true, compartidaEn: '2026-11-06T12:00:00Z' };
-    expect(detalleComparticion({ ...fila, vigencia: vigencia('PorVencer') }, t)).toBe('Tiene esta versión desde el 06/11/2026. Vence el 31/12/2026.');
-    expect(detalleComparticion({ ...fila, vigencia: null }, t)).toBe('Tiene esta versión desde el 06/11/2026.');
+    const fila = { vinculoId: 'v1', empresa, compartido: true, version: 3, versionActualCompartida: true, compartidaEn: '2026-11-06T12:00:00Z', situacion: 'TieneVigente', otraVersion: null };
+    expect(detalleComparticion({ ...fila, vigencia: vigencia('PorVencer') }, t)).toBe(
+      'Tiene la versión 3, la vigente. Vence el 31/12/2026: su regla de vigencia cuenta desde la fecha de expedición.',
+    );
+    // Si es la misma fecha de la cabecera, no se repite.
+    expect(detalleComparticion({ ...fila, vigencia: vigencia('PorVencer') }, t, '2026-12-31')).toBe('Tiene la versión 3, la vigente.');
+    expect(detalleComparticion({ ...fila, vigencia: null }, t)).toBe('Tiene la versión 3, la vigente.');
   });
 });

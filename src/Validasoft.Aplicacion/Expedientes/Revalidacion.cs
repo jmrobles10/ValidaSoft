@@ -50,7 +50,7 @@ public static class Revalidacion
             return null;
 
         var expediente = await ProcesoDeValidacion.AbrirAsync(sesion, vinculoStream, flujo, null, certificados, ahora, ct,
-            tipoExpediente: TipoExpediente.Actualizacion, soloRequisitos: cambios.Ids, actor: actor);
+            tipoExpediente: TipoExpediente.Actualizacion, soloRequisitos: cambios.Ids, actor: actor, retiros: cambios.Retiros);
 
         var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(vinculoId), ct);
         if (expediente.EstaAbierto && certificado.Aggregate?.MarcarConPendientes(MotivoDePendientes(cambios.Nombres), expediente.Id, ahora) is { } pendientes)
@@ -86,7 +86,7 @@ public static class Revalidacion
             return null;
 
         var calculados = await ProcesoDeValidacion.CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, version, contexto, cambios.Ids, null,
-            ahora, ct);
+            ahora, ct, cambios.Retiros);
         var eventos = expediente.AgregarRequisitos(calculados, ahora);
         if (eventos.Count == 0)
             return null;
@@ -114,6 +114,7 @@ public static class Revalidacion
             .FirstOrDefault();
 
         List<RequisitoPedido> documentos = [];
+        Dictionary<Guid, RetiroDeVersion> retiros = [];
         if (aprobado is not null)
         {
             var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, version, contexto, ct);
@@ -125,11 +126,28 @@ public static class Revalidacion
                             AprobadoAntes(aprobado, p) is { } previa &&
                             (previa.DocumentoId != actual.DocumentoId || previa.Numero != actual.Numero))
                 .ToList();
+
+            // Si la que la empresa aprobó la retiró el tercero, la revalidación lleva el motivo (RT-3).
+            foreach (var pedido in documentos)
+            {
+                if (AprobadoAntes(aprobado, pedido) is { } previa &&
+                    delTercero.FirstOrDefault(d => d.Id == previa.DocumentoId)?.Buscar(previa.Numero) is { Estado: EstadoVersion.Retirada } retirada)
+                    retiros[pedido.Requisito.Id] = RetiroDe(retirada, ahora);
+            }
         }
 
         var secciones = await SeccionesCambiadasAsync(sesion, vinculo, version, contexto, ahora, ct, yaIncluidos);
-        return new RequisitosCambiados(documentos, secciones);
+        return new RequisitosCambiados(documentos, secciones, retiros);
     }
+
+    /// <summary>El retiro de una versión de la bóveda como lo guarda el expediente (la fecha ausente de un retiro antiguo se reemplaza por <paramref name="ahora"/>).</summary>
+    public static RetiroDeVersion RetiroDe(VersionDocumento version, DateTimeOffset ahora) =>
+        new(version.Numero, version.MotivoRetiro ?? string.Empty, version.RetiradaEn ?? ahora);
+
+    /// <summary>Las versiones retiradas de los documentos, por (documento, número): lo que el expediente necesita para explicar un retroceso.</summary>
+    public static IReadOnlyDictionary<(Guid DocumentoId, int Numero), RetiroDeVersion> RetiradasDe(IEnumerable<Documento> documentos, DateTimeOffset ahora) =>
+        documentos.SelectMany(d => d.Versiones.Where(v => v.Estado == EstadoVersion.Retirada).Select(v => (Clave: (d.Id, v.Numero), Retiro: RetiroDe(v, ahora))))
+            .ToDictionary(x => x.Clave, x => x.Retiro);
 
     /// <summary>
     /// Secciones que el flujo pide al vínculo, que la empresa ya tenía aceptadas (<see cref="SeccionAceptada"/>) y cuya versión
@@ -202,7 +220,8 @@ public static class Revalidacion
 }
 
 /// <summary>Lo que cambió para un vínculo desde lo que la empresa aprobó o aceptó: documentos y secciones que entran a la actualización.</summary>
-public sealed record RequisitosCambiados(IReadOnlyList<RequisitoPedido> Documentos, IReadOnlyList<RequisitoDeSeccionPedido> Secciones)
+public sealed record RequisitosCambiados(IReadOnlyList<RequisitoPedido> Documentos, IReadOnlyList<RequisitoDeSeccionPedido> Secciones,
+    IReadOnlyDictionary<Guid, RetiroDeVersion>? Retiros = null)
 {
     public bool Vacio => Documentos.Count == 0 && Secciones.Count == 0;
 

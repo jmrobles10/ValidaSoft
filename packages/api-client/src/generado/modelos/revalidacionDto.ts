@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { RetiroDeVersionDto } from './retiroDeVersionDto';
 import type { TerceroResumenDto } from './terceroResumenDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
 import type { VersionResumenDto } from './versionResumenDto';
@@ -27,4 +28,5 @@ export interface RevalidacionDto {
   plazoHasta: string;
   diasRestantes: number;
   bloqueante: boolean;
+  retiro?: null | RetiroDeVersionDto;
 }

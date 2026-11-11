@@ -38,6 +38,10 @@ export const notificaciones = {
       titulo: 'Versión nueva de un documento',
       explicacion: 'Cuando el tercero sube una versión nueva de un documento que tu área está revisando: lo decidido sobre la anterior queda sin efecto.',
     },
+    versionRetirada: {
+      titulo: 'Versión retirada por el tercero',
+      explicacion: 'Cuando el tercero retira una versión que tu área tenía aprobada o en revisión: el expediente vuelve a la versión anterior o se abre una actualización para revisarla.',
+    },
     aprobado: {
       titulo: 'Expediente aprobado',
       explicacion: 'Cuando se aprueba la validación de un expediente de tus áreas.',

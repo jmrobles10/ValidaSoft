@@ -6,6 +6,7 @@ export const CLAVES_TIPO = {
   'expediente.nuevo_en_area': 'nuevoEnArea',
   'expediente.tercero_respondio': 'terceroRespondio',
   'expediente.version_nueva': 'versionNueva',
+  'documento.version_retirada': 'versionRetirada',
   'expediente.aprobado': 'aprobado',
   'expediente.rechazado': 'rechazado',
   'expediente.caducado': 'caducado',

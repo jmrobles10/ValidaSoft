@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
 import type { EstadoSeccionFichaDto } from '@validasoft/api-client';
 import { formatearFecha } from '@validasoft/ui';
-import { ArrowRight, CheckCircle2, ChevronRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronRight, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -101,6 +101,15 @@ function FilaSeccion({ fila }: { fila: EstadoSeccionFichaDto }) {
               </Typography>
             )}
           </Stack>
+          {/* El tercero retiró un documento que respaldaba la sección: sus datos siguen guardados; se le dice que elija otro soporte. */}
+          {(fila.soportesRetirados ?? []).map((s) => (
+            <Stack key={`${s.documentoId}-${String(s.version)}`} direction="row" spacing={0.75} sx={{ alignItems: 'center', mt: 0.75, color: 'warning.main' }}>
+              <TriangleAlert size={16} aria-hidden />
+              <Typography component="span" sx={{ fontSize: 13, color: 'text.primary' }}>
+                {t('ficha.soporte.retirado', { tipo: s.nombre ?? s.tipoDocumento ?? '', n: String(s.version) })}
+              </Typography>
+            </Stack>
+          ))}
         </Box>
         <Button
           component={RouterLink}

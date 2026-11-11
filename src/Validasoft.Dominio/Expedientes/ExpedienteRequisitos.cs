@@ -42,6 +42,12 @@ public sealed class RequisitoDeExpediente
     /// <summary>Aprobación de esta empresa a esta misma versión en otro expediente del tercero (RQ-11); nula si no la hay.</summary>
     public AprobacionPrevia? AprobacionPrevia { get; set; }
 
+    /// <summary>
+    /// El tercero retiró la versión que este requisito reemplaza (la que la empresa había aprobado o revisaba) y la versión
+    /// actual es la que vuelve (RT-3). Se limpia cuando llega una versión nueva por otra vía.
+    /// </summary>
+    public RetiroDeVersion? Retiro { get; set; }
+
     /// <summary>Ratificación del tercero en una renovación (RN-2); nula si no ratificó.</summary>
     public RatificacionDeRequisito? Ratificacion { get; set; }
 
@@ -220,9 +226,14 @@ public sealed partial class Expediente
     /// Con requisitos de sección (F2), <paramref name="secciones"/> trae la evaluación de la versión vigente de cada una: si su
     /// completitud para la empresa cambió se guarda (<see cref="CompletitudDeSeccionEvaluada"/>), y solo una versión completa
     /// para la empresa se adjunta (las incompletas no las revisa nadie: el requisito sigue con su motivo legible).
+    /// <para>
+    /// <paramref name="retiradas"/> son las versiones de la bóveda que el tercero retiró, por (documento, número): si la que
+    /// el requisito reemplaza está ahí, <see cref="VersionAdjuntadaARequisito.Retiro"/> lleva el motivo (RT-1).
+    /// </para>
     /// </remarks>
     public IReadOnlyList<object> SincronizarVersiones(IReadOnlyDictionary<Guid, VersionDeRequisito> disponibles, DateTimeOffset ahora,
-        IReadOnlyDictionary<Guid, EvaluacionDeSeccion>? secciones = null)
+        IReadOnlyDictionary<Guid, EvaluacionDeSeccion>? secciones = null,
+        IReadOnlyDictionary<(Guid DocumentoId, int Numero), RetiroDeVersion>? retiradas = null)
     {
         if (!EstaAbierto || !ConRequisitos)
             return [];
@@ -264,7 +275,10 @@ public sealed partial class Expediente
             {
                 var afectadas = requisito.Veredictos.Where(v => v.Vigente).Select(v => v.AreaId).OfType<Guid>()
                     .Where(a => !EtapaCerrada(a)).Distinct().ToList();
-                s.Emitir(new VersionAdjuntadaARequisito(requisito.Id, version, requisito.VersionActual?.Numero, ahora));
+                RetiroDeVersion? retiro = null;
+                if (requisito.VersionActual is { } reemplazada)
+                    retiro = retiradas?.GetValueOrDefault((reemplazada.DocumentoId, reemplazada.Numero));
+                s.Emitir(new VersionAdjuntadaARequisito(requisito.Id, version, requisito.VersionActual?.Numero, ahora, retiro));
                 if (afectadas.Count > 0)
                     s.Emitir(new VeredictosInvalidadosPorNuevaVersion(requisito.Id, requisito.VersionActual!.Numero, afectadas, ahora));
             }
@@ -354,7 +368,8 @@ public sealed partial class Expediente
         AreasQueRevisan = [.. r.AreasQueRevisan],
         AprobadoresRequeridos = r.AprobadoresRequeridos,
         VersionActual = r.Version,
-        AprobacionPrevia = r.Previa
+        AprobacionPrevia = r.Previa,
+        Retiro = r.Retiro
     };
 
     /// <summary>
@@ -393,6 +408,7 @@ public sealed partial class Expediente
         }
 
         requisito.VersionActual = e.Version;
+        requisito.Retiro = e.Retiro;
         RecalcularRequisitos(e.Fecha);
         ActualizadoEn = e.Fecha;
     }

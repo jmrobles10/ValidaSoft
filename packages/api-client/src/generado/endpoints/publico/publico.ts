@@ -46,6 +46,7 @@ import type {
   GuardarSeccionDto,
   GuardarSeccionFichaParams,
   IResult,
+  ImpactoDeRetiroDto,
   IniciarCargaDto,
   InvitacionAceptadaDto,
   InvitacionPublicaDto,
@@ -2482,6 +2483,98 @@ export function useObtenerDocumentoBoveda<TData = Awaited<ReturnType<typeof obte
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getObtenerDocumentoBovedaQueryOptions(documentoId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerImpactoDeRetiro = (
+    documentoId: string,
+    numero: number,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ImpactoDeRetiroDto>(
+      {url: `/public/v1/boveda/documentos/${documentoId}/versiones/${numero}/retiro/impacto`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerImpactoDeRetiroQueryKey = (documentoId: string,
+    numero: number,) => {
+    return [
+    `/public/v1/boveda/documentos/${documentoId}/versiones/${numero}/retiro/impacto`
+    ] as const;
+    }
+
+
+export const getObtenerImpactoDeRetiroQueryOptions = <TData = Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError = ErrorType<void>>(documentoId: string,
+    numero: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerImpactoDeRetiroQueryKey(documentoId,numero);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>> = ({ signal }) => obtenerImpactoDeRetiro(documentoId,numero, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentoId !== null && documentoId !== undefined && numero !== null && numero !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerImpactoDeRetiroQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>>
+export type ObtenerImpactoDeRetiroQueryError = ErrorType<void>
+
+
+export function useObtenerImpactoDeRetiro<TData = Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError = ErrorType<void>>(
+ documentoId: string,
+    numero: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerImpactoDeRetiro<TData = Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError = ErrorType<void>>(
+ documentoId: string,
+    numero: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerImpactoDeRetiro<TData = Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError = ErrorType<void>>(
+ documentoId: string,
+    numero: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerImpactoDeRetiro<TData = Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError = ErrorType<void>>(
+ documentoId: string,
+    numero: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerImpactoDeRetiro>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerImpactoDeRetiroQueryOptions(documentoId,numero,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

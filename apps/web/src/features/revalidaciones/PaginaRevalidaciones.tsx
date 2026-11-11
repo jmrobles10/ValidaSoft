@@ -101,7 +101,19 @@ export function PaginaRevalidaciones() {
               </Typography>
             </Box>
           ) : (
-            f.tipoDocumento
+            <Box>
+              <Typography component="span" variant="body2" sx={{ display: 'block' }}>
+                {f.tipoDocumento}
+              </Typography>
+              {/* La actualización se abrió porque el tercero retiró la versión que la empresa había aprobado: va hacia atrás (RT-3). */}
+              {f.retiro && (
+                <Tooltip title={t('revalidaciones.retiroAyuda', { retirada: String(f.retiro.numero), actual: String(f.versionActual.numero) })}>
+                  <Typography component="span" variant="caption" sx={{ display: 'block', color: 'warning.main' }}>
+                    {t('revalidaciones.retiro', { retirada: String(f.retiro.numero), motivo: f.retiro.motivo })}
+                  </Typography>
+                </Tooltip>
+              )}
+            </Box>
           ),
       },
       {

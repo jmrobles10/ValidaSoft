@@ -44,7 +44,9 @@ export interface Senalados {
  */
 export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, inicial: SeccionFichaDto, senalados: Senalados | null = null) {
   const [datos, setDatos] = useState<object>(() => inicial.datos ?? {});
-  const [soportes, setSoportes] = useState<SoporteSeccionDto[]>(() => inicial.soportes);
+  // Un soporte que el tercero retiró de su bóveda no se puede volver a enviar (422): queda fuera de lo editable y se avisa aparte (RT-4).
+  const [soportes, setSoportes] = useState<SoporteSeccionDto[]>(() => inicial.soportes.filter((s) => !s.retirado));
+  const [soportesRetirados, setSoportesRetirados] = useState<SoporteSeccionDto[]>(() => inicial.soportes.filter((s) => s.retirado));
   const [faltantes, setFaltantes] = useState<FaltanteSeccionDto[]>(() => inicial.completitud?.faltantes ?? []);
   const [erroresCampo, setErroresCampo] = useState<ErrorDeCampo[]>([]);
   const errorCampo = erroresCampo[0] ?? null;
@@ -91,7 +93,8 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
       {
         onSuccess: (respuesta) => {
           setDatos(respuesta.seccion.datos ?? {});
-          setSoportes(respuesta.seccion.soportes);
+          setSoportes(respuesta.seccion.soportes.filter((s) => !s.retirado));
+          setSoportesRetirados(respuesta.seccion.soportes.filter((s) => s.retirado));
           setFaltantes(respuesta.completitud.faltantes);
           setErroresCampo([]);
           setEditados(new Set());
@@ -109,7 +112,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   // Un error que no es de un campo (sesión, red, 5xx…) va arriba del formulario.
   const errorGeneral = guardado.isError && !errorCampo ? guardado.error : null;
 
-  return { datos, cambiar, soportes, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
+  return { datos, cambiar, soportes, soportesRetirados, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
 }
 
 export type EditorSeccion = ReturnType<typeof useEditorSeccion>;

@@ -170,10 +170,17 @@ public sealed record CompartidoDto(Guid DocumentoId, string Tipo, int Version, G
 /// <summary>Resultado del paso 2. <see cref="Duplicado"/> ⇒ no hubo versión nueva y <see cref="Version"/> es la existente.</summary>
 public sealed record ConfirmacionCargaDto(bool Duplicado, VersionDocumentoDto Version, IReadOnlyList<CompartidoDto> Compartidos);
 
-/// <summary>Estado del documento con una empresa del tercero (solo vínculos de su sesión).</summary>
+/// <summary>
+/// Estado del documento con una empresa del tercero (solo vínculos de su sesión). <see cref="Version"/> es la versión más
+/// reciente que la empresa recibió y no está retirada (nula si no tiene ninguna) y <see cref="VersionActualCompartida"/> dice si es
+/// la vigente del tercero. <see cref="Situacion"/> lo que hizo con ella (RT-5): <c>NoRecibe</c>, <c>SinVigente</c>,
+/// <c>TieneVigente</c>, <c>AproboVigente</c>, <c>Revisando</c>, <c>Observada</c>, <c>RevalidaRetirada</c>, <c>Revalida</c>,
+/// <c>PorRevalidar</c> o <c>TieneOtra</c>; <see cref="OtraVersion"/> es la segunda versión de su texto: la que aprobó y retiró o
+/// cambió, la retirada sin reemplazo o la vigente que no recibe.
+/// </summary>
 public sealed record ComparticionPublicaDto(
     Guid VinculoId, EmpresaPublicaDto Empresa, bool Compartido, int? Version, bool VersionActualCompartida, DateTimeOffset? CompartidaEn,
-    VigenciaDto? Vigencia = null);
+    VigenciaDto? Vigencia = null, string Situacion = "NoRecibe", int? OtraVersion = null);
 
 public sealed record DocumentoBovedaDto(
     Guid Id, TipoDocumentoResumenDto Tipo, string Ambito, string Clase, Guid? VinculoId, VersionDocumentoDto? VersionActual, int Versiones,
@@ -195,3 +202,26 @@ public sealed record DescargaDto(string Url, DateTimeOffset Expira, string Nombr
 public sealed record RetirarVersionDto(string Motivo);
 
 public sealed record RetiroDto(DocumentoDto Documento, bool BinarioEliminado, IReadOnlyList<CompartidoDto> Compartidos);
+
+// ---------- Impacto de retirar una versión (RT-1) ----------
+
+/// <summary>
+/// Una empresa a la que le cambia algo si el tercero retira la versión. <see cref="Situacion"/>: lo que la empresa hizo con ella,
+/// <c>Recibio</c>, <c>Aprobo</c> o <c>Revisa</c> (nada de sus decisiones privadas). <see cref="Efecto"/>: <c>Revalidar</c> (la
+/// aprobó: revisa de nuevo la que queda vigente), <c>VolverARevisar</c> (la revisa: su expediente cambia de versión y vuelve a
+/// revisarla), <c>VuelveALaAnterior</c> (la recibió: vuelve a tener la anterior), <c>SinVersion</c> (no queda otra vigente) o
+/// <c>SinCambios</c> (la versión retirada no era la vigente). <see cref="Folio"/> es el del expediente que revisa, si lo hay.
+/// </summary>
+public sealed record EmpresaAfectadaPorRetiroDto(Guid VinculoId, EmpresaPublicaDto Empresa, string Situacion, string Efecto, string? Folio = null);
+
+/// <summary>Una sección de la información del tercero que usa la versión como soporte.</summary>
+public sealed record SeccionAfectadaPorRetiroDto(string Seccion, string Nombre, int? Periodo);
+
+/// <summary>
+/// Lo que pasará si el tercero retira la versión <see cref="Numero"/> (<c>GET …/versiones/{n}/retiro/impacto</c>, solo lectura):
+/// si era la vigente (<see cref="EsLaVigente"/>), cuál queda vigente (<see cref="VersionQueQuedaVigente"/>, nula si ninguna), las
+/// empresas que la recibieron, aprobaron o revisan y las secciones de la ficha que la tienen de soporte.
+/// </summary>
+public sealed record ImpactoDeRetiroDto(
+    Guid DocumentoId, int Numero, bool EsLaVigente, int? VersionQueQuedaVigente, IReadOnlyList<EmpresaAfectadaPorRetiroDto> Empresas,
+    IReadOnlyList<SeccionAfectadaPorRetiroDto> Secciones);

@@ -171,7 +171,8 @@ public static class RequisitosDeExpediente
                 disponibles[requisito.Id] = version;
         }
 
-        return expediente.SincronizarVersiones(disponibles, ahora, await EvaluarSeccionesAsync(sesionDelTenant, expediente, ct));
+        return expediente.SincronizarVersiones(disponibles, ahora, await EvaluarSeccionesAsync(sesionDelTenant, expediente, ct),
+            Revalidacion.RetiradasDe(documentos, ahora));
     }
 
     /// <summary>

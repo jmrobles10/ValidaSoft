@@ -67,6 +67,9 @@ export const ficha = {
     anterior: '{{tipo}} · versión {{n}}',
     otroDocumento: 'Documento de tu bóveda · versión {{n}}',
     ninguno: 'Aún no tienes en tu bóveda un documento que sirva de soporte para esta sección.',
+    // Un soporte que el tercero retiró de su bóveda (RT-4): la sección conserva sus datos, el soporte ya no vale.
+    retirado: 'Tu soporte ({{tipo}}, versión {{n}}) fue retirado.',
+    retiradoAyuda: 'Tus datos siguen guardados. Elige otro documento que los respalde o sube uno nuevo, y guarda.',
     subir: 'Subir un soporte',
     subirAyuda: 'Guarda antes tus cambios: al volver los encuentras guardados.',
     nombreCanonico: 'Soporte de mi información',

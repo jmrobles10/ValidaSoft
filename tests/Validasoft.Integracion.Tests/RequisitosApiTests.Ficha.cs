@@ -128,7 +128,7 @@ public sealed partial class RequisitosApiTests
         var conSoporte = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", cambio, new SoporteSeccionDto(rut.DocumentoId, rut.N));
         conSoporte.Version.ShouldBe(4);
         conSoporte.Completitud.Completa.ShouldBeTrue();
-        conSoporte.Seccion.Soportes.ShouldHaveSingleItem().ShouldBe(new SoporteSeccionDto(rut.DocumentoId, rut.N, "RUT"));
+        conSoporte.Seccion.Soportes.ShouldHaveSingleItem().ShouldBe(new SoporteSeccionDto(rut.DocumentoId, rut.N, "RUT", false, "Registro Único Tributario"));
         conSoporte.SiguienteSeccion.ShouldBe("FICHA_TRIBUTARIA");
 
         // Tributaria con un soporte ad hoc (SOPORTE_FICHA, subido por la carga de siempre).
