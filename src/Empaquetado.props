@@ -1,6 +1,6 @@
 <Project>
   <!--
-    Metadatos y versión de los paquetes NuGet del SDK: Validasoft.Contratos y Validasoft.Sdk (docs/08 §2.3).
+    Metadatos y versión de los paquetes NuGet del SDK: Validasoft.Contratos y Validasoft.Sdk (docs/08 §2.4).
     La versión es la de todo el SDK —la misma de @validasoft/sdk en npm— y se cambia con `node infra/sdk/version.mjs <versión>`, que
     también actualiza packages/sdk/package.json; el workflow sdk-publicar.yml exige que el tag sdk-v<versión> coincida con las dos.
     Cada proyecto aporta su README.md; el CHANGELOG y la licencia son los del SDK.

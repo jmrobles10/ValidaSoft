@@ -53,11 +53,12 @@ jobs:
           dotnet test Validasoft.slnx --configuration Release --no-build
           --logger "trx;LogFilePrefix=resultados" --results-directory TestResults
 
-      # Que el empaquetado de los SDK no se pudra entre publicaciones (docs/08 §2.3): sin publicar nada.
+      # Que el empaquetado de los SDK no se pudra entre publicaciones (docs/08 §2.4): sin publicar nada. Sin `--no-build`: la documentación XML
+      # de Validasoft.Contratos solo se genera al empaquetar (`_IsPacking`), así que `pack` debe compilar (igual que sdk-publicar.yml).
       - name: Empaquetar el SDK .NET (sin publicar)
         run: |
-          dotnet pack src/Validasoft.Contratos/Validasoft.Contratos.csproj --configuration Release --no-build --output artefactos/nuget
-          dotnet pack src/Validasoft.Sdk/Validasoft.Sdk.csproj --configuration Release --no-build --output artefactos/nuget
+          dotnet pack src/Validasoft.Contratos/Validasoft.Contratos.csproj --configuration Release --output artefactos/nuget
+          dotnet pack src/Validasoft.Sdk/Validasoft.Sdk.csproj --configuration Release --output artefactos/nuget
 
       - name: Paquetes con vulnerabilidades conocidas (informativo)
         if: always()

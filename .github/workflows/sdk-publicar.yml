@@ -1,4 +1,4 @@
-# Publicación de los SDK (docs/08 §2.3): al crear un tag `sdk-v<versión>` (p. ej. sdk-v1.2.0) se publican, con la misma versión,
+# Publicación de los SDK (docs/08 §2.4): al crear un tag `sdk-v<versión>` (p. ej. sdk-v1.2.0) se publican, con la misma versión,
 #   Validasoft.Contratos y Validasoft.Sdk en NuGet.org, y @validasoft/sdk en npm.
 #
 # Antes del primer tag, un administrador del repositorio configura (Settings › Secrets and variables › Actions):
