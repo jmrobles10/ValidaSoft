@@ -50,9 +50,10 @@ export function simularApi(rutas: Record<string, ManejadorSimulado>): PeticionSi
       const cuerpo: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
       const peticion: PeticionSimulada = { metodo, ruta, url, cuerpo, cabeceras: new Headers(init?.headers) };
       peticiones.push(peticion);
-      const manejador = rutas[`${metodo} ${ruta}`];
-      if (manejador === undefined) return Promise.resolve(aRespuesta(new ProblemaSimulado(404, 'no-encontrado', `Sin simular: ${metodo} ${ruta}`)));
-      return Promise.resolve(aRespuesta(typeof manejador === 'function' ? manejador(peticion) : manejador));
+      const clave = `${metodo} ${ruta}`;
+      const manejador = rutas[clave];
+      if (!(clave in rutas)) return Promise.resolve(aRespuesta(new ProblemaSimulado(404, 'no-encontrado', `Sin simular: ${metodo} ${ruta}`)));
+      return Promise.resolve(aRespuesta(typeof manejador === 'function' ? (manejador as (p: PeticionSimulada) => RespuestaSimulada)(peticion) : manejador));
     }),
   });
   return peticiones;

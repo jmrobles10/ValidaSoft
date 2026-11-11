@@ -94,10 +94,15 @@ public sealed partial class RequisitosApiTests
         var vacio = (await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo=2020-01&grupoId={tenant}", Plataforma, null, 200)).Grupos.Single().Empresas.Single();
         (vacio.IncluidasConsumidas, vacio.AdicionalesConsumidas, vacio.CostoUsd, vacio.Modelos.Count).ShouldBe((0, 0, 0m, 0));
 
-        // Búsqueda por nombre de empresa o del grupo; los totales son los de todo lo que cumple el filtro, no solo los de la página.
-        var porNombre = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&q={Uri.EscapeDataString("Norte S.A.S.")}", Plataforma, null, 200);
-        porNombre.Grupos.ShouldContain(g => g.GrupoId == tenant);
-        porNombre.Grupos.ShouldNotContain(g => g.GrupoId == otra.Datos.TenantId);
+        // Búsqueda por nombre de empresa o del grupo (acotada al grupo: la base de pruebas es compartida y otras pruebas crean empresas con el mismo nombre); los totales
+        // son los de todo lo que cumple el filtro, no solo los de la página.
+        var porEmpresa = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Norte S.A.S.")}", Plataforma, null, 200);
+        porEmpresa.Grupos.ShouldHaveSingleItem().GrupoId.ShouldBe(tenant);
+        var porGrupo = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={tenant}&q={Uri.EscapeDataString("Grupo Norte")}", Plataforma, null, 200);
+        porGrupo.Grupos.ShouldHaveSingleItem().GrupoId.ShouldBe(tenant);
+        var sinCoincidencia = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&grupoId={otra.Datos.TenantId}&q={Uri.EscapeDataString("Norte S.A.S.")}", Plataforma, null, 200);
+        sinCoincidencia.Grupos.ShouldBeEmpty();
+        sinCoincidencia.Totales.Grupos.ShouldBe(0);
         var primeraPagina = await ApiAsync<ConsumoDeIaDto>("GET", $"/api/v1/plataforma/ia/consumo?periodo={mes}&limite=1", Plataforma, null, 200);
         primeraPagina.Grupos.Count.ShouldBe(1);
         primeraPagina.SiguienteCursor.ShouldNotBeNull();
