@@ -363,7 +363,7 @@ public sealed partial class Expediente
         RecalcularRequisitos(e.Fecha);
         // La etapa reabierta cuenta su SLA desde que le llegó lo nuevo (como al activarse).
         foreach (var area in reabiertas.SelectMany(etapa => etapa.Areas).Where(a => a.Estado == EstadoAreaExpediente.Pendiente))
-            area.SlaVence = area.SlaHoras is { } horas ? e.Fecha.AddHours(horas) : null;
+            area.ReiniciarSla(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
@@ -543,7 +543,7 @@ public sealed partial class Expediente
                     : EstadoAreaExpediente.Pendiente;
 
                 if (area.Estado == EstadoAreaExpediente.Pendiente && previo != EstadoAreaExpediente.Pendiente)
-                    area.PendienteDesde = fecha;
+                    area.IniciarRonda(fecha);
 
                 if (area.Estado != EstadoAreaExpediente.Aprobada)
                 {

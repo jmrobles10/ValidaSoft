@@ -41,7 +41,8 @@ public static class FlujosEndpoints
             Verificaciones = [.. (dto.Verificaciones ?? []).Select(v => v.ADominio())],
             PlazoCargue = dto.PlazoCargue?.ADominio(),
             Reintento = dto.Reintento?.ADominio(),
-            VigenciaVinculo = dto.VigenciaVinculo?.ADominio()
+            VigenciaVinculo = dto.VigenciaVinculo?.ADominio(),
+            RecordatorioObservacionesDias = dto.RecordatorioObservaciones?.ADominio()
         };
         var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos, tipo);
 
@@ -131,7 +132,8 @@ public static class FlujosEndpoints
             dto.Verificaciones is null ? ultima.Verificaciones : [.. dto.Verificaciones.Select(v => v.ADominio())],
             dto.PlazoCargue?.ADominio() ?? ultima.PlazoEfectivo(),
             dto.Reintento?.ADominio() ?? ultima.ReintentoEfectivo(),
-            dto.VigenciaVinculo?.ADominio() ?? ultima.VigenciaEfectiva());
+            dto.VigenciaVinculo?.ADominio() ?? ultima.VigenciaEfectiva(),
+            dto.RecordatorioObservaciones is { } recordatorio ? recordatorio.ADominio() : ultima.RecordatorioObservacionesDias);
 
         var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos,
             await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));

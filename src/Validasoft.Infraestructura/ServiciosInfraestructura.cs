@@ -136,6 +136,8 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<PreferenciasDeCorreoDelTercero>(); // el tercero puede apagar cada correo (NT-1)
         // Recordatorio automático de observaciones pendientes (NT-3): barrido periódico (Validasoft:RecordatoriosDeObservaciones:Intervalo).
         servicios.AddHostedService<ProgramadorDeRecordatoriosDeObservaciones>();
+        // Alertas del SLA de revisión (OP-12): barrido periódico (Validasoft:SlaDeRevision:Intervalo).
+        servicios.AddHostedService<ProgramadorDeSlaDeRevision>();
         servicios.AddSingleton<ProcesadorDeEventos>();
         servicios.AddSingleton<OpcionesDeWebhooks>();
         servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
@@ -285,6 +287,8 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlas>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlaDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Importacion.EjecutarImportacion>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

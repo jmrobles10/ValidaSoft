@@ -205,6 +205,6 @@ public static class RevalidacionesEndpoints
     {
         if (contexto.ActorTipo != ActorTipo.Usuario || !Guid.TryParse(contexto.ActorId, out var usuarioId))
             return null;
-        return (await empresa.Areas().Where(a => a.Miembros.Contains(usuarioId)).Select(a => a.Id).ToListAsync(ct)).ToHashSet();
+        return await Delegaciones.DelegacionesDeRevision.AreasQueRevisaAsync(empresa.Sesion, await empresa.Areas().ToListAsync(ct), empresa.EmpresaId, usuarioId, empresa.Hoy, ct);
     }
 }

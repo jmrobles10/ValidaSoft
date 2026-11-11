@@ -114,6 +114,8 @@ public static class CatalogoEventosPublicos
         new("expediente.caducado", "Venció el plazo de cargue con el expediente en manos del tercero."),
         new("expediente.reabierto", "La empresa reabrió un expediente caducado con un plazo nuevo."),
         new("expediente.desaprobado", "Un administrador devolvió a revisión lo ya aprobado: una etapa, la fase inicial o el expediente completo."),
+        new("expediente.sla_por_vencer", "El plazo de revisión de un área (SLA) está por vencer: ya consumió el porcentaje de aviso (campo area y slaVence)."),
+        new("expediente.sla_incumplido", "Un área no decidió dentro de su plazo de revisión (SLA) (campo area y slaVence)."),
         new("documento.compartido", "Una versión de un documento quedó compartida con el vínculo."),
         new("documento.por_vencer", "Un documento compartido está por vencer para el vínculo."),
         new("documento.vencido", "Un documento compartido venció para el vínculo.")
@@ -136,7 +138,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
                 or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or ContactosDeVinculoActualizados or CuentaDesignadaPropuesta
                 or CuentaDesignadaAprobada or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
-                or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta
+                or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta or SlaPorVencer or SlaIncumplido
                 => await DeExpedienteAsync(evento, contexto, ct),
             VersionCompartida or VencimientoAvisado or VersionVencida => await DeDocumentoAsync(evento, contexto, ct),
             _ => null
@@ -275,6 +277,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
                 Justificacion = d.Justificacion,
                 Etapa = d.Orden
             }),
+            SlaPorVencer s => ("expediente.sla_por_vencer", Datos(EstadoExpediente.EnRevision) with { Area = expediente?.BuscarArea(s.AreaId)?.Codigo, SlaVence = s.Vence }),
+            SlaIncumplido s => ("expediente.sla_incumplido", Datos(EstadoExpediente.EnRevision) with { Area = expediente?.BuscarArea(s.AreaId)?.Codigo, SlaVence = s.Vence }),
             ExpedienteRechazado r => ("expediente.rechazado", Datos(EstadoExpediente.Rechazado) with
             {
                 Motivos = [.. r.Motivos.Select(m => new MotivoEnEventoDto(m.Codigo, m.TextoAlTercero))],

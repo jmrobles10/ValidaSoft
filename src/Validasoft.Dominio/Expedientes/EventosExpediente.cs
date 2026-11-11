@@ -138,7 +138,8 @@ public sealed record FlujoSeleccionado(
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
     DateTimeOffset Fecha,
-    PlazoDeCargue? PlazoCargue = null);
+    PlazoDeCargue? PlazoCargue = null,
+    int? RecordatorioObservacionesDias = null);
 
 /// <summary>
 /// Fin de la fase de carga: sin requisitos al abrirse (FL-1); con requisitos, cuando todos los obligatorios están

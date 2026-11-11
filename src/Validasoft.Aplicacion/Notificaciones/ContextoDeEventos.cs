@@ -50,6 +50,14 @@ public interface IContextoDeEventos
 
     Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
+    /// <summary>Delegaciones de revisión no revocadas de la empresa (OP-7): quienes las reciben se enteran de lo que le llega al área.</summary>
+    Task<IReadOnlyList<Dominio.Delegaciones.DelegacionDeRevision>> DelegacionesAsync(Guid tenantId, Guid empresaId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<Dominio.Delegaciones.DelegacionDeRevision>>([]);
+
+    /// <summary>Configuración del SLA de la empresa (OP-10); por omisión la de fábrica.</summary>
+    Task<Expedientes.ConfiguracionDeSla> ConfiguracionDeSlaAsync(Guid tenantId, Guid empresaId, CancellationToken ct) =>
+        Task.FromResult(new Expedientes.ConfiguracionDeSla { Id = empresaId });
+
     Task<PreferenciasNotificacion?> PreferenciasAsync(Guid tenantId, Guid usuarioId, CancellationToken ct);
 
     /// <summary>Los vínculos de un tercero con todas las empresas (de cualquier tenant): a quiénes les cambia su ficha (NT-12).</summary>
@@ -124,6 +132,12 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public async Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         ids.Count == 0 ? [] : [.. await Sesion(Tenant(tenantId)).LoadManyAsync<Usuario>(ct, ids.Distinct().ToArray())];
+
+    public async Task<IReadOnlyList<Dominio.Delegaciones.DelegacionDeRevision>> DelegacionesAsync(Guid tenantId, Guid empresaId, CancellationToken ct) =>
+        [.. await Sesion(Tenant(tenantId)).Query<Dominio.Delegaciones.DelegacionDeRevision>().Where(d => d.EmpresaId == empresaId && d.RevocadaEn == null).ToListAsync(ct)];
+
+    public async Task<Expedientes.ConfiguracionDeSla> ConfiguracionDeSlaAsync(Guid tenantId, Guid empresaId, CancellationToken ct) =>
+        await CargarAsync<Expedientes.ConfiguracionDeSla>(Tenant(tenantId), empresaId, ct) ?? new Expedientes.ConfiguracionDeSla { Id = empresaId };
 
     public async Task<IReadOnlyList<Usuario>> UsuariosDelTenantAsync(Guid tenantId, CancellationToken ct) =>
         [.. await Sesion(Tenant(tenantId)).Query<Usuario>().Where(u => u.Activo).ToListAsync(ct)];

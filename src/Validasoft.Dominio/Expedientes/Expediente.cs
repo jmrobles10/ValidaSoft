@@ -35,7 +35,8 @@ public sealed record FlujoParaExpediente(
     PoliticaDevolucion PoliticaDevolucion,
     bool SeparacionDeFunciones,
     IReadOnlyList<VerificacionRequeridaDelFlujo>? Verificaciones = null,
-    PlazoDeCargue? PlazoCargue = null);
+    PlazoDeCargue? PlazoCargue = null,
+    int? RecordatorioObservacionesDias = null);
 
 /// <summary>Copia del flujo que gobierna el expediente.</summary>
 public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
@@ -119,6 +120,30 @@ public sealed class AreaDeExpediente
     public DateTimeOffset? PendienteDesde { get; set; }
 
     public DateTimeOffset? SlaVence { get; set; }
+
+    /// <summary>Cuándo se avisó, en esta ronda, que el plazo del área se acaba (<see cref="SlaPorVencer"/>); nulo si aún no.</summary>
+    public DateTimeOffset? SlaAvisadoEn { get; set; }
+
+    /// <summary>Cuándo se registró, en esta ronda, que el área no decidió a tiempo (<see cref="SlaIncumplido"/>); nulo si aún no.</summary>
+    public DateTimeOffset? SlaIncumplidoEn { get; set; }
+
+    /// <summary>
+    /// El área empieza a contar (activación de su etapa, reenvío del tercero o reapertura): su plazo corre desde <paramref name="fecha"/> y
+    /// los avisos de la ronda anterior quedan atrás.
+    /// </summary>
+    public void IniciarRonda(DateTimeOffset fecha)
+    {
+        PendienteDesde = fecha;
+        ReiniciarSla(fecha);
+    }
+
+    /// <summary>El plazo del área vuelve a contar desde <paramref name="fecha"/> sin cambiar desde cuándo espera (llegó algo nuevo para revisar).</summary>
+    public void ReiniciarSla(DateTimeOffset fecha)
+    {
+        SlaVence = SlaHoras is { } horas ? fecha.AddHours(horas) : null;
+        SlaAvisadoEn = null;
+        SlaIncumplidoEn = null;
+    }
 
     public List<VeredictoRegistrado> Veredictos { get; set; } = [];
 
@@ -240,6 +265,9 @@ public sealed partial class Expediente
     /// <summary>Plazo de cargue copiado del flujo (solo expedientes <c>Inicial</c>, LT-1); nulo = sin plazo.</summary>
     public PlazoDeCargue? PlazoCargue { get; set; }
 
+    /// <summary>Recordatorio automático de observaciones que fijó el flujo (OP-19): nulo = el de la empresa; 0 = apagado; 1 a 60 = cada tantos días.</summary>
+    public int? RecordatorioObservacionesDias { get; set; }
+
     /// <summary>Hasta cuándo tiene el tercero para completar lo que está en sus manos (<c>Abierto</c> u <c>Observado</c>).</summary>
     public DateTimeOffset? PlazoCargueHasta { get; set; }
 
@@ -303,7 +331,7 @@ public sealed partial class Expediente
         // El plazo de cargue solo corre en el expediente inicial (LT-1): renovaciones y actualizaciones tienen los suyos.
         var plazo = datos.Tipo == TipoExpediente.Inicial && flujo.PlazoCargue is { Activo: true } activo ? activo : null;
         simulacion.Emitir(new FlujoSeleccionado(flujo.FlujoId, flujo.FlujoVersionId, flujo.Codigo, flujo.Nombre, flujo.Version, flujo.Origen,
-            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo));
+            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo, flujo.RecordatorioObservacionesDias));
         if (requisitos is { Count: > 0 })
             simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
         if (flujo.Verificaciones is { Count: > 0 } verificaciones)
@@ -496,6 +524,7 @@ public sealed partial class Expediente
         })];
         AreaIds = [.. Etapas.SelectMany(x => x.Areas).Select(a => a.AreaId)];
         PlazoCargue = e.PlazoCargue;
+        RecordatorioObservacionesDias = e.RecordatorioObservacionesDias;
         if (Estado == EstadoExpediente.Abierto)
             IniciarPlazo(AbiertoEn);
         ActualizadoEn = e.Fecha;
@@ -518,8 +547,7 @@ public sealed partial class Expediente
         foreach (var area in etapa.Areas)
         {
             area.Estado = EstadoAreaExpediente.Pendiente;
-            area.PendienteDesde = e.Fecha;
-            area.SlaVence = area.SlaHoras is { } horas ? e.Fecha.AddHours(horas) : null;
+            area.IniciarRonda(e.Fecha);
         }
 
         RecalcularRequisitos(e.Fecha);
@@ -566,7 +594,6 @@ public sealed partial class Expediente
             }
 
             Recalcular(area, e.Fecha);
-            area.PendienteDesde = e.Fecha;
         }
 
         foreach (var requisito in (e.RequisitosReabiertos ?? []).Select(BuscarRequisito).OfType<RequisitoDeExpediente>())
@@ -584,7 +611,18 @@ public sealed partial class Expediente
         Reenvios++;
         UltimaRespuesta = e.Respuesta;
         RecalcularRequisitos(e.Fecha);
+        IniciarRondasPendientes(e.Fecha);
         ActualizadoEn = e.Fecha;
+    }
+
+    /// <summary>
+    /// El expediente vuelve a estar en manos de la empresa (el tercero respondió o la revisión se reanudó): cada área de la etapa activa
+    /// que sigue pendiente empieza una ronda nueva, con su plazo completo (la misma regla con la que se mide el SLA, IF-2).
+    /// </summary>
+    private void IniciarRondasPendientes(DateTimeOffset fecha)
+    {
+        foreach (var area in EtapaActiva?.Areas.Where(a => a.Estado == EstadoAreaExpediente.Pendiente) ?? [])
+            area.IniciarRonda(fecha);
     }
 
     public void Apply(RevisionReanudada e)
@@ -593,6 +631,7 @@ public sealed partial class Expediente
         TerminarPlazo();
         RequisitosObservados = [];
         RecalcularRequisitos(e.Fecha);
+        IniciarRondasPendientes(e.Fecha);
         ActualizadoEn = e.Fecha;
     }
 
@@ -670,7 +709,7 @@ public sealed partial class Expediente
             : EstadoAreaExpediente.Esperando;
 
         if (area.Estado == EstadoAreaExpediente.Pendiente && previo != EstadoAreaExpediente.Pendiente)
-            area.PendienteDesde = fecha;
+            area.IniciarRonda(fecha);
     }
 
     private void AsegurarEnRevision()
@@ -828,6 +867,8 @@ public sealed partial class Expediente
             case ExpedienteDesaprobado e: Apply(e); break;
             case EtapaReabierta e: Apply(e); break;
             case RecordatorioDeObservacionesEnviado e: Apply(e); break;
+            case SlaPorVencer e: Apply(e); break;
+            case SlaIncumplido e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento desconocido para el expediente: {evento.GetType().Name}.");
         }
     }
