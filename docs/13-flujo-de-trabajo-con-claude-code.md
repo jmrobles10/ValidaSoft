@@ -210,6 +210,30 @@ La segunda y tercera semana repiten el patrón con los issues restantes; el vier
 | Revisar en la misma sesión que implementó | Se aprueba a sí misma | Sesión de revisión aparte, modelo distinto |
 | Cambiar un contrato sin tocar 05/11 | El cliente generado y el 11 quedan mentirosos; CI de trazabilidad falla | Regla "mismo PR" del prompt 5.2 |
 
+## 10. Puerta local antes de subir: la réplica del CI en contenedores Linux
+
+Nada se sube sin pasar, **sobre la rama ya rebasada**, la suite completa igual que el CI. Esa suite es `infra/ci-local/`: corre en esta máquina (Windows con Docker Desktop y WSL2) lo mismo que `.github/workflows/ci.yml`, **dentro de contenedores Linux**, así que los errores de entorno (mayúsculas en las rutas, el SDK de .NET de Linux, Node 22, Testcontainers, Playwright en su imagen, servicios sin `localhost`) aparecen aquí y no en GitHub. Decisiones CI-1 a CI-8 en el [registro](decisiones/registro.md); manual completo en [infra/ci-local/README.md](../infra/ci-local/README.md).
+
+```bash
+infra/ci-local/ci-local.sh                         # backend + frontend + e2e sobre esta carpeta (Git Bash)
+.\infra\ci-local\ci-local.ps1                      # lo mismo en PowerShell
+infra/ci-local/ci-local.sh --solo frontend         # un trabajo (backend, frontend, e2e, imagen)
+infra/ci-local/ci-local.sh --rama origin/main      # lo confirmado en una rama o commit, sin tocar carpetas
+infra/ci-local/ci-local.sh --directorio <worktree> --salida <carpeta>
+```
+
+| Qué | Cómo |
+|---|---|
+| Qué corre | **backend** (SDK .NET 10 de Linux): `restore`, `build` en Release con advertencias como error, `test` de dominio, SDK, adaptador e integración (Testcontainers con el socket de Docker de la máquina), `pack` de los SDK. **frontend** (Node 22 y pnpm de `packageManager`): `pnpm install --frozen-lockfile`, `lint`, `typecheck`, `test`, `build`. **e2e**: PostgreSQL, Mailpit y MinIO en una red Docker propia sin puertos del host, la API en un contenedor con .NET + Node, y Playwright en `mcr.microsoft.com/playwright:v<versión de e2e/package.json>-noble` |
+| De dónde salen los comandos | Del propio `ci.yml` (comandos, versiones, rutas de reportes, condiciones). Si el flujo cambia de forma, la corrida termina con `SINCRONÍA con ci.yml` y `pnpm test` falla (`infra/ci-local/sincronia.test.mjs`) hasta actualizar `infra/ci-local/lib/plan.mjs` |
+| Qué prueba | Los archivos de la carpeta tal como están (incluye cambios sin confirmar) o, con `--rama`, lo confirmado. Para subir se corre sobre lo confirmado y rebasado |
+| Qué imprime | Una línea por paso y un resumen: verde o rojo por trabajo, conteos de pruebas y, si algo falla, qué pruebas fallaron y el final del log. Logs completos y reportes (`.trx`, `playwright-report`, `test-results`) en la carpeta de salida (`--salida`; por omisión `<temp>/validasoft-ci-local/<id>`) |
+| Varios agentes a la vez | Cada corrida tiene identificador propio (contenedores, proyecto de compose y carpeta de trabajo); ningún puerto del host. No toca la API del usuario (:5080), Mailpit (:8025), MinIO ni las bases que ya corren. Si una corrida murió sin limpiar: `ci-local.sh --limpiar` |
+| Recursos | Cada contenedor de trabajo ve 4 CPU (lo del runner de GitHub, `--cpus`); sin ese tope el paralelismo de vitest o dotnet usa las 14 de la máquina y los demás agentes se quedan sin CPU |
+| Cuánto tarda | Medido sobre `origin/main`, un trabajo tras otro y con las cachés llenas: **≈ 43 min** (frontend 16 min, backend 10 min, e2e 17 min), todo verde: 1096 pruebas de interfaz, 1232 de .NET y 106 de punta a punta. La primera vez suma las descargas. `--paralelo` acorta el total pero en una máquina compartida da falsos rojos por tiempos: para la puerta de subida, uno tras otro |
+
+Reglas para los agentes: (1) la corrida completa y verde sobre la rama rebasada es la puerta; un informe que dice «no repetí la suite completa» se rechaza; (2) `--solo` y `--e2e-args` sirven para depurar, no como puerta; (3) si falla, se corrige y se repite, no se sube; (4) no se consulta el CI de GitHub (lo vigila el coordinador); (5) la caché de NuGet y de pnpm es compartida y no hace falta tocarla.
+
 ## Decisiones abiertas
 
 1. **Herramienta para los issues**: GitHub Issues + Projects (P-17-2). *Propuesta:* un Project por hito con columnas Pendiente / En sesión / En revisión / Hecho. *Quién decide:* Arquitectura.
