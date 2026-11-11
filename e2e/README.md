@@ -31,6 +31,11 @@ En local las pruebas corren **aisladas** del entorno de desarrollo: base `valida
 | `eventos.spec.ts` | Webhooks firmados en orden; entrega fallida y reenvío; campana y correo a la revisora |
 | `lotes.spec.ts` | Invitación masiva: plantilla subida desde la pantalla, vista previa con errores por fila, lote procesado y terceros invitados; caducidad por plazo de cargue (job con fecha simulada para el tenant de la prueba) y reapertura |
 | `informes.spec.ts` | Informe de estado de expedientes con tiempos por área, filtro y descarga en Excel; exportación del expediente en ZIP; las exportaciones en la auditoría de accesos |
+| `desaprobacion.spec.ts` | Desaprobar (DS-1, DS-2): reabrir una etapa aprobada, volver a la fase inicial, desaprobar un expediente aprobado (vínculo a validación y certificado revocado, otro certificado al aprobarse de nuevo) y que solo el administrador ve las acciones |
+| `reintegro.spec.ts` | Desvincular y reintegrar (DS-3): sin revalidar (estado restituido y certificado de nuevo), revalidando (renovación con todo el flujo) y el vínculo que nunca fue aprobado (el diálogo explica por qué no se puede sin revalidar) |
+| `ciclo-vinculo.spec.ts` | Anular el veredicto de un área (cierre manual de una observación), anular el expediente y abrir otro, anular el vínculo (palabra de confirmación) y desvincular con el expediente abierto |
+| `secuencia.spec.ts` | Varias etapas en secuencia (cada área ve el expediente solo cuando le toca), un área con dos aprobadores y la separación de funciones |
+| `reintento.spec.ts` | Reinicio tras un rechazo (DS-4): el tercero ve los motivos y vuelve a postularse, la espera en días y el flujo que no lo permite (la empresa reabre desde la web) |
 | `navegacion.spec.ts` | Barra superior con «Más» adaptativo a 1536, 1100 y 700 px (sin desplazamiento horizontal, todas las secciones a un clic, activa dentro de «Más»), engranaje de Configuración, cambio de ancho en caliente y modo oscuro; deja capturas en `test-results/navegacion-*.png` |
 
 Los vencimientos se prueban sin mover el reloj: el proveedor declara una fecha de expedición vieja y los avisos o vencimientos que caen en el pasado se ejecutan enseguida.
