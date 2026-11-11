@@ -2,7 +2,7 @@
 
 export const cumplimiento = {
   titulo: 'Cumplimiento',
-  subtitulo: 'Listas restrictivas y estudio SAGRILAFT de los terceros de {{empresa}}.',
+  subtitulo: 'Listas restrictivas y estudio SAGRILAFT de los terceros de {{empresa}}',
   pestanas: { bandeja: 'Por atender', informe: 'Informe SAGRILAFT' },
   informeVistas: { sagrilaft: 'Situación de los terceros', verificaciones: 'Consultas y estudios' },
   tipos: {
