@@ -23,4 +23,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Validasoft.Aplicacion\Validasoft.Aplicacion.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Las pruebas fijan el dibujo de los logos del PDF (PNG y SVG) sin levantar la API. -->
+    <InternalsVisibleTo Include="Validasoft.Integracion.Tests" />
+  </ItemGroup>
 </Project>

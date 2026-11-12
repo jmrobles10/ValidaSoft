@@ -21,6 +21,8 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
     private const double Margen = 48;
     private const double AnchoUtil = Ancho - 2 * Margen;
     private const double AnchoEtiqueta = 170;
+    private const double AltoDelLogo = 34;
+    private const double AnchoMaximoDelLogo = 110;
     private static readonly CultureInfo Invariante = CultureInfo.InvariantCulture;
 
     private static readonly Dictionary<string, string> NombresDePaises = new(StringComparer.Ordinal)
@@ -38,8 +40,14 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         var declaracion = d.Declaracion;
         var pdf = new LienzoPdf();
         var y = Alto - Margen;
-        pdf.Texto(Margen, y - 14, Fuente.HelveticaBold, 16, d.Empresa);
-        pdf.Texto(Margen, y - 30, Fuente.Helvetica, 9, "Declaración jurada de persona expuesta políticamente (PEP)", 0.35);
+        // Encabezado: el logo de la empresa (o el de Validasoft) a la izquierda y, a su lado, el nombre y el título del documento.
+        var logo = LogosDePdf.Resolver(d.LogoUrl);
+        var anchoLogo = Math.Min(AnchoMaximoDelLogo, AltoDelLogo * logo.Proporcion);
+        logo.Dibujar(pdf, Margen, y - AltoDelLogo - 2, anchoLogo, AltoDelLogo);
+        var xTexto = Margen + anchoLogo + 12;
+        var (empresa, tamano) = AjustarNombre(d.Empresa, Ancho - Margen - xTexto);
+        pdf.Texto(xTexto, y - 14, Fuente.HelveticaBold, tamano, empresa);
+        pdf.Texto(xTexto, y - 30, Fuente.Helvetica, 9, "Declaración jurada de persona expuesta políticamente (PEP)", 0.35);
         y -= 42;
         pdf.Linea(Margen, y, Ancho - Margen, y, 0.6);
         y -= 4;
@@ -115,6 +123,21 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         return pdf.Construir($"Declaración jurada PEP {declaracion.Numero}", $"{declaracion.Nombre} · {d.Tercero}", d.Generado, (lienzo, n) =>
             lienzo.Texto(Margen, Margen - 14, Fuente.Helvetica, 7,
                 $"{d.Seccion}, versión {d.Version} del {Fecha(DateOnly.FromDateTime(Exportaciones.Local(d.FechaVersion)))} · generado el {momento} · página {n.Item1} de {n.Item2}", 0.45));
+    }
+
+    /// <summary>El nombre en la línea del encabezado: a 16 pt si cabe, si no a 12 y, si aun así no cabe, cortado con puntos suspensivos.</summary>
+    private static (string Texto, double Tamano) AjustarNombre(string nombre, double disponible)
+    {
+        foreach (var tamano in new[] { 16.0, 12.0 })
+        {
+            if (Medidas.Ancho(nombre, Fuente.HelveticaBold, tamano) <= disponible)
+                return (nombre, tamano);
+        }
+
+        var corte = nombre.Length;
+        while (corte > 1 && Medidas.Ancho(nombre[..corte] + "…", Fuente.HelveticaBold, 12) > disponible)
+            corte--;
+        return (nombre[..corte].TrimEnd() + "…", 12);
     }
 
     private static string Relacion(DeclaracionPep d) => d.RelacionEmpresa switch

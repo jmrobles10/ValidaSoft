@@ -16,8 +16,10 @@ namespace Validasoft.Aplicacion.Ficha;
 
 /// <summary>Lo que lleva el PDF de una declaración jurada PEP: quién la pide, de quién es, de qué versión de la ficha y la declaración tal como se firmó.</summary>
 /// <param name="Rol">Rol de la persona en la información legal (su nombre en español); nulo en la persona natural.</param>
+/// <param name="LogoUrl">Logo de la empresa (data URI PNG o SVG, o URL) para el encabezado; sin él, o si no se puede dibujar, el PDF lleva el de Validasoft.</param>
 public sealed record DatosDelPdfDeDeclaracionPep(
-    string Empresa, string Tercero, string Seccion, int Version, DateTimeOffset FechaVersion, string? Rol, DeclaracionPep Declaracion, DateTimeOffset Generado);
+    string Empresa, string Tercero, string Seccion, int Version, DateTimeOffset FechaVersion, string? Rol, DeclaracionPep Declaracion, DateTimeOffset Generado,
+    string? LogoUrl = null);
 
 /// <summary>PDF de la declaración jurada PEP (implementación en infraestructura, sin dependencias, con el lienzo del certificado).</summary>
 public interface IGeneradorDePdfDeDeclaracionPep
@@ -80,7 +82,7 @@ public static class DeclaracionesPepEndpoints
         var datosEmpresa = await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct);
         var ahora = reloj.GetUtcNow();
         var bytes = generador.Generar(new DatosDelPdfDeDeclaracionPep(datosEmpresa?.Nombre ?? "Validasoft", tercero.Nombre, definicion.Nombre, elegida.Numero,
-            elegida.Fecha, rol, declaracion, ahora));
+            elegida.Fecha, rol, declaracion, ahora, datosEmpresa?.LogoUrl));
         var nombre = NombreDelArchivo(declaracion, ahora);
         return await Exportaciones.EntregarAsync(empresa, contexto, http, reloj,
             new ArchivoExportado(NombreDelTipo, "Pdf", bytes, Exportaciones.TipoPdf, nombre, 1, terceroId.ToString(), tercero.Nombre,
@@ -111,7 +113,7 @@ public static class DeclaracionesPepEndpoints
     /// contenido. Lo usan la descarga del ZIP del expediente (el equivalente de la hoja de vida del SRM) y, de a uno, <see cref="Pdf"/>.
     /// </summary>
     public static IReadOnlyList<(string Nombre, byte[] Contenido)> PdfsDeLaVersion(string seccion, string nombreSeccion, VersionDeSeccion version, string empresa,
-        string tercero, IGeneradorDePdfDeDeclaracionPep generador, DateTimeOffset ahora)
+        string tercero, IGeneradorDePdfDeDeclaracionPep generador, DateTimeOffset ahora, string? logoUrl = null)
     {
         var indices = seccion == CodigosDeSeccion.General ? [(int?)null] : Enumerable.Range(0, JsonDeFicha.Deserializar<DatosLegales>(version.Datos).Personas?.Count ?? 0).Select(i => (int?)i).ToList();
         var pdfs = new List<(string, byte[])>();
@@ -121,7 +123,7 @@ public static class DeclaracionesPepEndpoints
             if (declaracion is null)
                 continue;
             pdfs.Add((NombreDelArchivo(declaracion, ahora), generador.Generar(new DatosDelPdfDeDeclaracionPep(empresa, tercero, nombreSeccion, version.Numero, version.Fecha, rol,
-                declaracion, ahora))));
+                declaracion, ahora, logoUrl))));
         }
 
         return pdfs;

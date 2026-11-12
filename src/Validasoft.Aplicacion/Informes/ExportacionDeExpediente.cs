@@ -112,7 +112,7 @@ public static partial class ExportacionDeExpedienteEndpoints
                     if (ficha?.Versiones.FirstOrDefault(v => v.Numero == requisito.VersionActual!.Numero) is not { } version)
                         continue;
                     foreach (var (nombreArchivo, bytes) in Ficha.DeclaracionesPepEndpoints.PdfsDeLaVersion(requisito.Seccion!, requisito.Nombre, version,
-                                 empresaDatos?.Nombre ?? "Validasoft", tercero?.Nombre ?? string.Empty, declaraciones, ahora))
+                                 empresaDatos?.Nombre ?? "Validasoft", tercero?.Nombre ?? string.Empty, declaraciones, ahora, empresaDatos?.LogoUrl))
                     {
                         var ruta = $"declaraciones-pep/{nombreArchivo}";
                         await EscribirAsync(archivo, ruta, bytes, ct);

@@ -332,6 +332,47 @@ internal sealed class LienzoPdf
         Actual.Append(Invariante, $"q {N(ancho)} 0 0 {N(alto)} {N(x)} {N(y)} cm /{_imagenes[existente].Nombre} Do Q\n");
     }
 
+    private readonly List<string> _estadosGraficos = [];
+    private readonly List<string> _patrones = [];
+
+    /// <summary>
+    /// Operadores PDF ya escritos (un dibujo vectorial, como el logo): se agregan tal cual a la página actual. Quien los arma es
+    /// responsable de abrirlos y cerrarlos con <c>q … Q</c>.
+    /// </summary>
+    public void Crudo(string operadores) => Actual.Append(operadores);
+
+    /// <summary>Nombre del estado gráfico con esa opacidad de relleno y de trazo (<c>/GS1 gs</c>); el mismo estado se registra una sola vez.</summary>
+    public string Opacidad(double relleno, double trazo)
+    {
+        var definicion = $"<< /Type /ExtGState /ca {N(relleno)} /CA {N(trazo)} >>";
+        var indice = _estadosGraficos.IndexOf(definicion);
+        if (indice < 0)
+        {
+            _estadosGraficos.Add(definicion);
+            indice = _estadosGraficos.Count - 1;
+        }
+
+        return $"GS{indice + 1}";
+    }
+
+    /// <summary>
+    /// Degradado lineal como patrón de relleno (<c>/Pattern cs /P1 scn</c>). <paramref name="matriz"/> lleva el espacio del patrón al de la
+    /// página (la transformación vigente al dibujar) y (x0, y0)-(x1, y1) van en ese espacio; las paradas, de 0 a 1 y en orden.
+    /// </summary>
+    public string PatronAxial(double[] matriz, double x0, double y0, double x1, double y1, IReadOnlyList<(double Posicion, byte R, byte G, byte B)> paradas)
+    {
+        static string Color((double Posicion, byte R, byte G, byte B) p) => $"{Preciso(p.R / 255.0)} {Preciso(p.G / 255.0)} {Preciso(p.B / 255.0)}";
+        var tramos = Enumerable.Range(0, paradas.Count - 1)
+            .Select(i => $"<< /FunctionType 2 /Domain [0 1] /C0 [{Color(paradas[i])}] /C1 [{Color(paradas[i + 1])}] /N 1 >>").ToList();
+        var funcion = tramos.Count == 1
+            ? tramos[0]
+            : $"<< /FunctionType 3 /Domain [0 1] /Functions [{string.Join(' ', tramos)}] /Bounds [{string.Join(' ', paradas.Skip(1).Take(paradas.Count - 2).Select(p => N(p.Posicion)))}] " +
+              $"/Encode [{string.Join(' ', tramos.Select(_ => "0 1"))}] >>";
+        _patrones.Add($"<< /Type /Pattern /PatternType 2 /Matrix [{string.Join(' ', matriz.Select(Preciso))}] /Shading << /ShadingType 2 /ColorSpace /DeviceRGB " +
+                      $"/Coords [{N(x0)} {N(y0)} {N(x1)} {N(y1)}] /Function {funcion} /Extend [true true] >> >>");
+        return $"P{_patrones.Count}";
+    }
+
     public void NuevaPagina()
     {
         _paginas.Add(new StringBuilder());
@@ -422,6 +463,19 @@ internal sealed class LienzoPdf
         }
 
         var recursos = xobjetos.Count == 0 ? string.Empty : $" /XObject << {string.Join(' ', xobjetos)} >>";
+        if (_estadosGraficos.Count > 0)
+            recursos += $" /ExtGState << {string.Join(' ', _estadosGraficos.Select((e, i) => $"/GS{i + 1} {e}"))} >>";
+        if (_patrones.Count > 0)
+        {
+            var referencias = new List<string>();
+            foreach (var patron in _patrones)
+            {
+                objetos.Add(patron);
+                referencias.Add($"/P{referencias.Count + 1} {objetos.Count} 0 R");
+            }
+
+            recursos += $" /Pattern << {string.Join(' ', referencias)} >>";
+        }
 
         var hijos = new List<string>();
         foreach (var pagina in _paginas)
@@ -462,6 +516,9 @@ internal sealed class LienzoPdf
     private static string Fecha(DateTimeOffset fecha) => "D:" + fecha.UtcDateTime.ToString("yyyyMMddHHmmss", Invariante) + "Z";
 
     private static string N(double valor) => Math.Round(valor, 2).ToString("0.##", Invariante);
+
+    /// <summary>Número con seis decimales (matrices de transformación, donde dos decimales deforman el dibujo).</summary>
+    internal static string Preciso(double valor) => Math.Round(valor, 6).ToString("0.######", Invariante);
 
     /// <summary>Cadena literal PDF en WinAnsi: escapa <c>\ ( )</c> y escribe lo no ASCII en octal (el flujo queda en ASCII).</summary>
     private static string Cadena(string texto)
