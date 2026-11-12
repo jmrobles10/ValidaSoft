@@ -108,7 +108,10 @@ public static class SecretosEndpoints
     public const string TipoSecretoWebhook = "secreto-webhook";
     public const string TipoCuentaBancaria = "cuenta-bancaria";
 
-    /// <summary>Usuario y clave de los proveedores de listas de cada empresa: cifrados con la clave del grupo (CU-20).</summary>
+    /// <summary>
+    /// Usuario y clave de los proveedores de listas: los de cada empresa (Stradata, Compliance) cifrados con la clave del grupo (CU-20) y la cuenta
+    /// de la plataforma (Infolaft, G-2) con la clave maestra.
+    /// </summary>
     public const string TipoCredencialDeListas = "credenciales-listas";
 
     /// <summary>El número de cuenta congelado en los eventos de un vínculo (PI-11): se re-cifra con la clave del grupo.</summary>
@@ -240,6 +243,28 @@ public static class SecretosEndpoints
             var (eventos, vinculos) = await recifrador.RecorrerAsync(tenantId, simular, ct);
             enEventos = Sumar(enEventos, eventos);
             enVinculos = Sumar(enVinculos, vinculos);
+        }
+
+        // La cuenta de la plataforma con los proveedores de listas (G-2) se cifra con la clave maestra, sin clave de grupo.
+        await using (var global = sesiones.Global())
+        {
+            if (await global.LoadAsync<ListasRestrictivasDePlataforma>(ListasRestrictivasDePlataforma.IdUnico, ct) is { } cuentaDeListas)
+            {
+                var cambioCuenta = false;
+                foreach (var credenciales in cuentaDeListas.Credenciales.Values)
+                {
+                    if (listas.Procesar(credenciales.ClaveProtegida, protector, simular) is not { } recifrada)
+                        continue;
+                    credenciales.ClaveProtegida = recifrada;
+                    cambioCuenta = true;
+                }
+
+                if (cambioCuenta)
+                {
+                    global.Store(cuentaDeListas);
+                    await global.SaveChangesAsync(ct);
+                }
+            }
         }
 
         await using (var boveda = sesiones.Boveda())

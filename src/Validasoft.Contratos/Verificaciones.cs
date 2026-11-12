@@ -95,11 +95,13 @@ public sealed record MonitoreoListasDto(
 
 /// <summary>
 /// Proveedor de listas tal como lo ve el administrador: si es real, si la instalación lo habilitó, y las credenciales de la
-/// empresa (la clave nunca vuelve: solo si está configurada y sus últimos 4 caracteres).
+/// empresa (la clave nunca vuelve: solo si está configurada y sus últimos 4 caracteres). Con <see cref="DeLaPlataforma"/> (Infolaft, G-2)
+/// la cuenta es de la plataforma: <see cref="Configurado"/> dice si la plataforma ya la configuró, la empresa no ve usuario, clave, URL,
+/// plan ni modo y <see cref="CuotaMensual"/> es la cuota de búsquedas al mes que Plataforma fijó para cada empresa.
 /// </summary>
 public sealed record ProveedorListasDto(
     string Nombre, bool Real, bool Principal, bool HabilitadoEnInstalacion, bool Configurado, string? Usuario, string? UltimosCuatroClave,
-    string? UrlBase, string? Plan, int? CuotaMensual, string? ModoBusqueda);
+    string? UrlBase, string? Plan, int? CuotaMensual, string? ModoBusqueda, bool DeLaPlataforma = false);
 
 /// <summary>Consumo del mes con el proveedor (búsquedas = personas consultadas).</summary>
 public sealed record UsoListasDto(string Mes, string Proveedor, int Consultas, int Busquedas, int ConCoincidencias, int? CuotaMensual);
@@ -124,6 +126,33 @@ public sealed record ActualizarListasRestrictivasDto(string? Proveedor = null, C
 /// </summary>
 public sealed record CredencialesListasDto(string Proveedor, string? Usuario = null, string? Clave = null, string? UrlBase = null, string? Plan = null,
     int? CuotaMensual = null, string? ModoBusqueda = null);
+
+// ---------- Cuenta de la plataforma con los proveedores de listas (G-2, PP-5) ----------
+
+/// <summary>
+/// Un proveedor que contrata la plataforma para todos los clientes (hoy, Infolaft): si la instalación lo habilitó, si su cuenta ya está
+/// configurada y sus datos sin la clave (solo sus últimos 4). <see cref="CuotaMensualPorEmpresa"/>: búsquedas al mes de cada empresa (nulo =
+/// sin tope). <see cref="EmpresasConCredencialesPropias"/>: empresas que aún guardan credenciales propias de este proveedor (de antes de G-2) y
+/// que la migración recoge.
+/// </summary>
+public sealed record ProveedorDePlataformaDto(
+    string Nombre, bool HabilitadoEnInstalacion, bool Configurado, string? Usuario, string? UltimosCuatroClave, string? UrlBase, string? Plan,
+    int? CuotaMensualPorEmpresa, string? ModoBusqueda, DateTimeOffset? ActualizadasEn, int EmpresasConCredencialesPropias);
+
+/// <summary>Cuentas de la plataforma con los proveedores de listas restrictivas, quién las cambió y cuándo.</summary>
+public sealed record ListasDePlataformaDto(IReadOnlyList<ProveedorDePlataformaDto> Proveedores, DateTimeOffset? ActualizadaEn, string? ActualizadaPor);
+
+/// <summary>Crea, cambia o quita (<c>Clave</c> vacía) la cuenta de un proveedor de la plataforma; la clave solo se escribe, nunca vuelve.</summary>
+public sealed record ActualizarListasDePlataformaDto(CredencialesListasDto Credenciales);
+
+/// <summary>
+/// Resultado de la migración de las credenciales propias de las empresas a la cuenta de la plataforma: si tomó una (la primera válida), de qué
+/// empresa, a cuántas empresas se las quitó y cuántas tenían una que no se pudo leer. Con <see cref="CuotasQueNoSeHeredaron"/> avisa de las
+/// cuotas propias que había (la cuota de ahora la fija Plataforma para todas).
+/// </summary>
+public sealed record ResultadoMigracionListasDto(
+    string Proveedor, bool CuentaTomada, Guid? EmpresaDeOrigen, int EmpresasConCredenciales, int EmpresasLimpiadas, int NoLegibles,
+    int CuotasQueNoSeHeredaron);
 
 // ---------- Informe SAGRILAFT (VE-14) ----------
 

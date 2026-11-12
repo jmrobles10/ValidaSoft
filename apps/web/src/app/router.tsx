@@ -56,6 +56,10 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaSecretos').then((m) => ({ Component: m.PaginaSecretos })),
         },
         {
+          path: 'listas',
+          lazy: () => import('../features/plataforma/PaginaListasPlataforma').then((m) => ({ Component: m.PaginaListasPlataforma })),
+        },
+        {
           path: 'mi-cuenta',
           lazy: () => import('../features/cuenta/PaginaMiCuenta').then((m) => ({ Component: m.PaginaMiCuenta })),
         },

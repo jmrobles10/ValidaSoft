@@ -1,4 +1,4 @@
-import type { CredencialesListasDto, ModoBusquedaListas, ProveedorListasDto } from '@validasoft/api-client';
+import type { CredencialesListasDto, ModoBusquedaListas, ProveedorDePlataformaDto, ProveedorListasDto } from '@validasoft/api-client';
 
 /** Formulario de credenciales de un proveedor real (la clave nunca llega del servidor: vacío = conservar la actual). */
 export interface BorradorCredenciales {
@@ -17,6 +17,18 @@ export function borradorCredenciales(p: ProveedorListasDto): BorradorCredenciale
     urlBase: p.urlBase ?? '',
     plan: p.plan ?? '',
     cuotaMensual: p.cuotaMensual === null ? '' : String(p.cuotaMensual),
+    modoBusqueda: p.modoBusqueda === 'PorDocumento' ? 'PorDocumento' : 'PorNombre',
+  };
+}
+
+/** El formulario de la cuenta de la plataforma (G-2): la cuota es la de cada empresa. */
+export function borradorDePlataforma(p: ProveedorDePlataformaDto): BorradorCredenciales {
+  return {
+    usuario: p.usuario ?? '',
+    clave: '',
+    urlBase: p.urlBase ?? '',
+    plan: p.plan ?? '',
+    cuotaMensual: p.cuotaMensualPorEmpresa === null ? '' : String(p.cuotaMensualPorEmpresa),
     modoBusqueda: p.modoBusqueda === 'PorDocumento' ? 'PorDocumento' : 'PorNombre',
   };
 }

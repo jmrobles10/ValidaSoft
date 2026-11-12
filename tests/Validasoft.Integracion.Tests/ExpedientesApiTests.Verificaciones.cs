@@ -198,25 +198,30 @@ public sealed partial class ExpedientesApiTests
     }
 
     [Fact]
-    public async Task La_empresa_configura_infolaft_con_clave_de_solo_escritura_y_ve_su_consumo_y_el_informe_sagrilaft()
+    public async Task La_empresa_ve_Infolaft_como_cuenta_de_la_plataforma_configura_solo_los_proveedores_del_legado_y_ve_su_consumo_y_el_informe_sagrilaft()
     {
         var e = await PrepararAsync();
         var inicial = await ApiAsync<ListasRestrictivasConfigDto>("GET", "/api/v1/configuracion/listas-restrictivas", Admin(e), null, 200);
         inicial.ProveedorEfectivo.ShouldBe("Simulado");
+        // Infolaft es de la plataforma (G-2): la empresa no ve usuario, clave, URL, plan ni modo; no los carga ni los cambia.
         var infolaft = inicial.Proveedores.First();
-        (infolaft.Nombre, infolaft.Principal, infolaft.HabilitadoEnInstalacion, infolaft.Configurado).ShouldBe(("Infolaft", true, false, false));
+        (infolaft.Nombre, infolaft.Principal, infolaft.HabilitadoEnInstalacion, infolaft.DeLaPlataforma).ShouldBe(("Infolaft", true, false, true));
+        (infolaft.Usuario, infolaft.UltimosCuatroClave, infolaft.UrlBase, infolaft.Plan, infolaft.ModoBusqueda).ShouldBe(((string?)null, (string?)null, (string?)null, (string?)null, (string?)null));
+        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/configuracion/listas-restrictivas", Admin(e),
+            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Infolaft", "sinco-norte", "clave-super-secreta-9876")), 422))).ShouldBe("credenciales-de-plataforma");
 
+        // Stradata y Compliance (el legado) siguen por empresa, con la clave de solo escritura.
         var conClave = await ApiAsync("PUT", "/api/v1/configuracion/listas-restrictivas", Admin(e),
-            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Infolaft", "sinco-norte", "clave-super-secreta-9876", Plan: "Empresarial",
+            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Stradata", "sinco-norte", "clave-super-secreta-9876", Plan: "Empresarial",
                 CuotaMensual: 500)), 200);
         var texto = await conClave.ReadAsTextAsync();
         texto.ShouldNotContain("clave-super-secreta");
         var configurado = JsonSerializer.Deserialize<ListasRestrictivasConfigDto>(texto, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
-        var conInfolaft = configurado.Proveedores.Single(p => p.Nombre == "Infolaft");
-        (conInfolaft.Configurado, conInfolaft.Usuario, conInfolaft.UltimosCuatroClave, conInfolaft.CuotaMensual, conInfolaft.ModoBusqueda)
-            .ShouldBe((true, "sinco-norte", "9876", 500, "PorNombre"));
-        // La instalación de pruebas no habilita proveedores reales: nunca se llama a Infolaft.
-        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/configuracion/listas-restrictivas", Admin(e), new ActualizarListasRestrictivasDto("Infolaft"), 422)))
+        var conStradata = configurado.Proveedores.Single(p => p.Nombre == "Stradata");
+        (conStradata.Configurado, conStradata.Usuario, conStradata.UltimosCuatroClave, conStradata.CuotaMensual, conStradata.ModoBusqueda, conStradata.DeLaPlataforma)
+            .ShouldBe((true, "sinco-norte", "9876", 500, "PorNombre", false));
+        // La instalación de pruebas no habilita proveedores reales: nunca se llama a uno real.
+        (await CodigoAsync(await ApiAsync("PUT", "/api/v1/configuracion/listas-restrictivas", Admin(e), new ActualizarListasRestrictivasDto("Stradata"), 422)))
             .ShouldBe("proveedor-no-habilitado");
         var auditoria = await ApiAsync("GET", "/api/v1/auditoria?entidad=ListasRestrictivasEmpresa", Admin(e), null, 200);
         (await auditoria.ReadAsTextAsync()).ShouldNotContain("clave-super-secreta");

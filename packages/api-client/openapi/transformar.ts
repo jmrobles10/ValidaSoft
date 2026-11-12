@@ -85,6 +85,10 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/plataforma/sesiones': 'crearSesionPlataforma',
   'GET /api/v1/plataforma/secretos': 'obtenerEstadoSecretos',
   'POST /api/v1/plataforma/secretos/recifrar': 'recifrarSecretos',
+  // Cuenta de la plataforma con los proveedores de listas restrictivas (G-2): Infolaft es uno solo para todos los clientes.
+  'GET /api/v1/plataforma/listas-restrictivas': 'obtenerListasDePlataforma',
+  'PUT /api/v1/plataforma/listas-restrictivas': 'actualizarListasDePlataforma',
+  'POST /api/v1/plataforma/listas-restrictivas/migrar-credenciales': 'migrarCredencialesDeListas',
   'POST /api/v1/plataforma/tenants/{tenantId}/empresas/{empresaId}/plan-ia/probar-llave': 'probarLlaveIaEmpresa',
   'GET /api/v1/plataforma/textos-legales/aviso': 'obtenerAvisoPlataforma',
   'PUT /api/v1/plataforma/textos-legales/aviso': 'publicarAvisoPlataforma',

@@ -264,7 +264,7 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task Las_credenciales_de_listas_se_cifran_con_la_clave_del_grupo_y_el_recifrado_migra_lo_guardado_con_la_clave_de_la_instalacion()
+    public async Task Las_credenciales_de_listas_de_una_empresa_se_cifran_con_la_clave_del_grupo_y_el_recifrado_migra_lo_guardado_con_la_clave_de_la_instalacion()
     {
         var (token, _, _) = await SesionDeOperadorAsync("op-5");
         var operador = new Credencial(null, Bearer: token);
@@ -276,11 +276,11 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
 
         // Lo que la empresa guarda por la API ya queda con la clave de su grupo y la API nunca devuelve la clave.
         var respuesta = await EnviarAsync("PUT", "/api/v1/configuracion/listas-restrictivas", empresa,
-            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Infolaft", "sinco-norte", "clave-super-secreta-9876")), esperado: 200);
+            new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Stradata", "sinco-norte", "clave-super-secreta-9876")), esperado: 200);
         (await respuesta.ReadAsTextAsync()).ShouldNotContain("clave-super-secreta");
         await using (var consulta = Store.QuerySession(grupoId.ToString("N")))
         {
-            var guardada = (await consulta.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Infolaft"].ClaveProtegida;
+            var guardada = (await consulta.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Stradata"].ClaveProtegida;
             guardada.ShouldStartWith("vs2.");
             guardada.ShouldNotContain("secreta");
             protector.DesprotegerDeGrupo(grupoId, guardada).ShouldBe("clave-super-secreta-9876");
@@ -291,7 +291,7 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         await using (var sesion = Store.LightweightSession(grupoId.ToString("N")))
         {
             var configuracion = (await sesion.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!;
-            configuracion.Credenciales["Infolaft"].ClaveProtegida = protector.Proteger("clave-legada-1234");
+            configuracion.Credenciales["Stradata"].ClaveProtegida = protector.Proteger("clave-legada-1234");
             sesion.Store(configuracion);
             await sesion.SaveChangesAsync();
         }
@@ -303,9 +303,113 @@ public sealed class PlataformaApiTests(ApiFixture fixture)
         despues.PorTipo.Single(t => t.Tipo == "credenciales-listas").Recifrados.ShouldBeGreaterThanOrEqualTo(1);
 
         await using var releida = Store.QuerySession(grupoId.ToString("N"));
-        var migrada = (await releida.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Infolaft"].ClaveProtegida;
+        var migrada = (await releida.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales["Stradata"].ClaveProtegida;
         migrada.ShouldStartWith($"vs2.{despues.ClaveVigente}.");
         protector.DesprotegerDeGrupo(grupoId, migrada).ShouldBe("clave-legada-1234");
+    }
+
+    [Fact]
+    public async Task La_cuenta_de_Infolaft_es_de_la_plataforma_se_cifra_con_la_clave_maestra_la_empresa_no_la_ve_y_la_migracion_recoge_la_que_tenia_una_empresa()
+    {
+        var (token, _, _) = await SesionDeOperadorAsync("op-6");
+        var operador = new Credencial(null, Bearer: token);
+        var slug = "g" + Guid.NewGuid().ToString("N")[..10];
+        var alta = await EnviarAsync<TenantCreadoDto>("POST", "/api/v1/plataforma/tenants", operador, AltaCompleta(slug, RSA.Create(2048), $"c.{slug}@a.co"));
+        var grupoId = alta.Tenant.Id;
+        var empresa = new Credencial(alta.ApiKeyAdministrador.Valor, alta.Empresa!.Id);
+        var protector = Host.Services.GetRequiredService<Validasoft.Aplicacion.Comun.IProtectorDeSecretos>();
+        const string url = "/api/v1/plataforma/listas-restrictivas";
+        var quitar = new ActualizarListasDePlataformaDto(new CredencialesListasDto("Infolaft", Clave: ""));
+
+        try
+        {
+            // La plataforma parte sin cuenta de Infolaft; la empresa la ve como «de la plataforma» y sin configurar.
+            await EnviarAsync<ListasDePlataformaDto>("PUT", url, operador, quitar, esperado: 200);
+            var vacia = (await EnviarAsync<ListasDePlataformaDto>("GET", url, operador, esperado: 200)).Proveedores.Single();
+            (vacia.Nombre, vacia.Configurado, vacia.Usuario).ShouldBe(("Infolaft", false, (string?)null));
+            var deLaEmpresa = (await EnviarAsync<ListasRestrictivasConfigDto>("GET", "/api/v1/configuracion/listas-restrictivas", empresa, esperado: 200)).Proveedores.First();
+            (deLaEmpresa.Nombre, deLaEmpresa.DeLaPlataforma, deLaEmpresa.Configurado).ShouldBe(("Infolaft", true, false));
+
+            // Una empresa con la cuenta que cargó antes de G-2 (cifrada con la clave de su grupo, con una cuota propia).
+            await using (var sesion = Store.LightweightSession(grupoId.ToString("N")))
+            {
+                var configuracion = Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa.Nueva(alta.Empresa.Id);
+                configuracion.Credenciales["Infolaft"] = new Validasoft.Dominio.Expedientes.CredencialesDeListas
+                {
+                    Usuario = "sinco-norte", ClaveProtegida = protector.ProtegerDeGrupo(grupoId, "clave-heredada-5555"), UltimosCuatroClave = "5555", CuotaMensual = 300,
+                    ModoBusqueda = Validasoft.Dominio.Expedientes.ModoBusquedaListas.PorDocumento
+                };
+                sesion.Store(configuracion);
+                await sesion.SaveChangesAsync();
+            }
+
+            (await EnviarAsync<ListasDePlataformaDto>("GET", url, operador, esperado: 200)).Proveedores.Single().EmpresasConCredencialesPropias.ShouldBeGreaterThanOrEqualTo(1);
+
+            // La migración toma la primera cuenta válida, la cifra con la clave maestra y quita las propias de las empresas.
+            var migracion = await EnviarAsync<ResultadoMigracionListasDto>("POST", url + "/migrar-credenciales", operador, esperado: 200);
+            (migracion.CuentaTomada, migracion.EmpresaDeOrigen, migracion.NoLegibles).ShouldBe((true, (Guid?)alta.Empresa.Id, 0));
+            migracion.EmpresasLimpiadas.ShouldBeGreaterThanOrEqualTo(1);
+            migracion.CuotasQueNoSeHeredaron.ShouldBeGreaterThanOrEqualTo(1);
+            var configurada = await EnviarAsync<ListasDePlataformaDto>("GET", url, operador, esperado: 200);
+            var infolaft = configurada.Proveedores.Single();
+            (infolaft.Configurado, infolaft.Usuario, infolaft.UltimosCuatroClave, infolaft.CuotaMensualPorEmpresa, infolaft.ModoBusqueda, infolaft.EmpresasConCredencialesPropias)
+                .ShouldBe((true, "sinco-norte", "5555", (int?)null, "PorDocumento", 0));
+            configurada.ActualizadaPor.ShouldNotBeNullOrWhiteSpace();
+
+            await using (var consulta = Store.QuerySession())
+            {
+                var guardada = (await consulta.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasDePlataforma>(Validasoft.Dominio.Expedientes.ListasRestrictivasDePlataforma.IdUnico))!
+                    .Credenciales["Infolaft"].ClaveProtegida;
+                guardada.ShouldStartWith($"vs1.{protector.ClaveVigente}.");
+                guardada.ShouldNotContain("heredada");
+                protector.Desproteger(guardada).ShouldBe("clave-heredada-5555");
+            }
+
+            await using (var propia = Store.QuerySession(grupoId.ToString("N")))
+                (await propia.LoadAsync<Validasoft.Dominio.Expedientes.ListasRestrictivasEmpresa>(alta.Empresa.Id))!.Credenciales.ShouldNotContainKey("Infolaft");
+
+            // La empresa solo sabe que está disponible (y su cuota); nada de usuario, clave, URL, plan ni modo, ni puede cargar los suyos.
+            var configuracionDeLaEmpresa = await EnviarAsync("GET", "/api/v1/configuracion/listas-restrictivas", empresa, esperado: 200);
+            var textoDeLaEmpresa = await configuracionDeLaEmpresa.ReadAsTextAsync();
+            textoDeLaEmpresa.ShouldNotContain("sinco-norte");
+            textoDeLaEmpresa.ShouldNotContain("5555");
+            var visto = JsonSerializer.Deserialize<ListasRestrictivasConfigDto>(textoDeLaEmpresa, new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Proveedores.First();
+            (visto.Nombre, visto.DeLaPlataforma, visto.Configurado, visto.Usuario, visto.UltimosCuatroClave, visto.UrlBase, visto.Plan, visto.ModoBusqueda)
+                .ShouldBe(("Infolaft", true, true, (string?)null, (string?)null, (string?)null, (string?)null, (string?)null));
+            var rechazo = await EnviarAsync("PUT", "/api/v1/configuracion/listas-restrictivas", empresa,
+                new ActualizarListasRestrictivasDto(Credenciales: new CredencialesListasDto("Infolaft", "otro", "clave-otra-1234")), esperado: 422);
+            (await rechazo.ReadAsTextAsync()).ShouldContain("credenciales-de-plataforma");
+
+            // Repetir la migración no cambia nada.
+            var otraVez = await EnviarAsync<ResultadoMigracionListasDto>("POST", url + "/migrar-credenciales", operador, esperado: 200);
+            (otraVez.CuentaTomada, otraVez.EmpresasConCredenciales, otraVez.EmpresasLimpiadas).ShouldBe((false, 0, 0));
+
+            // Plataforma la cambia (clave nueva y la cuota por empresa): la clave nunca vuelve y cada empresa ve su cuota.
+            var cambio = await EnviarAsync("PUT", url, operador,
+                new ActualizarListasDePlataformaDto(new CredencialesListasDto("Infolaft", Clave: "clave-nueva-7777", Plan: "Empresarial", CuotaMensual: 800)), esperado: 200);
+            (await cambio.ReadAsTextAsync()).ShouldNotContain("clave-nueva");
+            var cambiada = (await EnviarAsync<ListasDePlataformaDto>("GET", url, operador, esperado: 200)).Proveedores.Single();
+            (cambiada.Usuario, cambiada.UltimosCuatroClave, cambiada.Plan, cambiada.CuotaMensualPorEmpresa).ShouldBe(("sinco-norte", "7777", "Empresarial", 800));
+            (await EnviarAsync<ListasRestrictivasConfigDto>("GET", "/api/v1/configuracion/listas-restrictivas", empresa, esperado: 200)).Proveedores.First().CuotaMensual.ShouldBe(800);
+            (await EnviarAsync("PUT", url, operador, new ActualizarListasDePlataformaDto(new CredencialesListasDto("Stradata", "x", "clave-1234")), esperado: 422)).ShouldNotBeNull();
+
+            // El re-cifrado de la clave maestra la cuenta entre los secretos y la deja intacta.
+            var secretos = await EnviarAsync<EstadoDeSecretosDto>("GET", "/api/v1/plataforma/secretos", operador, esperado: 200);
+            var tipo = secretos.PorTipo.Single(t => t.Tipo == "credenciales-listas");
+            tipo.Vigentes.ShouldBeGreaterThanOrEqualTo(1);
+
+            // Nada de esto dejó una clave en la auditoría.
+            await using var auditoria = Store.QuerySession();
+            var registros = await auditoria.Query<RegistroDeCambioDeConfiguracion>().Where(r => r.Entidad == "ListasRestrictivasDePlataforma").ToListAsync();
+            registros.Count.ShouldBeGreaterThanOrEqualTo(2);
+            var serializado = JsonSerializer.Serialize(registros);
+            serializado.ShouldNotContain("heredada");
+            serializado.ShouldNotContain("clave-nueva");
+        }
+        finally
+        {
+            await EnviarAsync<ListasDePlataformaDto>("PUT", url, operador, quitar, esperado: 200);
+        }
     }
 
     private Task<PaginaDto<GrupoDto>> GruposAsync(Credencial credencial, string? q = null, int? limite = null, string? cursor = null)

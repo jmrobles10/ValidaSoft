@@ -19,6 +19,7 @@ const PESTANAS = [
   { clave: 'operadores', ruta: '/plataforma/operadores' },
   { clave: 'ingresos', ruta: '/plataforma/ingresos' },
   { clave: 'secretos', ruta: '/plataforma/secretos' },
+  { clave: 'listas', ruta: '/plataforma/listas' },
 ] as const;
 
 /** `/`: la sesión de un operador de Plataforma va a su consola; la de una persona de un tenant, a su empresa. */
