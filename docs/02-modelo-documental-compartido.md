@@ -455,7 +455,7 @@ erDiagram
 
 ### E9 — Bloqueo y desbloqueo (B-5)
 1. A bloquea a T por sanción: certificado de A `Suspendido` (consulta `bloqueado: true, motivo: Bloqueo`), compartición con A congelada, `estado_previo_al_bloqueo = Activo`.
-2. Dos meses después A desbloquea: la compartición se reanuda (se comparte la versión actual del RUT, que cambió entre tanto ⇒ revalidación) y el certificado vuelve a `Vigente` con `ConPendientes` informativo hasta revalidar; si la Cámara venció durante el bloqueo, se abre `Renovacion` y el vínculo queda `EnValidacion`.
+2. Dos meses después A desbloquea: la compartición se reanuda (se comparte la versión actual del RUT, que cambió entre tanto ⇒ revalidación) y el certificado vuelve a `Vigente` con `ConPendientes` informativo hasta revalidar; si la Cámara venció durante el bloqueo, se abre `Renovacion` y el vínculo queda `EnValidacion`. *Implementado (PP-9):* al desbloquear, a mano o por fecha, un mensaje `RevalidarVinculoDesbloqueado` restituye la compartición con la versión actual y abre la actualización si lo aprobado difiere de ella: el vínculo queda «En revisión» y el certificado «En verificación».
 
 ### E10 — Cambio de representante legal (esc. 6)
 1. T sube Cámara nueva; la IA extrae otro representante (confianza 0,97) ⇒ hecho `campos_criticos_cambiados = [representanteLegal]` + `CambioDeRelacionDetectado`. Todas las empresas revalidan la Cámara (crítico canónico).

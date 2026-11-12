@@ -33,10 +33,13 @@ en `AplicaSarlaft`, ningún cliente pudo seleccionarla. Luego el esfuerzo se fue
 
 - **Proveedor principal de listas para Sinco: Infolaft.** Se implementa detrás de `IVerificadorDeListas` (H7), con el
   proveedor simulado para desarrollo y pruebas y los demás adaptadores (Stradata, Compliance) opcionales.
-- **Credenciales por empresa.** La configuración de cada empresa y proveedor guarda usuario, clave cifrada con
-  `IProtectorDeSecretos` (como la API key de OpenAI), URL, plan y cuota mensual opcional. La clave nunca vuelve en
-  claro; se muestran solo los últimos cuatro caracteres. Es por empresa aunque hoy la suscripción sea de Sinco, para que
-  otro cliente pueda traer su propia cuenta.
+- **Cuenta única de la plataforma (G-2, PP-4…PP-8).** Infolaft es uno solo para todos los clientes: la cuenta es de Sinco y la
+  configura Plataforma en su consola (pestaña «Listas restrictivas»): usuario, clave cifrada con la clave maestra
+  (`IProtectorDeSecretos.Proteger`, como la API key de OpenAI), URL, plan, **cuota mensual de cada empresa** y modo de
+  búsqueda. La clave nunca vuelve en claro; se muestran solo los últimos cuatro caracteres. Las empresas no ven ni cargan
+  estas credenciales: solo si Infolaft está disponible y su cuota. Cada empresa conserva su consumo (VE-11) para atribuirle
+  el costo. Stradata y Compliance, las alternativas del legado, siguen por empresa. Lo que una empresa había cargado antes
+  se recoge con la migración de la consola.
 - **Cuándo consultar:**
   - al activarse la verificación del expediente, después de la invitación y del consentimiento del tercero (ADR-0009):
     al tercero, a sus representantes y socios de la ficha, y a los PEP;
@@ -87,7 +90,7 @@ en `AplicaSarlaft`, ningún cliente pudo seleccionarla. Luego el esfuerzo se fue
 
 1. ~~¿Infolaft será el proveedor único para todos los clientes de Sinco o cada cliente elige el suyo?~~ **Resuelta (G-2,
    2026-11-11): uno solo para todos los clientes, con la cuenta de la plataforma**; no se adopta la propuesta «por
-   empresa». Las credenciales pasan de cada empresa a la configuración de la plataforma (pendiente de implementar; el
+   empresa». Las credenciales pasaron de cada empresa a la configuración de la plataforma (implementado en PP-4…PP-8; el
    consumo por empresa se conserva para atribuir el costo).
 2. ~~¿Se usa en el SRM durante la coexistencia (paso 6) o solo desde Validasoft?~~ **Resuelta (G-4):** solo desde
    Validasoft; la integración con el SRM llega después de probar Validasoft solo.
