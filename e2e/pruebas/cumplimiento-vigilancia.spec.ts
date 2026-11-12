@@ -190,7 +190,7 @@ test('el monitoreo periódico de un vínculo activo reconsulta solo y, cuando el
   const resultado = await revisarVerificaciones(e, desdeAhora(31));
   expect(resultado.monitoreos).toBe(1);
   await paginaVinculo.reload();
-  await expect(monitoreo).toContainText(`${enPantalla(31)}`);
+  await expect(monitoreo).toContainText(enPantalla(31));
   await expect(monitoreo).toContainText('Sistema');
   await expect(monitoreo).toContainText(enPantalla(61));
   await expect(monitoreo).toContainText('Ninguna persona aparece en las listas consultadas.');

@@ -190,7 +190,7 @@ test('Ana exime a un tercero de la Cámara de comercio con su motivo: el expedie
   await aprobarArea(ruben, 'Compras');
   const olga = await abrirEmbebido(await paginaDe(browser), e, e.olga, e.norte);
   await abrirDesdeBandeja(olga, nombre, 'Cumplimiento');
-  await expect(regionDeArea(olga, 'Cumplimiento')).toContainText(`${CAMARA}`);
+  await expect(regionDeArea(olga, 'Cumplimiento')).toContainText(CAMARA);
   await expect(regionDeArea(olga, 'Cumplimiento')).toContainText('Eximido');
   await aprobarArea(olga, 'Cumplimiento');
   await expect(olga.getByText(/Todas las áreas aprobaron el .* y el vínculo quedó activo\./)).toBeVisible();
