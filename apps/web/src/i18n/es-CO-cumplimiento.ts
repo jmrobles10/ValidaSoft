@@ -241,8 +241,11 @@ export const cumplimiento = {
   monitoreo: {
     titulo: 'Monitoreo de listas',
     ayuda: 'El vínculo activo se reconsulta cada {{dias}} días; lo ya descartado no se vuelve a pedir.',
+    estado: 'Estado',
+    ultima: 'Última consulta',
     proxima: 'Próxima consulta',
     detenido: 'Detenido (el vínculo no está activo).',
+    confirmada: 'Confirmaste una coincidencia: el vínculo sigue activo hasta que un administrador decida si lo bloquea o lo desvincula.',
   },
   informe: {
     desde: 'Desde',

@@ -312,9 +312,9 @@ La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del pro
   embebido.~~ **Hecha en el sandbox** (`e2e/pruebas/integracion-sandbox.spec.ts`, 2026-11-11).
 - ~~**Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación → certificado.~~ **Hecha** (`e2e/pruebas/alta-empresa-certificacion.spec.ts`): grupo y empresa desde la consola, configuración mínima, invitación, carga, aprobación y certificado verificable en `/verificar`.
 - ~~**«Volver a postularme» de punta a punta:**~~ **Hecho** (`e2e/pruebas/volver-a-postularme.spec.ts`): rechazo con documentos, motivo visible para el tercero, nueva revisión, versión corregida, aprobación de las dos áreas y certificado.
-- **IA con el proveedor simulado:** cupo agotado y escalamiento.
-- **Aprobación de revalidaciones en lote** y eximir un requisito.
-- **Verificaciones:** coincidencia confirmada (rechazo), estudio vencido y monitoreo.
+- ~~**IA con el proveedor simulado:** cupo agotado y escalamiento.~~ **Hecha** (`e2e/pruebas/ia-cupo-y-escalamiento.spec.ts`, HI-1, HI-4).
+- ~~**Aprobación de revalidaciones en lote** y eximir un requisito.~~ **Hecha** (`e2e/pruebas/revalidaciones-y-exencion.spec.ts`, HI-4).
+- ~~**Verificaciones:** coincidencia confirmada (rechazo), estudio vencido y monitoreo.~~ **Hecha** (`e2e/pruebas/cumplimiento-vigilancia.spec.ts`, HI-2, HI-3, HI-4): encontró que el monitoreo no se podía ver ni resolver en el vínculo (ahora tiene su tarjeta) y que sin cupo de IA el documento esperaba diez minutos antes de pasar a una persona (HI-1).
 
 ### 4.10 Desaprobar, reintegrar sin revalidar y reinicio tras un rechazo (DS) — terminado en `feature/desaprobar-y-reintegrar`
 Cierra tres huecos frente al SRM (decisiones DS-1..DS-10 del [registro](decisiones/registro.md)):

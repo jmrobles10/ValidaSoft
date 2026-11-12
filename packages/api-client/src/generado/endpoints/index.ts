@@ -55,6 +55,7 @@ export * from './plantillas/plantillas';
 export * from './plantillas-notificacion/plantillas-notificacion';
 export * from './plazos-de-cargue/plazos-de-cargue';
 export * from './plazos-de-habeas/plazos-de-habeas';
+export * from './procesamiento-inmediato-de-verificaciones/procesamiento-inmediato-de-verificaciones';
 export * from './publico/publico';
 export * from './quien-soy/quien-soy';
 export * from './recalculo-de-fichas/recalculo-de-fichas';

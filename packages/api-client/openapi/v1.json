@@ -2038,6 +2038,41 @@
         }
       }
     },
+    "/api/v1/plataforma/verificaciones/revisar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Verificaciones.ProcesamientoInmediatoDeVerificacionesEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_verificaciones_revisar",
+        "description": "POST_api_v1_plataforma_verificaciones_revisar",
+        "operationId": "POST_api_v1_plataforma_verificaciones_revisar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisarVerificacionesDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoRevisionVerificacionesDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/expedientes/{id}/verificaciones/{tipo}/consultar": {
       "post": {
         "tags": [
@@ -31667,6 +31702,40 @@
           }
         }
       },
+      "ResultadoRevisionVerificacionesDto": {
+        "required": [
+          "consultas",
+          "expiraciones",
+          "monitoreos"
+        ],
+        "type": "object",
+        "properties": {
+          "consultas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "expiraciones": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "monitoreos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ResultadoRevisionVigenciasDto": {
         "required": [
           "revisados",
@@ -32597,6 +32666,25 @@
         }
       },
       "RevisarSlaDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "RevisarVerificacionesDto": {
         "type": "object",
         "properties": {
           "tenantId": {
@@ -37279,6 +37367,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Verificaciones.InformeCumplimientoEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Verificaciones.ProcesamientoInmediatoDeVerificacionesEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Verificaciones.VerificacionesEndpoints"
