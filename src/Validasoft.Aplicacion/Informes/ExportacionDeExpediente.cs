@@ -12,6 +12,7 @@ using Validasoft.Aplicacion.Documentos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
+using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Plataforma;
 using Wolverine.Http;
@@ -22,7 +23,7 @@ namespace Validasoft.Aplicacion.Informes;
 /// Expediente completo en ZIP (IF-5, docs/11 §H8 <c>ExpedienteExportado</c>): los archivos de los documentos aprobados
 /// (la versión aceptada de cada requisito), <c>resumen.pdf</c> (datos, requisitos, áreas con tiempos, decisiones y línea de
 /// tiempo, con el estilo de los PDF del proyecto), <c>linea-de-tiempo.json</c> (el historial completo) e <c>indice.json</c>
-/// con el SHA-256 de cada archivo. Cada documento incluido queda como <c>DocumentoAccedido</c> (motivo «Exportación del
+/// con el SHA-256 de cada archivo, y <c>declaraciones-pep/</c> con un PDF por cada persona PEP con declaración (HU 49093). Cada documento incluido queda como <c>DocumentoAccedido</c> (motivo «Exportación del
 /// expediente …») y la descarga como <c>ExportacionRegistrada</c> con la huella del ZIP.
 /// </summary>
 public static partial class ExportacionDeExpedienteEndpoints
@@ -33,7 +34,7 @@ public static partial class ExportacionDeExpedienteEndpoints
     [Authorize(Policy = Permisos.ExpedientesExportar)]
     [Authorize(Policy = Permisos.DocumentosDescargar)]
     public static async Task<IResult> Exportar(Guid id, SesionDeEmpresa empresa, ISesiones sesiones, IContextoSolicitud contexto, HttpContext http,
-        IAlmacenDeArchivos almacen, IGeneradorDePdfDeInformes generador, TimeProvider reloj, CancellationToken ct)
+        IAlmacenDeArchivos almacen, IGeneradorDePdfDeInformes generador, Ficha.IGeneradorDePdfDeDeclaracionPep declaraciones, TimeProvider reloj, CancellationToken ct)
     {
         var expediente = await empresa.CargarExpedienteAsync(id, ct);
         var vinculo = await empresa.CargarVinculoAsync(expediente.VinculoId, ct);
@@ -76,6 +77,7 @@ public static partial class ExportacionDeExpedienteEndpoints
         var usuarios = await NombresAsync(empresa, expediente, eventos, ct);
         var empresaDatos = await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct);
         var indice = new List<object>();
+        var pdfsDeDeclaraciones = 0;
         byte[] zip;
         using (var memoria = new MemoryStream())
         {
@@ -97,6 +99,26 @@ public static partial class ExportacionDeExpedienteEndpoints
                         ruta, requisito = requisito.Codigo, nombre = requisito.Nombre, version = version.Numero, sha256 = sha,
                         coincideConElExpediente = sha == requisito.VersionActual!.Sha256
                     });
+                }
+
+                // Declaraciones jurada PEP (HU 49093): un PDF por persona con «Sí» a PEP y declaración, de la versión de la sección que cubre el expediente (el
+                // equivalente de la hoja de vida del SRM, que lleva un PDF por contacto PEP).
+                var tercero = await empresa.Sesion.LoadAsync<Dominio.Terceros.Tercero>(expediente.TerceroId, ct);
+                foreach (var requisito in expediente.Requisitos.Where(r => r.EsSeccion && r.VersionActual is not null && r.Seccion is CodigosDeSeccion.General or CodigosDeSeccion.Legal))
+                {
+                    SeccionDeFicha? ficha;
+                    await using (var boveda = sesiones.ConsultaBoveda())
+                        ficha = await boveda.LoadAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(expediente.TerceroId, requisito.Seccion!, null), ct);
+                    if (ficha?.Versiones.FirstOrDefault(v => v.Numero == requisito.VersionActual!.Numero) is not { } version)
+                        continue;
+                    foreach (var (nombreArchivo, bytes) in Ficha.DeclaracionesPepEndpoints.PdfsDeLaVersion(requisito.Seccion!, requisito.Nombre, version,
+                                 empresaDatos?.Nombre ?? "Validasoft", tercero?.Nombre ?? string.Empty, declaraciones, ahora))
+                    {
+                        var ruta = $"declaraciones-pep/{nombreArchivo}";
+                        await EscribirAsync(archivo, ruta, bytes, ct);
+                        indice.Add(new { ruta, requisito = requisito.Codigo, nombre = requisito.Nombre, version = version.Numero, sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)) });
+                        pdfsDeDeclaraciones++;
+                    }
                 }
 
                 var historial = Peticiones.Historial(eventos);
@@ -124,7 +146,7 @@ public static partial class ExportacionDeExpedienteEndpoints
 
         var nombreZip = $"expediente-{expediente.Folio}.zip";
         return await Exportaciones.EntregarAsync(empresa, contexto, http, reloj,
-            new ArchivoExportado("Expediente", "Zip", zip, Exportaciones.TipoZip, nombreZip, incluidos.Count + 3, expediente.Id.ToString(), expediente.Folio,
+            new ArchivoExportado("Expediente", "Zip", zip, Exportaciones.TipoZip, nombreZip, incluidos.Count + pdfsDeDeclaraciones + 3, expediente.Id.ToString(), expediente.Folio,
                 expediente.VinculoId), ct);
     }
 

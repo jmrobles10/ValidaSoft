@@ -80,6 +80,7 @@ export function FilaSagrilaft({ fila: f, empresaId, onVerPersonas }: { fila: Fil
               {f.personas}
             </Button>
             {f.pep > 0 && <Typography sx={{ ...SECUNDARIO, color: 'warning.main' }}>{t('cumplimiento.sagrilaft.tabla.pep', { count: f.pep })}</Typography>}
+            {(f.pepSinDeclaracion ?? 0) > 0 && <Typography sx={{ ...SECUNDARIO, color: 'error.main' }}>{t('cumplimiento.sagrilaft.tabla.pepSinDeclaracion', { count: f.pepSinDeclaracion ?? 0 })}</Typography>}
           </Stack>
         )}
       </TableCell>

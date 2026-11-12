@@ -79,7 +79,7 @@ flowchart LR
 | `codigo` | Identificador estable (nunca numérico mágico); lista cerrada en 03 Anexo A | `RUT`, `CAMARA_COMERCIO`, `CEDULA`, `ESTADOS_FINANCIEROS`, `CERTIFICACION_BANCARIA`, `CUENTA_BANCARIA`, `DATOS_MAESTROS`, `POLIZA`, `AUTORIZACION_TRATAMIENTO_DATOS` |
 | `ambito` | `Global` o `PorVinculo` | RUT = Global; `FORMATO_VINCULACION` = PorVinculo |
 | `clase` | `Archivo` o `Formulario` (datos estructurados con esquema JSON, misma mecánica de versiones; ver §4.4) | `CUENTA_BANCARIA` = Formulario |
-| `dePersonaRelacionada` | El documento pertenece a la bóveda de una persona natural relacionada (rol) y no a la del tercero jurídico (B-3) | `CEDULA` (RepresentanteLegal…), `CERTIFICADO_ANTECEDENTES`, `DECLARACION_PEP` |
+| `dePersonaRelacionada` | El documento pertenece a la bóveda de una persona natural relacionada (rol) y no a la del tercero jurídico (B-3) | `CEDULA` (RepresentanteLegal…), `CERTIFICADO_ANTECEDENTES` (la declaración PEP de cada persona vive en la ficha, DP-13) |
 | `esquemaFormulario` + `versionEsquema` | Solo clase `Formulario`: JSON Schema **base canónico** de plataforma, versionado. Cada versión de documento guarda con qué versión del esquema se capturó (P-2-2, P-3-2). | `INFO_TRIBUTARIA` v2 |
 | `aplicaA` | `PersonaNatural`, `PersonaJuridica`, `Ambas` | Cámara de comercio = Jurídica (y natural comerciante: condición en la regla) |
 | `tieneVencimientoIntrinseco` | El documento trae su propia fecha de fin | Póliza = sí; RUT = no |
@@ -139,9 +139,9 @@ Un parámetro tiene **un solo nombre** en los tres niveles. Ejemplo: Acme Constr
 
 El representante legal, los suplentes, los socios/beneficiarios finales y los miembros de un consorcio son **terceros persona natural** con bóveda propia, unidos al tercero jurídico por `RelacionEntreTerceros { tipo, principal, vigencia, fuente }` ([03 §4.5](03-dominio-y-eventos.md)).
 
-- La `CEDULA`, el `CERTIFICADO_ANTECEDENTES`, la `DECLARACION_PEP` y el `BENEFICIARIO_FINAL` son documentos **de la persona**: se validan una vez y sirven a todas las empresas y a todos los terceros jurídicos donde esa persona figura. `IdentidadCoincide` compara la cédula con la identificación de la persona, no con el NIT.
+- La `CEDULA`, el `CERTIFICADO_ANTECEDENTES`, y el `BENEFICIARIO_FINAL` son documentos **de la persona** (su declaración PEP va en la ficha, DP-13): se validan una vez y sirven a todas las empresas y a todos los terceros jurídicos donde esa persona figura. `IdentidadCoincide` compara la cédula con la identificación de la persona, no con el NIT.
 - Un requisito del flujo puede exigir "cédula de la persona relacionada con rol `RepresentanteLegal`" (`dePersonaRelacionada`); se resuelve contra la relación principal vigente al abrir o recalcular el expediente.
-- El `FORMULARIO_SARLAFT` de cada empresa es `PorVinculo` y **referencia** las versiones vigentes de `BENEFICIARIO_FINAL` y `DECLARACION_PEP` en vez de duplicar los datos (I-20).
+- El `FORMULARIO_SARLAFT` de cada empresa es `PorVinculo` y **referencia** la versión vigente de `BENEFICIARIO_FINAL` en vez de duplicar los datos (I-20).
 - Un cambio de representante detectado por la IA en una Cámara nueva **no** cambia la relación por sí solo: la relación cambia cuando el tercero lo confirma, un revisor lo confirma al revalidar, o la confianza es ≥ 0,98 y la Cámara fue aprobada por alguna empresa; solo entonces expiran la cédula y las listas del saliente en todas las empresas (esc. 6).
 
 ## 5. Ciclo de vida de una versión

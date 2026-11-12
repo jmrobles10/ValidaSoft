@@ -89,7 +89,7 @@ public sealed partial class RequisitosApiTests
         var completa = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralCompleta);
         completa.Version.ShouldBe(2);
         completa.Completitud.Completa.ShouldBeTrue();
-        completa.Completitud.ReglaVersion.ShouldBe(1);
+        completa.Completitud.ReglaVersion.ShouldBe(2);
         completa.SiguienteSeccion.ShouldBe("FICHA_TRIBUTARIA");
 
         // Lo mismo otra vez ⇒ 200 sin versión nueva.
@@ -152,7 +152,7 @@ public sealed partial class RequisitosApiTests
         var ficha = await TerceroAsync<EstadoFichaDto>("GET", RutaFicha, sesion.AccessToken, null, 200);
         ficha.SiguienteSeccion.ShouldBe("FICHA_LEGAL");
         var general = ficha.Secciones.Single(s => s.Seccion == "FICHA_GENERAL");
-        (general.Version, general.Completa, general.ReglaVersion).ShouldBe((4, true, 1));
+        (general.Version, general.Completa, general.ReglaVersion).ShouldBe((4, true, 2));
         ficha.Secciones.Single(s => s.Seccion == "FICHA_FINANCIERA").Periodo.ShouldBe(2025);
         var guardado = (await EstadoGuardadoAsync(terceroId)).ShouldNotBeNull();
         guardado.Secciones.Select(s => (s.Seccion, s.Version, s.Completa)).ShouldBe(

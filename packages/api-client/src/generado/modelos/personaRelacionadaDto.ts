@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { DeclaracionPepErpDto } from './declaracionPepErpDto';
 
 export interface PersonaRelacionadaDto {
   /** @nullable */
@@ -45,4 +46,5 @@ export interface PersonaRelacionadaDto {
   telefono: string | null;
   /** @nullable */
   lugarExpedicion?: string | null;
+  declaracionPep?: null | DeclaracionPepErpDto;
 }

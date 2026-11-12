@@ -81,7 +81,7 @@ public static class DeclaracionesPepEndpoints
         var ahora = reloj.GetUtcNow();
         var bytes = generador.Generar(new DatosDelPdfDeDeclaracionPep(datosEmpresa?.Nombre ?? "Validasoft", tercero.Nombre, definicion.Nombre, elegida.Numero,
             elegida.Fecha, rol, declaracion, ahora));
-        var nombre = $"declaracion-pep-{Exportaciones.Slug(declaracion.Nombre ?? "persona")}-{Exportaciones.Slug(declaracion.Numero ?? "sin-documento")}-{Exportaciones.Local(ahora):yyyyMMdd}.pdf";
+        var nombre = NombreDelArchivo(declaracion, ahora);
         return await Exportaciones.EntregarAsync(empresa, contexto, http, reloj,
             new ArchivoExportado(NombreDelTipo, "Pdf", bytes, Exportaciones.TipoPdf, nombre, 1, terceroId.ToString(), tercero.Nombre,
                 vinculos[0].Id), ct);
@@ -105,6 +105,31 @@ public static class DeclaracionesPepEndpoints
         var p = personas[indice];
         return (p.Pep == true ? p.DeclaracionPep : null, p.Rol is { } rol ? Roles.GetValueOrDefault(rol) : null);
     }
+
+    /// <summary>
+    /// Los PDF de las declaraciones PEP activas de una versión de la sección (uno por persona con «Sí» a PEP y declaración): nombre de archivo y
+    /// contenido. Lo usan la descarga del ZIP del expediente (el equivalente de la hoja de vida del SRM) y, de a uno, <see cref="Pdf"/>.
+    /// </summary>
+    public static IReadOnlyList<(string Nombre, byte[] Contenido)> PdfsDeLaVersion(string seccion, string nombreSeccion, VersionDeSeccion version, string empresa,
+        string tercero, IGeneradorDePdfDeDeclaracionPep generador, DateTimeOffset ahora)
+    {
+        var indices = seccion == CodigosDeSeccion.General ? [(int?)null] : Enumerable.Range(0, JsonDeFicha.Deserializar<DatosLegales>(version.Datos).Personas?.Count ?? 0).Select(i => (int?)i).ToList();
+        var pdfs = new List<(string, byte[])>();
+        foreach (var indice in indices)
+        {
+            var (declaracion, rol) = DeclaracionDe(seccion, version.Datos, indice);
+            if (declaracion is null)
+                continue;
+            pdfs.Add((NombreDelArchivo(declaracion, ahora), generador.Generar(new DatosDelPdfDeDeclaracionPep(empresa, tercero, nombreSeccion, version.Numero, version.Fecha, rol,
+                declaracion, ahora))));
+        }
+
+        return pdfs;
+    }
+
+    /// <summary><c>declaracion-pep-{nombre}-{documento}-{aaaammdd}.pdf</c>: sin tildes ni espacios.</summary>
+    public static string NombreDelArchivo(DeclaracionPep declaracion, DateTimeOffset ahora) =>
+        $"declaracion-pep-{Exportaciones.Slug(declaracion.Nombre ?? "persona")}-{Exportaciones.Slug(declaracion.Numero ?? "sin-documento")}-{Exportaciones.Local(ahora):yyyyMMdd}.pdf";
 
     /// <summary>
     /// La empresa ve la versión vigente de la ficha de un tercero con el que tiene vínculo (Tercero 360), la que aceptó y la que revisa en
