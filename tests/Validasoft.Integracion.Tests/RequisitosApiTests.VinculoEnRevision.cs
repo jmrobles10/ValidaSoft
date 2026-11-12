@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Validasoft.Contratos;
 
 namespace Validasoft.Integracion.Tests;
@@ -28,6 +29,147 @@ public sealed partial class RequisitosApiTests
                 throw new TimeoutException("No se abrió la actualización.");
             await Task.Delay(150);
         }
+    }
+
+    /// <summary>La verificación pública del certificado (anónima) por su folio raíz y su huella.</summary>
+    private async Task<CertificadoPublicoDto> PublicoCertificadoAsync(string folioRaiz, string huella)
+    {
+        var respuesta = await Host.Scenario(s =>
+        {
+            s.Get.Url($"/public/v1/verificar/{folioRaiz}?huella={Uri.EscapeDataString(huella)}");
+            IpAleatoria(s);
+            s.StatusCodeShouldBe(200);
+        });
+        return (await respuesta.ReadAsJsonAsync<CertificadoPublicoDto>())!;
+    }
+
+    /// <summary>
+    /// Norte con el flujo CLIENTE en una etapa (Compras y Cumplimiento, y Cumplimiento puede rechazar) que pide el RUT, y un tercero ya aprobado por las dos áreas.
+    /// </summary>
+    private async Task<(Escenario E, VinculoDto Vinculo, SesionTerceroDto Sesion, string Correo, Guid Inicial)> AprobadoConRechazoPosibleAsync()
+    {
+        var e = await PrepararAsync();
+        var flujo = await ApiAsync<FlujoDto>("POST", "/api/v1/flujos", Admin(e.Norte), new CrearFlujoDto("HAB_NR_" + Guid.NewGuid().ToString("N")[..4].ToUpperInvariant(),
+            "Habilitación", "CLIENTE", [new EtapaDto(1, [new AreaDeEtapaDto(e.Compras.Id), new AreaDeEtapaDto(e.Cumplimiento.Id, PuedeRechazarExpediente: true)])],
+            Requisitos: [new RequisitoDelFlujoDto(TipoDocumento: "RUT", AreasQueRevisan: [e.Compras.Id, e.Cumplimiento.Id])]), 201);
+        await ApiAsync<FlujoDto>("POST", $"/api/v1/flujos/{flujo.Id}/publicar", Admin(e.Norte), new { }, 200);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "CLIENTE", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT v1"));
+        await AceptarAsync(sesion, vinculo.Id);
+        var inicial = await AbiertoEnAsync(e.Norte, vinculo.Id);
+        var revision = await EsperarAsync(e.Norte, inicial, x => x.Estado == "EnRevision");
+        var versiones = new Dictionary<Guid, int> { [Requisito(revision, "RUT").Id] = 1 };
+        await AreaAsync<ExpedienteDto>(e, inicial, e.Compras, e.Laura, new VeredictoDto("Aprobado", Versiones: versiones));
+        (await AreaAsync<ExpedienteDto>(e, inicial, e.Cumplimiento, e.Carlos, new VeredictoDto("Aprobado", Versiones: versiones))).Estado.ShouldBe("Aprobado");
+        return (e, vinculo, sesion, correo, inicial);
+    }
+
+    [Fact]
+    public async Task Una_actualizacion_rechazada_deja_el_vinculo_como_estaba_con_el_certificado_vigente_y_avisa_al_tercero_y_a_la_empresa_hasta_la_siguiente_actualizacion()
+    {
+        var (e, vinculo, sesion, correo, inicial) = await AprobadoConRechazoPosibleAsync();
+
+        // El RUT nuevo: el tercero recibe la confirmación (campana) de que la empresa lo está revisando, no el «necesita que actualices» de una petición de la empresa.
+        await SubirAsync(sesion, "RUT", Pdf("RUT v2"));
+        var actualizacion = await AbiertoEnAsync(e.Norte, vinculo.Id, inicial);
+        var enRevision = await EsperarAsync(e.Norte, actualizacion, x => x.Estado == "EnRevision");
+        var recibida = (await EsperarBandejaAsync(sesion, b => b.Datos.Any(n => n.Tipo == "tercero.actualizacion"))).Datos.First(n => n.Tipo == "tercero.actualizacion");
+        (recibida.Titulo, recibida.Mensaje).ShouldBe(("Recibimos tu actualización",
+            "Recibimos tu actualización de Registro Único Tributario; Norte S.A.S. la está revisando y te avisamos si necesita algo."));
+        var certificadoEnRevision = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        (certificadoEnRevision.EnVerificacion, certificadoEnRevision.Estado).ShouldBe((true, "ConPendientes"));
+
+        // Cumplimiento rechaza lo que el tercero actualizó: el vínculo conserva su estado (RV-2) y el certificado vuelve a ser vigente a secas.
+        var rechazada = await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{actualizacion}/rechazar", Delegado(e.Norte, e.Carlos),
+            new RechazarExpedienteDto(e.Cumplimiento.Id, ["no-corresponde-al-tercero"], "Interno: el NIT del RUT no es el del tercero."), 200);
+        rechazada.Estado.ShouldBe("Rechazado");
+        var sinAprobar = await VinculoDeAsync(e.Norte, vinculo.Id);
+        (sinAprobar.Estado, sinAprobar.EnRevision, sinAprobar.ExpedienteAbiertoId, sinAprobar.UltimoResultado).ShouldBe(("Activo", false, (Guid?)null, "Rechazado"));
+        sinAprobar.ActualizacionNoAprobada.ShouldNotBeNull().ShouldSatisfyAllConditions(a => a.Resultado.ShouldBe("Rechazado"), a => a.ExpedienteId.ShouldBe(actualizacion),
+            a => a.Fecha.ShouldNotBeNull());
+        var certificado = (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!;
+        (certificado.Estado, certificado.EnVerificacion, certificado.Bloqueante).ShouldBe(("Vigente", false, false));
+        var consulta = await ApiAsync<ConsultaCertificacionDto>("GET", $"/api/v1/consultas/certificacion?vinculoId={vinculo.Id}", Admin(e.Norte), null, 200);
+        (consulta.EstadoVinculo, consulta.Estado, consulta.Bloqueado, consulta.EnRevision, consulta.EnVerificacion).ShouldBe(("Activo", "Vigente", false, false, false));
+        consulta.RevalidacionPendiente.ShouldBeEmpty();
+        var historial = await ApiAsync<List<EventoHistorialDto>>("GET", $"/api/v1/vinculos/{vinculo.Id}/historial", Admin(e.Norte), null, 200);
+        // El historial del vínculo trae el cierre con el tipo de expediente (para decir «Actualización rechazada») y el certificado deja constancia de que volvió a Vigente.
+        historial.Where(h => h.Tipo == "expediente_cerrado").ShouldContain(h => h.Datos.EnumerateObject().Any(p => string.Equals(p.Name, "tipo", StringComparison.OrdinalIgnoreCase) &&
+            (p.Value.ToString() == "2" || p.Value.ToString() == "Actualizacion")));
+        (await EventosAsync(e.Norte.Datos.TenantId, Validasoft.Dominio.Certificados.Certificado.IdPara(vinculo.Id))).OfType<Validasoft.Dominio.Certificados.PendientesDeRevalidacionResueltos>().ShouldHaveSingleItem();
+
+        // El tercero ve que no se aprobó y por qué (los textos que se le comunican; nunca la justificación interna ni las áreas), y que lo ya aprobado sigue vigente.
+        var texto = await (await TerceroAsync("GET", "/public/v1/vinculos", sesion.AccessToken, null, 200)).ReadAsTextAsync();
+        texto.ShouldNotContain("Interno");
+        texto.ShouldNotContain("CUMPLIMIENTO");
+        var publico = (JsonSerializer.Deserialize<List<VinculoPublicoDto>>(texto, new JsonSerializerOptions(JsonSerializerDefaults.Web))!).Single(v => v.Id == vinculo.Id);
+        (publico.Estado, publico.EnRevision).ShouldBe(("Activo", false));
+        var aviso = publico.ActualizacionNoAprobada.ShouldNotBeNull();
+        aviso.Resultado.ShouldBe("Rechazado");
+        aviso.Motivos.Select(m => m.Codigo).ShouldBe(["no-corresponde-al-tercero"]);
+        aviso.Motivos.ShouldHaveSingleItem().Texto.ShouldNotBeNullOrWhiteSpace();
+        var campana = (await EsperarBandejaAsync(sesion, b => b.Datos.Any(n => n.Titulo == "Tu actualización no se aprobó"))).Datos.First(n => n.Titulo == "Tu actualización no se aprobó");
+        campana.Mensaje.ShouldStartWith("Norte S.A.S. no aprobó tu actualización ");
+        campana.Mensaje.ShouldContain("lo que ya tenías aprobado sigue vigente.");
+        var mensaje = await fixture.Correos.EsperarAsync(correo, m => m.Asunto.StartsWith("Norte S.A.S. no aprobó tu actualización"));
+        mensaje.Texto.ShouldContain("Lo que ya tenías aprobado sigue vigente.");
+        mensaje.Texto.ShouldNotContain("Interno");
+
+        // La siguiente actualización quita el aviso: el vínculo vuelve a estar en revisión y, aprobada, ya no hay nada que avisar.
+        await SubirAsync(sesion, "RUT", Pdf("RUT v3"));
+        var siguiente = await AbiertoEnAsync(e.Norte, vinculo.Id);
+        siguiente.ShouldNotBe(actualizacion);
+        var enRevisionOtraVez = await EsperarAsync(e.Norte, siguiente, x => x.Estado == "EnRevision");
+        var conAviso = await VinculoDeAsync(e.Norte, vinculo.Id);
+        (conAviso.EnRevision, conAviso.ActualizacionNoAprobada).ShouldBe((true, (ActualizacionNoAprobadaDto?)null));
+        (await VinculoPublicoAsync(sesion, vinculo.Id)).ActualizacionNoAprobada.ShouldBeNull();
+        var versiones = new Dictionary<Guid, int> { [Requisito(enRevisionOtraVez, "RUT").Id] = 3 };
+        await AreaAsync<ExpedienteDto>(e, siguiente, e.Compras, e.Laura, new VeredictoDto("Aprobado", Versiones: versiones));
+        (await AreaAsync<ExpedienteDto>(e, siguiente, e.Cumplimiento, e.Carlos, new VeredictoDto("Aprobado", Versiones: versiones))).Estado.ShouldBe("Aprobado");
+        var aprobada = await VinculoDeAsync(e.Norte, vinculo.Id);
+        (aprobada.EnRevision, aprobada.ActualizacionNoAprobada, aprobada.UltimoResultado).ShouldBe((false, (ActualizacionNoAprobadaDto?)null, "Aprobado"));
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!.Estado.ShouldBe("Vigente");
+    }
+
+    [Fact]
+    public async Task Una_actualizacion_anulada_tambien_deja_el_vinculo_como_estaba_y_avisa_sin_motivos_al_tercero()
+    {
+        var (e, vinculo, sesion, _, inicial) = await AprobadoConRechazoPosibleAsync();
+        await SubirAsync(sesion, "RUT", Pdf("RUT v2"));
+        var actualizacion = await AbiertoEnAsync(e.Norte, vinculo.Id, inicial);
+        await EsperarAsync(e.Norte, actualizacion, x => x.Estado == "EnRevision");
+        (await VinculoDeAsync(e.Norte, vinculo.Id)).EnRevision.ShouldBeTrue();
+
+        (await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{actualizacion}/anular", Admin(e.Norte), new MotivoDto("La subió por error."), 200)).Estado.ShouldBe("Anulado");
+
+        var anulada = await VinculoDeAsync(e.Norte, vinculo.Id);
+        (anulada.Estado, anulada.EnRevision, anulada.UltimoResultado).ShouldBe(("Activo", false, "Anulado"));
+        anulada.ActualizacionNoAprobada.ShouldNotBeNull().Resultado.ShouldBe("Anulado");
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!
+            .ShouldSatisfyAllConditions(c => c.Estado.ShouldBe("Vigente"), c => c.EnVerificacion.ShouldBeFalse());
+
+        // Una anulación no lleva motivos al tercero (son internos), pero igual ve que esa actualización no se aprobó.
+        var texto = await (await TerceroAsync("GET", "/public/v1/vinculos", sesion.AccessToken, null, 200)).ReadAsTextAsync();
+        texto.ShouldNotContain("por error");
+        var aviso = (JsonSerializer.Deserialize<List<VinculoPublicoDto>>(texto, new JsonSerializerOptions(JsonSerializerDefaults.Web))!).Single(v => v.Id == vinculo.Id).ActualizacionNoAprobada;
+        aviso!.Resultado.ShouldBe("Anulado");
+        aviso.Motivos.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Terminar_el_vinculo_con_una_actualizacion_abierta_no_deja_un_aviso_de_actualizacion_no_aprobada_al_reintegrarlo_sin_revalidar()
+    {
+        var (e, vinculo, sesion, _, inicial) = await AprobadoConRechazoPosibleAsync();
+        await SubirAsync(sesion, "RUT", Pdf("RUT v2"));
+        var actualizacion = await AbiertoEnAsync(e.Norte, vinculo.Id, inicial);
+        await EsperarAsync(e.Norte, actualizacion, x => x.Estado == "EnRevision");
+
+        await ApiAsync<VinculoDto>("POST", $"/api/v1/vinculos/{vinculo.Id}/desvincular", Admin(e.Norte), new MotivoDto("Fin del contrato."), 200);
+        var terminado = await VinculoDeAsync(e.Norte, vinculo.Id);
+        (terminado.Estado, terminado.EnRevision, terminado.ActualizacionNoAprobada).ShouldBe(("Desvinculado", false, (ActualizacionNoAprobadaDto?)null));
+        (await VinculoPublicoAsync(sesion, vinculo.Id)).ActualizacionNoAprobada.ShouldBeNull();
     }
 
     private async Task<VinculoPublicoDto> VinculoPublicoAsync(SesionTerceroDto sesion, Guid vinculoId) =>
@@ -100,17 +242,29 @@ public sealed partial class RequisitosApiTests
             var cifras = await ApiAsync<IndicadoresDto>("GET", "/api/v1/indicadores", Admin(empresa), null, 200);
             (cifras.VinculosEnRevision, cifras.VinculosActivos, cifras.VinculosPorVencer, cifras.VinculosVencidos).ShouldBe((1, 0, 0, 0));
 
-            // El certificado sigue siendo válido (Con pendientes) y la consulta lo dice: nada se bloquea ni se suspende por la revisión.
+            // El certificado sigue siendo válido y se ve «En verificación» (VR-11): su estado de dominio sigue siendo ConPendientes y nada se bloquea ni se suspende.
             var certificado = await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(empresa), null, 200);
-            certificado.Actual!.Estado.ShouldBe("ConPendientes");
+            (certificado.Actual!.Estado, certificado.Actual.Bloqueante, certificado.Actual.EnVerificacion).ShouldBe(("ConPendientes", false, true));
             var consulta = await ApiAsync<ConsultaCertificacionDto>("GET", $"/api/v1/consultas/certificacion?vinculoId={vinculo.Id}", Admin(empresa), null, 200);
-            (consulta.EstadoVinculo, consulta.Estado, consulta.Certificado, consulta.Bloqueado, consulta.EnRevision).ShouldBe(("Activo", "ConPendientes", true, false, true));
+            (consulta.EstadoVinculo, consulta.Estado, consulta.Certificado, consulta.Bloqueado, consulta.EnRevision, consulta.EnVerificacion)
+                .ShouldBe(("Activo", "ConPendientes", true, false, true, true));
             consulta.RevalidacionPendiente.ShouldHaveSingleItem().Tipo.ShouldBe("RUT");
+
+            // La lista de certificados lo filtra como «En verificación» (y «Con pendientes» no lo repite) y las cifras lo cuentan aparte.
+            (await ApiAsync<PaginaDto<FilaCertificadoDto>>("GET", "/api/v1/certificados?enVerificacion=true", Admin(empresa), null, 200)).Datos
+                .ShouldHaveSingleItem().ShouldSatisfyAllConditions(f => f.Estado.ShouldBe("ConPendientes"), f => f.EnVerificacion.ShouldBeTrue(), f => f.Bloqueante.ShouldBeFalse());
+            (await ApiAsync<PaginaDto<FilaCertificadoDto>>("GET", "/api/v1/certificados?estado=ConPendientes&enVerificacion=false", Admin(empresa), null, 200)).Datos.ShouldBeEmpty();
+            (await ApiAsync<PaginaDto<FilaCertificadoDto>>("GET", "/api/v1/certificados?estado=ConPendientes", Admin(empresa), null, 200)).Datos.ShouldHaveSingleItem(); // compatibilidad
+            (cifras.CertificadosEnVerificacion, cifras.CertificadosConPendientes).ShouldBe((1, 0));
+
+            // Quien lo verifica en la página pública ve que sigue vigente y puede guardar la copia; el estado sigue siendo ConPendientes.
+            var publicoCert = await PublicoCertificadoAsync(certificado.Actual.FolioRaiz, certificado.Actual.Huella);
+            (publicoCert.Estado, publicoCert.Bloqueante, publicoCert.EnVerificacion, publicoCert.PdfDescargable).ShouldBe(("ConPendientes", false, true, true));
 
             // El informe de vínculos lo cuenta y lo filtra como «En revisión», con su estado de dominio intacto.
             var informe = await ApiAsync<InformeVinculosDto>("GET", "/api/v1/informes/vinculos", Admin(empresa), null, 200);
             var fila = informe.Datos.ShouldHaveSingleItem();
-            (fila.Estado, fila.EnRevision, fila.ExpedienteEnCurso!.Tipo).ShouldBe(("Activo", true, "Actualizacion"));
+            (fila.Estado, fila.EnRevision, fila.ExpedienteEnCurso!.Tipo, fila.Certificado!.EnVerificacion).ShouldBe(("Activo", true, "Actualizacion", true));
             informe.Resumen.PorEstado.ShouldBe([new ConteoDto("EnRevision", 1)]);
             (await ApiAsync<InformeVinculosDto>("GET", "/api/v1/informes/vinculos?estado=EnRevision", Admin(empresa), null, 200)).Datos.ShouldHaveSingleItem();
             (await ApiAsync<InformeVinculosDto>("GET", "/api/v1/informes/vinculos?estado=Activo", Admin(empresa), null, 200)).Datos.ShouldBeEmpty();
@@ -134,13 +288,15 @@ public sealed partial class RequisitosApiTests
             new JustificacionDto("Revisada."), 200)).Estado.ShouldBe("Aprobado");
         var norteAprobado = await VinculoDeAsync(norte, enNorte.Id);
         (norteAprobado.Estado, norteAprobado.EnRevision, norteAprobado.ExpedienteAbiertoId, norteAprobado.UltimoResultado).ShouldBe(("Activo", false, (Guid?)null, "Aprobado"));
-        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{enNorte.Id}/certificado", Admin(norte), null, 200)).Actual!.Estado.ShouldBe("Vigente");
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{enNorte.Id}/certificado", Admin(norte), null, 200)).Actual!
+            .ShouldSatisfyAllConditions(c => c.Estado.ShouldBe("Vigente"), c => c.EnVerificacion.ShouldBeFalse());
         (await VinculosAsync(norte, "enRevision=true")).ShouldBeEmpty();
         (await VinculosAsync(norte, "estado=Activo&enRevision=false")).ShouldBe([enNorte.Id]);
         var cifrasNorte = await ApiAsync<IndicadoresDto>("GET", "/api/v1/indicadores", Admin(norte), null, 200);
-        (cifrasNorte.VinculosEnRevision, cifrasNorte.VinculosActivos).ShouldBe((0, 1));
+        (cifrasNorte.VinculosEnRevision, cifrasNorte.VinculosActivos, cifrasNorte.CertificadosEnVerificacion).ShouldBe((0, 1, 0));
+        (await ApiAsync<PaginaDto<FilaCertificadoDto>>("GET", "/api/v1/certificados?enVerificacion=true", Admin(norte), null, 200)).Datos.ShouldBeEmpty();
         (await ApiAsync<ConsultaCertificacionDto>("GET", $"/api/v1/consultas/certificacion?vinculoId={enNorte.Id}", Admin(norte), null, 200))
-            .ShouldSatisfyAllConditions(c => c.EnRevision.ShouldBeFalse(), c => c.Estado.ShouldBe("Vigente"), c => c.RevalidacionPendiente.ShouldBeEmpty());
+            .ShouldSatisfyAllConditions(c => c.EnRevision.ShouldBeFalse(), c => c.EnVerificacion.ShouldBeFalse(), c => c.Estado.ShouldBe("Vigente"), c => c.RevalidacionPendiente.ShouldBeEmpty());
 
         var surSigue = await VinculoDeAsync(sur, enSur.Id);
         (surSigue.Estado, surSigue.EnRevision, surSigue.ExpedienteAbiertoId).ShouldBe(("Activo", true, (Guid?)actualizacionSur));

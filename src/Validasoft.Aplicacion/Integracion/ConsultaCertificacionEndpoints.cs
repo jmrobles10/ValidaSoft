@@ -188,7 +188,8 @@ public static class ConsultaCertificacionEndpoints
             CuentaDesignada: cuenta,
             UrlVerificacion: actual?.UrlVerificacion,
             Legacy: null,
-            EnRevision: vinculo.EnRevisionPorActualizacion);
+            EnRevision: vinculo.EnRevisionPorActualizacion,
+            EnVerificacion: certificado?.EnVerificacion == true);
     }
 
     /// <summary>

@@ -98,6 +98,22 @@ public sealed partial class Vinculo
 
     public ResultadoExpediente? UltimoResultado { get; set; }
 
+    /// <summary>Tipo y fecha de cierre del último expediente cerrado (nulos en un vínculo anterior a estos campos).</summary>
+    public TipoExpediente? UltimoExpedienteTipo { get; set; }
+
+    public DateTimeOffset? UltimoExpedienteCerradoEn { get; set; }
+
+    /// <summary>
+    /// La última actualización no se aprobó (VR-13): se rechazó o se anuló, el vínculo conservó su estado (RV-2) y todavía no se abrió otro
+    /// expediente. Es una <b>situación derivada</b> que dura hasta que se abre el siguiente expediente (la próxima actualización o una renovación): ahí
+    /// el vínculo pasa a estar «En revisión» o, al cerrarse, a su resultado. Un vínculo bloqueado o terminado no la muestra.
+    /// </summary>
+    [JsonIgnore]
+    public bool ActualizacionNoAprobada =>
+        ExpedienteAbiertoId is null && UltimoExpedienteTipo == TipoExpediente.Actualizacion &&
+        UltimoResultado is ResultadoExpediente.Rechazado or ResultadoExpediente.Anulado &&
+        Estado is EstadoVinculo.Activo or EstadoVinculo.PorVencer or EstadoVinculo.Vencido;
+
     /// <summary>
     /// Estado que tenía al desvincularse (el previo al bloqueo si estaba bloqueado): con él se sabe si se puede reintegrar sin
     /// revalidar (DS-3). Nulo mientras no esté desvinculado.
@@ -392,8 +408,8 @@ public sealed partial class Vinculo
             throw ReglaDeNegocioException.Conflicto("expediente-no-abierto", "Ese expediente no es el abierto del vínculo.");
 
         return resultado == ResultadoExpediente.Aprobado
-            ? [new ExpedienteCerrado(expedienteId, resultado, ahora), new VinculoActivado(expedienteId, ahora)]
-            : [new ExpedienteCerrado(expedienteId, resultado, ahora)];
+            ? [new ExpedienteCerrado(expedienteId, resultado, ahora, ExpedienteAbiertoTipo), new VinculoActivado(expedienteId, ahora)]
+            : [new ExpedienteCerrado(expedienteId, resultado, ahora, ExpedienteAbiertoTipo)];
     }
 
     // ---------- Evolución (Marten) ----------
@@ -463,6 +479,8 @@ public sealed partial class Vinculo
 
     public void Apply(ExpedienteCerrado e)
     {
+        UltimoExpedienteTipo = e.Tipo ?? ExpedienteAbiertoTipo;
+        UltimoExpedienteCerradoEn = e.Fecha;
         ExpedienteAbiertoId = null;
         ExpedienteAbiertoTipo = null;
         UltimoExpedienteId = e.ExpedienteId;
@@ -561,6 +579,8 @@ public sealed partial class Vinculo
             return;
         UltimoExpedienteId = abierto;
         UltimoResultado = ResultadoExpediente.Anulado;
+        // Lo anuló la terminación del vínculo, no una decisión sobre la actualización: no hay «actualización no aprobada» que avisar al reintegrarlo.
+        UltimoExpedienteTipo = null;
         ExpedienteAbiertoId = null;
         ExpedienteAbiertoTipo = null;
     }

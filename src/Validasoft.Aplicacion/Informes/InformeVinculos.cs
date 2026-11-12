@@ -51,7 +51,7 @@ public static class InformeVinculosEndpoints
             filas.Select(f => (IReadOnlyList<object?>)
             [
                 f.Tercero.Nombre, InformeEstadoExpedientesEndpoints.Identificacion(f.Tercero.Identificacion), f.TipoVinculo.Nombre, TextoEstado(f.EnRevision ? EnRevisionClave : f.Estado),
-                Exportaciones.Local(f.CreadoEn), f.InvitacionAceptada ? "Sí" : "No", f.Certificado?.Folio, TextoCertificado(f.Certificado?.Estado),
+                Exportaciones.Local(f.CreadoEn), f.InvitacionAceptada ? "Sí" : "No", f.Certificado?.Folio, TextoCertificado(f.Certificado is { EnVerificacion: true } ? EnVerificacionClave : f.Certificado?.Estado),
                 f.Certificado?.VigenteHasta, f.ExpedienteEnCurso?.Folio,
                 f.ExpedienteEnCurso is { } x ? InformeEstadoExpedientesEndpoints.TextoEstado(x.Estado) : null,
                 f.Documentos?.ConVencimiento, f.Documentos?.Vigentes, f.Documentos?.PorVencer, f.Documentos?.EnGracia, f.Documentos?.Vencidos,
@@ -143,7 +143,7 @@ public static class InformeVinculosEndpoints
             var tipoVinculo = tipos.GetValueOrDefault(v.TipoVinculoId);
             var certificado = certificados.GetValueOrDefault(v.Id) is { } c
                 ? new CertificadoDelInformeDto(c.Emisiones.FirstOrDefault(x => x.Numero == c.EmisionActual)?.Folio ?? c.FolioRaiz, c.Estado.ToString(),
-                    c.Bloqueante, c.Emisiones.FirstOrDefault(x => x.Numero == c.EmisionActual)?.VigenteHasta)
+                    c.Bloqueante, c.Emisiones.FirstOrDefault(x => x.Numero == c.EmisionActual)?.VigenteHasta, c.EnVerificacion)
                 : null;
             var expediente = v.ExpedienteAbiertoId is { } id ? expedientes.GetValueOrDefault(id) : null;
             var secciones = expediente is null
@@ -177,7 +177,7 @@ public static class InformeVinculosEndpoints
             [.. Enum.GetValues<EstadoVinculo>().Select(e => new ConteoDto(e.ToString(), filas.Count(f => !f.EnRevision && f.Estado == e.ToString())))
                 .Append(new ConteoDto(EnRevisionClave, filas.Count(f => f.EnRevision)))
                 .Where(c => c.Cantidad > 0)],
-            filas.Count(f => f.Certificado is { Estado: nameof(EstadoCertificado.Vigente) }),
+            filas.Count(f => f.Certificado is { Estado: nameof(EstadoCertificado.Vigente) } or { EnVerificacion: true }),
             filas.Count(f => f.Documentos is { } d && d.PorVencer + d.EnGracia > 0),
             filas.Count(f => f.Documentos is { Vencidos: > 0 }),
             filas.Count(f => f.SeccionesPendientes.Count > 0));
@@ -190,8 +190,12 @@ public static class InformeVinculosEndpoints
         _ => estado
     };
 
+    /// <summary>Lo que el informe muestra de un certificado que sigue vigente mientras la empresa revisa lo que el tercero actualizó (VR-11).</summary>
+    public const string EnVerificacionClave = "EnVerificacion";
+
     private static string? TextoCertificado(string? estado) => estado switch
     {
+        EnVerificacionClave => "En verificación",
         nameof(EstadoCertificado.ConPendientes) => "Con pendientes",
         _ => estado
     };

@@ -16,7 +16,7 @@ function tipoDeExpediente(valor: unknown): (typeof ORDEN_TIPOS_DE_EXPEDIENTE)[nu
   return null;
 }
 
-type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor' | 'vigencia'>;
+type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor' | 'vigencia' | 'actualizacion_rechazada' | 'actualizacion_anulada'>;
 
 /**
  * Los datos del evento llegan como los serializa Marten (PascalCase y enums numéricos), distinto del resto de la
@@ -158,7 +158,13 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       return { ...base, despues: 'Vencido', motivo: texto(campo(datos, 'documento')) };
     case 'expediente_cerrado': {
       const resultado = texto(campo(datos, 'resultado'));
-      return resultado === 'Aprobado' || resultado === 'Rechazado' || resultado === 'Anulado' || resultado === 'Caducado' ? { ...base, despues: resultado } : base;
+      // La enumeración llega en texto o en número (ver `estadoDe`): Aprobado, Rechazado, Anulado, Caducado.
+      const nombre = typeof campo(datos, 'resultado') === 'number' ? (['Aprobado', 'Rechazado', 'Anulado', 'Caducado'] as const)[campo(datos, 'resultado') as number] : resultado;
+      if (nombre !== 'Aprobado' && nombre !== 'Rechazado' && nombre !== 'Anulado' && nombre !== 'Caducado') return base;
+      // Una actualización que no se aprobó (VR-13) lo dice en el título: el vínculo conserva su estado y no cambia nada más.
+      if (tipoDeExpediente(campo(datos, 'tipo')) === 'Actualizacion' && (nombre === 'Rechazado' || nombre === 'Anulado'))
+        return { ...base, titulo: t(nombre === 'Rechazado' ? 'historial.actualizacion_rechazada' : 'historial.actualizacion_anulada'), despues: nombre };
+      return { ...base, despues: nombre };
     }
     default:
       return { ...base, motivo: motivo ?? justificacion };

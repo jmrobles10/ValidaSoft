@@ -104,6 +104,17 @@ public sealed class Certificado
     /// <summary>Los pendientes de la revalidación vencieron sin resolverse (RV-4); la próxima emisión lo limpia.</summary>
     public bool PendientesBloqueantes { get; set; }
 
+    /// <summary>Expediente de actualización cuyos pendientes tiene el certificado (nulo si no tiene, o si es anterior a este campo).</summary>
+    public Guid? ExpedienteDePendientes { get; set; }
+
+    /// <summary>
+    /// «En verificación» (VR-11): el certificado sigue vigente (hasta su fecha, <c>bloqueado: false</c>) mientras la empresa revisa lo que el
+    /// tercero actualizó. Es el <c>ConPendientes</c> de la actualización abierta mientras su plazo no venció; con el plazo vencido (RV-4) los
+    /// pendientes bloquean y deja de ser «En verificación». No es un estado: <see cref="Estado"/> sigue siendo <c>ConPendientes</c>.
+    /// </summary>
+    [JsonIgnore]
+    public bool EnVerificacion => Estado == EstadoCertificado.ConPendientes && !PendientesBloqueantes;
+
     /// <summary>
     /// El certificado no debe aceptarse (consulta <c>bloqueado: true</c>): suspendido por bloqueo (B-5), revocado,
     /// vencido o con pendientes cuyo plazo de revalidación venció (A-2, RV-4).
@@ -167,6 +178,16 @@ public sealed class Certificado
         Estado == EstadoCertificado.ConPendientes && !PendientesBloqueantes
             ? new CertificadoConPendientes(EmisionActual, Requerido(motivo, "motivo-requerido", "Los pendientes necesitan un motivo."), expedienteId, ahora,
                 Ampliado: true)
+            : null;
+
+    /// <summary>
+    /// La actualización de <paramref name="expedienteId"/> se cerró sin aprobarse (rechazada o anulada, VR-13): lo ya aprobado sigue valiendo, así
+    /// que el certificado deja de tener pendientes y vuelve a <c>Vigente</c> (también si sus pendientes ya eran bloqueantes). Nulo si el
+    /// certificado no tiene pendientes de ese expediente (ya se reemitió, cambió de estado o los pendientes son de otro).
+    /// </summary>
+    public PendientesDeRevalidacionResueltos? ResolverPendientes(Guid expedienteId, DateTimeOffset ahora) =>
+        Estado == EstadoCertificado.ConPendientes && (ExpedienteDePendientes is null || ExpedienteDePendientes == expedienteId)
+            ? new PendientesDeRevalidacionResueltos(EmisionActual, expedienteId, ahora)
             : null;
 
     /// <summary>
@@ -270,6 +291,7 @@ public sealed class Certificado
         });
         EmisionActual = e.Emision;
         PendientesBloqueantes = false;
+        ExpedienteDePendientes = null;
         EstadoPrevioASuspension = null;
         MotivoSuspension = null;
         VenceDesde = e.VigenteHasta is { } hasta ? new DateTimeOffset(hasta.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero) : null;
@@ -285,7 +307,18 @@ public sealed class Certificado
         ActualizadoEn = e.Fecha;
     }
 
-    public void Apply(CertificadoConPendientes e) => Cambiar(e.Emision, EstadoCertificado.ConPendientes, e.Fecha);
+    public void Apply(CertificadoConPendientes e)
+    {
+        ExpedienteDePendientes = e.ExpedienteId;
+        Cambiar(e.Emision, EstadoCertificado.ConPendientes, e.Fecha);
+    }
+
+    public void Apply(PendientesDeRevalidacionResueltos e)
+    {
+        PendientesBloqueantes = false;
+        ExpedienteDePendientes = null;
+        Cambiar(e.Emision, EstadoCertificado.Vigente, e.Fecha);
+    }
 
     public void Apply(PlazoDeRevalidacionVencido e)
     {

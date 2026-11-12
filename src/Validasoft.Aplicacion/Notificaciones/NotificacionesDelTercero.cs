@@ -37,7 +37,10 @@ public static class TiposNotificacionTercero
     /// <summary>La empresa le recuerda las observaciones que siguen pendientes (a mano o automático, NT-2).</summary>
     public const string Recordatorio = "tercero.recordatorio";
 
-    /// <summary>La empresa abrió (o amplió) una actualización: hay secciones o documentos por actualizar.</summary>
+    /// <summary>
+    /// Hay una actualización abierta (o ampliada). Si la abrió la empresa para pedirle información, dice qué hay por actualizar; si la abrió la
+    /// propia versión nueva del tercero (lo habitual), le confirma que la recibió y que la empresa la está revisando (VR-12). Solo campana.
+    /// </summary>
     public const string Actualizacion = "tercero.actualizacion";
 
     /// <summary>La validación se cerró: aprobada (con certificado) o rechazada.</summary>
@@ -138,14 +141,21 @@ public static class PlanificadorDeNotificacionesDelTercero
                 // La empresa abrió la renovación a mano (campaña de renovación, OP-1): lo del sistema (vigencia, vencimiento) ya avisa por su evento.
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Vigencia,
                     "Tu empresa abrió tu renovación", $"{empresa} abrió la renovación de tu validación {e.Folio}: ratifica o actualiza tu información."));
-            case ExpedienteAbierto { Tipo: TipoExpediente.Actualizacion }:
-                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Actualizacion,
-                    "Hay información por actualizar", $"{empresa} necesita que actualices {Lista(e.Requisitos.Select(r => r.Nombre).ToList(), "tu información")}."));
+            case ExpedienteAbierto { Tipo: TipoExpediente.Actualizacion } abierta:
+                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => PidioLaEmpresa(abierta.AbiertoPor)
+                    ? (TiposNotificacionTercero.Actualizacion,
+                        "Hay información por actualizar", $"{empresa} necesita que actualices {Lista(e.Requisitos.Select(r => r.Nombre).ToList(), "tu información")}.")
+                    : (TiposNotificacionTercero.Actualizacion,
+                        "Recibimos tu actualización",
+                        $"Recibimos tu actualización{De(Lista(e.Requisitos.Select(r => r.Nombre).ToList(), string.Empty))}; {empresa} la está revisando y te avisamos si necesita algo."));
             case RequisitosAgregados agregados:
-                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Actualizacion,
-                    "Se sumó algo a tu actualización",
-                    $"{empresa} sumó {Lista([.. e.Requisitos.Where(r => agregados.Requisitos.Any(a => a.RequisitoId == r.Id)).Select(r => r.Nombre)], "más información")} " +
-                    "a la actualización que tienes abierta."));
+                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) =>
+                {
+                    var nuevos = Lista([.. e.Requisitos.Where(r => agregados.Requisitos.Any(a => a.RequisitoId == r.Id)).Select(r => r.Nombre)], "más información");
+                    return PidioLaEmpresa(e.AbiertoPor)
+                        ? (TiposNotificacionTercero.Actualizacion, "Se sumó algo a tu actualización", $"{empresa} sumó {nuevos} a la actualización que tienes abierta.")
+                        : (TiposNotificacionTercero.Actualizacion, "Sumamos algo a tu actualización", $"{empresa} también está revisando {nuevos}, que actualizaste después.");
+                });
             case ExpedienteAprobado:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Resultado,
                     "Validación aprobada", $"{empresa} aprobó tu validación {e.Folio}: tu vínculo está activo y ya tienes tu certificado."));
@@ -159,8 +169,12 @@ public static class PlanificadorDeNotificacionesDelTercero
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) =>
                 {
                     var motivos = RedactorDeCorreos.UnirMotivos(rechazado.Motivos.Select(m => m.TextoAlTercero));
-                    return (TiposNotificacionTercero.Resultado, "Validación cerrada sin aprobar",
-                        $"{empresa} cerró tu validación {e.Folio} sin aprobarla." + (motivos.Length == 0 ? string.Empty : $" Motivos: {motivos}"));
+                    // Una actualización rechazada deja el vínculo como estaba (RV-2): lo ya aprobado sigue vigente (VR-13).
+                    return e.Tipo == TipoExpediente.Actualizacion
+                        ? (TiposNotificacionTercero.Resultado, "Tu actualización no se aprobó",
+                            $"{empresa} no aprobó tu actualización {e.Folio}; lo que ya tenías aprobado sigue vigente." + (motivos.Length == 0 ? string.Empty : $" Motivos: {motivos}"))
+                        : (TiposNotificacionTercero.Resultado, "Validación cerrada sin aprobar",
+                            $"{empresa} cerró tu validación {e.Folio} sin aprobarla." + (motivos.Length == 0 ? string.Empty : $" Motivos: {motivos}"));
                 });
             case RecordatorioDeCargueEnviado recordatorio:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.PlazoDeCargue,
@@ -413,6 +427,14 @@ public static class PlanificadorDeNotificacionesDelTercero
     private static string Dias(int dias) => dias == 1 ? "1 día" : $"{dias} días";
 
     /// <summary>«A, B y C»; con más de tres, «A, B, C y 2 más». Sin nada, <paramref name="vacio"/>.</summary>
+    /// <summary>
+    /// ¿La actualización la pidió la empresa? Una persona o un sistema de la empresa que la abre le pide información al tercero; la que abre la propia
+    /// versión nueva del tercero (lo habitual, RV-1) no le pide nada: ya la recibió y la está revisando.
+    /// </summary>
+    private static bool PidioLaEmpresa(ActorDeExpediente abiertoPor) => abiertoPor.Tipo is ActorTipo.Usuario or ActorTipo.Integracion;
+
+    private static string De(string lista) => lista.Length == 0 ? string.Empty : $" de {lista}";
+
     private static string Lista(IReadOnlyList<string> nombres, string vacio) => nombres.Count switch
     {
         0 => vacio,

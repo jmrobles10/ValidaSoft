@@ -131,6 +131,57 @@ public class VinculoEnRevisionTests
         anulado.EnRevisionPorActualizacion.ShouldBeFalse();
     }
 
+    [Theory]
+    [InlineData(ResultadoExpediente.Rechazado)]
+    [InlineData(ResultadoExpediente.Anulado)]
+    public void Una_actualizacion_rechazada_o_anulada_deja_el_aviso_de_que_no_se_aprobo_hasta_que_se_abre_otro_expediente(ResultadoExpediente resultado)
+    {
+        var vinculo = Aprobado();
+        vinculo.ActualizacionNoAprobada.ShouldBeFalse(); // el expediente inicial aprobado no es una actualización
+        var actualizacion = Abrir(vinculo, TipoExpediente.Actualizacion);
+        vinculo.ActualizacionNoAprobada.ShouldBeFalse(); // abierta: está en revisión, no «no aprobada»
+
+        Cerrar(vinculo, resultado);
+
+        vinculo.ActualizacionNoAprobada.ShouldBeTrue();
+        (vinculo.Estado, vinculo.EnRevisionPorActualizacion, vinculo.UltimoExpedienteId, vinculo.UltimoExpedienteTipo, vinculo.UltimoResultado)
+            .ShouldBe((EstadoVinculo.Activo, false, (Guid?)actualizacion, (TipoExpediente?)TipoExpediente.Actualizacion, (ResultadoExpediente?)resultado));
+        vinculo.UltimoExpedienteCerradoEn.ShouldBe(Ahora.AddDays(1));
+
+        // Dura hasta que se abre otro expediente (la siguiente actualización): ahí vuelve a estar en revisión y, aprobada, deja de haber aviso.
+        Abrir(vinculo, TipoExpediente.Actualizacion);
+        vinculo.ActualizacionNoAprobada.ShouldBeFalse();
+        vinculo.EnRevisionPorActualizacion.ShouldBeTrue();
+        Cerrar(vinculo, ResultadoExpediente.Aprobado);
+        vinculo.ActualizacionNoAprobada.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void El_aviso_de_actualizacion_no_aprobada_no_se_muestra_con_el_vinculo_bloqueado_ni_si_fue_una_renovacion_ni_tras_terminarlo_y_reintegrarlo()
+    {
+        var bloqueado = Aprobado();
+        Abrir(bloqueado, TipoExpediente.Actualizacion);
+        Cerrar(bloqueado, ResultadoExpediente.Rechazado);
+        bloqueado.ActualizacionNoAprobada.ShouldBeTrue();
+        bloqueado.Apply(bloqueado.Bloquear("Sanción", null, Ahora.AddDays(2)));
+        bloqueado.ActualizacionNoAprobada.ShouldBeFalse(); // el bloqueo se ve primero
+        bloqueado.Apply(bloqueado.Desbloquear("Resuelto", Ahora.AddDays(3)));
+        bloqueado.ActualizacionNoAprobada.ShouldBeTrue();
+
+        var renovacion = Aprobado();
+        Abrir(renovacion, TipoExpediente.Renovacion);
+        Cerrar(renovacion, ResultadoExpediente.Rechazado);
+        renovacion.ActualizacionNoAprobada.ShouldBeFalse();
+
+        // Terminar el vínculo anula la actualización abierta, pero no es una decisión sobre ella: al reintegrarlo sin revalidar no hay aviso.
+        var terminado = Aprobado();
+        Abrir(terminado, TipoExpediente.Actualizacion);
+        terminado.Apply(terminado.Desvincular("Fin", Ahora.AddDays(2)));
+        terminado.ActualizacionNoAprobada.ShouldBeFalse();
+        terminado.Apply(terminado.Reintegrar("Se renovó el contrato.", Ahora.AddDays(3), sinRevalidar: true));
+        (terminado.Estado, terminado.ActualizacionNoAprobada).ShouldBe((EstadoVinculo.Activo, false));
+    }
+
     [Fact]
     public void La_expresion_que_filtra_en_la_base_y_la_propiedad_son_la_misma_regla()
     {

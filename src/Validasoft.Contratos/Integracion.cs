@@ -37,6 +37,10 @@ public sealed record LegadoDto(int EstadoTercero);
 /// actualización sigue abierta (es lo que la empresa y el tercero ven como «En revisión»). <b>No cambia nada de lo demás</b>:
 /// <see cref="EstadoVinculo"/> sigue siendo <c>Activo</c>, <c>PorVencer</c> o <c>Vencido</c> y el certificado, la vigencia, <see cref="Bloqueado"/> y
 /// <see cref="RevalidacionPendiente"/> (que lista lo que falta revisar) se calculan como siempre. Quien no lo conoce lo ignora.</param>
+/// <param name="EnVerificacion">Campo nuevo (VR-11), solo informativo: el certificado sigue vigente y la empresa revisa de nuevo lo que el tercero
+/// actualizó (es lo que la empresa y el tercero ven como «En verificación»). <see cref="Estado"/> sigue siendo <c>ConPendientes</c>, y
+/// <see cref="Bloqueado"/>, <see cref="VigenteHasta"/> y <see cref="RevalidacionPendiente"/> se calculan como siempre; con el plazo de la
+/// revalidación vencido, o vencido el certificado, deja de ser <c>true</c>.</param>
 public sealed record ConsultaCertificacionDto(
     bool Certificado,
     string? Folio,
@@ -54,4 +58,5 @@ public sealed record ConsultaCertificacionDto(
     LegadoDto? Legacy,
     bool FuenteRespaldo = false,
     int? AntiguedadSegundos = null,
-    bool EnRevision = false);
+    bool EnRevision = false,
+    bool EnVerificacion = false);

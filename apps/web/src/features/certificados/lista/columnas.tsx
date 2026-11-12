@@ -6,13 +6,14 @@ import { useTranslation } from 'react-i18next';
 import { formatearFechaDeclarada } from '../../documentos/formatoDatos';
 import { TerceroEnLinea } from '../../expedientes/componentes';
 import { EnlaceFichaTercero } from '../../terceros/EnlaceFichaTercero';
-import { esEstadoCertificado } from '../api';
+import { esEstadoCertificado, estadoVisibleDelCertificado } from '../api';
 import { fechaDelEstado } from './modelo';
 
 /** Celda del estado: el chip canónico (bloqueante en tono error) o, si la API trae uno desconocido, su texto. */
 function celdaEstado(fila: FilaCertificadoDto) {
-  if (!esEstadoCertificado(fila.estado)) return <Typography variant="body2">{fila.estado}</Typography>;
-  return <ChipEstado estado={fila.estado} fecha={fechaDelEstado(fila)} bloqueante={fila.bloqueante} />;
+  const visible = estadoVisibleDelCertificado(fila);
+  if (!esEstadoCertificado(visible)) return <Typography variant="body2">{fila.estado}</Typography>;
+  return <ChipEstado estado={visible} fecha={fechaDelEstado(fila)} bloqueante={fila.bloqueante} />;
 }
 
 /** Columnas de la lista de certificados (densas: una línea por fila). `conFicha`: el tercero lleva a su ficha. */

@@ -167,6 +167,21 @@ describe('Inicio', () => {
     expect(within(vinculos).getByText('3')).toBeInTheDocument();
   });
 
+  it('muestra cuántos certificados siguen vigentes en verificación y enlaza a su lista; en cero no hay tarjeta', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.certificadosLeer]);
+    montar(AL_DIA, { ...INDICADORES, certificadosEnVerificacion: 7 });
+    const certificados = await screen.findByRole('region', { name: 'Certificados' });
+    expect(within(certificados).getByRole('link', { name: 'En verificación' })).toHaveAttribute('href', '/e/emp/certificados?estado=EnVerificacion');
+    expect(within(certificados).getByText('7')).toBeInTheDocument();
+  });
+
+  it('sin certificados en verificación no aparece la tarjeta «En verificación»', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.certificadosLeer]);
+    montar(AL_DIA, { ...INDICADORES, certificadosEnVerificacion: 0 });
+    const certificados = await screen.findByRole('region', { name: 'Certificados' });
+    expect(within(certificados).queryByText('En verificación')).not.toBeInTheDocument();
+  });
+
   it('sin vínculos en revisión no aparece la tarjeta «En revisión»', async () => {
     permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
     montar(AL_DIA, { ...INDICADORES, vinculosEnRevision: 0 });

@@ -71,6 +71,16 @@ describe('historial del vínculo: vigencia periódica (VV-1)', () => {
     expect(eventoATimeline(evento('expediente_vinculado', { Tipo: 'Actualizacion', Folio: 'N-E-2' }), contexto, t)).toMatchObject({ despues: 'EnRevision' });
   });
 
+  it('una actualización que no se aprobó lo dice en el título del historial (VR-13); un expediente inicial rechazado, no', () => {
+    const cerrado = (resultado: number | string, tipo?: number | string) => eventoATimeline(evento('expediente_cerrado', { ExpedienteId: 'e1', Resultado: resultado, Tipo: tipo }), contexto, t);
+    expect(cerrado(1, 2)).toMatchObject({ titulo: 'Actualización rechazada: no se aprobó', despues: 'Rechazado' });
+    expect(cerrado(2, 2)).toMatchObject({ titulo: 'Actualización anulada: no se aprobó', despues: 'Anulado' });
+    expect(cerrado('Rechazado', 'Actualizacion')).toMatchObject({ titulo: 'Actualización rechazada: no se aprobó' });
+    expect(cerrado(0, 2)).toMatchObject({ titulo: 'Expediente cerrado', despues: 'Aprobado' }); // aprobada: no hay nada que avisar
+    expect(cerrado(1, 0)).toMatchObject({ titulo: 'Expediente cerrado', despues: 'Rechazado' });
+    expect(cerrado(1)).toMatchObject({ titulo: 'Expediente cerrado', despues: 'Rechazado' }); // evento anterior al tipo
+  });
+
   it('aprobar un expediente deja el vínculo Activo, sin decir de qué estado venía (puede ser el inicial o una actualización con el vínculo ya activo)', () => {
     const activado = eventoATimeline(evento('vinculo_activado', { ExpedienteId: 'e1' }), contexto, t);
     expect(activado).toMatchObject({ despues: 'Activo' });

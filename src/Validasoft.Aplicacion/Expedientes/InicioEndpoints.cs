@@ -110,8 +110,8 @@ public static class InicioEndpoints
             cerrados.Count(e => e.Estado == EstadoExpediente.Aprobado), cerrados.Count(e => e.Estado == EstadoExpediente.Rechazado),
             Informes.Estadistica.Promedio(tiempos), Informes.Estadistica.Mediana(tiempos),
             certificados.Count(c => c.Estado == EstadoCertificado.Vigente),
-            certificados.Count(c => c.Estado == EstadoCertificado.ConPendientes),
+            certificados.Count(c => c.Estado == EstadoCertificado.ConPendientes && !c.EnVerificacion),
             certificados.Count(c => c.Bloqueante),
-            Vinculos(EstadoVinculo.PorVencer), enRevision.Count);
+            Vinculos(EstadoVinculo.PorVencer), enRevision.Count, certificados.Count(c => c.EnVerificacion));
     }
 }

@@ -66,6 +66,25 @@ describe('verificación pública del certificado', () => {
     expect(urls).toContain('/.well-known/validasoft-certificados.json');
   });
 
+  it('en verificación (VR-11): sigue vigente, lo dice sin alarma, con su fecha de vencimiento y ofrece el PDF', async () => {
+    const { certificado, claves } = await certificadoSellado({ estado: 'ConPendientes', bloqueante: false, enVerificacion: true, pdfDescargable: true, estadoDesde: '2026-11-20T15:00:00Z' });
+    montarSellado(certificado, claves);
+
+    expect(await screen.findByRole('heading', { name: 'Este certificado está en verificación' })).toBeInTheDocument();
+    expect(screen.getByText(/Desde el 20\/11\/2026 Constructora Verificación S\.A\.S\. verifica de nuevo información que el titular actualizó\. Sigue vigente hasta su fecha de vencimiento/)).toBeInTheDocument();
+    expect(screen.getByText(/Vence el /)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
+    expect(screen.queryByText('Este certificado tiene pendientes')).not.toBeInTheDocument();
+  });
+
+  it('con pendientes que ya bloquean sigue diciendo «tiene pendientes» y no ofrece el PDF', async () => {
+    const { certificado, claves } = await certificadoSellado({ estado: 'ConPendientes', bloqueante: true, enVerificacion: false, pdfDescargable: false, estadoDesde: '2026-11-20T15:00:00Z' });
+    montarSellado(certificado, claves);
+
+    expect(await screen.findByRole('heading', { name: 'Este certificado tiene pendientes' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Descargar PDF' })).not.toBeInTheDocument();
+  });
+
   it('revocado: lo dice sin rodeos y no ofrece el PDF', async () => {
     const { certificado, claves } = await certificadoSellado({ estado: 'Revocado', bloqueante: true, pdfDescargable: false, estadoDesde: '2026-11-20T15:00:00Z' });
     montarSellado(certificado, claves);

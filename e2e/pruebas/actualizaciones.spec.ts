@@ -145,12 +145,12 @@ test('después de aprobado, el proveedor actualiza su RUT desde la bóveda: Nort
   }).toPass({ timeout: 45_000 });
 
   // En Norte el vínculo se ve «En revisión» (no «Activo») mientras revisa la actualización (VR-1, aunque su estado sigue siendo Activo); el certificado
-  // sigue siendo válido pero queda «Con pendientes» (RV-3).
+  // sigue siendo válido pero se ve «En verificación» (RV-3, VR-11; su estado de dominio sigue siendo «Con pendientes»).
   const vinculo = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.olga, e.norte, `vinculos/${enNorte.vinculoId}`);
   await expect(vinculo.getByRole('heading', { level: 1, name: tercero.nombre })).toBeVisible();
   await expect(vinculo.getByText('En revisión', { exact: true }).first()).toBeVisible();
   await expect(vinculo.getByText(/^Activo\. Activo desde el /)).toHaveCount(0); // el historial conserva sus chips «Activo»
-  await expect(vinculo.getByRole('main')).toContainText(new RegExp(`Con pendientes\\s*${e.norte.prefijo}-C-\\d{4}-\\d{6}-1`));
+  await expect(vinculo.getByRole('main')).toContainText(new RegExp(`En verificación\\s*${e.norte.prefijo}-C-\\d{4}-\\d{6}-1`));
   await expect(vinculo.getByRole('link', { name: 'Página de verificación' })).toBeVisible();
   // «Documentos compartidos»: cada uno con su botón «Ver o descargar {documento}, versión n».
   await expect(vinculo.getByRole('button', { name: `Ver o descargar ${RUT}, versión 2` })).toBeVisible();

@@ -4,7 +4,7 @@ import { ChipEstado } from '@validasoft/ui';
 import { FileText } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { esEstadoCertificado } from '../certificados/api';
+import { esEstadoCertificado, estadoVisibleDelCertificado } from '../certificados/api';
 import { versionVisible } from '../documentos/api';
 import { formatearFechaDeclarada } from '../documentos/formatoDatos';
 import { ChipVigencia } from '../documentos/VigenciaDocumento';
@@ -38,6 +38,7 @@ const Nota = ({ children }: { children: string }) => (
 export function CertificadoEnFicha({ certificado }: { certificado: CertificadoDelVinculoDto | null }) {
   const { t } = useTranslation();
   const actual = certificado?.actual ?? null;
+  const visible = actual ? estadoVisibleDelCertificado(actual) : '';
   return (
     <SeccionFicha titulo={t('terceros.ficha.certificado.titulo')}>
       {!certificado ? (
@@ -46,7 +47,7 @@ export function CertificadoEnFicha({ certificado }: { certificado: CertificadoDe
         <Nota>{t('terceros.ficha.certificado.sinEmitir')}</Nota>
       ) : (
         <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          {esEstadoCertificado(actual.estado) ? <ChipEstado estado={actual.estado} bloqueante={actual.bloqueante} /> : <Typography variant="body2">{actual.estado}</Typography>}
+          {esEstadoCertificado(visible) ? <ChipEstado estado={visible} bloqueante={actual.bloqueante} /> : <Typography variant="body2">{actual.estado}</Typography>}
           <Mono>{actual.folio}</Mono>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {actual.vigenteHasta ? t('terceros.ficha.certificado.vigenteHasta', { fecha: formatearFechaDeclarada(actual.vigenteHasta) }) : t('terceros.ficha.certificado.sinVencimiento')}

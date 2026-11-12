@@ -20,6 +20,7 @@ import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaEx
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
+import { AvisoActualizacionNoAprobada } from '../components/AvisoActualizacionNoAprobada';
 import { AvisoDeVigencia } from '../components/AvisoDeVigencia';
 import { DialogoAccion } from '../components/DialogoAccion';
 import { estadoVisibleDelVinculo } from '../estadoVisible';
@@ -91,6 +92,7 @@ export function DetalleVinculo() {
         </Alert>
       )}
       <AvisoDeVigencia vinculo={vinculo} />
+      <AvisoActualizacionNoAprobada vinculo={vinculo} empresaId={empresa.id} />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} conFicha={permisos.puede(SCOPES.tercerosLeer)} />

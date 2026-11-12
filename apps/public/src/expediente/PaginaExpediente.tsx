@@ -13,6 +13,7 @@ import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/c
 import { MarcaDeEmpresa } from '../shared/MarcaDeEmpresa';
 import { mensajeDeError } from '../shared/errores';
 import { avanceDelTercero } from '../vinculos/avance';
+import { AvisoActualizacionNoAprobada } from '../vinculos/AvisoActualizacionNoAprobada';
 import { ChipAvance } from '../vinculos/ChipAvance';
 import { useTextoAvance } from '../vinculos/useTextoAvance';
 import { situacionDelVinculo } from '../vinculos/situacion';
@@ -118,6 +119,8 @@ export function PaginaExpediente() {
           </Typography>
         )}
       </Card>
+
+      {vinculo?.actualizacionNoAprobada && situacion === 'vigente' && <AvisoActualizacionNoAprobada vinculo={vinculo} breve />}
 
       {/* El aviso habla de documentos vencidos: una renovación periódica del vínculo que solo pide secciones de la ficha ya lo explica el resumen de arriba. */}
       {expediente.tipo === 'Renovacion' &&

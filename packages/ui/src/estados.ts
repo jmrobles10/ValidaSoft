@@ -2,7 +2,7 @@
 import {
   Archive, Ban, CalendarX, CircleAlert, CircleCheck, CircleDashed, CircleDot, CircleEllipsis, CircleMinus, CirclePause, CircleX,
   Clock, Eye, FileUp, FolderOpen, History, Hourglass, Inbox, Lock, Mail, OctagonAlert, RefreshCw, Replace, ScanSearch,
-  SearchCheck, ShieldAlert, ShieldCheck, ShieldMinus, ShieldX, TimerOff, TriangleAlert, Undo2, Unlink, type LucideIcon,
+  SearchCheck, ShieldAlert, ShieldCheck, ShieldEllipsis, ShieldMinus, ShieldX, TimerOff, TriangleAlert, Undo2, Unlink, type LucideIcon,
 } from 'lucide-react';
 
 export type TonoEstado = 'encurso' | 'exito' | 'advertencia' | 'error' | 'info' | 'neutro';
@@ -11,7 +11,11 @@ export type EstadoVinculo = 'Invitado' | 'EnValidacion' | 'Activo' | 'PorVencer'
 export type EstadoRequisito = 'Pendiente' | 'Cargado' | 'EnRevision' | 'Observado' | 'Aprobado' | 'Eximido' | 'NoAplica' | 'Vencido' | 'Desactualizado';
 export type EstadoVersion = 'Recibida' | 'EnAnalisis' | 'Actual' | 'Superada' | 'Devuelta' | 'Retirada';
 export type EstadoExpediente = 'Abierto' | 'EnRevision' | 'Observado' | 'Aprobado' | 'Rechazado' | 'Anulado' | 'Caducado';
-export type EstadoCertificado = 'Vigente' | 'ConPendientes' | 'Suspendido' | 'Vencido' | 'Revocado' | 'Reemplazado';
+/**
+ * `EnVerificacion` (VR-11) no es un estado de dominio: es lo que se ve de un certificado vigente mientras la empresa revisa lo que el tercero
+ * actualizó (el estado de dominio sigue siendo `ConPendientes`, sin bloquear).
+ */
+export type EstadoCertificado = 'Vigente' | 'EnVerificacion' | 'ConPendientes' | 'Suspendido' | 'Vencido' | 'Revocado' | 'Reemplazado';
 export type EstadoAceptacion = 'AlDia' | 'Desactualizada' | 'PorVencer' | 'Vencida';
 export type EstadoCuentaDesignada = 'Propuesta' | 'Aprobada' | 'Rechazada' | 'Reemplazada';
 /** Verificación externa del expediente (H7): listas restrictivas o estudio de cumplimiento. */
@@ -62,6 +66,7 @@ export const APARIENCIA_ESTADO: Readonly<Record<Estado, Apariencia>> = {
   Caducado: { etiqueta: 'Caducado', tono: 'error', icono: TimerOff, verboFecha: 'Caducó el' },
   // Certificado
   Vigente: { etiqueta: 'Vigente', tono: 'exito', icono: ShieldCheck, verboFecha: 'Vigente hasta el' },
+  EnVerificacion: { etiqueta: 'En verificación', tono: 'encurso', icono: ShieldEllipsis, verboFecha: 'En verificación desde el' },
   ConPendientes: { etiqueta: 'Con pendientes', tono: 'advertencia', icono: CircleAlert },
   Suspendido: { etiqueta: 'Suspendido', tono: 'error', icono: CirclePause, verboFecha: 'Suspendido el' },
   Revocado: { etiqueta: 'Revocado', tono: 'error', icono: ShieldX, verboFecha: 'Revocado el' },

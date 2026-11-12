@@ -241,11 +241,17 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
         }
 
         var motivos = UnirMotivos(correo.Motivos);
-        var asunto = $"{correo.Empresa} cerró tu validación {correo.Folio} sin aprobarla";
-        var texto = $"{correo.Empresa} revisó tu validación {correo.Folio} y la cerró sin aprobarla." +
+        // Una actualización rechazada deja el vínculo como estaba (RV-2): lo ya aprobado sigue vigente (VR-13).
+        var asunto = correo.EsActualizacion
+            ? $"{correo.Empresa} no aprobó tu actualización {correo.Folio}"
+            : $"{correo.Empresa} cerró tu validación {correo.Folio} sin aprobarla";
+        var queSePaso = correo.EsActualizacion
+            ? "revisó tu actualización {0} y no la aprobó. Lo que ya tenías aprobado sigue vigente."
+            : "revisó tu validación {0} y la cerró sin aprobarla.";
+        var texto = $"{correo.Empresa} {string.Format(queSePaso, correo.Folio)}" +
                     (motivos.Length == 0 ? string.Empty : $"\n\nMotivos: {motivos}") +
                     "\n\nSi tienes dudas, escríbele directamente a la empresa.";
-        var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} revisó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b> y la cerró sin aprobarla.</p>" +
+        var html = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} {string.Format(queSePaso, $"<b>{WebUtility.HtmlEncode(correo.Folio)}</b>")}</p>" +
                    (motivos.Length == 0 ? string.Empty : $"<p>Motivos: {WebUtility.HtmlEncode(motivos)}</p>") +
                    "<p>Si tienes dudas, escríbele directamente a la empresa.</p>";
         return new MensajeDeCorreo(correo.Para, asunto, texto, html);
@@ -441,7 +447,7 @@ public static class CorreoDeObservacionPendienteHandler
 /// transacción de la decisión se confirma. <see cref="Motivos"/>: textos al tercero de los motivos del rechazo.
 /// </summary>
 public sealed record CorreoDeResultadoPendiente(string Para, string Empresa, string Folio, bool Aprobado, IReadOnlyList<string> Motivos,
-    Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null);
+    Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null, bool EsActualizacion = false);
 
 public static class CorreoDeResultadoPendienteHandler
 {

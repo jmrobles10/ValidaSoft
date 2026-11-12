@@ -10,4 +10,5 @@ export type ListarCertificadosParams = {
   q?: string;
   limite?: number;
   cursor?: string;
+  enVerificacion?: boolean;
 };

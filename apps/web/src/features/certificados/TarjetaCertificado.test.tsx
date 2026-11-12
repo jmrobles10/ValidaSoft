@@ -56,6 +56,33 @@ function montar(datos: CertificadoDelVinculoDto, responder: (url: string, metodo
   return peticiones;
 }
 
+describe('Certificado «En verificación» (VR-11)', () => {
+  it('sigue vigente y se ve «En verificación» (no «Con pendientes»), con la fecha hasta la que vale y lo que pasará', async () => {
+    permisos.scopes = new Set([SCOPES.certificadosLeer]);
+    montar({ vinculoId: 'v1', actual: { ...ACTUAL, estado: 'ConPendientes', enVerificacion: true }, emisiones: [] });
+
+    expect(await screen.findByText('En verificación')).toBeInTheDocument();
+    expect(screen.queryByText('Con pendientes')).not.toBeInTheDocument();
+    expect(screen.getByText(/Sigue vigente hasta el 08\/11\/2027 mientras la empresa verifica lo que el tercero actualizó/)).toBeInTheDocument();
+  });
+
+  it('con los pendientes ya bloqueantes manda «Con pendientes», no «En verificación»', async () => {
+    permisos.scopes = new Set([SCOPES.certificadosLeer]);
+    montar({ vinculoId: 'v1', actual: { ...ACTUAL, estado: 'ConPendientes', bloqueante: true, enVerificacion: false }, emisiones: [] });
+
+    expect(await screen.findByText('Con pendientes')).toBeInTheDocument();
+    expect(screen.queryByText('En verificación')).not.toBeInTheDocument();
+  });
+
+  it('un certificado vigente a secas no dice nada de verificación', async () => {
+    permisos.scopes = new Set([SCOPES.certificadosLeer]);
+    montar({ vinculoId: 'v1', actual: ACTUAL, emisiones: [] });
+
+    expect(await screen.findByText('Vigente')).toBeInTheDocument();
+    expect(screen.queryByText('En verificación')).not.toBeInTheDocument();
+  });
+});
+
 afterEach(() => {
   reiniciarCliente();
   permisos.scopes = new Set();

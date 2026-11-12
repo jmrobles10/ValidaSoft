@@ -68,6 +68,12 @@ public sealed record CertificadoSuspendido(int Emision, string Motivo, EstadoCer
 /// </summary>
 public sealed record CertificadoConPendientes(int Emision, string Motivo, Guid ExpedienteId, DateTimeOffset Fecha, bool Ampliado = false);
 
+/// <summary>
+/// La actualización que tenía al certificado con pendientes se cerró sin aprobarse (rechazada o anulada, VR-13): vuelve a <c>Vigente</c> con lo que
+/// la empresa ya había aprobado.
+/// </summary>
+public sealed record PendientesDeRevalidacionResueltos(int Emision, Guid ExpedienteId, DateTimeOffset Fecha);
+
 /// <summary>Venció el plazo de la revalidación sin resolverse (RV-4): los pendientes pasan a ser bloqueantes hasta la reemisión.</summary>
 public sealed record PlazoDeRevalidacionVencido(int Emision, Guid ExpedienteId, DateTimeOffset Fecha);
 

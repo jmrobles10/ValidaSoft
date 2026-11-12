@@ -101,7 +101,13 @@ public static class InvitacionesPublicasEndpoints
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
         // Un vínculo cuyo expediente se rechazó trae el rechazo con sus motivos y si puede volver a postularse (DS-4).
         var reintentos = await ReintentoDelTercero.CargarAsync(consulta, vistos, reloj.GetUtcNow(), ct);
-        return [.. vistos.Select(v => v.ADto() with { Reintento = reintentos.GetValueOrDefault(v.Vinculo.Id) })];
+        // Una actualización suya que la empresa no aprobó (VR-13): el vínculo conserva su estado, pero el tercero ve que no se aprobó y por qué.
+        var sinAprobar = await ActualizacionNoAprobada.CargarAsync(consulta, vistos, ct);
+        return [.. vistos.Select(v => v.ADto() with
+        {
+            Reintento = reintentos.GetValueOrDefault(v.Vinculo.Id),
+            ActualizacionNoAprobada = sinAprobar.GetValueOrDefault(v.Vinculo.Id)
+        })];
     }
 
     /// <summary>Empresa, tipo, estado y los textos vigentes por aceptar; <c>textosFaltantes</c> si la empresa no los ha publicado.</summary>

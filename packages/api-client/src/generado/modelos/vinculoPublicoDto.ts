@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ActualizacionNoAprobadaPublicaDto } from './actualizacionNoAprobadaPublicaDto';
 import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { EmpresaPublicaDto } from './empresaPublicaDto';
 import type { EstadoVinculo } from './estadoVinculo';
@@ -26,4 +27,5 @@ export interface VinculoPublicoDto {
   /** @nullable */
   vigenteHasta?: string | null;
   enRevision?: boolean;
+  actualizacionNoAprobada?: null | ActualizacionNoAprobadaPublicaDto;
 }

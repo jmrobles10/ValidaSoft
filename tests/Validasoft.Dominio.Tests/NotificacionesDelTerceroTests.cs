@@ -138,6 +138,42 @@ public class NotificacionesDelTerceroTests
     }
 
     [Fact]
+    public async Task Si_la_actualizacion_la_abrio_la_propia_version_del_tercero_se_le_confirma_que_la_empresa_la_esta_revisando_y_no_se_le_pide_actualizar()
+    {
+        var contexto = new ContextoFalso { TipoDeExpediente = TipoExpediente.Actualizacion, AbiertoPor = new ActorDeExpediente(ActorTipo.Tercero, TerceroId.ToString()) };
+        var abierta = Unica(await PlanearAsync(AperturaDe(TipoExpediente.Actualizacion, ActorTipo.Tercero), ExpedienteId, contexto));
+        (abierta.Tipo, abierta.Titulo).ShouldBe((TiposNotificacionTercero.Actualizacion, "Recibimos tu actualización"));
+        abierta.Mensaje.ShouldBe("Recibimos tu actualización de Registro Único Tributario y Cámara de comercio; Norte S.A.S. la está revisando y te avisamos si necesita algo.");
+        abierta.Mensaje.ShouldNotContain("necesita que actualices");
+        abierta.Enlace.ShouldBe($"/expediente/{ExpedienteId}");
+
+        var ampliada = Unica(await PlanearAsync(new RequisitosAgregados([Calculado(RequisitoId, "RUT", "Registro Único Tributario")], Ahora), ExpedienteId, contexto));
+        ampliada.Titulo.ShouldBe("Sumamos algo a tu actualización");
+        ampliada.Mensaje.ShouldBe("Norte S.A.S. también está revisando Registro Único Tributario, que actualizaste después.");
+
+        // Si la pidió la empresa (una persona o su sistema), se conserva el texto de siempre.
+        foreach (var empresa in new[] { ActorTipo.Usuario, ActorTipo.Integracion })
+        {
+            var pedida = Unica(await PlanearAsync(AperturaDe(TipoExpediente.Actualizacion, empresa), ExpedienteId,
+                new ContextoFalso { TipoDeExpediente = TipoExpediente.Actualizacion, AbiertoPor = new ActorDeExpediente(empresa, "x") }));
+            pedida.Titulo.ShouldBe("Hay información por actualizar");
+            pedida.Mensaje.ShouldContain("necesita que actualices");
+        }
+    }
+
+    [Fact]
+    public async Task Una_actualizacion_rechazada_avisa_que_no_se_aprobo_y_que_lo_ya_aprobado_sigue_vigente_y_una_validacion_inicial_dice_lo_de_siempre()
+    {
+        var rechazo = new ExpedienteRechazado(AreaCumplimiento, Revisor, [new MotivoAplicado("incompleto", "Falta información.")], "Interno: no cuadra con la cámara.", Ahora);
+        var actualizacion = Unica(await PlanearAsync(rechazo, ExpedienteId, new ContextoFalso { TipoDeExpediente = TipoExpediente.Actualizacion }));
+        (actualizacion.Tipo, actualizacion.Titulo).ShouldBe((TiposNotificacionTercero.Resultado, "Tu actualización no se aprobó"));
+        actualizacion.Mensaje.ShouldBe("Norte S.A.S. no aprobó tu actualización NORTE-E-2026-000001; lo que ya tenías aprobado sigue vigente. Motivos: Falta información.");
+        actualizacion.Mensaje.ShouldNotContain("Interno");
+
+        Unica(await PlanearAsync(rechazo, ExpedienteId, new ContextoFalso())).Titulo.ShouldBe("Validación cerrada sin aprobar");
+    }
+
+    [Fact]
     public async Task Una_actualizacion_o_su_ampliacion_avisa_que_hay_informacion_por_actualizar_y_la_inicial_no()
     {
         var contexto = new ContextoFalso { TipoDeExpediente = TipoExpediente.Actualizacion };
@@ -615,6 +651,9 @@ public class NotificacionesDelTerceroTests
         /// <summary>El vínculo de Norte no tiene correo de invitación.</summary>
         public bool SinCorreo { get; set; }
         public TipoExpediente TipoDeExpediente { get; set; } = TipoExpediente.Inicial;
+
+        /// <summary>Quién abrió el expediente: la empresa (una persona) por omisión; el tercero con su propia versión nueva, en las pruebas de VR-12.</summary>
+        public ActorDeExpediente AbiertoPor { get; set; } = new(ActorTipo.Usuario, "usuario-1");
         public string TipoCanonico { get; set; } = "RUT";
 
         public ContextoFalso()
@@ -641,7 +680,7 @@ public class NotificacionesDelTerceroTests
             return new Expediente
             {
                 Id = ExpedienteId, EmpresaId = EmpresaA, VinculoId = VinculoA, Folio = "NORTE-E-2026-000001", TerceroId = TerceroId, Tipo = TipoDeExpediente,
-                TerceroNombre = "Aceros del Norte", TipoVinculoNombre = "Proveedor", Estado = EstadoExpediente.Observado, AreaIds = [AreaCompras, AreaCumplimiento],
+                TerceroNombre = "Aceros del Norte", TipoVinculoNombre = "Proveedor", Estado = EstadoExpediente.Observado, AbiertoPor = AbiertoPor, AreaIds = [AreaCompras, AreaCumplimiento],
                 Etapas = [new EtapaDeExpediente { Orden = 1, Estado = EstadoEtapa.Activa, Areas = [new AreaDeExpediente { AreaId = AreaCumplimiento, Codigo = "CUMPLIMIENTO" }] }],
                 Requisitos =
                 [

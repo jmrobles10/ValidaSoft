@@ -14,6 +14,7 @@ export const certificadosLista = {
   },
   estados: {
     Vigente: 'Vigente',
+    EnVerificacion: 'En verificación',
     ConPendientes: 'Con pendientes',
     Suspendido: 'Suspendido',
     Vencido: 'Vencido',

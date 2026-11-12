@@ -10,6 +10,9 @@ versión mayor solo cambia cuando la API v1 rompe compatibilidad (ver «Versiona
 - `ConsultaCertificacionDto.EnRevision` (`enRevision` en TypeScript): solo informativo. Es `true` mientras el tercero tiene una actualización abierta
   con la empresa (actualizó información que ya había aprobado y la empresa la está revisando). No cambia nada de lo demás: `estadoVinculo` sigue
   siendo `Activo`, `PorVencer` o `Vencido` y el certificado, la vigencia, `bloqueado` y `revalidacionPendiente` se calculan como siempre. Quien no lo conoce lo ignora.
+- `ConsultaCertificacionDto.EnVerificacion` (`enVerificacion` en TypeScript): solo informativo. Es `true` mientras el certificado sigue vigente y la empresa revisa de nuevo lo
+  que el tercero actualizó («En verificación»). `estado` sigue siendo `ConPendientes` y `bloqueado`, `vigenteHasta` y `revalidacionPendiente` no cambian; con el plazo de la
+  revalidación vencido, o el certificado vencido, es `false`. Quien no lo conoce lo ignora.
 
 ## [1.0.0]
 

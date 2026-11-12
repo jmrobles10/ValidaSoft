@@ -14926,6 +14926,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "enVerificacion",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -15665,6 +15672,59 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "ActualizacionNoAprobadaDto": {
+        "required": [
+          "expedienteId",
+          "resultado",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "expedienteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "resultado": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ActualizacionNoAprobadaPublicaDto": {
+        "required": [
+          "resultado",
+          "fecha",
+          "motivos"
+        ],
+        "type": "object",
+        "properties": {
+          "resultado": {
+            "type": "string"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MotivoPublicoDto"
+            }
           }
         }
       },
@@ -17534,6 +17594,10 @@
               "string"
             ],
             "format": "date"
+          },
+          "enVerificacion": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -17740,6 +17804,10 @@
               "string"
             ],
             "format": "int64"
+          },
+          "enVerificacion": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -17836,6 +17904,10 @@
           },
           "pdfDescargable": {
             "type": "boolean"
+          },
+          "enVerificacion": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -18877,6 +18949,10 @@
             "format": "int32"
           },
           "enRevision": {
+            "type": "boolean",
+            "default": false
+          },
+          "enVerificacion": {
             "type": "boolean",
             "default": false
           }
@@ -24874,6 +24950,10 @@
           "estadoDesde": {
             "type": "string",
             "format": "date-time"
+          },
+          "enVerificacion": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26684,6 +26764,15 @@
             "default": 0
           },
           "vinculosEnRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "certificadosEnVerificacion": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -36892,6 +36981,16 @@
           "enRevision": {
             "type": "boolean",
             "default": false
+          },
+          "actualizacionNoAprobada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ActualizacionNoAprobadaDto"
+              }
+            ]
           }
         }
       },
@@ -37017,6 +37116,16 @@
           "enRevision": {
             "type": "boolean",
             "default": false
+          },
+          "actualizacionNoAprobada": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ActualizacionNoAprobadaPublicaDto"
+              }
+            ]
           }
         }
       },

@@ -65,7 +65,7 @@ public sealed record ResumenEstadoExpedientesDto(
 public sealed record InformeEstadoExpedientesDto(ResumenEstadoExpedientesDto Resumen, IReadOnlyList<FilaEstadoExpedienteDto> Datos, string? SiguienteCursor);
 
 /// <summary>Certificado del vínculo en el informe de terceros: la emisión actual.</summary>
-public sealed record CertificadoDelInformeDto(string Folio, string Estado, bool Bloqueante, DateOnly? VigenteHasta);
+public sealed record CertificadoDelInformeDto(string Folio, string Estado, bool Bloqueante, DateOnly? VigenteHasta, bool EnVerificacion = false);
 
 /// <summary>Expediente en curso del vínculo (abierto, en revisión u observado).</summary>
 public sealed record ExpedienteDelInformeDto(Guid Id, string Folio, string Tipo, string Estado);

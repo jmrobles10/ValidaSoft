@@ -31,4 +31,5 @@ export interface IndicadoresDto {
   certificadosNoValidos: number;
   vinculosPorVencer?: number;
   vinculosEnRevision?: number;
+  certificadosEnVerificacion?: number;
 }

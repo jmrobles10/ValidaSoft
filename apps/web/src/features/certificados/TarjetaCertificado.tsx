@@ -1,14 +1,14 @@
 import { Alert, Box, Button, Link, Stack, Typography } from '@mui/material';
 import { SCOPES, type VinculoDto } from '@validasoft/api-client';
 import { ChipEstado, Dato, formatearDiaCivil, formatearFecha, RejillaDatos } from '@validasoft/ui';
-import { Ban, Download, ExternalLink } from 'lucide-react';
+import { Ban, Download, ExternalLink, ShieldEllipsis } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorRecuperable, IconoCarga, Tarjeta } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
 import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
-import { esEstadoCertificado, pdfPendiente, useCertificadoVinculo, useDescargarCertificado } from './api';
+import { esEstadoCertificado, estadoVisibleDelCertificado, pdfPendiente, useCertificadoVinculo, useDescargarCertificado } from './api';
 import { DialogoRevocarCertificado } from './DialogoRevocarCertificado';
 
 /** Certificado del vínculo: estado de la emisión actual, descarga del PDF, verificación pública, revocación e historial. */
@@ -25,6 +25,7 @@ export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'
   if (!puedeLeer) return null;
   const actual = consulta.data?.actual ?? null;
   const anteriores = (consulta.data?.emisiones ?? []).filter((e) => e.folio !== actual?.folio);
+  const visible = actual ? estadoVisibleDelCertificado(actual) : '';
 
   return (
     <Tarjeta titulo={t('certificados.titulo')}>
@@ -37,11 +38,16 @@ export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'
       {actual && (
         <Stack spacing={1.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
-            {esEstadoCertificado(actual.estado) ? <ChipEstado estado={actual.estado} bloqueante={actual.bloqueante} /> : <Typography variant="body2">{actual.estado}</Typography>}
+            {esEstadoCertificado(visible) ? <ChipEstado estado={visible} bloqueante={actual.bloqueante} /> : <Typography variant="body2">{actual.estado}</Typography>}
             <Typography variant="mono" sx={{ fontSize: 13 }}>
               {actual.folio}
             </Typography>
           </Stack>
+          {actual.enVerificacion && (
+            <Alert severity="info" icon={<ShieldEllipsis size={18} strokeWidth={1.75} />}>
+              {t('certificados.enVerificacion', { fecha: actual.vigenteHasta ? formatearDiaCivil(actual.vigenteHasta) : t('certificados.sinVencimiento').toLowerCase() })}
+            </Alert>
+          )}
           {actual.pendientes.length > 0 && <Alert severity={actual.bloqueante ? 'error' : 'warning'}>{t('certificados.pendientes', { pendientes: actual.pendientes.join(', ') })}</Alert>}
           {actual.suspension && <Alert severity="warning">{t('certificados.suspendido', { fecha: formatearFecha(actual.suspension.desde), motivo: actual.suspension.motivo })}</Alert>}
           {actual.revocacion && (

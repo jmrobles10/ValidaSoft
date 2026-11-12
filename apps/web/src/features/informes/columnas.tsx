@@ -74,7 +74,7 @@ export function useColumnasVinculos(): ColumnaTabla<FilaInformeVinculoDto>[] {
         celda: (f) =>
           f.certificado ? (
             <Typography variant="body2">
-              {`${f.certificado.folio} · ${f.certificado.estado}`}
+              {`${f.certificado.folio} · ${f.certificado.enVerificacion ? t('certificados.lista.estados.EnVerificacion') : f.certificado.estado}`}
               {f.certificado.vigenteHasta ? ` · ${t('informes.vinculos.hasta', { fecha: formatearFechaDeclarada(f.certificado.vigenteHasta) })}` : ''}
             </Typography>
           ) : (

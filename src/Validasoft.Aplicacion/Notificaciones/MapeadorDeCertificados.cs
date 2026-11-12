@@ -18,7 +18,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
         new("certificado.reemplazado", "Una emisión quedó reemplazada por otra más reciente (sigue verificable)."),
         new("certificado.con_pendientes", "Una versión nueva de un documento aceptado está en revalidación; el certificado sigue válido."),
         new("certificado.suspendido", "El certificado se suspendió porque el vínculo se bloqueó."),
-        new("certificado.restablecido", "El certificado se restableció al desbloquearse el vínculo."),
+        new("certificado.restablecido", "El certificado se restableció: al desbloquearse el vínculo o al cerrarse sin aprobar la actualización que lo tenía con pendientes."),
         new("certificado.revocado", "El certificado se revocó."),
         new("certificado.vencido", "El certificado llegó a su fecha de vigencia.")
     ];
@@ -27,7 +27,7 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
 
     public async ValueTask<EventoPublicoMapeado?> MapearAsync(IEvent evento, IContextoDeEventos contexto, CancellationToken ct)
     {
-        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoConPendientes or PlazoDeRevalidacionVencido or CertificadoSuspendido or CertificadoRestablecido
+        if (evento.Data is not (CertificadoEmitido or CertificadoReemplazado or CertificadoConPendientes or PlazoDeRevalidacionVencido or PendientesDeRevalidacionResueltos or CertificadoSuspendido or CertificadoRestablecido
                 or CertificadoRevocado or CertificadoVencido))
             return null;
         if (!Guid.TryParse(evento.TenantId, out var tenantId))
@@ -75,6 +75,9 @@ public sealed class MapeadorDeCertificados : IMapeadorDeEventos
                 : null),
             CertificadoRestablecido r => ("certificado.restablecido", Datos(Emision(r.Emision, r.EstadoRestituido)) is { } d
                 ? d with { EstadoAnterior = nameof(EstadoCertificado.Suspendido), Motivo = r.Motivo }
+                : null),
+            PendientesDeRevalidacionResueltos r => ("certificado.restablecido", Datos(Emision(r.Emision, EstadoCertificado.Vigente)) is { } d
+                ? d with { EstadoAnterior = nameof(EstadoCertificado.ConPendientes), Motivo = "La actualización se cerró sin aprobarse: lo ya aprobado sigue vigente.", ExpedienteId = r.ExpedienteId }
                 : null),
             CertificadoRevocado r => ("certificado.revocado", Datos(Emision(r.Emision, EstadoCertificado.Revocado)) is { } d
                 ? d with { Motivo = r.Motivo }

@@ -194,6 +194,56 @@ public class CertificadoTests
         certificado.ActualizarMotivoDePendientes("Revalidación de RUT y la información general", expediente, Ahora.AddDays(17)).ShouldBeNull();
     }
 
+    [Fact]
+    public void Con_los_pendientes_de_una_actualizacion_abierta_el_certificado_esta_en_verificacion_sigue_vigente_y_deja_de_estarlo_si_el_plazo_vence_o_vence_el_certificado()
+    {
+        var (certificado, _) = Emitido();
+        var expediente = Guid.NewGuid();
+        certificado.EnVerificacion.ShouldBeFalse(); // vigente sin actualización
+
+        certificado = Aplicar(certificado, certificado.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(1)).ShouldNotBeNull());
+        (certificado.Estado, certificado.EnVerificacion, certificado.Bloqueante).ShouldBe((EstadoCertificado.ConPendientes, true, false)); // el estado de dominio no cambia
+
+        // Sigue siendo válido: bloqueado el vínculo se suspende y, restablecido, vuelve a estar en verificación.
+        certificado = Aplicar(certificado, certificado.Suspender("Bloqueo", Ahora.AddDays(2)));
+        certificado.EnVerificacion.ShouldBeFalse(); // suspendido manda
+        certificado = Aplicar(certificado, (CertificadoRestablecido)certificado.Restablecer("Desbloqueo", Ahora.AddDays(3)));
+        certificado.EnVerificacion.ShouldBeTrue();
+
+        // Con el plazo vencido (RV-4) los pendientes bloquean: deja de ser «En verificación» y manda «Con pendientes».
+        certificado = Aplicar(certificado, certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(16)).ShouldNotBeNull());
+        (certificado.EnVerificacion, certificado.Bloqueante).ShouldBe((false, true));
+
+        // Si vence el certificado durante la revisión, manda «Vencido».
+        var (otro, _) = Emitido();
+        otro = Aplicar(otro, otro.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(1)).ShouldNotBeNull());
+        otro = Aplicar(otro, otro.Vencer(otro.VenceDesde!.Value.AddDays(1)));
+        (otro.Estado, otro.EnVerificacion).ShouldBe((EstadoCertificado.Vencido, false));
+    }
+
+    [Fact]
+    public void Una_actualizacion_que_se_cierra_sin_aprobarse_devuelve_el_certificado_a_vigente_aunque_sus_pendientes_ya_bloquearan()
+    {
+        var (certificado, _) = Emitido();
+        var expediente = Guid.NewGuid();
+        certificado.ResolverPendientes(expediente, Ahora).ShouldBeNull(); // vigente: no hay pendientes que resolver
+        certificado = Aplicar(certificado, certificado.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(1)).ShouldNotBeNull());
+
+        certificado.ResolverPendientes(Guid.NewGuid(), Ahora.AddDays(2)).ShouldBeNull(); // los pendientes son de otra actualización
+        var resueltos = certificado.ResolverPendientes(expediente, Ahora.AddDays(2)).ShouldNotBeNull();
+        (resueltos.Emision, resueltos.ExpedienteId).ShouldBe((1, expediente));
+        certificado = Aplicar(certificado, resueltos);
+        (certificado.Estado, certificado.EnVerificacion, certificado.Bloqueante, certificado.ExpedienteDePendientes).ShouldBe((EstadoCertificado.Vigente, false, false, (Guid?)null));
+        certificado.ResolverPendientes(expediente, Ahora.AddDays(3)).ShouldBeNull(); // idempotente
+
+        // Con el plazo vencido (bloqueante), cerrar la actualización sin aprobarla también lo desbloquea: ya no hay pendientes.
+        certificado = Aplicar(certificado, certificado.MarcarConPendientes("Revalidación de RUT", expediente, Ahora.AddDays(4)).ShouldNotBeNull());
+        certificado = Aplicar(certificado, certificado.VencerPlazoDeRevalidacion(expediente, Ahora.AddDays(19)).ShouldNotBeNull());
+        certificado.Bloqueante.ShouldBeTrue();
+        certificado = Aplicar(certificado, certificado.ResolverPendientes(expediente, Ahora.AddDays(20)).ShouldNotBeNull());
+        (certificado.Estado, certificado.Bloqueante).ShouldBe((EstadoCertificado.Vigente, false));
+    }
+
     private static Certificado Aplicar(Certificado certificado, params object[] eventos)
     {
         foreach (var evento in eventos)
@@ -205,6 +255,7 @@ public class CertificadoTests
                 case CertificadoSuspendido e: certificado.Apply(e); break;
                 case CertificadoConPendientes e: certificado.Apply(e); break;
                 case PlazoDeRevalidacionVencido e: certificado.Apply(e); break;
+                case PendientesDeRevalidacionResueltos e: certificado.Apply(e); break;
                 case CertificadoRestablecido e: certificado.Apply(e); break;
                 case CertificadoRevocado e: certificado.Apply(e); break;
                 case CertificadoVencido e: certificado.Apply(e); break;

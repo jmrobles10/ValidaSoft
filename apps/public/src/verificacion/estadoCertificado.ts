@@ -9,6 +9,14 @@ export function estadoDelCertificado(estado: string): EstadoCertificado | null {
   return ESTADOS.find((e) => e === estado) ?? null;
 }
 
+/**
+ * Lo que se ve del certificado (VR-11): con la empresa verificando lo que el tercero actualizó es «En verificación» (sigue vigente hasta su fecha y
+ * no bloquea) aunque su estado de dominio siga siendo `ConPendientes`; con los pendientes ya bloqueantes manda «Con pendientes».
+ */
+export function estadoVisibleDelCertificado(c: Pick<CertificadoPublicoDto, 'estado' | 'enVerificacion'>): EstadoCertificado | null {
+  return c.enVerificacion ? 'EnVerificacion' : estadoDelCertificado(c.estado);
+}
+
 /** Ruta de esta página, la misma forma que pone el QR del PDF: `{UrlPublica}/verificar/{folio}?huella={12 hex}`. */
 export function rutaDeVerificacion(folio: string, huella?: string | null): string {
   const base = `/verificar/${encodeURIComponent(folio)}`;
@@ -20,14 +28,14 @@ export function rutaDeVerificacion(folio: string, huella?: string | null): strin
  * si sigue vigente, cuándo vence) o desde cuándo está así.
  */
 export function textoDelEstado(c: CertificadoPublicoDto, t: TFunction): { titulo: string; texto: string } {
-  const estado = estadoDelCertificado(c.estado);
+  const estado = estadoVisibleDelCertificado(c);
   const valores = { empresa: c.emisor.empresa, tercero: c.titular.nombre, estado: c.estado, fecha: formatearFecha(c.estadoDesde) };
   if (!estado) return { titulo: t('verificacion.estados.otro.titulo', valores), texto: t('verificacion.estados.otro.texto', valores) };
   if (estado === 'Vencido' && c.vigenteHasta) valores.fecha = formatearDiaCivil(c.vigenteHasta);
 
   const titulo = t(`verificacion.estados.${estado}.titulo`, valores);
   const texto = t(`verificacion.estados.${estado}.texto`, valores);
-  if (estado !== 'Vigente') return { titulo, texto };
+  if (estado !== 'Vigente' && estado !== 'EnVerificacion') return { titulo, texto };
   const vence = c.vigenteHasta ? t('verificacion.venceEl', { fecha: formatearDiaCivil(c.vigenteHasta) }) : t('verificacion.noVence');
   return { titulo, texto: `${texto} ${vence}` };
 }

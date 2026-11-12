@@ -105,6 +105,7 @@ export const certificados = {
   expediente: 'Expediente',
   huella: 'Huella',
   pendientes: 'Con pendientes: {{pendientes}}',
+  enVerificacion: 'Sigue vigente hasta el {{fecha}} mientras la empresa verifica lo que el tercero actualizó. Cuando lo apruebe se emite de nuevo; si se rechaza o se anula, el certificado sigue como estaba.',
   suspendido: 'Suspendido desde el {{fecha}}: {{motivo}}',
   revocado: 'Revocado el {{fecha}} ({{origen}}): {{motivo}}',
   origenes: { Administrador: 'por un administrador', Sistema: 'por el sistema' },

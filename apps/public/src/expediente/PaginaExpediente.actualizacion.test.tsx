@@ -87,6 +87,22 @@ describe('Mi revisión con una empresa: actualización abierta de un vínculo ac
     expect(screen.queryByText('Aprobado')).not.toBeInTheDocument();
   });
 
+  it('rechazada: «Actualización no aprobada» con los motivos y que lo ya aprobado sigue vigente; no «Aprobado» ni «cerró la revisión sin aprobarla»', async () => {
+    montar(
+      [vinculo({ actualizacionNoAprobada: { resultado: 'Rechazado', fecha: '2026-11-12T15:00:00Z', motivos: [{ codigo: 'incompleto', texto: 'Falta información.' }] } })],
+      expediente({ estado: 'Rechazado' }),
+    );
+
+    const titulo = await screen.findByRole('heading', { level: 1, name: 'Tu revisión con Constructora Norte' });
+    const principal = within(titulo.closest('main') ?? document.body);
+    expect(await principal.findByText('Actualización no aprobada')).toBeInTheDocument();
+    expect(principal.getByText('Esta actualización no se aprobó')).toBeInTheDocument();
+    expect(principal.getByText('Falta información.')).toBeInTheDocument();
+    // El encabezado ya cuenta que lo ya aprobado sigue vigente: el aviso solo suma el título y los motivos.
+    expect(principal.getByText(/Constructora Norte no aprobó la actualización que enviaste\. Lo que ya tenías aprobado sigue vigente\./)).toBeInTheDocument();
+    expect(principal.queryByText('Aprobado')).not.toBeInTheDocument();
+  });
+
   it('aprobada la actualización, el vínculo vuelve a «Aprobado»', async () => {
     montar([vinculo({ enRevision: false })], expediente({ estado: 'Aprobado' }));
 
