@@ -155,3 +155,10 @@ public sealed record DatosVerificacionDto(
     Guid ExpedienteId, string Folio, Guid VinculoId, IReadOnlyList<ReferenciaExternaDto> Referencias, string Tipo, string? Proveedor, string? Resultado,
     string Estado, bool Bloqueante, DateTimeOffset? VigenteHasta, int Coincidencias, int CoincidenciasPorAnalizar, string? Decision = null,
     int? NivelRiesgo = null);
+
+// ---------- Procesamiento inmediato (Plataforma; fecha simulada solo en Development) ----------
+
+public sealed record RevisarVerificacionesDto(Guid? TenantId = null, DateTimeOffset? Fecha = null);
+
+/// <summary>Lo que atendió el procesamiento: consultas automáticas de listas, expiraciones de lo vencido y monitoreos de vínculos activos.</summary>
+public sealed record ResultadoRevisionVerificacionesDto(int Consultas, int Expiraciones, int Monitoreos);

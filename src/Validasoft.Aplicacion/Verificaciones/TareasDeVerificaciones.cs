@@ -14,6 +14,9 @@ using Validasoft.Dominio.Vinculos;
 
 namespace Validasoft.Aplicacion.Verificaciones;
 
+/// <summary>Cuántas consultas de listas, expiraciones y monitoreos atendió un procesamiento.</summary>
+public sealed record ResultadoDeProcesamientoDeVerificaciones(int Consultas, int Expiraciones, int Monitoreos);
+
 /// <summary>
 /// Trabajo en segundo plano de las verificaciones (docs/11 §2.7.8): la consulta automática de listas cuando el expediente pasa
 /// a revisión o su resultado vence (VE-5), la expiración de lo satisfecho con el expediente abierto (estudio a los 30 días) y
@@ -25,19 +28,27 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
 {
     public const string ConsultadoPorElSistema = "Sistema (consulta automática)";
 
-    public async Task ProcesarPendientesAsync(CancellationToken ct)
+    /// <summary>
+    /// Procesa lo pendiente a la hora del reloj: de todos los tenants (el procesador periódico) o de uno solo
+    /// (<paramref name="tenantId"/>, lo que usa el barrido inmediato de Plataforma con fecha simulada). Devuelve cuántas cosas atendió.
+    /// </summary>
+    public async Task<ResultadoDeProcesamientoDeVerificaciones> ProcesarPendientesAsync(CancellationToken ct, Guid? tenantId = null)
     {
         var ahora = reloj.GetUtcNow();
         List<Expediente> porConsultar, porVencer;
         List<MonitoreoDeListas> monitoreos;
         Dictionary<Guid, Guid> tenants;
         await using (var global = store.QuerySession())
+        await using (var delTenant = tenantId is { } unico ? store.QuerySession(unico.ToString("N")) : null)
         {
-            porConsultar = [.. await global.Query<Expediente>().Where(e => e.AnyTenant() && e.ProximaConsultaDeListas != null && e.ProximaConsultaDeListas <= ahora)
+            // Con un tenant se consulta su propia sesión (sin `AnyTenant`): el tope de cada lista no se llena con lo de otros grupos.
+            var expedientes = delTenant is null ? global.Query<Expediente>().Where(e => e.AnyTenant()) : delTenant.Query<Expediente>();
+            var seguimientos = delTenant is null ? global.Query<MonitoreoDeListas>().Where(m => m.AnyTenant()) : delTenant.Query<MonitoreoDeListas>();
+            porConsultar = [.. await expedientes.Where(e => e.ProximaConsultaDeListas != null && e.ProximaConsultaDeListas <= ahora)
                 .OrderBy(e => e.ProximaConsultaDeListas).Take(20).ToListAsync(ct)];
-            porVencer = [.. await global.Query<Expediente>().Where(e => e.AnyTenant() && e.ProximoVencimientoDeVerificacion != null && e.ProximoVencimientoDeVerificacion <= ahora)
+            porVencer = [.. await expedientes.Where(e => e.ProximoVencimientoDeVerificacion != null && e.ProximoVencimientoDeVerificacion <= ahora)
                 .Take(50).ToListAsync(ct)];
-            monitoreos = [.. await global.Query<MonitoreoDeListas>().Where(m => m.AnyTenant() && m.ProximaConsulta != null && m.ProximaConsulta <= ahora)
+            monitoreos = [.. await seguimientos.Where(m => m.ProximaConsulta != null && m.ProximaConsulta <= ahora)
                 .OrderBy(m => m.ProximaConsulta).Take(20).ToListAsync(ct)];
             var empresas = porConsultar.Select(e => e.EmpresaId).Concat(porVencer.Select(e => e.EmpresaId)).Concat(monitoreos.Select(m => m.EmpresaId))
                 .Distinct().ToArray();
@@ -50,7 +61,11 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
             await IntentarAsync(() => ConsultarExpedienteAsync(tenants[expediente.EmpresaId], expediente.Id, ct), expediente.Folio, "consultar las listas");
         foreach (var monitoreo in monitoreos.Where(m => tenants.ContainsKey(m.EmpresaId)))
             await IntentarAsync(() => MonitorearAsync(tenants[monitoreo.EmpresaId], monitoreo.Id, ct), monitoreo.Folio, "monitorear las listas");
+        return new ResultadoDeProcesamientoDeVerificaciones(porConsultar.Count, porVencer.Count, monitoreos.Count);
     }
+
+    /// <summary>Las mismas tareas con otro reloj (el barrido inmediato de Plataforma simula «ahora» solo en Development).</summary>
+    public TareasDeVerificaciones ConReloj(TimeProvider otro) => new(store, consulta, certificados, otro, protector, alcances, registro);
 
     /// <summary>Consulta automática de las listas de un expediente (pendientes o vencidas); si el proveedor falla, se reintenta luego.</summary>
     public async Task ConsultarExpedienteAsync(Guid tenantId, Guid expedienteId, CancellationToken ct)

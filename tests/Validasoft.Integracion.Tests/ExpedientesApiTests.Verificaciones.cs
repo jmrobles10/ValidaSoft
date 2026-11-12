@@ -171,6 +171,33 @@ public sealed partial class ExpedientesApiTests
     }
 
     [Fact]
+    public async Task El_barrido_inmediato_de_Plataforma_vence_el_estudio_con_fecha_simulada_solo_en_el_grupo_indicado()
+    {
+        var e = await PrepararAsync();
+        var otro = await PrepararAsync();
+        await CrearFlujoConVerificacionesAsync(e, "CLIENTE", EstudioRequerido with { VigenciaDias = 1 });
+        var vinculo = await CrearVinculoConNombreAsync(e, "CLIENTE", "Aceros del Oeste S.A.S.");
+        var abierto = await ApiAsync<ExpedienteDto>("POST", $"/api/v1/vinculos/{vinculo.Id}/expedientes", Admin(e), new AbrirExpedienteDto(), 201);
+        (await ApiAsync<ExpedienteDto>("POST", $"/api/v1/expedientes/{abierto.Id}/verificaciones/estudio-cumplimiento", Delegado(e, e.Carlos),
+            new RegistrarEstudioCumplimientoDto(1, false, "Simple", "Favorable"), 200)).Verificaciones!.Single().Estado.ShouldBe("Satisfecha");
+
+        // Dentro de dos días (fecha simulada) el estudio de un día ya venció; pero el barrido de otro grupo no lo toca.
+        var plataforma = new Credencial(ApiFixture.ClavePlataforma);
+        var dentroDeDosDias = DateTimeOffset.UtcNow.AddDays(2);
+        (await ApiAsync<ResultadoRevisionVerificacionesDto>("POST", "/api/v1/plataforma/verificaciones/revisar", plataforma,
+            new RevisarVerificacionesDto(otro.TenantId, dentroDeDosDias), 200)).Expiraciones.ShouldBe(0);
+        (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{abierto.Id}", Admin(e), null, 200)).Verificaciones!.Single().Estado.ShouldBe("Satisfecha");
+
+        // El barrido de su grupo, con esa fecha, lo expira (como el procesador cuando pasan los días de verdad); repetirlo no cambia nada.
+        (await ApiAsync<ResultadoRevisionVerificacionesDto>("POST", "/api/v1/plataforma/verificaciones/revisar", plataforma,
+            new RevisarVerificacionesDto(e.TenantId, dentroDeDosDias), 200)).Expiraciones.ShouldBe(1);
+        var vencido = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{abierto.Id}", Admin(e), null, 200);
+        vencido.Verificaciones!.Single().Estado.ShouldBe("Expirada");
+        (await ApiAsync<ResultadoRevisionVerificacionesDto>("POST", "/api/v1/plataforma/verificaciones/revisar", plataforma,
+            new RevisarVerificacionesDto(e.TenantId, dentroDeDosDias), 200)).Expiraciones.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task La_empresa_configura_infolaft_con_clave_de_solo_escritura_y_ve_su_consumo_y_el_informe_sagrilaft()
     {
         var e = await PrepararAsync();
