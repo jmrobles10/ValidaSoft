@@ -33,7 +33,8 @@ public sealed record RevocacionDelCertificadoDto(string Motivo, string Origen, D
 /// Una emisión del certificado vista por la empresa (<c>certificados:leer</c>). <see cref="Folio"/> lleva la emisión
 /// (<c>{Prefijo}-C-{Año}-{Secuencia}-{n}</c>); <see cref="Estado"/> es el de esa emisión (<c>Reemplazado</c> si hay una
 /// más nueva). <see cref="ContenidoCanonico"/> es exactamente lo que se hasheó (claves en orden RFC 8785). <see cref="Pdf"/>
-/// es nulo mientras se genera.
+/// es nulo mientras se genera. <see cref="EnVerificacion"/> (VR-11, solo la emisión actual): el certificado sigue vigente mientras la empresa
+/// revisa lo que el tercero actualizó; <see cref="Estado"/> sigue siendo <c>ConPendientes</c> y <see cref="Bloqueante"/> <c>false</c>.
 /// </summary>
 public sealed record CertificadoDto(
     Guid Id,
@@ -64,7 +65,8 @@ public sealed record CertificadoDto(
     int Descargas,
     FirmaDelCertificadoDto Firma,
     JsonElement ContenidoCanonico,
-    long Version);
+    long Version,
+    bool EnVerificacion = false);
 
 /// <summary>Fila del historial de emisiones del vínculo.</summary>
 public sealed record EmisionDelCertificadoDto(
@@ -107,7 +109,8 @@ public sealed record CertificadoPublicoDto(
     FirmaDelCertificadoDto Firma,
     DateTimeOffset EstadoDesde,
     string? ReemplazadoPor,
-    bool PdfDescargable);
+    bool PdfDescargable,
+    bool EnVerificacion = false);
 
 /// <summary>Clave pública Ed25519 en bruto (base64, 32 bytes) y como JWK (RFC 8037) para WebCrypto.</summary>
 public sealed record ClavePublicaDeCertificadosDto(string Kid, string Algoritmo, string ClavePublica, JwkDto Jwk, bool Vigente);
@@ -126,4 +129,4 @@ public sealed record ClavesDeCertificadosDto(
 /// (suspendido, vencido, revocado o con pendientes ya bloqueantes) y su vigencia.
 /// </summary>
 public sealed record FilaCertificadoDto(Guid Id, string Folio, int Emision, Guid VinculoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo,
-    string Estado, bool Bloqueante, DateTimeOffset EmitidoEn, DateOnly? VigenteHasta, DateTimeOffset EstadoDesde);
+    string Estado, bool Bloqueante, DateTimeOffset EmitidoEn, DateOnly? VigenteHasta, DateTimeOffset EstadoDesde, bool EnVerificacion = false);

@@ -13,6 +13,8 @@ export * from './aceptacionDto';
 export * from './aceptadoPorDto';
 export * from './aceptarInvitacionDto';
 export * from './actorAuditoriaDto';
+export * from './actualizacionNoAprobadaDto';
+export * from './actualizacionNoAprobadaPublicaDto';
 export * from './actualizarAreaDto';
 export * from './actualizarAtributosDto';
 export * from './actualizarAtributosDtoAtributos';

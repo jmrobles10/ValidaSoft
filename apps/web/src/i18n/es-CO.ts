@@ -174,6 +174,17 @@ export const esCO = {
     errorLista: 'No pudimos cargar los vínculos.',
     abrir: 'Abrir vínculo de {{tercero}}',
     terceroDesconocido: 'Tercero sin acceso',
+    actualizacionNoAprobada: {
+      ver: 'Ver el expediente',
+      rechazada: {
+        titulo: 'La última actualización del tercero se rechazó',
+        texto: 'El {{fecha}} se rechazó lo que el tercero actualizó. El vínculo conserva lo que ya estaba aprobado y el tercero ve en su portal que no se aprobó, con los motivos. Este aviso se quita cuando se abra otro expediente.',
+      },
+      anulada: {
+        titulo: 'La última actualización del tercero se anuló',
+        texto: 'El {{fecha}} se anuló la revisión de lo que el tercero actualizó. El vínculo conserva lo que ya estaba aprobado y el tercero ve en su portal que no se aprobó. Este aviso se quita cuando se abra otro expediente.',
+      },
+    },
     contactos: {
       titulo: 'Contactos del tercero',
       dialogo: 'Contactos del tercero con esta empresa',
@@ -378,6 +389,8 @@ export const esCO = {
     vinculo_vencido: 'Vínculo vencido',
     vigencia_del_vinculo_fijada: 'Vigencia fijada',
     expediente_cerrado: 'Expediente cerrado',
+    actualizacion_rechazada: 'Actualización rechazada: no se aprobó',
+    actualizacion_anulada: 'Actualización anulada: no se aprobó',
     referencia: 'Referencia {{sistema}} {{id}}',
     invitacion: 'A {{correo}}, vence el {{expira}}',
     hasta: 'Hasta el {{fecha}}',

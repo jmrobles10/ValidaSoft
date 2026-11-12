@@ -274,7 +274,15 @@ public sealed record VinculoDto(
     string? UltimoResultado = null,
     IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null,
     DateOnly? VigenteHasta = null,
-    bool EnRevision = false);
+    bool EnRevision = false,
+    ActualizacionNoAprobadaDto? ActualizacionNoAprobada = null);
+
+/// <summary>
+/// La última actualización del vínculo no se aprobó (VR-13): <see cref="Resultado"/> es <c>Rechazado</c> o <c>Anulado</c>, <see cref="Fecha"/> cuándo se
+/// cerró y <see cref="ExpedienteId"/> el expediente (con sus motivos y su historial). El vínculo conserva su estado; el aviso dura hasta que se
+/// abre otro expediente.
+/// </summary>
+public sealed record ActualizacionNoAprobadaDto(Guid? ExpedienteId, string Resultado, DateTimeOffset? Fecha);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -373,7 +381,15 @@ public sealed record SesionEmbebidaDto(string Token, DateTimeOffset Expira, stri
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
     DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null,
-    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null, bool EnRevision = false);
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null, bool EnRevision = false,
+    ActualizacionNoAprobadaPublicaDto? ActualizacionNoAprobada = null);
+
+/// <summary>
+/// Lo que el tercero ve de una actualización suya que la empresa no aprobó (VR-13): <see cref="Resultado"/> <c>Rechazado</c> (con los
+/// <see cref="Motivos"/> tal como se le comunicaron, sin áreas ni revisores) o <c>Anulado</c> (sin motivos: son internos). Lo que ya tenía aprobado
+/// sigue vigente. Dura hasta que se abre otro expediente.
+/// </summary>
+public sealed record ActualizacionNoAprobadaPublicaDto(string Resultado, DateTimeOffset? Fecha, IReadOnlyList<MotivoPublicoDto> Motivos);
 
 /// <summary>
 /// Lo que el tercero ve de un rechazo (DS-4): cuándo y con qué motivos (los textos al tercero, sin áreas ni revisores). Con
@@ -504,8 +520,10 @@ public sealed record MisPendientesDto(IReadOnlyList<PendientesDeAreaDto> PorArea
 /// días; los de estado son la foto de hoy. Tiempos en días corridos, de la apertura al cierre aprobado.
 /// <see cref="VinculosEnRevision"/> (VR-1): vínculos con una actualización abierta; no cuentan en <see cref="VinculosActivos"/>,
 /// <see cref="VinculosPorVencer"/> ni <see cref="VinculosVencidos"/> (cada vínculo está en una sola cifra, la misma que ve en su lista).
+/// <see cref="CertificadosEnVerificacion"/> (VR-11): certificados vigentes que la empresa revisa de nuevo por una actualización; ya no cuentan en
+/// <see cref="CertificadosConPendientes"/> (queda con los pendientes que ya bloquean, que siguen contando también en <see cref="CertificadosNoValidos"/>).
 /// </summary>
 public sealed record IndicadoresDto(int Dias, int VinculosActivos, int VinculosEnValidacion, int VinculosInvitados, int VinculosVencidos,
     int VinculosBloqueados, int ExpedientesEnCurso, int ExpedientesObservados, int ExpedientesAprobados, int ExpedientesRechazados,
     double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos,
-    int VinculosPorVencer = 0, int VinculosEnRevision = 0);
+    int VinculosPorVencer = 0, int VinculosEnRevision = 0, int CertificadosEnVerificacion = 0);

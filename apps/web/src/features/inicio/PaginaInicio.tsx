@@ -21,7 +21,7 @@ export function PaginaInicio() {
     <>
       <EncabezadoPagina titulo={t('inicio.titulo')} subtitulo={t('inicio.subtitulo', { empresa: empresa.nombre })} />
       <LoQueTeToca empresaId={empresa.id} />
-      <Indicadores empresaId={empresa.id} puedeVerVinculos={permisos.puede(SCOPES.vinculosLeer)} />
+      <Indicadores empresaId={empresa.id} puedeVerVinculos={permisos.puede(SCOPES.vinculosLeer)} puedeVerCertificados={permisos.puede(SCOPES.certificadosLeer)} />
     </>
   );
 }

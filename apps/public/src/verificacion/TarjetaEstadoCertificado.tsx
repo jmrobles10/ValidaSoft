@@ -7,7 +7,7 @@ import { Link as RouterLink } from 'react-router';
 import { mensajeDeError } from '../shared/errores';
 import { LogoEmpresa } from '../shared/componentes';
 import { DatosCertificado } from './DatosCertificado';
-import { estadoDelCertificado, rutaDeVerificacion, textoDelEstado } from './estadoCertificado';
+import { estadoVisibleDelCertificado, rutaDeVerificacion, textoDelEstado } from './estadoCertificado';
 import { useDescargarCertificado } from './useVerificacion';
 
 /**
@@ -16,7 +16,7 @@ import { useDescargarCertificado } from './useVerificacion';
  */
 export function TarjetaEstadoCertificado({ certificado: c, huella }: { certificado: CertificadoPublicoDto; huella: string | null }) {
   const { t } = useTranslation();
-  const estado = estadoDelCertificado(c.estado);
+  const estado = estadoVisibleDelCertificado(c);
   const tono = estado ? tonoDe(estado, c.bloqueante) : 'neutro';
   const { titulo, texto } = textoDelEstado(c, t);
   const descargar = useDescargarCertificado(c.folio, huella);

@@ -176,6 +176,9 @@ export const esCO = {
     enRevision: 'En revisión',
     observado: 'Tienes observaciones',
     aprobado: 'Aprobado',
+    noAprobada: 'Actualización no aprobada',
+    textoNoAprobadaRechazado: '{{empresa}} no aprobó la actualización que enviaste. Lo que ya tenías aprobado sigue vigente.',
+    textoNoAprobadaAnulado: '{{empresa}} anuló la revisión de la actualización que enviaste. Lo que ya tenías aprobado sigue vigente.',
     preVencimiento: 'En pre-vencimiento',
     porVencer: 'Por vencer',
     ratificar: 'Ratifica tu información',
@@ -184,6 +187,14 @@ export const esCO = {
     textoPorVencer: 'Tu validación con {{empresa}} vence el {{fecha}}. Ratifica (confirma que sigue igual) o actualiza tu información para seguir al día.',
     textoPorVencerSinFecha: 'Tu validación con {{empresa}} vence pronto. Ratifica o actualiza tu información para seguir al día.',
     textoRatificar: 'La validación con {{empresa}} venció. Ratifica (confirma que sigue igual) o actualiza las secciones de tu información que te pide.',
+  },
+  actualizacionNoAprobada: {
+    titulo: 'Esta actualización no se aprobó',
+    motivos: 'Motivos',
+    Rechazado: '{{empresa}} no aprobó la actualización que enviaste{{cuando}}.',
+    Anulado: '{{empresa}} anuló la revisión de la actualización que enviaste{{cuando}}.',
+    el: ' el {{fecha}}',
+    sigueVigente: 'Lo que ya tenías aprobado con {{empresa}} sigue vigente. Si quieres que lo revisen de nuevo, sube una versión nueva.',
   },
   vinculoSituacion: {
     suspendida: {
@@ -538,6 +549,11 @@ export const esCO = {
     cargando: 'Consultando el certificado…',
     estados: {
       Vigente: { titulo: 'Este certificado está vigente', texto: '{{empresa}} validó los documentos de {{tercero}} y el certificado sigue en vigor.' },
+      // Con la empresa verificando lo que el tercero actualizó el certificado sigue vigente (VR-11): no es una alerta, pero se dice.
+      EnVerificacion: {
+        titulo: 'Este certificado está en verificación',
+        texto: 'Desde el {{fecha}} {{empresa}} verifica de nuevo información que el titular actualizó. Sigue vigente hasta su fecha de vencimiento; si necesitas la confirmación más reciente, pídesela a la empresa.',
+      },
       // Los nombres suelen terminar en «S.A.S.»: ninguna frase termina con un nombre, para no cerrar con dos puntos.
       ConPendientes: {
         titulo: 'Este certificado tiene pendientes',

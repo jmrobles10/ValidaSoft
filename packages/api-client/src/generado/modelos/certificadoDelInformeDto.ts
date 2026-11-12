@@ -11,4 +11,5 @@ export interface CertificadoDelInformeDto {
   bloqueante: boolean;
   /** @nullable */
   vigenteHasta: string | null;
+  enVerificacion?: boolean;
 }

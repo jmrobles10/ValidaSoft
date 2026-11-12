@@ -4,6 +4,7 @@ using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Vinculos;
+using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
@@ -343,6 +344,16 @@ public static class ProcesoDeValidacion
                     var vigenteHasta = await VigenciasDeVinculos.FijarAlAprobarAsync(sesion, vinculoStream, vinculo, estado, ahora, ct);
                     await certificados.EmitirAsync(sesion, estado, vinculo, ahora, ct, vigenteHastaDelVinculo: vigenteHasta);
                 }
+
+                // Una actualización que se cierra sin aprobarse (VR-13): lo ya aprobado sigue valiendo, así que el certificado deja de estar
+                // «En verificación» y vuelve a Vigente (el vínculo ya conserva su estado, RV-2).
+                if (cierre is ResultadoExpediente.Rechazado or ResultadoExpediente.Anulado && estado.Tipo == TipoExpediente.Actualizacion &&
+                    vinculo.Estado is not (EstadoVinculo.Desvinculado or EstadoVinculo.Anulado))
+                {
+                    var certificado = await sesion.Events.FetchForWriting<Certificado>(Certificado.IdPara(estado.VinculoId), ct);
+                    if (certificado.Aggregate?.ResolverPendientes(estado.Id, ahora) is { } resueltos)
+                        certificado.AppendOne(resueltos);
+                }
             }
 
             // Aprobado con listas consultadas ⇒ el vínculo queda en monitoreo periódico (VE-12), heredando las decisiones.
@@ -372,7 +383,7 @@ public static class ProcesoDeValidacion
         var rechazo = eventos.OfType<ExpedienteRechazado>().FirstOrDefault();
         await correo.Publicar(new CorreoDeResultadoPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", estado.Folio,
             rechazo is null, rechazo is null ? [] : [.. rechazo.Motivos.Select(m => m.TextoAlTercero)], empresa?.TenantId, estado.EmpresaId,
-            vinculo.TerceroId));
+            vinculo.TerceroId, estado.Tipo == TipoExpediente.Actualizacion));
     }
 
     /// <summary>

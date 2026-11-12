@@ -19,6 +19,9 @@ import { situacionDelVinculo } from './situacion';
  * empresa es lo que dice el expediente: «En revisión», «Tienes observaciones» o, si algo falta, «Faltan N documentos»; nunca «Aprobado»
  * mientras la empresa la revisa. Aprobada, vuelve a «Aprobado».
  *
+ * Una actualización suya que la empresa **no aprobó** (VR-13: se rechazó o se anuló; el vínculo conserva su estado) es `noAprobada`: lo que le toca saber con
+ * esa empresa es que no se aprobó (y por qué), no «Aprobado». Dura hasta que se abre otro expediente.
+ *
  * `null` cuando no hay un paso propio que contar (sin aceptar, vínculo suspendido o terminado, expediente cerrado sin
  * aprobar): se muestra el estado tal cual.
  */
@@ -27,6 +30,7 @@ export type AvanceTercero =
   | { tipo: 'enRevision' }
   | { tipo: 'observado' }
   | { tipo: 'aprobado' }
+  | { tipo: 'noAprobada'; resultado: 'Rechazado' | 'Anulado' }
   | { tipo: 'preVencimiento'; hasta: string | null }
   | { tipo: 'porVencer'; hasta: string | null }
   | { tipo: 'ratificar' };
@@ -51,13 +55,24 @@ function avanceDelExpedienteAbierto(expediente: { estado: EstadoExpediente; requ
 }
 
 export function avanceDelTercero(
-  vinculo: { estado: EstadoVinculo; invitacionAceptada: boolean; vigenteHasta?: string | null; enRevision?: boolean } | null | undefined,
+  vinculo:
+    | {
+        estado: EstadoVinculo;
+        invitacionAceptada: boolean;
+        vigenteHasta?: string | null;
+        enRevision?: boolean;
+        actualizacionNoAprobada?: { resultado: string } | null;
+      }
+    | null
+    | undefined,
   expediente: { estado: EstadoExpediente; requisitosFaltantes?: number; tipo?: string } | null | undefined,
 ): AvanceTercero | null {
   if (vinculo && (situacionDelVinculo(vinculo.estado) !== 'vigente' || !vinculo.invitacionAceptada)) return null;
   // Actualización abierta (VR-1): manda sobre el estado del vínculo. Sin el expediente a la mano, la marca del vínculo basta para no decir «Aprobado».
   if (expediente?.tipo === 'Actualizacion' && ESTADOS_ABIERTOS.includes(expediente.estado)) return avanceDelExpedienteAbierto(expediente);
   if (vinculo?.enRevision && !expediente) return { tipo: 'enRevision' };
+  // Una actualización que no se aprobó (VR-13): se avisa sobre «Activo», «Por vencer» y «Vencido» hasta que se abra otro expediente.
+  if (vinculo?.actualizacionNoAprobada) return { tipo: 'noAprobada', resultado: vinculo.actualizacionNoAprobada.resultado === 'Anulado' ? 'Anulado' : 'Rechazado' };
   if (vinculo?.estado === 'PorVencer') {
     // Pre-vencimiento: la renovación abierta espera al tercero. Ya enviada (en revisión u observada) cuenta como cualquier expediente.
     const renovacion = expediente?.tipo === 'Renovacion' ? expediente.estado : null;
@@ -75,6 +90,7 @@ export const ESTADO_DEL_AVANCE = {
   enRevision: 'EnRevision',
   observado: 'Observado',
   aprobado: 'Aprobado',
+  noAprobada: 'Observado',
   preVencimiento: 'PorVencer',
   porVencer: 'PorVencer',
   ratificar: 'Vencido',

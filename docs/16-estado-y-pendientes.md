@@ -147,7 +147,7 @@ Rama lista para revisar (con push, **sin PR**). Cierra «lo mismo de la HU 49093
 - **Pendiente** (DP-16): logo en el PDF, descarga por el propio tercero, importar la imagen de las firmas del Portal (hoy solo su huella), y el «Registro automático por RUT» de la HU.
 
 ### 3.4 Vínculo «En revisión» por una actualización (`feature/vinculo-en-revision-por-actualizacion`, 2026-11-12)
-Rama sobre `main`, **sin PR**. Decisiones **VR-1…VR-10** en el [registro](decisiones/registro.md#5-quinquaquinquagies-vínculo-en-revisión-por-una-actualización-2026-11-12-vr);
+Rama sobre `main`, **sin PR**. Decisiones **VR-1…VR-13** en el [registro](decisiones/registro.md#5-quinquaquinquagies-vínculo-en-revisión-por-una-actualización-2026-11-12-vr);
 contratos en [05 §2.3.1](05-api-contratos-y-webhooks.md). Producto decidió que un tercero ya aprobado que actualiza un documento o una sección deja el **documento y
 el vínculo con cada empresa afectada «En revisión»** (antes el portal decía «Aprobado» arriba y «En revisión» en el documento: HI-5 (3)).
 - **Qué hace:** una situación **derivada** (`Vinculo.EnRevisionPorActualizacion`), no un estado nuevo: `estado`, certificado, vigencia, eventos y consulta de
@@ -156,8 +156,12 @@ el vínculo con cada empresa afectada «En revisión»** (antes el portal decía
   (`enRevision` en `VinculoDto`, `VinculoPublicoDto`, la consulta de certificación y el informe; `GET /vinculos?enRevision=`; `vinculosEnRevision`).
 - **«Todos los vínculos del tercero»** = los que la actualización alcanza (VR-2): cada empresa cuyo flujo exige lo que cambió y que ya lo había aprobado; un
   vínculo que no lo exige no tiene nada que revisar.
-- **Pendiente / preguntas abiertas** (VR-10): suspender o no el certificado mientras está en revisión (hoy no, A-2/RV-4 intactos), el texto de la campana
-  `tercero.actualizacion`, qué mostrar si la actualización se rechaza o se anula, y que un vínculo bloqueado no recibe la versión nueva (B-5).
+- **Producto respondió las tres preguntas abiertas (2026-11-12):** el certificado **no se suspende**: mientras la actualización está abierta sigue vigente y se ve
+  **«En verificación»** (app de la empresa, página pública `/verificar` y consulta de certificación; VR-11); la campana `tercero.actualizacion` dice «Recibimos tu actualización…»
+  cuando la abrió la propia versión del tercero (VR-12); y una actualización **rechazada o anulada** deja el vínculo como estaba pero el tercero (con los motivos) y la
+  empresa ven que no se aprobó, hasta que se abre el siguiente expediente (VR-13). Rechazada o anulada, el certificado vuelve a «Vigente».
+- **Pendiente / preguntas abiertas** (VR-10): un vínculo bloqueado no recibe la versión nueva (B-5); y con el plazo de la revalidación vencido (A-2/RV-4) el certificado
+  deja de ser «En verificación» y bloquea (no se cambió: ¿el plazo cuenta como «vencer»?).
 
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
@@ -403,4 +407,4 @@ Pendiente:
 4. ~~Señal entre empresas: ¿debe compartirse algún hecho grave sin revelar quién decidió?~~ Resuelta en G-1: **no se comparte ningún hecho grave; las decisiones de cada empresa son privadas.**
 5. ~~Integración con el SRM (§3.2): cuándo se sube la rama, cuenta de servicio de AyF y «Bloqueado».~~ Resuelta en G-4: **todavía no; primero se prueba Validasoft solo, sin integrarlo en ningún sistema.** La rama del SRM sigue en espera (§3.2).
 6. ~~Nueva vigencia tras renovar: ¿desde la aprobación o desde el vencimiento anterior?~~ Resuelta en G-3 (ya era VV-12): **desde la aprobación.**
-7. **Vínculo en revisión (VR-8, §3.4):** ¿debe suspenderse el certificado (o decirle `bloqueado: true` a los ERP) mientras el vínculo está «En revisión» por una actualización? Hoy no: queda `ConPendientes`, válido, con el aviso y el bloqueo de A-2/RV-4 a los 15 días.
+7. ~~**Vínculo en revisión (VR-8, §3.4):** ¿debe suspenderse el certificado (o decirle `bloqueado: true` a los ERP) mientras el vínculo está «En revisión» por una actualización?~~ Resuelta en VR-11: **no se suspende; sigue vigente y se ve «En verificación»** (con el plazo de A-2/RV-4 vencido bloquea, como antes: pregunta abierta en VR-10).

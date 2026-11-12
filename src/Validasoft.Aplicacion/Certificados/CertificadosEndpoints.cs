@@ -133,7 +133,7 @@ public static class VerificacionPublicaEndpoints
     }
 
     /// <summary>
-    /// Descarga pública del PDF solo de una emisión <c>Vigente</c> (otro estado ⇒ 409 <c>certificado-no-vigente</c>): quien
+    /// Descarga pública del PDF solo de una emisión <c>Vigente</c> o «En verificación» (otro estado ⇒ 409 <c>certificado-no-vigente</c>): quien
     /// verifica un certificado vigente puede guardar la copia; uno suspendido, vencido, revocado o reemplazado no se
     /// redistribuye. Queda auditada como descarga pública (IP y user-agent).
     /// </summary>
@@ -146,7 +146,8 @@ public static class VerificacionPublicaEndpoints
         EmisionDeCertificado emision;
         await using (var consulta = sesiones.ConsultaGlobal())
             (certificado, emision) = await BuscarAsync(consulta, entornos, folio, huella, ct);
-        if (emision.Estado != EstadoCertificado.Vigente)
+        // En verificación (VR-11) sigue vigente: quien lo verifica puede guardar la copia.
+        if (emision.Estado != EstadoCertificado.Vigente && !MapeosCertificados.EnVerificacion(certificado, emision))
             throw ReglaDeNegocioException.Conflicto("certificado-no-vigente", $"El certificado está {emision.Estado}: su PDF no se entrega.");
 
         var pdf = emision.Pdf ?? await archivo.AsegurarPdfAsync(certificado.Tenant, certificado.Id, emision.Numero, ct)
@@ -240,7 +241,8 @@ internal static class MapeosCertificados
             e.Descargas,
             Firma(e, emisor),
             Contenido(e),
-            c.Version);
+            c.Version,
+            EnVerificacion(c, e));
     }
 
     public static EmisionDelCertificadoDto AResumen(this EmisionDeCertificado e) =>
@@ -256,8 +258,16 @@ internal static class MapeosCertificados
             new FlujoDelCertificadoDto(contenido.Flujo.Codigo, contenido.Flujo.Nombre, contenido.Flujo.Version),
             e.EmitidoEn, e.VigenteHasta, e.Huella, e.HashContenido, Contenido(e), e.UrlVerificacion, [], Firma(e, emisor), e.EstadoDesde,
             e.Estado == EstadoCertificado.Reemplazado ? c.Actual.Folio : null,
-            e.Estado == EstadoCertificado.Vigente);
+            e.Estado == EstadoCertificado.Vigente || EnVerificacion(c, e),
+            EnVerificacion(c, e));
     }
+
+    /// <summary>
+    /// «En verificación» (VR-11): la emisión actual con los pendientes de una actualización abierta cuyo plazo no venció: sigue vigente
+    /// y no bloquea. No es un estado (<c>Estado</c> sigue siendo <c>ConPendientes</c>).
+    /// </summary>
+    internal static bool EnVerificacion(Certificado c, EmisionDeCertificado e) =>
+        e.Numero == c.EmisionActual && e.Estado == EstadoCertificado.ConPendientes && !c.PendientesBloqueantes;
 
     /// <summary>
     /// Suspendido (B-5), revocado, vencido o, la emisión actual, con pendientes de revalidación vencidos (RV-4): no debe
@@ -283,13 +293,15 @@ public static class ListaDeCertificadosEndpoints
 {
     /// <summary>
     /// <paramref name="estado"/>: Vigente, ConPendientes, Suspendido, Vencido, Revocado o <c>Bloqueante</c> (los que la
-    /// consulta de certificación responde bloqueados). <paramref name="q"/>: parte del nombre o la identificación del
+    /// consulta de certificación responde bloqueados). <paramref name="enVerificacion"/> (VR-11): <c>true</c> solo los vigentes que la empresa revisa de
+    /// nuevo por una actualización; <c>false</c> excluye esos (así «Con pendientes» en pantalla no repite lo que se ve «En verificación»); <c>estado</c>
+    /// sigue filtrando por el estado de dominio. <paramref name="q"/>: parte del nombre o la identificación del
     /// tercero, o del folio. Ordenados por la vigencia más próxima; cursor opaco.
     /// </summary>
     [WolverineGet("/api/v1/certificados")]
     [Authorize(Policy = Permisos.CertificadosLeer)]
     public static async Task<PaginaDto<FilaCertificadoDto>> Listar(SesionDeEmpresa empresa, string? estado, string? q, int? limite, string? cursor,
-        CancellationToken ct)
+        bool? enVerificacion, CancellationToken ct)
     {
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
         var desde = Peticiones.LeerDesplazamiento(cursor);
@@ -311,7 +323,7 @@ public static class ListaDeCertificadosEndpoints
         var texto = q?.Trim();
         var filas = certificados
             .Where(c => c.Emisiones.Count > 0)
-            .Where(c => (filtro is null || c.Estado == filtro) && (!bloqueantes || c.Bloqueante))
+            .Where(c => (filtro is null || c.Estado == filtro) && (!bloqueantes || c.Bloqueante) && (enVerificacion is null || c.EnVerificacion == enVerificacion))
             .Select(c =>
             {
                 var actual = c.Actual;
@@ -320,7 +332,7 @@ public static class ListaDeCertificadosEndpoints
                 return new FilaCertificadoDto(c.Id, actual.Folio, actual.Numero, c.VinculoId,
                     new TerceroResumenDto(c.TerceroId, tercero?.Nombre ?? string.Empty, tercero?.Identificacion.Clave ?? string.Empty),
                     new TipoVinculoResumenDto(tipo?.Id ?? Guid.Empty, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
-                    c.Estado.ToString(), c.Bloqueante, actual.EmitidoEn, actual.VigenteHasta, actual.EstadoDesde);
+                    c.Estado.ToString(), c.Bloqueante, actual.EmitidoEn, actual.VigenteHasta, actual.EstadoDesde, c.EnVerificacion);
             })
             .Where(f => string.IsNullOrEmpty(texto) ||
                         f.Tercero.Nombre.Contains(texto, StringComparison.CurrentCultureIgnoreCase) ||

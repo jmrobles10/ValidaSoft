@@ -116,8 +116,12 @@ public enum ResultadoExpediente
 /// </summary>
 public sealed record ExpedienteVinculado(Guid ExpedienteId, TipoExpediente Tipo, string Folio, DateTimeOffset Fecha);
 
-/// <summary>El expediente abierto terminó; con <c>Rechazado</c>, <c>Anulado</c> o <c>Caducado</c> un vínculo en validación vuelve a <c>Invitado</c>.</summary>
-public sealed record ExpedienteCerrado(Guid ExpedienteId, ResultadoExpediente Resultado, DateTimeOffset Fecha);
+/// <summary>
+/// El expediente abierto terminó; con <c>Rechazado</c>, <c>Anulado</c> o <c>Caducado</c> un vínculo en validación vuelve a <c>Invitado</c>.
+/// <see cref="Tipo"/> (VR-13): de qué tipo era el expediente que se cerró (nulo en los eventos anteriores a este campo): con una
+/// <c>Actualizacion</c> rechazada o anulada el vínculo conserva su estado y se avisa que esa actualización no se aprobó.
+/// </summary>
+public sealed record ExpedienteCerrado(Guid ExpedienteId, ResultadoExpediente Resultado, DateTimeOffset Fecha, TipoExpediente? Tipo = null);
 
 /// <summary>
 /// Un administrador desaprobó el último expediente aprobado del vínculo (DS-2): el mismo expediente vuelve a revisión, el vínculo

@@ -46,6 +46,9 @@ export const expedientes = {
     esperandoVerificacionesTitulo: 'Falta cumplimiento para aprobar',
     esperandoVerificaciones: 'Todas las áreas aprobaron. El expediente se aprueba cuando se satisfaga: {{verificaciones}}.',
     rechazado: '{{area}} lo rechazó el {{fecha}}. El vínculo volvió a Invitado.',
+    // Una actualización rechazada o anulada deja el vínculo como estaba (RV-2, VR-13): el tercero ve que no se aprobó.
+    rechazadoActualizacion: '{{area}} la rechazó el {{fecha}}. El vínculo conserva lo que ya estaba aprobado y el tercero ve que esta actualización no se aprobó.',
+    anuladoActualizacion: 'Se anuló el {{fecha}}. El vínculo conserva lo que ya estaba aprobado y el tercero ve que esta actualización no se aprobó; se revisa otra vez cuando suba una versión nueva.',
     anuladoTitulo: 'Expediente anulado',
     anulado: 'Se anuló el {{fecha}}. El vínculo volvió a Invitado y se puede abrir otro expediente.',
     bloqueadoTitulo: 'Vínculo bloqueado',

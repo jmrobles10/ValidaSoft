@@ -47,4 +47,5 @@ export interface CertificadoDto {
   firma: FirmaDelCertificadoDto;
   contenidoCanonico: JsonElement;
   version: number;
+  enVerificacion?: boolean;
 }

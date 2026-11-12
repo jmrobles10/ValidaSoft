@@ -31,4 +31,5 @@ export interface CertificadoPublicoDto {
   /** @nullable */
   reemplazadoPor: string | null;
   pdfDescargable: boolean;
+  enVerificacion?: boolean;
 }

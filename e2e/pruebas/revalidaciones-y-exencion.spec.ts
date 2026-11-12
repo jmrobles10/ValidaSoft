@@ -115,7 +115,7 @@ test('Sofía aprueba en lote las revalidaciones sin cambios; la que cambió se r
   await expect(expedienteA.getByText(`Revisión aprobó ${RUT} (v2)`, { exact: true })).toHaveCount(1);
   await expect(expedienteA.getByText(`Revisión aprobó ${BANCARIA} (v2)`, { exact: true })).toHaveCount(1);
   const vinculoB = await abrirEmbebido(await paginaDe(browser), e, e.sofia, e.sur, `vinculos/${b.invitacion.vinculoId}`);
-  await expect(vinculoB.getByRole('main')).toContainText(new RegExp(`Con pendientes\\s*${e.sur.prefijo}-C-\\d{4}-\\d{6}-1`));
+  await expect(vinculoB.getByRole('main')).toContainText(new RegExp(`En verificación\\s*${e.sur.prefijo}-C-\\d{4}-\\d{6}-1`));
   await expect(vinculoB.getByText('Expediente cerrado', { exact: true })).toHaveCount(1);
   await expect(vinculoB.getByText('Expediente abierto', { exact: true })).toHaveCount(2);
 

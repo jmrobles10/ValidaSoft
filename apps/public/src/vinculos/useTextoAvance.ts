@@ -15,6 +15,8 @@ export function useTextoAvance() {
         return t('expediente.estadoTexto.Observado', { empresa });
       case 'aprobado':
         return t('expediente.estadoTexto.Aprobado', { empresa });
+      case 'noAprobada':
+        return t(`avance.textoNoAprobada${avance.resultado}`, { empresa });
       case 'preVencimiento':
         return avance.hasta
           ? t('avance.textoPreVencimiento', { empresa, fecha: formatearDiaCivil(avance.hasta) })

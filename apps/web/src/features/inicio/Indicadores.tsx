@@ -13,7 +13,7 @@ import { aNumero, formatearConteo, formatearDias, leerVentana, VENTANA_POR_DEFEC
  * Indicadores de la empresa (IN-2): vínculos y certificados al momento; expedientes en curso al momento y, en la ventana
  * elegida (7, 30 o 90 días, en la URL), los aprobados, rechazados y el tiempo de la apertura a la aprobación.
  */
-export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string; puedeVerVinculos: boolean }) {
+export function Indicadores({ empresaId, puedeVerVinculos, puedeVerCertificados = false }: { empresaId: string; puedeVerVinculos: boolean; puedeVerCertificados?: boolean }) {
   const { t } = useTranslation();
   const [parametros, setParametros] = useSearchParams();
   const dias = leerVentana(parametros);
@@ -33,6 +33,7 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
       { replace: true },
     );
   const aVinculos = (estado: string) => (puedeVerVinculos ? `/e/${empresaId}/vinculos?estado=${estado}` : null);
+  const aCertificados = (estado: string) => (puedeVerCertificados ? `/e/${empresaId}/certificados?estado=${estado}` : null);
   // Los aprobados y su tiempo llevan al informe de estado con la misma ventana y medida (IF-7).
   const aInforme = rutaInformeDeVentana(empresaId, dias);
 
@@ -102,6 +103,9 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
           </GrupoCifras>
           <GrupoCifras titulo={t('inicio.indicadores.certificados')}>
             <Cifra etiqueta={t('inicio.indicadores.vigentes')} valor={formatearConteo(datos.certificadosVigentes)} />
+            {datos.certificadosEnVerificacion ? (
+              <Cifra etiqueta={t('inicio.indicadores.enVerificacion')} valor={formatearConteo(datos.certificadosEnVerificacion)} a={aCertificados('EnVerificacion')} />
+            ) : null}
             <Cifra etiqueta={t('inicio.indicadores.conPendientes')} valor={formatearConteo(datos.certificadosConPendientes)} />
             <Cifra etiqueta={t('inicio.indicadores.noValidos')} valor={formatearConteo(datos.certificadosNoValidos)} />
           </GrupoCifras>

@@ -20,4 +20,5 @@ export interface FilaCertificadoDto {
   /** @nullable */
   vigenteHasta: string | null;
   estadoDesde: string;
+  enVerificacion?: boolean;
 }

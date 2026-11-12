@@ -126,7 +126,7 @@ describe('Certificados', () => {
     await usuario.click(screen.getByRole('button', { name: /Estado/ }));
     await usuario.click(await screen.findByRole('menuitem', { name: 'Bloquean la certificación' }));
 
-    await waitFor(() => expect(urls).toContain('/api/v1/certificados?estado=Bloqueante&limite=25'));
+    await waitFor(() => expect(urls).toContain('/api/v1/certificados?estado=Bloqueante&enVerificacion=false&limite=25'));
   });
 
   it('la búsqueda espera a que se deje de escribir y viaja como q', async () => {
@@ -163,7 +163,7 @@ describe('Certificados', () => {
     const urls = montar([], '/e/emp/certificados?estado=Revocado&q=Tornillo');
 
     expect(await screen.findByText('Ningún certificado coincide con los filtros.')).toBeInTheDocument();
-    expect(urls[0]).toBe('/api/v1/certificados?estado=Revocado&q=Tornillo&limite=25');
+    expect(urls[0]).toBe('/api/v1/certificados?estado=Revocado&enVerificacion=false&q=Tornillo&limite=25');
     expect(screen.getByRole('searchbox')).toHaveValue('Tornillo');
 
     // Está en la barra de filtros y en el estado vacío; cualquiera limpia la URL.

@@ -81,6 +81,26 @@ describe('avance del tercero: lo que le toca, no el estado interno', () => {
     });
   });
 
+  describe('una actualización suya que la empresa no aprobó (VR-13): el vínculo conserva su estado, pero lo que le toca saber es que no se aprobó', () => {
+    const noAprobada = (resultado: string) => ({ estado: 'Activo', invitacionAceptada: true, actualizacionNoAprobada: { resultado } }) as const;
+
+    it('rechazada o anulada se cuenta como «no aprobada», no como «Aprobado»', () => {
+      expect(avanceDelTercero(noAprobada('Rechazado'), { estado: 'Rechazado', tipo: 'Actualizacion' })).toEqual({ tipo: 'noAprobada', resultado: 'Rechazado' });
+      expect(avanceDelTercero(noAprobada('Anulado'), { estado: 'Anulado', tipo: 'Actualizacion' })).toEqual({ tipo: 'noAprobada', resultado: 'Anulado' });
+      expect(avanceDelTercero(noAprobada('Rechazado'), null)).toEqual({ tipo: 'noAprobada', resultado: 'Rechazado' });
+      expect(avanceDelTercero({ estado: 'PorVencer', invitacionAceptada: true, actualizacionNoAprobada: { resultado: 'Rechazado' } }, null)).toEqual({ tipo: 'noAprobada', resultado: 'Rechazado' });
+    });
+
+    it('si se abre otra actualización manda esa; sin aviso, el vínculo activo es «Aprobado»', () => {
+      expect(avanceDelTercero({ ...noAprobada('Rechazado'), enRevision: true }, { estado: 'EnRevision', tipo: 'Actualizacion' })).toEqual({ tipo: 'enRevision' });
+      expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true, actualizacionNoAprobada: null }, { estado: 'Rechazado', tipo: 'Actualizacion' })).toEqual({ tipo: 'aprobado' });
+    });
+
+    it('un vínculo suspendido o terminado no cuenta nada', () => {
+      expect(avanceDelTercero({ estado: 'Bloqueado', invitacionAceptada: true, actualizacionNoAprobada: { resultado: 'Rechazado' } }, null)).toBeNull();
+    });
+  });
+
   it('sin paso propio que contar se deja el estado tal cual', () => {
     expect(avanceDelTercero({ estado: 'Invitado', invitacionAceptada: false }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();
     expect(avanceDelTercero({ estado: 'Bloqueado', invitacionAceptada: true }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();
@@ -217,5 +237,53 @@ describe('Mis empresas', () => {
     // Por vencer con una actualización abierta cuenta la actualización, no «Por vencer».
     expect(await tarjeta('Distribuidora Este').findByText('En revisión')).toBeInTheDocument();
     expect(tarjeta('Distribuidora Este').queryByText('Por vencer')).not.toBeInTheDocument();
+  });
+
+  it('una actualización rechazada o anulada: «Actualización no aprobada» con los motivos que se le comunicaron y que lo ya aprobado sigue vigente, nunca «Aprobado»', async () => {
+    const vinculos = [
+      vinculo('a', 'Aceros del Norte', {
+        estado: 'Activo',
+        actualizacionNoAprobada: { resultado: 'Rechazado', fecha: '2026-11-12T15:00:00Z', motivos: [{ codigo: 'incompleto', texto: 'Falta información.' }] },
+      }),
+      vinculo('b', 'Bodegas del Sur', { estado: 'Activo', actualizacionNoAprobada: { resultado: 'Anulado', fecha: '2026-11-12T15:00:00Z', motivos: [] } }),
+    ];
+    const expedientes: Record<string, Partial<ExpedientePublicoDto>> = {
+      'exp-a': { ...expediente('exp-a', 'Rechazado', 0), tipo: 'Actualizacion' },
+      'exp-b': { ...expediente('exp-b', 'Anulado', 0), tipo: 'Actualizacion' },
+    };
+    configurarCliente({
+      fetch: vi.fn((url: RequestInfo | URL) => {
+        const ruta = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+        const id = ruta.split('/expedientes/')[1];
+        return Promise.resolve(json(id ? expedientes[id] : vinculos));
+      }),
+    });
+    render(
+      <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <PaginaEmpresas />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    const tarjeta = (nombre: string) => {
+      const li = screen.getByRole('heading', { name: nombre }).closest('li');
+      if (!li) throw new Error(`Sin tarjeta para ${nombre}`);
+      return within(li);
+    };
+
+    await screen.findByRole('heading', { name: 'Aceros del Norte' });
+    expect(await tarjeta('Aceros del Norte').findByText('Actualización no aprobada')).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').getByText('Aceros del Norte no aprobó la actualización que enviaste el 12/11/2026.')).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').getByText(/Lo que ya tenías aprobado con Aceros del Norte sigue vigente/)).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').getByText('Falta información.')).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').queryByText('Aprobado')).not.toBeInTheDocument();
+
+    expect(await tarjeta('Bodegas del Sur').findByText('Actualización no aprobada')).toBeInTheDocument();
+    expect(tarjeta('Bodegas del Sur').getByText('Bodegas del Sur anuló la revisión de la actualización que enviaste el 12/11/2026.')).toBeInTheDocument();
+    expect(tarjeta('Bodegas del Sur').queryByText('Motivos')).not.toBeInTheDocument(); // una anulación no lleva motivos: son internos
+    expect(tarjeta('Bodegas del Sur').queryByText('Aprobado')).not.toBeInTheDocument();
   });
 });

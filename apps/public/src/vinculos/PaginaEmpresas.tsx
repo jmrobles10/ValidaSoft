@@ -8,6 +8,7 @@ import { Link as RouterLink } from 'react-router';
 import { useExpedientePublico, useVinculosPublicos } from '../shared/api';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas, LogoEmpresa } from '../shared/componentes';
 import { avanceDelTercero, type AvanceTercero } from './avance';
+import { AvisoActualizacionNoAprobada } from './AvisoActualizacionNoAprobada';
 import { AvisoRechazo } from './AvisoRechazo';
 import { ChipAvance } from './ChipAvance';
 import { DialogoContactos } from './DialogoContactos';
@@ -92,6 +93,8 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
       </Stack>
       {v.reintento ? (
         <AvisoRechazo vinculo={v} />
+      ) : v.actualizacionNoAprobada && situacion === 'vigente' ? (
+        <AvisoActualizacionNoAprobada vinculo={v} />
       ) : (
         <Typography sx={{ color: 'text.secondary', fontSize: 14, lineHeight: '20px', mt: 1.5 }}>
           {situacion !== 'vigente'

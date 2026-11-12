@@ -11,9 +11,17 @@ import type { Estado } from '@validasoft/ui';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
 
 /** Estados de una emisión (CE-5): el chip usa el estado canónico del mismo nombre. */
-export const ESTADOS_CERTIFICADO = ['Vigente', 'ConPendientes', 'Suspendido', 'Revocado', 'Vencido', 'Reemplazado'] as const satisfies readonly Estado[];
+export const ESTADOS_CERTIFICADO = ['Vigente', 'EnVerificacion', 'ConPendientes', 'Suspendido', 'Revocado', 'Vencido', 'Reemplazado'] as const satisfies readonly Estado[];
 export type EstadoCertificado = (typeof ESTADOS_CERTIFICADO)[number];
 export const esEstadoCertificado = (v: string): v is EstadoCertificado => ESTADOS_CERTIFICADO.some((e) => e === v);
+
+/**
+ * Lo que se ve de un certificado (VR-11): con la empresa revisando lo que el tercero actualizó es «En verificación» (sigue vigente, no bloquea)
+ * aunque su estado de dominio siga siendo `ConPendientes`. Con los pendientes ya bloqueantes (venció el plazo) manda «Con pendientes».
+ */
+export function estadoVisibleDelCertificado(certificado: { estado: string; enVerificacion?: boolean }): string {
+  return certificado.enVerificacion ? 'EnVerificacion' : certificado.estado;
+}
 
 /** Certificado del vínculo (emisión actual e historial) en la empresa activa; `Actual` nulo si nunca se aprobó. */
 export function useCertificadoVinculo(empresaId: string, vinculoId: string, habilitado: boolean) {

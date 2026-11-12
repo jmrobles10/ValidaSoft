@@ -54,6 +54,7 @@ export const inicio = {
     enLaVentana_one: 'Aprobados, rechazados y tiempos: el último día, contados desde la apertura.',
     enLaVentana_other: 'Aprobados, rechazados y tiempos: los últimos {{count}} días, contados desde la apertura.',
     vigentes: 'Vigentes',
+    enVerificacion: 'En verificación',
     conPendientes: 'Con pendientes',
     noValidos: 'No válidos',
     sinDato: '—',

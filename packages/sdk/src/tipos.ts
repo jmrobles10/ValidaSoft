@@ -173,6 +173,11 @@ export interface ConsultaCertificacionDto {
    * revisa). No cambia `estadoVinculo` (sigue `Activo`, `PorVencer` o `Vencido`) ni el certificado, la vigencia o `bloqueado`.
    */
   enRevision?: boolean;
+  /**
+   * Solo informativo: el certificado sigue vigente y la empresa revisa de nuevo lo que el tercero actualizó («En verificación»). `estado` sigue siendo
+   * `ConPendientes`; `bloqueado`, `vigenteHasta` y `revalidacionPendiente` no cambian. Con el plazo de la revalidación vencido o el certificado vencido, es `false`.
+   */
+  enVerificacion?: boolean;
 }
 
 /** Sobre común de un evento público: el mismo JSON en el webhook y en `GET /eventos`. */

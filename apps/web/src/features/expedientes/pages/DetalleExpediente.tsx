@@ -232,16 +232,18 @@ export function DetalleExpediente() {
       {expediente.estado === 'Rechazado' && expediente.rechazo && (
         <Alert severity="error" sx={{ mb: 2 }}>
           <AlertTitle>{expediente.rechazo.origen === 'Cumplimiento' ? t('cumplimiento.rechazo.avisoTitulo') : t('expedientes.avisos.rechazadoTitulo')}</AlertTitle>
-          {expediente.rechazo.origen === 'Cumplimiento'
-            ? t('cumplimiento.rechazo.aviso', { fecha: formatearFecha(expediente.rechazo.fecha) })
-            : t('expedientes.avisos.rechazado', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })}{' '}
+          {expediente.tipo === 'Actualizacion'
+            ? t('expedientes.avisos.rechazadoActualizacion', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })
+            : expediente.rechazo.origen === 'Cumplimiento'
+              ? t('cumplimiento.rechazo.aviso', { fecha: formatearFecha(expediente.rechazo.fecha) })
+              : t('expedientes.avisos.rechazado', { area: nombreDeArea(expediente.rechazo.areaId), fecha: formatearFecha(expediente.rechazo.fecha) })}{' '}
           “{expediente.rechazo.justificacion}”
         </Alert>
       )}
       {expediente.estado === 'Anulado' && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <AlertTitle>{t('expedientes.avisos.anuladoTitulo')}</AlertTitle>
-          {t('expedientes.avisos.anulado', { fecha: formatearFecha(expediente.cerradoEn ?? expediente.actualizadoEn) })}
+          {t(expediente.tipo === 'Actualizacion' ? 'expedientes.avisos.anuladoActualizacion' : 'expedientes.avisos.anulado', { fecha: formatearFecha(expediente.cerradoEn ?? expediente.actualizadoEn) })}
           {expediente.motivoAnulacion ? ` “${expediente.motivoAnulacion}”` : ''}
         </Alert>
       )}
