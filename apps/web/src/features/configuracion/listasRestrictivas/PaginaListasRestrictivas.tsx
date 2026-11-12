@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Chip, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { SCOPES, type ListasRestrictivasConfigDto, type ProveedorListasDto } from '@validasoft/api-client';
-import { CampoNumero } from '@validasoft/ui';
+import { CampoNumero, Dato, RejillaDatos } from '@validasoft/ui';
 import { Skeleton } from '@mui/material';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -59,6 +59,7 @@ function Contenido({ empresaId, datos, puedeEscribir }: { empresaId: string; dat
           onChange={(e) => elegir(e.target.value)}
           disabled={!puedeEscribir || actualizar.isPending}
           sx={{ minWidth: 320 }}
+          slotProps={{ select: { displayEmpty: true } }}
         >
           <MenuItem value="">{t('cumplimiento.configuracion.deLaInstalacion')}</MenuItem>
           {datos.proveedores.map((p) => (
@@ -73,9 +74,13 @@ function Contenido({ empresaId, datos, puedeEscribir }: { empresaId: string; dat
       </Tarjeta>
       {datos.proveedores
         .filter((p) => p.real)
-        .map((p) => (
-          <Credenciales key={p.nombre} empresaId={empresaId} proveedor={p} puedeEscribir={puedeEscribir} />
-        ))}
+        .map((p) =>
+          p.deLaPlataforma ? (
+            <CuentaDeLaPlataforma key={p.nombre} proveedor={p} />
+          ) : (
+            <Credenciales key={p.nombre} empresaId={empresaId} proveedor={p} puedeEscribir={puedeEscribir} />
+          ),
+        )}
       <Tarjeta titulo={t('cumplimiento.configuracion.uso', { mes: datos.uso[0]?.mes ?? '' })}>
         {datos.uso.length === 0 ? (
           <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>{t('cumplimiento.configuracion.usoVacio')}</Typography>
@@ -105,6 +110,43 @@ function Contenido({ empresaId, datos, puedeEscribir }: { empresaId: string; dat
         )}
       </Tarjeta>
     </Stack>
+  );
+}
+
+/**
+ * Infolaft es de la plataforma (G-2, PP-5): un solo contrato para todos los clientes. La empresa no ve ni carga usuario ni clave; solo si está
+ * disponible y su cuota mensual.
+ */
+function CuentaDeLaPlataforma({ proveedor: p }: { proveedor: ProveedorListasDto }) {
+  const { t } = useTranslation();
+  return (
+    <Tarjeta
+      etiqueta={p.nombre}
+      titulo={
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+          {p.nombre}
+          {p.principal && <Chip size="small" color="primary" variant="outlined" label={t('cumplimiento.configuracion.principal')} />}
+          {!p.habilitadoEnInstalacion && <Chip size="small" variant="outlined" label={t('cumplimiento.configuracion.noHabilitado')} />}
+        </Box>
+      }
+      acciones={
+        <Chip
+          size="small"
+          variant="outlined"
+          color={p.configurado ? 'success' : 'warning'}
+          label={p.configurado ? t('cumplimiento.configuracion.disponible') : t('cumplimiento.configuracion.noDisponible')}
+        />
+      }
+    >
+      <Stack spacing={1}>
+        <Typography sx={{ fontSize: 13 }}>{p.configurado ? t('cumplimiento.configuracion.cuentaDeLaPlataformaAyuda') : t('cumplimiento.configuracion.noDisponibleAyuda')}</Typography>
+        <RejillaDatos columnas={3}>
+          <Dato etiqueta={t('cumplimiento.configuracion.cuotaDeLaEmpresa')}>
+            {p.cuotaMensual === null ? t('cumplimiento.configuracion.sinTope') : t('cumplimiento.configuracion.cuotaBusquedas', { cuota: String(p.cuotaMensual) })}
+          </Dato>
+        </RejillaDatos>
+      </Stack>
+    </Tarjeta>
   );
 }
 

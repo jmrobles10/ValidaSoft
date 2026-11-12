@@ -142,8 +142,12 @@ public sealed class ControlDeProveedores(TimeProvider reloj)
     }
 }
 
-/// <summary>Lo que hay que saber para consultar: el proveedor que toca, sus opciones y las credenciales de la empresa.</summary>
-public sealed record ProveedorResuelto(string Nombre, OpcionesDeProveedor Opciones, CredencialesDeListas? Credenciales, IVerificadorDeListas Verificador);
+/// <summary>
+/// Lo que hay que saber para consultar: el proveedor que toca, sus opciones y las credenciales (las de la plataforma si el proveedor es suyo,
+/// <see cref="CuentaDeLaPlataforma"/>, o las de la empresa).
+/// </summary>
+public sealed record ProveedorResuelto(string Nombre, OpcionesDeProveedor Opciones, CredencialesDeListas? Credenciales, IVerificadorDeListas Verificador,
+    bool CuentaDeLaPlataforma = false);
 
 /// <summary>
 /// Consulta de listas restrictivas (VE-7…VE-11): resuelve el proveedor de la empresa, arma las personas (el tercero y sus
@@ -159,11 +163,20 @@ public sealed class ConsultaDeListas(
 
     public OpcionesDeVerificaciones Opciones => opciones;
 
+    /// <summary>La cuenta de la plataforma con los proveedores de listas (G-2): un solo documento global; nulo si Plataforma aún no la configuró.</summary>
+    public async Task<ListasRestrictivasDePlataforma?> PlataformaAsync(CancellationToken ct)
+    {
+        await using var global = store.QuerySession();
+        return await global.LoadAsync<ListasRestrictivasDePlataforma>(ListasRestrictivasDePlataforma.IdUnico, ct);
+    }
+
     /// <summary>
     /// Proveedor que usará la empresa: el que eligió o el de la instalación. 503 <c>verificacion-no-disponible</c> si no hay
-    /// ninguno, si la instalación no lo habilitó o si falta su adaptador; 422 <c>credenciales-requeridas</c> sin credenciales.
+    /// ninguno, si la instalación no lo habilitó, si falta su adaptador o si es de la plataforma y Plataforma aún no configuró su cuenta;
+    /// 422 <c>credenciales-requeridas</c> si es de la empresa y no cargó las suyas. Las credenciales de Infolaft son las de la plataforma
+    /// (<paramref name="plataforma"/>), nunca las de la empresa (G-2).
     /// </summary>
-    public ProveedorResuelto Resolver(ListasRestrictivasEmpresa? configuracion, bool sandbox = false)
+    public ProveedorResuelto Resolver(ListasRestrictivasEmpresa? configuracion, ListasRestrictivasDePlataforma? plataforma, bool sandbox = false)
     {
         // En el sandbox (SB-4) siempre el proveedor simulado, aunque la instalación no lo permita: ninguna consulta de prueba sale a un
         // proveedor real ni gasta la cuota de la empresa.
@@ -176,18 +189,21 @@ public sealed class ConsultaDeListas(
             throw ReglaDeNegocioException.NoDisponible("verificacion-no-disponible", $"{nombre} no está habilitado en esta instalación.");
         var verificador = verificadores.FirstOrDefault(v => v.Proveedor == nombre)
                           ?? throw ReglaDeNegocioException.NoDisponible("verificacion-no-disponible", $"No hay adaptador para {nombre}.");
-        var credenciales = configuracion?.CredencialesDe(nombre);
-        if (ProveedoresDeListas.Reales.Contains(nombre) && credenciales is null)
-            throw ReglaDeNegocioException.Validacion("credenciales-requeridas", $"La empresa no configuró sus credenciales de {nombre}.");
-        return new ProveedorResuelto(nombre, deProveedor, credenciales, verificador);
+        var deLaPlataforma = ProveedoresDeListas.EsDeLaPlataforma(nombre);
+        var credenciales = deLaPlataforma ? plataforma?.CredencialesDe(nombre) : configuracion?.CredencialesDe(nombre);
+        if (!sandbox && ProveedoresDeListas.Reales.Contains(nombre) && credenciales is null)
+            throw deLaPlataforma
+                ? ReglaDeNegocioException.NoDisponible("verificacion-no-disponible", $"La plataforma aún no configuró la cuenta de {nombre}.")
+                : ReglaDeNegocioException.Validacion("credenciales-requeridas", $"La empresa no configuró sus credenciales de {nombre}.");
+        return new ProveedorResuelto(nombre, deProveedor, credenciales, verificador, deLaPlataforma);
     }
 
     /// <summary>El proveedor efectivo sin lanzar (para mostrarlo en la configuración); nulo si no hay ninguno utilizable.</summary>
-    public string? Efectivo(ListasRestrictivasEmpresa? configuracion)
+    public string? Efectivo(ListasRestrictivasEmpresa? configuracion, ListasRestrictivasDePlataforma? plataforma)
     {
         try
         {
-            return Resolver(configuracion).Nombre;
+            return Resolver(configuracion, plataforma).Nombre;
         }
         catch (ReglaDeNegocioException)
         {
@@ -244,7 +260,7 @@ public sealed class ConsultaDeListas(
         string consultadoPor, int mesesVigencia, CancellationToken ct)
     {
         var configuracion = await sesion.LoadAsync<ListasRestrictivasEmpresa>(empresaId, ct);
-        var proveedor = Resolver(configuracion, await entornos.EsSandboxAsync(tenantId, ct));
+        var proveedor = Resolver(configuracion, await PlataformaAsync(ct), await entornos.EsSandboxAsync(tenantId, ct));
         var personas = await PersonasAsync(sesion, terceroId, ct);
         var ahora = reloj.GetUtcNow();
         var mes = UsoMensualListas.MesDe(CalculadoraDeVigencia.Fecha(ahora));
@@ -254,8 +270,10 @@ public sealed class ConsultaDeListas(
             throw ReglaDeNegocioException.Validacion("cuota-listas-agotada",
                 $"La empresa llegó a la cuota mensual de {proveedor.Nombre} ({proveedor.Credenciales!.CuotaMensual} búsquedas).");
 
+        // La clave de la plataforma se descifra con la clave maestra; la de una empresa (Stradata, Compliance), con la de su grupo (CU-20).
         var credenciales = proveedor.Credenciales is { } c
-            ? new CredencialesEnClaro(c.Usuario, protector.DesprotegerDeGrupo(tenantId, c.ClaveProtegida), c.UrlBase ?? proveedor.Opciones.UrlBase, c.ModoBusqueda)
+            ? new CredencialesEnClaro(c.Usuario, proveedor.CuentaDeLaPlataforma ? protector.Desproteger(c.ClaveProtegida) : protector.DesprotegerDeGrupo(tenantId, c.ClaveProtegida),
+                c.UrlBase ?? proveedor.Opciones.UrlBase, c.ModoBusqueda)
             : null;
         RespuestaDeListas respuesta;
         try

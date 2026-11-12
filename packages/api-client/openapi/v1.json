@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5871/"
+      "url": "http://localhost:5181/"
     }
   ],
   "paths": {
@@ -2919,6 +2919,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EstadoDeSecretosDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/listas-restrictivas": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ListasDePlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_listas_restrictivas",
+        "description": "GET_api_v1_plataforma_listas_restrictivas",
+        "operationId": "GET_api_v1_plataforma_listas_restrictivas",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListasDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ListasDePlataformaEndpoints"
+        ],
+        "summary": "PUT_api_v1_plataforma_listas_restrictivas",
+        "description": "PUT_api_v1_plataforma_listas_restrictivas",
+        "operationId": "PUT_api_v1_plataforma_listas_restrictivas",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActualizarListasDePlataformaDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListasDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/listas-restrictivas/migrar-credenciales": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.ListasDePlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_listas_restrictivas_migrar_credenciales",
+        "description": "POST_api_v1_plataforma_listas_restrictivas_migrar_credenciales",
+        "operationId": "POST_api_v1_plataforma_listas_restrictivas_migrar_credenciales",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoMigracionListasDto"
                 }
               }
             }
@@ -15974,6 +16057,17 @@
           }
         }
       },
+      "ActualizarListasDePlataformaDto": {
+        "required": [
+          "credenciales"
+        ],
+        "type": "object",
+        "properties": {
+          "credenciales": {
+            "$ref": "#/components/schemas/CredencialesListasDto"
+          }
+        }
+      },
       "ActualizarListasRestrictivasDto": {
         "type": "object",
         "properties": {
@@ -27680,6 +27774,35 @@
           }
         }
       },
+      "ListasDePlataformaDto": {
+        "required": [
+          "proveedores",
+          "actualizadaEn",
+          "actualizadaPor"
+        ],
+        "type": "object",
+        "properties": {
+          "proveedores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProveedorDePlataformaDto"
+            }
+          },
+          "actualizadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "actualizadaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ListasRestrictivasConfigDto": {
         "required": [
           "proveedor",
@@ -30125,6 +30248,87 @@
           "datos": {}
         }
       },
+      "ProveedorDePlataformaDto": {
+        "required": [
+          "nombre",
+          "habilitadoEnInstalacion",
+          "configurado",
+          "usuario",
+          "ultimosCuatroClave",
+          "urlBase",
+          "plan",
+          "cuotaMensualPorEmpresa",
+          "modoBusqueda",
+          "actualizadasEn",
+          "empresasConCredencialesPropias"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "habilitadoEnInstalacion": {
+            "type": "boolean"
+          },
+          "configurado": {
+            "type": "boolean"
+          },
+          "usuario": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ultimosCuatroClave": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urlBase": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plan": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cuotaMensualPorEmpresa": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "modoBusqueda": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actualizadasEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "empresasConCredencialesPropias": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "ProveedorListasDto": {
         "required": [
           "nombre",
@@ -30194,6 +30398,10 @@
               "null",
               "string"
             ]
+          },
+          "deLaPlataforma": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -31881,6 +32089,65 @@
             "items": {
               "$ref": "#/components/schemas/FilaRechazadaDto"
             }
+          }
+        }
+      },
+      "ResultadoMigracionListasDto": {
+        "required": [
+          "proveedor",
+          "cuentaTomada",
+          "empresaDeOrigen",
+          "empresasConCredenciales",
+          "empresasLimpiadas",
+          "noLegibles",
+          "cuotasQueNoSeHeredaron"
+        ],
+        "type": "object",
+        "properties": {
+          "proveedor": {
+            "type": "string"
+          },
+          "cuentaTomada": {
+            "type": "boolean"
+          },
+          "empresaDeOrigen": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "empresasConCredenciales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "empresasLimpiadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "noLegibles": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "cuotasQueNoSeHeredaron": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -37711,6 +37978,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Plataforma.SecretosEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Plataforma.ListasDePlataformaEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Plataforma.OperadoresDirectosEndpoints"

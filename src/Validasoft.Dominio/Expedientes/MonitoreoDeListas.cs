@@ -33,6 +33,11 @@ public sealed class MonitoreoDeListas
 
     public VerificacionDeExpediente Listas { get; set; } = new() { Tipo = TipoVerificacion.ListasRestrictivas };
 
+    /// <summary>
+    /// Hay algo que decidir para el oficial: alguna coincidencia de la última consulta sin resolver (HI-5, PP-1). Descartar o
+    /// confirmar la última la resuelve y la fila sale de su bandeja: confirmada, lo que sigue es del administrador (bloquear o
+    /// desvincular el vínculo) y <see cref="Listas"/> conserva el estado «Fallida» para que se vea.
+    /// </summary>
     public bool PendienteDeCumplimiento { get; set; }
 
     public DateTimeOffset CreadoEn { get; set; }
@@ -40,6 +45,9 @@ public sealed class MonitoreoDeListas
     public DateTimeOffset ActualizadoEn { get; set; }
 
     public Guid VinculoId => Id;
+
+    /// <summary>Alguna coincidencia de la última consulta espera la decisión de Cumplimiento.</summary>
+    public bool TieneCoincidenciasSinResolver => Listas.Coincidencias.Any(c => !c.Resuelta);
 
     /// <summary>
     /// Inicia (o renueva) el monitoreo con la consulta del expediente aprobado: copia personas, coincidencias resueltas y
@@ -75,7 +83,7 @@ public sealed class MonitoreoDeListas
             Anteriores = [.. monitoreo.Listas.Anteriores]
         };
         monitoreo.ProximaConsulta = ahora.AddDays(frecuenciaDias);
-        monitoreo.PendienteDeCumplimiento = monitoreo.Listas.Estado != EstadoVerificacion.Satisfecha;
+        monitoreo.PendienteDeCumplimiento = monitoreo.TieneCoincidenciasSinResolver;
         monitoreo.ActualizadoEn = ahora;
         return monitoreo;
     }
@@ -107,7 +115,7 @@ public sealed class MonitoreoDeListas
         Listas.UltimoError = null;
         Listas.ReintentarDesde = null;
         Listas.Estado = ReglasDeListas.Estado(coincidencias);
-        PendienteDeCumplimiento = Listas.Estado != EstadoVerificacion.Satisfecha;
+        PendienteDeCumplimiento = TieneCoincidenciasSinResolver;
         ProximaConsulta = ahora.AddDays(FrecuenciaDias);
         ActualizadoEn = ahora;
         return [.. coincidencias.Where(c => !c.Resuelta)];
@@ -136,7 +144,7 @@ public sealed class MonitoreoDeListas
             ahora.AddMonths(Expediente.MesesVigenciaDecisionCoincidencia));
         coincidencia.Heredada = false;
         Listas.Estado = ReglasDeListas.Estado(Listas.Coincidencias);
-        PendienteDeCumplimiento = Listas.Estado != EstadoVerificacion.Satisfecha;
+        PendienteDeCumplimiento = TieneCoincidenciasSinResolver;
         ActualizadoEn = ahora;
         return coincidencia;
     }

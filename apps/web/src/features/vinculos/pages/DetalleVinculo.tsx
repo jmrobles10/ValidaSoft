@@ -1,6 +1,6 @@
 import { Alert, AlertTitle, Box, Button, Chip, ListItemIcon, ListItemText, Menu, MenuItem, Skeleton, Stack, Typography } from '@mui/material';
 import { accionesDisponibles, esErrorApi, SCOPES, type DefinicionAccion, type VinculoDto } from '@validasoft/api-client';
-import { AvatarActor, ChipEstado, Dato, EsqueletoTarjeta, EstadoVacio, formatearFecha, LineaDeTiempo, MarcoTabla, PaginaEstado, RejillaDatos } from '@validasoft/ui';
+import { AvatarActor, ChipEstado, Dato, EsqueletoTarjeta, EstadoVacio, formatearFecha, LineaDeTiempo, MarcoTabla, PaginaEstado, RejillaDatos, ValorLargo } from '@validasoft/ui';
 import { ChevronDown, Lock, SearchX } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -221,11 +221,11 @@ function DatosVinculo({ vinculo, empresaNombre, conFicha }: { vinculo: VinculoDt
             (tercero.data?.nombre ?? '—')
           )}
         </Dato>
-        <Dato etiqueta={t('vinculos.detalle.identificacion')}>{tercero.data ? <Mono>{identificacionDe(tercero.data)}</Mono> : '—'}</Dato>
+        <Dato etiqueta={t('vinculos.detalle.identificacion')}>{tercero.data ? <ValorLargo valor={identificacionDe(tercero.data)} mono /> : '—'}</Dato>
         <Dato etiqueta={t('vinculos.detalle.tipo')}>{vinculo.tipoVinculo.nombre}</Dato>
         <Dato etiqueta={t('vinculos.detalle.empresa')}>{empresaNombre}</Dato>
         <Dato etiqueta={t('vinculos.detalle.correo')}>
-          <Mono>{vinculo.invitacion?.correoDestino ?? vinculo.correoTercero}</Mono>
+          <ValorLargo valor={vinculo.invitacion?.correoDestino ?? vinculo.correoTercero} partirEn="@" />
         </Dato>
         <Dato etiqueta={t('vinculos.detalle.invitacion')}>{invitacion}</Dato>
         {vinculo.vigenteHasta && (
@@ -284,7 +284,9 @@ function ReferenciasVinculo({ vinculo }: { vinculo: VinculoDto }) {
                     </Stack>
                   </td>
                   <td>
-                    <Mono>{r.id}</Mono>
+                    <Box sx={{ maxWidth: 320 }}>
+                      <ValorLargo valor={r.id} mono />
+                    </Box>
                   </td>
                 </tr>
               ))}

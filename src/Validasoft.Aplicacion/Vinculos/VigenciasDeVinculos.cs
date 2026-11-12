@@ -247,6 +247,8 @@ public static class VigenciasDeVinculos
             await CicloDeCertificados.AlDesbloquearAsync(sesion, vinculo.Id, desbloqueado.Justificacion, ahora, ct);
             stream.AppendOne(desbloqueado);
             vinculo.Apply(desbloqueado);
+            // Como el desbloqueo manual (PP-9): se le restituye la compartición y se abre la actualización si lo aprobado ya no es lo actual.
+            await mensajes.PublishAsync(new RevalidarVinculoDesbloqueado(mensaje.TenantId, vinculo.Id, nameof(ActorTipo.Sistema), Actor));
             resultado = ResultadoDeVigencia.Desbloqueado;
         }
 

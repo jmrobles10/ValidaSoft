@@ -162,8 +162,15 @@ el vínculo con cada empresa afectada «En revisión»** (antes el portal decía
   **«En verificación»** (app de la empresa, página pública `/verificar` y consulta de certificación; VR-11); la campana `tercero.actualizacion` dice «Recibimos tu actualización…»
   cuando la abrió la propia versión del tercero (VR-12); y una actualización **rechazada o anulada** deja el vínculo como estaba pero el tercero (con los motivos) y la
   empresa ven que no se aprobó, hasta que se abre el siguiente expediente (VR-13). Rechazada o anulada, el certificado vuelve a «Vigente».
-- **Pendiente / preguntas abiertas** (VR-10): un vínculo bloqueado no recibe la versión nueva (B-5); y con el plazo de la revalidación vencido (A-2/RV-4) el certificado
-  deja de ser «En verificación» y bloquea (no se cambió: ¿el plazo cuenta como «vencer»?).
+- **Pendiente / preguntas abiertas** (VR-10): un vínculo bloqueado no recibe la versión nueva (B-5) y **al desbloquearlo se revalida** (resuelta en PP-9, §3.6); y con el plazo de la revalidación vencido (A-2/RV-4) el certificado
+  deja de ser «En verificación» y bloquea: Producto confirmó que es lo correcto («pasado el plazo ya se bloquea»).
+
+### 3.6 Pendientes pequeños (rama `feature/pendientes-pequenos`, 2026-11-12)
+Rama sobre `main`, con push y **sin PR**. Decisiones **PP-1…PP-10** en el [registro](decisiones/registro.md#5-septemquinquagies-pendientes-pequeños-historial-valores-largos-monitoreo-cuenta-de-infolaft-y-desbloqueo-2026-11-12-pp).
+- **Pulido visual:** el historial del vínculo ya no muestra «consentimientos registrados» en minúscula (todo rótulo empieza en mayúscula y una prueba cruza los eventos del dominio con es-CO: PP-2) y el correo de «Datos del vínculo» no se parte a mitad de línea (fuente normal, se parte en la «@», recorte con tooltip: PP-3).
+- **HI-5 (2):** confirmar la coincidencia del monitoreo saca la fila de la bandeja del oficial (PP-1). Falta un aviso propio al administrador para que decida bloquear o desvincular.
+- **G-2 implementada:** la cuenta de Infolaft es de la plataforma (consola de Plataforma › Listas restrictivas, clave maestra, passkey para cambiarla); las empresas solo ven si está disponible y su cuota; una migración recoge lo que cada empresa había cargado (PP-4…PP-8). Stradata y Compliance siguen por empresa. **Tras desplegar hay que correr la migración** (o configurar la cuenta) o las empresas con Infolaft no consultan. Pendiente: cuota distinta por empresa y un reporte de consumo por cliente en la consola.
+- **B-5:** desbloquear un vínculo (a mano o por fecha) restituye su compartición y abre la actualización si lo aprobado difiere de lo actual: queda «En revisión» y el certificado «En verificación» (PP-9).
 
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
@@ -281,7 +288,7 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
   - formato de la respuesta, búsqueda por documento y si entrega PDF;
   - un usuario de pruebas;
   - rotar la credencial expuesta en ADPRO ([15 §2](15-infolaft.md)).
-  - **cuenta única de la plataforma (G-2):** Infolaft es uno solo para todos los clientes; las credenciales de los proveedores de listas pasan de cada empresa (hoy, cifradas con la clave del grupo, CU-10) a la configuración de la plataforma, y el consumo por empresa (VE-11) se conserva para atribuir el costo.
+  - **cuenta única de la plataforma (G-2), implementada (PP-4…PP-8, §3.6):** Infolaft es uno solo para todos los clientes; sus credenciales pasaron de cada empresa (cifradas con la clave del grupo, CU-10) a la configuración de la plataforma (clave maestra), y el consumo por empresa (VE-11) se conserva para atribuir el costo. Stradata y Compliance siguen por empresa.
 
 ### 4.5 H9 — pendientes
 - ~~Sandbox con datos aislados~~ **Hecho (SB-1…SB-6, 2026-11-11):** tenant hermano con la configuración del grupo, buzón de correo, IA y listas simuladas y reinicio ([05 §2.6.3](05-api-contratos-y-webhooks.md), [07 §5.4](07-seguridad-identidad-y-tenancy.md)). Falta, como mejora, una pantalla en la consola con el buzón y el botón de reinicio (hoy es por API y SDK; la llave de prueba sí se emite desde Configuración › API keys).
@@ -404,7 +411,7 @@ Pendiente:
 **Sección G cerrada (2026-11-11).** Producto resolvió las decisiones 2, 4 y 5 (registro [G-1…G-4](decisiones/registro.md#5-tresquinquagies-decisiones-de-producto-de-la-sección-g-2026-11-11)); solo queda abierta la 1.
 
 1. 2FA: ¿en Validasoft o en el sistema integrador? (§4.6)
-2. ~~Infolaft: ¿proveedor único para los clientes de Sinco o uno por cliente? ¿Se usa desde el SRM durante la coexistencia? ([15](15-infolaft.md))~~ Resuelta en G-2 y G-4: **uno solo para todos los clientes, con la cuenta de la plataforma**, y solo desde Validasoft. Pendiente de implementar: pasar las credenciales de los proveedores de listas de cada empresa a la configuración de la plataforma (§4.4).
+2. ~~Infolaft: ¿proveedor único para los clientes de Sinco o uno por cliente? ¿Se usa desde el SRM durante la coexistencia? ([15](15-infolaft.md))~~ Resuelta en G-2 y G-4: **uno solo para todos los clientes, con la cuenta de la plataforma**, y solo desde Validasoft. Implementado en PP-4…PP-8: la cuenta de Infolaft está en la configuración de la plataforma (§3.6).
 3. ~~¿El oficial de cumplimiento puede rechazar el expediente directamente?~~ Resuelta en CU-7: sí, solo ante un hallazgo (§4.4).
 4. ~~Señal entre empresas: ¿debe compartirse algún hecho grave sin revelar quién decidió?~~ Resuelta en G-1: **no se comparte ningún hecho grave; las decisiones de cada empresa son privadas.**
 5. ~~Integración con el SRM (§3.2): cuándo se sube la rama, cuenta de servicio de AyF y «Bloqueado».~~ Resuelta en G-4: **todavía no; primero se prueba Validasoft solo, sin integrarlo en ningún sistema.** La rama del SRM sigue en espera (§3.2).

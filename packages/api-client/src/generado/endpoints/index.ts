@@ -41,6 +41,7 @@ export * from './informe-vinculos/informe-vinculos';
 export * from './ingreso/ingreso';
 export * from './inicio/inicio';
 export * from './lista-de-certificados/lista-de-certificados';
+export * from './listas-de-plataforma/listas-de-plataforma';
 export * from './listas-restrictivas/listas-restrictivas';
 export * from './lotes/lotes';
 export * from './matriz/matriz';
