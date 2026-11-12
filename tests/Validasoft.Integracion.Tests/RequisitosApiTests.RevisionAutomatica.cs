@@ -350,4 +350,39 @@ public sealed partial class RequisitosApiTests
         (uso.Aprobadas, uso.Excepciones, uso.Tope).ShouldBe((1, 1, 1));
         (await ExcepcionesAsync(e.Norte)).ShouldHaveSingleItem().Motivos.Single().Codigo.ShouldBe("sin-presupuesto");
     }
+
+
+    [Fact]
+    public async Task Con_el_cupo_de_IA_agotado_el_documento_va_a_una_persona_de_una_vez_sin_esperar_un_analisis_que_no_va_a_llegar()
+    {
+        var e = await PrepararAsync();
+        // Una sola validación incluida al mes y sin adicional: el primer tercero la consume y el segundo se queda sin cupo (IA-4).
+        await PlanIaAsync(e.Norte, new ActualizarPlanIaEmpresaDto(1, false, ApiKeyOpenAi: LlaveIa()));
+        await FlujoConAsync(e.Norte, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT", AreasQueRevisan: [e.Compras.Id, e.Cumplimiento.Id])]);
+        await ConfigRevisionAsync(e.Norte, new ActualizarRevisionAutomaticaDto("Automatico", PorcentajeMuestreo: 0, TiposAutorizados: ["RUT"],
+            AreasAutorizadas: [e.Compras.Id, e.Cumplimiento.Id]));
+
+        // Con cupo, lo limpio se aprueba solo y el expediente se cierra.
+        var (_, primeraSesion, primero) = await TerceroAceptaAsync(e.Norte, "CLIENTE");
+        await SubirAsync(primeraSesion, "RUT", Pdf("RUT primero"));
+        var aprobado = await EsperarAsync(e.Norte, primero, x => x.Estado == "Aprobado");
+        RevisionDe(aprobado, "RUT", "COMPRAS")!.Resultado.ShouldBe("AprobadaAutomaticamente");
+
+        // Sin cupo no hay análisis que esperar (por omisión, 10 minutos): las dos áreas reciben el documento como excepción, con su motivo, y nada se aprueba solo.
+        var (_, segundaSesion, segundo) = await TerceroAceptaAsync(e.Norte, "CLIENTE");
+        await SubirAsync(segundaSesion, "RUT", Pdf("RUT segundo"));
+        var sinCupo = await EsperarAsync(e.Norte, segundo, x => RevisionDe(x, "RUT", "COMPRAS") is not null && RevisionDe(x, "RUT", "CUMPLIMIENTO") is not null);
+        foreach (var area in new[] { "COMPRAS", "CUMPLIMIENTO" })
+        {
+            var revision = RevisionDe(sinCupo, "RUT", area)!;
+            (revision.Resultado, revision.PendienteDeAtencion, revision.Confianza).ShouldBe(("Excepcion", true, null));
+            revision.Motivos.Single().ShouldBe(new MotivoDeRevisionDto("sin-analisis-ia", "La empresa no recibió el análisis de IA de esta versión."));
+        }
+
+        sinCupo.Estado.ShouldBe("EnRevision");
+        Requisito(sinCupo, "RUT").Areas.SelectMany(a => a.Veredictos).ShouldBeEmpty();
+        var excepciones = await ExcepcionesAsync(e.Norte);
+        excepciones.Count.ShouldBe(2);
+        excepciones.ShouldAllBe(f => f.Folio == excepciones[0].Folio && f.Motivos.Single().Codigo == "sin-analisis-ia");
+    }
 }

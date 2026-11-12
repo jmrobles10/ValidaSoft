@@ -1,5 +1,5 @@
 import { expect, type Browser, type FrameLocator, type Page } from '@playwright/test';
-import { llamar } from './api';
+import { CLAVE_PLATAFORMA, llamar } from './api';
 import { pdf } from './archivos';
 import { abrirEmbebido } from './embebido';
 import { abrirDesdeBandeja, regionDeArea } from './empresa';
@@ -20,7 +20,7 @@ export function captura(nombre: string): string {
 }
 
 /** Agrega las verificaciones al flujo de proveedores de Norte y lo vuelve a publicar. */
-export async function pedirVerificaciones(e: Escenario, verificaciones: { tipo: string; bloqueante: boolean }[]): Promise<void> {
+export async function pedirVerificaciones(e: Escenario, verificaciones: { tipo: string; bloqueante: boolean; vigenciaDias?: number }[]): Promise<void> {
   const flujos = await llamar<{ id: string; codigo: string }[]>('GET', '/api/v1/flujos?tipoVinculo=PROVEEDOR', { llave: e.admin, empresa: e.norte.id });
   const flujo = flujos.find((f) => f.codigo === 'HABILITACION');
   if (!flujo) throw new Error('Falta el flujo HABILITACION de Norte.');
@@ -59,4 +59,22 @@ export async function aprobarUltimaArea(app: FrameLocator, area: string, falta: 
   await expect(dialogo).toBeHidden();
   const aviso = app.getByRole('alert').filter({ hasText: 'Falta cumplimiento para aprobar' });
   await expect(aviso).toContainText(falta);
+}
+
+export interface ResultadoDeVerificaciones {
+  consultas: number;
+  expiraciones: number;
+  monitoreos: number;
+}
+
+/**
+ * Corre ya lo que el procesador de verificaciones haría (consulta automática de listas, expiración de lo vencido con el expediente abierto y
+ * monitoreo de los vínculos activos) para el grupo, como si fuera `fecha` (solo Development): así se prueba un estudio vencido o la reconsulta
+ * periódica sin esperar los días de verdad.
+ */
+export async function revisarVerificaciones(e: Escenario, fecha: Date): Promise<ResultadoDeVerificaciones> {
+  return llamar<ResultadoDeVerificaciones>('POST', '/api/v1/plataforma/verificaciones/revisar', {
+    llave: CLAVE_PLATAFORMA,
+    cuerpo: { tenantId: e.tenantId, fecha: fecha.toISOString() },
+  });
 }

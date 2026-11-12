@@ -24,6 +24,7 @@ import { AvisoDeVigencia } from '../components/AvisoDeVigencia';
 import { DialogoAccion } from '../components/DialogoAccion';
 import { TarjetaContactos } from '../contactos/TarjetaContactos';
 import { TarjetaCuentaDesignada } from '../cuentaDesignada/TarjetaCuentaDesignada';
+import { TarjetaMonitoreoListas } from '../../cumplimiento/components/TarjetaMonitoreoListas';
 import { identificacionDe } from '../tercero';
 import { eventoATimeline } from '../historial';
 
@@ -93,6 +94,7 @@ export function DetalleVinculo() {
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosVinculo vinculo={vinculo} empresaNombre={empresa.nombre} conFicha={permisos.puede(SCOPES.tercerosLeer)} />
           <TarjetaExpedienteVinculo vinculo={vinculo} />
+          <TarjetaMonitoreoListas vinculoId={vinculo.id} empresaId={empresa.id} />
           <TarjetaFichaAceptadaEnVinculo vinculo={vinculo} />
           <TarjetaCertificado vinculo={vinculo} />
           <TarjetaContactos vinculo={vinculo} />

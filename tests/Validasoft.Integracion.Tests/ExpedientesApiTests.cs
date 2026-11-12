@@ -36,7 +36,7 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
 
     private sealed record Escenario(
         string Admin, EmpresaDto Empresa, string LlaveSrm, RSA ClaveSrm, AreaDto Aprobador, AreaDto Cumplimiento,
-        Persona Laura, Persona Carlos, Persona Pedro, Persona Ajeno);
+        Persona Laura, Persona Carlos, Persona Pedro, Persona Ajeno, Guid TenantId);
 
     // ---------- flujo principal ----------
 
@@ -430,7 +430,7 @@ public sealed partial class ExpedientesApiTests(ApiFixture fixture)
             new MiembrosAreaDto([laura.Usuario.Id, pedro.Usuario.Id]), 200);
         await ApiAsync<AreaDto>("PUT", $"/api/v1/areas/{cumplimiento.Id}/miembros", credencialAdmin, new MiembrosAreaDto([carlos.Usuario.Id]), 200);
 
-        return new Escenario(admin, empresa, llave.Valor!, rsa, aprobador, cumplimiento, laura, carlos, pedro, ajeno);
+        return new Escenario(admin, empresa, llave.Valor!, rsa, aprobador, cumplimiento, laura, carlos, pedro, ajeno, tenant.Tenant.Id);
     }
 
     /// <summary>Crea y publica el flujo (el primero publicado de su tipo queda por defecto). Sin etapas: todas las áreas en paralelo.</summary>

@@ -84,6 +84,7 @@ export * from './generado/endpoints/delegaciones/delegaciones';
 export * from './generado/endpoints/configuracion-de-sla/configuracion-de-sla';
 export * from './generado/endpoints/informe-sla/informe-sla';
 export * from './generado/endpoints/slas-de-revision/slas-de-revision';
+export * from './generado/endpoints/procesamiento-inmediato-de-verificaciones/procesamiento-inmediato-de-verificaciones';
 export * from './generado/endpoints/ayudas-de-documento/ayudas-de-documento';
 export * from './generado/endpoints/sso-ingreso/sso-ingreso';
 export * from './generado/endpoints/sso-configuracion/sso-configuracion';

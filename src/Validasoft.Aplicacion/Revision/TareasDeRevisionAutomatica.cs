@@ -99,6 +99,8 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
                 return 0;
 
             var plan = await lectura.LoadAsync<PlanDeIaEmpresa>(expediente.EmpresaId, ct);
+            var usoIa = await lectura.LoadAsync<UsoMensualIa>(UsoMensualIa.Clave(expediente.EmpresaId, UsoMensualIa.MesDe(CalculadoraDeVigencia.Fecha(ahora))), ct)
+                        ?? UsoMensualIa.Nuevo(expediente.EmpresaId, UsoMensualIa.MesDe(CalculadoraDeVigencia.Fecha(ahora)));
             var uso = await lectura.LoadAsync<UsoRevisionAutomatica>(UsoRevisionAutomatica.Clave(expediente.EmpresaId, mes), ct);
             var documentoIds = candidatas.Select(c => c.Requisito.VersionActual!.DocumentoId).Distinct().ToArray();
             var documentos = (await boveda.LoadManyAsync<Documento>(ct, documentoIds)).ToDictionary(d => d.Id);
@@ -111,7 +113,7 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
             var aprobadasEnLaPasada = 0;
             foreach (var candidata in candidatas)
             {
-                var entrada = Entrada(candidata, documentos, consumidas, cruces, config, plan, ahora, out var esperando);
+                var entrada = Entrada(candidata, documentos, consumidas, cruces, config, plan, usoIa, ahora, out var esperando);
                 var politica = new PoliticaDeRevision(config.Nivel, config.UmbralEfectivo(plan?.UmbralConfianza ?? PlanDeIaEmpresa.UmbralConfianzaInicial),
                     config.PorcentajeMuestreo, config.TiposAutorizados, (uso?.Aprobadas ?? 0) + aprobadasEnLaPasada, config.TopeMensualAprobaciones);
                 // Lo que está fuera del alcance de la revisión automática se anota ya: no hay análisis que esperar.
@@ -135,7 +137,7 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
     /// venció la espera de la empresa: no se decide todavía.
     /// </summary>
     private EntradaDeRevision Entrada(CandidataDeRevision candidata, IReadOnlyDictionary<Guid, Documento> documentos, IReadOnlySet<(Guid, int)> consumidas,
-        CrucesDelExpediente cruces, RevisionAutomaticaEmpresa config, PlanDeIaEmpresa? plan, DateTimeOffset ahora, out bool esperando)
+        CrucesDelExpediente cruces, RevisionAutomaticaEmpresa config, PlanDeIaEmpresa? plan, UsoMensualIa usoIa, DateTimeOffset ahora, out bool esperando)
     {
         var requisito = candidata.Requisito;
         var version = requisito.VersionActual!;
@@ -148,7 +150,10 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
         // F5: el cruce de lo que la empresa ve de las secciones que respalda el documento.
         var soporte = cruces.DeDocumento(requisito.Id);
         var crucePendiente = analisis is not null && soporte is { SinAnalisis: false } && soporte.Secciones.Any(s => s.Version is not null && s.Cruce is null);
-        var iaPuedeLlegar = analisis is null && opcionesIa.Habilitada && plan is { Activo: true } && versionDocumento is not null && versionDocumento.FalloIa is null;
+        // Sin cupo (incluidas y adicional agotados) la empresa no consumirá la validación de esta versión: el análisis no le va a llegar, así que no se
+        // espera a que venza la espera de la empresa y la versión pasa de una vez a una persona (IA-4, IA-6). Si ya la consumió, el análisis viene en camino.
+        var sinCupo = !consumidas.Contains((version.DocumentoId, version.Numero)) && usoIa.CupoDisponible(plan) is null;
+        var iaPuedeLlegar = analisis is null && opcionesIa.Habilitada && plan is { Activo: true } && !sinCupo && versionDocumento is not null && versionDocumento.FalloIa is null;
 
         var inicio = candidata.Area.PendienteDesde is { } pendienteDesde && pendienteDesde > version.CargadaEn ? pendienteDesde : version.CargadaEn;
         var vencida = ahora >= inicio.AddMinutes(config.EsperaIaMinutos);
