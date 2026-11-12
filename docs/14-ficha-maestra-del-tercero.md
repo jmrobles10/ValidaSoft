@@ -119,7 +119,7 @@ El wizard pasa solo al siguiente sector cuando el actual está **completo**. Ese
 - **Si cambia la regla:** cuando se publica una versión nueva del esquema o de sus reglas, un proceso recalcula `EstadoDeFicha` de todos los terceros y deja registrada la versión de regla con que se calculó. Así ninguna marca queda desactualizada en silencio.
 - **Pruebas:** tabla de casos por sección (persona natural y jurídica, filas mínimas, coherencias, null frente a 0) y pruebas de integración que guardan, leen la proyección y verifican que el wizard avance solo cuando corresponde.
 
-### 4.2 Declaración jurada PEP (HU 49093, DP-1…DP-16)
+### 4.2 Declaración jurada PEP (HU 49093, DP-1…DP-17)
 Quien responde «Sí» a «¿Es PEP?» firma su **declaración jurada**: la de la persona natural va en la General (`declaracion_pep`) y, en la jurídica, una por cada persona de la legal (`personas[i].declaracion_pep`). No es un documento aparte: vive **dentro de los datos de la sección**, así que se versiona, se hashea, se compara y la revisa la empresa como el resto de la ficha, y nunca hay una respuesta sin su declaración en la misma versión.
 
 - **Obligatoriedad.** Con `pep = true` el backend la exige (422 `declaracion-pep-requerida` al guardar y en la vista previa); lo que llega de un sistema de origen se guarda y queda como faltante. La otra pregunta (`vinculo_pep`) no la abre. Con «No» se conserva inactiva y nada la muestra.
@@ -127,6 +127,7 @@ Quien responde «Sí» a «¿Es PEP?» firma su **declaración jurada**: la de l
 - **Firma y sello.** La imagen (dibujada o subida; PNG de 600×200 normalizado por el navegador) viaja en base64 dentro de la declaración y el servidor la decodifica entera. Fija `firma_huella` (SHA-256), `fecha_firma` (día del negocio) y `firma_ip`: son la evidencia de la aceptación y se conservan mientras el contenido no cambie; una declaración reactivada (de «No» a «Sí») se firma de nuevo.
 - **Lo que ve la empresa.** El bloque «Declaración jurada PEP» de la persona en la revisión de la sección, la ficha aceptada y Tercero 360, con **Descargar PDF** (`GET /api/v1/terceros/{id}/declaraciones-pep/pdf`), solo si `pep = true` y hay declaración; el detalle de personas del informe SAGRILAFT (con «Sin declaración» si falta) y el ZIP del expediente (`declaraciones-pep/`). El contenido para el ERP lleva un resumen (`declaracionPep`: fecha, calidad y huella de la firma).
 - **Importación.** Del Portal se importa la declaración activa de un contacto con «Sí» (con la huella de la firma: la imagen está en el disco del Portal); un «Sí» sin declaración queda como faltante y el tercero la completa.
+- **Sin soporte del cambio.** Declarar o cambiar la declaración, o la respuesta a PEP, no exige un documento nuevo (DP-17): la declaración es su propia evidencia.
 - **Versiones.** General y Legal pasan a esquema 2 y reglas 2 (FM-16): al recalcular, una ficha con «Sí» y sin declaración queda incompleta con su faltante exacto. El canónico `DECLARACION_PEP` se retira (DP-13): lo reemplaza este formulario.
 
 ## 5. El documento como fuente de las secciones

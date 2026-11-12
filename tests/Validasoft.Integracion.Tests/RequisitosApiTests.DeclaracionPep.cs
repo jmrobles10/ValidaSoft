@@ -106,6 +106,11 @@ public sealed partial class RequisitosApiTests
         igual.Creada.ShouldBeFalse();
         igual.Seccion.Datos!.Value.GetProperty("declaracion_pep").GetProperty("fecha_firma").GetString().ShouldBe(sello.Item2);
 
+        // La vista previa de lo mismo no pide un documento de soporte: declarar PEP no es «cambiar» (DP-17).
+        guardada.Completitud.Completa.ShouldBeTrue();
+        (await TerceroAsync<CompletitudSeccionDto>("POST", $"{rutaGeneral}/evaluacion", sesion.AccessToken,
+            new GuardarSeccionDto(Datos(JsonSerializer.Serialize(guardada.Seccion.Datos))), 200)).Completa.ShouldBeTrue();
+
         // La empresa descarga el PDF de su proveedor: con la imagen de la firma, el cargo y el nombre; queda como exportación.
         var url = $"/api/v1/terceros/{terceroId}/declaraciones-pep/pdf?seccion=FICHA_GENERAL";
         var pdf = await DescargarAsync(url, Admin(e.Norte));
@@ -140,12 +145,14 @@ public sealed partial class RequisitosApiTests
         var declaracion = DeclaracionPepJson();
         var v2 = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(false, declaracion));
         v2.Seccion.Version.ShouldBe(v1.Seccion.Version + 1);
+        v2.Completitud.Completa.ShouldBeTrue(); // pasar a «No» y volver a «Sí» tampoco pide soporte (DP-17)
         v2.Seccion.Datos!.Value.GetProperty("declaracion_pep").GetProperty("cargo").GetString().ShouldBe("Alcalde municipal");
         (await DescargarAsync(url, Admin(e.Norte))).Estado.ShouldBe(HttpStatusCode.NotFound);
 
         // «Sí» otra vez: versión nueva y el PDF vuelve. La versión anterior, que la empresa no ve, no se entrega.
         var v3 = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(true, DeclaracionPepJson()));
         v3.Seccion.Version.ShouldBe(v2.Seccion.Version + 1);
+        v3.Completitud.Completa.ShouldBeTrue();
         (await DescargarAsync(url, Admin(e.Norte))).Estado.ShouldBe(HttpStatusCode.OK);
         (await DescargarAsync($"{url}&version={v1.Seccion.Version}", Admin(e.Norte))).Estado.ShouldBe(HttpStatusCode.NotFound);
 

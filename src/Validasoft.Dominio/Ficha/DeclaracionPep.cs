@@ -207,7 +207,8 @@ public static partial class DeclaracionPepReglas
         var (relacion, otra) = RelacionDe(origen);
         var calidad = origen.EsNatural ? FirmaEnCalidad.NombrePropio : d.FirmaEnCalidad;
         var firmaPropia = calidad is FirmaEnCalidad.NombrePropio;
-        var vigente = d.Vigente;
+        // Una fecha de desvinculación sin la marca «vigente» dice que ya no lo está (la casilla sin marcar no llega como «no»).
+        var vigente = d.Vigente ?? (d.FechaDesvinculacion is not null ? false : null);
         return d with
         {
             RelacionEmpresa = relacion,
@@ -220,6 +221,7 @@ public static partial class DeclaracionPepReglas
             Cargo = Texto(d.Cargo),
             Institucion = Texto(d.Institucion),
             Pais = Mayusculas(d.Pais),
+            Vigente = vigente,
             FechaDesvinculacion = vigente == true ? null : d.FechaDesvinculacion,
             PaisesCuentasExterior = d.CuentasExterior == true
                 ? Lista(d.PaisesCuentasExterior)
@@ -282,12 +284,14 @@ public static partial class DeclaracionPepReglas
             return null;
         if (v.Tiene == false)
             return new VinculoConPep { Tiene = false };
+        var vigente = v.Vigente ?? (v.FechaDesvinculacion is not null ? false : null);
         var normal = v with
         {
             Nombre = Texto(v.Nombre),
             Parentesco = Texto(v.Parentesco),
             CargoInstitucion = Texto(v.CargoInstitucion),
-            FechaDesvinculacion = v.Vigente == true ? null : v.FechaDesvinculacion
+            Vigente = vigente,
+            FechaDesvinculacion = vigente == true ? null : v.FechaDesvinculacion
         };
         return normal == new VinculoConPep() ? null : normal;
     }

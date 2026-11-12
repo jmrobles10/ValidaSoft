@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Validasoft.Aplicacion.Ficha;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identificaciones;
@@ -218,7 +219,6 @@ public class DeclaracionPepTests
         { "pais", "Colombia", "declaracion_pep.pais" },
         { "nacionalidad", null, "declaracion_pep.nacionalidad" },
         { "fecha_vinculacion", null, "declaracion_pep.fecha_vinculacion" },
-        { "vigente", null, "declaracion_pep.vigente" },
         { "cuentas_exterior", null, "declaracion_pep.cuentas_exterior" },
         { "acepta_juramento", null, "declaracion_pep.acepta_juramento" },
         { "firma_png", null, "declaracion_pep.firma_png" },
@@ -273,6 +273,18 @@ public class DeclaracionPepTests
         var mismoDia = Declaracion();
         mismoDia["fecha_desvinculacion"] = "2018-01-01";
         RutasDeNatural(mismoDia).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Una_fecha_de_desvinculacion_sin_la_marca_vigente_vale_como_no_vigente()
+    {
+        var d = Declaracion();
+        d.Remove("vigente"); // la casilla sin marcar no llega como «no»
+        RutasDeNatural(d).ShouldBeEmpty();
+        LeerDeclaracion(d).Vigente.ShouldBe(false);
+
+        d.Remove("fecha_desvinculacion");
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.vigente"]);
     }
 
     [Fact]
@@ -648,6 +660,87 @@ public class DeclaracionPepTests
         Rutas(Evaluar(CodigosDeSeccion.General, GeneralNatural(d), Natural)).ShouldBe(["declaracion_pep.firma_png"]);
     }
 
+
+    private static readonly Lazy<ICatalogosDeFicha> CatalogosDeSemilla = new(() =>
+    {
+        var entradas = new List<EntradaDeCatalogo>();
+        foreach (var (catalogo, filas) in SemillaDeCatalogos.Todas)
+        {
+            var niveles = new Dictionary<string, int>();
+            foreach (var fila in filas.OrderBy(f => f.Nivel ?? 0))
+            {
+                var (entrada, _) = ReglasDeCatalogo.Validar(catalogo, fila, p => niveles.TryGetValue(p, out var n) ? n : null, Ahora);
+                if (entrada!.Nivel is { } nivel)
+                    niveles[entrada.Codigo] = nivel;
+                entradas.Add(entrada);
+            }
+        }
+
+        return new CatalogosEnMemoria(entradas);
+    });
+
+    [Fact]
+    public void Declarar_o_cambiar_la_declaracion_no_pide_el_soporte_del_cambio_pero_otro_cambio_si()
+    {
+        var definicion = CatalogoDeSecciones.Requerida(CodigosDeSeccion.General);
+        var seccion = SeccionDeFicha.Create(SeccionDeFicha.Iniciar(Guid.NewGuid(), definicion, null, Ahora));
+
+        VersionDeSeccionRegistrada Guardar(JsonObject datos)
+        {
+            var leidos = ReglasDeFicha.Leer(definicion, JsonDocument.Parse(datos.ToJsonString()).RootElement.Clone(), Natural);
+            var evento = seccion.Registrar(definicion, leidos, [], Natural, CatalogosDeSemilla.Value, OrigenDeSeccion.Tercero, "tercero", Ahora).ShouldHaveSingleItem()
+                .ShouldBeOfType<VersionDeSeccionRegistrada>();
+            seccion = seccion.Proyectar([evento]);
+            return evento;
+        }
+
+        JsonObject Completa(bool pep, JsonObject? declaracion, string direccion = "Carrera 7 # 32-16")
+        {
+            var general = GeneralNatural(declaracion, pep, direccion);
+            general["correo"] = "ana@correo.co";
+            general["telefono"] = "3001234567";
+            general["pais"] = "CO";
+            general["ciudad"] = "11001";
+            general["ciiu_principal"] = "4663";
+            return general;
+        }
+
+        // La primera versión (sin PEP) queda completa; declarar PEP con su declaración también: la declaración es su propia evidencia.
+        Guardar(Completa(false, null)).Completitud.Completa.ShouldBeTrue();
+        var conDeclaracion = Guardar(Completa(true, Declaracion()));
+        conDeclaracion.Completitud.Completa.ShouldBeTrue();
+        conDeclaracion.Completitud.Faltantes.ShouldBeEmpty();
+
+        // Cambiar el cargo, pasar a «No» y volver a «Sí» tampoco piden soporte.
+        var cambio = Declaracion();
+        cambio["cargo"] = "Concejal";
+        Guardar(Completa(true, cambio)).Completitud.Completa.ShouldBeTrue();
+        Guardar(Completa(false, cambio)).Completitud.Completa.ShouldBeTrue();
+        Guardar(Completa(true, cambio)).Completitud.Completa.ShouldBeTrue();
+        seccion.SinSoporte(seccion.VersionVigente!.Value).ShouldBeNull();
+
+        // La vista previa de los mismos datos, otra vez, tampoco pide soporte (el servidor responde igual que al guardar).
+        var previa = SeccionDeFicha.Anticipar(seccion, definicion, ReglasDeFicha.Leer(definicion, JsonDocument.Parse(Completa(true, cambio).ToJsonString()).RootElement.Clone(), Natural),
+            0, Natural, CatalogosDeSemilla.Value);
+        previa.Completa.ShouldBeTrue();
+
+        // Cambiar otra cosa de la sección (la dirección) sí lo pide, y el aviso solo nombra lo que no es de PEP.
+        var direccion = Guardar(Completa(true, cambio, "Calle 80 # 12-34"));
+        direccion.Completitud.Faltantes.ShouldBe([new FaltanteDeSeccion(null, ReglasDeFicha.ReglaSoporte, ReglasDeFicha.MensajeSoporte)]);
+        var sinSoporte = seccion.SinSoporte(direccion.Numero).ShouldNotBeNull();
+        sinSoporte.Cambios.Select(c => c.Campo).ShouldBe(["direccion"]);
+    }
+
+    [Fact]
+    public void La_huella_para_el_soporte_ignora_lo_de_pep_y_el_orden_de_las_claves_que_devuelve_la_base()
+    {
+        var uno = JsonDocument.Parse("""{ "nombres": "Ana", "pep": true, "declaracion_pep": { "cargo": "A" }, "personas": [ { "numero": "1", "pep": true, "declaracion_pep": { "cargo": "B" }, "rol": "Socio" } ] }""").RootElement;
+        var otro = JsonDocument.Parse("""{ "personas": [ { "rol": "Socio", "numero": "1", "pep": false } ], "nombres": "Ana" }""").RootElement;
+        SeccionDeFicha.HuellaParaSoporte(uno).ShouldBe(SeccionDeFicha.HuellaParaSoporte(otro));
+
+        var distinto = JsonDocument.Parse("""{ "personas": [ { "rol": "Socio", "numero": "2" } ], "nombres": "Ana" }""").RootElement;
+        SeccionDeFicha.HuellaParaSoporte(distinto).ShouldNotBe(SeccionDeFicha.HuellaParaSoporte(otro));
+    }
     [Fact]
     public void Lo_que_cambia_en_la_declaracion_se_lee_en_la_comparacion_sin_la_imagen_de_la_firma()
     {

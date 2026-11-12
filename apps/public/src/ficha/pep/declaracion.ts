@@ -137,13 +137,14 @@ export function declaracionParaEntregar(d: DeclaracionPep, basicos: DatosBasicos
     numero: basicos.numero,
     direccion: basicos.direccionFija ?? d.direccion ?? null,
     nacionalidad: basicos.nacionalidadFija ?? d.nacionalidad ?? null,
+    vigente: d.vigente === true,
     fecha_desvinculacion: d.vigente ? null : (d.fecha_desvinculacion ?? null),
     paises_cuentas_exterior: d.cuentas_exterior ? (d.paises_cuentas_exterior ?? []) : null,
     conyuge: conyugeVacio ? null : d.conyuge,
     familiares: familiares.length > 0 ? familiares : null,
     sociedades: sociedades.length > 0 ? sociedades.map((s) => (s.calidad === 'Otra' ? s : { ...s, calidad_otra: null })) : null,
     vinculo_con_pep: vinculo?.tiene
-      ? { ...vinculo, fecha_desvinculacion: vinculo.vigente ? null : (vinculo.fecha_desvinculacion ?? null) }
+      ? { ...vinculo, vigente: vinculo.vigente === true, fecha_desvinculacion: vinculo.vigente ? null : (vinculo.fecha_desvinculacion ?? null) }
       : { tiene: vinculo?.tiene ?? false },
     firma_en_calidad: basicos.soloNombrePropio ? 'NombrePropio' : (d.firma_en_calidad ?? 'NombrePropio'),
     firmante_nombre: representante ? d.firmante_nombre : null,

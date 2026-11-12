@@ -102,6 +102,8 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
             y = Dato(pdf, y, "Fecha de desvinculación", vinculo.Vigente == true ? "Vigente" : Fecha(vinculo.FechaDesvinculacion));
         }
 
+        // El juramento, quién firma y la firma van juntos: si no caben en lo que queda de la página, empiezan en la siguiente.
+        y = Espacio(pdf, y, 360);
         y = Seccion(pdf, y, "4. Juramento y firma");
         y = Parrafo(pdf, y, Juramento, 9.5);
         y -= 4;
