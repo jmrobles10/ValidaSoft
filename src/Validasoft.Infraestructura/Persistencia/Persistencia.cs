@@ -276,6 +276,8 @@ public static class ConfiguracionMarten
                     .Index(x => x.EmpresaId)
                     .Index(x => x.VenceEl);
                 opts.Schema.For<Validasoft.Dominio.Habeas.LlaveDeDatosDelTercero>().DatabaseSchemaName("boveda");
+                // Descargas del PDF de la propia declaración PEP del tercero (DP-18): globales, como el tercero; quién, cuándo, desde dónde y la huella del PDF.
+                opts.Schema.For<Validasoft.Aplicacion.Ficha.AccesoADeclaracionPep>().DatabaseSchemaName("boveda").Index(x => x.TerceroId).Index(x => x.Fecha);
                 opts.Schema.For<Validasoft.Dominio.Habeas.ExportacionDeBoveda>().DatabaseSchemaName("boveda")
                     .Index(x => x.TerceroId)
                     .Index(x => x.ExpiraEn);

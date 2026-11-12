@@ -170,6 +170,7 @@ export * from './descargaDto';
 export * from './descargaEvidenciaDto';
 export * from './descargarCertificadoVerificadoParams';
 export * from './descargarDeclaracionPepParams';
+export * from './descargarDeclaracionPepPropiaParams';
 export * from './descargarEvidenciaVerificacionParams';
 export * from './descargarInformeSlaExcelParams';
 export * from './descargarPlantillaLoteParams';

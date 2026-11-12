@@ -1,7 +1,11 @@
 using System.IO.Compression;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Marten;
+using Microsoft.Extensions.DependencyInjection;
+using Validasoft.Aplicacion.Ficha;
 using Validasoft.Contratos;
 
 namespace Validasoft.Integracion.Tests;
@@ -198,10 +202,186 @@ public sealed partial class RequisitosApiTests
         (await DescargarAsync($"{url}&persona=0", Admin(e.Norte))).Estado.ShouldBe(HttpStatusCode.NotFound);
         (await DescargarAsync(url, Admin(e.Norte))).Estado.ShouldBe(HttpStatusCode.NotFound);
 
+        // El propio tercero baja el PDF de cada persona suya con «Sí» y declaración (por su posición en la legal), y nada más.
+        var urlDelTercero = string.Format(RutaPdfDelTercero, "FICHA_LEGAL");
+        var propio = await DescargarComoTerceroAsync($"{urlDelTercero}?persona=1", sesion.AccessToken);
+        propio.Estado.ShouldBe(HttpStatusCode.OK);
+        var propioTexto = Encoding.Latin1.GetString(propio.Contenido);
+        propioTexto.ShouldContain("Calle 80 # 12-34");
+        propioTexto.ShouldContain("Socio o accionista de ");
+        (await DescargarComoTerceroAsync($"{urlDelTercero}?persona=0", sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync($"{urlDelTercero}?persona=7", sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync($"{urlDelTercero}?persona=-1", sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync(urlDelTercero, sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync(string.Format(RutaPdfDelTercero, "FICHA_GENERAL"), sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await AccesosADeclaracionesAsync(terceroId)).ShouldHaveSingleItem().Persona.ShouldBe(1);
+
         // El informe SAGRILAFT de la empresa muestra la persona PEP con su declaración y su posición.
         var personas = await ApiAsync<PersonasDelTerceroDto>("GET", $"/api/v1/informes/sagrilaft/terceros/{terceroId}/personas", Admin(e.Norte), null, 200);
         var pep = personas.Personas.Single(p => p.EsPep);
         (pep.DeclaracionPep, pep.Indice, pep.Rol).ShouldBe((true, 1, "Socio"));
         personas.Personas.Single(p => !p.EsPep).DeclaracionPep.ShouldBeFalse();
+    }
+
+    // ---------- el tercero descarga su declaración y el logo del PDF (DP-16, DP-18) ----------
+
+    private const string RutaPdfDelTercero = "/public/v1/ficha/{0}/declaracion-pep/pdf";
+
+    /// <summary>GET con la sesión del tercero (sin sesión si el token es nulo): el PDF o el error.</summary>
+    private async Task<Descarga> DescargarComoTerceroAsync(string url, string? token)
+    {
+        using var cliente = Host.Server.CreateClient();
+        using var pedido = new HttpRequestMessage(HttpMethod.Get, url);
+        if (token is not null)
+            pedido.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var respuesta = await cliente.SendAsync(pedido);
+        return new Descarga(respuesta.StatusCode, respuesta.Content.Headers.ContentType?.MediaType,
+            respuesta.Content.Headers.ContentDisposition?.FileNameStar ?? respuesta.Content.Headers.ContentDisposition?.FileName,
+            await respuesta.Content.ReadAsByteArrayAsync());
+    }
+
+    private async Task<List<AccesoADeclaracionPep>> AccesosADeclaracionesAsync(Guid terceroId)
+    {
+        await using var consulta = Host.Services.GetRequiredService<IDocumentStore>().QuerySession();
+        return [.. (await consulta.Query<AccesoADeclaracionPep>().Where(a => a.TerceroId == terceroId).ToListAsync()).OrderBy(a => a.Fecha)];
+    }
+
+    [Fact]
+    public async Task El_tercero_descarga_su_propia_declaracion_solo_con_si_a_pep_y_declaracion_y_cada_descarga_queda_registrada()
+    {
+        var (_, vinculo, sesion) = await NaturalConSesionAsync();
+        var url = string.Format(RutaPdfDelTercero, "FICHA_GENERAL");
+
+        // Sin sesión no hay PDF; con sesión pero sin declaración, tampoco.
+        (await DescargarComoTerceroAsync(url, null)).Estado.ShouldBe(HttpStatusCode.Unauthorized);
+        (await DescargarComoTerceroAsync(url, sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        var sin = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(false, null));
+        (await DescargarComoTerceroAsync(url, sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+
+        // Con «Sí» y la declaración guardada: el PDF de la versión vigente, a nombre de Validasoft y con su logo (no está dirigido a una empresa).
+        var guardada = await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(true, DeclaracionPepJson()));
+        guardada.Seccion.Version.ShouldBe(sin.Seccion.Version + 1);
+        var pdf = await DescargarComoTerceroAsync(url, sesion.AccessToken);
+        pdf.Estado.ShouldBe(HttpStatusCode.OK);
+        pdf.Tipo.ShouldBe("application/pdf");
+        pdf.Nombre.ShouldNotBeNull().ShouldStartWith("declaracion-pep-ana-perez-");
+        var texto = Encoding.Latin1.GetString(pdf.Contenido);
+        texto.ShouldStartWith("%PDF-1.7");
+        texto.ShouldContain("(Validasoft)");
+        texto.ShouldContain("/ShadingType 2");        // el isotipo de Validasoft, con su degradado
+        texto.ShouldContain("/Subtype /Image");       // la firma
+        texto.ShouldContain("(Alcalde municipal)");
+        texto.ShouldContain(guardada.Seccion.Datos!.Value.GetProperty("declaracion_pep").GetProperty("firma_huella").GetString()!);
+
+        // Cada descarga queda registrada: quién, cuándo, desde dónde, de qué versión y la huella del archivo.
+        (await DescargarComoTerceroAsync(url, sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.OK);
+        var accesos = await AccesosADeclaracionesAsync(vinculo.TerceroId);
+        accesos.Count.ShouldBe(2);
+        accesos.ShouldAllBe(a => a.Seccion == "FICHA_GENERAL" && a.Persona == null && a.Version == guardada.Seccion.Version && a.ActorTipo == "Tercero" && a.Sha256.Length == 64 && a.Fecha > DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        // Lo que no existe: otra sección con declaración, una sección que no la lleva, una persona de la legal (la natural no la diligencia).
+        (await DescargarComoTerceroAsync(string.Format(RutaPdfDelTercero, "FICHA_LEGAL") + "?persona=0", sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync(string.Format(RutaPdfDelTercero, "FICHA_SST"), sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await DescargarComoTerceroAsync(string.Format(RutaPdfDelTercero, "FICHA_INEXISTENTE"), sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+
+        // «No» la deja inactiva y con ella desaparece la descarga (como para la empresa).
+        await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(false, DeclaracionPepJson()));
+        (await DescargarComoTerceroAsync(url, sesion.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await AccesosADeclaracionesAsync(vinculo.TerceroId)).Count.ShouldBe(2); // lo que no se entregó no se registra
+    }
+
+    [Fact]
+    public async Task Cada_tercero_solo_baja_su_propia_declaracion_y_el_pdf_sale_de_sus_datos_no_de_lo_que_pida_el_cliente()
+    {
+        var (_, _, sesionA) = await NaturalConSesionAsync();
+        var (_, vinculoB, sesionB) = await NaturalConSesionAsync();
+        var url = string.Format(RutaPdfDelTercero, "FICHA_GENERAL");
+
+        var a = await GuardarSeccionAsync(sesionA, "FICHA_GENERAL", GeneralNaturalConPep(true, DeclaracionPepJson(cargo: "Alcalde de A")));
+        // B no tiene declaración: A tiene una y B no puede obtenerla (la sesión fija de quién es), ni con índices ni con versiones de por medio.
+        (await DescargarComoTerceroAsync(url, sesionB.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+        (await DescargarComoTerceroAsync(url + "?persona=0&version=1&terceroId=" + Guid.NewGuid(), sesionB.AccessToken)).Estado.ShouldBe(HttpStatusCode.NotFound);
+
+        var b = await GuardarSeccionAsync(sesionB, "FICHA_GENERAL", GeneralNaturalConPep(true, DeclaracionPepJson(cargo: "Concejal de B")));
+        var pdfB = Encoding.Latin1.GetString((await DescargarComoTerceroAsync(url, sesionB.AccessToken)).Contenido);
+        pdfB.ShouldContain("(Concejal de B)");
+        pdfB.ShouldNotContain("Alcalde de A");
+        var numeroA = a.Seccion.Datos!.Value.GetProperty("declaracion_pep").GetProperty("numero").GetString()!;
+        pdfB.ShouldNotContain(numeroA);
+        pdfB.ShouldContain(b.Seccion.Datos!.Value.GetProperty("declaracion_pep").GetProperty("numero").GetString()!);
+        (await AccesosADeclaracionesAsync(vinculoB.TerceroId)).ShouldHaveSingleItem().TerceroId.ShouldBe(vinculoB.TerceroId);
+    }
+
+    /// <summary>Un PNG RGB de 8 bits de 80×24, naranja: el logo de una empresa (distinto de la firma, para contarlos por separado).</summary>
+    private static string LogoPngBase64()
+    {
+        const int ancho = 80, alto = 24;
+        var crudo = new List<byte>();
+        for (var y = 0; y < alto; y++)
+        {
+            crudo.Add(0);
+            for (var x = 0; x < ancho; x++)
+                crudo.AddRange(x < 24 ? [255, 255, 255] : [224, 122, 31]);
+        }
+
+        using var comprimido = new MemoryStream();
+        using (var zlib = new ZLibStream(comprimido, CompressionLevel.Optimal, leaveOpen: true))
+            zlib.Write([.. crudo]);
+
+        using var png = new MemoryStream();
+        png.Write([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        void Trozo(string tipo, byte[] datos)
+        {
+            png.Write([(byte)(datos.Length >> 24), (byte)(datos.Length >> 16), (byte)(datos.Length >> 8), (byte)datos.Length]);
+            png.Write(Encoding.ASCII.GetBytes(tipo));
+            png.Write(datos);
+            png.Write([0, 0, 0, 0]);
+        }
+
+        Trozo("IHDR", [0, 0, 0, ancho, 0, 0, 0, alto, 8, 2, 0, 0, 0]);
+        Trozo("IDAT", comprimido.ToArray());
+        Trozo("IEND", []);
+        return Convert.ToBase64String(png.ToArray());
+    }
+
+    [Fact]
+    public async Task El_pdf_de_la_empresa_lleva_su_logo_png_o_svg_y_sin_logo_o_con_uno_que_no_se_puede_dibujar_el_de_Validasoft()
+    {
+        var (e, vinculo, sesion) = await NaturalConSesionAsync();
+        await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralNaturalConPep(true, DeclaracionPepJson()));
+        var url = $"/api/v1/terceros/{vinculo.TerceroId}/declaraciones-pep/pdf?seccion=FICHA_GENERAL";
+        async Task<string> PdfAsync() => Encoding.Latin1.GetString((await DescargarAsync(url, Admin(e.Norte))).Contenido);
+        async Task FijarLogoAsync(string logo) =>
+            await ApiAsync("PUT", $"/api/v1/empresas/{e.Norte.Datos.Id}", Admin(e.Norte), new ActualizarEmpresaDto(LogoUrl: logo), 200);
+
+        // Sin logo configurado: el de Validasoft (degradado) y la firma como única imagen.
+        var sinLogo = await PdfAsync();
+        sinLogo.ShouldContain("/ShadingType 2");
+        sinLogo.Split("/Subtype /Image").Length.ShouldBe(2);
+
+        // Un logo PNG: su imagen (80×24) en el encabezado, además de la firma, y ya no el de Validasoft.
+        await FijarLogoAsync($"data:image/png;base64,{LogoPngBase64()}");
+        var conPng = await PdfAsync();
+        conPng.ShouldContain("/Width 80 /Height 24");
+        conPng.Split("/Subtype /Image").Length.ShouldBe(3);
+        conPng.ShouldNotContain("/ShadingType");
+
+        // Un logo SVG: vectores (sin imagen nueva), con el color del logo.
+        var svg = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 30"><rect width="100" height="30" rx="5" fill="#E07A1F"/><circle cx="15" cy="15" r="8" fill="#FFFFFF"/></svg>""";
+        await FijarLogoAsync($"data:image/svg+xml;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes(svg))}");
+        var conSvg = await PdfAsync();
+        conSvg.ShouldContain("0.878431 0.478431 0.121569 rg");
+        conSvg.Split("/Subtype /Image").Length.ShouldBe(2);
+        conSvg.ShouldNotContain("/ShadingType");
+
+        // Un SVG con texto no se puede dibujar fielmente: el PDF lleva el de Validasoft en vez de un logo a medias. Y por URL (no se descarga) también.
+        await FijarLogoAsync($"data:image/svg+xml;base64,{Convert.ToBase64String(Encoding.UTF8.GetBytes("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>Norte</text></svg>"""))}");
+        (await PdfAsync()).ShouldContain("/ShadingType 2");
+        await FijarLogoAsync("https://cdn.norte.example/logo.png");
+        (await PdfAsync()).ShouldContain("/ShadingType 2");
+
+        // Quitar el logo (cadena vacía) devuelve al de Validasoft.
+        await FijarLogoAsync(string.Empty);
+        (await PdfAsync()).ShouldContain("/ShadingType 2");
     }
 }

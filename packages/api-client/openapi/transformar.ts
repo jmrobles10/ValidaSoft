@@ -377,6 +377,7 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/informes/sagrilaft': 'obtenerInformeSagrilaft',
   'GET /api/v1/informes/sagrilaft/excel': 'exportarInformeSagrilaft',
   'GET /api/v1/terceros/{terceroId}/declaraciones-pep/pdf': 'descargarDeclaracionPep',
+  'GET /public/v1/ficha/{seccion}/declaracion-pep/pdf': 'descargarDeclaracionPepPropia',
   'GET /api/v1/informes/sagrilaft/terceros/{terceroId}/personas': 'obtenerPersonasDelTerceroSagrilaft',
   // Revisión automática con IA (Manual, Asistido, Automático) y bandeja de excepciones (13 y 14).
   'GET /api/v1/configuracion/revision-automatica': 'obtenerRevisionAutomatica',

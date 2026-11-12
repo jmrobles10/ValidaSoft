@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CampoSiNo } from '../campos';
 import type { DeclaracionPep } from '../tipos';
+import { BotonDescargarDeclaracion } from './BotonDescargarDeclaracion';
 import { datosBasicos, faltasBasicas, type FaltaBasico, type OrigenDeclaracion } from './declaracion';
 import { DialogoDeclaracionPep } from './DialogoDeclaracionPep';
 
@@ -20,6 +21,8 @@ interface Props {
   mensaje: (ruta: string) => string | null;
   hayEnRuta?: (prefijo: string) => boolean;
   deshabilitado?: boolean;
+  /** Con esto, una declaración ya guardada ofrece «Descargar PDF» (la general del tercero; las personas de la legal lo tienen en su tarjeta). */
+  descarga?: { seccion: string };
 }
 
 /** Cómo se abrió el diálogo: al responder «Sí» (salir sin declarar devuelve la respuesta a «No») o con el botón de una respuesta que ya era «Sí». */
@@ -30,7 +33,7 @@ type Apertura = 'respuesta' | 'boton';
  * no): al responder «Sí» se abre el diálogo; «No» conserva la declaración como inactiva y al volver a «Sí» abre precargada. Con «Sí»
  * muestra si la declaración está firmada o falta, y no se puede guardar la sección sin ella (lo exige el servidor).
  */
-export function PreguntaPep({ etiqueta, pep, declaracion, origen, onCambiar, mensaje, hayEnRuta, deshabilitado = false }: Props) {
+export function PreguntaPep({ etiqueta, pep, declaracion, origen, onCambiar, mensaje, hayEnRuta, deshabilitado = false, descarga }: Props) {
   const { t } = useTranslation();
   const [apertura, setApertura] = useState<Apertura | null>(null);
   const [faltas, setFaltas] = useState<FaltaBasico[]>([]);
@@ -75,6 +78,7 @@ export function PreguntaPep({ etiqueta, pep, declaracion, origen, onCambiar, men
           <Button variant="outlined" startIcon={<FilePen size={16} aria-hidden />} onClick={() => abrir('boton')} disabled={deshabilitado}>
             {t('ficha.pep.verEditar')}
           </Button>
+          {descarga && declaracion.fecha_firma && <BotonDescargarDeclaracion seccion={descarga.seccion} persona={null} />}
         </Stack>
       )}
       {pep === true && !declaracion && (

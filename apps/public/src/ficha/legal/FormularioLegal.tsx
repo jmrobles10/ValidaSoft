@@ -1,10 +1,11 @@
-import { Alert, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CampoTexto, Rejilla, Subtitulo } from '../campos';
 import type { DatosLegales, PersonaRelacionada, PropsFormulario } from '../tipos';
 import { DialogoPersona } from './DialogoPersona';
+import { BotonDescargarDeclaracion } from '../pep/BotonDescargarDeclaracion';
 import { esRol, nombrePersona } from './personas';
 
 /**
@@ -101,6 +102,7 @@ function TarjetaPersona({ persona, indice, mensaje, hayEnRuta, onEditar, onQuita
             {marcados > 0 && <Chip size="small" color="warning" variant="outlined" label={t('ficha.legal.faltan', { count: marcados })} />}
             {faltaDeclaracion && <Chip size="small" color="warning" variant="outlined" label={t('ficha.pep.tarjeta.falta')} />}
           </Stack>
+          {persona.pep === true && persona.declaracion_pep?.fecha_firma && <Box><BotonDescargarDeclaracion seccion="FICHA_LEGAL" persona={indice} nombre={nombre} variante="text" /></Box>}
           {errorFila && <Typography sx={{ color: 'error.main', fontSize: 14 }}>{errorFila}</Typography>}
         </Stack>
         <Stack direction="row" spacing={1}>

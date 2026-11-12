@@ -22,6 +22,13 @@ export const declaracionPep = {
     conErrores: 'La declaración tiene datos por corregir. Ábrela y revísalos.',
   },
   tarjeta: { falta: 'Falta la declaración PEP' },
+  descarga: {
+    boton: 'Descargar PDF',
+    accesible: 'Descargar el PDF de tu declaración PEP',
+    accesiblePersona: 'Descargar el PDF de la declaración PEP de {{nombre}}',
+    archivo: 'declaracion-pep.pdf',
+    error: 'No se pudo descargar la declaración.',
+  },
   faltaBasico: {
     titulo: 'Completa antes {{campos}} para poder declarar PEP.',
     nombre: 'el nombre',

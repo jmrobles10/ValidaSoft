@@ -350,6 +350,7 @@ public sealed class RetencionDelTercero(ISesiones sesiones, IDocumentStore store
             sesion.DeleteWhere<SesionDeRefresco>(s => s.TerceroId == terceroId);
             sesion.DeleteWhere<EnlaceDeAcceso>(e => e.TerceroId == terceroId);
             sesion.Delete<PreferenciasDelTercero>(terceroId);
+            sesion.DeleteWhere<Validasoft.Aplicacion.Ficha.AccesoADeclaracionPep>(a => a.TerceroId == terceroId); // IP y agente de las descargas de su declaración PEP (DP-19)
             await sesion.SaveChangesAsync(ct);
             suprimidos.Add(new ElementoSuprimido("accesos", terceroId.ToString("N"), "Sesiones, enlaces de acceso y preferencias del portal"));
         }

@@ -105,6 +105,9 @@ interface Escenario {
   alEvaluar?: (peticion: Peticion) => Response;
   /** Propuestas de actualizar desde el documento (F5), de todas las secciones; por omisión, ninguna. */
   propuestas?: PropuestaDeSeccionDto[];
+  /** Respuesta de la descarga del PDF de la declaración PEP (`/public/v1/ficha/{sección}/declaracion-pep/pdf`); por omisión, 404. Cada petición se anota en `descargas`. */
+  alDescargar?: (peticion: Peticion) => Response;
+  descargas?: Peticion[];
 }
 
 /** Monta el wizard en `ruta` con una API falsa; devuelve los PUT que recibió. */
@@ -118,6 +121,10 @@ export function montarFicha(ruta: string, escenario: Escenario) {
       if (metodo === 'PUT') {
         guardados.push(peticion);
         return Promise.resolve(escenario.alGuardar?.(peticion) ?? json(500, {}));
+      }
+      if (metodo === 'GET' && url.pathname.endsWith('/declaracion-pep/pdf')) {
+        escenario.descargas?.push(peticion);
+        return Promise.resolve(escenario.alDescargar?.(peticion) ?? json(404, { status: 404, codigo: 'declaracion-pep-no-encontrada', detail: 'No hay declaración.' }));
       }
       if (metodo === 'POST' && url.pathname.endsWith('/evaluacion')) {
         return Promise.resolve(escenario.alEvaluar?.(peticion) ?? json(200, { completa: true, faltantes: [], reglaVersion: 1 }));
