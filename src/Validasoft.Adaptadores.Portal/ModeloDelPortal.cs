@@ -126,8 +126,10 @@ public sealed record TerCamaraComercio(
 /// <summary>
 /// <c>dbo.TerDeclaracionPep</c> (HU 49093 del Portal, solo existe en un Portal con esa rama desplegada): la declaración jurada PEP de una fila
 /// de <c>TerCamaraComercio</c> (<c>TerCamId</c>), con sus hijos. <c>RelacionEmpresa</c>: 1 proveedor, 2 socio, 3 otro; <c>FirmaEnCalidad</c>: 1 nombre
-/// propio, 2 representante legal. Solo se lee la <b>activa</b>. La imagen de la firma está en el disco del servidor del Portal
-/// (<c>FirmaRuta</c>): Validasoft no la lee, solo su huella (<c>FirmaHash</c>, SHA-256).
+/// propio, 2 representante legal, 3 apoderado. Solo se lee la <b>activa</b>. La imagen de la firma está en el disco del servidor del Portal
+/// (<c>FirmaRuta</c>, ruta que guardó el Portal) y su huella SHA-256 en <c>FirmaHash</c>. <c>FirmaImagen</c> no es una columna: el adaptador la llena leyendo
+/// la imagen por <see cref="IOrigenDeArchivosDelPortal"/> (o viene en el archivo JSON de pruebas) y el traductor solo la usa si su huella coincide.
+/// <c>Vinculos</c> son las PEP relacionadas (<c>dbo.TerDeclaracionPepVinculo</c>, varias por declaración desde la última versión de la HU).
 /// </summary>
 public sealed record TerDeclaracionPep(
     int TerCamId = 0,
@@ -161,13 +163,29 @@ public sealed record TerDeclaracionPep(
     DateTime? FechaFirma = null,
     string? FirmaHash = null,
     IReadOnlyList<TerDeclaracionPepFamiliar>? Familiares = null,
-    IReadOnlyList<TerDeclaracionPepSociedad>? Sociedades = null);
+    IReadOnlyList<TerDeclaracionPepSociedad>? Sociedades = null,
+    string? FirmaRuta = null,
+    byte[]? FirmaImagen = null,
+    IReadOnlyList<TerDeclaracionPepVinculo>? Vinculos = null);
 
 /// <summary><c>dbo.TerDeclaracionPepFamiliar</c>.</summary>
 public sealed record TerDeclaracionPepFamiliar(string? NombreCompleto = null, string? Parentesco = null, string? TipoDocumento = null, string? NumeroDocumento = null);
 
 /// <summary><c>dbo.TerDeclaracionPepSociedad</c>. <c>Calidad</c>: 1 socio, 2 administrador, 3 fideicomitente, 4 otra.</summary>
 public sealed record TerDeclaracionPepSociedad(string? NombreRazonSocial = null, string? Identificacion = null, int Calidad = 0, string? CalidadOtraCual = null);
+
+/// <summary><c>dbo.TerDeclaracionPepVinculo</c>: una PEP relacionada. <c>TipoVinculo</c>: 1 familiar, 2 asociado cercano; <c>Actual</c>: sigue vigente.</summary>
+public sealed record TerDeclaracionPepVinculo(
+    int TipoVinculo = 0,
+    string? Relacion = null,
+    string? NombreCompleto = null,
+    string? Cargo = null,
+    string? Entidad = null,
+    string? Pais = null,
+    DateTime? FechaVinculacion = null,
+    DateTime? FechaRetiro = null,
+    bool Actual = false);
+
 /// <summary><c>dbo.TerSISO</c>: las ocho preguntas S/N.</summary>
 public sealed record TerSISO(
     bool ProgramaSaludOcupacional = false,
