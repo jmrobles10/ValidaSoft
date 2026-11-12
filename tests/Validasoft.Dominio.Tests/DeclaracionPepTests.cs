@@ -95,7 +95,7 @@ internal static class PngDePrueba
 /// Declaración jurada PEP (HU 49093, DP-1…DP-14): obligatoria con «Sí» a PEP, todos sus campos y las filas todo-o-nada, el máximo de
 /// 30 filas, los datos básicos y los sellos que fija el servidor, la firma (PNG decodificable) y lo que conserva cada versión.
 /// </summary>
-public class DeclaracionPepTests
+public partial class DeclaracionPepTests
 {
     private static readonly DateOnly Hoy = new(2026, 11, 12);
     private static readonly DateTimeOffset Ahora = new(2026, 11, 12, 15, 0, 0, TimeSpan.Zero);

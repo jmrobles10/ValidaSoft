@@ -297,7 +297,7 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
             : d with
             {
                 DeclaracionPep = DeclaracionPepReglas.Sellar(d.DeclaracionPep, anterior?.DeclaracionPep, d.Pep == true, anterior?.Pep == true,
-                    origen == OrigenDeSeccion.Tercero, contexto.Hoy, contexto.IpDeFirma)
+                    origen == OrigenDeSeccion.Tercero, contexto.Hoy, contexto.IpDeFirma, direccionEsBasica: true)
             };
 
     protected override DatosGenerales Normalizar(DatosGenerales d, ContextoDeSeccion contexto)

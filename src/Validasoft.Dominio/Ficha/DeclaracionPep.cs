@@ -319,8 +319,15 @@ public static partial class DeclaracionPepReglas
     /// Fija los sellos de la firma. Lo que guarda el tercero: la huella sale de la imagen; la fecha y la IP son las del momento si la
     /// declaración es nueva, cambió o se reactivó (<paramref name="pep"/> pasó de no a sí) y, si sigue igual, las que ya tenía. Lo que
     /// llega de un sistema de origen conserva sus sellos (solo se calcula la huella si trae la imagen).
+    /// <para>
+    /// <b>Los datos básicos no son lo que se declaró</b> (DP-19): nombre, documento, relación y, en la natural (<paramref name="direccionEsBasica"/>), la dirección los
+    /// copia el servidor de la persona. Si cambian (porque el tercero corrigió su nombre, o «Actualizar desde mi RUT» le cambió la dirección) y la
+    /// declaración no cambió ni se volvió a firmar, la declaración sigue siendo la que firmó, con sus datos básicos de ese día y sus sellos: nadie
+    /// vuelve a firmar por un cambio ajeno a la declaración. Para actualizar esa copia hay que declarar de nuevo (cambiar algo o firmar otra vez).
+    /// </para>
     /// </summary>
-    public static DeclaracionPep? Sellar(DeclaracionPep? nueva, DeclaracionPep? anterior, bool pep, bool pepAnterior, bool delTercero, DateOnly hoy, string? ip)
+    public static DeclaracionPep? Sellar(DeclaracionPep? nueva, DeclaracionPep? anterior, bool pep, bool pepAnterior, bool delTercero, DateOnly hoy, string? ip,
+        bool direccionEsBasica = false)
     {
         if (nueva is null)
             return null;
@@ -328,10 +335,32 @@ public static partial class DeclaracionPepReglas
         if (!delTercero)
             return nueva with { FirmaHuella = huella };
 
-        var igual = anterior is not null && Contenido(anterior) == Contenido(nueva) && !(pep && !pepAnterior);
-        return igual
-            ? nueva with { FirmaHuella = huella, FechaFirma = anterior!.FechaFirma, FirmaIp = anterior.FirmaIp }
-            : nueva with { FirmaHuella = huella, FechaFirma = hoy, FirmaIp = Texto(ip) };
+        if (anterior is not null && !(pep && !pepAnterior))
+        {
+            var firmada = nueva.FirmaPng == anterior.FirmaPng ? ConBasicosDe(nueva, anterior, direccionEsBasica) : nueva;
+            if (Contenido(firmada) == Contenido(anterior))
+                return firmada with { FirmaHuella = huella, FechaFirma = anterior.FechaFirma, FirmaIp = anterior.FirmaIp };
+        }
+
+        return nueva with { FirmaHuella = huella, FechaFirma = hoy, FirmaIp = Texto(ip) };
+    }
+
+    /// <summary>La declaración nueva con los datos básicos (copia de la persona) que tenía la firmada: lo que el servidor fija, no lo que el tercero escribió.</summary>
+    private static DeclaracionPep ConBasicosDe(DeclaracionPep nueva, DeclaracionPep firmada, bool direccionEsBasica)
+    {
+        var firmaPropia = nueva.FirmaEnCalidad == FirmaEnCalidad.NombrePropio && firmada.FirmaEnCalidad == FirmaEnCalidad.NombrePropio;
+        return nueva with
+        {
+            RelacionEmpresa = firmada.RelacionEmpresa,
+            RelacionOtra = firmada.RelacionOtra,
+            Nombre = firmada.Nombre,
+            TipoIdentificacion = firmada.TipoIdentificacion,
+            Numero = firmada.Numero,
+            Direccion = direccionEsBasica ? firmada.Direccion : nueva.Direccion,
+            FirmanteNombre = firmaPropia ? firmada.FirmanteNombre : nueva.FirmanteNombre,
+            FirmanteTipoIdentificacion = firmaPropia ? firmada.FirmanteTipoIdentificacion : nueva.FirmanteTipoIdentificacion,
+            FirmanteNumero = firmaPropia ? firmada.FirmanteNumero : nueva.FirmanteNumero
+        };
     }
 
     // ---------- Revisión ----------
