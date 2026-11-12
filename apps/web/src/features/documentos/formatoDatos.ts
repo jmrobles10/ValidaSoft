@@ -1,5 +1,5 @@
 import type { DatoDeclaradoDto } from '@validasoft/api-client';
-import { formatearFecha, LOCALE } from '@validasoft/ui';
+import { formatearDiaCivil, formatearFecha, LOCALE } from '@validasoft/ui';
 
 /** Textos que el formato necesita y dependen del idioma. */
 export interface TextosDatoDeclarado {
@@ -33,7 +33,7 @@ export function formatearDatoDeclarado(dato: Pick<DatoDeclaradoDto, 'tipo' | 'va
 
 /** `2026-11-30` → `30/11/2026` (día calendario, sin correrlo por zona); un ISO con hora usa la zona del tenant. */
 export function formatearFechaDeclarada(valor: string): string {
-  if (SOLO_FECHA.test(valor)) return formatearFecha(`${valor}T00:00:00Z`, 'UTC');
+  if (SOLO_FECHA.test(valor)) return formatearDiaCivil(valor);
   return Number.isNaN(Date.parse(valor)) ? valor : formatearFecha(valor);
 }
 

@@ -210,7 +210,7 @@ public static class ConsultaCertificacionEndpoints
 
     private static List<RevalidacionPendienteDto> Revalidaciones(Expediente actualizacion, bool bloqueante)
     {
-        var plazo = DateOnly.FromDateTime(Revalidacion.PlazoHasta(actualizacion).UtcDateTime);
+        var plazo = Revalidacion.DiaDelPlazo(Revalidacion.PlazoHasta(actualizacion));
         return [.. actualizacion.Requisitos
             .Where(r => !r.Eximido && r.Estado != EstadoRequisito.Aprobado)
             .OrderBy(r => r.Codigo, StringComparer.Ordinal)

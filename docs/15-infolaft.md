@@ -85,7 +85,9 @@ en `AplicaSarlaft`, ningún cliente pudo seleccionarla. Luego el esfuerzo se fue
 
 ## Decisiones abiertas
 
-1. ¿Infolaft será el proveedor único para todos los clientes de Sinco o cada cliente elige el suyo? Propuesta: por
-   empresa, con Infolaft por defecto cuando el cliente no tenga contrato propio.
-2. ¿Se usa en el SRM durante la coexistencia (paso 6) o solo desde Validasoft? Propuesta: solo desde Validasoft, salvo
-   que un cliente lo necesite antes de migrar.
+1. ~~¿Infolaft será el proveedor único para todos los clientes de Sinco o cada cliente elige el suyo?~~ **Resuelta (G-2,
+   2026-11-11): uno solo para todos los clientes, con la cuenta de la plataforma**; no se adopta la propuesta «por
+   empresa». Las credenciales pasan de cada empresa a la configuración de la plataforma (pendiente de implementar; el
+   consumo por empresa se conserva para atribuir el costo).
+2. ~~¿Se usa en el SRM durante la coexistencia (paso 6) o solo desde Validasoft?~~ **Resuelta (G-4):** solo desde
+   Validasoft; la integración con el SRM llega después de probar Validasoft solo.

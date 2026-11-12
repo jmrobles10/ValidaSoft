@@ -1,6 +1,7 @@
 import type { ComparticionPublicaDto, DocumentoBovedaDto, VersionDocumentoDto } from '@validasoft/api-client';
 import type { TFunction } from 'i18next';
-import { estadoDeVigencia, formatearDia, textoVigencia } from '../vigencia/vigencia';
+import { formatearDiaCivil } from '@validasoft/ui';
+import { estadoDeVigencia, textoVigencia } from '../vigencia/vigencia';
 import { MAXIMO_PAGINAS } from './subida';
 
 /** Por qué se devolvió una versión, en lenguaje del tercero y con qué hacer (BO-4). */
@@ -57,7 +58,7 @@ function venceAparte(c: ComparticionPublicaDto, venceEnCabecera: string | null, 
   const estado = estadoDeVigencia(vigencia);
   if (estado === 'EnGracia' || estado === 'Vencida') return `${textoVigencia(vigencia, t) ?? ''}.`;
   if (estado === 'SinVencimiento' || vigencia.vigenteHasta === venceEnCabecera) return null;
-  const fecha = formatearDia(vigencia.vigenteHasta);
+  const fecha = formatearDiaCivil(vigencia.vigenteHasta);
   const base = BASES.find((b) => b === vigencia.base);
   return base ? t(`boveda.vence.${base}`, { fecha }) : t('boveda.vence.otra', { fecha });
 }

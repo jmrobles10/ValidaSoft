@@ -19,10 +19,15 @@ export function AvisoRechazo({ vinculo }: { vinculo: VinculoPublicoDto }) {
   const reintento = vinculo.reintento;
   if (!reintento) return null;
 
-  const postular = () =>
-    reintentar.mutate(undefined, {
-      onSuccess: (expediente) => void navegar(`/expediente/${expediente.id}`),
-    });
+  // Con `mutateAsync` y no con el `onSuccess` de `mutate`: ese callback se pierde si el aviso se desmonta antes de la respuesta, y se desmonta
+  // cuando el aviso en tiempo real refresca la lista (el vínculo ya no trae el rechazo) y esa lista llega antes que la respuesta del POST.
+  // La promesa se cumple siempre; el error ya lo muestra `reintentar.isError`.
+  const postular = () => {
+    reintentar.mutateAsync().then(
+      (expediente) => void navegar(`/expediente/${expediente.id}`),
+      () => undefined,
+    );
+  };
 
   return (
     <Box

@@ -23,6 +23,15 @@ public class FechaDeNegocioTests
     }
 
     [Fact]
+    public void El_plazo_de_una_revalidacion_que_vence_de_noche_en_Bogota_se_cuenta_ese_mismo_dia()
+    {
+        // Vence el 9 de noviembre a las 9:00 p. m. en Bogotá = 10 de noviembre, 2:00 a. m. UTC: la consulta del sistema integrado decía «10».
+        var plazo = new DateTimeOffset(2026, 11, 10, 2, 0, 0, TimeSpan.Zero);
+
+        Aplicacion.Expedientes.Revalidacion.DiaDelPlazo(plazo).ShouldBe(new DateOnly(2026, 11, 9));
+    }
+
+    [Fact]
     public void Una_zona_desconocida_cae_en_UTC()
     {
         CalculadoraDeVigencia.Zona("Zona/Inexistente").ShouldBe(TimeZoneInfo.Utc);

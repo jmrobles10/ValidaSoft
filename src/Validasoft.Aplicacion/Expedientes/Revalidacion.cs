@@ -217,6 +217,12 @@ public static class Revalidacion
     public static DateTimeOffset PlazoHasta(Expediente actualizacion) => actualizacion.PlazoDeRevalidacionHasta;
 
     /// <summary>
+    /// El día de calendario en que vence el plazo, en la zona del negocio (FE-1): el que ve la empresa en su pantalla y el que consulta el sistema
+    /// integrado. En UTC, un plazo que vence entre las 7 p. m. y la medianoche de Bogotá se contaba un día después.
+    /// </summary>
+    public static DateOnly DiaDelPlazo(DateTimeOffset plazoHasta) => CalculadoraDeVigencia.Fecha(plazoHasta);
+
+    /// <summary>
     /// ¿Se puede aprobar en lote (A-18)? Solo si la bóveda no ve cambios frente a la anterior: <c>Identica</c> por hash o
     /// <c>SinCambios</c> en los campos clave (con IA). Sin IA toda versión nueva es <c>Distinta</c> y se revisa una a una.
     /// </summary>

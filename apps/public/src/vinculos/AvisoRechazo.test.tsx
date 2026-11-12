@@ -31,18 +31,19 @@ const vinculo = (cambios: Partial<VinculoPublicoDto> = {}): VinculoPublicoDto =>
   ...cambios,
 });
 
-function mostrar(vinculos: VinculoPublicoDto[], reintentar?: () => Response) {
+function mostrar(vinculos: VinculoPublicoDto[], reintentar?: () => Response | Promise<Response>, lista: () => VinculoPublicoDto[] = () => vinculos) {
   const llamadas: string[] = [];
+  const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   configurarCliente({
     fetch: vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
       const ruta = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
       llamadas.push(`${init?.method ?? 'GET'} ${ruta}`);
-      return Promise.resolve(ruta.endsWith('/reintentar') && reintentar ? reintentar() : json(vinculos));
+      return Promise.resolve(ruta.endsWith('/reintentar') && reintentar ? reintentar() : json(lista()));
     }),
   });
   render(
     <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={cliente}>
         <MemoryRouter initialEntries={['/']}>
           <Routes>
             <Route path="/" element={<PaginaEmpresas />} />
@@ -52,7 +53,7 @@ function mostrar(vinculos: VinculoPublicoDto[], reintentar?: () => Response) {
       </QueryClientProvider>
     </ThemeProvider>,
   );
-  return llamadas;
+  return Object.assign(llamadas, { cliente });
 }
 
 afterEach(() => reiniciarCliente());
@@ -70,6 +71,24 @@ describe('rechazo y «Volver a postularme» (DS-4)', () => {
 
     await waitFor(() => expect(screen.getByText('Expediente nuevo')).toBeInTheDocument());
     expect(llamadas).toContain('POST /public/v1/vinculos/v1/reintentar');
+  });
+
+  it('abre la revisión nueva aunque el aviso en tiempo real refresque la lista (y el aviso desaparezca) antes de que llegue la respuesta', async () => {
+    // El POST queda en el aire hasta que la lista ya cambió: así llega el tiempo real en una red lenta.
+    let responder: (r: Response) => void = () => undefined;
+    const respuesta = new Promise<Response>((resolver) => (responder = resolver));
+    let rechazado = true;
+    const llamadas = mostrar([vinculo()], () => respuesta, () => [vinculo(rechazado ? {} : { reintento: null, estado: 'EnValidacion', expedienteId: 'exp-nuevo' })]);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Volver a postularme' }));
+    await waitFor(() => expect(llamadas).toContain('POST /public/v1/vinculos/v1/reintentar'));
+    rechazado = false;
+    await llamadas.cliente.invalidateQueries();
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Volver a postularme' })).not.toBeInTheDocument());
+    expect(screen.queryByText('Expediente nuevo')).not.toBeInTheDocument();
+
+    responder(json({ id: 'exp-nuevo', estado: 'EnRevision' }));
+    await waitFor(() => expect(screen.getByText('Expediente nuevo')).toBeInTheDocument());
   });
 
   it('con espera dice desde cuándo puede y no deja postularse todavía', async () => {

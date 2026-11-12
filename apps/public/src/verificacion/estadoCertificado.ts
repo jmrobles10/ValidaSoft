@@ -1,7 +1,6 @@
 import { esErrorApi, esErrorDeRed, type CertificadoPublicoDto } from '@validasoft/api-client';
-import { formatearFecha, type EstadoCertificado } from '@validasoft/ui';
+import { formatearDiaCivil, formatearFecha, type EstadoCertificado } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { formatearDia } from '../vigencia/vigencia';
 
 /** Estados que puede traer `CertificadoPublicoDto.estado` (`ConPendientes` llega con H6). */
 const ESTADOS: readonly EstadoCertificado[] = ['Vigente', 'ConPendientes', 'Suspendido', 'Vencido', 'Revocado', 'Reemplazado'];
@@ -24,12 +23,12 @@ export function textoDelEstado(c: CertificadoPublicoDto, t: TFunction): { titulo
   const estado = estadoDelCertificado(c.estado);
   const valores = { empresa: c.emisor.empresa, tercero: c.titular.nombre, estado: c.estado, fecha: formatearFecha(c.estadoDesde) };
   if (!estado) return { titulo: t('verificacion.estados.otro.titulo', valores), texto: t('verificacion.estados.otro.texto', valores) };
-  if (estado === 'Vencido' && c.vigenteHasta) valores.fecha = formatearDia(c.vigenteHasta);
+  if (estado === 'Vencido' && c.vigenteHasta) valores.fecha = formatearDiaCivil(c.vigenteHasta);
 
   const titulo = t(`verificacion.estados.${estado}.titulo`, valores);
   const texto = t(`verificacion.estados.${estado}.texto`, valores);
   if (estado !== 'Vigente') return { titulo, texto };
-  const vence = c.vigenteHasta ? t('verificacion.venceEl', { fecha: formatearDia(c.vigenteHasta) }) : t('verificacion.noVence');
+  const vence = c.vigenteHasta ? t('verificacion.venceEl', { fecha: formatearDiaCivil(c.vigenteHasta) }) : t('verificacion.noVence');
   return { titulo, texto: `${texto} ${vence}` };
 }
 

@@ -1,5 +1,5 @@
 import type { VigenciaDto } from '@validasoft/api-client';
-import { formatearFecha, type Estado } from '@validasoft/ui';
+import { formatearDiaCivil, type Estado } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 
 /** Estado de la vigencia de una versión para una empresa (TD-6), calculado por la API con la fecha de hoy. */
@@ -31,20 +31,11 @@ export function requiereAtencion(vigencia: Pick<VigenciaDto, 'estado'> | null | 
   return estado === 'PorVencer' || estado === 'EnGracia' || estado === 'Vencida';
 }
 
-/**
- * `vigenteHasta` y `finDeGracia` son fechas sin hora (`aaaa-mm-dd`): se muestran tal cual, sin pasar por la zona horaria
- * (como `Date` serían la medianoche UTC, el día anterior en Bogotá).
- */
-export function formatearDia(valor: string): string {
-  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor);
-  return partes ? `${partes[3] ?? ''}/${partes[2] ?? ''}/${partes[1] ?? ''}` : formatearFecha(valor);
-}
-
 /** «Vence el 28/09/2026» o «Venció el …»; `null` si no hay fecha que decir (sin vencimiento o periodo sin calcular). */
 export function textoVigencia(vigencia: VigenciaDto, t: TFunction): string | null {
   const estado = estadoDeVigencia(vigencia);
   if (!estado || estado === 'SinVencimiento' || !vigencia.vigenteHasta) return null;
-  const fecha = formatearDia(vigencia.vigenteHasta);
+  const fecha = formatearDiaCivil(vigencia.vigenteHasta);
   return estado === 'EnGracia' || estado === 'Vencida' ? t('vigencia.vencioEl', { fecha }) : t('vigencia.venceEl', { fecha });
 }
 
@@ -59,12 +50,12 @@ export function avisoDeVigencia(vigencia: VigenciaDto, t: TFunction): AvisoVigen
     case 'PorVencer':
       return {
         severidad: 'warning',
-        texto: vigencia.vigenteHasta ? t('vigencia.avisos.porVencer', { fecha: formatearDia(vigencia.vigenteHasta) }) : t('vigencia.avisos.porVencerSinFecha'),
+        texto: vigencia.vigenteHasta ? t('vigencia.avisos.porVencer', { fecha: formatearDiaCivil(vigencia.vigenteHasta) }) : t('vigencia.avisos.porVencerSinFecha'),
       };
     case 'EnGracia':
       return {
         severidad: 'warning',
-        texto: vigencia.finDeGracia ? t('vigencia.avisos.enGracia', { fecha: formatearDia(vigencia.finDeGracia) }) : t('vigencia.avisos.enGraciaSinFecha'),
+        texto: vigencia.finDeGracia ? t('vigencia.avisos.enGracia', { fecha: formatearDiaCivil(vigencia.finDeGracia) }) : t('vigencia.avisos.enGraciaSinFecha'),
       };
     case 'Vencida':
       return { severidad: 'error', texto: t('vigencia.avisos.vencida') };
