@@ -11,6 +11,9 @@ export const CLAVES_TIPO = {
   'expediente.rechazado': 'rechazado',
   'expediente.caducado': 'caducado',
   'invitaciones.lote_terminado': 'loteTerminado',
+  'campanias.terminada': 'campaniaTerminada',
+  'expediente.sla_por_vencer': 'slaPorVencer',
+  'expediente.sla_incumplido': 'slaIncumplido',
   'documento.por_vencer': 'porVencer',
   'documento.vencido': 'vencido',
   'webhook.deshabilitado': 'webhookDeshabilitado',
@@ -18,6 +21,10 @@ export const CLAVES_TIPO = {
   'verificacion.coincidencia': 'coincidenciaListas',
   'verificacion.estudio_pendiente': 'estudioPendiente',
   'verificacion.expirada': 'verificacionExpirada',
+  'habeas.solicitud': 'habeasSolicitud',
+  'habeas.plazo': 'habeasPlazo',
+  'plan.limite': 'planLimite',
+  'vinculo.cuenta_propuesta': 'cuentaPropuesta',
 } as const;
 
 export type ClaveTipo = (typeof CLAVES_TIPO)[keyof typeof CLAVES_TIPO];

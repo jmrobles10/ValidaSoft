@@ -29,6 +29,9 @@ public static class CatalogoDePlantillas
     public const string Desaprobacion = "desaprobacion";
     public const string Reintegro = "reintegro";
     public const string RetiroDeVersion = "retiro-version";
+    public const string PreVencimiento = "pre-vencimiento";
+    public const string VigenciaVencida = "vigencia-vencida";
+    public const string Renovacion = "renovacion";
 
     public static readonly IReadOnlyList<EventoDePlantilla> Eventos =
     [
@@ -45,7 +48,13 @@ public static class CatalogoDePlantillas
         new(Reintegro, "Vínculo reintegrado", "La empresa reintegró el vínculo del tercero, con o sin validar de nuevo.", ["empresa", "folio"]),
         new(RetiroDeVersion, "Versión retirada por el tercero",
             "Aviso al personal de la empresa (no al tercero) cuando el tercero retira una versión que ya había aprobado o que está en revisión.",
-            ["empresa", "folio", "documento"])
+            ["empresa", "folio", "documento"]),
+        new(PreVencimiento, "Pre-vencimiento de la validación",
+            "La validación del tercero está por vencer: el aviso, sus recordatorios y el enlace para ratificar o actualizar su información.", ["empresa", "fecha"]),
+        new(VigenciaVencida, "Validación vencida",
+            "La vigencia de la validación del tercero terminó: pide ratificar o actualizar su información para volver a estar al día.", ["empresa", "fecha"]),
+        new(Renovacion, "Renovación abierta por la empresa",
+            "La empresa abrió la renovación de la validación del tercero (por ejemplo, desde una campaña) antes de que venza.", ["empresa", "fecha"])
     ];
 
     public static EventoDePlantilla? Buscar(string? evento) =>

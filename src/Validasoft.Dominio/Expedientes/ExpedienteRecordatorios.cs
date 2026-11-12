@@ -73,6 +73,13 @@ public sealed partial class Expediente
         return CalculadoraDeVigencia.Fecha(ahora).DayNumber - CalculadoraDeVigencia.Fecha(desde).DayNumber >= cadaDias;
     }
 
+    /// <summary>
+    /// Cada cuántos días sale solo el recordatorio de este expediente (OP-19): lo que fijó su flujo (0 = apagado) o, si el flujo no dice nada, lo
+    /// de la empresa (<paramref name="empresaActiva"/> y <paramref name="empresaCadaDias"/>). 0 = no recuerda solo.
+    /// </summary>
+    public int RecordatorioAutomaticoEfectivo(bool empresaActiva, int empresaCadaDias) =>
+        RecordatorioObservacionesDias ?? (empresaActiva ? empresaCadaDias : 0);
+
     /// <summary>Días de calendario que lleva devuelto al tercero (0 el mismo día).</summary>
     public int DiasObservado(DateTimeOffset ahora) =>
         ObservadoEn is { } observadoEn

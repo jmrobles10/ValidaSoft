@@ -72,6 +72,18 @@ public static class ServiciosInfraestructura
     /// </summary>
     public const string ColaLotes = "lotes";
 
+    /// <summary>Cola local durable y <b>secuencial</b> de las campañas de renovación (OP-3): una tanda a la vez, cada una encola la siguiente.</summary>
+    public const string ColaCampanias = "campanias";
+
+    /// <summary>Cola local durable del habeas data: barrido de plazos y revisión de cada solicitud (OD-3), y limpieza de exportaciones vencidas.</summary>
+    public const string ColaHabeas = "habeas";
+
+    /// <summary>Cola local durable y <b>secuencial</b> de las exportaciones de la bóveda (OD-9): un ZIP a la vez, para acotar la memoria y el disco.</summary>
+    public const string ColaExportaciones = "exportaciones";
+
+    /// <summary>Cola local durable de la revisión de los planes de los grupos (OD-16).</summary>
+    public const string ColaPlan = "plan";
+
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
         servicios.AddSingleton(TimeProvider.System);
@@ -82,31 +94,75 @@ public static class ServiciosInfraestructura
         servicios.AddHttpContextAccessor();
         servicios.AddScoped<IContextoSolicitud, ContextoDesdeHttp>();
         servicios.AddSingleton<IGeneradorDeApiKeys, GeneradorDeApiKeys>();
-        servicios.AddSingleton<ICacheDeCredenciales, CacheDeCredenciales>();
+        // Aviso entre servidores (PI-8): PostgreSQL LISTEN/NOTIFY. Cada caché que guarda algo cambiable se registra como receptor.
+        servicios.AddSingleton<BusDeInvalidaciones>();
+        servicios.AddSingleton<IBusDeInvalidaciones>(proveedor => proveedor.GetRequiredService<BusDeInvalidaciones>());
+        servicios.AddSingleton<CacheDeCredenciales>();
+        servicios.AddSingleton<ICacheDeCredenciales>(proveedor => proveedor.GetRequiredService<CacheDeCredenciales>());
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeCredenciales>());
+        servicios.AddHostedService<EscuchaDeInvalidaciones>();
+        servicios.AddSingleton<CacheDeClaveDeArranque>();
+        servicios.AddSingleton<ICacheDeClaveDeArranque>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
+        servicios.AddSingleton<VerificadorDeSistemas>();
+        servicios.AddSingleton<ICacheDeSistemas>(proveedor => proveedor.GetRequiredService<VerificadorDeSistemas>());
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<VerificadorDeSistemas>());
         // Los adaptadores de origen (IAdaptadorDeOrigen) los registra quien compone la aplicación; sin ninguno el importador responde 404.
         servicios.AddSingleton<Aplicacion.Importacion.RegistroDeAdaptadores>();
         servicios.AddSingleton<IEmisorDeSesiones, EmisorDeSesiones>();
         servicios.AddSingleton<IEmisorDeSesionesTercero, EmisorDeSesionesTercero>();
-        servicios.AddSingleton<IProtectorDeSecretos, ProtectorDeSecretos>();
+        servicios.AddSingleton<ProtectorDeSecretos>();
+        servicios.AddSingleton<IProtectorDeSecretos>(proveedor => proveedor.GetRequiredService<ProtectorDeSecretos>());
+        servicios.AddSingleton<IProtectorDeCamposDelGrupo, ProtectorDeCamposDelGrupo>();
+        servicios.AddSingleton<IRecifradorDeCuentasDeVinculos, RecifradorDeCuentasDeVinculos>();
         servicios.AddHostedService<VerificacionDeClaveMaestra>(); // sin clave maestra de secretos la API no arranca (PT-1)
         // El correo pasa primero por EnviadorDeCorreo, que retiene en el buzón del sandbox el de un tenant sandbox (SB-4); solo lo
         // que sale va al transporte SMTP.
         servicios.AddSingleton<IEntornos, Sandbox.Entornos>();
         servicios.AddSingleton<CacheDeEmpresas>(); // la empresa de X-Empresa, 30 s por nodo
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeEmpresas>());
         servicios.AddSingleton<Aplicacion.Integracion.IndiceDeVinculosConsultados>(); // consulta de certificación en un solo viaje (CN-1)
         servicios.AddSingleton<ITransporteDeCorreo, EnviadorSmtp>();
+        // Dominio de correo propio por empresa (OD-19): hoy solo el proveedor simulado; uno real se conecta implementando la interfaz.
+        if (string.Equals(configuracion["Validasoft:Correo:Dominios:Proveedor"] ?? ProveedorSimuladoDeDominios.NombreDelProveedor, ProveedorSimuladoDeDominios.NombreDelProveedor,
+                StringComparison.OrdinalIgnoreCase))
+            servicios.AddSingleton<Aplicacion.Configuracion.IProveedorDeDominiosDeCorreo, ProveedorSimuladoDeDominios>();
+        else
+            servicios.AddSingleton<Aplicacion.Configuracion.IProveedorDeDominiosDeCorreo>(new ProveedorDeDominiosNoConfigurado(configuracion["Validasoft:Correo:Dominios:Proveedor"]!));
         servicios.AddSingleton<IEnviadorDeCorreo, Sandbox.EnviadorDeCorreo>();
         servicios.AddScoped<Aplicacion.Sandbox.ServicioDeSandbox>();
+        // Habeas data (Ley 1581): llave de datos por tercero para cifrar lo personal que va a eventos (crypto-shredding), retención y supresión de
+        // la bóveda, y el barrido de plazos con sus alertas (OD-1…OD-12).
+        servicios.AddScoped<Aplicacion.Habeas.IProtectorDeDatosDelTercero, Aplicacion.Habeas.ProtectorDeDatosDelTercero>();
+        servicios.AddScoped<Aplicacion.Habeas.RetencionDelTercero>();
+        servicios.AddHostedService<Aplicacion.Habeas.ProgramadorDeHabeas>();
+        // Plan y límites por grupo (OD-14…OD-17): medición de uso, bloqueo suave, avisos al 80 % y al 100 %.
+        servicios.AddSingleton<Aplicacion.Plataforma.MedidorDeLlamadasApi>();
+        servicios.AddHostedService(proveedor => proveedor.GetRequiredService<Aplicacion.Plataforma.MedidorDeLlamadasApi>());
+        servicios.AddSingleton<Aplicacion.Plataforma.ControlDePlan>();
+        servicios.AddScoped<Aplicacion.Plataforma.EvaluadorDePlan>();
+        servicios.AddHostedService<Aplicacion.Plataforma.ProgramadorDePlanes>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
         // Ingreso directo sin contraseñas (ING-1…ING-7): código por correo, passkeys (WebAuthn) y sesiones propias de las personas del grupo.
         servicios.AddSingleton<CookieDeSesionDeUsuario>();
         servicios.AddSingleton<PoliticaDeIngreso>();
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<PoliticaDeIngreso>());
         servicios.AddSingleton<IServicioDePasskeys, ServicioDePasskeysFido2>();
         servicios.AddSingleton<VerificadorDeSesionesDirectas>();
         servicios.AddSingleton<ICacheDeSesionesDirectas>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDirectas>());
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDirectas>());
         servicios.AddSingleton<IProveedorDeIdentidad, ProveedorLocalDeCodigos>();
+        // SSO con el proveedor de identidad del cliente (PI-1...PI-6): OIDC genérico y el adaptador de WorkOS (detrás de configuración); el cliente HTTP no entra a redes internas.
+        servicios.AddSingleton<OpcionesDeSso>();
+        servicios.AddSingleton<ConfiguracionesDeSso>();
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<ConfiguracionesDeSso>());
+        servicios.AddSingleton<CookieDeSso>();
+        servicios.AddHttpClient(ClienteSso.Nombre).ConfigurePrimaryHttpMessageHandler(proveedor => ClienteSso.Manejador(proveedor.GetRequiredService<OpcionesDeSso>()));
+        servicios.AddSingleton<IProveedorDeIdentidad, ProveedorOidc>();
+        servicios.AddSingleton<IProveedorDeIdentidad, ProveedorWorkOs>();
+        servicios.AddSingleton<IComprobadorDeDominios, ComprobadorDeDominiosHttp>();
         servicios.AddSingleton<RegistroDeIngresos>();
         servicios.AddSingleton<CuentasDeIngreso>();
         servicios.AddScoped<ServicioDeIngreso>();
@@ -136,6 +192,8 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<PreferenciasDeCorreoDelTercero>(); // el tercero puede apagar cada correo (NT-1)
         // Recordatorio automático de observaciones pendientes (NT-3): barrido periódico (Validasoft:RecordatoriosDeObservaciones:Intervalo).
         servicios.AddHostedService<ProgramadorDeRecordatoriosDeObservaciones>();
+        // Alertas del SLA de revisión (OP-12): barrido periódico (Validasoft:SlaDeRevision:Intervalo).
+        servicios.AddHostedService<ProgramadorDeSlaDeRevision>();
         servicios.AddSingleton<ProcesadorDeEventos>();
         servicios.AddSingleton<OpcionesDeWebhooks>();
         servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
@@ -203,14 +261,35 @@ public static class ServiciosInfraestructura
                 // La clave se lee al primer uso del esquema: sin Validasoft:Sesiones:ClaveFirma solo falla el Bearer.
                 opciones.MapInboundClaims = false;
                 opciones.TokenValidationParameters = EmisorDeSesiones.ParametrosDeValidacion(configuracion);
-                // Una sesión directa cerrada o revocada deja de valer en segundos, aunque su token de acceso no haya vencido (ING-3).
+                // Una sesión directa cerrada o revocada deja de valer en segundos, aunque su token de acceso no haya vencido (ING-3). Lo mismo
+                // la sesión que emitió un sistema integrador (identidad delegada) o la consola de Plataforma, cuando ese sistema o ese operador
+                // se desactiva (PI-7).
                 opciones.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = async contexto =>
                     {
-                        if (Guid.TryParse(contexto.Principal?.FindFirst(Reclamos.SesionId)?.Value, out var sesionId) &&
-                            !await contexto.HttpContext.RequestServices.GetRequiredService<VerificadorDeSesionesDirectas>().VigenteAsync(sesionId, contexto.HttpContext.RequestAborted))
-                            contexto.Fail("La sesión se cerró.");
+                        var servicios = contexto.HttpContext.RequestServices;
+                        var ct = contexto.HttpContext.RequestAborted;
+                        var principal = contexto.Principal;
+                        if (Guid.TryParse(principal?.FindFirst(Reclamos.SesionId)?.Value, out var sesionId))
+                        {
+                            if (!await servicios.GetRequiredService<VerificadorDeSesionesDirectas>().VigenteAsync(sesionId, ct))
+                                contexto.Fail("La sesión se cerró.");
+                            return;
+                        }
+
+                        var sistemas = servicios.GetRequiredService<ICacheDeSistemas>();
+                        var actor = principal?.FindFirst(Reclamos.ActorTipo)?.Value;
+                        var generacion = int.TryParse(principal?.FindFirst(Reclamos.Generacion)?.Value, out var g) ? g : 0; // sin el reclamo: la generación inicial
+                        if (actor == nameof(Dominio.Comun.ActorTipo.Plataforma) && principal?.FindFirst(Reclamos.Sujeto)?.Value is { Length: > 0 } operador)
+                        {
+                            if (!await sistemas.OperadorActivoAsync(operador, generacion, ct))
+                                contexto.Fail("El operador o su sistema se desactivó.");
+                        }
+                        else if (actor == nameof(Dominio.Comun.ActorTipo.Usuario) && Guid.TryParse(principal?.FindFirst(Reclamos.Tenant)?.Value, out var tenantId) &&
+                                 principal?.FindFirst(Reclamos.Sistema)?.Value is { Length: > 0 } codigo &&
+                                 !await sistemas.IntegradorActivoAsync(tenantId, codigo, generacion, ct))
+                            contexto.Fail("El sistema integrador se desactivó.");
                     }
                 };
             })
@@ -218,6 +297,21 @@ public static class ServiciosInfraestructura
             {
                 opciones.MapInboundClaims = false;
                 opciones.TokenValidationParameters = EmisorDeSesionesTercero.ParametrosDeValidacion(configuracion);
+                // La sesión embebida que abrió un sistema integrador deja de valer cuando ese sistema se desactiva (PI-7).
+                opciones.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async contexto =>
+                    {
+                        if (contexto.Principal is not { } principal ||
+                            !string.Equals(principal.FindFirst(ReclamosTercero.Embebido)?.Value, "true", StringComparison.OrdinalIgnoreCase))
+                            return;
+                        var sesion = SesionDeTercero.De(principal);
+                        if (sesion.Embebida is { Sistema.Length: > 0 } embebida && sesion.Vinculos.Count > 0 &&
+                            !await contexto.HttpContext.RequestServices.GetRequiredService<ICacheDeSistemas>()
+                                .IntegradorActivoAsync(sesion.Vinculos[0].TenantId, embebida.Sistema, embebida.Generacion, contexto.HttpContext.RequestAborted))
+                            contexto.Fail("El sistema integrador se desactivó.");
+                    }
+                };
             });
 
         servicios.AddAuthorization(opciones =>
@@ -249,6 +343,16 @@ public static class ServiciosInfraestructura
         opciones.Discovery.IncludeAssembly(typeof(Permisos).Assembly);
         opciones.Policies.AutoApplyTransactions();
         opciones.PublishMessage<CorreoDeAccesoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.CorreoDeSolicitudHabeasPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.CorreoDeExportacionListaPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.RevisarSolicitudesHabeas>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.RevisarSolicitudHabeas>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.LimpiarExportacionesDeBoveda>().ToLocalQueue(ColaHabeas).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Habeas.GenerarExportacionDeBoveda>().ToLocalQueue(ColaExportaciones);
+        opciones.LocalQueue(ColaExportaciones).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Plataforma.EvaluarPlanesDeGrupos>().ToLocalQueue(ColaPlan).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Plataforma.EvaluarPlanDelGrupo>().ToLocalQueue(ColaPlan).UseDurableInbox();
+        opciones.PublishMessage<CorreoDeSeguridadPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeObservacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<CorreoDeResultadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
@@ -275,6 +379,8 @@ public static class ServiciosInfraestructura
         opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Invitaciones.ProcesarTandaDeLote>().ToLocalQueue(ColaLotes);
         opciones.LocalQueue(ColaLotes).Sequential().UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Campanias.ProcesarTandaDeCampania>().ToLocalQueue(ColaCampanias);
+        opciones.LocalQueue(ColaCampanias).Sequential().UseDurableInbox();
         opciones.PublishMessage<RevisarPlazosDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RevisarPlazoDeCargue>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<CorreoDePlazoDeCarguePendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
@@ -285,6 +391,8 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<CorreoDeRecordatorioDeObservacionesPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<RevisarRecordatoriosDeObservaciones>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<RecordarObservacionesDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlas>().ToLocalQueue(ColaPlazos).UseDurableInbox();
+        opciones.PublishMessage<RevisarSlaDelExpediente>().ToLocalQueue(ColaPlazos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Importacion.EjecutarImportacion>().ToLocalQueue(ColaImportacion);
         opciones.LocalQueue(ColaImportacion).Sequential().UseDurableInbox();
         opciones.Policies.OnAnyException()

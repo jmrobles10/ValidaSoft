@@ -19,7 +19,8 @@ export const ALCANCES_PUBLICO = {
 } as const;
 
 export const MAPA_PUBLICO: MapaDeInvalidacion = {
-  expediente: [ALCANCES_PUBLICO.expedientes, ALCANCES_PUBLICO.vinculos],
+  // Una observación de la empresa llega con el estado de la ficha (FD-2): un cambio del expediente también lo refresca.
+  expediente: [ALCANCES_PUBLICO.expedientes, ALCANCES_PUBLICO.vinculos, ALCANCES_PUBLICO.ficha],
   vinculo: [ALCANCES_PUBLICO.vinculos, ALCANCES_PUBLICO.invitaciones, ALCANCES_PUBLICO.expedientes],
   cuenta: [ALCANCES_PUBLICO.boveda],
   documento: [ALCANCES_PUBLICO.boveda, ALCANCES_PUBLICO.expedientes, ALCANCES_PUBLICO.ficha],

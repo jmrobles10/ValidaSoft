@@ -1,7 +1,7 @@
 import type { VencimientoDto } from '@validasoft/api-client';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
-import { baseVencimiento, claveVencimiento, estadoVencimiento, leerFiltros, lote, mensajeRecordatorio, textoDias, tonoVencimiento } from './modelo';
+import { baseVencimiento, claveVencimiento, estadoVencimiento, leerFiltros, lote, mensajeRecordatorio, tercerosDelLote, textoDias, tonoVencimiento } from './modelo';
 
 const t = i18n.t.bind(i18n);
 
@@ -77,5 +77,16 @@ describe('vencimientos', () => {
       mensaje: 'No se envió ningún recordatorio. 1 se omitió (ya se recordó hoy o el vínculo no tiene correo).',
       severidad: 'warning',
     });
+  });
+
+  it('el diálogo cuenta los terceros que reciben correo: uno por vínculo, con todos sus documentos', () => {
+    expect(tercerosDelLote([])).toBe(0);
+    expect(
+      tercerosDelLote([
+        { vinculoId: 'v1', documentoId: 'd1' },
+        { vinculoId: 'v1', documentoId: 'd2' },
+        { vinculoId: 'v2', documentoId: 'd1' },
+      ]),
+    ).toBe(2);
   });
 });

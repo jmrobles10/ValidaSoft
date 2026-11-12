@@ -32,6 +32,22 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaPlanIa').then((m) => ({ Component: m.PaginaPlanIa })),
         },
         {
+          path: 'grupos/:tenantId/plan',
+          lazy: () => import('../features/plataforma/PaginaPlanGrupo').then((m) => ({ Component: m.PaginaPlanGrupo })),
+        },
+        {
+          path: 'habeas',
+          lazy: () => import('../features/plataforma/PaginaHabeasPlataforma').then((m) => ({ Component: m.PaginaHabeasPlataforma })),
+        },
+        {
+          path: 'uso-ia',
+          lazy: () => import('../features/plataforma/PaginaConsumoIa').then((m) => ({ Component: m.PaginaConsumoIa })),
+        },
+        {
+          path: 'ingresos',
+          lazy: () => import('../features/plataforma/PaginaIngresosOperadores').then((m) => ({ Component: m.PaginaIngresosOperadores })),
+        },
+        {
           path: 'operadores',
           lazy: () => import('../features/plataforma/PaginaOperadores').then((m) => ({ Component: m.PaginaOperadores })),
         },
@@ -77,6 +93,18 @@ export function crearRouter() {
               path: 'vencimientos',
               lazy: () => import('../features/vencimientos/PaginaVencimientos').then((m) => ({ Component: m.PaginaVencimientos })),
             },
+            {
+              path: 'vencimientos/campanias',
+              lazy: () => import('../features/campanias/PaginaCampanias').then((m) => ({ Component: m.PaginaCampanias })),
+            },
+            {
+              path: 'vencimientos/campanias/nueva',
+              lazy: () => import('../features/campanias/PaginaNuevaCampania').then((m) => ({ Component: m.PaginaNuevaCampania })),
+            },
+            {
+              path: 'vencimientos/campanias/:campaniaId',
+              lazy: () => import('../features/campanias/DetalleCampania').then((m) => ({ Component: m.DetalleCampania })),
+            },
             { path: 'informes', element: <Navigate to="estado-expedientes" replace /> },
             {
               path: 'informes/estado-expedientes',
@@ -85,6 +113,10 @@ export function crearRouter() {
             {
               path: 'informes/vinculos',
               lazy: () => import('../features/informes/PaginaInformeVinculos').then((m) => ({ Component: m.PaginaInformeVinculos })),
+            },
+            {
+              path: 'informes/sla',
+              lazy: () => import('../features/informes/PaginaInformeSla').then((m) => ({ Component: m.PaginaInformeSla })),
             },
             {
               path: 'cumplimiento',
@@ -105,6 +137,10 @@ export function crearRouter() {
             {
               path: 'vinculos/:vinculoId',
               lazy: () => import('../features/vinculos/pages/DetalleVinculo').then((m) => ({ Component: m.DetalleVinculo })),
+            },
+            {
+              path: 'vinculos/:vinculoId/ficha',
+              lazy: () => import('../features/terceros/fichaAceptada/PaginaFichaAceptada').then((m) => ({ Component: m.PaginaFichaAceptada })),
             },
             {
               path: 'invitaciones/lotes',
@@ -200,6 +236,18 @@ export function crearRouter() {
                   lazy: () => import('../features/configuracion/accesosSoporte/PaginaAccesosSoporte').then((m) => ({ Component: m.PaginaAccesosSoporte })),
                 },
                 {
+                  path: 'plan-grupo',
+                  lazy: () => import('../features/configuracion/planGrupo/PaginaPlanGrupo').then((m) => ({ Component: m.PaginaPlanGrupo })),
+                },
+                {
+                  path: 'habeas-data',
+                  lazy: () => import('../features/configuracion/habeas/PaginaHabeasData').then((m) => ({ Component: m.PaginaHabeasData })),
+                },
+                {
+                  path: 'dominio-correo',
+                  lazy: () => import('../features/configuracion/dominioCorreo/PaginaDominioCorreo').then((m) => ({ Component: m.PaginaDominioCorreo })),
+                },
+                {
                   path: 'datos-marca',
                   lazy: () => import('../features/configuracion/datosMarca/PaginaDatosMarca').then((m) => ({ Component: m.PaginaDatosMarca })),
                 },
@@ -210,6 +258,22 @@ export function crearRouter() {
                 {
                   path: 'ingreso',
                   lazy: () => import('../features/configuracion/ingreso/PaginaIngreso').then((m) => ({ Component: m.PaginaIngreso })),
+                },
+                {
+                  path: 'delegaciones',
+                  lazy: () => import('../features/configuracion/delegaciones/PaginaDelegaciones').then((m) => ({ Component: m.PaginaDelegaciones })),
+                },
+                {
+                  path: 'plazos-de-revision',
+                  lazy: () => import('../features/configuracion/plazos/PaginaPlazosDeRevision').then((m) => ({ Component: m.PaginaPlazosDeRevision })),
+                },
+                {
+                  path: 'ayuda-de-documentos',
+                  lazy: () => import('../features/configuracion/ayudas/PaginaAyudasDeDocumentos').then((m) => ({ Component: m.PaginaAyudasDeDocumentos })),
+                },
+                {
+                  path: 'sso',
+                  lazy: () => import('../features/configuracion/ingreso/sso/PaginaSso').then((m) => ({ Component: m.PaginaSso })),
                 },
               ],
             },

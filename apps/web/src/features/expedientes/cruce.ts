@@ -27,15 +27,25 @@ export function porcentaje(valor: number): string {
 /** Largo mínimo de la justificación para aprobar con una discrepancia crítica (`Expediente.LongitudMinimaJustificacion`). */
 export const LONGITUD_MINIMA_JUSTIFICACION = 10;
 
-/** ¿El cruce que ve la empresa tiene diferencias en campos críticos? Un requisito de sección o un documento que respalda secciones. */
+/** ¿El cruce que ve la empresa tiene diferencias en campos críticos? Un requisito de sección, un documento que respalda secciones o la certificación frente a las cuentas. */
 export function tieneDiscrepanciaCritica(requisito: Pick<RequisitoExpedienteDto, 'seccion' | 'soporteDeSecciones'>): boolean {
   return requisito.seccion?.cruce?.discrepanciaCritica === true || requisito.soporteDeSecciones?.discrepanciaCritica === true;
 }
 
-/** De lo que la persona aprobaría de una vez, los requisitos con una discrepancia crítica (piden justificación, FM-13). */
+/** ¿La sección cambió un campo crítico (identidad o representante legal) sin un documento nuevo que la respalde? (FM-15, FD-4). */
+export function tieneSinSoporteCritico(requisito: Pick<RequisitoExpedienteDto, 'seccion'>): boolean {
+  return requisito.seccion?.sinSoporte?.critico === true;
+}
+
+/** Aprobarlo exige una justificación: el cruce difiere en campos críticos o el cambio crítico no trae un documento nuevo. */
+export function requiereJustificacion(requisito: Pick<RequisitoExpedienteDto, 'seccion' | 'soporteDeSecciones'>): boolean {
+  return tieneDiscrepanciaCritica(requisito) || tieneSinSoporteCritico(requisito);
+}
+
+/** De lo que la persona aprobaría de una vez, los requisitos que piden justificación (FM-13, FM-15). */
 export function conDiscrepanciaCritica(expediente: Pick<ExpedienteDto, 'requisitos'>, porDecidir: readonly Pick<DocumentoPorDecidirDto, 'requisitoId'>[]): RequisitoExpedienteDto[] {
   const ids = new Set(porDecidir.map((d) => d.requisitoId));
-  return requisitosDe(expediente).filter((r) => ids.has(r.id) && tieneDiscrepanciaCritica(r));
+  return requisitosDe(expediente).filter((r) => ids.has(r.id) && requiereJustificacion(r));
 }
 
 /** ¿La justificación alcanza para aprobar con discrepancias? */

@@ -71,7 +71,7 @@ export function agruparTipos(tipos: readonly TipoEventoPublicoDto[]): { grupo: s
   return [...grupos].map(([grupo, lista]) => ({ grupo, tipos: lista }));
 }
 
-const GRUPOS_CONOCIDOS = ['vinculo', 'expediente', 'documento', 'certificado'] as const;
+const GRUPOS_CONOCIDOS = ['vinculo', 'expediente', 'documento', 'certificado', 'seccion', 'invitaciones'] as const;
 export type GrupoConocido = (typeof GRUPOS_CONOCIDOS)[number];
 export const esGrupoConocido = (grupo: string): grupo is GrupoConocido => GRUPOS_CONOCIDOS.some((g) => g === grupo);
 

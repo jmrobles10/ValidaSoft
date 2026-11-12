@@ -64,6 +64,8 @@ public static class PropuestaDesdeDocumento
                 return;
             p.Texto("nombres", "Nombres", LecturaDeHechos.Texto(x, "nombres"), CruceConDocumento.Comparador.Nombre);
             p.Texto("apellidos", "Apellidos", LecturaDeHechos.Texto(x, "apellidos"), CruceConDocumento.Comparador.Nombre);
+            if (FechaIso(LecturaDeHechos.Texto(x, "fechaExpedicion")) is { } expedicion)
+                p.Texto("fecha_expedicion", "Fecha de expedición", expedicion, CruceConDocumento.Comparador.Texto);
             return;
         }
 
@@ -87,6 +89,13 @@ public static class PropuestaDesdeDocumento
 
     private static void Legal(Constructor p, string tipo, IReadOnlyDictionary<string, JsonElement> x)
     {
+        // La cédula completa la fila de la persona a la que pertenece (FD-6): no agrega personas (la cédula no dice qué rol tiene).
+        if (tipo == "CEDULA")
+        {
+            LegalConCedula(p, x);
+            return;
+        }
+
         var enDocumento = tipo switch
         {
             "CAMARA_COMERCIO" => LecturaDeHechos.Personas(x, "representantesLegales") ?? [],
@@ -134,6 +143,44 @@ public static class PropuestaDesdeDocumento
                 CruceConDocumento.Resumen(persona.Nombre, persona.Identificacion, persona.Cargo)));
         }
     }
+
+    /// <summary>
+    /// De la cédula: la fecha de expedición y la de nacimiento de la persona de la legal que tiene ese número, si cambian o faltan.
+    /// Solo propone sobre una fila que ya existe: la identificación es lo que une la cédula con la persona.
+    /// </summary>
+    private static void LegalConCedula(Constructor p, IReadOnlyDictionary<string, JsonElement> x)
+    {
+        var numero = Normalizacion.Identificacion(LecturaDeHechos.Texto(x, "numero"));
+        if (numero.Length == 0 || p.Datos["personas"] is not JsonArray personas)
+            return;
+
+        for (var i = 0; i < personas.Count; i++)
+        {
+            if (personas[i] is not JsonObject fila || Normalizacion.Identificacion(fila["numero"]?.GetValue<string>()) != numero)
+                continue;
+            ProponerFecha(p, fila, i, "fecha_expedicion", "Fecha de expedición", FechaIso(LecturaDeHechos.Texto(x, "fechaExpedicion")));
+            ProponerFecha(p, fila, i, "fecha_nacimiento", "Fecha de nacimiento", FechaIso(LecturaDeHechos.Texto(x, "fechaNacimiento")));
+            return;
+        }
+    }
+
+    private static void ProponerFecha(Constructor p, JsonObject fila, int indice, string campo, string etiqueta, string? propuesta)
+    {
+        var ruta = $"personas[{indice}].{campo}";
+        if (propuesta is null || p.Excluidos.Contains(ruta))
+            return;
+        var actual = fila[campo]?.GetValue<string>();
+        if (actual == propuesta)
+            return;
+        fila[campo] = propuesta;
+        p.Agregar(new CampoPropuesto(ruta, etiqueta, actual, propuesta));
+    }
+
+    /// <summary>Fecha aaaa-mm-dd; nulo si el texto no lo es.</summary>
+    private static string? FechaIso(string? texto) =>
+        texto is not null && DateOnly.TryParseExact(texto, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha)
+            ? fecha.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            : null;
 
     private static void Financiera(Constructor p, int? periodo, IReadOnlyDictionary<string, JsonElement> x)
     {

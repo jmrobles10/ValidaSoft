@@ -94,7 +94,7 @@ describe('Informe SAGRILAFT completo (CU-19)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Quitar filtros' }));
     expect(within(screen.getByRole('table', { name: 'Informe SAGRILAFT' })).getAllByRole('row')).toHaveLength(4);
-  }, 40_000);
+  });
 
   it('el detalle de personas muestra la participación, el PEP y el beneficiario final', async () => {
     const llamadas = montar({

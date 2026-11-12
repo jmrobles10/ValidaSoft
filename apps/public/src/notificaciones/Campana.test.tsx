@@ -41,7 +41,7 @@ const DE_SUR = notificacion('n2', {
 });
 const PREFERENCIAS: PreferenciasNotificacionDto = {
   correo: { 'tercero.observado': true, 'tercero.recordatorio': true, 'tercero.documento_por_vencer': false },
-  tiposConCorreo: ['tercero.observado', 'tercero.recordatorio', 'tercero.documento_por_vencer'],
+  tiposConCorreo: ['tercero.observado', 'tercero.recordatorio', 'tercero.documento_por_vencer', 'tercero.vigencia'],
 };
 
 interface Peticion {
@@ -161,6 +161,9 @@ describe('campana del tercero', () => {
     const dialogo = await screen.findByRole('dialog', { name: 'Preferencias de correo' });
     expect(await within(dialogo).findByRole('switch', { name: /Observaciones de una empresa/ })).toBeChecked();
     expect(within(dialogo).getByRole('switch', { name: /Documento por vencer/ })).not.toBeChecked();
+    // La vigencia de la validación (OP-17) también se puede apagar: sin guardar nada, queda encendida.
+    expect(within(dialogo).getByRole('switch', { name: /Vigencia de mi validación/ })).toBeChecked();
+    expect(within(dialogo).getByText('Aviso cuando mi validación está por vencer, venció o la empresa abrió su renovación.')).toBeInTheDocument();
     expect(within(dialogo).getByRole('button', { name: 'Guardar' })).toBeDisabled();
 
     await usuario.click(within(dialogo).getByRole('switch', { name: /Observaciones de una empresa/ }));

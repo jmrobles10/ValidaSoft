@@ -67,7 +67,7 @@ public static class SesionesTerceroEmbebidasEndpoints
         // Quien abre la sesión es el sistema que ya autenticó a la persona: equivale a la verificación de identidad (OTP) del enlace.
         var (token, expira) = emisor.Emitir(vinculo.TerceroId, vinculo.CorreoTercero, otpVerificado: true,
             [new VinculoEnSesion(vinculo.Id, contexto.TenantRequerido(), vinculo.EmpresaId)], reloj.GetUtcNow(),
-            new EmbebidoDeSesion(sistema.Codigo, origen, componente, vigencia));
+            new EmbebidoDeSesion(sistema.Codigo, origen, componente, vigencia, sistema.Generacion));
 
         var url = $"{(configuracion["Validasoft:Correo:UrlPublica"] ?? string.Empty).TrimEnd('/')}/embed/{componente}";
         return Results.Created(url, new SesionEmbebidaDto(token, expira, url, origen, componente, vinculo.Id, vinculo.TerceroId));

@@ -82,15 +82,16 @@ public static class GestionDeIngresoEndpoints
     [WolverinePost("/api/v1/usuarios/{id}/passkeys/{passkeyId}/revocar")]
     [Authorize(Policy = Permisos.UsuariosAdministrar)]
     public static async Task<PasskeyDto> RevocarPasskey(Guid id, Guid passkeyId, RevocarPasskeyDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
-        ICacheDeSesionesDirectas cache, TimeProvider reloj, CancellationToken ct)
+        ICacheDeSesionesDirectas cache, CuentasDeIngreso cuentas, ServicioDeIngreso servicio, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
+        await servicio.ExigirReautenticacionAsync(http.User, "revocar-passkey", ct);
         var cuenta = await CuentaDeAsync(id, sesiones, contexto, ct);
-        return await RevocarAsync(passkeyId, cuenta, dto.Motivo, http, sesiones, contexto, cache, reloj, ct);
+        return await RevocarAsync(passkeyId, cuenta, dto.Motivo, http, sesiones, contexto, cache, cuentas, mensajes, reloj, ct);
     }
 
     /// <summary>La revocación compartida con la consola de Plataforma: la passkey, el cierre de las sesiones de la cuenta y la auditoría, en una transacción.</summary>
     public static async Task<PasskeyDto> RevocarAsync(Guid passkeyId, CuentaDeIngreso cuenta, string? motivo, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
-        ICacheDeSesionesDirectas cache, TimeProvider reloj, CancellationToken ct)
+        ICacheDeSesionesDirectas cache, CuentasDeIngreso cuentas, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Global();
@@ -109,6 +110,9 @@ public static class GestionDeIngresoEndpoints
         await sesion.SaveChangesAsync(ct);
         foreach (var cerrada in cerradas)
             cache.Olvidar(cerrada);
+        // La persona se entera por correo de que le revocaron una passkey (PI-15), sea quien sea quien lo hizo.
+        if (await cuentas.CargarAsync(cuenta, ct) is { } dueno)
+            await AvisosDeSeguridad.PasskeyRevocadaAsync(mensajes, dueno.Correo, dueno.Nombre, cuenta.TenantId, passkey.Nombre, porAdministrador: true, cliente, ahora);
         return passkey.ADto();
     }
 

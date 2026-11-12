@@ -19,6 +19,18 @@ async function estadoDeLaBarra(app: FrameLocator) {
   return { barra, enlaces, mas, hayMas: (await mas.count()) > 0 };
 }
 
+/** Lee `leer` hasta que dos lecturas seguidas, separadas por 300 ms, coinciden: lo que llega tarde a la barra ya está puesto. */
+async function asentado<T>(leer: () => Promise<T>): Promise<T> {
+  let previo = await leer();
+  for (let intento = 0; intento < 30; intento += 1) {
+    await new Promise((resolver) => setTimeout(resolver, 300));
+    const actual = await leer();
+    if (actual === previo) return actual;
+    previo = actual;
+  }
+  throw new Error('La barra no se asentó en 9 s.');
+}
+
 /** Todo lo visible de la barra cabe en ella y la página del iframe no tiene scroll horizontal. */
 async function sinDesplazamientoHorizontal(app: FrameLocator) {
   const medidas = await app.getByRole('navigation', { name: 'Secciones' }).evaluate((barra) => {
@@ -96,7 +108,10 @@ test('al cambiar el ancho de la ventana la barra se recalcula sin recargar y sin
   const ana = await abrirEmbebido(page, e, e.ana, e.norte, 'bandeja');
   await expect(ana.getByRole('heading', { level: 1, name: 'Bandeja de revisión' })).toBeVisible();
   const aLaVista = async () => (await estadoDeLaBarra(ana)).enlaces.length;
-  const ancha = await aLaVista();
+  // El nombre de la persona (GET /yo) y el contador de Excepciones llegan después de la página y le quitan sitio a la barra: se mide el ancho completo
+  // cuando ya están puestos, no antes (con 8 pestañas a la vista antes de que llegaran y 7 después, la comparación del final nunca podía cumplirse).
+  await expect(ana.getByText(/^Ana Administradora/)).toBeVisible();
+  const ancha = await asentado(aLaVista);
 
   await page.setViewportSize({ width: 700, height: ALTO });
   await expect.poll(aLaVista).toBeLessThan(ancha);

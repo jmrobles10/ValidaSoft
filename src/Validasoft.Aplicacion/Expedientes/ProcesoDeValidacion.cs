@@ -156,10 +156,12 @@ public static class ProcesoDeValidacion
 
         var areaIds = flujo.Version.Etapas.SelectMany(e => e.Areas).Select(a => a.AreaId).Distinct().ToArray();
         var areas = (await sesion.LoadManyAsync<Area>(ct, areaIds)).ToDictionary(a => a.Id);
+        // El plazo del flujo manda; si no pone uno, el plazo por defecto del área en la empresa (SLA, OP-10).
+        var sla = await SlaDeLaEmpresa.CargarAsync(sesion, vinculo.EmpresaId, ct);
         var etapas = flujo.Version.Etapas.Select(e => new EtapaDelFlujo(e.Orden, [.. e.Areas.Select(a => new AreaDelFlujo(a.AreaId,
             areas.TryGetValue(a.AreaId, out var area) ? area.Codigo : a.AreaId.ToString("N"),
             areas.TryGetValue(a.AreaId, out var conNombre) ? conNombre.Nombre : "Área", a.AprobadoresRequeridos, a.PuedeRechazarExpediente,
-            a.Automatica, a.SlaHoras))])).ToList();
+            a.Automatica, a.SlaHoras ?? sla.HorasDe(a.AreaId)))])).ToList();
 
         var exigencia = ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
         var requisitos = await CalcularRequisitosAsync(sesion, vinculo, tercero, empresa.TenantId, flujo.Version, exigencia, soloRequisitos, documentos, ahora, ct,
@@ -173,7 +175,7 @@ public static class ProcesoDeValidacion
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
             flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones,
             // Una actualización (un documento cambió) no repite las listas ni el estudio (VE-6).
-            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo()), ahora, requisitos);
+            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo(), flujo.Version.RecordatorioObservacionesDias), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
         var vinculado = vinculo.VincularExpediente(expedienteId, tipoExpediente, folio, ahora);
@@ -451,10 +453,19 @@ public static class Revisores
 
         var area = await empresa.CargarAreaAsync(areaId, ct);
         var usuario = await empresa.Sesion.LoadAsync<Usuario>(usuarioId, ct);
-        if (usuario is not { Activo: true } || !area.Miembros.Contains(usuarioId) || !usuario.TieneRolEn(empresa.EmpresaId))
+        // Revisa quien es miembro del área o quien tiene una delegación vigente de uno de sus miembros (OP-8): sigue siendo él ante las reglas.
+        var delegacion = area.Miembros.Contains(usuarioId) ? null : await Delegaciones.DelegacionesDeRevision.VigenteParaAreaAsync(empresa.Sesion, area, usuarioId, empresa.Hoy, ct);
+        if (usuario is not { Activo: true } || (!area.Miembros.Contains(usuarioId) && delegacion is null) || !usuario.TieneRolEn(empresa.EmpresaId))
             throw ReglaDeNegocioException.Prohibido("no-es-miembro-del-area", $"No eres miembro activo del área {area.Codigo}.");
         if (!area.Activa)
             throw ReglaDeNegocioException.Conflicto("area-inactiva", $"El área {area.Codigo} está inactiva.");
+
+        if (delegacion is not null)
+        {
+            // Queda en los eventos de esta decisión: en nombre de quién revisa y con qué delegación.
+            empresa.Sesion.SetHeader("delegadoDe", delegacion.DeUsuarioId.ToString());
+            empresa.Sesion.SetHeader("delegacionId", delegacion.Id.ToString());
+        }
 
         return new Revisor(usuarioId, usuario.Identificacion?.Clave);
     }

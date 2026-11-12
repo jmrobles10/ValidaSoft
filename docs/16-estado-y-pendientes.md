@@ -91,6 +91,14 @@ obligó a decidir: los correos a terceros llevan a la vez la preferencia del ter
 [integracion.md §8.1 y §1.1](integracion.md) (08 §2.3 es solo un puntero); y el stream de la campana se corta cuando se cierra o se revoca la sesión directa (ING-3).
 Verificación de la mezcla: 929 pruebas web, 790 de dominio, 20 del SDK, 72 del adaptador del Portal, 233 de integración y 99 e2e, con lint, tipos, build y compilación .NET sin advertencias.
 
+### 3.1.4 Operación de la revisión (rama `feature/operacion-revision`, 2026-11-11)
+Sale del lote de integración. Decisiones **OP-1…OP-21** en el [registro](decisiones/registro.md#5-novemquadragies-operación-de-la-revisión-2026-11-11); contratos en [05 §2.7.3](05-api-contratos-y-webhooks.md).
+- **Campañas de renovación masivas:** la empresa elige vínculos por filtro (vencen en N días, tipo de vínculo, estado), ve a quién afecta antes de confirmar y abre su renovación en lote; se procesa por tandas con el patrón de los lotes, es reanudable (pausar, reanudar, cancelar, reintentar) y deja informe por vínculo.
+- **Delegación de revisión:** quien revisa delega sus áreas (o todas) en otra persona entre dos fechas; la persona delegada ve la bandeja y los avisos del área y decide, y la separación de funciones y el conflicto de intereses se le siguen aplicando a ella. Todo queda auditado.
+- **Plazos de revisión (SLA):** plazo por área en el flujo (ya existía) y por defecto en la empresa, alertas en la campana y por correo al acercarse y al vencer (y a los administradores), indicador en la bandeja, informe de cumplimiento y eventos públicos `expediente.sla_por_vencer` / `expediente.sla_incumplido`.
+- **Ayuda por documento por empresa**, **plantillas editables y preferencias del tercero** para los avisos de pre-vencimiento y vigencia (más la campana del tercero), **recordatorio de observaciones desde Revalidaciones y Vencimientos** y **recordatorio automático por flujo**.
+- **Pendiente:** OP-6 y OP-21 (campañas programadas, delegación por expediente, SLA en días hábiles, escalamiento en dos niveles, filtro de la bandeja por plazo).
+
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
 push**). Por decisión de Producto queda en espera hasta validar todo el alcance de Validasoft; no se sube ni se crea
@@ -195,15 +203,18 @@ al cambio se indexan con su próximo evento (o reconstruyendo la proyección del
 - ~~**Cargo del contacto por empresa**: el mismo tercero tiene contactos distintos para cada empresa.~~ Resuelto en `feature/integracion-abierta` (IO-4): contactos por vínculo con cargo, correo, teléfono y rol.
 
 ### 4.3 Ficha — pendientes (FM-38, FM-55)
-- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`. Pendiente: el lugar y la fecha de expedición cuando el representante es el propio tercero (persona natural).
-- Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).
-- Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.
-- La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.
-- Tras F5:
-  - la revisión automática de H7 ya usa el cruce (CU-19);
-  - la certificación bancaria no está en el mapa de respaldo;
-  - una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15);
-  - la cédula respalda solo la General.
+- ~~Banco con código CENIT (catálogo `bancos`), SWIFT y contacto de pagos; lugar de expedición del documento del representante; `ExentoReteCREE`.~~ Resueltos en `feature/integracion-abierta` (IO-5) como datos genéricos, no «de AyF»: salen en `GET /vinculos/{id}/ficha`.
+- ~~Lugar y fecha de expedición cuando el representante es el propio tercero (persona natural).~~ Resuelto en FD-8: la General de la persona natural los captura (opcionales) y salen en el representante del ERP.
+- ~~Prellenar General con lo que ya se sabe del tercero (razón social y correo de la invitación).~~ Resuelto en FD-1.
+- ~~Incluir las observaciones en el DTO de la ficha; hoy el portal hace N peticiones.~~ Resuelto en FD-2.
+- ~~La web aún no muestra la ficha del vínculo ni el evento `seccion.aceptada` en la configuración de webhooks.~~ Resuelto en FD-3 (ficha aceptada del vínculo) y FD-7 (grupos del catálogo de webhooks).
+- ~~Tras F5: la certificación bancaria no está en el mapa de respaldo; una sección que cambia sin documento nuevo no se marca «sin respaldo» (FM-15); la cédula respalda solo la General.~~ Resueltos en FD-5, FD-4 y FD-6.
+- Persona natural frente a jurídica: ajustada con su tabla en FD-8. **Abiertas para Producto:** ¿el PEP de la natural es obligatorio?; ¿se capturan primer y segundo nombre y apellido por separado?
+- Sigue pendiente:
+  - la revisión automática de H7 ya usa el cruce (CU-19); falta que lea también el cruce de las cuentas y el «sin soporte» (se ven en la revisión manual);
+  - el cruce de las cuentas con la certificación solo se ve en el requisito de la certificación: falta mostrarlo en la tarjeta de la **cuenta designada** para quien la aprueba (CB-2) y que no se guarde como hecho compartido;
+  - la configuración por flujo de FM-15 («exigir siempre un documento nuevo»): hoy se cubre observando la sección y señalando el soporte;
+  - sin plan de IA (o sin cupo) ningún tercero recibe valores propuestos ni cruce: queda la revisión manual.
 
 ### 4.4 H7 — cumplimiento completo (rama `feature/cumplimiento-h7`, decisiones CU-1..CU-22)
 
@@ -257,26 +268,31 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
 - Sandbox: las llaves de prueba emitidas antes de SB-2 (sin sandbox creado) responden 401 hasta que se cree con `POST /api/v1/sandbox`; no hay límite de tamaño del buzón ni retención automática del sandbox.
 
 ### 4.6 Plataforma e identidad
-- Plataforma ya entra **directo** (correo, código y passkey obligatoria; ING-4). Falta **desactivar la clave de arranque en producción** una vez
-  creado el primer operador (hoy es dejar vacía la variable `VALIDASOFT__PLATAFORMA__CLAVEBOOTSTRAP`; una acción en la consola sería mejor) y, más adelante,
-  federar con OIDC/WorkOS (ING-7: la abstracción existe, no está integrada).
-- 2FA de usuarios (P-14-4): **resuelta** con las passkeys (ING-2). Pendiente a evaluar: reautenticación (step-up) para acciones sensibles,
-  códigos de recuperación y avisos por correo cuando se registra o revoca una passkey.
-- Conditional UI: ofrecer las passkeys del sitio en el propio campo del correo (hoy hay un botón «Entrar con una passkey»).
-- Consultar en la consola la auditoría de ingreso de los operadores de Plataforma (hoy se registra; la consulta es la del grupo).
-- Desactivar sistemas de Plataforma por API (los operadores ya se desactivan, ING-4); agregar empresas a un grupo desde la consola.
-- `POST /api-keys` y `POST /sesiones-usuario` todavía guardan su respuesta en el registro de idempotencia 24 h.
-- Ayuda por documento **por empresa** (hoy es por tenant, B-4).
+- ~~Ayuda por documento **por empresa**.~~ Hecho (OP-15, OP-16).
+- **Hecho en `feature/plataforma-identidad` (PI-1…PI-19, 2026-11-11; sin PR):** SSO con el proveedor del cliente (OIDC genérico y WorkOS tras configuración, dominios verificados, JIT, reglas de grupos a roles, modo exclusivo); desactivar y reactivar sistemas y operadores; agregar empresas a un grupo desde la consola; idempotencia sin secretos; cuenta de los eventos cifrada con la clave del grupo; invalidación inmediata de llaves y sesiones en todos los servidores (PostgreSQL `LISTEN/NOTIFY`); uso de IA por cliente con su tarifa y exportación; step-up con passkey; passkeys en el campo del correo; aviso por correo de passkeys; auditoría de ingresos de los operadores y clave de arranque desde la consola; códigos de recuperación. Diseño en [07 §2.8](07-seguridad-identidad-y-tenancy.md) y contrato en [05 §2.11](05-api-contratos-y-webhooks.md).
+- **Sigue pendiente (PI-19):** probar el SSO contra un proveedor real (Entra ID, Google Workspace) y WorkOS real —hoy solo hay simuladores—; SAML nativo y SCIM; TOTP; login propio de Plataforma con OIDC (PT-8); KMS por tenant (P-14-3: la clave del grupo se deriva de la maestra); y una prueba de integración del `409 sin-operadores-con-passkey` (la base de pruebas es compartida).
+- Operación: cuando el primer operador tenga su passkey, **desactivar la clave de arranque desde Secretos › Clave de arranque**; los grupos que usen SSO deben registrar la URL de retorno en su proveedor.
 
 ### 4.7 H8 restante
-- Campañas de renovación.
-- Delegación de revisión.
-- Habeas Data y supresión.
-- ZIP firmado de la bóveda.
-- Plan y límites por tenant.
-- Dominio de correo propio.
-- SLAs con alertas.
-- Rendimiento de un lote de 1.000 filas.
+- ~~Campañas de renovación.~~ Hecho en `feature/operacion-revision` (OP-1…OP-6, §3.1.4).
+- ~~Delegación de revisión.~~ Hecho (OP-7…OP-9).
+- ~~SLAs con alertas.~~ Hecho (OP-9…OP-14): plazo por área, alertas, indicador en la bandeja e informe de cumplimiento.
+- ~~Habeas Data y supresión, ZIP firmado de la bóveda, plan y límites por tenant, dominio de correo propio y rendimiento de un lote de 1.000 filas.~~ Hechos en `feature/derechos-plan-correo` (OD-1…OD-24, abajo).
+
+**Hecho en la rama `feature/derechos-plan-correo` (OD-1…OD-24, [registro §5-quinquagies](decisiones/registro.md),
+[docs/11](11-trazabilidad-por-hito.md)):**
+- Habeas data: solicitudes del tercero (consulta, corrección, supresión) a la plataforma o a una empresa, plazos de 10 y
+  15 días hábiles con alertas, supresión con plan previo y retención por ley, crypto-shredding del texto personal y
+  constancia sellada.
+- ZIP firmado de la bóveda del tercero (manifiesto con SHA-256 y firma Ed25519), generado en segundo plano.
+- Plan y límites por grupo (usuarios, empresas, vínculos activos, almacenamiento y llamadas), avisos al 80 % y al 100 %
+  y bloqueo suave configurable; pantalla en Plataforma y «Plan del grupo» en Configuración.
+- Dominio de correo propio por empresa con SPF, DKIM y DMARC verificados (proveedor simulado) y remitente de respaldo.
+- Prueba de rendimiento de 1.000 filas: 12 s de procesamiento, 0 reintentos, +57 MB de memoria; sin cuellos de botella.
+
+**Pendiente de esto (OD-12, OD-22):** prórroga de los plazos del habeas data; portabilidad más allá del ZIP; proveedor de
+dominios y DNS real con revalidación periódica; facturación por plan; el almacenamiento solo bloquea los documentos propios
+de un vínculo; el crypto-shredding cubre el texto de la solicitud, no lo declarado en los eventos de un documento retenido.
 
 ### 4.8 Piloto y producción (H10, H11)
 - **H10:** piloto con un tenant real. El importador existe (F4), pero `OrigenPortalSqlServer` no se ha probado contra

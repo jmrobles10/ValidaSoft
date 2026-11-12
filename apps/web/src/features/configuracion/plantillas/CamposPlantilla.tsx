@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CAMPOS, insertarVariable, marcador, maximoDe, type BorradorPlantilla, type CampoPlantilla } from './modelo';
 
-const VARIABLES_CONOCIDAS = ['empresa', 'folio', 'tipoVinculo', 'documento'] as const;
+const VARIABLES_CONOCIDAS = ['empresa', 'folio', 'tipoVinculo', 'documento', 'fecha'] as const;
 type VariableConocida = (typeof VARIABLES_CONOCIDAS)[number];
 const esConocida = (variable: string): variable is VariableConocida => (VARIABLES_CONOCIDAS as readonly string[]).includes(variable);
 

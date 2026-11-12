@@ -16,8 +16,11 @@ namespace Validasoft.Aplicacion.Comun;
 /// <c>EmpresaId</c>, y un recurso de otra empresa responde 404 (T-4), nunca 403.
 /// </summary>
 public sealed class SesionDeEmpresa(ISesiones sesiones, IContextoSolicitud contexto, ReglasDeCarga reglas, TimeProvider reloj,
-    EmisorDeCertificados certificados) : IAsyncDisposable
+    EmisorDeCertificados certificados, IProtectorDeSecretos protector) : IAsyncDisposable
 {
+    /// <summary>Protector de secretos: descifra lo que solo se compara en memoria (el número de una cuenta frente a su certificación, FD-5).</summary>
+    public IProtectorDeSecretos Protector => protector;
+
     private IDocumentSession? _sesion;
     private IMessageBus? _mensajes;
 

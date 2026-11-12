@@ -11,6 +11,7 @@ using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Expedientes;
+using Validasoft.Aplicacion.Notificaciones;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Certificados;
 using Validasoft.Dominio.Comun;
@@ -54,41 +55,64 @@ public sealed record DesbloquearAlLlegarLaFecha(Guid TenantId, Guid VinculoId, D
 public enum AvisoDeVigencia
 {
     PorVencer,
-    Vencido
+    Vencido,
+
+    /// <summary>La empresa abrió la renovación antes de que venza (campaña de renovación, OP-1).</summary>
+    Renovacion
 }
 
 /// <summary>
-/// Correo al tercero sobre la vigencia de su validación con una empresa (cola <c>correo</c>): el aviso previo o el vencimiento, con
-/// el enlace de acceso a la renovación (cifrado, IN-3).
+/// Correo al tercero sobre la vigencia de su validación con una empresa (cola <c>correo</c>): el aviso previo, el vencimiento o la renovación
+/// que abrió la empresa, con el enlace de acceso a la renovación (cifrado, IN-3). Lleva la plantilla de la empresa (PL-1: <c>pre-vencimiento</c>,
+/// <c>vigencia-vencida</c> o <c>renovacion</c>) y respeta que el tercero apague este tipo de correo (NT-5, <c>tercero.vigencia</c>).
 /// </summary>
 public sealed record CorreoDeVigenciaPendiente(string Para, string Empresa, AvisoDeVigencia Aviso, DateOnly VigenteHasta, int DiasRestantes,
-    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null);
+    string? EnlaceProtegido = null, DateTimeOffset? EnlaceExpira = null, Guid? TenantId = null, Guid? EmpresaId = null, Guid? TerceroId = null);
 
 public static class CorreoDeVigenciaPendienteHandler
 {
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-CO");
 
-    public static Task Handle(CorreoDeVigenciaPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector, RedactorDeCorreos redactor,
-        CancellationToken ct) =>
-        enviador.EnviarAsync(Redactar(correo, redactor.UrlPublica, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido))
-            .DeTenant(correo.TenantId), ct);
+    public static async Task Handle(CorreoDeVigenciaPendiente correo, IEnviadorDeCorreo enviador, IProtectorDeSecretos protector, RedactorDeCorreos redactor,
+        PlantillasDeCorreo plantillas, PreferenciasDeCorreoDelTercero preferencias, CancellationToken ct)
+    {
+        // El tercero puede apagar este correo: la campana de su portal avisa igual (NT-5).
+        if (!await preferencias.QuiereAsync(correo.TerceroId, TiposNotificacionTercero.Vigencia, ct))
+            return;
+        var mensaje = Redactar(correo, redactor.UrlPublica, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
+        var evento = correo.Aviso switch
+        {
+            AvisoDeVigencia.PorVencer => CatalogoDePlantillas.PreVencimiento,
+            AvisoDeVigencia.Vencido => CatalogoDePlantillas.VigenciaVencida,
+            _ => CatalogoDePlantillas.Renovacion
+        };
+        await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, evento, correo.TenantId, correo.EmpresaId,
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, fecha: FechaLarga(correo.VigenteHasta)), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
+    }
+
+    internal static string FechaLarga(DateOnly fecha) => fecha.ToString("d 'de' MMMM 'de' yyyy", Cultura);
 
     internal static MensajeDeCorreo Redactar(CorreoDeVigenciaPendiente correo, string urlPublica, string? token)
     {
-        var fecha = correo.VigenteHasta.ToString("d 'de' MMMM 'de' yyyy", Cultura);
+        var fecha = FechaLarga(correo.VigenteHasta);
         var cuando = correo.DiasRestantes switch
         {
             <= 0 => "hoy",
             1 => "mañana",
             var dias => $"en {dias} días"
         };
-        var (asunto, parrafo) = correo.Aviso == AvisoDeVigencia.PorVencer
-            ? ($"Ratifica tu información con {correo.Empresa} antes del {fecha}",
+        var (asunto, parrafo) = correo.Aviso switch
+        {
+            AvisoDeVigencia.PorVencer => ($"Ratifica tu información con {correo.Empresa} antes del {fecha}",
                 $"Tu validación con {correo.Empresa} está en pre-vencimiento: vence {cuando} ({fecha}). Antes de esa fecha ratifica (confirma que sigue igual) " +
-                "o actualiza las secciones de tu información y sube los documentos pendientes para seguir al día sin interrupciones.")
-            : ($"Tu validación con {correo.Empresa} venció: ratifica tu información",
+                "o actualiza las secciones de tu información y sube los documentos pendientes para seguir al día sin interrupciones."),
+            AvisoDeVigencia.Renovacion => ($"{correo.Empresa} abrió la renovación de tu validación",
+                $"{correo.Empresa} abrió la renovación de tu validación, que vence {cuando} ({fecha}). Ratifica (confirma que sigue igual) o actualiza las " +
+                "secciones de tu información y sube los documentos pendientes para seguir al día sin interrupciones."),
+            _ => ($"Tu validación con {correo.Empresa} venció: ratifica tu información",
                 $"Tu validación con {correo.Empresa} venció el {fecha}. Para seguir al día ratifica las secciones de tu información que no cambiaron " +
-                "o actualiza las que sí.");
+                "o actualiza las que sí.")
+        };
 
         var entrar = token is null
             ? $"Entra a Validasoft ({urlPublica}) y pide un enlace con tu correo."
@@ -406,7 +430,7 @@ public static class VigenciasDeVinculos
     /// Correo al tercero (aviso del pre-vencimiento, recordatorio o vencimiento) con un enlace de acceso a su renovación, creado en
     /// esta misma transacción (como el del correo de observación, RE-4). Sin correo del tercero no avisa.
     /// </summary>
-    private static async Task AvisarAlTerceroAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Vinculo vinculo,
+    internal static async Task AvisarAlTerceroAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Vinculo vinculo,
         AvisoDeVigencia aviso, DateOnly hasta, int diasRestantes, DateTimeOffset ahora, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(vinculo.CorreoTercero))
@@ -418,7 +442,7 @@ public static class VigenciasDeVinculos
             ahora + VigenciaDelEnlace, tipo?.ExigeOtpEnEnlace ?? false, ahora, MotivoEnlace.Observacion);
         sesion.Store(enlace);
         await mensajes.PublishAsync(new CorreoDeVigenciaPendiente(vinculo.CorreoTercero, empresa?.Nombre ?? "La empresa", aviso, hasta, diasRestantes,
-            protector.Proteger(secreto), enlace.Expira, empresa?.TenantId));
+            protector.Proteger(secreto), enlace.Expira, empresa?.TenantId, vinculo.EmpresaId, vinculo.TerceroId));
     }
 }
 

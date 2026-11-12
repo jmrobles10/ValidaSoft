@@ -32,6 +32,11 @@ export interface DatosGenerales {
   pagina_web?: string | null;
   certificado_iso?: boolean | null;
   anio_inicio?: number | null;
+  // Solo persona natural (FD-8): lo propio de ella; la jurídica los declara por persona en la información legal.
+  pep?: boolean | null;
+  vinculo_pep?: boolean | null;
+  fecha_expedicion?: string | null;
+  lugar_expedicion?: string | null;
 }
 
 export interface Resolucion {

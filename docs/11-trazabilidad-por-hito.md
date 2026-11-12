@@ -934,6 +934,18 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | Pantalla | `web:/informes/estado-expedientes` y `/informes/vinculos` (pestaña Informes); «Exportar a Excel» en `/auditoria`; «Exportar expediente» en `/expedientes/:id`; Inicio enlaza al informe con la misma ventana (IF-7) | 06 §3.1 |
 | Pendiente | Exportación asíncrona con `exportacion.lista`, ZIP firmado de auditoría, índice firmado del expediente, proyección `InformeEstadoExpedientes` | registro IF-8 |
 
+#### H8 — Implementado: operación de la revisión (OP, 2026-11-11)
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint | `/campanias*` (vista previa, crear, lista, detalle, filas, pausar, reanudar, cancelar, reintentar, informe), `/delegaciones*` (candidatos, lista, crear, revocar), `/configuracion/sla`, `/informes/sla` (+ `/excel`), `/plataforma/sla/revisar`, `/ayudas-de-documentos*` | 05 §2.7.3; registro OP-1…OP-19 |
+| Dominio | `CampaniaDeRenovacion` (stream) y `FilaDeCampania`; `DelegacionDeRevision`; `Expediente.RevisarSla`, `SlaPorVencer`, `SlaIncumplido`, `AreaDeExpediente.IniciarRonda`, `ProximaRevisionDeSla`; `TiempoDeArea.RondasConSla/RondasFueraDeSla`; `FlujoVersion.RecordatorioObservacionesDias` | registro OP-3, OP-7, OP-9, OP-19 |
+| Proceso | Cola durable `campanias` (tandas), job `ProgramadorDeSlaDeRevision` (`RevisarSlas`, `RevisarSlaDelExpediente`), barrido de recordatorios por flujo | OP-3, OP-12, OP-19 |
+| Notificaciones | Campana y correo: `expediente.sla_por_vencer`, `expediente.sla_incumplido` (áreas, delegados y administradores), `campanias.terminada`; al tercero `tercero.vigencia` (pre-vencimiento, vencimiento, renovación abierta); plantillas `pre-vencimiento`, `vigencia-vencida`, `renovacion` | OP-13, OP-17 |
+| Eventos públicos | `expediente.sla_por_vencer`, `expediente.sla_incumplido` (catálogo: 42 tipos) | OP-13 |
+| Pantalla | `web:/vencimientos/campanias*`, `/delegaciones`, `/plazos-de-revision`, `/ayuda-de-documentos`, `/informes/sla`; columna «Plazo de revisión» en la bandeja; recordatorio masivo en Revalidaciones; recordatorio por flujo en el editor | registro OP-5, OP-10…OP-19 |
+| Pruebas | Dominio (`SlaDeRevisionTests`, `OperacionDeLaRevisionTests`), integración (`RequisitosApiTests.Operacion`), web (`features/campanias`, `configuracion/delegaciones`, `configuracion/plazos`, `configuracion/ayudas`, `informes`, `revalidaciones`), e2e (`e2e/pruebas/operacion.spec.ts`) | OP-20 |
+| Pendiente | Campañas programadas, delegación por expediente, SLA en días hábiles, escalamiento en dos niveles, filtro de la bandeja por plazo | OP-6, OP-21 |
+
 #### H8 — Cierre de huecos (2026-10-28)
 | Tipo | Elemento | Definido en |
 |---|---|---|
@@ -942,6 +954,40 @@ Paridad con `Features/InvitacionLote` y el job de solicitudes vencidas del SRM. 
 | Evento público | `invitaciones.lote_terminado` | 05 §7 |
 | Permiso | `supresiones:resolver` (Administrador, Cumplimiento), `auditoria:exportar` (Administrador, Auditor) | 07 §3.2 |
 | Pantalla | `/auditoria` → exportación ZIP firmado | 06 §3 |
+
+#### H8 — Implementado: derechos del tercero, plan y correo (OD-1…OD-24, 2026-11-11)
+Cierra del H8 el habeas data, la exportación firmada de la bóveda, el plan por grupo, el dominio de correo propio y la prueba de rendimiento del lote. Lo construido **difiere de la tabla 2.8.2** en los nombres (`solicitudes-habeas`, no `solicitudes-supresion`; el uso del plan se mide en `/tenant/uso`; el dominio de correo no es solo DKIM sino SPF, DKIM y DMARC) y en que la empresa **responde**, no solo escala: decisiones en [el registro §5-quinquagies](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Endpoint (tercero) | `POST /public/v1/solicitudes-habeas` (201), `GET /public/v1/solicitudes-habeas[/{id}]`, `GET …/{id}/constancia`; `POST /public/v1/boveda/exportar` (202), `GET /public/v1/exportaciones[/{id}]`, `POST …/{id}/descarga` (URL prefirmada de 5 min) | 05 §2.9; registro OD-1, OD-9, OD-10 |
+| Endpoint (empresa) | `GET /solicitudes-habeas?estado=abiertas\|vencidas\|resueltas\|todas&cursor=`, `GET …/resumen`, `GET …/{id}`, `POST …/{id}/resolver` (`supresiones:resolver`); `GET/PUT/DELETE /empresas/{id}/dominio-correo`, `POST …/verificar` (`empresas:administrar`); `GET /tenant/plan`, `GET /tenant/uso` (`configuracion:leer`) | registro OD-3, OD-14, OD-18 |
+| Endpoint (Plataforma) | `GET /plataforma/solicitudes-habeas[/resumen\|/{id}\|/{id}/plan]`, `POST …/{id}/resolver`, `POST /plataforma/habeas/revisar-plazos`; `GET/PUT /plataforma/tenants/{id}/plan`, `POST /plataforma/planes/revisar` | registro OD-3, OD-6, OD-14, OD-16 |
+| DTO | `CrearSolicitudHabeasDto`, `SolicitudHabeasDto` (`Plazo`, `DiasHabilesRestantes`, `ContenidoSuprimido`, `Titular` solo para quien responde), `ResumenDeSolicitudesHabeasDto`, `ResolverSolicitudHabeasDto`, `PlanDeSupresionDto`/`ElementoDePlanDeSupresionDto`, `ConstanciaHabeasDto`, `ExportacionBovedaDto`, `LimitesDePlanDto`, `PlanDelGrupoDto`, `ActualizarPlanDelGrupoDto`, `MedicionDePlanDto`, `UsoDelGrupoDto`, `DominioDeCorreoDto`/`RegistroDnsDto`/`ComprobacionDeRegistroDnsDto`, `ActualizarDominioDeCorreoDto` | `Validasoft.Contratos` (`Habeas.cs`, `PlanYCorreo.cs`) |
+| Dominio | `SolicitudHabeas` (agregado de eventos: `SolicitudHabeasRecibida`, `AvisoDePlazoDeSolicitudEnviado`, `SolicitudHabeasResuelta`), `CalendarioHabil`, `LlaveDeDatosDelTercero` + `CifradoDePersonales` (AES-256-GCM), `ExportacionDeBoveda`, `Documento` (`VersionSuprimida`, `RetencionLegalMarcada`), `PlanDelGrupo`/`UsoMensualDelGrupo`/`MedicionDeMetrica`, `DominioDeCorreoEmpresa` | registro OD-2…OD-8, OD-14…OD-20 |
+| Notificaciones | `habeas.solicitud` y `habeas.plazo` (campana y correo a quienes tienen `supresiones:resolver`), `plan.limite` (campana y correo a los administradores); correos al titular: acuse, respuesta con su constancia y exportación lista | `TiposNotificacion` |
+| Jobs y colas | Colas durables `habeas` (`ProgramadorDeHabeas`), `exportaciones` (**secuencial**) y `plan` (`ProgramadorDePlanes`); `LimpiarExportacionesDeBoveda` | registro OD-3, OD-9, OD-16 |
+| Configuración | `Validasoft:Habeas:Intervalo`, `BaseLegalRetencion`, `AniosRetencion` (10), `ExportacionesPorDia` (5), `DiasDeVigenciaDeExportaciones` (7, de 1 a 30), `CorreosPlataforma` (correos, separados por coma, a los que avisan los plazos de las solicitudes dirigidas a la plataforma, que no tiene usuarios); `Validasoft:Plan:Intervalo` (00:15:00), `SegundosDeVolcado`, `MinutosMedicionAlmacenamiento` | registro OD-5, OD-10, OD-15 |
+| Permiso | `supresiones:resolver` ahora en `Permisos.DelTenant`, Administrador y OficialCumplimiento | registro OD-13; 07 §3.2 |
+| Pantallas | `public:/privacidad` (Privacidad y mis datos); `web:/e/{empresa}/habeas-data`, `…/plan-grupo`, `…/dominio-correo`; `web:/plataforma/habeas`, `/plataforma/grupos/{tenant}/plan` | registro OD-11, OD-21 |
+| Pruebas | Dominio (`HabeasDataTests`, `PlanYCorreoTests`), integración (`RequisitosApiTests.Habeas`, `.Exportacion`, `.Plan`, `.DominioCorreo`, `.RendimientoDeLotes`), web (`features/habeas`, `features/plan`, `features/configuracion/dominioCorreo`), public (`privacidad`), e2e (`e2e/pruebas/derechos-plan-correo.spec.ts`) | — |
+| Pendiente | Prórroga de plazos; portabilidad más allá del ZIP; proveedor de dominios real y revalidación periódica del dominio; facturación por plan; el almacenamiento solo bloquea documentos propios de un vínculo; SLAs con alertas, campañas de renovación y delegación de revisión (H8 restante) | registro OD-12, OD-22 |
+
+#### H8 — Rendimiento de la invitación masiva (OD-23, OD-24, 2026-11-11)
+`RequisitosApiTests.RendimientoDeLotes` (`[Trait("Categoria", "Rendimiento")]`, PostgreSQL y MinIO reales) corre **1.000 filas** (940 válidas, 20 repetidas y 40 con el correo mal escrito), con tandas de 100, y mide cada fase, los reintentos por carrera (`lotes.filas_reintentadas`) y la memoria del proceso. Escribe lo medido en `%TEMP%/validasoft-rendimiento-lote.txt`. Correrla sola: `dotnet test tests/Validasoft.Integracion.Tests --filter "Categoria=Rendimiento"`.
+
+| Fase | Presupuesto | Medido (máquina de desarrollo, sin otras cargas) |
+|---|---|---|
+| Vista previa de las 1.000 filas | 20 s | 0,42 s |
+| Creación del lote (guarda las filas y encola la primera tanda) | 30 s | 0,47 s |
+| Procesamiento (10 tandas; 940 vínculos, terceros y expedientes) | 240 s | **12,4 s (75,7 filas/s)**; 32 s con otras tres suites corriendo a la vez |
+| Los 940 correos de invitación (cola durable del outbox) | 300 s | listos al terminar el procesamiento (0,05 s después) |
+| Lectura paginada de las 1.000 filas / informe Excel | — / 30 s | 0,32 s / 0,18 s |
+| Reintentos por carrera | ≤ 5 % de las filas | **0** (0,0 %) |
+| Memoria: crecimiento del conjunto de trabajo | ≤ 800 MB | **+57 MB** (387 → 444 MB); montón gestionado +42 MB; 2 colecciones de generación 2 |
+| Duración de una fila | — | media 12,6 ms, máxima 140 ms |
+
+Conclusión: **no hubo nada que arreglar** para llegar a 1.000 filas (el límite de un lote es 10.000): el procesamiento es lineal, sin reintentos y con memoria acotada porque cada tanda se confirma por separado. Se instrumentó con `MetricasDeLotes` (`Meter` `Validasoft.Lotes`: `lotes.filas` por resultado, `lotes.filas_reintentadas`, `lotes.tandas`, `lotes.duracion_fila`) para vigilarlo en producción. Dos hallazgos de la propia prueba: (1) con la máquina cargada por otras suites el procesamiento sube a 30-60 s, por eso el presupuesto es de 240 s y no el de la máquina libre; (2) al barajar las filas, una repetida podía quedar **antes** de su original y ser la que se invita: la prueba deja las repetidas al final porque la primera aparición de un NIT es la que cuenta.
 
 ### H9 — SDKs e integración con SRM, Portal y Marco
 
@@ -1152,6 +1198,31 @@ Decisión de Producto: sin contraseñas; ingreso directo con código y passkeys,
 | Pantalla | Ingreso (correo, código, cuenta, passkey), Mi cuenta, Configuración › Ingreso, Usuarios (invitar, passkeys y sesiones), Plataforma › Operadores, Auditoría › Ingresos, menú de cuenta y aviso de passkey | 06 §3.1, §3.4 |
 | Configuración | `Validasoft:LimiteIngreso`, `Validasoft:Ingreso:{MinutosAcceso, MinutosLimpieza, CookieSegura, Plataforma, Passkeys}` | 07 §2.7 |
 | Pruebas | Dominio: `IngresoTests` (código, passkeys, sesión, política, correos). Integración: `IngresoApiTests` (vencimiento, un solo uso, límites, no enumeración, modos por grupo, passkey obligatoria por rol, revocación, sesiones, Mi cuenta, gestión, auditoría, operadores) con un autenticador WebAuthn por software. Web: `estado`, `passkeys`, `sesionDirecta`, `CampoCodigo`, política del grupo. E2E: `ingreso.spec.ts` con el autenticador virtual de Chromium (CDP `WebAuthn`) | 04 §12 |
+
+### Ficha: pendientes (2026-11-11, FD-1…FD-9)
+
+Cierra los pendientes de la ficha de F3, F5 y la integración abierta: General prellenada, observaciones en el DTO de la ficha, la ficha aceptada del vínculo en la web, el cambio «sin soporte», la cédula y la certificación bancaria en el mapa de respaldo, y la persona natural frente a la jurídica. Decisiones en la sección `5-octoquadragies` del [registro](decisiones/registro.md), diseño en [14](14-ficha-maestra-del-tercero.md) §4, §5.1, §5.3 y §7, contratos en [05 §2.4](05-api-contratos-y-webhooks.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Dominio | `PrellenadoDeGeneral` (FD-1); `SeccionDeFicha.SinSoporte` y `SinSoporteDelCambio` (FD-4); `MapaDeRespaldo` con `CEDULA` → General y Legal y `CERTIFICACION_BANCARIA` → `CuentasBancarias` (FD-5, FD-6); `CruceConDocumento.CruzarCuenta`, el cruce de la cédula con la Legal y `PropuestaDesdeDocumento` con las fechas de la cédula; `DatosGenerales` con `pep`, `vinculo_pep`, `fecha_expedicion` y `lugar_expedicion` solo de la persona natural y `campo-no-aplica` (FD-8) | 14 §4, §5.1, §6 |
+| Endpoint | `GET /vinculos/{id}/ficha-aceptada` (`FichaAceptadaDelVinculoDto`); `GET /public/v1/ficha` con `observaciones[]`; `GET /public/v1/ficha/{seccion}` con `prellenado` y `sinSoporte`; `seccion.sinSoporte` en el requisito del expediente; `soporteDeSecciones.secciones[]` con las cuentas (`CUENTAS_BANCARIAS`) en el requisito de la certificación | 05 §2.4 |
+| Pantalla | `web:/e/:empresaId/vinculos/:vinculoId/ficha` (ficha aceptada) y su tarjeta en el vínculo; aviso «Cambio sin soporte» en el requisito y justificación al aprobar; cuentas en «Soporte de la información»; grupos «Información del tercero» e «Invitaciones» en los webhooks; `public:/ficha/general` prellenada y con lo propio de la persona natural | 06 |
+| Pruebas | Dominio: `FichaPendientesTests`. Integración: `RequisitosApiTests.FichaPendientes`. Adaptador del Portal: la fila propia de la persona natural. Vitest de `apps/web` y `apps/public`. e2e: `ficha-pendientes.spec.ts` | registro FD-9 |
+
+### Plataforma e identidad (2026-11-11, PI-1…PI-19)
+
+Encargo de Producto: SSO con el proveedor del cliente, desactivar y reactivar sistemas y operadores, empresas de un grupo desde la consola, idempotencia sin secretos, cuenta cifrada con la clave del grupo, invalidación inmediata entre servidores, uso de IA por cliente y los pendientes de ING-9. Diseño en [07 §2.8](07-seguridad-identidad-y-tenancy.md), contrato en [05 §2.11](05-api-contratos-y-webhooks.md), pantallas en [06 §3.4](06-frontend-y-ux.md) y decisiones en PI-1…PI-19 del [registro](decisiones/registro.md).
+
+| Tipo | Elemento | Definido en |
+|---|---|---|
+| Entidad (global) | `ConfiguracionDeSso` (un documento por grupo), `DominioVerificadoDeSso` (id = el dominio), `CodigosDeRecuperacion` (con concurrencia optimista), `ConfiguracionDePlataforma` (clave de arranque), `TarifaDeIa` (id `ia`); `DesafioDeIngreso` suma etapas `SsoPendiente`, `SsoVerificado`, reautenticación y recuperación; `SesionDeUsuario.ReautenticadaEn`; `SistemaIntegrado`, `OperadorDePlataforma` y `SistemaDePlataforma` suman `Generacion` y `Reactivar`; `UsoMensualIa.PorModelo`; `PlanDeIaEmpresa.PrecioAdicional` | 03 §2, 07 §2.8 |
+| Servicio | `ProveedorOidc` (`oidc`) y `ProveedorWorkOs` (`workos`) tras `IProveedorDeIdentidad`; `ClienteSso` (anti-SSRF); `ConfiguracionesDeSso` e `IComprobadorDeDominios`; `ServicioDeIngreso` (SSO, step-up, recuperación); `BusDeInvalidaciones` + `EscuchaDeInvalidaciones` (PostgreSQL `LISTEN/NOTIFY`) y los receptores de cada caché; `VerificadorDeSistemas`; `CacheDeClaveDeArranque`; `MiddlewareDeIdempotencia` con `RedactorDeSecretos`; `ProtectorDeCamposDelGrupo` y `RecifradorDeCuentasDeVinculos`; `CorreoDeSeguridadPendiente` | 07 §2.8, 04 |
+| Endpoint | `/ingreso/sso/{descubrir,iniciar,callback,completar}`, `/ingreso/recuperacion`; `/configuracion/sso` (+ `/dominios`, `/probar`); `/mi-cuenta/{reautenticacion,codigos-de-recuperacion}`; `/sistemas/{id}/{desactivar,reactivar}`; `/plataforma/tenants/{id}/{sso/desactivar,sistemas,empresas}`; `/plataforma/sistemas/{id}/…`; `/plataforma/operadores/{id}/reactivar`; `/plataforma/clave-de-arranque`; `/plataforma/auditoria-ingresos`; `/plataforma/ia/{consumo,consumo/exportar,tarifa}` | 05 §2.11 |
+| Correo | Aviso de seguridad al registrar o revocar una passkey o generar códigos de recuperación | 05 §8 |
+| Pantalla | Configuración › Inicio de sesión único; ingreso con «Entrar con {empresa}», retorno del proveedor, código de recuperación y passkeys en el campo del correo; diálogo de reautenticación; Mi cuenta › Códigos de recuperación; Plataforma › Uso de IA, Ingresos, Secretos › Clave de arranque, Operadores › Reactivar, grupo › Agregar empresa y Sistemas, plan de IA › precio propio | 06 §3.4 |
+| Configuración | `Validasoft:Ingreso:Sso:{PermitirHttpLocal, UrlDeRetorno, WorkOs:{ApiKey, ClientId, UrlBase}}` | 07 §2.8 |
+| Pruebas | Dominio: `PlataformaIdentidadTests` (SSO, dominios, JIT y reglas, step-up, recuperación, generaciones, tarifa y uso por modelo). Integración: `IngresoApiTests.Sso` (proveedor OIDC y WorkOS simulados en proceso: PKCE, `state`, `nonce`, emisor, dominios verificados, JIT, reglas, modos), `IngresoApiTests.Seguridad` (step-up, recuperación, avisos, sistemas y operadores desactivados, clave de arranque, caché entre servidores) y `RequisitosApiTests.PlataformaIdentidad` (uso de IA, cuenta con clave del grupo). Web: `modeloSso`, `PaginaSso`, `reautenticacion`, `DialogoDeReautenticacion`, `PasoCorreo` (SSO y UI condicional), `PantallaIngreso.sso`, recuperación, consola (uso de IA, ingresos, clave de arranque, sistemas, empresas) | 04 §12 |
 
 ## 3. Matrices globales
 

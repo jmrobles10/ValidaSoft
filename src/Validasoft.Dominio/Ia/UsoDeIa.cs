@@ -54,6 +54,20 @@ public sealed class UsoDiarioIa
     public decimal CostoUsd { get; set; }
 }
 
+/// <summary>Lo que gastó un modelo en el mes de una empresa (PI-12).</summary>
+public sealed class UsoPorModeloIa
+{
+    public int Llamadas { get; set; }
+
+    public long TokensEntrada { get; set; }
+
+    public long TokensEntradaEnCache { get; set; }
+
+    public long TokensSalida { get; set; }
+
+    public decimal CostoUsd { get; set; }
+}
+
 /// <summary>Resultado de pedir una validación: el cupo del que salió (nulo = sin cupo) y los umbrales de aviso que cruzó.</summary>
 public sealed record ConsumoDeValidacion(TipoValidacionIa? Tipo, IReadOnlyList<int> AvisosCruzados)
 {
@@ -97,6 +111,9 @@ public sealed class UsoMensualIa
 
     /// <summary>Serie por día (<c>yyyy-MM-dd</c> en la zona del tenant).</summary>
     public Dictionary<string, UsoDiarioIa> PorDia { get; set; } = [];
+
+    /// <summary>Lo que pagó la llave de la empresa en el mes, por modelo (PI-12): llamadas, tokens y costo. Los meses anteriores a PI-12 no lo traen.</summary>
+    public Dictionary<string, UsoPorModeloIa> PorModelo { get; set; } = [];
 
     public static string Clave(Guid empresaId, string mes) => $"{empresaId:N}:{mes}";
 
@@ -188,6 +205,27 @@ public sealed class UsoMensualIa
         delDia.TokensEntrada += tokensEntrada;
         delDia.TokensSalida += tokensSalida;
         delDia.CostoUsd += costoUsd;
+    }
+
+    /// <summary>
+    /// Suma las llamadas a OpenAI que pagó la llave de la empresa: los totales del mes y del día de <see cref="RegistrarCosto"/> y, además, lo que gastó cada
+    /// modelo (PI-12), para cobrar y explicar el consumo por cliente.
+    /// </summary>
+    public void RegistrarLlamadas(IReadOnlyList<LlamadaDeIa> llamadas, DateOnly dia, bool analisis)
+    {
+        RegistrarCosto(llamadas.Sum(l => l.TokensEntrada), llamadas.Sum(l => l.TokensEntradaEnCache), llamadas.Sum(l => l.TokensSalida), llamadas.Sum(l => l.CostoUsd), dia,
+            analisis);
+        foreach (var llamada in llamadas)
+        {
+            var modelo = string.IsNullOrWhiteSpace(llamada.Modelo) ? "desconocido" : llamada.Modelo.Trim();
+            if (!PorModelo.TryGetValue(modelo, out var uso))
+                PorModelo[modelo] = uso = new UsoPorModeloIa();
+            uso.Llamadas++;
+            uso.TokensEntrada += llamada.TokensEntrada;
+            uso.TokensEntradaEnCache += llamada.TokensEntradaEnCache;
+            uso.TokensSalida += llamada.TokensSalida;
+            uso.CostoUsd += llamada.CostoUsd;
+        }
     }
 
     private UsoDiarioIa Dia(DateOnly dia)

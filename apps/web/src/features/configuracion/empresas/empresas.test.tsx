@@ -110,7 +110,7 @@ describe('agregar una empresa', () => {
       metodo: 'POST',
       cuerpo: { identificacion: { pais: 'CO', tipo: 'NIT', numero: '900123456-8' }, nombre: 'Constructora Norte', prefijoFolio: 'NORTE1' },
     });
-  }, 20_000);
+  });
 });
 
 describe('textos legales de una empresa', () => {
@@ -146,7 +146,7 @@ describe('textos legales de una empresa', () => {
       metodo: 'PUT',
       cuerpo: { contenido: 'Autorizo el tratamiento de mis datos y su transferencia.' },
     });
-  }, 20_000);
+  });
 
   it('sin permiso de escritura solo deja leer el texto', async () => {
     const usuario = userEvent.setup();

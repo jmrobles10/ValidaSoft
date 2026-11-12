@@ -105,7 +105,7 @@ public sealed class TareasDeRevisionAutomatica(IDocumentStore store, EmisorDeCer
             var empresaId = expediente.EmpresaId;
             var consumidas = (await lectura.Query<ValidacionIaConsumida>().Where(v => v.EmpresaId == empresaId && v.DocumentoId.IsOneOf(documentoIds))
                 .ToListAsync(ct)).Select(v => (v.DocumentoId, v.Numero)).ToHashSet();
-            var cruces = await CrucesDelExpediente.CargarAsync(lectura, boveda, expediente, empresaId, ct);
+            var cruces = await CrucesDelExpediente.CargarAsync(lectura, boveda, expediente, empresaId, protector, ct);
 
             propuestas = [];
             var aprobadasEnLaPasada = 0;

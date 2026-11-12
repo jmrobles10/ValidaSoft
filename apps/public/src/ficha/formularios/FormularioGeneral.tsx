@@ -1,6 +1,6 @@
 import { Stack, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { CampoCifra, CampoSiNo, CampoTexto, Rejilla } from '../campos';
+import { CampoCifra, CampoFechaFicha, CampoSiNo, CampoTexto, Rejilla } from '../campos';
 import { PAISES } from '../paises';
 import { CampoCatalogo, SelectorUnico } from '../selectores';
 import type { DatosGenerales, PropsFormulario } from '../tipos';
@@ -35,10 +35,16 @@ export function FormularioGeneral({ datos, onCambiar, mensaje, deshabilitado, ti
         />
       </Rejilla>
       {natural ? (
-        <Rejilla>
-          <CampoTexto etiqueta={t('ficha.general.nombres')} valor={datos.nombres} onCambiar={(v) => onCambiar({ nombres: v })} mensaje={mensaje('nombres')} autoComplete="given-name" maxLength={150} deshabilitado={deshabilitado} />
+        <>
+          <Rejilla>
+            <CampoTexto etiqueta={t('ficha.general.nombres')} valor={datos.nombres} onCambiar={(v) => onCambiar({ nombres: v })} mensaje={mensaje('nombres')} autoComplete="given-name" maxLength={150} deshabilitado={deshabilitado} />
           <CampoTexto etiqueta={t('ficha.general.apellidos')} valor={datos.apellidos} onCambiar={(v) => onCambiar({ apellidos: v })} mensaje={mensaje('apellidos')} autoComplete="family-name" maxLength={150} deshabilitado={deshabilitado} />
-        </Rejilla>
+          </Rejilla>
+          <Rejilla>
+            <CampoFechaFicha etiqueta={t('ficha.general.fechaExpedicion')} valor={datos.fecha_expedicion} onCambiar={(v) => onCambiar({ fecha_expedicion: v })} mensaje={mensaje('fecha_expedicion')} ayuda={t('ficha.general.fechaExpedicionAyuda')} deshabilitado={deshabilitado} />
+            <CampoTexto etiqueta={t('ficha.general.lugarExpedicion')} valor={datos.lugar_expedicion} onCambiar={(v) => onCambiar({ lugar_expedicion: v })} mensaje={mensaje('lugar_expedicion')} maxLength={100} deshabilitado={deshabilitado} />
+          </Rejilla>
+        </>
       ) : (
         <CampoTexto etiqueta={t('ficha.general.razonSocial')} valor={datos.razon_social} onCambiar={(v) => onCambiar({ razon_social: v })} mensaje={mensaje('razon_social')} autoComplete="organization" deshabilitado={deshabilitado} />
       )}
@@ -97,6 +103,12 @@ export function FormularioGeneral({ datos, onCambiar, mensaje, deshabilitado, ti
         <CampoCifra etiqueta={t('ficha.general.anioInicio')} valor={datos.anio_inicio} onCambiar={(v) => onCambiar({ anio_inicio: v })} mensaje={mensaje('anio_inicio')} entero deshabilitado={deshabilitado} />
       </Rejilla>
       <CampoSiNo etiqueta={t('ficha.general.certificadoIso')} valor={datos.certificado_iso} onCambiar={(v) => onCambiar({ certificado_iso: v })} mensaje={mensaje('certificado_iso')} deshabilitado={deshabilitado} />
+      {natural && (
+        <>
+          <CampoSiNo etiqueta={t('ficha.general.pep')} valor={datos.pep} onCambiar={(v) => onCambiar({ pep: v })} mensaje={mensaje('pep')} deshabilitado={deshabilitado} />
+          <CampoSiNo etiqueta={t('ficha.general.vinculoPep')} valor={datos.vinculo_pep} onCambiar={(v) => onCambiar({ vinculo_pep: v })} mensaje={mensaje('vinculo_pep')} deshabilitado={deshabilitado} />
+        </>
+      )}
     </Stack>
   );
 }

@@ -10,6 +10,7 @@ export const fichaEmpresa = {
     FICHA_LEGAL: 'Información legal',
     FICHA_SST: 'Seguridad y salud en el trabajo',
     FICHA_ESPECIALIDADES: 'Especialidades',
+    CUENTAS_BANCARIAS: 'Cuentas bancarias',
   },
   campos: { soporte: 'Soporte' },
   editor: {
@@ -65,6 +66,12 @@ export const fichaEmpresa = {
     modificada: 'Se modificó {{etiqueta}}',
     tipos: { Agregado: 'agregado', Quitado: 'quitado', Modificado: 'modificado' },
     vacio: '—',
+  },
+  sinSoporte: {
+    titulo: 'Cambio sin soporte',
+    texto: 'El tercero cambió estos datos sin un documento nuevo que los respalde. Revísalos con cuidado o pídele un documento.',
+    critico:
+      'El tercero cambió datos críticos sin un documento nuevo que los respalde. Para aprobarlo escribe una justificación, o observa la sección y pídele el documento.',
   },
   observar: {
     campos: 'Campos por corregir (opcional)',

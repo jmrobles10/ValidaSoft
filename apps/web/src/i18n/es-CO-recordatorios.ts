@@ -49,6 +49,7 @@ export const recordatorios = {
     titulo: 'Recordatorio automático de observaciones',
     ayuda:
       'Mientras un expediente siga devuelto al tercero, Validasoft le recuerda sus observaciones por correo y en su portal cada cierto número de días, a lo sumo una vez al día. Se detiene cuando el tercero responde.',
+    porFlujo: 'Cada flujo puede sobrescribirlo: en sus datos generales se elige seguir lo de la empresa, apagarlo o fijar sus propios días.',
     activar: 'Enviar recordatorios automáticos',
     cada: 'Cada (días)',
     cadaAyuda: 'Entre 1 y 60 días desde que se devolvió o desde el último recordatorio.',
@@ -62,4 +63,18 @@ export const recordatorios = {
 export const erroresRecordatorios = {
   'expediente-no-observado': 'El expediente ya no está devuelto al tercero, así que no hay observaciones que recordar. Recarga la página.',
   'recordatorio-ya-enviado-hoy': 'Ya se le recordó hoy al tercero. Puedes volver a hacerlo mañana.',
+} as const;
+
+/** Recordatorio automático de observaciones por flujo (OP-19), en «Datos generales» del editor de flujos. */
+export const flujoRecordatorio = {
+  titulo: 'Recordatorio de observaciones',
+  ayuda: 'Cada cuánto se le recuerda al tercero lo que le falta corregir mientras el expediente siga devuelto, sin que nadie tenga que hacerlo.',
+  modo: 'Recordatorio automático',
+  modos: {
+    Empresa: { titulo: 'Lo que diga la empresa', ayuda: 'Se usa lo que la empresa configuró en Plantillas de correo.' },
+    Apagado: { titulo: 'Nunca en este flujo', ayuda: 'No se le recuerda por su cuenta, aunque la empresa lo tenga encendido.' },
+    CadaDias: { titulo: 'Cada cierto número de días', ayuda: 'Se le recuerda con estos días, aunque la empresa lo tenga apagado.' },
+  },
+  dias: 'Cada (días)',
+  diasAyuda: 'Entre 1 y 60 días.',
 } as const;

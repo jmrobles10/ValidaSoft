@@ -6,6 +6,7 @@ using Validasoft.Aplicacion.Comun;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Identidad;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Identidad;
@@ -73,10 +74,10 @@ public static class MiCuentaEndpoints
     [WolverinePost("/api/v1/mi-cuenta/passkeys")]
     [Authorize]
     public static async Task<PasskeyDto> RegistrarPasskey(RegistrarPasskeyDto dto, HttpContext http, ISesiones sesiones, CuentasDeIngreso cuentas,
-        ServicioDeIngreso servicio, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
+        ServicioDeIngreso servicio, IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
         var (_, cuenta) = await SesionPropia.CargarAsync(http, sesiones, cuentas, reloj, ct);
-        return (await servicio.ConfirmarRegistroAsync(cuenta, dto, ContextoDeCliente.De(http, contexto.CorrelationId), ct)).ADto();
+        return (await servicio.ConfirmarRegistroAsync(cuenta, dto, ContextoDeCliente.De(http, contexto.CorrelationId), mensajes, ct)).ADto();
     }
 
     [WolverinePut("/api/v1/mi-cuenta/passkeys/{id}")]
@@ -99,7 +100,7 @@ public static class MiCuentaEndpoints
     [WolverineDelete("/api/v1/mi-cuenta/passkeys/{id}")]
     [Authorize]
     public static async Task<IResult> Eliminar(Guid id, HttpContext http, ISesiones sesiones, CuentasDeIngreso cuentas, IContextoSolicitud contexto,
-        TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
         var (_, cuenta) = await SesionPropia.CargarAsync(http, sesiones, cuentas, reloj, ct);
         await using var sesion = sesiones.Global();
@@ -114,6 +115,8 @@ public static class MiCuentaEndpoints
         RegistroDeIngresos.Agregar(sesion, RegistroDeIngresos.Crear(EventoDeIngreso.PasskeyEliminada, true, ContextoDeCliente.De(http, contexto.CorrelationId), ahora,
             cuenta.Cuenta.TenantId, cuenta.Cuenta.Tipo, cuenta.Cuenta.SujetoId, cuenta.Correo, passkeyId: passkey.Id, detalle: passkey.Nombre));
         await sesion.SaveChangesAsync(ct);
+        await AvisosDeSeguridad.PasskeyRevocadaAsync(mensajes, cuenta.Correo, cuenta.Nombre, cuenta.Cuenta.TenantId, passkey.Nombre, porAdministrador: false,
+            ContextoDeCliente.De(http, contexto.CorrelationId), ahora, eliminada: true);
         return Results.NoContent();
     }
 

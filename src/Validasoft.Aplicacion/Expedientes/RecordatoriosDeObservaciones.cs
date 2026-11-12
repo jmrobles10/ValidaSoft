@@ -42,7 +42,7 @@ public static class CorreoDeRecordatorioDeObservacionesPendienteHandler
             return;
         var mensaje = redactor.RedactarRecordatorioDeObservaciones(correo, correo.EnlaceProtegido is null ? null : protector.Desproteger(correo.EnlaceProtegido));
         await enviador.EnviarAsync((await plantillas.AplicarAsync(mensaje, CatalogoDePlantillas.RecordatorioObservaciones, correo.TenantId, correo.EmpresaId,
-            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId), ct);
+            EjemplosDeCorreo.VariablesDe(correo.Empresa, correo.Folio), ct)).DeTenant(correo.TenantId, correo.EmpresaId), ct);
     }
 }
 
@@ -274,39 +274,50 @@ public sealed record RecordarObservacionesDelExpediente(Guid TenantId, Guid Expe
 public static class RecordatoriosAutomaticos
 {
     /// <summary>
-    /// Expedientes a los que hoy toca el recordatorio automático: los devueltos al tercero de las empresas que lo tienen encendido,
-    /// a los que ya pasaron N días desde que se devolvieron o desde el último recordatorio.
+    /// Expedientes a los que hoy toca el recordatorio automático: los devueltos al tercero a los que ya pasaron N días desde que se
+    /// devolvieron o desde el último recordatorio, con N del flujo del expediente (OP-19) o, si el flujo no dice nada, el de su empresa
+    /// cuando la tiene encendida.
     /// </summary>
     public static async Task<IReadOnlyList<RecordarObservacionesDelExpediente>> PendientesAsync(IDocumentStore store, Guid? tenantId, DateTimeOffset ahora,
         CancellationToken ct)
     {
         await using var global = store.QuerySession();
-        IReadOnlyList<ConfiguracionDeRecordatorios> configuraciones;
+        IReadOnlyList<Expediente> observados;
         if (tenantId is { } tenant)
         {
             await using var delTenant = store.QuerySession(tenant.ToString("N"));
-            configuraciones = await delTenant.Query<ConfiguracionDeRecordatorios>().Where(c => c.Activo).ToListAsync(ct);
+            observados = await delTenant.Query<Expediente>()
+                .Where(e => e.Estado == EstadoExpediente.Observado && (e.RecordatorioObservacionesDias == null || e.RecordatorioObservacionesDias > 0))
+                .OrderBy(e => e.ObservadoEn).Take(RecordatoriosDeObservaciones.MaximoPorBarrido).ToListAsync(ct);
         }
         else
         {
-            configuraciones = await global.Query<ConfiguracionDeRecordatorios>().Where(c => c.AnyTenant() && c.Activo).ToListAsync(ct);
+            observados = await global.Query<Expediente>()
+                .Where(e => e.AnyTenant() && e.Estado == EstadoExpediente.Observado && (e.RecordatorioObservacionesDias == null || e.RecordatorioObservacionesDias > 0))
+                .OrderBy(e => e.ObservadoEn).Take(RecordatoriosDeObservaciones.MaximoPorBarrido).ToListAsync(ct);
         }
 
-        if (configuraciones.Count == 0)
+        if (observados.Count == 0)
             return [];
 
-        var empresas = (await global.LoadManyAsync<Empresa>(ct, configuraciones.Select(c => c.Id).ToArray())).ToDictionary(e => e.Id);
-        var pendientes = new List<RecordarObservacionesDelExpediente>();
-        foreach (var configuracion in configuraciones)
+        var empresas = (await global.LoadManyAsync<Empresa>(ct, observados.Select(e => e.EmpresaId).Distinct().ToArray())).ToDictionary(e => e.Id);
+        var configuraciones = new Dictionary<Guid, ConfiguracionDeRecordatorios>();
+        foreach (var grupo in empresas.Values.GroupBy(e => e.TenantId))
         {
-            if (!empresas.TryGetValue(configuracion.Id, out var empresa))
+            await using var delTenant = store.QuerySession(grupo.Key.ToString("N"));
+            foreach (var configuracion in await delTenant.LoadManyAsync<ConfiguracionDeRecordatorios>(ct, grupo.Select(e => e.Id).ToArray()))
+                configuraciones[configuracion.Id] = configuracion;
+        }
+
+        var pendientes = new List<RecordarObservacionesDelExpediente>();
+        foreach (var expediente in observados)
+        {
+            if (!empresas.TryGetValue(expediente.EmpresaId, out var empresa))
                 continue;
-            await using var consulta = store.QuerySession(empresa.TenantId.ToString("N"));
-            var observados = await consulta.Query<Expediente>()
-                .Where(e => e.EmpresaId == empresa.Id && e.Estado == EstadoExpediente.Observado)
-                .OrderBy(e => e.ObservadoEn).Take(RecordatoriosDeObservaciones.MaximoPorBarrido).ToListAsync(ct);
-            pendientes.AddRange(observados.Where(e => e.TocaRecordatorioAutomatico(configuracion.CadaDias, ahora))
-                .Select(e => new RecordarObservacionesDelExpediente(empresa.TenantId, e.Id)));
+            var configuracion = configuraciones.GetValueOrDefault(expediente.EmpresaId);
+            var cadaDias = expediente.RecordatorioAutomaticoEfectivo(configuracion?.Activo == true, configuracion?.CadaDias ?? 0);
+            if (expediente.TocaRecordatorioAutomatico(cadaDias, ahora))
+                pendientes.Add(new RecordarObservacionesDelExpediente(empresa.TenantId, expediente.Id));
         }
 
         return pendientes;
@@ -330,7 +341,7 @@ public static class RecordatoriosAutomaticos
         if (stream.Aggregate is not { } expediente)
             return false;
         var configuracion = await sesion.LoadAsync<ConfiguracionDeRecordatorios>(expediente.EmpresaId, ct);
-        if (configuracion is not { Activo: true } || !expediente.TocaRecordatorioAutomatico(configuracion.CadaDias, ahora))
+        if (!expediente.TocaRecordatorioAutomatico(expediente.RecordatorioAutomaticoEfectivo(configuracion?.Activo == true, configuracion?.CadaDias ?? 0), ahora))
             return false;
 
         var resultado = await RecordatoriosDeObservaciones.EnviarAsync(sesion, stream, RecordatoriosDeObservaciones.ActorAutomatico, true, mensajes, protector, ahora, ct);

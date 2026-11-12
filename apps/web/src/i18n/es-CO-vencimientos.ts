@@ -54,8 +54,10 @@ export const vencimientos = {
   recordarSinSeleccion: 'Recordar al tercero',
   confirmarTitulo_one: '¿Recordarle {{count}} documento al tercero?',
   confirmarTitulo_other: '¿Recordarle {{count}} documentos a los terceros?',
-  confirmarTexto:
-    'Cada tercero recibe un solo correo con sus documentos y la fecha en que vencen para la empresa. Lo que ya se recordó hoy no se vuelve a enviar.',
+  confirmarTexto_one:
+    'Le llega un correo a {{count}} tercero, con sus documentos y la fecha en que vencen para la empresa. A cada tercero se le recuerda a lo sumo una vez por día: lo que ya se recordó hoy se omite.',
+  confirmarTexto_other:
+    'Les llega un correo a {{count}} terceros, uno a cada uno con sus documentos y la fecha en que vencen para la empresa. A cada tercero se le recuerda a lo sumo una vez por día: lo que ya se recordó hoy se omite.',
   confirmar: 'Enviar recordatorio',
   maximo: 'Se recuerdan hasta {{maximo}} documentos a la vez: quita algunos de la selección.',
   enviados_one: 'Enviaste {{count}} recordatorio a {{terceros}}.',

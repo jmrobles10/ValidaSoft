@@ -40,7 +40,7 @@ public static class CargaEndpoints
     [WolverinePost("/public/v1/boveda/documentos")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IResult> Iniciar(IniciarCargaDto dto, HttpContext http, ISesiones sesiones, IAlmacenDeArchivos almacen,
-        ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
+        ReglasDeCarga reglas, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User);
         var nombre = CargaDeDocumento.NormalizarNombre(dto.NombreArchivo);
@@ -52,6 +52,9 @@ public static class CargaEndpoints
 
         var destino = await ResolverDestinoAsync(dto.TipoCanonico, dto.TipoDocumentoTenantId, dto.VinculoId, tercero, sesiones, reglas, ct);
         destino.Reglas.ValidarDeclarado(mime, dto.TamanoBytes);
+        // Un documento propio de una empresa cuenta para el almacenamiento de su grupo: con el bloqueo suave y el límite alcanzado no se cargan más (OD-17).
+        if (destino.Tipo is { Ambito: AmbitoDocumento.PorVinculo } && tercero.Vinculos.FirstOrDefault(v => v.VinculoId == destino.ContextoVinculoId) is { } propio)
+            await plan.ExigirAsync(propio.TenantId, Validasoft.Dominio.Plataforma.MetricaDePlan.Almacenamiento, dto.TamanoBytes, ct);
         var datos = DatosDelArchivo(destino.Tipo, dto, reloj);
 
         var reserva = await Peticiones.ConReintentosAsync(async () =>

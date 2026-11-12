@@ -13,6 +13,11 @@ export interface ConfiguracionCliente {
   obtenerEmpresa: () => string | null;
   /** Se llama con cada 401 (y la URL pedida), antes de rechazar la promesa. */
   alNoAutenticado?: (error: ErrorApi, url: string) => void;
+  /**
+   * Una acción sensible de una sesión directa pide confirmar con la passkey (403 `reautenticacion-requerida`, PI-13). La app abre el diálogo, hace la
+   * ceremonia y responde si se confirmó: con `true` el cliente repite la petición una vez; con `false`, rechaza con el error original.
+   */
+  alRequerirReautenticacion?: (error: ErrorApi) => Promise<boolean>;
   /** Genera `Idempotency-Key` y `X-Correlation-Id`. */
   generarId: () => string;
   /** Implementación de fetch (inyectable en pruebas). */

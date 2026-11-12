@@ -1,4 +1,4 @@
-import { Alert, AlertTitle, Box, Button, Checkbox, Tooltip, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Tooltip, Typography } from '@mui/material';
 import { SCOPES, type FalloDeLoteDto, type RevalidacionDto } from '@validasoft/api-client';
 import { BarraFiltros, ChipEstado, EstadoVacio, FiltroMenu, formatearFecha, TablaConCursor, usePaginacionCursor, type ColumnaTabla } from '@validasoft/ui';
 import { CheckCheck } from 'lucide-react';
@@ -12,8 +12,10 @@ import { usePermisos } from '../../shared/usePermisos';
 import { useAreas } from '../configuracion/areas/api';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
 import { TerceroEnLinea } from '../expedientes/componentes';
+import { AccionesRecordarEnLote } from '../recordatorios/AccionesRecordarEnLote';
 import { useAprobarRevalidaciones, useRevalidaciones } from './api';
-import { claveRevalidacion, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
+import { CasillaRevalidacion, EstadoDeRevalidacion } from './CasillaRevalidacion';
+import { claveRevalidacion, devueltosSeleccionados, esDevuelta, esRevalidacionDeSeccion, lote, seleccionables, tonoPlazo } from './modelo';
 
 const TAMANO_PAGINA = 25;
 /** Plazo de la revalidación (RV-4, `Revalidacion.DiasDePlazo`). */
@@ -30,6 +32,8 @@ export function PaginaRevalidaciones() {
   const permisos = usePermisos(empresa.id);
   const puede = permisos.puede(SCOPES.expedientesLeer);
   const puedeRevisar = permisos.puede(SCOPES.expedientesRevisar);
+  // Recordar al tercero lo devuelto (la misma acción en lote de la bandeja) pide poder escribir en los vínculos.
+  const puedeRecordar = permisos.puede(SCOPES.vinculosEscribir);
   const mostrar = useAvisos((s) => s.mostrar);
   const [filtros, setFiltros] = useSearchParams();
   const area = filtros.get('area') ?? '';
@@ -51,6 +55,9 @@ export function PaginaRevalidaciones() {
   const aprobables = seleccionables(filas);
   const porAprobar = lote(filas, seleccion);
   const hayAprobables = aprobables.length > 0;
+  const hayDevueltas = filas.some(esDevuelta);
+  const porRecordar = devueltosSeleccionados(filas, seleccion);
+  const hayCasillas = (puedeRevisar && hayAprobables) || (puedeRecordar && hayDevueltas);
 
   const alternar = (f: RevalidacionDto) =>
     setSeleccion((previa) => {
@@ -63,7 +70,7 @@ export function PaginaRevalidaciones() {
 
   const columnas = useMemo<ColumnaTabla<RevalidacionDto>[]>(
     () => [
-      ...(puedeRevisar && hayAprobables
+      ...(hayCasillas
         ? [
             {
               id: 'seleccion',
@@ -71,14 +78,12 @@ export function PaginaRevalidaciones() {
               encabezadoOculto: true,
               ancho: 44,
               celda: (f: RevalidacionDto) => (
-                <Checkbox
-                  size="small"
-                  checked={seleccion.has(claveRevalidacion(f))}
-                  disabled={!f.aprobableEnLote}
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={() => alternar(f)}
-                  slotProps={{ input: { 'aria-label': t('revalidaciones.seleccionar', { documento: f.tipoDocumento, tercero: f.tercero.nombre }) } }}
-                  sx={{ p: 0.5 }}
+                <CasillaRevalidacion
+                  fila={f}
+                  marcada={seleccion.has(claveRevalidacion(f))}
+                  puedeAprobar={puedeRevisar}
+                  puedeRecordar={puedeRecordar}
+                  onAlternar={() => alternar(f)}
                 />
               ),
             },
@@ -148,6 +153,7 @@ export function PaginaRevalidaciones() {
             </Tooltip>
           ),
       },
+      { id: 'estado', encabezado: t('revalidaciones.columnas.estado'), ancho: 170, celda: (f) => <EstadoDeRevalidacion fila={f} /> },
       {
         id: 'plazo',
         encabezado: t('revalidaciones.columnas.plazo'),
@@ -166,7 +172,7 @@ export function PaginaRevalidaciones() {
       },
       { id: 'folio', encabezado: t('revalidaciones.columnas.folio'), ancho: 170, celda: (f) => <Typography variant="monoTabla">{f.folio}</Typography> },
     ],
-    [t, seleccion, puedeRevisar, hayAprobables],
+    [t, seleccion, puedeRevisar, puedeRecordar, hayCasillas],
   );
 
   if (!puede) return <SinPermiso seccion={t('nav.revalidaciones')} />;
@@ -194,14 +200,28 @@ export function PaginaRevalidaciones() {
         titulo={t('revalidaciones.titulo')}
         subtitulo={t('revalidaciones.subtitulo', { empresa: empresa.nombre, dias: String(DIAS_DE_PLAZO) })}
         acciones={
-          puedeRevisar && aprobables.length > 0 ? (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button variant="outlined" onClick={() => setSeleccion(porAprobar.length > 0 ? new Set() : new Set(aprobables.map(claveRevalidacion)))}>
-                {porAprobar.length > 0 ? t('revalidaciones.quitarSeleccion') : t('revalidaciones.seleccionarTodas')}
-              </Button>
-              <Button variant="contained" startIcon={<CheckCheck size={16} aria-hidden />} disabled={porAprobar.length === 0} onClick={() => setConfirmando(true)}>
-                {t('revalidaciones.aprobar', { count: porAprobar.length })}
-              </Button>
+          (puedeRevisar && hayAprobables) || puedeRecordar ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {puedeRevisar && hayAprobables && (
+                <>
+                  <Button variant="outlined" onClick={() => setSeleccion(seleccion.size > 0 ? new Set() : new Set(aprobables.map(claveRevalidacion)))}>
+                    {seleccion.size > 0 ? t('revalidaciones.quitarSeleccion') : t('revalidaciones.seleccionarTodas')}
+                  </Button>
+                  <Button variant="contained" startIcon={<CheckCheck size={16} aria-hidden />} disabled={porAprobar.length === 0} onClick={() => setConfirmando(true)}>
+                    {t('revalidaciones.aprobar', { count: porAprobar.length })}
+                  </Button>
+                </>
+              )}
+              {puedeRecordar && (
+                <AccionesRecordarEnLote
+                  empresaId={empresa.id}
+                  empresaNombre={empresa.nombre}
+                  seleccion={porRecordar}
+                  areaId={area}
+                  areaNombre={areas.data?.find((a) => a.id === area)?.nombre}
+                  onTerminado={() => setSeleccion(new Set())}
+                />
+              )}
             </Box>
           ) : undefined
         }

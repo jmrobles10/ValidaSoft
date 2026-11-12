@@ -71,6 +71,9 @@ public static class ConfiguracionMarten
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_identificacion", x => x.TenantId, x => x.ClaveIdentificacion)
                     .UniqueIndex(UniqueIndexType.Computed, "ux_empresa_prefijo", x => x.TenantId, x => x.PrefijoFolio);
 
+                // Tarifa general de las validaciones adicionales de IA (PI-12): un solo documento global.
+                opts.Schema.For<Validasoft.Dominio.Ia.TarifaDeIa>().DatabaseSchemaName("plataforma");
+
                 // boveda (global)
                 opts.Schema.For<Tercero>().DatabaseSchemaName("boveda")
                     .UniqueIndex(UniqueIndexType.Computed, "ux_tercero_identificacion", x => x.ClaveIdentificacion)
@@ -142,6 +145,14 @@ public static class ConfiguracionMarten
                     .Index(x => x.SujetoId)
                     .Index(x => x.ExpiraEn);
                 opts.Schema.For<RegistroDeIngreso>().DatabaseSchemaName("identidad").Index(x => x.Fecha).Index(x => x.SujetoId);
+                // Inicio de sesión con el proveedor de identidad del cliente (SSO, PI-1): un documento por grupo (id = grupo) y el índice global de
+                // dominios ya verificados, con el dominio como id (un dominio verificado es de un solo grupo).
+                opts.Schema.For<ConfiguracionDeSso>().DatabaseSchemaName("identidad");
+                opts.Schema.For<DominioVerificadoDeSso>().DatabaseSchemaName("identidad").Index(x => x.TenantId);
+                // Códigos de recuperación de una cuenta (PI-18): global, con concurrencia optimista (dos usos del mismo código no pasan los dos).
+                opts.Schema.For<CodigosDeRecuperacion>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
+                // Configuración global de la instalación que cambia la consola (PI-17).
+                opts.Schema.For<ConfiguracionDePlataforma>().DatabaseSchemaName("plataforma");
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")
@@ -186,7 +197,15 @@ public static class ConfiguracionMarten
                     .Index(x => x.ProximaConsultaDeListas)
                     .Index(x => x.ProximoVencimientoDeVerificacion)
                     // Barrido del job de plazos de cargue (LT-4): solo los que tienen algo pendiente llevan valor.
-                    .Index(x => x.ProximaRevisionDePlazo);
+                    .Index(x => x.ProximaRevisionDePlazo)
+                    // Barrido de alertas de SLA de revisión (OP-12): solo los que tienen un plazo corriendo llevan valor.
+                    .Index(x => x.ProximaRevisionDeSla);
+                // Ayuda por documento que una empresa escribió para sí (OP-15): id determinista {empresa:N}:{tipo:N}.
+                opts.Schema.For<Validasoft.Aplicacion.Documentos.AyudaDeDocumentoDeEmpresa>().MultiTenanted().Index(x => x.EmpresaId);
+                // Delegaciones de revisión por ausencias (OP-7): de una empresa, se leen por el delegado.
+                opts.Schema.For<Validasoft.Dominio.Delegaciones.DelegacionDeRevision>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.AUsuarioId);
+                // Plazos de revisión por defecto y umbral de aviso del SLA por empresa (OP-10; id = empresa).
+                opts.Schema.For<Validasoft.Aplicacion.Expedientes.ConfiguracionDeSla>().MultiTenanted();
                 // Verificaciones externas (H7): listas por empresa (id = empresa, credenciales cifradas), consumo mensual con
                 // concurrencia optimista y monitoreo de listas por vínculo activo (id = vínculo).
                 opts.Schema.For<ListasRestrictivasEmpresa>().MultiTenanted();
@@ -247,6 +266,25 @@ public static class ConfiguracionMarten
                     .Index(x => x.Estado)
                     .Index(x => x.N);
 
+                // Campañas de renovación (OP-1): como el lote de invitación, un stream con snapshot inline y sus filas como documentos.
+                opts.Schema.For<Validasoft.Dominio.Campanias.CampaniaDeRenovacion>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.CreadaEn);
+                opts.Schema.For<Validasoft.Dominio.Campanias.FilaDeCampania>().MultiTenanted().Index(x => x.CampaniaId).Index(x => x.Estado).Index(x => x.N);
+                // Habeas data y exportación de la bóveda (OD-1…OD-12): las solicitudes son streams en el tenant técnico «boveda» (snapshot
+                // inline); la llave de datos de cada tercero (crypto-shredding) y las exportaciones son globales, como el propio tercero.
+                opts.Schema.For<Validasoft.Dominio.Habeas.SolicitudHabeas>().DatabaseSchemaName("boveda").MultiTenanted()
+                    .Index(x => x.TerceroId)
+                    .Index(x => x.EmpresaId)
+                    .Index(x => x.VenceEl);
+                opts.Schema.For<Validasoft.Dominio.Habeas.LlaveDeDatosDelTercero>().DatabaseSchemaName("boveda");
+                opts.Schema.For<Validasoft.Dominio.Habeas.ExportacionDeBoveda>().DatabaseSchemaName("boveda")
+                    .Index(x => x.TerceroId)
+                    .Index(x => x.ExpiraEn);
+                // Plan y límites por grupo, y las llamadas a la API del mes (OD-14, OD-15): globales (id = tenant).
+                opts.Schema.For<Validasoft.Dominio.Plataforma.PlanDelGrupo>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<Validasoft.Dominio.Plataforma.UsoMensualDelGrupo>().DatabaseSchemaName("plataforma").Index(x => x.TenantId);
+                // Dominio de correo propio de cada empresa (OD-18; id = empresa), en el tenant del grupo.
+                opts.Schema.For<Validasoft.Dominio.Configuracion.DominioDeCorreoEmpresa>().MultiTenanted();
+
                 // IA con OpenAI y cupo por empresa (ADR-0012): plan por empresa (id = empresa), validaciones consumidas con id
                 // determinista por (empresa, documento, versión) y contador mensual con concurrencia optimista.
                 opts.Schema.For<Validasoft.Dominio.Ia.PlanDeIaEmpresa>().MultiTenanted();
@@ -265,6 +303,8 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Validasoft.Dominio.Invitaciones.LoteDeInvitacion>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Campanias.CampaniaDeRenovacion>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<Validasoft.Dominio.Habeas.SolicitudHabeas>(SnapshotLifecycle.Inline);
             })
             .UseLightweightSessions()
             // Daemon asíncrono con un solo nodo líder (bloqueo consultivo de PostgreSQL): corre la suscripción de eventos

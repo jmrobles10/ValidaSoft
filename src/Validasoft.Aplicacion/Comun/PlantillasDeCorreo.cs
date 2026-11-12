@@ -101,13 +101,24 @@ public static class EjemplosDeCorreo
                     $"Expediente {folio} de {empresa}.", "Tu área: Compras."
                 ], $"/e/{Guid.Empty}/expedientes/{Guid.Empty}")),
                 VariablesDe(empresa, folio, documento: Documento)),
+            CatalogoDePlantillas.PreVencimiento => EjemploDeVigencia(redactor, evento, empresa, ahora, Vinculos.AvisoDeVigencia.PorVencer),
+            CatalogoDePlantillas.VigenciaVencida => EjemploDeVigencia(redactor, evento, empresa, ahora, Vinculos.AvisoDeVigencia.Vencido),
+            CatalogoDePlantillas.Renovacion => EjemploDeVigencia(redactor, evento, empresa, ahora, Vinculos.AvisoDeVigencia.Renovacion),
             _ => throw new ArgumentOutOfRangeException(nameof(evento), evento, "Evento sin plantilla.")
         };
     }
 
+    /// <summary>El aviso de vigencia del vínculo (pre-vencimiento, vencimiento o renovación abierta) con su fecha de ejemplo, a 15 días de hoy.</summary>
+    private static EjemploDeCorreo EjemploDeVigencia(RedactorDeCorreos redactor, string evento, string empresa, DateTimeOffset ahora, Vinculos.AvisoDeVigencia aviso)
+    {
+        var hasta = Dominio.Documentos.CalculadoraDeVigencia.Fecha(ahora).AddDays(aviso == Vinculos.AvisoDeVigencia.Vencido ? -3 : 15);
+        var correo = new Vinculos.CorreoDeVigenciaPendiente(Para, empresa, aviso, hasta, aviso == Vinculos.AvisoDeVigencia.Vencido ? 0 : 15);
+        return new(Vinculos.CorreoDeVigenciaPendienteHandler.Redactar(correo, redactor.UrlPublica, "enlace-de-ejemplo"), VariablesDe(empresa, fecha: Vinculos.CorreoDeVigenciaPendienteHandler.FechaLarga(hasta)));
+    }
+
     /// <summary>Variables de un correo; las nulas no se incluyen (quedan vacías al reemplazar).</summary>
     public static IReadOnlyDictionary<string, string> VariablesDe(string? empresa, string? folio = null, string? tipoVinculo = null,
-        string? documento = null)
+        string? documento = null, string? fecha = null)
     {
         var variables = new Dictionary<string, string>(StringComparer.Ordinal);
         if (empresa is not null)
@@ -118,6 +129,8 @@ public static class EjemplosDeCorreo
             variables["tipoVinculo"] = tipoVinculo;
         if (documento is not null)
             variables["documento"] = documento;
+        if (fecha is not null)
+            variables["fecha"] = fecha;
         return variables;
     }
 }

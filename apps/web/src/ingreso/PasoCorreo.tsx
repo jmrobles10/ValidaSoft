@@ -6,9 +6,12 @@ import { KeyRound } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../shared/componentes';
+import { BotonSso } from './BotonSso';
 import { esCorreoPlausible } from './estado';
 import { mensajeDeIngreso } from './mensajes';
 import { firmarConPasskey, soportaPasskeys } from './passkeys';
+import { useIniciarSso, useSsoDelCorreo } from './useSso';
+import { useUiCondicionalDePasskeys } from './useUiCondicional';
 
 const SIN_CREDENCIAL = { token: null, empresa: null } as const;
 
@@ -19,11 +22,18 @@ export interface PasoCorreoProps {
   alResultado: (paso: PasoDeIngresoDto) => void;
 }
 
-/** Primer paso: el correo (recibe un código) o, si el navegador puede, entrar solo con una passkey sin escribir nada. */
+/**
+ * Primer paso: el correo (recibe un código), entrar con el proveedor de identidad de la empresa si el dominio lo tiene (PI-1) o, si el navegador puede,
+ * solo con una passkey: sin escribir nada o escogiéndola en el autocompletado del propio campo (PI-14).
+ */
 export function PasoCorreo({ correoInicial = '', alCodigo, alResultado }: PasoCorreoProps) {
   const { t } = useTranslation();
   const [correo, setCorreo] = useState(correoInicial);
   const [intentado, setIntentado] = useState(false);
+  const [falloCondicional, setFalloCondicional] = useState<unknown>(null);
+  const sso = useSsoDelCorreo(correo);
+  // Con el SSO exclusivo la persona no entra con código ni con passkey: solo con el proveedor de su empresa.
+  const soloSso = sso?.reemplazaElCodigo === true;
 
   const pedirCodigo = useMutation({
     mutationFn: () => solicitarCodigoIngreso({ correo: correo.trim() }, SIN_CREDENCIAL),
@@ -39,16 +49,28 @@ export function PasoCorreo({ correoInicial = '', alCodigo, alResultado }: PasoCo
     onSuccess: alResultado,
   });
 
+  const iniciarSso = useIniciarSso(correo);
+  useUiCondicionalDePasskeys(alResultado, setFalloCondicional, !soloSso);
+
   const invalido = intentado && !esCorreoPlausible(correo);
-  const ocupado = pedirCodigo.isPending || conPasskey.isPending;
-  const error = pedirCodigo.error ?? conPasskey.error;
+  // Tras iniciar el SSO el navegador se va: el botón queda ocupado hasta que cambie de página.
+  const ocupado = pedirCodigo.isPending || conPasskey.isPending || iniciarSso.isPending || iniciarSso.isSuccess;
+  const error = pedirCodigo.error ?? conPasskey.error ?? iniciarSso.error ?? falloCondicional;
+
+  const reiniciarErrores = () => {
+    conPasskey.reset();
+    pedirCodigo.reset();
+    iniciarSso.reset();
+    setFalloCondicional(null);
+  };
 
   const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
     setIntentado(true);
     if (!esCorreoPlausible(correo) || ocupado) return;
-    conPasskey.reset();
-    pedirCodigo.mutate();
+    reiniciarErrores();
+    if (soloSso) iniciarSso.mutate();
+    else pedirCodigo.mutate();
   };
 
   return (
@@ -58,7 +80,7 @@ export function PasoCorreo({ correoInicial = '', alCodigo, alResultado }: PasoCo
           <Typography variant="h2" component="h1" sx={{ mb: 0.5 }}>
             {t('ingreso.titulo')}
           </Typography>
-          <Typography sx={{ color: 'text.secondary' }}>{t('ingreso.subtitulo')}</Typography>
+          <Typography sx={{ color: 'text.secondary' }}>{soloSso ? t('ingreso.sso.subtituloExclusivo', { nombre: sso.nombre ?? '' }) : t('ingreso.subtitulo')}</Typography>
         </Box>
         {error !== null && (
           <Alert severity="error" role="alert">
@@ -77,33 +99,51 @@ export function PasoCorreo({ correoInicial = '', alCodigo, alResultado }: PasoCo
           fullWidth
           slotProps={{ htmlInput: { autoComplete: 'username webauthn', inputMode: 'email', maxLength: 254 } }}
         />
-        <Button type="submit" variant="contained" size="large" fullWidth disabled={ocupado} startIcon={pedirCodigo.isPending ? <IconoCarga /> : undefined}>
-          {t('ingreso.continuar')}
-        </Button>
-        {soportaPasskeys() && (
+        {soloSso ? (
+          <BotonSso nombre={sso.nombre ?? ''} principal ocupado={ocupado} cargando={iniciarSso.isPending || iniciarSso.isSuccess} alPulsar={() => undefined} />
+        ) : (
           <>
-            <Divider>
-              <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
-                {t('ingreso.o')}
-              </Typography>
-            </Divider>
-            <Stack spacing={0.75}>
-              <Button
-                variant="outlined"
-                fullWidth
-                disabled={ocupado}
-                onClick={() => {
-                  pedirCodigo.reset();
-                  conPasskey.mutate();
+            <Button type="submit" variant="contained" size="large" fullWidth disabled={ocupado} startIcon={pedirCodigo.isPending ? <IconoCarga /> : undefined}>
+              {t('ingreso.continuar')}
+            </Button>
+            {sso && (
+              <BotonSso
+                nombre={sso.nombre ?? ''}
+                principal={false}
+                ocupado={ocupado}
+                cargando={iniciarSso.isPending || iniciarSso.isSuccess}
+                alPulsar={() => {
+                  reiniciarErrores();
+                  iniciarSso.mutate();
                 }}
-                startIcon={conPasskey.isPending ? <IconoCarga /> : <KeyRound size={16} strokeWidth={1.75} aria-hidden />}
-              >
-                {t('ingreso.conPasskey')}
-              </Button>
-              <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                {t('ingreso.passkeyAyuda')}
-              </Typography>
-            </Stack>
+              />
+            )}
+            {soportaPasskeys() && (
+              <>
+                <Divider>
+                  <Typography component="span" variant="body2" sx={{ color: 'text.secondary' }}>
+                    {t('ingreso.o')}
+                  </Typography>
+                </Divider>
+                <Stack spacing={0.75}>
+                  <Button
+                    variant="outlined"
+                    fullWidth
+                    disabled={ocupado}
+                    onClick={() => {
+                      reiniciarErrores();
+                      conPasskey.mutate();
+                    }}
+                    startIcon={conPasskey.isPending ? <IconoCarga /> : <KeyRound size={16} strokeWidth={1.75} aria-hidden />}
+                  >
+                    {t('ingreso.conPasskey')}
+                  </Button>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                    {t('ingreso.passkeyAyuda')}
+                  </Typography>
+                </Stack>
+              </>
+            )}
           </>
         )}
       </Stack>

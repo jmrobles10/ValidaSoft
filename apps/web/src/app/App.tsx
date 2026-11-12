@@ -11,6 +11,8 @@ import { usePuenteEmbed } from '../sesion/usePuenteEmbed';
 import { Avisos } from '../shared/avisos';
 import { crearClienteConsultas } from '../shared/consultas';
 import { usePreferencias } from '../shared/preferencias';
+import { DialogoDeReautenticacion } from '../seguridad/DialogoDeReautenticacion';
+import { solicitarReautenticacion } from '../seguridad/reautenticacion';
 import { crearRouter } from './router';
 
 // El token se lee en cada petición; un 401 de la API marca la sesión como vencida y se pide otra al contenedor.
@@ -18,6 +20,8 @@ configurarCliente({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? '',
   obtenerToken: () => useSesion.getState().sesion?.token ?? null,
   alNoAutenticado: () => useSesion.getState().marcar('vencida'),
+  // Una acción sensible pide la passkey en un diálogo y, si la persona confirma, la petición se repite sola (PI-13).
+  alRequerirReautenticacion: solicitarReautenticacion,
 });
 
 export function App() {
@@ -52,6 +56,7 @@ export function App() {
       <CssBaseline enableColorScheme />
       <QueryClientProvider client={clienteConsultas}>
         {estado === 'activa' ? <RouterProvider router={router} /> : <PantallaSesion estado={estado} embebida={embebida} restaurando={restaurando} />}
+        <DialogoDeReautenticacion />
         <Avisos />
       </QueryClientProvider>
     </ThemeProvider>

@@ -10,7 +10,10 @@ public enum AccionConfiguracion
     Archivado,
     Desactivado,
     Rotado,
-    Revocado
+    Revocado,
+
+    /// <summary>Un sistema o un operador desactivado volvió a estar activo (PI-7); sus llaves revocadas no se restauran.</summary>
+    Reactivado
 }
 
 /// <summary>

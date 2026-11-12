@@ -13,7 +13,8 @@ public sealed record CambiosDePlanIa(
     string? ModeloPorDefecto,
     string? ModeloEscalamiento,
     decimal? UmbralConfianza,
-    bool Activo);
+    bool Activo,
+    decimal? PrecioAdicional = null);
 
 /// <summary>
 /// Plan de IA de una empresa (ADR-0012, IA-2). Esquema <c>validacion</c>, multi-tenant; uno por empresa (id = empresa).
@@ -37,6 +38,12 @@ public sealed partial class PlanDeIaEmpresa
 
     /// <summary>Máximo de validaciones adicionales al mes; nulo = sin tope.</summary>
     public int? TopeAdicionalMes { get; set; }
+
+    /// <summary>
+    /// Lo que se cobra a esta empresa por cada validación adicional (PI-12), en la moneda de la tarifa general; nulo = el precio de la tarifa general
+    /// (<c>TarifaDeIa</c>).
+    /// </summary>
+    public decimal? PrecioAdicional { get; set; }
 
     /// <summary>Llave de OpenAI cifrada con el protector de secretos; nunca se guarda ni se devuelve en claro.</summary>
     public string? ApiKeyOpenAiProtegida { get; set; }
@@ -83,6 +90,8 @@ public sealed partial class PlanDeIaEmpresa
         var umbral = cambios.UmbralConfianza ?? UmbralConfianza;
         if (umbral is < 0m or > 1m)
             throw ReglaDeNegocioException.Validacion("umbral-confianza-invalido", "El umbral de confianza debe estar entre 0 y 1.");
+        if (cambios.PrecioAdicional is < 0m or > TarifaDeIa.PrecioMaximo)
+            throw ReglaDeNegocioException.Validacion("precio-adicional-invalido", $"El precio de cada validación adicional debe estar entre 0 y {TarifaDeIa.PrecioMaximo:0}, o vacío para usar la tarifa general.");
         var modelo = ValidarModelo(cambios.ModeloPorDefecto) ?? ModeloPorDefecto;
         var escalamiento = ValidarModelo(cambios.ModeloEscalamiento) ?? ModeloEscalamiento;
 
@@ -105,6 +114,7 @@ public sealed partial class PlanDeIaEmpresa
         ValidacionesIncluidasMes = cambios.ValidacionesIncluidasMes;
         AdicionalHabilitado = cambios.AdicionalHabilitado;
         TopeAdicionalMes = cambios.TopeAdicionalMes;
+        PrecioAdicional = cambios.PrecioAdicional;
         ModeloPorDefecto = modelo;
         ModeloEscalamiento = escalamiento;
         UmbralConfianza = umbral;

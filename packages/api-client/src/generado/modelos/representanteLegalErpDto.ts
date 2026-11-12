@@ -32,4 +32,8 @@ export interface RepresentanteLegalErpDto {
   telefono: string | null;
   /** @nullable */
   lugarExpedicion?: string | null;
+  /** @nullable */
+  pep?: boolean | null;
+  /** @nullable */
+  vinculoPep?: boolean | null;
 }

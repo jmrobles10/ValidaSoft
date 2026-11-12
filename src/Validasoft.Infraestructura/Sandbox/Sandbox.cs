@@ -3,7 +3,9 @@ using Marten;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Comun;
+using Microsoft.Extensions.Caching.Memory;
 using Validasoft.Aplicacion.Ia;
+using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Infraestructura.IA;
 
@@ -33,9 +35,34 @@ public sealed class Entornos(IDocumentStore store) : IEntornos
 /// destinatario; los demás van al transporte real (SMTP). Un correo sin tenant (el acceso del tercero sin empresa) es de
 /// producción.
 /// </summary>
-public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos entornos, IDocumentStore store, TimeProvider reloj,
+public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos entornos, IDocumentStore store, IMemoryCache cache, TimeProvider reloj,
     ILogger<EnviadorDeCorreo> logger) : IEnviadorDeCorreo
 {
+    private static readonly TimeSpan VigenciaDelRemitente = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// El remitente propio de la empresa (OD-20): solo si su dominio de correo está <b>verificado</b>. Mientras no lo esté, o si lo quitó,
+    /// nulo: el correo sale con el remitente de la plataforma. Se recuerda 30 segundos por empresa.
+    /// </summary>
+    private async Task<RemitenteDeCorreo?> RemitenteDeLaEmpresaAsync(Guid tenantId, Guid empresaId, CancellationToken ct)
+    {
+        var llave = Aplicacion.Configuracion.DominioDeCorreoEndpoints.LlaveDelRemitente(empresaId);
+        if (cache.TryGetValue(llave, out RemitenteDeCorreo? guardado))
+            return guardado;
+
+        await using var consulta = store.QuerySession(tenantId.ToString("N"));
+        var dominio = await consulta.LoadAsync<DominioDeCorreoEmpresa>(empresaId, ct);
+        RemitenteDeCorreo? remitente = null;
+        if (dominio is { Estado: EstadoDeDominioDeCorreo.Verificado })
+        {
+            await using var global = store.QuerySession();
+            remitente = dominio.RemitenteSiVerificado((await global.LoadAsync<Empresa>(empresaId, ct))?.Nombre ?? "Validasoft");
+        }
+
+        cache.Set(llave, remitente, VigenciaDelRemitente);
+        return remitente;
+    }
+
     public async Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct)
     {
         if (mensaje.TenantId is { } tenantId && await entornos.EsSandboxAsync(tenantId, ct))
@@ -47,6 +74,8 @@ public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos e
             return;
         }
 
+        if (mensaje is { Remitente: null, TenantId: { } tenant, EmpresaId: { } empresa })
+            mensaje = mensaje with { Remitente = await RemitenteDeLaEmpresaAsync(tenant, empresa, ct) };
         await transporte.EnviarAsync(mensaje, ct);
     }
 }

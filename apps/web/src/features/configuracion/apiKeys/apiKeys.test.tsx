@@ -27,7 +27,7 @@ const DEL_TENANT = [
   'empresas:administrar', 'api-keys:administrar', 'sistemas:administrar', 'usuarios:administrar', 'configuracion:leer', 'configuracion:escribir',
   'terceros:leer', 'terceros:escribir', 'vinculos:leer', 'vinculos:escribir', 'vinculos:bloquear', 'cuentas:aprobar', 'auditoria:leer', 'auditoria:exportar',
   'flujos:leer', 'flujos:escribir', 'expedientes:leer', 'expedientes:revisar', 'expedientes:administrar', 'expedientes:exportar', 'documentos:leer', 'documentos:descargar',
-  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'sesiones-tercero:crear', 'sandbox:administrar', 'verificaciones:escribir', 'cumplimiento:decidir',
+  'certificados:leer', 'eventos:leer', 'webhooks:administrar', 'consultas:leer', 'sesiones-tercero:crear', 'sandbox:administrar', 'verificaciones:escribir', 'cumplimiento:decidir', 'supresiones:resolver',
 ];
 
 const EMPRESAS = [
@@ -215,7 +215,7 @@ describe('crear una API key', () => {
     await usuario.click(screen.getByRole('button', { name: 'Listo, ya la guardé' }));
     expect(screen.queryByText(LLAVE.valor ?? '')).not.toBeInTheDocument();
     expect(screen.getByText('Cerrado')).toBeInTheDocument();
-  }, 20_000);
+  });
 
   it('el diálogo de la clave no se cierra con Escape: solo con «Listo»', async () => {
     const usuario = userEvent.setup();

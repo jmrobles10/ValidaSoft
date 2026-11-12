@@ -22,7 +22,7 @@ export const cruce = {
   sinDocumento: 'Ningún documento de la bóveda respalda esta sección todavía.',
   evidencia: 'Es evidencia para la revisión: el cruce no aprueba ni observa nada por sí mismo.',
   soporte: {
-    titulo: 'Respaldo de la información',
+    titulo: 'Soporte de la información',
     sinAnalisis: 'Tu empresa no recibió la lectura automática de esta versión: compara a mano con las secciones.',
     seccionSinDiligenciar: '{{seccion}}: sin diligenciar.',
     seccionSinCruce: '{{seccion}} (versión {{n}}): sin cruce.',
@@ -35,7 +35,7 @@ export const cruce = {
   },
   justificacion: {
     etiqueta: 'Justificación de la aprobación',
-    ayuda: 'El cruce con el documento difiere en campos críticos de {{requisitos}}. Explica por qué apruebas (al menos 10 caracteres).',
+    ayuda: 'Los campos críticos de {{requisitos}} no tienen soporte: el cruce con el documento difiere o el cambio no trae un documento nuevo. Explica por qué apruebas (al menos 10 caracteres).',
     falta: 'Escribe la justificación de la aprobación (al menos 10 caracteres).',
   },
   editor: {
@@ -45,7 +45,7 @@ export const cruce = {
 } as const;
 
 export const erroresCruce = {
-  'justificacion-por-discrepancias': 'El cruce con el documento difiere en campos críticos: escribe una justificación para aprobar.',
-  'cruce-con-discrepancias': 'Difiere de la información del tercero en campos críticos: revísalo en su expediente.',
+  'justificacion-por-discrepancias': 'Hay campos críticos sin soporte (el cruce difiere o el cambio no trae un documento nuevo): escribe una justificación para aprobar.',
+  'cruce-con-discrepancias': 'Tiene campos críticos sin soporte (el cruce difiere o el cambio no trae un documento nuevo): revísalo en su expediente.',
   'soporte-no-aplica': 'Ese documento no respalda ninguna sección de la información.',
 } as const;

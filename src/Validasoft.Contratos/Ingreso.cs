@@ -75,3 +75,22 @@ public sealed record OperadorDePlataformaDto(
 public sealed record IngresoAuditadoDto(
     Guid Id, DateTimeOffset Fecha, string Evento, bool Exitoso, string? Correo, string? Metodo, string? Motivo, string? Ip, string? Dispositivo, string ActorTipo,
     string ActorId, Guid? SesionId, Guid? PasskeyId);
+
+// ---------- Reautenticación con passkey para acciones sensibles (PI-13) ----------
+
+/// <summary>La reautenticación con la passkey valió: las acciones sensibles se aceptan hasta <see cref="Hasta"/>.</summary>
+public sealed record ReautenticacionDto(DateTimeOffset Hasta, int Minutos);
+
+/// <summary>Si la sesión está reautenticada ahora y hasta cuándo.</summary>
+public sealed record EstadoDeReautenticacionDto(bool Vigente, DateTimeOffset? Hasta, int Minutos);
+
+// ---------- Códigos de recuperación (PI-18) ----------
+
+/// <summary>Un juego nuevo de códigos de recuperación: se muestran <b>una sola vez</b>, de un solo uso cada uno.</summary>
+public sealed record CodigosDeRecuperacionDto(IReadOnlyList<string> Codigos, DateTimeOffset GeneradosEn);
+
+/// <summary>Cuántos códigos de recuperación le quedan a la cuenta (sin mostrarlos).</summary>
+public sealed record EstadoDeRecuperacionDto(int Disponibles, int Total, DateTimeOffset? GeneradosEn);
+
+/// <summary>Usa un código de recuperación en un ingreso con el código del correo ya verificado: sigue el registro de una passkey nueva.</summary>
+public sealed record UsarCodigoDeRecuperacionDto(Guid Desafio, string Codigo);

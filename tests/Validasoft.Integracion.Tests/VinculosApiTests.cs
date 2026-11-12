@@ -61,6 +61,15 @@ public sealed class ApiFixture : IAsyncLifetime
 
     public CorreosCapturados Correos { get; } = new();
 
+    /// <summary>Proveedor de identidad OIDC/WorkOS simulado, en proceso (SSO, PI-3): nunca se llega a uno real.</summary>
+    public IdpSimulado Idp { get; private set; } = null!;
+
+    /// <summary>Qué dominios «publicaron» su token de verificación (PI-2): el comprobador real busca un archivo por https y aquí nunca se sale a la red.</summary>
+    public ComprobadorDeDominiosDePrueba Dominios { get; } = new();
+
+    /// <summary>Cadena de conexión de la base de las pruebas (para leer y escribir como lo haría otro servidor).</summary>
+    public string CadenaDeConexion => _postgres.GetConnectionString();
+
     public RelojDePruebas Reloj { get; } = new();
 
     /// <summary>Analizador de IA falso (ADR-0012): las pruebas nunca llaman a OpenAI.</summary>
@@ -69,6 +78,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _minio.StartAsync());
+        Idp = await IdpSimulado.IniciarAsync();
         CrearApps();
         Host = await AlbaHost.For<Program>(b =>
         {
@@ -88,6 +98,11 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Ingreso:Passkeys:Origenes:0", OrigenDeLaApp);
             b.UseSetting("Validasoft:LimiteIngreso:Peticiones", LimiteIngreso.ToString(System.Globalization.CultureInfo.InvariantCulture));
             b.UseSetting("Validasoft:LimiteIngreso:VentanaSegundos", "60");
+            // SSO (PI-3, PI-6): el proveedor simulado vive en 127.0.0.1; el adaptador de WorkOS apunta a sus puntos simulados.
+            b.UseSetting("Validasoft:Ingreso:Sso:PermitirHttpLocal", "true");
+            b.UseSetting("Validasoft:Ingreso:Sso:WorkOs:ApiKey", IdpSimulado.ApiKeyDeWorkOs);
+            b.UseSetting("Validasoft:Ingreso:Sso:WorkOs:ClientId", IdpSimulado.ClientIdDeWorkOs);
+            b.UseSetting("Validasoft:Ingreso:Sso:WorkOs:UrlBase", Idp.UrlDeWorkOs);
             b.UseSetting("Validasoft:Apps:Web", Path.Combine(CarpetaApps, "web"));
             b.UseSetting("Validasoft:Apps:Publica", Path.Combine(CarpetaApps, "public"));
             b.UseSetting("Validasoft:Cors:OrigenesPermitidos:0", OrigenCors);
@@ -107,6 +122,12 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:PlazosDeCargue:Intervalo", "00:00:00");
             // Invitación masiva (LT-8): tandas pequeñas para ver el avance, la pausa y la reanudación.
             b.UseSetting("Validasoft:Lotes:TamanoTanda", "5");
+            // Plan del grupo (OD-14…OD-17): el conteo de llamadas se vuelca cada segundo, el almacenamiento se mide en cada lectura y los barridos
+            // periódicos del plan y del habeas data se apagan (las pruebas los disparan con los endpoints de Plataforma).
+            b.UseSetting("Validasoft:Plan:SegundosDeVolcado", "1");
+            b.UseSetting("Validasoft:Plan:MinutosMedicionAlmacenamiento", "0");
+            b.UseSetting("Validasoft:Plan:Intervalo", "00:00:00");
+            b.UseSetting("Validasoft:Habeas:Intervalo", "00:00:00");
             b.ConfigureTestServices(s =>
             {
                 // El transporte SMTP se reemplaza, no el enviador: el aislamiento del sandbox (SB-4) sigue activo en las pruebas y lo que
@@ -115,6 +136,8 @@ public sealed class ApiFixture : IAsyncLifetime
                 s.AddSingleton<ITransporteDeCorreo>(Correos);
                 s.RemoveAll<TimeProvider>();
                 s.AddSingleton<TimeProvider>(Reloj);
+                s.RemoveAll<Validasoft.Aplicacion.Identidad.IComprobadorDeDominios>();
+                s.AddSingleton<Validasoft.Aplicacion.Identidad.IComprobadorDeDominios>(Dominios);
                 s.RemoveAll<Validasoft.Aplicacion.Ia.IAnalizadorDeDocumentos>();
                 s.AddSingleton<Validasoft.Aplicacion.Ia.IAnalizadorDeDocumentos>(Analizador);
             });
@@ -124,6 +147,7 @@ public sealed class ApiFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         await Host.DisposeAsync();
+        await Idp.DisposeAsync();
         await _postgres.DisposeAsync();
         await _minio.DisposeAsync();
         Directory.Delete(CarpetaApps, recursive: true);
@@ -158,6 +182,9 @@ public sealed class CorreosCapturados : ITransporteDeCorreo, IEnviadorDeCorreo
         _mensajes.Enqueue(mensaje);
         return Task.CompletedTask;
     }
+
+    /// <summary>Cuántos correos han salido (para medir el avance de un envío masivo).</summary>
+    public int Total => _mensajes.Count;
 
     public IReadOnlyList<MensajeDeCorreo> Para(string correo) =>
         [.. _mensajes.Where(m => string.Equals(m.Para, correo, StringComparison.OrdinalIgnoreCase))];

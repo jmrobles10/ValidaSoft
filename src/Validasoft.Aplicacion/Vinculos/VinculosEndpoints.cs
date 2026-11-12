@@ -127,7 +127,7 @@ public static class VinculosEndpoints
     [WolverinePost("/api/v1/vinculos")]
     [Authorize(Policy = Permisos.VinculosEscribir)]
     public static async Task<IResult> Crear(CrearVinculoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+        IMessageBus mensajes, IProtectorDeSecretos protector, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, TimeProvider reloj, CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
         empresa.UsarMensajeria(mensajes);
@@ -163,6 +163,8 @@ public static class VinculosEndpoints
         if (referencia is not null)
             await AsegurarReferenciaLibreAsync(empresa, referencia, ct);
 
+        // Un vínculo nuevo cuenta para el límite de vínculos activos del plan; con el bloqueo suave y el límite alcanzado no se crean más (OD-17).
+        await plan.ExigirAsync(contexto.TenantRequerido(), Validasoft.Dominio.Plataforma.MetricaDePlan.VinculosActivos, 1, ct);
         var creado = Vinculo.Crear(empresa.EmpresaId, tercero.Id, tipo.Id, await FlujoExplicitoAsync(empresa, dto.FlujoId, tipo, ct), atributos,
             OrigenVinculo.Api, referencia, dto.CorreoInvitacion, ahora);
 

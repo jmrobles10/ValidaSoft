@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type FrameLocator, type Page } from '@playwright/test';
 import { pdf } from '../soporte/archivos';
-import { esperarCorreo, literal, textoSinEnlaces } from '../soporte/correo';
+import { esperarCorreo, literal, mensajesDe, textoSinEnlaces } from '../soporte/correo';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea, irASeccion, observar } from '../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero, esperarTarjeta, responder, subirDocumento } from '../soporte/proveedor';
@@ -193,8 +193,5 @@ test('cuando el tercero responde se avisa a las áreas que vuelven a revisar lo 
 
 /** Asuntos de los correos que recibió `destinatario` (sin esperar: lo que ya llegó). */
 async function fetchCorreosDe(destinatario: string): Promise<string[]> {
-  const mailpit = process.env.E2E_MAILPIT ?? 'http://localhost:8025';
-  const respuesta = await fetch(`${mailpit}/api/v1/search?query=${encodeURIComponent(`to:"${destinatario}"`)}&limit=50`);
-  const { messages } = (await respuesta.json()) as { messages: { Subject: string }[] };
-  return messages.map((m) => m.Subject);
+  return (await mensajesDe(destinatario)).map((m) => m.Subject);
 }

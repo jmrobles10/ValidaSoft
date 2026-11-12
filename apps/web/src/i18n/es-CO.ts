@@ -1,25 +1,34 @@
 /** Textos es-CO (P-16-1: es-CO en el MVP; `en` preparado con las mismas claves). Tono: directo, en segunda persona, con el siguiente paso. */
 import { auditoria } from './es-CO-auditoria';
+import { ayudas } from './es-CO-ayudas';
+import { campanias, erroresCampanias } from './es-CO-campanias';
 import { accesosSoporte, apiKeys, datosMarca, empresasGrupo, erroresConfiguracion, tiposVinculo } from './es-CO-configuracion';
 import { certificadosLista } from './es-CO-certificados-lista';
+import { dominioCorreo, habeas, plan } from './es-CO-derechos-plan-correo';
 import { cuentas, erroresCuentas } from './es-CO-cuentas';
+import { delegaciones, erroresDelegaciones } from './es-CO-delegaciones';
 import { cumplimiento, erroresCumplimiento } from './es-CO-cumplimiento';
 import { documentos, erroresDocumentos } from './es-CO-documentos';
 import { fichaMaestra } from './es-CO-ficha';
 import { cruce, erroresCruce } from './es-CO-cruce';
 import { erroresFichaEmpresa, fichaEmpresa } from './es-CO-ficha-empresa';
+import { fichaAceptada } from './es-CO-ficha-aceptada';
 import { informes } from './es-CO-informes';
 import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
 import { matrizRiesgo } from './es-CO-matriz-riesgo';
+import { erroresSla, sla } from './es-CO-sla';
 import { ia } from './es-CO-ia';
 import { certificados, webhooks } from './es-CO-integraciones';
 import { notificaciones } from './es-CO-notificaciones';
 import { plantillas } from './es-CO-plantillas';
+import { consola } from './es-CO-consola';
+import { sso } from './es-CO-identidad';
+import { erroresSeguridad, reautenticacion } from './es-CO-seguridad';
 import { plataforma } from './es-CO-plataforma';
-import { erroresRecordatorios, recordatorios } from './es-CO-recordatorios';
+import { erroresRecordatorios, flujoRecordatorio, recordatorios } from './es-CO-recordatorios';
 import { erroresRevalidaciones, revalidaciones } from './es-CO-revalidaciones';
 import { erroresRevisionAutomatica, revisionAutomatica } from './es-CO-revision-automatica';
 import { bandeja, erroresRevision, expedientes, flujos, motivos } from './es-CO-revision';
@@ -60,9 +69,16 @@ export const esCO = {
     empresas: 'Empresas del grupo',
     'api-keys': 'API keys',
     'accesos-soporte': 'Accesos de soporte',
+    'plan-grupo': 'Plan del grupo',
+    'habeas-data': 'Habeas data',
+    'dominio-correo': 'Dominio de correo',
     'datos-marca': 'Datos y marca',
     'tipos-vinculo': 'Tipos de vínculo',
     ingreso: 'Ingreso',
+    delegaciones: 'Delegación de revisión',
+    'plazos-de-revision': 'Plazos de revisión',
+    'ayuda-de-documentos': 'Ayuda de documentos',
+    sso: 'Inicio de sesión único',
     'mi-cuenta': 'Mi cuenta',
     configuracion: 'Configuración',
     principal: 'Secciones',
@@ -297,9 +313,11 @@ export const esCO = {
   cumplimiento,
   matrizRiesgo,
   lotes,
+  campanias,
   plazoCargue,
   flujoPlazo,
   flujoReintento,
+  flujoRecordatorio,
   flujoVigencia,
   vigenciaVinculo,
   informes,
@@ -324,13 +342,23 @@ export const esCO = {
   terceros,
   fichaMaestra,
   fichaEmpresa,
+  fichaAceptada,
   cruce,
   auditoria,
   plantillas,
   recordatorios,
+  delegaciones,
+  sla,
+  ayudas,
   ia,
   revisionAutomatica,
   plataforma,
+  habeas,
+  plan,
+  dominioCorreo,
+  sso,
+  consola,
+  reautenticacion,
   motivos,
   flujos,
   historial: {
@@ -665,11 +693,15 @@ export const esCO = {
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
     ...erroresLotes,
+    ...erroresCampanias,
     ...erroresVigencias,
     ...erroresCruce,
     ...erroresRecordatorios,
+    ...erroresDelegaciones,
+    ...erroresSla,
     ...erroresIngreso,
     ...erroresRevisionAutomatica,
+    ...erroresSeguridad,
   },
 } as const;
 

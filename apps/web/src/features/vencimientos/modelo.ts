@@ -64,6 +64,11 @@ export function lote(filas: readonly VencimientoDto[], seleccion: ReadonlySet<st
   return resultado;
 }
 
+/** A cuántos terceros les llega correo con lo que se va a recordar: uno por vínculo, con todos sus documentos (lo dice el diálogo antes de enviar). */
+export function tercerosDelLote(lote: readonly VencimientoARecordarDto[]): number {
+  return new Set(lote.map((v) => v.vinculoId)).size;
+}
+
 /** «Vence hoy», «Vence en 10 días» o «Venció hace 3 días» (los días negativos ya vencieron). */
 export function textoDias(diasRestantes: number, t: TFunction): string {
   if (diasRestantes === 0) return t('vencimientos.dias.venceHoy');

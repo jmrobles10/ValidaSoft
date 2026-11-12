@@ -28,7 +28,8 @@ public static class InicioEndpoints
         var empresaId = empresa.EmpresaId;
         var usuario = contexto.ActorTipo == ActorTipo.Usuario && Guid.TryParse(contexto.ActorId, out var id) ? id : (Guid?)null;
         var areas = await empresa.Areas().Where(a => a.Activa).ToListAsync(ct);
-        var mias = usuario is { } u ? areas.Where(a => a.Miembros.Contains(u)).ToList() : areas;
+        var efectivas = usuario is { } u ? await Delegaciones.DelegacionesDeRevision.AreasQueRevisaAsync(empresa.Sesion, areas, empresaId, u, empresa.Hoy, ct) : null;
+        var mias = efectivas is null ? areas : areas.Where(a => efectivas.Contains(a.Id)).ToList();
         var ids = mias.Select(a => a.Id).ToArray();
 
         var filas = ids.Length == 0

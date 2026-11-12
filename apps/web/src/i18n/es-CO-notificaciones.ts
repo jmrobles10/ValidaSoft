@@ -58,6 +58,18 @@ export const notificaciones = {
       titulo: 'Lote de invitaciones terminado',
       explicacion: 'Cuando termina un lote de invitación masiva que creaste, con cuántas filas se invitaron y cuántas fallaron.',
     },
+    campaniaTerminada: {
+      titulo: 'Campaña de renovación terminada',
+      explicacion: 'Cuando termina una campaña de renovación que creaste, con a cuántos terceros se les abrió la renovación o se les recordó y cuántos fallaron.',
+    },
+    slaPorVencer: {
+      titulo: 'Plazo de revisión por vencer',
+      explicacion: 'Cuando un expediente lleva buena parte del plazo de revisión de un área tuya y aún no se decide.',
+    },
+    slaIncumplido: {
+      titulo: 'Plazo de revisión vencido',
+      explicacion: 'Cuando venció el plazo de revisión de un área tuya sin que se decidiera. A los administradores también les llega si la empresa lo configuró así.',
+    },
     porVencer: {
       titulo: 'Documento por vencer',
       explicacion: 'Cuando un documento de un vínculo de tus áreas está cerca de vencer.',
@@ -81,6 +93,22 @@ export const notificaciones = {
     cupoIa: {
       titulo: 'Cupo de revisión automática',
       explicacion: 'A los administradores, cuando la empresa llega al 80 % y al 100 % de las validaciones con IA incluidas en su plan del mes.',
+    },
+    habeasSolicitud: {
+      titulo: 'Solicitud de habeas data',
+      explicacion: 'A quienes responden el habeas data, cuando un tercero pide consultar, corregir o suprimir sus datos: la ley da 10 o 15 días hábiles para responder.',
+    },
+    habeasPlazo: {
+      titulo: 'Plazo de habeas data por vencer',
+      explicacion: 'A quienes responden el habeas data, cuando a una solicitud le quedan dos días hábiles o menos y cuando vence.',
+    },
+    planLimite: {
+      titulo: 'Límite del plan',
+      explicacion: 'A los administradores, cuando el grupo llega al 80 % y al 100 % de un límite de su plan: usuarios, empresas, vínculos, almacenamiento o llamadas a la API.',
+    },
+    cuentaPropuesta: {
+      titulo: 'Cuenta bancaria por aprobar',
+      explicacion: 'A quienes pueden aprobar cuentas, cuando el tercero propone la cuenta con la que le cobra a la empresa. Solo aparece en la campana.',
     },
     webhookDeshabilitado: {
       titulo: 'Webhook deshabilitado',

@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { esCO } from '../i18n/es-CO';
 import { mensajeDeError } from '../shared/errores';
 import { intentosRestantesDe } from './estado';
 import { esErrorDePasskey } from './passkeys';
@@ -21,4 +22,9 @@ export function mensajeDeIngreso(error: unknown, t: TFunction): string {
   const intentos = intentosRestantesDe(error);
   if (intentos !== null) return t('ingreso.intentos', { count: intentos });
   return mensajeDeError(error, t);
+}
+
+/** Texto de un código de SSO que dejó el servidor en la dirección (`sso_error`): el de su error o, si no lo conocemos, uno general con el siguiente paso. */
+export function mensajeDeCodigoDeSso(codigo: string, t: TFunction): string {
+  return codigo in esCO.errores ? t(`errores.${codigo as keyof typeof esCO.errores}`) : t('ingreso.sso.errorGenerico');
 }

@@ -1,4 +1,5 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import type { UseMutationResult } from '@tanstack/react-query';
 import type { EmpresaDto } from '@validasoft/api-client';
 import { FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { useState, type SubmitEvent } from 'react';
@@ -9,14 +10,25 @@ import { useAvisos } from '../../../shared/useAvisos';
 import { useCrearEmpresa, usePaises } from './api';
 import { borradorEmpresaNuevo, ejemploFolio, validarEmpresa, type BorradorEmpresa, type ErrorEmpresa } from './modelo';
 
+interface Props {
+  claveIdempotencia: string;
+  onCerrar: () => void;
+  onCreada: (empresa: EmpresaDto) => void;
+  /** Quién crea la empresa: por omisión, el grupo desde su propia sesión; la consola de Plataforma pasa la suya (con el grupo ya elegido, PI-4). */
+  mutacion?: UseMutationResult<EmpresaDto, Error, BorradorEmpresa>;
+  /** Para qué grupo es (la consola de Plataforma lo dice debajo del título). */
+  subtitulo?: string;
+}
+
 /** Agregar una razón social al grupo: identificación, razón social y prefijo de folio (no se puede cambiar después). */
-export function DialogoEmpresa({ claveIdempotencia, onCerrar, onCreada }: { claveIdempotencia: string; onCerrar: () => void; onCreada: (empresa: EmpresaDto) => void }) {
+export function DialogoEmpresa({ claveIdempotencia, onCerrar, onCreada, mutacion, subtitulo }: Props) {
   const { t } = useTranslation();
   const mostrar = useAvisos((s) => s.mostrar);
   const [b, setB] = useState<BorradorEmpresa>(borradorEmpresaNuevo);
   const [tocados, setTocados] = useState<ReadonlySet<keyof BorradorEmpresa>>(new Set());
   const paises = usePaises(true);
-  const crear = useCrearEmpresa(claveIdempotencia);
+  const propia = useCrearEmpresa(claveIdempotencia);
+  const crear = mutacion ?? propia;
 
   const tipos = paises.data?.find((p) => p.codigo === b.pais)?.tiposIdentificacion ?? [];
   const tipo = tipos.find((x) => x.codigo === b.tipo);
@@ -48,7 +60,14 @@ export function DialogoEmpresa({ claveIdempotencia, onCerrar, onCreada }: { clav
   return (
     <Dialog open onClose={crear.isPending ? undefined : onCerrar} maxWidth={false} slotProps={{ paper: { sx: { width: 520, maxWidth: 'calc(100% - 32px)' } } }} aria-labelledby="titulo-empresa">
       <FormularioDeDialogo onSubmit={enviar}>
-        <DialogTitle id="titulo-empresa">{t('empresasGrupo.nueva')}</DialogTitle>
+        <DialogTitle id="titulo-empresa">
+          {t('empresasGrupo.nueva')}
+          {subtitulo && (
+            <Typography variant="body2" component="span" sx={{ color: 'text.secondary', display: 'block', mt: 0.25, fontWeight: 400 }}>
+              {subtitulo}
+            </Typography>
+          )}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2}>
             {crear.isError && <Alert severity="error">{mensajeDeError(crear.error, t)}</Alert>}

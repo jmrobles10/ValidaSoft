@@ -47,7 +47,7 @@ public static class PlanIaEndpoints
         var antes = existente?.ADto(true);
         var plan = existente ?? PlanDeIaEmpresa.Nuevo(empresaId, ahora);
         plan.Actualizar(new CambiosDePlanIa(dto.ValidacionesIncluidasMes, dto.AdicionalHabilitado, dto.TopeAdicionalMes, dto.ApiKeyOpenAi,
-            dto.ModeloPorDefecto, dto.ModeloEscalamiento, dto.UmbralConfianza, dto.Activo), protector.Proteger, ahora);
+            dto.ModeloPorDefecto, dto.ModeloEscalamiento, dto.UmbralConfianza, dto.Activo, dto.PrecioAdicional), protector.Proteger, ahora);
         var despues = plan.ADto(true);
 
         sesion.Store(plan);
@@ -90,7 +90,7 @@ public static class PlanIaEndpoints
     public static PlanIaEmpresaDto ADto(this PlanDeIaEmpresa p, bool configurado) =>
         new(p.EmpresaId, configurado, p.ValidacionesIncluidasMes, p.AdicionalHabilitado, p.TopeAdicionalMes, p.LlaveConfigurada,
             p.LlaveConfigurada ? p.UltimosCuatroLlave : null, p.ModeloPorDefecto, p.ModeloEscalamiento, p.UmbralConfianza, p.Activo,
-            configurado ? p.ActualizadoEn : null);
+            configurado ? p.ActualizadoEn : null, p.PrecioAdicional);
 
     public static PlanIaResumenDto Resumen(this PlanDeIaEmpresa p, bool configurado) =>
         new(configurado, p.ValidacionesIncluidasMes, p.AdicionalHabilitado, p.TopeAdicionalMes, p.LlaveConfigurada, p.ModeloPorDefecto,

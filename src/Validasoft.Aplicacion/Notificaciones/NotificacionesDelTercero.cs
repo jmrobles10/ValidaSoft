@@ -61,6 +61,9 @@ public static class TiposNotificacionTercero
     /// <summary>La empresa aprobó o rechazó la cuenta bancaria que designó para cobrarle (solo campana).</summary>
     public const string Cuenta = "tercero.cuenta";
 
+    /// <summary>La validación con una empresa está por vencer, venció o la empresa abrió su renovación (VV, campañas de renovación, OP-1).</summary>
+    public const string Vigencia = "tercero.vigencia";
+
     /// <summary>La empresa devolvió a revisión una validación que ya estaba aprobada (desaprobar, DS-2).</summary>
     public const string Desaprobado = "tercero.desaprobado";
 
@@ -69,11 +72,11 @@ public static class TiposNotificacionTercero
 
     public static readonly IReadOnlyList<string> Todos =
         [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion, Cuenta,
-            Desaprobado, Reintegrado];
+            Desaprobado, Reintegrado, Vigencia];
 
     /// <summary>Los que además de la campana van por correo (si el tercero no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
-        [Observado, Recordatorio, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Desaprobado, Reintegrado];
+        [Observado, Recordatorio, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Desaprobado, Reintegrado, Vigencia];
 
     public static bool QuiereCorreo(PreferenciasDelTercero? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -131,6 +134,10 @@ public static class PlanificadorDeNotificacionesDelTercero
                     "Recordatorio: observaciones pendientes",
                     $"{empresa} te recuerda que tu validación {e.Folio} " +
                     (recordatorio.DiasObservado > 0 ? $"lleva {Dias(recordatorio.DiasObservado)} con observaciones por corregir." : "tiene observaciones por corregir.")));
+            case ExpedienteAbierto { Tipo: TipoExpediente.Renovacion, AbiertoPor.Tipo: not ActorTipo.Sistema }:
+                // La empresa abrió la renovación a mano (campaña de renovación, OP-1): lo del sistema (vigencia, vencimiento) ya avisa por su evento.
+                return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Vigencia,
+                    "Tu empresa abrió tu renovación", $"{empresa} abrió la renovación de tu validación {e.Folio}: ratifica o actualiza tu información."));
             case ExpedienteAbierto { Tipo: TipoExpediente.Actualizacion }:
                 return await DeExpedienteAsync(evento, contexto, orden, ct, (e, empresa) => (TiposNotificacionTercero.Actualizacion,
                     "Hay información por actualizar", $"{empresa} necesita que actualices {Lista(e.Requisitos.Select(r => r.Nombre).ToList(), "tu información")}."));
@@ -179,6 +186,12 @@ public static class PlanificadorDeNotificacionesDelTercero
                 return await DeCertificadoAsync(evento, contexto, revocado.Emision, revocado: true, orden, ct);
             case CertificadoSuspendido suspendido:
                 return await DeCertificadoAsync(evento, contexto, suspendido.Emision, revocado: false, orden, ct);
+            case VinculoPorVencer porVencer:
+                return await DeLaVigenciaAsync(evento, contexto, orden, ct, "Tu validación está por vencer",
+                    (empresa, vinculo) => $"La validación con {empresa} vence el {Fecha(porVencer.VigenteHasta)} ({Dias(porVencer.DiasRestantes)}). Ratifica o actualiza tu información antes de esa fecha.");
+            case VinculoVencido { Causa: CausaDeVencimiento.Vigencia } vencido:
+                return await DeLaVigenciaAsync(evento, contexto, orden, ct, "Tu validación venció",
+                    (empresa, vinculo) => $"La validación con {empresa} venció. Ratifica o actualiza tu información para volver a estar al día.");
             case InvitacionEnviada:
                 return await DeInvitacionAsync(evento, contexto, orden, ct);
             case CuentaDesignadaAprobada aprobada:
@@ -284,6 +297,23 @@ public static class PlanificadorDeNotificacionesDelTercero
 
     private static string Descripcion(CuentaParaDesignar? cuenta) =>
         cuenta is null ? "designada" : $"{cuenta.Banco} {Dominio.Terceros.CuentaBancaria.Enmascarar(cuenta.Ultimos4)}";
+
+    /// <summary>
+    /// La validación del tercero con una empresa está por vencer o venció por su vigencia (VV-3): aviso en su campana (el correo con el enlace lo manda el
+    /// barrido de vigencias). El enlace lleva a la renovación abierta o, si no hay, a la empresa.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> DeLaVigenciaAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct, string titulo,
+        Func<string, Vinculo, string> mensaje)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo ||
+            vinculo.TerceroId == Guid.Empty)
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "La empresa";
+        var expediente = vinculo.ExpedienteAbiertoId is { } id ? await contexto.ExpedienteAsync(tenantId, id, ct) : null;
+        return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, vinculo.Id, expediente?.Id, expediente?.Folio, TiposNotificacionTercero.Vigencia,
+            titulo, mensaje(empresa, vinculo), expediente is null ? $"/empresas/{vinculo.Id}" : $"/expediente/{expediente.Id}", orden), tenantId);
+    }
 
     private static async Task<PlanDeNotificaciones> DeInvitacionAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)
     {

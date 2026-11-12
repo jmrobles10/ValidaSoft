@@ -162,6 +162,15 @@ public sealed class AlmacenS3(FabricaClienteS3 clientes, TimeProvider reloj) : I
         await clientes.Interno.PutObjectAsync(solicitud, ct);
     }
 
+    public async Task GuardarArchivoAsync(string bucket, string clave, string rutaLocal, string tipoContenido, IReadOnlyDictionary<string, string> metadatos,
+        CancellationToken ct)
+    {
+        var solicitud = new PutObjectRequest { BucketName = bucket, Key = clave, FilePath = rutaLocal, ContentType = tipoContenido, UseChunkEncoding = false };
+        foreach (var (nombre, valor) in metadatos)
+            solicitud.Metadata.Add(nombre, valor);
+        await clientes.Interno.PutObjectAsync(solicitud, ct);
+    }
+
     public async Task EliminarAsync(string bucket, string clave, CancellationToken ct)
     {
         try

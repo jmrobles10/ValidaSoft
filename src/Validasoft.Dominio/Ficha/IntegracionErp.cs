@@ -169,7 +169,12 @@ public sealed record RepresentanteLegalPrincipal(OrigenDelRepresentante Origen, 
                     Nombres = general.Nombres,
                     Apellidos = general.Apellidos,
                     Correo = general.Correo,
-                    Telefono = general.Telefono
+                    Telefono = general.Telefono,
+                    // Lo propio de la persona natural (FD-8): el lugar y la fecha de expedición que antes viajaban vacíos al ERP.
+                    FechaExpedicion = general.FechaExpedicion,
+                    LugarExpedicion = general.LugarExpedicion,
+                    Pep = general.Pep,
+                    VinculoPep = general.VinculoPep
                 }, null);
         }
 

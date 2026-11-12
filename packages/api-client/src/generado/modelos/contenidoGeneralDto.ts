@@ -45,4 +45,12 @@ export interface ContenidoGeneralDto {
   /** @nullable */
   anioInicio: number | null;
   representanteLegal: null | RepresentanteLegalErpDto;
+  /** @nullable */
+  pep?: boolean | null;
+  /** @nullable */
+  vinculoPep?: boolean | null;
+  /** @nullable */
+  fechaExpedicion?: string | null;
+  /** @nullable */
+  lugarExpedicion?: string | null;
 }

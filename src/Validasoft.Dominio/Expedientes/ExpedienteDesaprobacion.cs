@@ -144,6 +144,8 @@ public sealed partial class Expediente
             area.Estado = EstadoAreaExpediente.Esperando;
             area.PendienteDesde = null;
             area.SlaVence = null;
+            area.SlaAvisadoEn = null;
+            area.SlaIncumplidoEn = null;
         }
 
         foreach (var requisito in Requisitos)

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Marten;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,28 @@ namespace Validasoft.Aplicacion.Invitaciones;
 /// </summary>
 public sealed record ProcesarTandaDeLote(Guid TenantId, Guid LoteId, Guid Ejecucion);
 
+/// <summary>
+/// Métricas de la invitación masiva (OD-24), publicadas con <see cref="Meter"/> (<c>Validasoft.Lotes</c>; OpenTelemetry las recoge y las
+/// pruebas de rendimiento las leen con un <see cref="MeterListener"/>): filas procesadas por resultado, reintentos por carrera de
+/// concurrencia, tandas y la duración de cada fila.
+/// </summary>
+public static class MetricasDeLotes
+{
+    public const string NombreDelMedidor = "Validasoft.Lotes";
+
+    private static readonly Meter Medidor = new(NombreDelMedidor);
+
+    /// <summary>Filas que terminaron, con la etiqueta <c>resultado</c>: <c>exitosa</c> o <c>fallida</c> (con su <c>codigo</c>).</summary>
+    public static readonly Counter<long> Filas = Medidor.CreateCounter<long>("lotes.filas", description: "Filas del lote que terminaron.");
+
+    /// <summary>Veces que una fila se repitió porque perdió una carrera (otro proceso creó el mismo tercero o escribió en el vínculo).</summary>
+    public static readonly Counter<long> Reintentos = Medidor.CreateCounter<long>("lotes.filas_reintentadas", description: "Reintentos de una fila por carrera.");
+
+    public static readonly Counter<long> Tandas = Medidor.CreateCounter<long>("lotes.tandas", description: "Tandas procesadas.");
+
+    public static readonly Histogram<double> DuracionDeFila = Medidor.CreateHistogram<double>("lotes.duracion_fila", unit: "ms", description: "Duración de procesar una fila.");
+}
+
 /// <summary>Lo que dejó una fila exitosa.</summary>
 public sealed record ResultadoDeFila(AccionFilaLote Accion, Guid TerceroId, Guid VinculoId, bool TerceroCreado, string? Detalle);
 
@@ -41,7 +65,7 @@ public static class ProcesarTandaDeLoteHandler
 
     public static async Task Handle(ProcesarTandaDeLote mensaje, IDocumentStore store, ISesiones sesiones, IWolverineRuntime runtime,
         IMessageContext mensajes, IProtectorDeSecretos protector, IConfiguration configuracion, TimeProvider reloj,
-        ILogger<LoteDeInvitacion> logger, IEntornos entornos, CancellationToken ct)
+        ILogger<LoteDeInvitacion> logger, IEntornos entornos, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, CancellationToken ct)
     {
         var tamano = Math.Clamp(configuracion.GetValue("Validasoft:Lotes:TamanoTanda", TandaPorOmision), 1, 1000);
         LoteDeInvitacion? lote;
@@ -59,12 +83,13 @@ public static class ProcesarTandaDeLoteHandler
 
         var catalogo = await CatalogoDeLote.CargarAsync(store, mensaje.TenantId, lote.EmpresaId, ct);
         Guid? sandbox = await entornos.EsSandboxAsync(mensaje.TenantId, ct) ? mensaje.TenantId : null; // terceros de pruebas (SB-4)
+        MetricasDeLotes.Tandas.Add(1);
         for (var i = 0; i < filas.Count; i++)
         {
             // Cada 10 filas mira si lo pausaron o cancelaron: la pausa no espera a que termine la tanda.
             if (i > 0 && i % 10 == 0 && !await SigueVigenteAsync(store, mensaje, ct))
                 break;
-            await ProcesarFilaAsync(sesiones, runtime, protector, mensaje.TenantId, sandbox, lote, filas[i], catalogo, reloj, logger, ct);
+            await ProcesarFilaAsync(sesiones, runtime, protector, plan, mensaje.TenantId, sandbox, lote, filas[i], catalogo, reloj, logger, ct);
         }
 
         // Avance de la tanda y, si queda trabajo, la siguiente (por el outbox de este mensaje).
@@ -100,9 +125,10 @@ public static class ProcesarTandaDeLoteHandler
         return new TotalesDeLote(pendientes + exitosas + fallidas + duplicadas + invalidas, pendientes, exitosas, fallidas, duplicadas, invalidas);
     }
 
-    private static async Task ProcesarFilaAsync(ISesiones sesiones, IWolverineRuntime runtime, IProtectorDeSecretos protector, Guid tenantId,
+    private static async Task ProcesarFilaAsync(ISesiones sesiones, IWolverineRuntime runtime, IProtectorDeSecretos protector, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, Guid tenantId,
         Guid? sandbox, LoteDeInvitacion lote, FilaDeLote fila, CatalogoDeLote catalogo, TimeProvider reloj, ILogger logger, CancellationToken ct)
     {
+        var cronometro = Stopwatch.StartNew();
         for (var intento = 1; ; intento++)
         {
             var ahora = reloj.GetUtcNow();
@@ -119,21 +145,25 @@ public static class ProcesarTandaDeLoteHandler
                 if (actual is not { Estado: EstadoFilaLote.Pendiente })
                     return;
 
-                var resultado = await InvitarAsync(sesion, bus, protector, tenantId, sandbox, lote, actual.Datos, catalogo, ahora, ct);
+                var resultado = await InvitarAsync(sesion, bus, protector, tenantId, sandbox, lote, actual.Datos, catalogo, ahora, ct, plan);
                 actual.MarcarExitosa(resultado.Accion, resultado.TerceroId, resultado.VinculoId, resultado.TerceroCreado, resultado.Detalle, ahora);
                 sesion.Store(actual);
                 await sesion.SaveChangesAsync(ct);
+                MetricasDeLotes.Filas.Add(1, new KeyValuePair<string, object?>("resultado", "exitosa"));
+                MetricasDeLotes.DuracionDeFila.Record(cronometro.Elapsed.TotalMilliseconds);
                 return;
             }
             catch (ReglaDeNegocioException e)
             {
                 await MarcarFallidaAsync(sesiones, tenantId, fila.Id, new ErrorDeFila(null, e.Codigo, e.Message), ahora, ct);
+                MetricasDeLotes.Filas.Add(1, new KeyValuePair<string, object?>("resultado", "fallida"), new KeyValuePair<string, object?>("codigo", e.Codigo));
                 return;
             }
             catch (Exception e) when (e is not OperationCanceledException && intento < Intentos)
             {
                 // Una carrera (otro proceso creó el mismo tercero o escribió en el vínculo): se repite con datos frescos.
                 logger.LogDebug(e, "Reintento de la fila {Fila} del lote {Lote}.", fila.N, lote.Id);
+                MetricasDeLotes.Reintentos.Add(1, new KeyValuePair<string, object?>("excepcion", e.GetType().Name));
                 await Task.Delay(Random.Shared.Next(20, 100 * intento), ct);
             }
             catch (Exception e) when (e is not OperationCanceledException)
@@ -141,6 +171,7 @@ public static class ProcesarTandaDeLoteHandler
                 logger.LogWarning(e, "La fila {Fila} del lote {Lote} falló.", fila.N, lote.Id);
                 await MarcarFallidaAsync(sesiones, tenantId, fila.Id, new ErrorDeFila(null, "error-inesperado", "No se pudo procesar la fila; reinténtala."),
                     ahora, ct);
+                MetricasDeLotes.Filas.Add(1, new KeyValuePair<string, object?>("resultado", "fallida"), new KeyValuePair<string, object?>("codigo", "error-inesperado"));
                 return;
             }
         }
@@ -162,7 +193,8 @@ public static class ProcesarTandaDeLoteHandler
     /// no acepta ⇒ reenvío al correo de la fila; tercero que ya aceptó ⇒ nada (<c>SinCambios</c>). Bloqueado o terminado ⇒ 409.
     /// </summary>
     public static async Task<ResultadoDeFila> InvitarAsync(IDocumentSession sesion, IMessageBus mensajes, IProtectorDeSecretos protector, Guid tenantId,
-        Guid? sandbox, LoteDeInvitacion lote, FilaDeLoteEntrada datos, CatalogoDeLote catalogo, DateTimeOffset ahora, CancellationToken ct)
+        Guid? sandbox, LoteDeInvitacion lote, FilaDeLoteEntrada datos, CatalogoDeLote catalogo, DateTimeOffset ahora, CancellationToken ct,
+        Validasoft.Aplicacion.Plataforma.ControlDePlan? plan = null)
     {
         var tipo = catalogo.Tipo(datos.TipoVinculo)
                    ?? throw ReglaDeNegocioException.Validacion("tipo-vinculo-invalido", $"El tipo de vínculo «{datos.TipoVinculo}» no existe o está inactivo.");
@@ -190,6 +222,9 @@ public static class ProcesarTandaDeLoteHandler
         var existente = await sesion.Query<Vinculo>().FirstOrDefaultAsync(v => v.EmpresaId == empresaId && v.TerceroId == terceroId && v.TipoVinculoId == tipoId, ct);
         if (existente is null)
         {
+            // El vínculo nuevo cuenta para el límite del plan: con el bloqueo suave y el límite alcanzado, la fila falla (se reintenta al ampliar el plan, OD-17).
+            if (plan is not null)
+                await plan.ExigirAsync(tenantId, Validasoft.Dominio.Plataforma.MetricaDePlan.VinculosActivos, 1, ct);
             var creado = Vinculo.Crear(empresaId, terceroId, tipoId, catalogo.Flujo(datos.Flujo, tipoId), ValidadorDeAtributos.Validar(tipo, null),
                 OrigenVinculo.Invitacion, null,
                 datos.Correo ?? string.Empty, ahora);

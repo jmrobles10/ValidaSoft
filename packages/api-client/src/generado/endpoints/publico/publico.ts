@@ -35,7 +35,9 @@ import type {
   CertificadoPublicoDto,
   CompletitudSeccionDto,
   ConfirmacionCargaDto,
+  ConstanciaHabeasDto,
   ContactoDeEmpresaDto,
+  CrearSolicitudHabeasDto,
   CuentaBancariaPublicaDto,
   DescargaDto,
   DescargarCertificadoVerificadoParams,
@@ -45,6 +47,7 @@ import type {
   EstadoFichaDto,
   EvaluarSeccionFichaParams,
   ExpedientePublicoDto,
+  ExportacionBovedaDto,
   GuardarSeccionDto,
   GuardarSeccionFichaParams,
   IResult,
@@ -70,6 +73,7 @@ import type {
   SeccionGuardadaDto,
   SesionTerceroDto,
   SolicitarAccesoDto,
+  SolicitudHabeasDto,
   SolicitudRecibidaDto,
   VerificarCertificadoParams,
   VerificarOtpDto,
@@ -1619,6 +1623,610 @@ export function useObtenerSesionActual<TData = Awaited<ReturnType<typeof obtener
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getObtenerSesionActualQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const exportarBoveda = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExportacionBovedaDto>(
+      {url: `/public/v1/boveda/exportar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getExportarBovedaMutationKey = () => ['exportarBoveda'] as const;
+
+export const getExportarBovedaMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportarBoveda>>, TError,void, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof exportarBoveda>>, TError,void, TContext> => {
+
+const mutationKey = getExportarBovedaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportarBoveda>>, void> = () => {
+
+
+          return  exportarBoveda(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExportarBovedaMutationResult = NonNullable<Awaited<ReturnType<typeof exportarBoveda>>>
+
+    export type ExportarBovedaMutationError = ErrorType<unknown>
+
+
+    export const useExportarBoveda = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportarBoveda>>, TError,void, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof exportarBoveda>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getExportarBovedaMutationOptions(options), queryClient);
+    }
+    export const listarExportacionesBoveda = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExportacionBovedaDto[]>(
+      {url: `/public/v1/exportaciones`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListarExportacionesBovedaQueryKey = () => {
+    return [
+    `/public/v1/exportaciones`
+    ] as const;
+    }
+
+
+export const getListarExportacionesBovedaQueryOptions = <TData = Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarExportacionesBovedaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarExportacionesBoveda>>> = ({ signal }) => listarExportacionesBoveda(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarExportacionesBovedaQueryResult = NonNullable<Awaited<ReturnType<typeof listarExportacionesBoveda>>>
+export type ListarExportacionesBovedaQueryError = ErrorType<void>
+
+
+export function useListarExportacionesBoveda<TData = Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarExportacionesBoveda>>,
+          TError,
+          Awaited<ReturnType<typeof listarExportacionesBoveda>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarExportacionesBoveda<TData = Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarExportacionesBoveda>>,
+          TError,
+          Awaited<ReturnType<typeof listarExportacionesBoveda>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarExportacionesBoveda<TData = Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarExportacionesBoveda<TData = Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarExportacionesBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarExportacionesBovedaQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerExportacionBoveda = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ExportacionBovedaDto>(
+      {url: `/public/v1/exportaciones/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerExportacionBovedaQueryKey = (id: string,) => {
+    return [
+    `/public/v1/exportaciones/${id}`
+    ] as const;
+    }
+
+
+export const getObtenerExportacionBovedaQueryOptions = <TData = Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerExportacionBovedaQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerExportacionBoveda>>> = ({ signal }) => obtenerExportacionBoveda(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerExportacionBovedaQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerExportacionBoveda>>>
+export type ObtenerExportacionBovedaQueryError = ErrorType<void>
+
+
+export function useObtenerExportacionBoveda<TData = Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerExportacionBoveda>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerExportacionBoveda>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerExportacionBoveda<TData = Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerExportacionBoveda>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerExportacionBoveda>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerExportacionBoveda<TData = Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerExportacionBoveda<TData = Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerExportacionBoveda>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerExportacionBovedaQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const descargarExportacionBoveda = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<DescargaDto>(
+      {url: `/public/v1/exportaciones/${id}/descarga`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getDescargarExportacionBovedaMutationKey = () => ['descargarExportacionBoveda'] as const;
+
+export const getDescargarExportacionBovedaMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof descargarExportacionBoveda>>, TError,DescargarExportacionBovedaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof descargarExportacionBoveda>>, TError,DescargarExportacionBovedaMutationVariables, TContext> => {
+
+const mutationKey = getDescargarExportacionBovedaMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof descargarExportacionBoveda>>, DescargarExportacionBovedaMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  descargarExportacionBoveda(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DescargarExportacionBovedaMutationResult = NonNullable<Awaited<ReturnType<typeof descargarExportacionBoveda>>>
+
+    export type DescargarExportacionBovedaMutationError = ErrorType<void>
+    export type DescargarExportacionBovedaMutationVariables = {id: string}
+
+    export const useDescargarExportacionBoveda = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof descargarExportacionBoveda>>, TError,DescargarExportacionBovedaMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof descargarExportacionBoveda>>,
+        TError,
+        DescargarExportacionBovedaMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDescargarExportacionBovedaMutationOptions(options), queryClient);
+    }
+    export const crearSolicitudHabeas = (
+    crearSolicitudHabeasDto: BodyType<CrearSolicitudHabeasDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SolicitudHabeasDto>(
+      {url: `/public/v1/solicitudes-habeas`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: crearSolicitudHabeasDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getCrearSolicitudHabeasMutationKey = () => ['crearSolicitudHabeas'] as const;
+
+export const getCrearSolicitudHabeasMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crearSolicitudHabeas>>, TError,CrearSolicitudHabeasMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof crearSolicitudHabeas>>, TError,CrearSolicitudHabeasMutationVariables, TContext> => {
+
+const mutationKey = getCrearSolicitudHabeasMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof crearSolicitudHabeas>>, CrearSolicitudHabeasMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  crearSolicitudHabeas(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CrearSolicitudHabeasMutationResult = NonNullable<Awaited<ReturnType<typeof crearSolicitudHabeas>>>
+    export type CrearSolicitudHabeasMutationBody = BodyType<CrearSolicitudHabeasDto>
+    export type CrearSolicitudHabeasMutationError = ErrorType<unknown>
+    export type CrearSolicitudHabeasMutationVariables = {data: BodyType<CrearSolicitudHabeasDto>}
+
+    export const useCrearSolicitudHabeas = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof crearSolicitudHabeas>>, TError,CrearSolicitudHabeasMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof crearSolicitudHabeas>>,
+        TError,
+        CrearSolicitudHabeasMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCrearSolicitudHabeasMutationOptions(options), queryClient);
+    }
+    export const listarSolicitudesHabeas = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SolicitudHabeasDto[]>(
+      {url: `/public/v1/solicitudes-habeas`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListarSolicitudesHabeasQueryKey = () => {
+    return [
+    `/public/v1/solicitudes-habeas`
+    ] as const;
+    }
+
+
+export const getListarSolicitudesHabeasQueryOptions = <TData = Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarSolicitudesHabeasQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarSolicitudesHabeas>>> = ({ signal }) => listarSolicitudesHabeas(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarSolicitudesHabeasQueryResult = NonNullable<Awaited<ReturnType<typeof listarSolicitudesHabeas>>>
+export type ListarSolicitudesHabeasQueryError = ErrorType<void>
+
+
+export function useListarSolicitudesHabeas<TData = Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarSolicitudesHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof listarSolicitudesHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSolicitudesHabeas<TData = Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarSolicitudesHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof listarSolicitudesHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSolicitudesHabeas<TData = Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSolicitudesHabeas<TData = Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSolicitudesHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarSolicitudesHabeasQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerSolicitudHabeas = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SolicitudHabeasDto>(
+      {url: `/public/v1/solicitudes-habeas/${id}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerSolicitudHabeasQueryKey = (id: string,) => {
+    return [
+    `/public/v1/solicitudes-habeas/${id}`
+    ] as const;
+    }
+
+
+export const getObtenerSolicitudHabeasQueryOptions = <TData = Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerSolicitudHabeasQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>> = ({ signal }) => obtenerSolicitudHabeas(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerSolicitudHabeasQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>>
+export type ObtenerSolicitudHabeasQueryError = ErrorType<void>
+
+
+export function useObtenerSolicitudHabeas<TData = Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerSolicitudHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerSolicitudHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSolicitudHabeas<TData = Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerSolicitudHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerSolicitudHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSolicitudHabeas<TData = Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerSolicitudHabeas<TData = Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerSolicitudHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerSolicitudHabeasQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const obtenerConstanciaHabeas = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ConstanciaHabeasDto>(
+      {url: `/public/v1/solicitudes-habeas/${id}/constancia`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerConstanciaHabeasQueryKey = (id: string,) => {
+    return [
+    `/public/v1/solicitudes-habeas/${id}/constancia`
+    ] as const;
+    }
+
+
+export const getObtenerConstanciaHabeasQueryOptions = <TData = Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError = ErrorType<void>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerConstanciaHabeasQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>> = ({ signal }) => obtenerConstanciaHabeas(id, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerConstanciaHabeasQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>>
+export type ObtenerConstanciaHabeasQueryError = ErrorType<void>
+
+
+export function useObtenerConstanciaHabeas<TData = Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError = ErrorType<void>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerConstanciaHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerConstanciaHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerConstanciaHabeas<TData = Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerConstanciaHabeas>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerConstanciaHabeas>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerConstanciaHabeas<TData = Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerConstanciaHabeas<TData = Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError = ErrorType<void>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerConstanciaHabeas>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerConstanciaHabeasQueryOptions(id,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

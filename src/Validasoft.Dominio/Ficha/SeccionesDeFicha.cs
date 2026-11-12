@@ -17,6 +17,13 @@ public static class CodigosDeSeccion
 
     /// <summary>Canónico de archivo (global) con el que el tercero sube un soporte ad hoc de una sección (FM-5).</summary>
     public const string SoporteFicha = "SOPORTE_FICHA";
+
+    /// <summary>
+    /// Las cuentas bancarias del tercero como lo que respalda la certificación bancaria en el mapa de respaldo (FD-5, docs/14 §5.1). No es
+    /// una sección de la ficha (no está en <see cref="CatalogoDeSecciones.Todas"/>, no tiene versiones ni se acepta): las cuentas tienen su
+    /// propio flujo (CB-1…CB-3) y este código solo nombra «lo que respalda» para el cruce.
+    /// </summary>
+    public const string CuentasBancarias = "CUENTAS_BANCARIAS";
 }
 
 /// <summary>

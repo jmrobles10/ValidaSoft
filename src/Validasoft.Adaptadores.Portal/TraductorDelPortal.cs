@@ -96,7 +96,8 @@ public static partial class TraductorDelPortal
 
         var natural = tercero.TipoPersona == TipoPersona.Natural;
         avisos.Seccion = CodigosDeSeccion.Legal;
-        if (natural && origen.CamaraComercio is { Count: > 0 })
+        // La fila propia de la persona natural (la que crea la invitación del SRM) ya se importó en la General: su PEP y su expedición (FD-8).
+        if (natural && origen.CamaraComercio?.Count(c => !EsFilaPropia(c, tercero)) is > 0)
             avisos.Advertir("personas", "no-aplica-a-persona-natural",
                 "La persona natural no diligencia la información legal (FM-17): las filas de TerCamaraComercio no se importan.");
         else
@@ -250,6 +251,9 @@ public static partial class TraductorDelPortal
         if (natural && string.IsNullOrWhiteSpace(ig.TerApellido))
             avisos.Advertir("apellidos", "apellidos-vacios", "El Portal no separa los apellidos (TerApellido vacío): quedan por diligenciar.", ig.TigNombre);
 
+        // Lo propio de la persona natural (FD-8): el Portal lo guarda en su fila de TerCamaraComercio (representante legal de sí misma).
+        var propia = natural ? origen.CamaraComercio?.OrderBy(c => c.TerCamId).FirstOrDefault(c => EsFilaPropia(c, tercero)) : null;
+
         return new DatosGenerales
         {
             RazonSocial = natural ? null : ig.TigNombre,
@@ -264,9 +268,18 @@ public static partial class TraductorDelPortal
             CiiuPrincipal = ciiu,
             PaginaWeb = ig.TigPaginaWeb,
             CertificadoIso = ig.TigCertificadoISO,
-            AnioInicio = ig.TigAnioInicioActividades
+            AnioInicio = ig.TigAnioInicioActividades,
+            Pep = propia?.TerCamEsPep,
+            VinculoPep = propia?.TerCamVinculoPep,
+            FechaExpedicion = propia is null ? null : Fecha(propia.TerFechaExpedicion, "fecha_expedicion", avisos),
+            LugarExpedicion = propia?.TerLugarExpedicion
         };
     }
+
+    /// <summary>La fila de TerCamaraComercio que es la propia persona natural: representante legal con su mismo número de documento.</summary>
+    private static bool EsFilaPropia(TerCamaraComercio c, TerceroTraducido tercero) =>
+        c.TerTipoRegistro == 1 && !string.IsNullOrWhiteSpace(c.TerCamDocumento) &&
+        new string(c.TerCamDocumento.Where(char.IsLetterOrDigit).ToArray()).TrimStart('0').Equals(tercero.Identificacion.Numero.TrimStart('0'), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>La dirección estructurada de AyF, solo si se puede armar entera (vía conocida, números válidos); si no, nula con advertencia.</summary>
     private static DireccionEstructurada? Direccion(TerDireccionEstructurada? d, Avisos avisos)

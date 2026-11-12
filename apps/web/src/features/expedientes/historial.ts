@@ -199,6 +199,10 @@ export function eventoExpedienteATimeline(
         motivo: texto(campo(datos, 'justificacion')),
       };
     }
+    // Plazo de revisión de un área (OP-9): qué área y hasta cuándo.
+    case 'sla_por_vencer':
+    case 'sla_incumplido':
+      return { ...base, detalle: area(campo(datos, 'areaId')) };
     // Verificaciones externas (H7): sin nombres de personas en el título; el detalle está en el panel de verificaciones.
     case 'verificaciones_requeridas':
       return {

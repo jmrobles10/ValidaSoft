@@ -56,6 +56,11 @@ public sealed class FilaBandeja
     /// <summary>Desde cuándo espera el área (activación de su etapa o reenvío del tercero).</summary>
     public DateTimeOffset? Desde { get; set; }
 
+    /// <summary>Plazo de revisión del área en horas (SLA, OP-10) y cuándo vence en la ronda en curso; nulos si no tiene plazo.</summary>
+    public int? SlaHoras { get; set; }
+
+    public DateTimeOffset? SlaVence { get; set; }
+
     public DateTimeOffset ActualizadoEn { get; set; }
 
     public static string Clave(Guid expedienteId, Guid areaId) => $"{expedienteId:N}:{areaId:N}";
@@ -89,6 +94,8 @@ public static class ProyeccionBandejaRevision
             RequisitosPendientes = area.RequisitosPorDecidir,
             Desaprobaciones = e.Desaprobaciones,
             Desde = area.PendienteDesde,
+            SlaHoras = area.SlaHoras,
+            SlaVence = area.SlaVence,
             ActualizadoEn = e.ActualizadoEn
         }));
 }
