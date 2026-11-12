@@ -90,4 +90,5 @@ export const camposFicha = {
   politica_hseq: 'Política HSEQ',
   licencias_y_permisos: 'Licencias y permisos',
   especialidades: 'Especialidades',
+  declaracion_pep: 'Declaración jurada PEP',
 } as const;

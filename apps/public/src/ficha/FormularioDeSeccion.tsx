@@ -11,7 +11,7 @@ import type { EditorSeccion } from './useEditorSeccion';
 
 /** El formulario de cada sección sobre el mismo editor (datos en snake_case, mensajes del servidor por ruta). */
 export function FormularioDeSeccion({ codigo, estado, editor, selectorPeriodo }: { codigo: CodigoSeccion; estado: EstadoFichaDto; editor: EditorSeccion; selectorPeriodo?: ReactNode }) {
-  const comun = { onCambiar: editor.cambiar, mensaje: editor.mensaje, deshabilitado: editor.guardando };
+  const comun = { onCambiar: editor.cambiar, mensaje: editor.mensaje, hayEnRuta: editor.hayEnRuta, deshabilitado: editor.guardando };
   switch (codigo) {
     case 'FICHA_GENERAL':
       return <FormularioGeneral {...comun} datos={editor.datos} tipoPersona={estado.tipoPersona} />;

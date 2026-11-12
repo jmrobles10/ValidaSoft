@@ -82,7 +82,8 @@ public sealed record RechazarPorCumplimientoDto(IReadOnlyList<string> Motivos, s
 
 /// <summary>Una persona relacionada del tercero (información legal del informe SAGRILAFT).</summary>
 public sealed record PersonaInformeDto(
-    string Rol, string TipoIdentificacion, string Identificacion, string Nombre, decimal? Participacion, bool EsPep, bool VinculoPep, bool BeneficiarioFinal);
+    string Rol, string TipoIdentificacion, string Identificacion, string Nombre, decimal? Participacion, bool EsPep, bool VinculoPep, bool BeneficiarioFinal,
+    bool DeclaracionPep = false, int Indice = 0);
 
 /// <summary>
 /// Una fila por tercero con su situación de cumplimiento más reciente (las columnas del informe del SRM y lo que no tenía):
@@ -94,7 +95,7 @@ public sealed record FilaTerceroSagrilafDto(
     string? Pais, string? Ciudad, string? Correo, string? Actividad, string EstadoVinculo, DateTimeOffset? UltimaConsultaListas, string? ProveedorListas,
     string EstadoListas, int CoincidenciasPorAnalizar, DateTimeOffset? FechaEstudio, string? Oficial, int? NivelRiesgo, string? DebidaDiligencia,
     string? Concepto, bool? ConflictoDeInteres, DateTimeOffset? ProximaRevision, int? DiasParaRevision, string EstadoDebidaDiligencia, int Personas,
-    int Pep);
+    int Pep, int PepSinDeclaracion = 0);
 
 /// <summary>Cantidad de estudios cerrados y de consultas por mes (tendencia de los últimos 12 meses).</summary>
 public sealed record MesDeCumplimientoDto(string Mes, int Estudios, int Consultas);

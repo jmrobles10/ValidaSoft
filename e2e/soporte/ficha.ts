@@ -25,13 +25,13 @@ export async function abrirSeccion(page: Page, ruta: string, titulo: string): Pr
   await expect(page.getByRole('heading', { level: 1, name: titulo })).toBeVisible();
 }
 
-async function elegirOpcion(page: Page, combo: string, escribir: string, opcion: RegExp | string): Promise<void> {
+export async function elegirOpcion(page: Page, combo: string, escribir: string, opcion: RegExp | string): Promise<void> {
   await page.getByRole('combobox', { name: combo, exact: true }).fill(escribir);
   await page.getByRole('option', { name: opcion }).first().click();
 }
 
 /** Lo común de la información general: contacto, domicilio y actividad (en Colombia, Bogotá, CIIU 4663). */
-async function llenarContactoYDomicilio(page: Page, telefono: string, direccion: string): Promise<void> {
+export async function llenarContactoYDomicilio(page: Page, telefono: string, direccion: string): Promise<void> {
   await page.getByRole('textbox', { name: 'Teléfono', exact: true }).fill(telefono);
   await elegirOpcion(page, 'País', 'Colombia', 'Colombia');
   await elegirOpcion(page, 'Ciudad', 'Bogot', /^Bogotá/);

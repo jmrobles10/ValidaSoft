@@ -11,7 +11,7 @@ import { esRol, nombrePersona } from './personas';
  * Información legal (`FICHA_LEGAL`, fase 1 de FM-7): las personas relacionadas como tarjetas (agregar, editar en un
  * diálogo, quitar) y la firma de revisoría fiscal si el revisor actúa por una firma.
  */
-export function FormularioLegal({ datos, onCambiar, mensaje, deshabilitado }: PropsFormulario<DatosLegales>) {
+export function FormularioLegal({ datos, onCambiar, mensaje, hayEnRuta, deshabilitado }: PropsFormulario<DatosLegales>) {
   const { t } = useTranslation();
   const personas = datos.personas ?? [];
   // Índice de la persona en edición; `personas.length` = una nueva.
@@ -40,7 +40,7 @@ export function FormularioLegal({ datos, onCambiar, mensaje, deshabilitado }: Pr
       ) : (
         <Stack component="ul" spacing={1.5} aria-label={t('ficha.legal.personas')} sx={{ p: 0, m: 0, listStyle: 'none' }}>
           {personas.map((persona, i) => (
-            <TarjetaPersona key={`${persona.rol ?? ''}-${persona.numero ?? ''}-${String(i)}`} persona={persona} indice={i} mensaje={mensaje} onEditar={() => setEditando(i)} onQuitar={() => quitar(i)} deshabilitado={deshabilitado} />
+            <TarjetaPersona key={`${persona.rol ?? ''}-${persona.numero ?? ''}-${String(i)}`} persona={persona} indice={i} mensaje={mensaje} hayEnRuta={hayEnRuta} onEditar={() => setEditando(i)} onQuitar={() => quitar(i)} deshabilitado={deshabilitado} />
           ))}
         </Stack>
       )}
@@ -57,6 +57,7 @@ export function FormularioLegal({ datos, onCambiar, mensaje, deshabilitado }: Pr
           inicial={personas[editando] ?? {}}
           nueva={editando >= personas.length}
           mensaje={(campo) => mensaje(`personas[${String(editando)}].${campo}`)}
+          hayEnRuta={hayEnRuta ? (prefijo) => hayEnRuta(`personas[${String(editando)}].${prefijo}`) : undefined}
           onGuardar={(persona) => guardarPersona(editando, persona)}
           onCerrar={() => setEditando(null)}
         />
@@ -69,18 +70,21 @@ interface PropsTarjeta {
   persona: PersonaRelacionada;
   indice: number;
   mensaje: (ruta: string) => string | null;
+  hayEnRuta?: (prefijo: string) => boolean;
   onEditar: () => void;
   onQuitar: () => void;
   deshabilitado: boolean;
 }
 
 /** Una persona: nombre, rol, identificación y cuántos datos le faltan según el servidor. */
-function TarjetaPersona({ persona, indice, mensaje, onEditar, onQuitar, deshabilitado }: PropsTarjeta) {
+function TarjetaPersona({ persona, indice, mensaje, hayEnRuta, onEditar, onQuitar, deshabilitado }: PropsTarjeta) {
   const { t } = useTranslation();
   const nombre = nombrePersona(persona) || t('ficha.legal.sinNombre');
   const ruta = `personas[${String(indice)}]`;
   const campos = ['rol', 'tipo_identificacion', 'numero', 'dv', 'nombres', 'apellidos', 'cargo', 'porcentaje', 'pep', 'vinculo_pep', 'fecha_expedicion', 'lugar_expedicion', 'fecha_nacimiento', 'nacionalidad', 'residencia', 'correo', 'telefono', 'tipo_representacion'];
-  const marcados = campos.filter((c) => mensaje(`${ruta}.${c}`)).length;
+  // La declaración PEP cuenta como un dato por corregir si el servidor señaló algo dentro de ella.
+  const marcados = campos.filter((c) => mensaje(`${ruta}.${c}`)).length + (hayEnRuta?.(`${ruta}.declaracion_pep`) ? 1 : 0);
+  const faltaDeclaracion = persona.pep === true && !persona.declaracion_pep;
   const errorFila = mensaje(ruta);
 
   return (
@@ -93,7 +97,10 @@ function TarjetaPersona({ persona, indice, mensaje, onEditar, onQuitar, deshabil
               .filter(Boolean)
               .join(' · ')}
           </Typography>
-          {marcados > 0 && <Chip size="small" color="warning" variant="outlined" label={t('ficha.legal.faltan', { count: marcados })} sx={{ alignSelf: 'flex-start' }} />}
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+            {marcados > 0 && <Chip size="small" color="warning" variant="outlined" label={t('ficha.legal.faltan', { count: marcados })} />}
+            {faltaDeclaracion && <Chip size="small" color="warning" variant="outlined" label={t('ficha.pep.tarjeta.falta')} />}
+          </Stack>
           {errorFila && <Typography sx={{ color: 'error.main', fontSize: 14 }}>{errorFila}</Typography>}
         </Stack>
         <Stack direction="row" spacing={1}>

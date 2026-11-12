@@ -336,7 +336,7 @@ public class TipoDocumentoTenantTests
     public void El_catalogo_canonico_tiene_codigos_unicos_y_no_trae_los_retirados()
     {
         CatalogoCanonico.Todos.Select(t => t.Codigo).ShouldBeUnique();
-        foreach (var retirado in new[] { "CERT_BANCARIA", "INFO_BANCARIA", "TRATAMIENTO_DATOS", "INFO_GENERAL", "CEDULA_REPRESENTANTE", "POLIZA_RC" })
+        foreach (var retirado in new[] { "CERT_BANCARIA", "INFO_BANCARIA", "TRATAMIENTO_DATOS", "INFO_GENERAL", "CEDULA_REPRESENTANTE", "POLIZA_RC", "DECLARACION_PEP" })
             CatalogoCanonico.Buscar(retirado).ShouldBeNull();
         CatalogoCanonico.Buscar("rut")!.Codigo.ShouldBe("RUT");
     }

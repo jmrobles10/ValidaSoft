@@ -18,6 +18,9 @@ export interface DetalleSeccionRequisitoProps {
   documentos: readonly DocumentoVistaEmpresaDto[];
   puedeVer: boolean;
   onVer: (documento: DocumentoEnVisor) => void;
+  /** Empresa y tercero del expediente: con ellos se descarga el PDF de la declaración PEP de las personas de la sección. */
+  empresaId?: string;
+  terceroId?: string;
 }
 
 /**
@@ -25,7 +28,7 @@ export interface DetalleSeccionRequisitoProps {
  * actualización lo que cambió frente a la versión aceptada (FM-28), el cruce con los documentos que la respaldan (F5), los
  * datos de la versión en solo lectura y sus soportes. Nada se calcula aquí: todo viene del expediente.
  */
-export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeVer, onVer }: DetalleSeccionRequisitoProps) {
+export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeVer, onVer, empresaId, terceroId }: DetalleSeccionRequisitoProps) {
   const { t } = useTranslation();
   const actual = requisito.versionActual?.n ?? null;
   const cubre = actual ?? seccion.versionEvaluada;
@@ -43,7 +46,7 @@ export function DetalleSeccionRequisito({ requisito, seccion, documentos, puedeV
       {seccion.cruce && <CruceSeccion cruce={seccion.cruce} />}
       {esObjeto(seccion.datos) && cubre !== null && (
         <SeccionFicha titulo={t('fichaEmpresa.requisito.datos', { n: String(cubre) })}>
-          <DatosDeSeccion datos={seccion.datos} />
+          <DatosDeSeccion datos={seccion.datos} empresaId={empresaId} terceroId={terceroId} seccion={seccion.seccion} version={cubre} />
         </SeccionFicha>
       )}
       {(seccion.soportes.length > 0 || seccion.exigeSoporte) && (

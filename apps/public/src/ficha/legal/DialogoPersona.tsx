@@ -2,6 +2,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, St
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CampoCifra, CampoFechaFicha, CampoSiNo, CampoTexto, Rejilla } from '../campos';
+import { PreguntaPep } from '../pep/PreguntaPep';
 import { PAISES } from '../paises';
 import { SelectorUnico } from '../selectores';
 import { ROLES, TIPOS_IDENTIFICACION_PERSONA, type PersonaRelacionada } from '../tipos';
@@ -12,6 +13,8 @@ interface Props {
   nueva: boolean;
   /** Mensaje del servidor para un campo de esta persona (`pep` ⇒ `personas[i].pep`). */
   mensaje: (campo: string) => string | null;
+  /** ¿Hay un error o faltante del servidor en alguna ruta de esta persona bajo el prefijo (`declaracion_pep`)? */
+  hayEnRuta?: (prefijo: string) => boolean;
   onGuardar: (persona: PersonaRelacionada) => void;
   onCerrar: () => void;
 }
@@ -20,7 +23,7 @@ interface Props {
  * Agregar o editar una persona relacionada. Solo cambia la lista del formulario: se guarda con la sección. En el celular
  * ocupa toda la pantalla. El DV de un NIT lo calcula Validasoft.
  */
-export function DialogoPersona({ inicial, nueva, mensaje, onGuardar, onCerrar }: Props) {
+export function DialogoPersona({ inicial, nueva, mensaje, hayEnRuta, onGuardar, onCerrar }: Props) {
   const { t } = useTranslation();
   const tema = useTheme();
   const pantallaCompleta = useMediaQuery(tema.breakpoints.down('sm'));
@@ -72,7 +75,7 @@ export function DialogoPersona({ inicial, nueva, mensaje, onGuardar, onCerrar }:
               <CampoTexto etiqueta={t('ficha.legal.cargo')} valor={p.cargo} onCambiar={(v) => cambiar({ cargo: v })} mensaje={mensaje('cargo')} maxLength={150} />
               <CampoCifra etiqueta={t('ficha.legal.porcentaje')} valor={p.porcentaje} onCambiar={(v) => cambiar({ porcentaje: v })} mensaje={mensaje('porcentaje')} />
             </Rejilla>
-            <CampoSiNo etiqueta={t('ficha.legal.pep')} valor={p.pep} onCambiar={(v) => cambiar({ pep: v })} mensaje={mensaje('pep')} />
+            <PreguntaPep etiqueta={t('ficha.legal.pep')} pep={p.pep} declaracion={p.declaracion_pep} origen={{ tipo: 'persona', persona: p }} onCambiar={cambiar} mensaje={mensaje} hayEnRuta={hayEnRuta} />
             <CampoSiNo etiqueta={t('ficha.legal.vinculoPep')} valor={p.vinculo_pep} onCambiar={(v) => cambiar({ vinculo_pep: v })} mensaje={mensaje('vinculo_pep')} />
             <Rejilla>
               <CampoFechaFicha etiqueta={t('ficha.legal.fechaExpedicion')} valor={p.fecha_expedicion} onCambiar={(v) => cambiar({ fecha_expedicion: v })} mensaje={mensaje('fecha_expedicion')} />

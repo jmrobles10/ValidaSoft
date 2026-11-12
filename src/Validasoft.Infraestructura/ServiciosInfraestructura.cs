@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
 using Validasoft.Aplicacion.Expedientes;
+using Validasoft.Aplicacion.Ficha;
 using Validasoft.Aplicacion.Ia;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Interesado;
@@ -220,6 +221,7 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorCompliance>();
         servicios.AddSingleton<IVerificadorDeListas, Verificaciones.VerificadorSimulado>();
         servicios.AddSingleton<IGeneradorDePdfDeEvidencia, Verificaciones.GeneradorPdfDeEvidencia>();
+        servicios.AddSingleton<IGeneradorDePdfDeDeclaracionPep, Ficha.GeneradorPdfDeDeclaracionPep>();
         servicios.AddSingleton<ConsultaDeListas>();
         servicios.AddSingleton<TareasDeVerificaciones>();
         servicios.AddHostedService<Verificaciones.ProcesadorDeVerificaciones>();

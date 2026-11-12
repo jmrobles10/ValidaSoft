@@ -60,6 +60,12 @@ public sealed record DatosGenerales
 
     /// <summary>Lugar (ciudad) de expedición del documento de identidad. Solo persona natural; texto libre de hasta 100 caracteres.</summary>
     public string? LugarExpedicion { get; init; }
+
+    /// <summary>
+    /// Declaración jurada PEP (HU 49093). Solo persona natural; obligatoria con <see cref="Pep"/> en <c>true</c> y, si responde que no,
+    /// se conserva «inactiva». La jurídica la diligencia por cada persona de la información legal.
+    /// </summary>
+    public DeclaracionPep? DeclaracionPep { get; init; }
 }
 
 /// <summary>Dirección en el formato estructurado colombiano (opcional): «Calle 45 # 12 - 08, Oficina 301».</summary>
@@ -240,6 +246,9 @@ public sealed record PersonaRelacionada
     public string? Correo { get; init; }
 
     public string? Telefono { get; init; }
+
+    /// <summary>Declaración jurada PEP de la persona: obligatoria con <see cref="Pep"/> en <c>true</c>; con <c>false</c> se conserva «inactiva».</summary>
+    public DeclaracionPep? DeclaracionPep { get; init; }
 }
 
 /// <summary>Firma de revisoría fiscal cuando el revisor actúa por una firma.</summary>

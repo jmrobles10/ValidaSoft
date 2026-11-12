@@ -18,4 +18,6 @@ export interface PersonaInformeDto {
   esPep: boolean;
   vinculoPep: boolean;
   beneficiarioFinal: boolean;
+  declaracionPep?: boolean;
+  indice?: number;
 }

@@ -62,7 +62,7 @@ public static class ContenidoParaErp
                 d.Complemento),
             Ciudad(catalogos, g.Ciudad), g.Pais, g.Telefono, g.Correo, Codigo(catalogos, CatalogoDePlataforma.ActividadesEconomicas, g.CiiuPrincipal),
             [.. (g.CiiuSecundarias ?? []).Select(c => Codigo(catalogos, CatalogoDePlataforma.ActividadesEconomicas, c)!)], g.PaginaWeb, g.CertificadoIso,
-            g.AnioInicio, representante, g.Pep, g.VinculoPep, g.FechaExpedicion, g.LugarExpedicion);
+            g.AnioInicio, representante, g.Pep, g.VinculoPep, g.FechaExpedicion, g.LugarExpedicion, Declaracion(g.Pep, g.DeclaracionPep));
     }
 
     private static ContenidoTributarioDto Tributaria(DatosTributarios t, ICatalogosDeFicha catalogos)
@@ -83,12 +83,16 @@ public static class ContenidoParaErp
                 f.TarifaPorMil))]);
     }
 
+    /// <summary>Resumen de la declaración PEP activa (con «Sí» a PEP); la inactiva no viaja.</summary>
+    private static DeclaracionPepErpDto? Declaracion(bool? pep, DeclaracionPep? d) =>
+        pep == true && d is not null ? new DeclaracionPepErpDto(d.FechaFirma, d.FirmaEnCalidad?.ToString(), d.FirmaHuella) : null;
+
     private static ContenidoLegalDto Legal(DatosLegales l) =>
         new(Representante(RepresentanteLegalPrincipal.Elegir(null, null, l)),
             [
                 .. (l.Personas ?? []).Select(p => new PersonaRelacionadaDto(p.Rol?.ToString(), p.TipoRepresentacion, p.TipoIdentificacion, p.Numero, p.Dv,
                     p.Nombres, p.Apellidos, p.Cargo, p.Porcentaje, p.Pep, p.VinculoPep, p.FechaExpedicion, p.FechaNacimiento, p.Nacionalidad, p.Residencia,
-                    p.Correo, p.Telefono, p.LugarExpedicion))
+                    p.Correo, p.Telefono, p.LugarExpedicion, Declaracion(p.Pep, p.DeclaracionPep)))
             ],
             l.RevisorFiscalFirma is { } firma ? new FirmaRevisoraDto(firma.Nit, firma.RazonSocial) : null);
 

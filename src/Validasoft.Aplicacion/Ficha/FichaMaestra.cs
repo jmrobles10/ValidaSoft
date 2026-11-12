@@ -83,12 +83,18 @@ public static class GuardadoDeSecciones
     public sealed record Resultado(SeccionDeFicha Seccion, bool Creada, EstadoDeFicha Estado, TipoPersona TipoPersona);
 
     public static async Task<Resultado> GuardarAsync(ISesiones sesiones, Guid terceroId, DefinicionDeSeccion definicion, int? periodo, GuardarSeccionDto dto,
-        OrigenDeSeccion origen, string autor, TimeProvider reloj, CancellationToken ct, IMessageBus? mensajes = null, IContextoSolicitud? solicitud = null)
+        OrigenDeSeccion origen, string autor, TimeProvider reloj, CancellationToken ct, IMessageBus? mensajes = null, IContextoSolicitud? solicitud = null,
+        string? ip = null)
     {
         var hoy = reloj.Hoy();
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, hoy);
         var tercero = await TerceroAsync(sesiones, terceroId, ct);
-        var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, periodoValido, hoy);
+        // Quien guarda es el tercero: «Sí» a PEP exige la declaración y la firma lleva su IP (HU 49093). Un sistema de origen no la exige.
+        var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, periodoValido, hoy)
+        {
+            ExigeDeclaracionPep = origen == OrigenDeSeccion.Tercero,
+            IpDeFirma = ip
+        };
         var datos = ReglasDeFicha.Leer(definicion, dto.Datos, contexto);
 
         ICatalogosDeFicha catalogos;
@@ -168,7 +174,8 @@ public static class GuardadoDeSecciones
         var hoy = reloj.Hoy();
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, hoy);
         var tercero = await TerceroAsync(sesiones, terceroId, ct);
-        var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, periodoValido, hoy);
+        // La vista previa responde lo mismo que el guardado del tercero, también ante una declaración PEP que falta.
+        var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, periodoValido, hoy) { ExigeDeclaracionPep = true };
         var datos = ReglasDeFicha.Leer(definicion, dto.Datos, contexto);
 
         ICatalogosDeFicha catalogos;
@@ -366,7 +373,7 @@ public static class FichaMaestraEndpoints
         var terceroId = SesionDeTercero.De(http.User).TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         var resultado = await GuardadoDeSecciones.GuardarAsync(sesiones, terceroId, definicion, periodo, dto, OrigenDeSeccion.Tercero, terceroId.ToString(),
-            reloj, ct, mensajes, contexto);
+            reloj, ct, mensajes, contexto, BovedaEndpoints.Ip(http));
         var vigente = resultado.Seccion.Vigente!;
         await using var boveda = sesiones.ConsultaBoveda();
         return new SeccionGuardadaDto(vigente.Numero, resultado.Creada, vigente.Completitud.ADto(),

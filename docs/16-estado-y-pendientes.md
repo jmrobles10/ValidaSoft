@@ -141,6 +141,11 @@ Rama lista para revisar, **sin push ni PR**. Decisiones **ING-1…ING-9** en el 
 - **Queda fuera** (§4.6): WorkOS/OIDC, autocompletado de passkeys en el campo del correo (conditional UI), reautenticación
   para acciones sensibles, avisos por correo de cambios de passkey y consulta de la auditoría de ingreso de Plataforma.
 
+### 3.5 Declaración jurada PEP (rama `feature/declaracion-pep`, 2026-11-12)
+Rama lista para revisar (con push, **sin PR**). Cierra «lo mismo de la HU 49093» del SRM y el Portal; decisiones **DP-1…DP-17** en el [registro](decisiones/registro.md#5-sexquinquagies-declaración-jurada-pep-en-la-ficha-hu-49093-2026-11-12) (con la tabla de paridad HU ↔ Validasoft), diseño en [14 §4.2](14-ficha-maestra-del-tercero.md) y contrato en [05 §2.3](05-api-contratos-y-webhooks.md).
+- **Qué hace:** «Sí» a «¿Es PEP?» abre el diálogo «Declaración jurada PEP» (datos básicos, condición PEP, vínculo con otra PEP, juramento y firma dibujada o subida), en la General de la natural y en cada persona de la legal; el **backend** exige la declaración (422 `declaracion-pep-requerida`), sella la firma (huella, fecha, IP) y la versiona con la sección; la empresa la ve en la revisión, la ficha aceptada y Tercero 360 con **Descargar PDF** (por persona, estilo de los PDF de Validasoft); el informe SAGRILAFT muestra «Sin declaración» y el Excel suma columnas; el ZIP del expediente lleva `declaraciones-pep/`; el importador del Portal lee la declaración activa; el canónico `DECLARACION_PEP` se retira.
+- **Pendiente** (DP-16): logo en el PDF, descarga por el propio tercero, importar la imagen de las firmas del Portal (hoy solo su huella), y el «Registro automático por RUT» de la HU.
+
 ### 3.4 Vínculo «En revisión» por una actualización (`feature/vinculo-en-revision-por-actualizacion`, 2026-11-12)
 Rama sobre `main`, **sin PR**. Decisiones **VR-1…VR-13** en el [registro](decisiones/registro.md#5-quinquaquinquagies-vínculo-en-revisión-por-una-actualización-2026-11-12-vr);
 contratos en [05 §2.3.1](05-api-contratos-y-webhooks.md). Producto decidió que un tercero ya aprobado que actualiza un documento o una sección deja el **documento y

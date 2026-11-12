@@ -48,4 +48,5 @@ export interface FilaTerceroSagrilafDto {
   estadoDebidaDiligencia: string;
   personas: number;
   pep: number;
+  pepSinDeclaracion?: number;
 }
