@@ -46,6 +46,15 @@ export function tipoNormalizado(tipo: string): string {
     .replace(/[^a-z0-9_]/g, '');
 }
 
+/**
+ * Título de un evento que aún no tiene texto en es-CO (`consentimientos_registrados` → «Consentimientos registrados»): siempre con la inicial en
+ * mayúscula, como todos los rótulos del historial. Lo usan el historial del vínculo y el del expediente.
+ */
+export function tituloDeTipoDesconocido(tipo: string): string {
+  const texto = tipo.replace(/_/g, ' ').trim();
+  return texto.charAt(0).toLocaleUpperCase('es-CO') + texto.slice(1);
+}
+
 function esTipoConocido(tipo: string): tipo is TipoConocido {
   return tipo in esCO.historial && !['referencia', 'invitacion', 'hasta', 'actor', 'vigencia'].includes(tipo);
 }
@@ -84,7 +93,7 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
   const datos = evento.datos as Record<string, unknown>;
   const base: EventoTimeline = {
     id: `${String(evento.version)}-${tipo}`,
-    titulo: esTipoConocido(tipo) ? t(`historial.${tipo}`) : tipo.replace(/_/g, ' '),
+    titulo: esTipoConocido(tipo) ? t(`historial.${tipo}`) : tituloDeTipoDesconocido(tipo),
     fecha: evento.fecha,
     actor: actorDe(evento, contexto, t),
     sistema: evento.sistema,

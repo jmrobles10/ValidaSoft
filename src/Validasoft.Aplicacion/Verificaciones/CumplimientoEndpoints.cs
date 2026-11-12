@@ -14,8 +14,9 @@ namespace Validasoft.Aplicacion.Verificaciones;
 
 /// <summary>
 /// Listas restrictivas de la empresa activa (VE-7, VE-11): proveedor (Infolaft, el principal entre los reales), credenciales
-/// propias cifradas con <see cref="IProtectorDeSecretos"/> (la clave es de solo escritura: vuelve «configurada · …1234») y
-/// consumo del mes por proveedor. Todo cambio queda en la auditoría, sin la clave.
+/// propias de los proveedores del legado (Stradata, Compliance) cifradas con <see cref="IProtectorDeSecretos"/> (la clave es de
+/// solo escritura: vuelve «configurada · …1234») y consumo del mes por proveedor. <b>Infolaft es de la plataforma (G-2, PP-5):</b> la
+/// empresa no ve ni carga sus credenciales; solo si está disponible y su cuota. Todo cambio queda en la auditoría, sin la clave.
 /// </summary>
 public static partial class ListasRestrictivasEndpoints
 {
@@ -31,14 +32,15 @@ public static partial class ListasRestrictivasEndpoints
         if (!RegexMes().IsMatch(periodo))
             throw ReglaDeNegocioException.Validacion("mes-invalido", "El mes debe tener la forma AAAA-MM (por ejemplo 2026-11).");
         var configuracion = await empresa.Sesion.LoadAsync<ListasRestrictivasEmpresa>(empresa.EmpresaId, ct);
-        return await DtoAsync(empresa, configuracion, consulta, periodo, ct);
+        return await DtoAsync(empresa, configuracion, await consulta.PlataformaAsync(ct), consulta, periodo, ct);
     }
 
     /// <summary>
     /// Cambia las credenciales de un proveedor real y/o el proveedor de la empresa (<c>proveedor: ""</c> = el de la
     /// instalación). 422 <c>proveedor-invalido</c>, <c>proveedor-no-habilitado</c> (la instalación no lo habilitó),
-    /// <c>credenciales-requeridas</c>, <c>usuario-requerido</c>, <c>clave-requerida</c>, <c>clave-invalida</c>, <c>url-invalida</c>,
-    /// <c>cuota-invalida</c>, <c>modo-busqueda-invalido</c>.
+    /// <c>credenciales-requeridas</c> (la empresa no cargó las suyas, o la plataforma no configuró la de Infolaft),
+    /// <c>credenciales-de-plataforma</c> (Infolaft no lleva credenciales de la empresa), <c>usuario-requerido</c>, <c>clave-requerida</c>,
+    /// <c>clave-invalida</c>, <c>url-invalida</c>, <c>cuota-invalida</c>, <c>modo-busqueda-invalido</c>.
     /// </summary>
     [WolverinePut("/api/v1/configuracion/listas-restrictivas")]
     [Authorize(Policy = Permisos.ConfiguracionEscribir)]
@@ -48,8 +50,9 @@ public static partial class ListasRestrictivasEndpoints
         var ahora = reloj.GetUtcNow();
         var grupoId = contexto.TenantRequerido(); // la clave de las credenciales es del grupo (CU-20)
         var mes = UsoMensualListas.MesDe(CalculadoraDeVigencia.Fecha(ahora));
+        var plataforma = await consulta.PlataformaAsync(ct);
         var existente = await empresa.Sesion.LoadAsync<ListasRestrictivasEmpresa>(empresa.EmpresaId, ct);
-        var antes = existente is null ? null : await DtoAsync(empresa, existente, consulta, mes, ct);
+        var antes = existente is null ? null : await DtoAsync(empresa, existente, plataforma, consulta, mes, ct);
         var configuracion = existente ?? ListasRestrictivasEmpresa.Nueva(empresa.EmpresaId);
 
         if (dto.Credenciales is { } c)
@@ -66,19 +69,20 @@ public static partial class ListasRestrictivasEndpoints
             var nombre = string.IsNullOrWhiteSpace(proveedor) ? null : ProveedoresDeListas.Normalizar(proveedor) ?? proveedor;
             if (nombre is not null && ProveedoresDeListas.Normalizar(nombre) is { } conocido && !consulta.Opciones.Proveedor(conocido).Habilitado)
                 throw ReglaDeNegocioException.Validacion("proveedor-no-habilitado", $"{conocido} no está habilitado en esta instalación.");
-            configuracion.ElegirProveedor(nombre, ahora);
+            configuracion.ElegirProveedor(nombre, ahora,
+                cuentaDeLaPlataforma: nombre is not null && ProveedoresDeListas.Normalizar(nombre) is { } elegido && plataforma?.CredencialesDe(elegido) is not null);
         }
 
         empresa.Sesion.Store(configuracion);
-        var despues = await DtoAsync(empresa, configuracion, consulta, mes, ct);
+        var despues = await DtoAsync(empresa, configuracion, plataforma, consulta, mes, ct);
         Auditoria.Registrar(empresa.Sesion, contexto, Entidad, empresa.EmpresaId.ToString(),
             existente is null ? AccionConfiguracion.Creado : AccionConfiguracion.Modificado, antes, despues, ahora, empresa.EmpresaId);
         await empresa.Sesion.SaveChangesAsync(ct);
         return despues;
     }
 
-    private static async Task<ListasRestrictivasConfigDto> DtoAsync(SesionDeEmpresa empresa, ListasRestrictivasEmpresa? configuracion, ConsultaDeListas consulta,
-        string mes, CancellationToken ct)
+    private static async Task<ListasRestrictivasConfigDto> DtoAsync(SesionDeEmpresa empresa, ListasRestrictivasEmpresa? configuracion,
+        ListasRestrictivasDePlataforma? plataforma, ConsultaDeListas consulta, string mes, CancellationToken ct)
     {
         var empresaId = empresa.EmpresaId;
         var usos = await empresa.Sesion.Query<UsoMensualListas>().Where(u => u.EmpresaId == empresaId && u.Mes == mes).ToListAsync(ct);
@@ -87,15 +91,19 @@ public static partial class ListasRestrictivasEndpoints
             .Where(p => p != ProveedoresDeListas.Simulado || opciones.PermitirSimulado)
             .Select(p =>
             {
+                // Infolaft es de la plataforma: la empresa solo sabe si está disponible y su cuota; nada de usuario, clave, URL, plan ni modo.
+                if (ProveedoresDeListas.EsDeLaPlataforma(p))
+                    return new ProveedorListasDto(p, true, p == ProveedoresDeListas.Infolaft, opciones.Proveedor(p).Habilitado, plataforma?.CredencialesDe(p) is not null,
+                        null, null, null, null, plataforma?.CredencialesDe(p)?.CuotaMensual, null, DeLaPlataforma: true);
                 var credenciales = configuracion?.CredencialesDe(p);
                 return new ProveedorListasDto(p, ProveedoresDeListas.Reales.Contains(p), p == ProveedoresDeListas.Infolaft, opciones.Proveedor(p).Habilitado,
                     credenciales is not null || p == ProveedoresDeListas.Simulado, credenciales?.Usuario, credenciales?.UltimosCuatroClave, credenciales?.UrlBase,
                     credenciales?.Plan, credenciales?.CuotaMensual, credenciales?.ModoBusqueda.ToString());
             })
             .ToList();
-        return new ListasRestrictivasConfigDto(configuracion?.Proveedor, consulta.Efectivo(configuracion), proveedores,
+        return new ListasRestrictivasConfigDto(configuracion?.Proveedor, consulta.Efectivo(configuracion, plataforma), proveedores,
             [.. usos.OrderBy(u => u.Proveedor).Select(u => new UsoListasDto(u.Mes, u.Proveedor, u.Consultas, u.Busquedas, u.ConCoincidencias,
-                configuracion?.CredencialesDe(u.Proveedor)?.CuotaMensual))],
+                ProveedoresDeListas.EsDeLaPlataforma(u.Proveedor) ? plataforma?.CredencialesDe(u.Proveedor)?.CuotaMensual : configuracion?.CredencialesDe(u.Proveedor)?.CuotaMensual))],
             opciones.DiasMonitoreo, opciones.VigenciaEstudioDias);
     }
 

@@ -23,4 +23,5 @@ export interface ProveedorListasDto {
   cuotaMensual: number | null;
   /** @nullable */
   modoBusqueda: string | null;
+  deLaPlataforma?: boolean;
 }

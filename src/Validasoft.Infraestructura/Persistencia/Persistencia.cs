@@ -153,6 +153,7 @@ public static class ConfiguracionMarten
                 opts.Schema.For<CodigosDeRecuperacion>().DatabaseSchemaName("identidad").UseOptimisticConcurrency(true);
                 // Configuración global de la instalación que cambia la consola (PI-17).
                 opts.Schema.For<ConfiguracionDePlataforma>().DatabaseSchemaName("plataforma");
+                opts.Schema.For<ListasRestrictivasDePlataforma>().DatabaseSchemaName("plataforma");
 
                 // Textos legales versionados (aviso de la plataforma y textos de cada empresa): globales e inmutables.
                 opts.Schema.For<TextoLegal>().DatabaseSchemaName("plataforma")

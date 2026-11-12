@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ChipEstado, textoTooltip, tonoDe } from './ChipEstado';
-import { iniciales } from './datos';
+import { iniciales, ValorLargo } from './datos';
 import { APARIENCIA_ESTADO, aparienciaDe, type Estado, type EstadoVinculo } from './estados';
 import { agruparPorDia, LineaDeTiempo, type EventoTimeline } from './LineaDeTiempo';
 import { contraste, derivarPaletaEmpresa } from './marcaEmpresa';
@@ -149,6 +149,28 @@ describe('LineaDeTiempo', () => {
     expect(iniciales('Ana Administradora')).toBe('AA');
     expect(iniciales('Olga María Oficial')).toBe('OO');
     expect(iniciales('Tú')).toBe('T');
+  });
+});
+
+describe('ValorLargo (un valor largo no se parte a mitad de la palabra)', () => {
+  it('un correo se parte solo en la «@»: el usuario con la «@» y el dominio, cada uno en su propio tramo recortable', () => {
+    const { container } = conTema(<ValorLargo valor="proveedor.971986726.4c57ac@e2e.validasoft.co" partirEn="@" />);
+    const tramos = [...container.querySelectorAll('span > span')].map((tramo) => tramo.textContent);
+    expect(tramos).toEqual(['proveedor.971986726.4c57ac@', 'e2e.validasoft.co']);
+    // El texto completo sigue siendo el del correo (se puede seleccionar y copiar).
+    expect(container.textContent).toBe('proveedor.971986726.4c57ac@e2e.validasoft.co');
+    for (const tramo of container.querySelectorAll('span > span')) {
+      const estilo = getComputedStyle(tramo);
+      expect(estilo.whiteSpace).toBe('nowrap');
+      expect(estilo.textOverflow).toBe('ellipsis');
+    }
+  });
+
+  it('sin «@» (o sin cortar) es un solo tramo, y el valor completo está en el tooltip', async () => {
+    const { container } = conTema(<ValorLargo valor="PRV-0000000000000000000001" mono />);
+    expect([...container.querySelectorAll('span > span')].map((tramo) => tramo.textContent)).toEqual(['PRV-0000000000000000000001']);
+    await userEvent.hover(container.querySelector('span') as HTMLElement);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('PRV-0000000000000000000001');
   });
 });
 

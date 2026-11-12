@@ -281,31 +281,126 @@ public class VerificacionesTests
     }
 
     [Fact]
-    public void La_configuracion_de_listas_guarda_la_clave_cifrada_y_exige_credenciales_para_un_proveedor_real()
+    public void Confirmar_la_ultima_coincidencia_del_monitoreo_la_saca_de_la_bandeja_del_oficial_y_una_reconsulta_la_vuelve_a_pedir()
     {
+        var e = Abrir(Listas);
+        e = Aplicar(e, e.RegistrarConsultaDeListas(Resultado("ref-1", EnOfac()), "sistema", Ahora));
+        e = Aplicar(e, e.ResolverCoincidencia(e.BuscarVerificacion(TipoVerificacion.ListasRestrictivas)!.Coincidencias[0].Id, DecisionCoincidencia.Descartada,
+            "Homónimo.", _oficial, Ahora));
+        e = Aplicar(e, e.EmitirVeredicto(_a, _ana, Veredicto.Aprobado, [], null, Ahora));
+        var monitoreo = MonitoreoDeListas.Iniciar(e, null, 30, Ahora)!;
+
+        var nueva = new CoincidenciaHallada(ClaveTercero, "ONU", "ACEROS SAS", null, 90m);
+        var nuevas = monitoreo.RegistrarConsulta(Resultado("ref-m1", EnOfac(), nueva), "sistema", Ahora.AddDays(30));
+        monitoreo.PendienteDeCumplimiento.ShouldBeTrue();
+
+        // Confirmarla es la decisión del oficial: ya no hay nada por decidir (lo que sigue es del administrador) y la fila sale de su bandeja.
+        // El estado del monitoreo sigue siendo «Fallida» para que el vínculo muestre que hay una coincidencia confirmada.
+        monitoreo.ResolverCoincidencia(nuevas[0].Id, DecisionCoincidencia.Confirmada, "Es la misma persona del listado.", _oficial, Ahora.AddDays(31));
+        monitoreo.PendienteDeCumplimiento.ShouldBeFalse();
+        monitoreo.Listas.Estado.ShouldBe(EstadoVerificacion.Fallida);
+
+        // Una confirmada nunca se hereda como resuelta: si la reconsulta periódica la vuelve a encontrar, vuelve a pedirse al oficial.
+        var otra = monitoreo.RegistrarConsulta(Resultado("ref-m2", EnOfac(), nueva), "sistema", Ahora.AddDays(60));
+        otra.ShouldHaveSingleItem();
+        monitoreo.PendienteDeCumplimiento.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void La_configuracion_de_listas_de_una_empresa_guarda_la_clave_cifrada_y_exige_credenciales_para_un_proveedor_del_legado()
+    {
+        // Stradata y Compliance siguen por empresa (G-2: solo Infolaft pasó a la plataforma).
         var config = ListasRestrictivasEmpresa.Nueva(Guid.NewGuid());
-        Codigo(() => config.ElegirProveedor("Infolaft", Ahora)).ShouldBe("credenciales-requeridas");
+        Codigo(() => config.ElegirProveedor("Stradata", Ahora)).ShouldBe("credenciales-requeridas");
         Codigo(() => config.ElegirProveedor("Otro", Ahora)).ShouldBe("proveedor-invalido");
-        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "sinco", null, null, null, null, null), s => s, Ahora))
+        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Stradata", "sinco", null, null, null, null, null), s => s, Ahora))
             .ShouldBe("clave-requerida");
-        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "sinco", "secreta-123", "http://x.co", null, null, null), s => s, Ahora))
+        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Stradata", "sinco", "secreta-123", "http://x.co", null, null, null), s => s, Ahora))
             .ShouldBe("url-invalida");
 
-        config.CambiarCredenciales(new CambioDeCredencialesDeListas("infolaft", "sinco", "secreta-1234", null, "Empresarial", 500, ModoBusquedaListas.PorNombre),
+        config.CambiarCredenciales(new CambioDeCredencialesDeListas("stradata", "sinco", "secreta-1234", null, "Empresarial", 500, ModoBusquedaListas.PorNombre),
             s => $"cifrado({s})", Ahora);
-        config.ElegirProveedor("INFOLAFT", Ahora);
-        config.Proveedor.ShouldBe("Infolaft");
-        var c = config.CredencialesDe("Infolaft")!;
+        config.ElegirProveedor("STRADATA", Ahora);
+        config.Proveedor.ShouldBe("Stradata");
+        var c = config.CredencialesDe("Stradata")!;
         c.ClaveProtegida.ShouldBe("cifrado(secreta-1234)");
         c.UltimosCuatroClave.ShouldBe("1234");
         c.CuotaMensual.ShouldBe(500);
 
         // Cambiar el usuario conserva la clave; vaciar la clave quita las credenciales y el proveedor elegido.
-        config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "otro", null, null, null, null, null), _ => throw new InvalidOperationException(), Ahora);
-        config.CredencialesDe("Infolaft")!.ClaveProtegida.ShouldBe("cifrado(secreta-1234)");
-        config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", null, "", null, null, null, null), s => s, Ahora);
-        config.CredencialesDe("Infolaft").ShouldBeNull();
+        config.CambiarCredenciales(new CambioDeCredencialesDeListas("Stradata", "otro", null, null, null, null, null), _ => throw new InvalidOperationException(), Ahora);
+        config.CredencialesDe("Stradata")!.ClaveProtegida.ShouldBe("cifrado(secreta-1234)");
+        config.CambiarCredenciales(new CambioDeCredencialesDeListas("Stradata", null, "", null, null, null, null), s => s, Ahora);
+        config.CredencialesDe("Stradata").ShouldBeNull();
         config.Proveedor.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Una_empresa_no_carga_credenciales_de_Infolaft_porque_su_cuenta_es_de_la_plataforma_y_solo_lo_elige_si_la_plataforma_la_configuro()
+    {
+        var config = ListasRestrictivasEmpresa.Nueva(Guid.NewGuid());
+        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "sinco", "secreta-1234", null, null, null, null), s => s, Ahora))
+            .ShouldBe("credenciales-de-plataforma");
+        Codigo(() => config.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", null, "", null, null, null, null), s => s, Ahora))
+            .ShouldBe("credenciales-de-plataforma");
+        config.Credenciales.ShouldBeEmpty();
+
+        // Elegir Infolaft no pide credenciales de la empresa: basta con que la plataforma haya configurado su cuenta.
+        Codigo(() => config.ElegirProveedor("Infolaft", Ahora)).ShouldBe("credenciales-requeridas");
+        config.ElegirProveedor("Infolaft", Ahora, cuentaDeLaPlataforma: true);
+        config.Proveedor.ShouldBe("Infolaft");
+    }
+
+    [Fact]
+    public void La_cuenta_de_Infolaft_de_la_plataforma_guarda_la_clave_cifrada_una_sola_vez_y_solo_acepta_proveedores_de_la_plataforma()
+    {
+        var cuenta = new ListasRestrictivasDePlataforma();
+        Codigo(() => cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("Stradata", "sinco", "secreta-1234", null, null, null, null), s => s, "operador", Ahora))
+            .ShouldBe("proveedor-invalido");
+        Codigo(() => cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "sinco", null, null, null, null, null), s => s, "operador", Ahora))
+            .ShouldBe("clave-requerida");
+        Codigo(() => cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "sinco", "secreta-1234", null, null, 0, null), s => s, "operador", Ahora))
+            .ShouldBe("cuota-invalida");
+
+        cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("infolaft", "sinco", "secreta-1234", null, "Empresarial", 800, ModoBusquedaListas.PorDocumento),
+            s => $"maestra({s})", "operador-1", Ahora);
+        var c = cuenta.CredencialesDe("Infolaft")!;
+        (c.Usuario, c.ClaveProtegida, c.UltimosCuatroClave, c.CuotaMensual, c.ModoBusqueda).ShouldBe(("sinco", "maestra(secreta-1234)", "1234", 800, ModoBusquedaListas.PorDocumento));
+        (cuenta.ActualizadaPor, cuenta.ActualizadaEn).ShouldBe(("operador-1", Ahora));
+
+        // Cambiar el usuario conserva la clave; vaciar la clave quita la cuenta.
+        cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", "otro", null, null, null, 800, null), _ => throw new InvalidOperationException(), "operador-2", Ahora);
+        cuenta.CredencialesDe("Infolaft")!.ClaveProtegida.ShouldBe("maestra(secreta-1234)");
+        cuenta.CambiarCredenciales(new CambioDeCredencialesDeListas("Infolaft", null, "", null, null, null, null), s => s, "operador-2", Ahora);
+        cuenta.CredencialesDe("Infolaft").ShouldBeNull();
+    }
+
+    [Fact]
+    public void La_migracion_toma_la_primera_cuenta_de_una_empresa_sin_heredar_su_cuota_y_quita_las_propias_de_Infolaft_sin_tocar_las_del_legado()
+    {
+        var deLaEmpresa = new CredencialesDeListas
+        {
+            Usuario = "sinco-norte", ClaveProtegida = "del-grupo", UltimosCuatroClave = "9876", UrlBase = "https://infolaft.test/", Plan = "Empresarial", CuotaMensual = 300,
+            ModoBusqueda = ModoBusquedaListas.PorDocumento
+        };
+        var cuenta = new ListasRestrictivasDePlataforma();
+        cuenta.TomarCredencialesDeEmpresa("Infolaft", deLaEmpresa, "de-la-maestra", "operador", Ahora).ShouldBeTrue();
+        var c = cuenta.CredencialesDe("Infolaft")!;
+        (c.Usuario, c.ClaveProtegida, c.UltimosCuatroClave, c.UrlBase, c.Plan, c.CuotaMensual, c.ModoBusqueda)
+            .ShouldBe(("sinco-norte", "de-la-maestra", "9876", "https://infolaft.test/", "Empresarial", (int?)null, ModoBusquedaListas.PorDocumento));
+        // Una segunda empresa no pisa la cuenta ya tomada.
+        cuenta.TomarCredencialesDeEmpresa("Infolaft", new CredencialesDeListas { Usuario = "otra" }, "otra-clave", "operador", Ahora).ShouldBeFalse();
+        cuenta.CredencialesDe("Infolaft")!.Usuario.ShouldBe("sinco-norte");
+
+        var empresa = ListasRestrictivasEmpresa.Nueva(Guid.NewGuid());
+        empresa.Credenciales["Infolaft"] = deLaEmpresa;
+        empresa.Credenciales["Stradata"] = new CredencialesDeListas { Usuario = "sds", ClaveProtegida = "x", UltimosCuatroClave = "1111" };
+        empresa.Proveedor = "Infolaft";
+        var quitadas = empresa.QuitarCredencialesDeLaPlataforma(Ahora);
+        quitadas.Keys.ShouldBe(["Infolaft"]);
+        empresa.Credenciales.Keys.ShouldBe(["Stradata"]);
+        empresa.Proveedor.ShouldBe("Infolaft"); // la elección se conserva: ahora resuelve a la cuenta de la plataforma
+        empresa.QuitarCredencialesDeLaPlataforma(Ahora).ShouldBeEmpty();
     }
 
     [Fact]

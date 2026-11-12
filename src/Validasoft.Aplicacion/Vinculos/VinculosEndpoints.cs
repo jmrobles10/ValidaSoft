@@ -308,16 +308,22 @@ public static class VinculosEndpoints
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 
-    /// <summary>Desbloquear restablece el certificado suspendido (o lo deja vencido si su vigencia pasó durante el bloqueo).</summary>
+    /// <summary>
+    /// Desbloquear restablece el certificado suspendido (o lo deja vencido si su vigencia pasó durante el bloqueo) y pone al día al
+    /// vínculo con lo que pasó mientras estuvo congelado (PP-9): en la misma transacción pide restituirle la compartición con la
+    /// versión actual y abrir la actualización si lo aprobado difiere de ella (<see cref="RevalidarVinculoDesbloqueado"/>).
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/desbloquear")]
     [Authorize(Policy = Permisos.VinculosBloquear)]
     public static async Task<VinculoDto> Desbloquear(Guid id, JustificacionDto dto, SesionDeEmpresa empresa, HttpContext http,
-        TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
+        empresa.UsarMensajeria(mensajes);
         var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
         var evento = stream.Aggregate!.Desbloquear(dto.Justificacion, ahora);
         await CicloDeCertificados.AlDesbloquearAsync(empresa.Sesion, id, evento.Justificacion, ahora, ct);
+        await mensajes.PublishAsync(new RevalidarVinculoDesbloqueado(contexto.TenantRequerido(), id, contexto.ActorTipo.ToString(), contexto.ActorId));
         return await GuardarAsync(empresa, stream, evento, ct);
     }
 

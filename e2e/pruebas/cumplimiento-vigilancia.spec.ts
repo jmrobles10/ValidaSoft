@@ -243,6 +243,12 @@ test('el monitoreo periódico de un vínculo activo reconsulta solo y, cuando el
   await expect(novedad).toContainText('el vínculo sigue activo hasta que un administrador decida si lo bloquea o lo desvincula');
   await expect(olga.getByText(/^Activo$/).first()).toBeVisible();
 
+  // Confirmarla era lo último que le tocaba decidir al oficial: la fila sale de su bandeja (HI-5). Lo que sigue es del administrador, y el
+  // monitoreo del vínculo sigue mostrando la coincidencia confirmada.
+  await irASeccion(olga, 'Cumplimiento');
+  await expect(olga.getByText('No hay nada por atender', { exact: true })).toBeVisible();
+  await expect(olga.getByRole('row').filter({ hasText: nombre })).toHaveCount(0);
+
   // El administrador decide: bloquea el vínculo con su motivo.
   const ana = await abrirEmbebido(await paginaDe(browser), e, e.ana, e.norte, `vinculos/${invitacion.vinculoId}`);
   await ana.getByRole('button', { name: 'Más acciones' }).click();

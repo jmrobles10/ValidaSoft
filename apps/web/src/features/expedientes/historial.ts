@@ -3,7 +3,7 @@ import type { EventoTimeline } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 import { esCO } from '../../i18n/es-CO';
 import { fraseDeRevisionAutomatica } from '../revisionAutomatica/historial';
-import { actorDe, campo, texto, tipoNormalizado, type ContextoHistorial } from '../vinculos/historial';
+import { actorDe, campo, texto, tipoNormalizado, tituloDeTipoDesconocido, type ContextoHistorial } from '../vinculos/historial';
 
 type TipoEvento = keyof typeof esCO.expedientes.historial.eventos;
 
@@ -77,7 +77,7 @@ export function eventoExpedienteATimeline(
   const porSistema = (tipo === 'veredicto_de_area_emitido' || tipo === 'veredicto_de_requisito_emitido') && campo(datos, 'origen') === 'Sistema';
   const base: EventoTimeline = {
     id: `${String(evento.version)}-${tipo}`,
-    titulo: esTipoEvento(tipo) ? t(`expedientes.historial.eventos.${tipo}`) : tipo.replace(/_/g, ' '),
+    titulo: esTipoEvento(tipo) ? t(`expedientes.historial.eventos.${tipo}`) : tituloDeTipoDesconocido(tipo),
     fecha: evento.fecha,
     actor: porSistema ? { nombre: t('expedientes.veredictos.sistema'), tipo: 'sistema' } : actorDe(evento, contexto, t),
     sistema: evento.sistema,
