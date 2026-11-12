@@ -5,6 +5,7 @@ import { ArrowRight, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { Tarjeta } from '../../shared/componentes';
+import { estadoVisibleDelVinculo } from '../vinculos/estadoVisible';
 import { CertificadoEnFicha, CuentaEnFicha, DocumentosEnFicha } from './SeccionesVinculo';
 
 /** Un vínculo del tercero con la empresa activa: estado, bloqueo, certificado, cuenta designada y documentos. */
@@ -20,7 +21,7 @@ export function TarjetaVinculoFicha({ empresaId, datos }: { empresaId: string; d
       titulo={
         <Stack direction="row" spacing={1} component="span" sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
           <span>{tipo}</span>
-          <ChipEstado estado={vinculo.estado} fecha={vinculo.bloqueo?.desde ?? vinculo.actualizadoEn} />
+          <ChipEstado estado={estadoVisibleDelVinculo(vinculo)} fecha={vinculo.bloqueo?.desde ?? vinculo.actualizadoEn} />
         </Stack>
       }
       acciones={

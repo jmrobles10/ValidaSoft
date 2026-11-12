@@ -184,13 +184,24 @@ public static class VinculosEndpoints
         return Results.Created($"/api/v1/vinculos/{resultado.Id}", resultado.ADto(tipo));
     }
 
+    /// <summary>
+    /// Vínculos de la empresa, del más antiguo al más reciente. <c>estado</c> filtra por el estado del dominio (no cambia nunca por una
+    /// actualización); <c>enRevision</c> (VR-1) por la situación derivada «en revisión por una actualización»: <c>true</c> solo los que
+    /// tienen una actualización abierta, <c>false</c> excluye esos (así «Activo» en pantalla no repite lo que se ve «En revisión»).
+    /// </summary>
     [WolverineGet("/api/v1/vinculos")]
     [Authorize(Policy = Permisos.VinculosLeer)]
     public static async Task<PaginaDto<VinculoDto>> Listar(SesionDeEmpresa empresa, string? estado, string? tipoVinculo,
-        Guid? terceroId, int? limite, string? cursor, CancellationToken ct)
+        Guid? terceroId, int? limite, string? cursor, bool? enRevision, CancellationToken ct)
     {
         var tamano = Math.Clamp(limite ?? 50, 1, 200);
         var consulta = empresa.Vinculos();
+
+        if (enRevision is true)
+            consulta = consulta.Where(Vinculo.EsEnRevisionPorActualizacion);
+        else if (enRevision is false)
+            consulta = consulta.Where(v => v.ExpedienteAbiertoId == null || v.ExpedienteAbiertoTipo != TipoExpediente.Actualizacion ||
+                                           (v.Estado != EstadoVinculo.Activo && v.Estado != EstadoVinculo.PorVencer && v.Estado != EstadoVinculo.Vencido));
 
         if (!string.IsNullOrWhiteSpace(estado))
         {

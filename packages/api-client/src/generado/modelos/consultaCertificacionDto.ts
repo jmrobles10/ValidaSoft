@@ -33,4 +33,5 @@ export interface ConsultaCertificacionDto {
   fuenteRespaldo?: boolean;
   /** @nullable */
   antiguedadSegundos?: number | null;
+  enRevision?: boolean;
 }

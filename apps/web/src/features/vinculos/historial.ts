@@ -7,6 +7,15 @@ import { formatearFechaDeclarada } from '../documentos/formatoDatos';
 /** Orden del enum `EstadoVinculo` del dominio: los eventos lo guardan como número. */
 const ORDEN_ESTADOS: readonly EstadoVinculo[] = ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'];
 
+/** Orden del enum `TipoExpediente` del dominio: el evento `expediente_vinculado` lo guarda como número. */
+const ORDEN_TIPOS_DE_EXPEDIENTE = ['Inicial', 'Renovacion', 'Actualizacion'] as const;
+
+function tipoDeExpediente(valor: unknown): (typeof ORDEN_TIPOS_DE_EXPEDIENTE)[number] | null {
+  if (typeof valor === 'number') return ORDEN_TIPOS_DE_EXPEDIENTE[valor] ?? null;
+  if (typeof valor === 'string') return ORDEN_TIPOS_DE_EXPEDIENTE.find((tipo) => tipo.toLowerCase() === valor.toLowerCase()) ?? null;
+  return null;
+}
+
 type TipoConocido = Exclude<keyof typeof esCO.historial, 'referencia' | 'invitacion' | 'hasta' | 'actor' | 'vigencia'>;
 
 /**
@@ -120,10 +129,22 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
       return { ...base, antes: 'Desvinculado', despues: estadoDe(campo(datos, 'estadoResultante')), motivo: justificacion };
     case 'vinculo_anulado':
       return { ...base, antes: estadoDe(campo(datos, 'estadoPrevio')), despues: 'Anulado', motivo };
-    case 'expediente_vinculado':
-      return { ...base, antes: 'Invitado', despues: 'EnValidacion', detalle: texto(campo(datos, 'folio')) };
+    case 'expediente_vinculado': {
+      // Solo el expediente inicial pasa al vínculo de Invitado a En validación. Una actualización lo deja «En revisión» (VR-1: sin cambiar su estado) y una
+      // renovación no cambia lo que se ve: no se cuenta una transición que no ocurrió.
+      const detalle = texto(campo(datos, 'folio'));
+      switch (tipoDeExpediente(campo(datos, 'tipo'))) {
+        case 'Actualizacion':
+          return { ...base, despues: 'EnRevision', detalle };
+        case 'Renovacion':
+          return { ...base, detalle };
+        default:
+          return { ...base, antes: 'Invitado', despues: 'EnValidacion', detalle };
+      }
+    }
+    // Se aprueba el expediente inicial, una actualización o una renovación: desde dónde llega el vínculo no es siempre el mismo estado.
     case 'vinculo_activado':
-      return { ...base, antes: 'EnValidacion', despues: 'Activo' };
+      return { ...base, despues: 'Activo' };
     // Vigencia periódica del vínculo (VV-1): la fecha que fijó la aprobación, el aviso previo y el vencimiento.
     case 'vigencia_del_vinculo_fijada': {
       const hasta = texto(campo(datos, 'vigenteHasta'));

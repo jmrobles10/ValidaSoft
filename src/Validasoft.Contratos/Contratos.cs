@@ -245,6 +245,12 @@ public sealed record ContactoDeEmpresaDto(string Nombre, string? Cargo, string C
 /// <summary>Reemplaza la lista de contactos del tercero con la empresa (hasta 20; lista vacía = quitarlos todos).</summary>
 public sealed record ActualizarContactosDto(IReadOnlyList<ContactoDeEmpresaDto> Contactos);
 
+/// <summary>
+/// <see cref="EnRevision"/> (VR-1): el tercero actualizó información que la empresa ya había aprobado y el expediente de
+/// <c>Actualizacion</c> sigue abierto (abierto, en revisión u observado). <b>No cambia <see cref="Estado"/></b> (sigue <c>Activo</c>,
+/// <c>PorVencer</c> o <c>Vencido</c>, igual que el certificado y la vigencia): es lo que la pantalla muestra como «En revisión» y
+/// lo que filtra <c>GET /vinculos?enRevision=</c>. <see cref="ExpedienteAbiertoId"/> es ese expediente.
+/// </summary>
 public sealed record VinculoDto(
     Guid Id,
     Guid EmpresaId,
@@ -267,7 +273,8 @@ public sealed record VinculoDto(
     bool AperturaDeExpedientePendiente = false,
     string? UltimoResultado = null,
     IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null,
-    DateOnly? VigenteHasta = null);
+    DateOnly? VigenteHasta = null,
+    bool EnRevision = false);
 
 public sealed record ActualizarAtributosDto(Dictionary<string, JsonElement> Atributos);
 
@@ -358,11 +365,15 @@ public sealed record CrearSesionEmbebidaDto(Guid VinculoId, string Componente, s
 /// </summary>
 public sealed record SesionEmbebidaDto(string Token, DateTimeOffset Expira, string Url, string Origen, string Componente, Guid VinculoId, Guid TerceroId);
 
-/// <summary>Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.</summary>
+/// <summary>
+/// Vínculo visto por el tercero (sin decisiones de la empresa). Certificado, pendientes y cuenta designada llegan con H4/H6.
+/// <see cref="EnRevision"/> (VR-1): hay una actualización suya abierta con esa empresa (<see cref="ExpedienteId"/> es ese expediente);
+/// <see cref="Estado"/> no cambia, pero la pantalla del tercero cuenta lo que le toca con ella, no «Aprobado».
+/// </summary>
 public sealed record VinculoPublicoDto(
     Guid Id, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado, bool InvitacionAceptada,
     DateTimeOffset? InvitacionAceptadaEn, Guid? ExpedienteId = null, ReintentoPublicoDto? Reintento = null,
-    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null);
+    IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null, DateOnly? VigenteHasta = null, bool EnRevision = false);
 
 /// <summary>
 /// Lo que el tercero ve de un rechazo (DS-4): cuándo y con qué motivos (los textos al tercero, sin áreas ni revisores). Con
@@ -491,8 +502,10 @@ public sealed record MisPendientesDto(IReadOnlyList<PendientesDeAreaDto> PorArea
 /// <summary>
 /// Indicadores de la empresa activa (IN-2). Los de flujo cuentan expedientes cerrados en los últimos <see cref="Dias"/>
 /// días; los de estado son la foto de hoy. Tiempos en días corridos, de la apertura al cierre aprobado.
+/// <see cref="VinculosEnRevision"/> (VR-1): vínculos con una actualización abierta; no cuentan en <see cref="VinculosActivos"/>,
+/// <see cref="VinculosPorVencer"/> ni <see cref="VinculosVencidos"/> (cada vínculo está en una sola cifra, la misma que ve en su lista).
 /// </summary>
 public sealed record IndicadoresDto(int Dias, int VinculosActivos, int VinculosEnValidacion, int VinculosInvitados, int VinculosVencidos,
     int VinculosBloqueados, int ExpedientesEnCurso, int ExpedientesObservados, int ExpedientesAprobados, int ExpedientesRechazados,
     double? TiempoPromedioDias, double? TiempoMedianaDias, int CertificadosVigentes, int CertificadosConPendientes, int CertificadosNoValidos,
-    int VinculosPorVencer = 0);
+    int VinculosPorVencer = 0, int VinculosEnRevision = 0);

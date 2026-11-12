@@ -141,10 +141,23 @@ Rama lista para revisar, **sin push ni PR**. Decisiones **ING-1…ING-9** en el 
 - **Queda fuera** (§4.6): WorkOS/OIDC, autocompletado de passkeys en el campo del correo (conditional UI), reautenticación
   para acciones sensibles, avisos por correo de cambios de passkey y consulta de la auditoría de ingreso de Plataforma.
 
-### 3.4 Declaración jurada PEP (rama `feature/declaracion-pep`, 2026-11-12)
+### 3.5 Declaración jurada PEP (rama `feature/declaracion-pep`, 2026-11-12)
 Rama lista para revisar (con push, **sin PR**). Cierra «lo mismo de la HU 49093» del SRM y el Portal; decisiones **DP-1…DP-17** en el [registro](decisiones/registro.md#5-sexquinquagies-declaración-jurada-pep-en-la-ficha-hu-49093-2026-11-12) (con la tabla de paridad HU ↔ Validasoft), diseño en [14 §4.2](14-ficha-maestra-del-tercero.md) y contrato en [05 §2.3](05-api-contratos-y-webhooks.md).
 - **Qué hace:** «Sí» a «¿Es PEP?» abre el diálogo «Declaración jurada PEP» (datos básicos, condición PEP, vínculo con otra PEP, juramento y firma dibujada o subida), en la General de la natural y en cada persona de la legal; el **backend** exige la declaración (422 `declaracion-pep-requerida`), sella la firma (huella, fecha, IP) y la versiona con la sección; la empresa la ve en la revisión, la ficha aceptada y Tercero 360 con **Descargar PDF** (por persona, estilo de los PDF de Validasoft); el informe SAGRILAFT muestra «Sin declaración» y el Excel suma columnas; el ZIP del expediente lleva `declaraciones-pep/`; el importador del Portal lee la declaración activa; el canónico `DECLARACION_PEP` se retira.
 - **Pendiente** (DP-16): logo en el PDF, descarga por el propio tercero, importar la imagen de las firmas del Portal (hoy solo su huella), y el «Registro automático por RUT» de la HU.
+
+### 3.4 Vínculo «En revisión» por una actualización (`feature/vinculo-en-revision-por-actualizacion`, 2026-11-12)
+Rama sobre `main`, **sin PR**. Decisiones **VR-1…VR-10** en el [registro](decisiones/registro.md#5-quinquaquinquagies-vínculo-en-revisión-por-una-actualización-2026-11-12-vr);
+contratos en [05 §2.3.1](05-api-contratos-y-webhooks.md). Producto decidió que un tercero ya aprobado que actualiza un documento o una sección deja el **documento y
+el vínculo con cada empresa afectada «En revisión»** (antes el portal decía «Aprobado» arriba y «En revisión» en el documento: HI-5 (3)).
+- **Qué hace:** una situación **derivada** (`Vinculo.EnRevisionPorActualizacion`), no un estado nuevo: `estado`, certificado, vigencia, eventos y consulta de
+  certificación no cambian. Se ve «En revisión» en el portal del tercero (encabezado, «Mis empresas»; «Tienes observaciones» si la observan) y en la app de la
+  empresa (lista y filtro, detalle, Tercero 360, cifra del inicio, informe de vínculos). Aprobada, el vínculo vuelve a «Activo». Todo lo de API es aditivo
+  (`enRevision` en `VinculoDto`, `VinculoPublicoDto`, la consulta de certificación y el informe; `GET /vinculos?enRevision=`; `vinculosEnRevision`).
+- **«Todos los vínculos del tercero»** = los que la actualización alcanza (VR-2): cada empresa cuyo flujo exige lo que cambió y que ya lo había aprobado; un
+  vínculo que no lo exige no tiene nada que revisar.
+- **Pendiente / preguntas abiertas** (VR-10): suspender o no el certificado mientras está en revisión (hoy no, A-2/RV-4 intactos), el texto de la campana
+  `tercero.actualizacion`, qué mostrar si la actualización se rechaza o se anula, y que un vínculo bloqueado no recibe la versión nueva (B-5).
 
 ## 3-bis. Qué está en la rama `feature/novedades-tercero` (aún no en `main`)
 
@@ -318,6 +331,7 @@ La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del pro
 - ~~**Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación → certificado.~~ **Hecha** (`e2e/pruebas/alta-empresa-certificacion.spec.ts`): grupo y empresa desde la consola, configuración mínima, invitación, carga, aprobación y certificado verificable en `/verificar`.
 - ~~**«Volver a postularme» de punta a punta:**~~ **Hecho** (`e2e/pruebas/volver-a-postularme.spec.ts`): rechazo con documentos, motivo visible para el tercero, nueva revisión, versión corregida, aprobación de las dos áreas y certificado.
 - ~~**IA con el proveedor simulado:** cupo agotado y escalamiento.~~ **Hecha** (`e2e/pruebas/ia-cupo-y-escalamiento.spec.ts`, HI-1, HI-4).
+- ~~**Un tercero aprobado con dos empresas sube una versión nueva:** el documento y el vínculo «En revisión» en las dos y en el portal; una aprueba y vuelve a «Activo».~~ **Hecha** (`e2e/pruebas/vinculo-en-revision.spec.ts`, VR-9).
 - ~~**Aprobación de revalidaciones en lote** y eximir un requisito.~~ **Hecha** (`e2e/pruebas/revalidaciones-y-exencion.spec.ts`, HI-4).
 - ~~**Verificaciones:** coincidencia confirmada (rechazo), estudio vencido y monitoreo.~~ **Hecha** (`e2e/pruebas/cumplimiento-vigilancia.spec.ts`, HI-2, HI-3, HI-4): encontró que el monitoreo no se podía ver ni resolver en el vínculo (ahora tiene su tarjeta) y que sin cupo de IA el documento esperaba diez minutos antes de pasar a una persona (HI-1).
 
@@ -389,3 +403,4 @@ Pendiente:
 4. ~~Señal entre empresas: ¿debe compartirse algún hecho grave sin revelar quién decidió?~~ Resuelta en G-1: **no se comparte ningún hecho grave; las decisiones de cada empresa son privadas.**
 5. ~~Integración con el SRM (§3.2): cuándo se sube la rama, cuenta de servicio de AyF y «Bloqueado».~~ Resuelta en G-4: **todavía no; primero se prueba Validasoft solo, sin integrarlo en ningún sistema.** La rama del SRM sigue en espera (§3.2).
 6. ~~Nueva vigencia tras renovar: ¿desde la aprobación o desde el vencimiento anterior?~~ Resuelta en G-3 (ya era VV-12): **desde la aprobación.**
+7. **Vínculo en revisión (VR-8, §3.4):** ¿debe suspenderse el certificado (o decirle `bloqueado: true` a los ERP) mientras el vínculo está «En revisión» por una actualización? Hoy no: queda `ConPendientes`, válido, con el aviso y el bloqueo de A-2/RV-4 a los 15 días.

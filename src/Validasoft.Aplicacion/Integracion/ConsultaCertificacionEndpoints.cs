@@ -187,7 +187,8 @@ public static class ConsultaCertificacionEndpoints
             MotivoBloqueo: motivo,
             CuentaDesignada: cuenta,
             UrlVerificacion: actual?.UrlVerificacion,
-            Legacy: null);
+            Legacy: null,
+            EnRevision: vinculo.EnRevisionPorActualizacion);
     }
 
     /// <summary>

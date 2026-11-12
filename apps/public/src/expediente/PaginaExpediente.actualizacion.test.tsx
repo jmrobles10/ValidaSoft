@@ -1,0 +1,97 @@
+import { ThemeProvider } from '@mui/material';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, within } from '@testing-library/react';
+import { configurarCliente, reiniciarCliente, type ExpedientePublicoDto, type VinculoPublicoDto } from '@validasoft/api-client';
+import { createValidasoftTheme } from '@validasoft/ui';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { PaginaExpediente } from './PaginaExpediente';
+
+/**
+ * El encabezado de «Tu revisión con {empresa}» con una actualización abierta (VR-1): el vínculo sigue Activo, pero la revisión no está
+ * aprobada; el tercero no debe ver «Aprobado» arriba y «En revisión» en la tarjeta del documento (dos verdades en pantalla).
+ */
+const json = (cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+function vinculo(cambios: Partial<VinculoPublicoDto>): VinculoPublicoDto {
+  return {
+    id: 'v1',
+    empresa: { id: 'emp', nombre: 'Constructora Norte', logoUrl: null },
+    tipoVinculo: { id: 'tp', codigo: 'PROVEEDOR', nombre: 'Proveedor' },
+    estado: 'Activo',
+    invitacionAceptada: true,
+    invitacionAceptadaEn: '2026-11-08T15:00:00Z',
+    expedienteId: 'exp-1',
+    ...cambios,
+  };
+}
+
+function expediente(cambios: Partial<ExpedientePublicoDto>): ExpedientePublicoDto {
+  return {
+    id: 'exp-1',
+    folio: 'NORTE-E-2026-000002',
+    empresa: { id: 'emp', nombre: 'Constructora Norte', logoUrl: null },
+    tipoVinculo: { id: 'tp', codigo: 'PROVEEDOR', nombre: 'Proveedor' },
+    estado: 'EnRevision',
+    tipo: 'Actualizacion',
+    observaciones: [],
+    puedeReenviar: false,
+    reenvios: 0,
+    requisitosFaltantes: 0,
+    requisitos: [],
+    actualizadoEn: '2026-11-09T15:00:00Z',
+    ...cambios,
+  };
+}
+
+function montar(vinculos: VinculoPublicoDto[], cuerpo: ExpedientePublicoDto) {
+  configurarCliente({
+    fetch: vi.fn((entrada: RequestInfo | URL) => {
+      const url = typeof entrada === 'string' ? entrada : entrada instanceof URL ? entrada.href : entrada.url;
+      return Promise.resolve(json(url.includes('/expedientes/') ? cuerpo : vinculos));
+    }),
+  });
+  render(
+    <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/expediente/exp-1']}>
+          <Routes>
+            <Route path="/expediente/:id" element={<PaginaExpediente />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+afterEach(() => reiniciarCliente());
+
+describe('Mi revisión con una empresa: actualización abierta de un vínculo activo', () => {
+  it('en revisión: el encabezado dice «En revisión» y que la empresa está revisando, no «Aprobado» ni «tu vínculo está activo»', async () => {
+    montar([vinculo({ enRevision: true })], expediente({ estado: 'EnRevision' }));
+
+    const titulo = await screen.findByRole('heading', { level: 1, name: 'Tu revisión con Constructora Norte' });
+    const principal = within(titulo.closest('main') ?? document.body);
+    expect(await principal.findByText('En revisión')).toBeInTheDocument();
+    expect(principal.getByText(/Constructora Norte está revisando tu información/)).toBeInTheDocument();
+    expect(principal.queryByText('Aprobado')).not.toBeInTheDocument();
+    expect(principal.queryByText(/aprobó tu información/)).not.toBeInTheDocument();
+  });
+
+  it('observada: «Tienes observaciones» con lo que le toca, no «Aprobado»', async () => {
+    montar([vinculo({ enRevision: true })], expediente({ estado: 'Observado', puedeReenviar: true }));
+
+    expect(await screen.findByText('Tienes observaciones')).toBeInTheDocument();
+    expect(screen.getByText(/Constructora Norte te pide corregir lo siguiente/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enviar respuesta' })).toBeInTheDocument();
+    expect(screen.queryByText('Aprobado')).not.toBeInTheDocument();
+  });
+
+  it('aprobada la actualización, el vínculo vuelve a «Aprobado»', async () => {
+    montar([vinculo({ enRevision: false })], expediente({ estado: 'Aprobado' }));
+
+    expect(await screen.findByText('Aprobado')).toBeInTheDocument();
+    expect(screen.getByText(/Constructora Norte aprobó tu información/)).toBeInTheDocument();
+    expect(screen.queryByText('En revisión')).not.toBeInTheDocument();
+  });
+});
