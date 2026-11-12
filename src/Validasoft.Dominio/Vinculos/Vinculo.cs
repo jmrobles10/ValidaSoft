@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Validasoft.Dominio.Comun;
@@ -69,6 +70,24 @@ public sealed partial class Vinculo
 
     /// <summary>Tipo del expediente abierto (nulo sin expediente abierto o si se abrió antes de que el vínculo lo registrara).</summary>
     public TipoExpediente? ExpedienteAbiertoTipo { get; set; }
+
+    /// <summary>
+    /// «En revisión» por una actualización (VR-1): el tercero actualizó información que esta empresa ya había aprobado o aceptado y el
+    /// expediente de <c>Actualizacion</c> sigue abierto (abierto, en revisión u observado). Es una <b>situación derivada</b>, no un estado: el
+    /// <see cref="Estado"/> (y con él el certificado, la vigencia, los eventos y la consulta de certificación) sigue siendo el de siempre
+    /// (A-2); lo que cambia es lo que se le muestra a la empresa y al tercero. Un vínculo bloqueado muestra <c>Bloqueado</c> (manda el
+    /// bloqueo) y uno terminado no tiene nada que revisar. Es la misma regla para la propiedad (<see cref="EnRevisionPorActualizacion"/>)
+    /// y para filtrar en la base (<see cref="EsEnRevisionPorActualizacion"/>): una sola definición.
+    /// </summary>
+    public static readonly Expression<Func<Vinculo, bool>> EsEnRevisionPorActualizacion = v =>
+        v.ExpedienteAbiertoId != null && v.ExpedienteAbiertoTipo == TipoExpediente.Actualizacion &&
+        (v.Estado == EstadoVinculo.Activo || v.Estado == EstadoVinculo.PorVencer || v.Estado == EstadoVinculo.Vencido);
+
+    private static readonly Func<Vinculo, bool> EnRevisionCompilada = EsEnRevisionPorActualizacion.Compile();
+
+    /// <summary>Ver <see cref="EsEnRevisionPorActualizacion"/>.</summary>
+    [JsonIgnore]
+    public bool EnRevisionPorActualizacion => EnRevisionCompilada(this);
 
     /// <summary>¿El expediente abierto es una renovación? (la de pre-vencimiento o la del vencimiento: la misma se reutiliza).</summary>
     [JsonIgnore]

@@ -76,6 +76,9 @@ export function Indicadores({ empresaId, puedeVerVinculos }: { empresaId: string
               <Cifra etiqueta={t('inicio.indicadores.porVencer')} valor={formatearConteo(datos.vinculosPorVencer)} a={aVinculos('PorVencer')} />
             ) : null}
             <Cifra etiqueta={t('inicio.indicadores.enValidacion')} valor={formatearConteo(datos.vinculosEnValidacion)} a={aVinculos('EnValidacion')} />
+            {datos.vinculosEnRevision ? (
+              <Cifra etiqueta={t('inicio.indicadores.enRevision')} valor={formatearConteo(datos.vinculosEnRevision)} a={aVinculos('EnRevision')} />
+            ) : null}
             <Cifra etiqueta={t('inicio.indicadores.invitados')} valor={formatearConteo(datos.vinculosInvitados)} a={aVinculos('Invitado')} />
             <Cifra etiqueta={t('inicio.indicadores.vencidos')} valor={formatearConteo(datos.vinculosVencidos)} a={aVinculos('Vencido')} />
             <Cifra etiqueta={t('inicio.indicadores.bloqueados')} valor={formatearConteo(datos.vinculosBloqueados)} a={aVinculos('Bloqueado')} />

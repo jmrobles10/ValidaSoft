@@ -22,4 +22,5 @@ export interface FilaInformeVinculoDto {
   expedienteEnCurso: null | ExpedienteDelInformeDto;
   documentos: null | DocumentosDelInformeDto;
   seccionesPendientes: string[];
+  enRevision?: boolean;
 }

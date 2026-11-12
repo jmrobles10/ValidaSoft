@@ -11,4 +11,5 @@ export type ListarVinculosParams = {
   terceroId?: string;
   limite?: number;
   cursor?: string;
+  enRevision?: boolean;
 };

@@ -25,10 +25,12 @@ import { useAvisos } from '../../../shared/useAvisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { buscarPorReferencia, useTiposVinculo, useVinculos } from '../api';
 import { NombreTercero } from '../components/NombreTercero';
+import { EN_REVISION, estadoVisibleDelVinculo, parametrosDeEstado, type EstadoVisibleDelVinculo } from '../estadoVisible';
 import { interpretarReferencia } from '../referencia';
 
 const TAMANO_PAGINA = 20;
-const ESTADOS = Object.values(EstadoVinculo);
+// «En revisión» (VR-1) es una situación del vínculo, no un estado de dominio: va entre «En validación» y «Activo».
+const ESTADOS: EstadoVisibleDelVinculo[] = Object.values(EstadoVinculo).flatMap((e) => (e === EstadoVinculo.Activo ? [EN_REVISION, e] : [e]));
 
 /** Bandeja de vínculos de la empresa activa; los filtros viven en la URL. */
 export function ListaVinculos() {
@@ -51,7 +53,7 @@ export function ListaVinculos() {
   }, [estado, tipoVinculo, empresa.id, reiniciar]);
 
   const consulta = useVinculos(empresa.id, {
-    estado: estado || undefined,
+    ...parametrosDeEstado(estado),
     tipoVinculo: tipoVinculo || undefined,
     limite: TAMANO_PAGINA,
     cursor: paginacion.cursor ?? undefined,
@@ -67,7 +69,7 @@ export function ListaVinculos() {
         id: 'estado',
         encabezado: t('vinculos.columnas.estado'),
         ancho: 160,
-        celda: (v) => <ChipEstado estado={v.estado} fecha={v.estado === 'Bloqueado' ? v.bloqueo?.desde : v.actualizadoEn} />,
+        celda: (v) => <ChipEstado estado={estadoVisibleDelVinculo(v)} fecha={v.estado === 'Bloqueado' ? v.bloqueo?.desde : v.actualizadoEn} />,
       },
       {
         id: 'referencias',

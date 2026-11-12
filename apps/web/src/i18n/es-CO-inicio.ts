@@ -41,6 +41,7 @@ export const inicio = {
     activos: 'Activos',
     porVencer: 'Por vencer',
     enValidacion: 'En validación',
+    enRevision: 'En revisión',
     invitados: 'Invitados sin aceptar',
     vencidos: 'Vencidos',
     bloqueados: 'Bloqueados',

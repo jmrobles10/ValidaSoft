@@ -25,4 +25,5 @@ export interface VinculoPublicoDto {
   contactos?: ContactoDeEmpresaDto[] | null;
   /** @nullable */
   vigenteHasta?: string | null;
+  enRevision?: boolean;
 }

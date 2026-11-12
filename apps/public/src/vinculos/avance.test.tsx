@@ -43,6 +43,44 @@ describe('avance del tercero: lo que le toca, no el estado interno', () => {
     expect(avanceDelTercero({ estado: 'Vencido', invitacionAceptada: true }, { estado: 'EnRevision', tipo: 'Renovacion' })).toEqual({ tipo: 'enRevision' });
   });
 
+  describe('con una actualización abierta (VR-1) el vínculo sigue Activo pero lo que le toca es lo del expediente, nunca «Aprobado»', () => {
+    const activo = { estado: 'Activo', invitacionAceptada: true, enRevision: true } as const;
+
+    it('en revisión, observada o con algo por subir', () => {
+      expect(avanceDelTercero(activo, { estado: 'EnRevision', tipo: 'Actualizacion' })).toEqual({ tipo: 'enRevision' });
+      expect(avanceDelTercero(activo, { estado: 'Observado', tipo: 'Actualizacion' })).toEqual({ tipo: 'observado' });
+      expect(avanceDelTercero(activo, { estado: 'Abierto', tipo: 'Actualizacion', requisitosFaltantes: 2 })).toEqual({ tipo: 'faltan', documentos: 2 });
+      expect(avanceDelTercero(activo, { estado: 'Abierto', tipo: 'Actualizacion', requisitosFaltantes: 0 })).toEqual({ tipo: 'enRevision' });
+    });
+
+    it('por vencer o vencido con la actualización abierta tampoco dicen «por vencer» ni quedan sin paso', () => {
+      const porVencer = { estado: 'PorVencer', invitacionAceptada: true, vigenteHasta: '2027-11-06', enRevision: true } as const;
+      expect(avanceDelTercero(porVencer, { estado: 'EnRevision', tipo: 'Actualizacion' })).toEqual({ tipo: 'enRevision' });
+      expect(avanceDelTercero(porVencer, { estado: 'Observado', tipo: 'Actualizacion' })).toEqual({ tipo: 'observado' });
+      expect(avanceDelTercero({ estado: 'Vencido', invitacionAceptada: true, enRevision: true }, { estado: 'EnRevision', tipo: 'Actualizacion' })).toEqual({ tipo: 'enRevision' });
+    });
+
+    it('con la marca del vínculo y sin el expediente todavía, tampoco dice «Aprobado»', () => {
+      expect(avanceDelTercero(activo, null)).toEqual({ tipo: 'enRevision' });
+      expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true }, null)).toEqual({ tipo: 'aprobado' });
+    });
+
+    it('aprobada la actualización vuelve a «Aprobado»; rechazada, el vínculo conserva lo que tenía (RV-2)', () => {
+      expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true }, { estado: 'Aprobado', tipo: 'Actualizacion' })).toEqual({ tipo: 'aprobado' });
+      expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true }, { estado: 'Rechazado', tipo: 'Actualizacion' })).toEqual({ tipo: 'aprobado' });
+    });
+
+    it('una actualización abierta no cambia lo de un vínculo suspendido o terminado', () => {
+      expect(avanceDelTercero({ estado: 'Bloqueado', invitacionAceptada: true }, { estado: 'EnRevision', tipo: 'Actualizacion' })).toBeNull();
+      expect(avanceDelTercero({ estado: 'Desvinculado', invitacionAceptada: true }, { estado: 'EnRevision', tipo: 'Actualizacion' })).toBeNull();
+    });
+
+    it('un expediente inicial o una renovación en revisión se cuentan como siempre', () => {
+      expect(avanceDelTercero({ estado: 'Activo', invitacionAceptada: true }, { estado: 'EnRevision', tipo: 'Renovacion' })).toEqual({ tipo: 'aprobado' });
+      expect(avanceDelTercero(aceptado, { estado: 'EnRevision', tipo: 'Inicial' })).toEqual({ tipo: 'enRevision' });
+    });
+  });
+
   it('sin paso propio que contar se deja el estado tal cual', () => {
     expect(avanceDelTercero({ estado: 'Invitado', invitacionAceptada: false }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();
     expect(avanceDelTercero({ estado: 'Bloqueado', invitacionAceptada: true }, { estado: 'Abierto', requisitosFaltantes: 3 })).toBeNull();
@@ -125,5 +163,59 @@ describe('Mis empresas', () => {
     expect(tarjeta('Energía Oeste').getByRole('link', { name: 'Ratificar mi información' })).toHaveAttribute('href', '/expediente/exp-e');
     expect(screen.queryByText('Por vencer')).not.toBeInTheDocument();
     expect(screen.queryByText('En validación')).not.toBeInTheDocument();
+  });
+
+  it('con una actualización abierta, la tarjeta de la empresa dice «En revisión» (o «Tienes observaciones»), no «Aprobado»; aprobada, vuelve a «Aprobado»', async () => {
+    const vinculos = [
+      vinculo('a', 'Aceros del Norte', { estado: 'Activo', enRevision: true }),
+      vinculo('b', 'Bodegas del Sur', { estado: 'Activo', enRevision: true }),
+      vinculo('c', 'Constructora Centro', { estado: 'Activo' }),
+      vinculo('d', 'Distribuidora Este', { estado: 'PorVencer', vigenteHasta: '2027-11-06', enRevision: true }),
+    ];
+    const expedientes: Record<string, Partial<ExpedientePublicoDto>> = {
+      'exp-a': { ...expediente('exp-a', 'EnRevision', 0), tipo: 'Actualizacion' },
+      'exp-b': { ...expediente('exp-b', 'Observado', 0), tipo: 'Actualizacion' },
+      'exp-c': { ...expediente('exp-c', 'Aprobado', 0), tipo: 'Actualizacion' },
+      'exp-d': { ...expediente('exp-d', 'EnRevision', 0), tipo: 'Actualizacion' },
+    };
+    configurarCliente({
+      fetch: vi.fn((url: RequestInfo | URL) => {
+        const ruta = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+        const id = ruta.split('/expedientes/')[1];
+        return Promise.resolve(json(id ? expedientes[id] : vinculos));
+      }),
+    });
+    render(
+      <ThemeProvider theme={createValidasoftTheme('light', { app: 'public' })}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <PaginaEmpresas />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    const tarjeta = (nombre: string) => {
+      const li = screen.getByRole('heading', { name: nombre }).closest('li');
+      if (!li) throw new Error(`Sin tarjeta para ${nombre}`);
+      return within(li);
+    };
+
+    await screen.findByRole('heading', { name: 'Aceros del Norte' });
+    expect(await tarjeta('Aceros del Norte').findByText('En revisión')).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').getByText(/Aceros del Norte está revisando tu información/)).toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').queryByText('Aprobado')).not.toBeInTheDocument();
+    expect(tarjeta('Aceros del Norte').getByRole('link', { name: 'Ver mi revisión' })).toHaveAttribute('href', '/expediente/exp-a');
+
+    expect(await tarjeta('Bodegas del Sur').findByText('Tienes observaciones')).toBeInTheDocument();
+    expect(tarjeta('Bodegas del Sur').getByRole('link', { name: 'Ver observaciones' })).toHaveAttribute('href', '/expediente/exp-b');
+    expect(tarjeta('Bodegas del Sur').queryByText('Aprobado')).not.toBeInTheDocument();
+
+    // La actualización ya se aprobó: el vínculo vuelve a «Aprobado».
+    expect(await tarjeta('Constructora Centro').findByText('Aprobado')).toBeInTheDocument();
+
+    // Por vencer con una actualización abierta cuenta la actualización, no «Por vencer».
+    expect(await tarjeta('Distribuidora Este').findByText('En revisión')).toBeInTheDocument();
+    expect(tarjeta('Distribuidora Este').queryByText('Por vencer')).not.toBeInTheDocument();
   });
 });

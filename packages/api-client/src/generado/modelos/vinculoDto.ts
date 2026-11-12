@@ -43,4 +43,5 @@ export interface VinculoDto {
   contactos?: ContactoDeEmpresaDto[] | null;
   /** @nullable */
   vigenteHasta?: string | null;
+  enRevision?: boolean;
 }

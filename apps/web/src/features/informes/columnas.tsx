@@ -62,7 +62,10 @@ export function useColumnasVinculos(): ColumnaTabla<FilaInformeVinculoDto>[] {
         id: 'estado',
         encabezado: t('informes.vinculos.columnas.estado'),
         ancho: 140,
-        celda: (f) => <ChipEstado estado={f.estado} etiqueta={t(`informes.vinculos.estados.${f.estado}`)} />,
+        celda: (f) => {
+          const visible = f.enRevision ? 'EnRevision' : f.estado;
+          return <ChipEstado estado={visible} etiqueta={t(`informes.vinculos.estados.${visible}`)} />;
+        },
       },
       {
         id: 'certificado',
