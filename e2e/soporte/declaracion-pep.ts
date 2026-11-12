@@ -57,6 +57,11 @@ export function pngDeFirma(ancho = 360, alto = 120): { name: string; mimeType: s
 export async function dibujarFirma(page: Page, dialogo: Locator): Promise<void> {
   const lienzo = dialogo.getByRole('img', { name: 'Lienzo para dibujar la firma' });
   await lienzo.scrollIntoViewIfNeeded();
+  // `hover` espera a que el lienzo reciba el mouse (y a que deje de moverse). `page.mouse` no mira qué hay encima: el menú del último select
+  // (p. ej. «Tipo de documento del firmante») sigue cerrándose unos 200 ms, su capa invisible se traga el «mousedown» y no queda ningún trazo.
+  const previa = await lienzo.boundingBox();
+  if (!previa) throw new Error('El lienzo de la firma no tiene caja.');
+  await lienzo.hover({ position: { x: 20, y: previa.height / 2 } });
   const caja = await lienzo.boundingBox();
   if (!caja) throw new Error('El lienzo de la firma no tiene caja.');
   const x = caja.x + 20;

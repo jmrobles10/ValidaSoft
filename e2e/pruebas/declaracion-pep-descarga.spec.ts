@@ -4,7 +4,7 @@ import { llamar } from '../soporte/api';
 import { capturar } from '../soporte/capturas';
 import { abrirEmbebido } from '../soporte/embebido';
 import { abrirDesdeBandeja } from '../soporte/empresa';
-import { diligenciarDeclaracion, pngDeFirma, TITULO_DECLARACION } from '../soporte/declaracion-pep';
+import { dialogoDeclaracion, diligenciarDeclaracion, pngDeFirma, TITULO_DECLARACION } from '../soporte/declaracion-pep';
 import { abrirSeccion, guardarSeccionCompleta, llenarContactoYDomicilio, publicarFlujoDeFicha, REPRESENTANTE } from '../soporte/ficha';
 import { escribirFecha } from '../soporte/fechas';
 import { aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero } from '../soporte/proveedor';
@@ -71,9 +71,16 @@ test('persona natural: el botón «Descargar PDF» aparece solo con la declaraci
   await expect(botonDelTercero).toBeVisible();
   await capturar(page, 'declaracion-pep-descarga-tercero');
 
-  // Un cambio sin guardar la esconde otra vez (el PDF sale de lo guardado) y al guardar vuelve.
-  const telefono = page.getByRole('textbox', { name: 'Teléfono', exact: true });
-  await telefono.fill('300 555 9999');
+  // Un cambio de la declaración sin guardar la esconde otra vez (el PDF sale de lo guardado) y al guardar vuelve, con el cambio. Se cambia lo de
+  // la declaración y no un dato de contacto porque este último, tras una versión completa, pide un documento nuevo que lo respalde (FM-15) y la
+  // sección quedaría como borrador; la declaración es su propia evidencia (DP-17).
+  await page.getByRole('button', { name: 'Ver o editar declaración' }).click();
+  const dialogo = dialogoDeclaracion(page);
+  await dialogo.getByRole('textbox', { name: 'Cargo desempeñado' }).fill('Alcalde encargado');
+  await dialogo.getByRole('checkbox', { name: /^Declaro bajo juramento/ }).check();
+  await dialogo.getByRole('button', { name: 'Confirmar declaración' }).click();
+  await expect(dialogo).toBeHidden();
+  await expect(page.getByText('Declaración lista: se guarda con la sección')).toBeVisible();
   await expect(botonDelTercero).toHaveCount(0);
   await guardarSeccionCompleta(page, 'Guardaste Información general: está completa.');
   await expect(botonDelTercero).toBeVisible();
@@ -85,7 +92,7 @@ test('persona natural: el botón «Descargar PDF» aparece solo con la declaraci
   expect(propio.pdf).toContain('(Validasoft)');
   expect(propio.pdf).toContain('/ShadingType 2'); // el isotipo con su degradado
   expect(propio.pdf).toContain('/Subtype /Image'); // la firma
-  expect(propio.pdf).toContain('(Alcalde municipal)');
+  expect(propio.pdf).toContain('(Alcalde encargado)');
   expect(propio.pdf).toContain('Carrera 7 # 32-16');
   expect(propio.pdf).toContain('Luis Ruiz');
   expect(propio.pdf).not.toContain('/Width 360 /Height 120');
@@ -103,7 +110,7 @@ test('persona natural: el botón «Descargar PDF» aparece solo con la declaraci
   expect(deLaEmpresa.nombre).toMatch(/^declaracion-pep-ana-maria-perez-gomez-[a-z0-9]+-\d{8}\.pdf$/);
   expect(deLaEmpresa.pdf).toContain('/Width 360 /Height 120'); // el logo PNG de la empresa
   expect(deLaEmpresa.pdf).not.toContain('/ShadingType');
-  expect(deLaEmpresa.pdf).toContain('(Alcalde municipal)');
+  expect(deLaEmpresa.pdf).toContain('(Alcalde encargado)');
 });
 
 test('persona jurídica: cada persona PEP con declaración guardada tiene su botón en la tarjeta y el PDF de la empresa lleva su logo SVG', async ({ page, browser }) => {
