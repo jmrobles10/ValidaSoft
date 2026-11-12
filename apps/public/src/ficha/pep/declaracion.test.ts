@@ -65,7 +65,7 @@ describe('al abrir y al confirmar', () => {
         conyuge: { nombre: ' ' },
         familiares: [{}, { nombre: 'Luis', parentesco: 'Hijo', tipo_identificacion: 'CC', numero: '1' }],
         sociedades: [{ nombre: 'X SAS', identificacion: '9', calidad: 'Socio', calidad_otra: 'resto' }, {}],
-        vinculo_con_pep: { tiene: false, nombre: 'resto' },
+        vinculo_con_pep: { tiene: false, vinculos: [{ nombre: 'resto' }] },
         firma_en_calidad: 'NombrePropio',
         firmante_nombre: 'resto',
         firma_png: 'AAA=',

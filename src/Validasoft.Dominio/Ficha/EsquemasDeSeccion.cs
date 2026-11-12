@@ -286,10 +286,10 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
     [GeneratedRegex(@"^[A-Z]{1,2}$")]
     private static partial Regex RegexLetra();
 
-    // Cambia la forma de los datos (declaración PEP) y la regla (el «Sí» a PEP exige la declaración).
-    public override int VersionEsquema => 2;
+    // Cambia la forma de los datos (declaración PEP; varias PEP relacionadas y firma por apoderado, DP-22) y la regla (el «Sí» a PEP exige la declaración).
+    public override int VersionEsquema => 3;
 
-    public override int VersionReglas => 2;
+    public override int VersionReglas => 3;
 
     protected override DatosGenerales Sellar(DatosGenerales d, DatosGenerales? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen) =>
         d.DeclaracionPep is null
@@ -695,10 +695,10 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
 {
     public const int MaximoPersonas = 100;
 
-    // Cambia la forma de los datos (declaración PEP por persona) y la regla (el «Sí» a PEP exige la declaración).
-    public override int VersionEsquema => 2;
+    // Cambia la forma de los datos (declaración PEP por persona; varias PEP relacionadas y firma por apoderado, DP-22) y la regla (el «Sí» a PEP exige la declaración).
+    public override int VersionEsquema => 3;
 
-    public override int VersionReglas => 2;
+    public override int VersionReglas => 3;
 
     protected override DatosLegales Sellar(DatosLegales d, DatosLegales? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen)
     {

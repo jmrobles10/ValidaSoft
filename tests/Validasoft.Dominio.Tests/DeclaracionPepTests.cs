@@ -376,32 +376,71 @@ public partial class DeclaracionPepTests
     // ---------- vínculo con otra PEP ----------
 
     [Fact]
-    public void El_vinculo_con_otra_pep_pide_si_o_no_y_con_si_todos_sus_campos()
+    public void El_vinculo_con_otras_pep_pide_si_o_no_y_con_si_al_menos_una_con_todos_sus_campos()
     {
         var d = Declaracion();
         d.Remove("vinculo_con_pep");
         RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.tiene"]);
 
         d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true };
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.vinculos"]);
+
+        JsonObject Pep(string tipo = "Familiar", string relacion = "Hermano(a) · 2.° consanguinidad") => new()
+        {
+            ["tipo"] = tipo, ["relacion"] = relacion, ["nombre"] = "Carlos Ruiz", ["cargo"] = "Senador", ["entidad"] = "Senado de la República", ["pais"] = "co",
+            ["fecha_vinculacion"] = "2022-08-01", ["vigente"] = false
+        };
+
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray(new JsonObject()) };
+        // Una fila vacía se descarta: sigue faltando al menos una.
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.vinculos"]);
+
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray(new JsonObject { ["nombre"] = "Carlos Ruiz" }) };
         RutasDeNatural(d).ShouldBe(
         [
-            "declaracion_pep.vinculo_con_pep.nombre", "declaracion_pep.vinculo_con_pep.parentesco", "declaracion_pep.vinculo_con_pep.cargo_institucion",
-            "declaracion_pep.vinculo_con_pep.fecha_vinculacion", "declaracion_pep.vinculo_con_pep.vigente"
+            "declaracion_pep.vinculo_con_pep.vinculos[0].tipo", "declaracion_pep.vinculo_con_pep.vinculos[0].relacion", "declaracion_pep.vinculo_con_pep.vinculos[0].cargo",
+            "declaracion_pep.vinculo_con_pep.vinculos[0].entidad", "declaracion_pep.vinculo_con_pep.vinculos[0].pais", "declaracion_pep.vinculo_con_pep.vinculos[0].fecha_vinculacion",
+            "declaracion_pep.vinculo_con_pep.vinculos[0].vigente"
         ]);
 
-        d["vinculo_con_pep"] = new JsonObject
-        {
-            ["tiene"] = true, ["nombre"] = "Carlos Ruiz", ["parentesco"] = "Cuñado", ["cargo_institucion"] = "Senador, Senado", ["fecha_vinculacion"] = "2022-08-01",
-            ["vigente"] = false
-        };
-        RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.fecha_desvinculacion"]);
-
-        d["vinculo_con_pep"]!["vigente"] = true;
+        // La relación sale de la lista del tipo: un parentesco no vale para un asociado ni al revés; la fecha de desvinculación, sin «vigente».
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray(Pep("AsociadoCercano"), Pep()) };
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.vinculos[0].relacion", "declaracion_pep.vinculo_con_pep.vinculos[0].fecha_desvinculacion",
+            "declaracion_pep.vinculo_con_pep.vinculos[1].fecha_desvinculacion"]);
+        var completa = Pep("AsociadoCercano", "Socio(a) o asociado(a) comercial");
+        completa["vigente"] = true;
+        var conyuge = Pep(relacion: "Cónyuge o compañero(a) permanente");
+        conyuge["vigente"] = true;
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray(completa, conyuge) };
         RutasDeNatural(d).ShouldBeEmpty();
+        var leida = LeerDeclaracion(d).VinculoConPep!;
+        (leida.Tiene, leida.Vinculos!.Count, leida.Vinculos[0].Tipo, leida.Vinculos[0].Pais, leida.Vinculos[1].Relacion)
+            .ShouldBe((true, 2, TipoVinculoPep.AsociadoCercano, "CO", "Cónyuge o compañero(a) permanente"));
 
-        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = false, ["nombre"] = "Se descarta" };
+        // Hasta 30; con «No» se descartan.
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray([.. Enumerable.Range(0, 31).Select(_ => (JsonNode)Cambiado(Pep(), p => p["vigente"] = true))]) };
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.vinculo_con_pep.vinculos"]);
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = true, ["vinculos"] = new JsonArray([.. Enumerable.Range(0, 30).Select(_ => (JsonNode)Cambiado(Pep(), p => p["vigente"] = true))]) };
+        RutasDeNatural(d).ShouldBeEmpty();
+        d["vinculo_con_pep"] = new JsonObject { ["tiene"] = false, ["vinculos"] = new JsonArray(Pep()) };
         RutasDeNatural(d).ShouldBeEmpty();
         LeerDeclaracion(d).VinculoConPep.ShouldBe(new VinculoConPep { Tiene = false });
+    }
+
+    [Fact]
+    public void La_natural_firma_a_nombre_propio_o_por_apoderado_y_este_escribe_su_nombre_y_documento()
+    {
+        var d = Declaracion();
+        d["firma_en_calidad"] = "Apoderado";
+        RutasDeNatural(d).ShouldBe(["declaracion_pep.firmante_nombre", "declaracion_pep.firmante_tipo_identificacion", "declaracion_pep.firmante_numero"]);
+
+        d["firmante_nombre"] = "Pedro Apoderado Gil";
+        d["firmante_tipo_identificacion"] = "cc";
+        d["firmante_numero"] = "80123456";
+        RutasDeNatural(d).ShouldBeEmpty();
+        var leida = LeerDeclaracion(d);
+        (leida.FirmaEnCalidad, leida.FirmanteNombre, leida.FirmanteTipoIdentificacion, leida.FirmanteNumero).ShouldBe((FirmaEnCalidad.Apoderado, "Pedro Apoderado Gil", "CC", "80123456"));
+        leida.Nombre.ShouldBe("Ana Gómez"); // la declarante sigue siendo la persona; el apoderado solo firma por ella
     }
 
     // ---------- datos básicos que fija el servidor ----------

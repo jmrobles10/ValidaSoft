@@ -101,21 +101,22 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         y = Seccion(pdf, y, "3. Vínculo familiar o asociados cercanos a una PEP");
         var vinculo = declaracion.VinculoConPep;
         y = Dato(pdf, y, "¿Tiene algún vínculo familiar o societario con una PEP?", SiNo(vinculo?.Tiene));
-        if (vinculo is { Tiene: true })
+        if (vinculo is { Tiene: true, Vinculos: { Count: > 0 } pepRelacionadas })
         {
-            y = Dato(pdf, y, "Nombre de la PEP", vinculo.Nombre);
-            y = Dato(pdf, y, "Vínculo o grado de parentesco", vinculo.Parentesco);
-            y = Dato(pdf, y, "Cargo e institución", vinculo.CargoInstitucion);
-            y = Dato(pdf, y, "Fecha de vinculación", Fecha(vinculo.FechaVinculacion));
-            y = Dato(pdf, y, "Fecha de desvinculación", vinculo.Vigente == true ? "Vigente" : Fecha(vinculo.FechaDesvinculacion));
+            y = Fila(pdf, y, true, ("Nombre de la PEP", 130), ("Vínculo", 112), ("Cargo y entidad", 120), ("Periodo", AnchoUtil - 362));
+            foreach (var p in pepRelacionadas)
+            {
+                y = Fila(pdf, y, false, (p.Nombre ?? "—", 130), ((p.Tipo == TipoVinculoPep.AsociadoCercano ? "Asociado cercano: " : "Familiar: ") + (p.Relacion ?? "—"), 112),
+                    (string.Join(", ", new[] { p.Cargo, p.Entidad, p.Pais is { } pais ? Pais(pais) : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 120),
+                    ($"{Fecha(p.FechaVinculacion)} – {(p.Vigente == true ? "vigente" : Fecha(p.FechaDesvinculacion))}", AnchoUtil - 362));
+            }
         }
-
         // El juramento, quién firma y la firma van juntos: si no caben en lo que queda de la página, empiezan en la siguiente.
         y = Espacio(pdf, y, 360);
         y = Seccion(pdf, y, "4. Juramento y firma");
         y = Parrafo(pdf, y, Juramento, 9.5);
         y -= 4;
-        y = Dato(pdf, y, "Firma en calidad de", declaracion.FirmaEnCalidad == FirmaEnCalidad.RepresentanteLegal ? "Representante legal" : "Nombre propio");
+        y = Dato(pdf, y, "Firma en calidad de", declaracion.FirmaEnCalidad switch { FirmaEnCalidad.RepresentanteLegal => "Representante legal", FirmaEnCalidad.Apoderado => "Apoderado", _ => "Nombre propio" });
         y = Dato(pdf, y, "Firmante", $"{declaracion.FirmanteNombre} · {Documento(declaracion.FirmanteTipoIdentificacion, declaracion.FirmanteNumero)}");
         y = Firma(pdf, y, declaracion);
 

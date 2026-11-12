@@ -22,7 +22,8 @@ public class DeclaracionPepDelPortalTests
         FirmaEnCalidad: 1, FirmanteNombre: "María López Díaz", FirmanteTipoDocumento: "CC", FirmanteNumeroDocumento: "52987654",
         FechaFirma: new DateTime(2026, 10, 5), FirmaHash: new string('A', 64),
         Familiares: [new TerDeclaracionPepFamiliar("Marta López", "Hermana", "CC", "52111222"), new TerDeclaracionPepFamiliar("Pedro López", "Padre", "XX", "79111222")],
-        Sociedades: [new TerDeclaracionPepSociedad("Inversiones SAS", "900111222", 4, "Fiduciante"), new TerDeclaracionPepSociedad("Fiducia X", "900333444", 3)]);
+        Sociedades: [new TerDeclaracionPepSociedad("Inversiones SAS", "900111222", 4, "Fiduciante"), new TerDeclaracionPepSociedad("Fiducia X", "900333444", 3)],
+        Vinculos: [new TerDeclaracionPepVinculo(1, "Cuñado(a) · 2.° afinidad", "Carlos Ruiz", "Senador", "Senado", "Colombia", new DateTime(2022, 8, 1), null, true)]);
 
     private static TerceroDelPortal Natural(bool pep, params TerDeclaracionPep[] declaraciones) => new(new TercerosPortal(202, 3),
         new TerInformacionGeneral(2, "María", "López Díaz", "N", "CC", "52.987.654", null, "maria@correo.co", 2, "Cra 7 # 1-2", 11, "3001234567", null, false, null, "Colombia"),
@@ -58,9 +59,9 @@ public class DeclaracionPepDelPortalTests
         d.PaisesCuentasExterior.ShouldBe(["US"]); // «Narnia» no es un país ISO: queda fuera con su advertencia
         d.Conyuge.ShouldBe(new ConyugePep { Nombre = "Luis Ruiz", TipoIdentificacion = "CC", Numero = "80111222" });
         d.Sociedades!.Select(s => (s.Nombre, s.Calidad, s.CalidadOtra)).ShouldBe([("Inversiones SAS", CalidadEnSociedad.Otra, "Fiduciante"), ("Fiducia X", CalidadEnSociedad.Fideicomitente, null)]);
-        d.VinculoConPep.ShouldBe(new VinculoConPep
+        d.VinculoConPep!.Vinculos.ShouldHaveSingleItem().ShouldBe(new PepRelacionada
         {
-            Tiene = true, Nombre = "Carlos Ruiz", Parentesco = "Cuñado", CargoInstitucion = "Senador, Senado", FechaVinculacion = new DateOnly(2022, 8, 1), Vigente = true
+            Tipo = TipoVinculoPep.Familiar, Relacion = "Cuñado(a) · 2.° afinidad", Nombre = "Carlos Ruiz", Cargo = "Senador", Entidad = "Senado", Pais = "CO", FechaVinculacion = new DateOnly(2022, 8, 1), Vigente = true
         });
         (d.AceptaJuramento, d.FirmaEnCalidad, d.FirmanteNombre, d.FirmanteNumero).ShouldBe((true, FirmaEnCalidad.NombrePropio, "María López Díaz", "52987654"));
         (d.FirmaPng, d.FirmaHuella, d.FechaFirma, d.FirmaIp).ShouldBe((null, new string('a', 64), new DateOnly(2026, 10, 5), null));

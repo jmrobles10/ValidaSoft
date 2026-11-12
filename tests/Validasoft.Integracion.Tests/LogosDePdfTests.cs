@@ -258,10 +258,10 @@ public sealed class LogosDePdfTests
         FechaFirma = new DateOnly(2026, 11, 12)
     };
 
-    private static byte[] GenerarPdf(string empresa, string? logo, string nombreDeMuestra)
+    private static byte[] GenerarPdf(string empresa, string? logo, string nombreDeMuestra, DeclaracionPep? declaracion = null)
     {
         var bytes = new GeneradorPdfDeDeclaracionPep().Generar(new DatosDelPdfDeDeclaracionPep(empresa, "Ana María Pérez Gómez", "Información general", 3,
-            new DateTimeOffset(2026, 11, 12, 15, 0, 0, TimeSpan.Zero), null, Declaracion(), new DateTimeOffset(2026, 11, 12, 16, 0, 0, TimeSpan.Zero), logo));
+            new DateTimeOffset(2026, 11, 12, 15, 0, 0, TimeSpan.Zero), null, declaracion ?? Declaracion(), new DateTimeOffset(2026, 11, 12, 16, 0, 0, TimeSpan.Zero), logo));
         if (Environment.GetEnvironmentVariable("VALIDASOFT_PDF_SALIDA") is { Length: > 0 } carpeta)
         {
             Directory.CreateDirectory(carpeta);
@@ -295,6 +295,36 @@ public sealed class LogosDePdfTests
             texto.ShouldContain("/ShadingType 2");
             texto.ShouldNotContain("/Subtype /Image");
         }
+    }
+
+    [Fact]
+    public void El_pdf_lista_todas_las_pep_relacionadas_y_dice_si_firmo_un_apoderado()
+    {
+        var declaracion = Declaracion() with
+        {
+            VinculoConPep = new VinculoConPep
+            {
+                Tiene = true,
+                Vinculos =
+                [
+                    new PepRelacionada { Tipo = TipoVinculoPep.Familiar, Relacion = "Hermano(a) · 2.° consanguinidad", Nombre = "Carlos Ruiz", Cargo = "Senador", Entidad = "Senado", Pais = "CO", FechaVinculacion = new DateOnly(2022, 8, 1), Vigente = true },
+                    new PepRelacionada { Tipo = TipoVinculoPep.AsociadoCercano, Relacion = "Socio(a) o asociado(a) comercial", Nombre = "Ana Mora", Cargo = "Gobernadora", Entidad = "Gobernación", Pais = "CO", FechaVinculacion = new DateOnly(2019, 1, 1), FechaDesvinculacion = new DateOnly(2021, 1, 1), Vigente = false }
+                ]
+            },
+            FirmaEnCalidad = FirmaEnCalidad.Apoderado,
+            FirmanteNombre = "Pedro Apoderado Gil",
+            FirmanteTipoIdentificacion = "CC",
+            FirmanteNumero = "80123456"
+        };
+        var texto = Encoding.Latin1.GetString(GenerarPdf("Validasoft", null, "pep-relacionadas-apoderado", declaracion));
+
+        texto.ShouldContain("(Carlos Ruiz)");
+        texto.ShouldContain("(Ana Mora)");
+        texto.ShouldContain("Familiar: Hermano");
+        texto.ShouldContain("Asociado cercano: Socio");
+        texto.ShouldContain("01/01/2019 \\226 01/01/2021"); // el periodo, con la raya de WinAnsi
+        texto.ShouldContain("(Apoderado)");
+        texto.ShouldContain("Pedro Apoderado Gil");
     }
 
     [Fact]

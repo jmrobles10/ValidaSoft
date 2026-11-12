@@ -691,9 +691,9 @@ public static partial class TraductorDelPortal
                     CalidadOtra = s.CalidadOtraCual
                 })]
                 : null,
-            VinculoConPep = VinculoPep(d, Ruta, avisos),
+            VinculoConPep = VinculoPep(d, Ruta, avisos, Pais),
             AceptaJuramento = d.AceptaJuramento,
-            FirmaEnCalidad = FirmaEnCalidadDe(d.FirmaEnCalidad, Ruta, avisos),
+            FirmaEnCalidad = FirmaEnCalidadDe(d.FirmaEnCalidad),
             FirmanteNombre = d.FirmanteNombre,
             FirmanteTipoIdentificacion = Documento(d.FirmanteTipoDocumento, "declaracion_pep.firmante_tipo_identificacion"),
             FirmanteNumero = d.FirmanteNumeroDocumento,
@@ -736,48 +736,69 @@ public static partial class TraductorDelPortal
         return (Convert.ToBase64String(imagen), huella);
     }
 
-    /// <summary>Firma a nombre propio o como representante legal. «Apoderado» (la HU más reciente del Portal) no existe en Validasoft: se importa como la segunda, con su firmante, y se avisa.</summary>
-    private static FirmaEnCalidad FirmaEnCalidadDe(int calidad, Func<string, string> ruta, Avisos avisos)
+    /// <summary>Firma a nombre propio (1), como representante legal (2) o por apoderado (3), como en la HU del Portal.</summary>
+    private static FirmaEnCalidad FirmaEnCalidadDe(int calidad) => calidad switch
     {
-        if (calidad == 3)
-            avisos.Advertir(ruta("declaracion_pep.firma_en_calidad"), "firma-por-apoderado",
-                "El Portal registra la firma de un apoderado; Validasoft solo distingue nombre propio y representante legal: se importa como firma de representante legal con el nombre y el documento de quien firmó.");
-        return calidad is 2 or 3 ? Dominio.Ficha.FirmaEnCalidad.RepresentanteLegal : Dominio.Ficha.FirmaEnCalidad.NombrePropio;
-    }
+        2 => Dominio.Ficha.FirmaEnCalidad.RepresentanteLegal,
+        3 => Dominio.Ficha.FirmaEnCalidad.Apoderado,
+        _ => Dominio.Ficha.FirmaEnCalidad.NombrePropio
+    };
 
     /// <summary>
-    /// El vínculo con otra PEP (sección 3). Las versiones nuevas del Portal guardan varias PEP relacionadas en <c>TerDeclaracionPepVinculo</c> y dejan en blanco las columnas
-    /// del vínculo único de la fase 1: si hay filas se importa la primera (Validasoft guarda un vínculo por declaración) y se avisa de las demás; si no, vale lo de la fase 1.
+    /// El vínculo con otras PEP (sección 3). Las versiones nuevas del Portal guardan varias PEP relacionadas (<c>TerDeclaracionPepVinculo</c>, tipo familiar o asociado cercano,
+    /// con relación, cargo, entidad, país y periodo) y dejan en blanco las columnas del vínculo único de la fase 1: se importan todas. Sin filas vale lo de la fase 1
+    /// (una sola, de tipo familiar, sin país ni entidad: queda como faltante lo que no traía).
     /// </summary>
-    private static VinculoConPep VinculoPep(TerDeclaracionPep d, Func<string, string> ruta, Avisos avisos)
+    private static VinculoConPep VinculoPep(TerDeclaracionPep d, Func<string, string> ruta, Avisos avisos, Func<string?, string, string?> pais)
     {
         static DateOnly? Dia(DateTime? fecha) => fecha is { } f ? DateOnly.FromDateTime(f) : null;
 
-        if (d.Vinculos is not { Count: > 0 } vinculos)
+        if (d.Vinculos is { Count: > 0 } vinculos)
             return new VinculoConPep
             {
-                Tiene = d.TieneVinculoPep,
-                Nombre = d.VinculoPepNombre,
-                Parentesco = d.VinculoPepParentesco,
-                CargoInstitucion = d.VinculoPepCargoInstitucion,
-                FechaVinculacion = Dia(d.VinculoPepFechaVinculacion),
-                FechaDesvinculacion = Dia(d.VinculoPepFechaDesvinculacion),
-                Vigente = d.VinculoPepVigente
+                Tiene = true,
+                Vinculos =
+                [
+                    .. vinculos.Select((v, i) => new PepRelacionada
+                    {
+                        Tipo = v.TipoVinculo == 2 ? TipoVinculoPep.AsociadoCercano : TipoVinculoPep.Familiar,
+                        Relacion = v.Relacion?.Trim(),
+                        Nombre = v.NombreCompleto,
+                        Cargo = v.Cargo,
+                        Entidad = v.Entidad,
+                        Pais = pais(v.Pais, $"declaracion_pep.vinculo_con_pep.vinculos[{i}].pais"),
+                        FechaVinculacion = Dia(v.FechaVinculacion),
+                        FechaDesvinculacion = v.Actual ? null : Dia(v.FechaRetiro),
+                        Vigente = v.Actual
+                    })
+                ]
             };
 
-        if (vinculos.Count > 1)
-            avisos.Advertir(ruta("declaracion_pep.vinculo_con_pep"), "varias-pep-relacionadas",
-                $"El Portal registra {vinculos.Count} PEP relacionadas; Validasoft guarda una por declaración: se importa la primera.", vinculos[1].NombreCompleto);
-        var primero = vinculos[0];
+        if (!d.TieneVinculoPep)
+            return new VinculoConPep { Tiene = false };
+        if (string.IsNullOrWhiteSpace(d.VinculoPepNombre + d.VinculoPepParentesco + d.VinculoPepCargoInstitucion))
+            return new VinculoConPep { Tiene = true };
+        var parentesco = d.VinculoPepParentesco?.Trim();
+        var enLista = parentesco is not null && DeclaracionPepReglas.RelacionesFamiliar.Contains(parentesco);
+        if (parentesco is not null && !enLista)
+            avisos.Advertir(ruta("declaracion_pep.vinculo_con_pep.vinculos[0].relacion"), "parentesco-sin-equivalente",
+                "El parentesco de la PEP relacionada no es uno de la lista de la HU: queda sin diligenciar.", parentesco);
         return new VinculoConPep
         {
             Tiene = true,
-            Nombre = primero.NombreCompleto,
-            Parentesco = primero.Relacion,
-            CargoInstitucion = string.Join(", ", new[] { primero.Cargo, primero.Entidad }.Where(x => !string.IsNullOrWhiteSpace(x))) is { Length: > 0 } cargo ? cargo : null,
-            FechaVinculacion = Dia(primero.FechaVinculacion),
-            FechaDesvinculacion = primero.Actual ? null : Dia(primero.FechaRetiro),
-            Vigente = primero.Actual
+            Vinculos =
+            [
+                new PepRelacionada
+                {
+                    Tipo = TipoVinculoPep.Familiar,
+                    Relacion = enLista ? parentesco : null,
+                    Nombre = d.VinculoPepNombre,
+                    Cargo = d.VinculoPepCargoInstitucion,
+                    FechaVinculacion = Dia(d.VinculoPepFechaVinculacion),
+                    FechaDesvinculacion = d.VinculoPepVigente ? null : Dia(d.VinculoPepFechaDesvinculacion),
+                    Vigente = d.VinculoPepVigente
+                }
+            ]
         };
     }
 

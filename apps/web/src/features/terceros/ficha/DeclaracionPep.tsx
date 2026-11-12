@@ -50,19 +50,18 @@ export function DeclaracionPep({ declaracion: d, indice, descarga }: Props) {
   const cuentas = d.cuentas_exterior === true ? unir([t('fichaMaestra.si'), formatearValor('paises', d.paises_cuentas_exterior, t)]) : si(d.cuentas_exterior);
   const conyuge = esObjeto(d.conyuge) ? unir([texto(d.conyuge, 'nombre'), documento(d.conyuge)]) : null;
   const vinculo = esObjeto(d.vinculo_con_pep) ? d.vinculo_con_pep : null;
-  const vinculoTexto =
-    vinculo?.tiene === true
-      ? unir([
-          t('fichaMaestra.si'),
-          texto(vinculo, 'nombre'),
-          texto(vinculo, 'parentesco'),
-          texto(vinculo, 'cargo_institucion'),
-          periodo(vinculo.fecha_vinculacion, vinculo.fecha_desvinculacion, vinculo.vigente),
-        ])
-      : si(false);
+  // Las PEP relacionadas (sección 3): una línea por persona con su tipo y relación, cargo, entidad, país y periodo.
+  const pepRelacionadas = vinculo?.tiene === true ? filas(vinculo, 'vinculos') : [];
+  const lineaPep = (p: Campos) =>
+    unir([
+      unir([typeof p.tipo === 'string' ? t(`fichaMaestra.pep.tiposVinculo.${p.tipo}`, { defaultValue: p.tipo }) : null, texto(p, 'relacion')], ': '),
+      texto(p, 'nombre'),
+      unir([texto(p, 'cargo'), texto(p, 'entidad'), typeof p.pais === 'string' ? formatearValor('pais', p.pais, t) : null], ', '),
+      periodo(p.fecha_vinculacion, p.fecha_desvinculacion, p.vigente),
+    ]);
   const firmante =
-    d.firma_en_calidad === 'RepresentanteLegal'
-      ? t('fichaMaestra.pep.firmaRepresentante', { nombre: texto(d, 'firmante_nombre') ?? '', documento: unir([texto(d, 'firmante_tipo_identificacion'), texto(d, 'firmante_numero')], ' ') })
+    d.firma_en_calidad === 'RepresentanteLegal' || d.firma_en_calidad === 'Apoderado'
+      ? t(d.firma_en_calidad === 'Apoderado' ? 'fichaMaestra.pep.firmaApoderado' : 'fichaMaestra.pep.firmaRepresentante', { nombre: texto(d, 'firmante_nombre') ?? '', documento: unir([texto(d, 'firmante_tipo_identificacion'), texto(d, 'firmante_numero')], ' ') })
       : t('fichaMaestra.pep.firmaNombrePropio');
 
   const descargar = () => {
@@ -132,7 +131,7 @@ export function DeclaracionPep({ declaracion: d, indice, descarga }: Props) {
           )}
         </Dato>
         <Dato etiqueta={t('fichaMaestra.pep.vinculo')} ancho>
-          {vinculoTexto}
+          {vinculo?.tiene === true ? (pepRelacionadas.length > 0 ? lista(pepRelacionadas, lineaPep) : t('fichaMaestra.si')) : si(false)}
         </Dato>
         <Dato etiqueta={t('fichaMaestra.pep.firma')} ancho>
           {unir([firmante, texto(d, 'firma_huella') ? t('fichaMaestra.pep.huella', { huella: (texto(d, 'firma_huella') ?? '').slice(0, 12) }) : null])}

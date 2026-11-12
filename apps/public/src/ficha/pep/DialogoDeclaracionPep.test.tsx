@@ -212,7 +212,7 @@ describe('Declaración jurada PEP: el diálogo', () => {
     expect(fila.getByRole('textbox', { name: '¿Cuál?' })).toHaveAccessibleDescription('Completa este dato o quita la fila');
   });
 
-  it('el vínculo con otra PEP: con «Sí» pide sus datos y su periodo', async () => {
+  it('el vínculo con otras PEP: con «Sí» abre una fila que pide sus datos y su periodo', async () => {
     const { usuario, onConfirmar } = montar({ previa: PREVIA });
     await marcarJuramento(usuario);
     const vinculo = within(screen.getByRole('region', { name: '3. Vínculo familiar o asociados cercanos a una PEP' }));
@@ -221,9 +221,13 @@ describe('Declaración jurada PEP: el diálogo', () => {
     await confirmar(usuario);
 
     expect(onConfirmar).not.toHaveBeenCalled();
-    expect(vinculo.getByRole('textbox', { name: 'Nombre de la PEP' })).toHaveAttribute('aria-invalid', 'true');
-    expect(vinculo.getByRole('textbox', { name: 'Vínculo o grado de parentesco' })).toHaveAttribute('aria-invalid', 'true');
-    expect(vinculo.getByRole('textbox', { name: 'Cargo e institución' })).toHaveAttribute('aria-invalid', 'true');
+    // La fila en blanco no cuenta: falta al menos una PEP relacionada completa.
+    expect(vinculo.getByText('Este dato es obligatorio')).toBeInTheDocument();
+    await escribir(usuario, vinculo.getByRole('textbox', { name: 'Nombre de la PEP' }), 'Carlos Ruiz');
+    await confirmar(usuario);
+    expect(vinculo.getByRole('textbox', { name: 'Cargo de la PEP' })).toHaveAttribute('aria-invalid', 'true');
+    expect(vinculo.getByRole('textbox', { name: 'Entidad' })).toHaveAttribute('aria-invalid', 'true');
+    expect(vinculo.getByRole('combobox', { name: 'Tipo de vínculo' })).toHaveAccessibleDescription('Este dato es obligatorio');
   });
 
   it('con cuentas en el exterior pide al menos un país', async () => {
@@ -256,15 +260,48 @@ describe('Declaración jurada PEP: el diálogo', () => {
     expect(onConfirmar.mock.calls[0]?.[0]).toMatchObject({ firma_en_calidad: 'RepresentanteLegal', firmante_nombre: 'Pedro Pérez', firmante_tipo_identificacion: 'CC', firmante_numero: '80123456' });
   });
 
-  it('una persona de la información legal escribe su dirección y elige su calidad al firmar; la persona natural no', () => {
+  it('una persona de la información legal escribe su dirección y elige su calidad al firmar (con representante legal); la natural no tiene representante legal', () => {
     montar({ basicos: REPRESENTANTE });
     expect(within(screen.getByRole('region', { name: '1. Datos básicos' })).getByRole('textbox', { name: 'Dirección' })).not.toHaveAttribute('readonly');
     expect(screen.getByRole('combobox', { name: 'Firma en calidad de' })).toBeInTheDocument();
   });
 
-  it('la persona natural firma siempre a nombre propio: no hay selector de calidad', () => {
-    montar();
-    expect(screen.queryByRole('combobox', { name: 'Firma en calidad de' })).not.toBeInTheDocument();
+  it('la persona natural firma a nombre propio o por apoderado (nunca como representante legal) y el apoderado escribe su nombre y documento', async () => {
+    const { usuario, onConfirmar } = montar({ previa: { ...PREVIA } });
+    await usuario.click(screen.getByRole('combobox', { name: 'Firma en calidad de' }));
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Nombre propio', 'Apoderado']);
+    await usuario.click(screen.getByRole('option', { name: 'Apoderado' }));
+    await marcarJuramento(usuario);
+    await confirmar(usuario);
+
+    expect(onConfirmar).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'Nombre completo del firmante' })).toHaveAttribute('aria-invalid', 'true');
+    await escribir(usuario, screen.getByRole('textbox', { name: 'Nombre completo del firmante' }), 'Pedro Gil');
+    await usuario.click(screen.getByRole('combobox', { name: 'Tipo de documento del firmante' }));
+    await usuario.click(screen.getByRole('option', { name: 'CC' }));
+    await escribir(usuario, screen.getByRole('textbox', { name: 'Número de documento del firmante' }), '80123456');
+  });
+
+  it('las PEP relacionadas son una lista: agregar, completar por tipo y quitar (de 1 a 30)', async () => {
+    const pep = { tipo: 'Familiar', relacion: 'Hermano(a) · 2.° consanguinidad', nombre: 'Carlos Ruiz', cargo: 'Senador', entidad: 'Senado', pais: 'CO', fecha_vinculacion: '2022-08-01', vigente: true } as const;
+    const { usuario } = montar({ previa: { ...PREVIA, vinculo_con_pep: { tiene: true, vinculos: [pep] } } });
+    const seccion = within(screen.getByRole('region', { name: '3. Vínculo familiar o asociados cercanos a una PEP' }));
+    const lista = seccion.getByRole('list', { name: 'PEP relacionadas' });
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(lista).getByRole('textbox', { name: 'Nombre de la PEP' })).toHaveValue('Carlos Ruiz');
+
+    await usuario.click(seccion.getByRole('button', { name: 'Agregar PEP relacionada' }));
+    const segunda = within(screen.getByRole('listitem', { name: 'PEP relacionada 2' }));
+    // La relación depende del tipo: sin tipo no se elige; un asociado cercano solo tiene «socio o asociado comercial».
+    expect(segunda.getByRole('combobox', { name: 'Parentesco o relación con la PEP' })).toHaveAttribute('aria-disabled', 'true');
+    await usuario.click(segunda.getByRole('combobox', { name: 'Tipo de vínculo' }));
+    await usuario.click(screen.getByRole('option', { name: 'Asociado cercano' }));
+    await usuario.click(segunda.getByRole('combobox', { name: 'Parentesco o relación con la PEP' }));
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['Socio(a) o asociado(a) comercial']);
+    await usuario.keyboard('{Escape}');
+
+    await usuario.click(seccion.getByRole('button', { name: 'Quitar la PEP relacionada 2' }));
+    expect(within(lista).getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('muestra el error del servidor de un campo aunque no se haya intentado confirmar', () => {

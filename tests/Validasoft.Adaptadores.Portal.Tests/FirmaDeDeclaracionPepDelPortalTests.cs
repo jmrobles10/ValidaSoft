@@ -143,29 +143,18 @@ public class FirmaDeDeclaracionPepDelPortalTests
     // ---------- Lo que cambió la HU en el Portal ----------
 
     [Fact]
-    public void La_firma_por_apoderado_se_importa_como_representante_legal_con_su_firmante_y_se_avisa()
+    public void La_firma_por_apoderado_se_importa_como_apoderado_con_su_firmante_y_sin_aviso()
     {
         var imagen = Png();
-        var socio = Declaracion(imagen, Huella(imagen)) with { TerCamId = 2, RelacionEmpresa = 2, FirmaEnCalidad = 3, FirmanteNombre = "Pedro Apoderado Gil", FirmanteNumeroDocumento = "80123456" };
-        var tercero = new TerceroDelPortal(new TercerosPortal(101, 3),
-            new TerInformacionGeneral(1, "Aceros del Norte S.A.S.", null, "J", "NIT", "900123456", 0, "COMPRAS@ACEROS.CO", 1, "Calle 45 # 12-08", 10, "6015551234", "aceros.co", true, null, "Colombia", 2005),
-            InfoTributaria: new TerInfoTributaria(),
-            CamaraComercio:
-            [
-                new TerCamaraComercio(1, 1, "CC", "79123456", "Juan", "Pérez", "Gerente", null, false, false, 1, TerNacionalidad: "Colombia"),
-                new TerCamaraComercio(2, 2, "CC", "80111222", "Luis", "Ruiz", null, "100", true, false)
-            ],
-            Siso: new TerSISO(),
-            DeclaracionesPep: [socio]);
-        var r = Traducir(tercero);
-
-        var persona = ((DatosLegales)r.Secciones.Single(s => s.Definicion.Codigo == CodigosDeSeccion.Legal).Datos).Personas![1].DeclaracionPep.ShouldNotBeNull();
-        (persona.FirmaEnCalidad, persona.FirmanteNombre, persona.FirmanteNumero).ShouldBe((FirmaEnCalidad.RepresentanteLegal, "Pedro Apoderado Gil", "80123456"));
-        r.Advertencias.ShouldContain(a => a.Codigo == "firma-por-apoderado" && a.Campo == "personas[1].declaracion_pep.firma_en_calidad");
+        var natural = Traducir(Natural(Declaracion(imagen, Huella(imagen)) with { FirmaEnCalidad = 3, FirmanteNombre = "Pedro Apoderado Gil", FirmanteTipoDocumento = "CC", FirmanteNumeroDocumento = "80123456" }));
+        var d = Declarada(natural);
+        (d.FirmaEnCalidad, d.FirmanteNombre, d.FirmanteTipoIdentificacion, d.FirmanteNumero).ShouldBe((FirmaEnCalidad.Apoderado, "Pedro Apoderado Gil", "CC", "80123456"));
+        natural.Advertencias.ShouldNotContain(a => a.Codigo.StartsWith("firma-por", StringComparison.Ordinal));
+        Regla(natural).Completitud.Faltantes.ShouldBeEmpty();
     }
 
     [Fact]
-    public void Las_pep_relacionadas_de_la_tabla_nueva_se_importan_la_primera_y_se_avisa_de_las_demas()
+    public void Las_pep_relacionadas_de_la_tabla_nueva_se_importan_todas_con_su_tipo_relacion_pais_y_periodo()
     {
         var imagen = Png();
         var declaracion = Declaracion(imagen, Huella(imagen)) with
@@ -173,23 +162,28 @@ public class FirmaDeDeclaracionPepDelPortalTests
             TieneVinculoPep = true,
             Vinculos =
             [
-                new TerDeclaracionPepVinculo(1, "Hermano", "Carlos Ruiz", "Senador", "Senado de la República", "Colombia", new DateTime(2022, 8, 1), null, true),
-                new TerDeclaracionPepVinculo(2, "Socio", "Ana Mora", "Gobernadora", "Gobernación", "Colombia", new DateTime(2019, 1, 1), new DateTime(2021, 1, 1), false)
+                new TerDeclaracionPepVinculo(1, "Hermano(a) · 2.° consanguinidad", "Carlos Ruiz", "Senador", "Senado de la República", "Colombia", new DateTime(2022, 8, 1), null, true),
+                new TerDeclaracionPepVinculo(2, "Socio(a) o asociado(a) comercial", "Ana Mora", "Gobernadora", "Gobernación", "Colombia", new DateTime(2019, 1, 1), new DateTime(2021, 1, 1), false)
             ]
         };
         var r = Traducir(Natural(declaracion));
 
-        Declarada(r).VinculoConPep.ShouldBe(new VinculoConPep
-        {
-            Tiene = true, Nombre = "Carlos Ruiz", Parentesco = "Hermano", CargoInstitucion = "Senador, Senado de la República", FechaVinculacion = new DateOnly(2022, 8, 1), Vigente = true
-        });
-        r.Advertencias.Single(a => a.Codigo == "varias-pep-relacionadas").Mensaje.ShouldContain("2 PEP relacionadas");
+        var vinculo = Declarada(r).VinculoConPep.ShouldNotBeNull();
+        vinculo.Tiene.ShouldBe(true);
+        vinculo.Vinculos.ShouldBe(
+        [
+            new PepRelacionada { Tipo = TipoVinculoPep.Familiar, Relacion = "Hermano(a) · 2.° consanguinidad", Nombre = "Carlos Ruiz", Cargo = "Senador", Entidad = "Senado de la República", Pais = "CO", FechaVinculacion = new DateOnly(2022, 8, 1), Vigente = true },
+            new PepRelacionada { Tipo = TipoVinculoPep.AsociadoCercano, Relacion = "Socio(a) o asociado(a) comercial", Nombre = "Ana Mora", Cargo = "Gobernadora", Entidad = "Gobernación", Pais = "CO", FechaVinculacion = new DateOnly(2019, 1, 1), FechaDesvinculacion = new DateOnly(2021, 1, 1), Vigente = false }
+        ]);
+        r.Advertencias.ShouldNotContain(a => a.Codigo == "varias-pep-relacionadas");
         Regla(r).Completitud.Faltantes.ShouldBeEmpty();
 
-        // Sin filas en la tabla nueva vale el vínculo único de la fase 1.
+        // Sin filas en la tabla nueva vale el vínculo único de la fase 1: con un parentesco que no es de la lista queda sin él, con aviso y como faltante.
         var antigua = Traducir(Natural(declaracion with { Vinculos = null, VinculoPepNombre = "Marta Gil", VinculoPepParentesco = "Prima", VinculoPepCargoInstitucion = "Edil, Concejo", VinculoPepVigente = true }));
-        Declarada(antigua).VinculoConPep!.Nombre.ShouldBe("Marta Gil");
-        antigua.Advertencias.ShouldNotContain(a => a.Codigo == "varias-pep-relacionadas");
+        var unica = Declarada(antigua).VinculoConPep!.Vinculos.ShouldHaveSingleItem();
+        (unica.Nombre, unica.Relacion, unica.Cargo).ShouldBe(("Marta Gil", null, "Edil, Concejo"));
+        antigua.Advertencias.ShouldContain(a => a.Codigo == "parentesco-sin-equivalente");
+        Regla(antigua).Completitud.Faltantes.Select(f => f.Campo).ShouldContain("declaracion_pep.vinculo_con_pep.vinculos[0].relacion");
     }
 
     // ---------- El adaptador lee la imagen por el origen de archivos ----------

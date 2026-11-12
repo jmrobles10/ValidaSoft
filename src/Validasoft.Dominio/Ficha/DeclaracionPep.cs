@@ -26,11 +26,22 @@ public enum CalidadEnSociedad
     Otra
 }
 
-/// <summary>En calidad de quién firma: la persona misma o su representante legal (que escribe su nombre y documento).</summary>
+/// <summary>
+/// En calidad de quién firma: la persona misma, su representante legal o su apoderado (los dos últimos escriben su nombre y documento). La persona natural
+/// firma a nombre propio o por apoderado; el representante legal solo lo es de una persona jurídica.
+/// </summary>
 public enum FirmaEnCalidad
 {
     NombrePropio,
-    RepresentanteLegal
+    RepresentanteLegal,
+    Apoderado
+}
+
+/// <summary>Tipo de vínculo con una PEP relacionada: familiar (incluye al cónyuge o compañero permanente) o asociado cercano.</summary>
+public enum TipoVinculoPep
+{
+    Familiar,
+    AsociadoCercano
 }
 
 /// <summary>Cónyuge o compañero(a) permanente: todo o nada.</summary>
@@ -68,22 +79,37 @@ public sealed record SociedadPep
     public string? CalidadOtra { get; init; }
 }
 
-/// <summary>Sección 3: vínculo familiar o asociados cercanos a otra persona expuesta políticamente.</summary>
+/// <summary>Una persona expuesta políticamente con la que el declarante tiene un vínculo (sección 3), con su cargo y el periodo en que lo ejerció.</summary>
+public sealed record PepRelacionada
+{
+    public TipoVinculoPep? Tipo { get; init; }
+
+    /// <summary>Una de <see cref="DeclaracionPepReglas.RelacionesFamiliar"/> (si es familiar) o <see cref="DeclaracionPepReglas.RelacionesAsociado"/> (si es asociado cercano).</summary>
+    public string? Relacion { get; init; }
+
+    public string? Nombre { get; init; }
+
+    public string? Cargo { get; init; }
+
+    public string? Entidad { get; init; }
+
+    /// <summary>País de la entidad, ISO 3166-1 alfa-2.</summary>
+    public string? Pais { get; init; }
+
+    public DateOnly? FechaVinculacion { get; init; }
+
+    /// <summary>Con <c>true</c> no hay fecha de desvinculación.</summary>
+    public bool? Vigente { get; init; }
+
+    public DateOnly? FechaDesvinculacion { get; init; }
+}
+
+/// <summary>Sección 3: vínculo familiar o de asociado cercano con otras personas expuestas políticamente; con «Sí», al menos una y hasta 30.</summary>
 public sealed record VinculoConPep
 {
     public bool? Tiene { get; init; }
 
-    public string? Nombre { get; init; }
-
-    public string? Parentesco { get; init; }
-
-    public string? CargoInstitucion { get; init; }
-
-    public DateOnly? FechaVinculacion { get; init; }
-
-    public DateOnly? FechaDesvinculacion { get; init; }
-
-    public bool? Vigente { get; init; }
+    public IReadOnlyList<PepRelacionada>? Vinculos { get; init; }
 }
 
 /// <summary>
@@ -172,6 +198,23 @@ public sealed record OrigenDeDeclaracionPep(bool EsNatural, RolPersonaRelacionad
 public static partial class DeclaracionPepReglas
 {
     public const int MaximoFilas = 30;
+
+    /// <summary>Relación con la PEP de un familiar que es el cónyuge o compañero(a) permanente.</summary>
+    public const string RelacionConyuge = "Cónyuge o compañero(a) permanente";
+
+    /// <summary>Parentescos de un familiar de la PEP (hasta el segundo grado de consanguinidad o afinidad y el primero civil), con los textos canónicos de la HU.</summary>
+    public static readonly IReadOnlyList<string> Parentescos =
+    [
+        "Padre / Madre · 1.° consanguinidad", "Hijo(a) · 1.° consanguinidad", "Hermano(a) · 2.° consanguinidad", "Abuelo(a) · 2.° consanguinidad",
+        "Nieto(a) · 2.° consanguinidad", "Suegro(a) · 1.° afinidad", "Yerno / Nuera · 1.° afinidad", "Hijastro(a) · 1.° afinidad", "Cuñado(a) · 2.° afinidad",
+        "Hijo(a) adoptivo(a) · 1.° civil", "Padre / Madre adoptante · 1.° civil"
+    ];
+
+    /// <summary>Relaciones válidas con una PEP del tipo <see cref="TipoVinculoPep.Familiar"/>: el cónyuge o compañero(a) y los parentescos.</summary>
+    public static readonly IReadOnlyList<string> RelacionesFamiliar = [RelacionConyuge, .. Parentescos];
+
+    /// <summary>Relaciones válidas con una PEP del tipo <see cref="TipoVinculoPep.AsociadoCercano"/>.</summary>
+    public static readonly IReadOnlyList<string> RelacionesAsociado = ["Socio(a) o asociado(a) comercial"];
     public const string RelacionRevisorFiscal = "Revisor fiscal";
     public const string RelacionContador = "Contador";
     public const string CodigoRequerida = "declaracion-pep-requerida";
@@ -205,7 +248,8 @@ public static partial class DeclaracionPepReglas
             return null;
 
         var (relacion, otra) = RelacionDe(origen);
-        var calidad = origen.EsNatural ? FirmaEnCalidad.NombrePropio : d.FirmaEnCalidad;
+        // La persona natural firma a nombre propio o por apoderado (nunca como representante legal); la persona de la legal, de cualquiera de las tres formas.
+        var calidad = origen.EsNatural && d.FirmaEnCalidad != FirmaEnCalidad.Apoderado ? FirmaEnCalidad.NombrePropio : d.FirmaEnCalidad;
         var firmaPropia = calidad is FirmaEnCalidad.NombrePropio;
         // Una fecha de desvinculación sin la marca «vigente» dice que ya no lo está (la casilla sin marcar no llega como «no»).
         var vigente = d.Vigente ?? (d.FechaDesvinculacion is not null ? false : null);
@@ -282,18 +326,26 @@ public static partial class DeclaracionPepReglas
     {
         if (v is null)
             return null;
-        if (v.Tiene == false)
-            return new VinculoConPep { Tiene = false };
-        var vigente = v.Vigente ?? (v.FechaDesvinculacion is not null ? false : null);
-        var normal = v with
+        if (v.Tiene != true)
+            return v.Tiene == false ? new VinculoConPep { Tiene = false } : null;
+        return new VinculoConPep
         {
-            Nombre = Texto(v.Nombre),
-            Parentesco = Texto(v.Parentesco),
-            CargoInstitucion = Texto(v.CargoInstitucion),
-            Vigente = vigente,
-            FechaDesvinculacion = vigente == true ? null : v.FechaDesvinculacion
+            Tiene = true,
+            Vinculos = Filas(v.Vinculos, p =>
+            {
+                var vigente = p.Vigente ?? (p.FechaDesvinculacion is not null ? false : null);
+                return p with
+                {
+                    Relacion = Texto(p.Relacion),
+                    Nombre = Texto(p.Nombre),
+                    Cargo = Texto(p.Cargo),
+                    Entidad = Texto(p.Entidad),
+                    Pais = Mayusculas(p.Pais),
+                    Vigente = vigente,
+                    FechaDesvinculacion = vigente == true ? null : p.FechaDesvinculacion
+                };
+            }, new PepRelacionada())
         };
-        return normal == new VinculoConPep() ? null : normal;
     }
 
     private static string? LimpiarPng(string? firma)
@@ -549,10 +601,31 @@ public static partial class DeclaracionPepReglas
 
             if (v.Tiene == false)
                 return;
-            Requerido(v.Nombre, "vinculo_con_pep.nombre", "Nombre de la PEP", 300);
-            Requerido(v.Parentesco, "vinculo_con_pep.parentesco", "Vínculo o grado de parentesco", 100);
-            Requerido(v.CargoInstitucion, "vinculo_con_pep.cargo_institucion", "Cargo e institución", 300);
-            Periodo("vinculo_con_pep", "del vínculo", v.FechaVinculacion, v.FechaDesvinculacion, v.Vigente);
+            var filas = v.Vinculos ?? [];
+            if (filas.Count == 0)
+            {
+                Falta("vinculo_con_pep.vinculos", "Al menos una persona expuesta políticamente relacionada");
+                return;
+            }
+
+            if (filas.Count > MaximoFilas)
+                Invalido("vinculo_con_pep.vinculos", $"puedes registrar hasta {MaximoFilas} personas expuestas políticamente relacionadas.");
+            for (var i = 0; i < filas.Count; i++)
+            {
+                var p = filas[i];
+                var campo = $"vinculo_con_pep.vinculos[{i}]";
+                var n = i + 1;
+                if (p.Tipo is null)
+                    Falta($"{campo}.tipo", $"Tipo de vínculo de la PEP relacionada {n}");
+                Requerido(p.Relacion, $"{campo}.relacion", $"Parentesco o relación con la PEP relacionada {n}", 100);
+                if (p.Tipo is { } tipo && p.Relacion is { } relacion && !(tipo == TipoVinculoPep.Familiar ? DeclaracionPepReglas.RelacionesFamiliar : DeclaracionPepReglas.RelacionesAsociado).Contains(relacion))
+                    Invalido($"{campo}.relacion", $"elige el parentesco o relación con la PEP relacionada {n} de la lista.");
+                Requerido(p.Nombre, $"{campo}.nombre", $"Nombre de la PEP relacionada {n}", 300);
+                Requerido(p.Cargo, $"{campo}.cargo", $"Cargo de la PEP relacionada {n}", 300);
+                Requerido(p.Entidad, $"{campo}.entidad", $"Entidad de la PEP relacionada {n}", 200);
+                Pais(p.Pais, $"{campo}.pais", $"País de la PEP relacionada {n}");
+                Periodo(campo, $"de la PEP relacionada {n}", p.FechaVinculacion, p.FechaDesvinculacion, p.Vigente);
+            }
         }
 
         public void Juramento(DeclaracionPep d)
@@ -561,7 +634,7 @@ public static partial class DeclaracionPepReglas
                 Invalido("acepta_juramento", "debes aceptar la declaración bajo juramento.");
             if (d.FirmaEnCalidad is null)
                 Falta("firma_en_calidad", "Firma en calidad de");
-            else if (d.FirmaEnCalidad == FirmaEnCalidad.RepresentanteLegal)
+            else if (d.FirmaEnCalidad is FirmaEnCalidad.RepresentanteLegal or FirmaEnCalidad.Apoderado)
             {
                 Requerido(d.FirmanteNombre, "firmante_nombre", "Nombre del firmante", 300);
                 TipoDocumento(d.FirmanteTipoIdentificacion, "firmante_tipo_identificacion", "Tipo de documento del firmante");
