@@ -226,3 +226,20 @@ describe('UI-7 · ningún control nativo del navegador', () => {
     expect(Object.keys(entrada.input).join(' ')).toContain('::-ms-reveal');
   });
 });
+
+describe('FE-3 · días de calendario sin desfase', () => {
+  const todos = fuentes().filter((f) => f.ruta !== 'packages/ui/src/formato.ts');
+  /** Líneas de código (sin los comentarios de documentación, que sí pueden nombrar el patrón). */
+  const codigo = (texto: string) => texto.split('\n').filter((linea) => !/^\s*(\/\/|\/\*|\*)/.test(linea)).join('\n');
+  const infractores = (patron: RegExp) => todos.filter((f) => patron.test(codigo(f.texto))).map((f) => f.ruta);
+
+  it('nadie arma una hora falsa para mostrar un día (`${dia}T12:00:00Z`, `T00:00:00Z`): un día sin hora va por formatearDiaCivil', () => {
+    expect(infractores(/formatearFecha\(\s*`[^`]*T(00|12):00:00(\.000)?Z`/)).toEqual([]);
+  });
+
+  it('el único código que parte un `aaaa-mm-dd` para escribirlo `dd/mm/aaaa` es formatearDiaCivil', () => {
+    expect(infractores(/\(\\d\{4\}\)-\(\\d\{2\}\)-\(\\d\{2\}\)\$\/\.exec\(/)).toEqual([]);
+    expect(infractores(/\$\{partes\[3\] \?\? ''\}\/\$\{partes\[2\] \?\? ''\}/)).toEqual([]);
+    expect(infractores(/\$\{partes\[2\] \?\? ''\}\/\$\{partes\[1\] \?\? ''\}/)).toEqual([]);
+  });
+});

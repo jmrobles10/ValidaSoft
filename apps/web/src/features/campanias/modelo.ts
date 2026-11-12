@@ -7,6 +7,7 @@ import type {
   TotalesCampaniaDto,
   VistaPreviaCampaniaDto,
 } from '@validasoft/api-client';
+import { formatearDiaCivil } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
 
 /** Tono del chip de estado de la campaña (colores de MUI). */
@@ -119,8 +120,7 @@ export function paginar<T>(filas: readonly T[], pagina: number, tamano = FILAS_P
 
 /** `2026-11-30` → «30/11/2026» sin pasar por la zona horaria (la API manda solo el día). */
 export function formatearDia(dia: string | null | undefined): string {
-  const partes = dia?.split('-');
-  return partes?.length === 3 ? `${partes[2] ?? ''}/${partes[1] ?? ''}/${partes[0] ?? ''}` : '—';
+  return dia ? formatearDiaCivil(dia) : '—';
 }
 
 /** `CO|NIT|900123456` → «NIT 900123456». */

@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Link, Stack, Typography } from '@mui/material';
 import { SCOPES, type VinculoDto } from '@validasoft/api-client';
-import { ChipEstado, Dato, formatearFecha, RejillaDatos } from '@validasoft/ui';
+import { ChipEstado, Dato, formatearDiaCivil, formatearFecha, RejillaDatos } from '@validasoft/ui';
 import { Ban, Download, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,9 +10,6 @@ import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
 import { esEstadoCertificado, pdfPendiente, useCertificadoVinculo, useDescargarCertificado } from './api';
 import { DialogoRevocarCertificado } from './DialogoRevocarCertificado';
-
-/** Las fechas de vigencia son días calendario (`aaaa-mm-dd`): se muestran sin correrse por la zona horaria. */
-const dia = (valor: string) => formatearFecha(`${valor}T12:00:00Z`);
 
 /** Certificado del vínculo: estado de la emisión actual, descarga del PDF, verificación pública, revocación e historial. */
 export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'> }) {
@@ -58,7 +55,7 @@ export function TarjetaCertificado({ vinculo }: { vinculo: Pick<VinculoDto, 'id'
           )}
           <RejillaDatos>
             <Dato etiqueta={t('certificados.emitido')}>{formatearFecha(actual.emitidoEn)}</Dato>
-            <Dato etiqueta={t('certificados.vigenteHasta')}>{actual.vigenteHasta ? dia(actual.vigenteHasta) : t('certificados.sinVencimiento')}</Dato>
+            <Dato etiqueta={t('certificados.vigenteHasta')}>{actual.vigenteHasta ? formatearDiaCivil(actual.vigenteHasta) : t('certificados.sinVencimiento')}</Dato>
             <Dato etiqueta={t('certificados.expediente')}>
               <Typography component="span" variant="mono">
                 {actual.expedienteFolio}

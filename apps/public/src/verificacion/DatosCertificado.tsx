@@ -1,8 +1,7 @@
 import { Typography } from '@mui/material';
 import type { CertificadoPublicoDto } from '@validasoft/api-client';
-import { Dato, formatearFechaHora, RejillaDatos } from '@validasoft/ui';
+import { Dato, formatearDiaCivil, formatearFechaHora, RejillaDatos } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
-import { formatearDia } from '../vigencia/vigencia';
 
 /** Lo que expone la verificación pública (P-8-1): sin documentos, contactos, revisores ni motivo del bloqueo. */
 export function DatosCertificado({ certificado: c }: { certificado: CertificadoPublicoDto }) {
@@ -18,7 +17,7 @@ export function DatosCertificado({ certificado: c }: { certificado: CertificadoP
       <Dato etiqueta={t('verificacion.datos.empresa')}>{c.emisor.empresa}</Dato>
       <Dato etiqueta={t('verificacion.datos.proceso')}>{c.flujo.nombre}</Dato>
       <Dato etiqueta={t('verificacion.datos.vigencia')}>
-        {c.vigenteHasta ? formatearDia(c.vigenteHasta) : t('verificacion.datos.sinVencimiento')}
+        {c.vigenteHasta ? formatearDiaCivil(c.vigenteHasta) : t('verificacion.datos.sinVencimiento')}
       </Dato>
       <Dato etiqueta={t('verificacion.datos.folio')}>
         <Typography component="span" variant="mono">

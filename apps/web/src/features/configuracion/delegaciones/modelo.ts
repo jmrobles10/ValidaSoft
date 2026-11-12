@@ -1,5 +1,5 @@
 import type { AreaDto, CrearDelegacionDto, DelegacionDto, EstadoDeDelegacion } from '@validasoft/api-client';
-import { formatearFecha, type Estado } from '@validasoft/ui';
+import { formatearDiaCivil, type Estado } from '@validasoft/ui';
 
 /** Igual que `DelegacionDeRevision.MaximoDias` y `LongitudMaximaMotivo` del dominio. */
 export const MAXIMO_DIAS_DELEGACION = 366;
@@ -25,7 +25,7 @@ export function puedeRevocar(delegacion: Pick<DelegacionDto, 'estado'>): boolean
 
 /** `2026-11-12` → «12/11/2026» sin pasar por zonas horarias (un día sin hora no se corre). */
 export function formatearDia(iso: string): string {
-  return formatearFecha(`${iso.slice(0, 10)}T12:00:00Z`);
+  return formatearDiaCivil(iso.slice(0, 10));
 }
 
 /** Días de calendario entre dos fechas ISO, contando ambos extremos (`desde` = `hasta` es 1). */

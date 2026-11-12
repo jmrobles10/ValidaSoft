@@ -1,8 +1,9 @@
 import type { VigenciaDto } from '@validasoft/api-client';
+import { formatearDiaCivil } from '@validasoft/ui';
 import { describe, expect, it } from 'vitest';
 import { detalleComparticion } from '../boveda/versiones';
 import i18n from '../i18n';
-import { avisoDeVigencia, ESTADO_DEL_CHIP, estadoDeVigencia, formatearDia, requiereAtencion, textoVigencia } from './vigencia';
+import { avisoDeVigencia, ESTADO_DEL_CHIP, estadoDeVigencia, requiereAtencion, textoVigencia } from './vigencia';
 
 const t = i18n.t.bind(i18n);
 
@@ -19,8 +20,11 @@ const vigencia = (estado: string, cambios: Partial<VigenciaDto> = {}): VigenciaD
 
 describe('vigencia de un documento', () => {
   it('muestra las fechas sin hora tal cual, sin correrlas por la zona horaria', () => {
-    expect(formatearDia('2026-12-31')).toBe('31/12/2026');
-    expect(formatearDia('2026-11-08T15:00:00Z')).toBe('08/11/2026');
+    expect(formatearDiaCivil('2026-12-31')).toBe('31/12/2026');
+    expect(formatearDiaCivil('2026-11-08T15:00:00Z')).toBe('08/11/2026');
+    // El texto que ve el tercero usa ese mismo día, no el anterior.
+    const vigencia: VigenciaDto = { vigenteHasta: '2026-11-26', base: 'FechaCarga', estado: 'Vigente', diasAviso: [], diasGracia: 0, finDeGracia: null, vencidaEn: null };
+    expect(textoVigencia(vigencia, t)).toContain('26/11/2026');
   });
 
   it('dice hasta cuándo sirve o cuándo venció', () => {

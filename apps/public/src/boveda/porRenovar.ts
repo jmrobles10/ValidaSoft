@@ -1,6 +1,7 @@
 import type { DocumentoBovedaDto, VigenciaDto } from '@validasoft/api-client';
 import type { TFunction } from 'i18next';
-import { estadoDeVigencia, formatearDia, requiereAtencion, type EstadoVigencia } from '../vigencia/vigencia';
+import { formatearDiaCivil } from '@validasoft/ui';
+import { estadoDeVigencia, requiereAtencion, type EstadoVigencia } from '../vigencia/vigencia';
 import { enlaceSubirVersion, sePuedeSubirVersion } from './versiones';
 
 /** Lo que vence de un documento con una empresa (cada una calcula su propia vigencia, TD-6). */
@@ -28,7 +29,7 @@ const URGENCIA: Readonly<Record<VencimientoConEmpresa['estado'], number>> = { Ve
 
 /** `aaaa-mm-dd` sin hora → «31/10», para el plazo («Renueva antes del 31/10»): el año ya va en la fecha de cada empresa. */
 function diaYMes(valor: string): string {
-  return formatearDia(valor).slice(0, 5);
+  return formatearDiaCivil(valor).slice(0, 5);
 }
 
 /** Las fechas `aaaa-mm-dd` se ordenan como texto; sin fecha va al final. */
@@ -81,7 +82,7 @@ function textosEmpresas(lista: readonly VencimientoConEmpresa[], t: TFunction): 
     const { frase, fecha } = fraseEmpresa(v);
     const clave = frase === anterior ? CONTINUACION[frase] : frase;
     anterior = frase;
-    return t(`boveda.porRenovar.${clave}`, { empresa: v.empresa, fecha: fecha ? formatearDia(fecha) : '' });
+    return t(`boveda.porRenovar.${clave}`, { empresa: v.empresa, fecha: fecha ? formatearDiaCivil(fecha) : '' });
   });
 }
 
