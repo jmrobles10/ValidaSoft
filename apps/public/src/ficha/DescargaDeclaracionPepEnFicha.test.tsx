@@ -38,8 +38,9 @@ const GENERAL = (datos: object = {}) =>
     completitud: COMPLETITUD,
   });
 
+// El cuerpo va como texto: con el `Blob` de jsdom, el `Response` de Node 22 (el del CI) falla con «object.stream is not a function».
 const PDF = (nombre = 'declaracion-pep-ana-gomez-20261112.pdf') =>
-  new Response(new Blob(['%PDF-1.7']), { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${nombre}"` } });
+  new Response('%PDF-1.7', { status: 200, headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${nombre}"` } });
 
 let guardados: { nombre: string; href: string }[] = [];
 
