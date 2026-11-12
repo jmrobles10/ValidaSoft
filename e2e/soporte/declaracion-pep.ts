@@ -82,8 +82,10 @@ export interface OpcionesDeclaracion {
   /** Persona de la legal: la dirección no está en su fila, la escribe quien declara. */
   direccion?: string;
   firma: 'dibujar' | 'subir';
-  /** Persona de la legal que firma como representante legal: nombre, tipo y número del firmante. */
-  firmante?: { nombre: string; tipo: string; numero: string };
+  /** Quien firma por la persona, como representante legal (por omisión) o como apoderado: nombre, tipo y número del firmante. */
+  firmante?: { nombre: string; tipo: string; numero: string; calidad?: 'Representante legal' | 'Apoderado' };
+  /** Responde «Sí» al vínculo con otras PEP y registra dos: un familiar y un asociado cercano (que sigue vigente). */
+  pepRelacionadas?: boolean;
   /** Agrega un familiar y una sociedad (con «Otra»), el cónyuge y las cuentas en el exterior. */
   completa?: boolean;
 }
@@ -91,6 +93,17 @@ export interface OpcionesDeclaracion {
 async function elegirEnCombo(page: Page, dialogo: Locator, combo: string, escribir: string, opcion: string | RegExp): Promise<void> {
   await dialogo.getByRole('combobox', { name: combo, exact: true }).fill(escribir);
   await page.getByRole('option', { name: opcion }).first().click();
+}
+
+/** Una fila de «PEP relacionadas» (ya con su tipo y relación): nombre, cargo, entidad, país, fecha de vinculación y «Vigente». */
+async function llenarPepRelacionada(page: Page, fila: Locator, nombre: string, cargo: string, entidad: string): Promise<void> {
+  await fila.getByRole('textbox', { name: 'Nombre de la PEP' }).fill(nombre);
+  await fila.getByRole('textbox', { name: 'Cargo de la PEP' }).fill(cargo);
+  await fila.getByRole('textbox', { name: 'Entidad', exact: true }).fill(entidad);
+  await fila.getByRole('combobox', { name: 'País de la entidad' }).fill('Colombia');
+  await page.getByRole('option', { name: 'Colombia' }).first().click();
+  await escribirFecha(page, 'Fecha de vinculación', '2022-08-01', fila);
+  await fila.getByRole('checkbox', { name: 'Vigente' }).check();
 }
 
 /** Llena el diálogo «Declaración jurada PEP» abierto y lo confirma. */
@@ -136,11 +149,29 @@ export async function diligenciarDeclaracion(page: Page, opciones: OpcionesDecla
     await sociedad.getByRole('textbox', { name: '¿Cuál?' }).fill('Fideicomitente');
   }
 
-  await dialogo.getByRole('radiogroup', { name: '¿Tiene algún vínculo familiar o societario con una PEP?' }).getByRole('radio', { name: 'No' }).check();
+  const vinculo = dialogo.getByRole('radiogroup', { name: '¿Tiene algún vínculo familiar o societario con una PEP?' });
+  if (!opciones.pepRelacionadas) {
+    await vinculo.getByRole('radio', { name: 'No' }).check();
+  } else {
+    await vinculo.getByRole('radio', { name: 'Sí' }).check();
+    const primera = dialogo.getByRole('listitem', { name: 'PEP relacionada 1' });
+    await primera.getByRole('combobox', { name: 'Tipo de vínculo' }).click();
+    await page.getByRole('option', { name: 'Familiar', exact: true }).click();
+    await primera.getByRole('combobox', { name: 'Parentesco o relación con la PEP' }).click();
+    await page.getByRole('option', { name: /^Hermano\(a\)/ }).click();
+    await llenarPepRelacionada(page, primera, 'Carlos Ruiz', 'Senador', 'Senado de la República');
+    await dialogo.getByRole('button', { name: 'Agregar PEP relacionada' }).click();
+    const segunda = dialogo.getByRole('listitem', { name: 'PEP relacionada 2' });
+    await segunda.getByRole('combobox', { name: 'Tipo de vínculo' }).click();
+    await page.getByRole('option', { name: 'Asociado cercano', exact: true }).click();
+    await segunda.getByRole('combobox', { name: 'Parentesco o relación con la PEP' }).click();
+    await page.getByRole('option', { name: /^Socio\(a\)/ }).click();
+    await llenarPepRelacionada(page, segunda, 'Ana Mora', 'Gobernadora', 'Gobernación de Cundinamarca');
+  }
 
   if (opciones.firmante) {
     await dialogo.getByRole('combobox', { name: 'Firma en calidad de' }).click();
-    await page.getByRole('option', { name: 'Representante legal', exact: true }).click();
+    await page.getByRole('option', { name: opciones.firmante.calidad ?? 'Representante legal', exact: true }).click();
     await dialogo.getByRole('textbox', { name: 'Nombre completo del firmante' }).fill(opciones.firmante.nombre);
     await dialogo.getByRole('combobox', { name: 'Tipo de documento del firmante' }).click();
     await page.getByRole('option', { name: opciones.firmante.tipo, exact: true }).click();

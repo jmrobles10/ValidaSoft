@@ -168,3 +168,45 @@ test('persona jurídica: cada persona PEP con declaración guardada tiene su bot
   expect(deLaEmpresa.pdf).not.toContain('/ShadingType');
   expect(deLaEmpresa.pdf).toContain('Calle 80 # 12-34');
 });
+
+test('persona natural: firma por apoderado con dos PEP relacionadas y el PDF de la empresa las lleva con su tipo, relación y quién firmó', async ({ page, browser }) => {
+  const e = await escenarioDeFicha('FICHA_GENERAL');
+  const tercero = nuevaPersonaNatural('Ana María Pérez Gómez');
+  const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
+  await aceptar(page, invitacion);
+
+  await abrirSeccion(page, 'general', 'Información general');
+  await llenarContactoYDomicilio(page, '300 555 1234', 'Carrera 7 # 32-16');
+  await escribirFecha(page, 'Fecha de expedición de tu documento', '2012-03-20');
+  await page.getByRole('textbox', { name: 'Lugar de expedición', exact: true }).fill('Bogotá');
+  await page.getByRole('radiogroup', { name: '¿Tienes vínculo con una persona expuesta políticamente?' }).getByRole('radio', { name: 'No' }).check();
+  await page.getByRole('radiogroup', { name: PREGUNTA_NATURAL }).getByRole('radio', { name: 'Sí' }).check();
+
+  // La persona natural firma a nombre propio o por apoderado: no hay «Representante legal».
+  const dialogo = page.getByRole('dialog', { name: TITULO_DECLARACION });
+  await dialogo.getByRole('combobox', { name: 'Firma en calidad de' }).click();
+  await expect(page.getByRole('option')).toHaveText(['Nombre propio', 'Apoderado']);
+  await page.keyboard.press('Escape');
+  await diligenciarDeclaracion(page, { firma: 'dibujar', pepRelacionadas: true, firmante: { nombre: 'Pedro Apoderado Gil', tipo: 'CC', numero: '80123456', calidad: 'Apoderado' } });
+  await guardarSeccionCompleta(page, 'Guardaste Información general: está completa.');
+
+  const propio = await descargar(page, page.getByRole('button', { name: 'Descargar el PDF de tu declaración PEP' }), 'declaracion-pep-relacionadas-del-tercero');
+  expect(propio.pdf).toContain('(Carlos Ruiz)');
+  expect(propio.pdf).toContain('(Ana Mora)');
+  expect(propio.pdf).toContain('Asociado cercano: Socio');
+  expect(propio.pdf).toContain('(Apoderado)');
+  expect(propio.pdf).toContain('Pedro Apoderado Gil');
+
+  // La empresa ve las dos PEP y quién firmó.
+  await esperarEstadoDelTercero(page, 'EnRevision').catch(() => undefined);
+  const paginaSofia = await (await browser.newContext({ acceptDownloads: true })).newPage();
+  const sofia = await abrirEmbebido(paginaSofia, e, e.sofia, e.sur);
+  await expect(async () => {
+    await abrirDesdeBandeja(sofia, tercero.nombre, 'Revisión', 'Cliente');
+    await expect(sofia.getByRole('region', { name: TITULO_DECLARACION })).toBeVisible({ timeout: 1500 });
+  }).toPass({ timeout: 60_000 });
+  const bloque = sofia.getByRole('region', { name: TITULO_DECLARACION });
+  await expect(bloque).toContainText('Familiar: Hermano(a) · 2.° consanguinidad · Carlos Ruiz');
+  await expect(bloque).toContainText('Asociado cercano: Socio(a) o asociado(a) comercial · Ana Mora');
+  await expect(bloque).toContainText('Por apoderado: Pedro Apoderado Gil (CC 80123456)');
+});
