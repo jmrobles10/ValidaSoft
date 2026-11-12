@@ -122,6 +122,52 @@ public sealed record TerCamaraComercio(
     string? TerCelular = null,
     string? TerCorreo = null);
 
+
+/// <summary>
+/// <c>dbo.TerDeclaracionPep</c> (HU 49093 del Portal, solo existe en un Portal con esa rama desplegada): la declaración jurada PEP de una fila
+/// de <c>TerCamaraComercio</c> (<c>TerCamId</c>), con sus hijos. <c>RelacionEmpresa</c>: 1 proveedor, 2 socio, 3 otro; <c>FirmaEnCalidad</c>: 1 nombre
+/// propio, 2 representante legal. Solo se lee la <b>activa</b>. La imagen de la firma está en el disco del servidor del Portal
+/// (<c>FirmaRuta</c>): Validasoft no la lee, solo su huella (<c>FirmaHash</c>, SHA-256).
+/// </summary>
+public sealed record TerDeclaracionPep(
+    int TerCamId = 0,
+    int RelacionEmpresa = 0,
+    string? RelacionOtroCual = null,
+    string? Nacionalidad = null,
+    string? Direccion = null,
+    string? CargoDesempenado = null,
+    string? Institucion = null,
+    string? PaisInstitucion = null,
+    DateTime? FechaVinculacion = null,
+    DateTime? FechaDesvinculacion = null,
+    bool CargoVigente = false,
+    bool TieneCuentasExterior = false,
+    string? PaisesCuentasExterior = null,
+    string? ConyugeNombre = null,
+    string? ConyugeTipoDocumento = null,
+    string? ConyugeNumeroDocumento = null,
+    bool TieneVinculoPep = false,
+    string? VinculoPepNombre = null,
+    string? VinculoPepParentesco = null,
+    string? VinculoPepCargoInstitucion = null,
+    DateTime? VinculoPepFechaVinculacion = null,
+    DateTime? VinculoPepFechaDesvinculacion = null,
+    bool VinculoPepVigente = false,
+    bool AceptaJuramento = false,
+    int FirmaEnCalidad = 0,
+    string? FirmanteNombre = null,
+    string? FirmanteTipoDocumento = null,
+    string? FirmanteNumeroDocumento = null,
+    DateTime? FechaFirma = null,
+    string? FirmaHash = null,
+    IReadOnlyList<TerDeclaracionPepFamiliar>? Familiares = null,
+    IReadOnlyList<TerDeclaracionPepSociedad>? Sociedades = null);
+
+/// <summary><c>dbo.TerDeclaracionPepFamiliar</c>.</summary>
+public sealed record TerDeclaracionPepFamiliar(string? NombreCompleto = null, string? Parentesco = null, string? TipoDocumento = null, string? NumeroDocumento = null);
+
+/// <summary><c>dbo.TerDeclaracionPepSociedad</c>. <c>Calidad</c>: 1 socio, 2 administrador, 3 fideicomitente, 4 otra.</summary>
+public sealed record TerDeclaracionPepSociedad(string? NombreRazonSocial = null, string? Identificacion = null, int Calidad = 0, string? CalidadOtraCual = null);
 /// <summary><c>dbo.TerSISO</c>: las ocho preguntas S/N.</summary>
 public sealed record TerSISO(
     bool ProgramaSaludOcupacional = false,
@@ -151,7 +197,8 @@ public sealed record TerceroDelPortal(
     IReadOnlyList<TerCamaraComercio>? CamaraComercio = null,
     TerSISO? Siso = null,
     IReadOnlyList<int>? Especialidades = null,
-    IReadOnlyList<TercerosConstructora>? Constructoras = null)
+    IReadOnlyList<TercerosConstructora>? Constructoras = null,
+    IReadOnlyList<TerDeclaracionPep>? DeclaracionesPep = null)
 {
     public int Terid => Tercero.Terid;
 }

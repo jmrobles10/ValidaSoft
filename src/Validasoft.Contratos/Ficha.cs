@@ -165,6 +165,12 @@ public sealed record DireccionEstructuradaDto(
     string? Complemento);
 
 /// <summary>
+/// Resumen de la declaración jurada PEP de una persona con «Sí» a «¿Es PEP?» (HU 49093): solo viaja si existe (nulo si no). El PDF se descarga con
+/// <c>GET /api/v1/terceros/{id}/declaraciones-pep/pdf?seccion=…&amp;persona=…</c>; <see cref="FirmaHuella"/> es el SHA-256 de la imagen de la firma.
+/// </summary>
+public sealed record DeclaracionPepErpDto(DateOnly? FechaFirma, string? FirmaEnCalidad, string? FirmaHuella);
+
+/// <summary>
 /// El representante legal principal que recibe el ERP (FM-34): en persona natural, el propio tercero (<see cref="Origen"/> = <c>FICHA_GENERAL</c>);
 /// en jurídica, el principal de menor orden de la sección legal (o el primero), con su posición en <see cref="Indice"/>.
 /// <see cref="Nombre"/> = nombres y apellidos.
@@ -180,7 +186,7 @@ public sealed record ContenidoGeneralDto(
     string? Apellidos, string? Direccion, DireccionEstructuradaDto? DireccionEstructurada, CiudadErpDto? Ciudad, string? Pais, string? Telefono,
     string? Correo, CodigoNombreDto? CiiuPrincipal, IReadOnlyList<CodigoNombreDto> CiiuSecundarias, string? PaginaWeb, bool? CertificadoIso,
     int? AnioInicio, RepresentanteLegalErpDto? RepresentanteLegal, bool? Pep = null, bool? VinculoPep = null, DateOnly? FechaExpedicion = null,
-    string? LugarExpedicion = null);
+    string? LugarExpedicion = null, DeclaracionPepErpDto? DeclaracionPep = null);
 
 /// <summary>
 /// Calidades tributarias sí/no de un tercero en Colombia (FM-33), derivadas de los códigos DIAN y de lo declarado en la sección
@@ -210,7 +216,7 @@ public sealed record ContenidoTributarioDto(
 public sealed record PersonaRelacionadaDto(
     string? Rol, string? TipoRepresentacion, string? TipoIdentificacion, string? Numero, string? Dv, string? Nombres, string? Apellidos, string? Cargo,
     decimal? Porcentaje, bool? Pep, bool? VinculoPep, DateOnly? FechaExpedicion, DateOnly? FechaNacimiento, string? Nacionalidad, string? Residencia,
-    string? Correo, string? Telefono, string? LugarExpedicion = null);
+    string? Correo, string? Telefono, string? LugarExpedicion = null, DeclaracionPepErpDto? DeclaracionPep = null);
 
 public sealed record FirmaRevisoraDto(string? Nit, string? RazonSocial);
 

@@ -163,6 +163,8 @@ public sealed class SeccionDeFicha
         if (seccion.Codigo != Seccion)
             throw new InvalidOperationException("La definición no es la de esta sección.");
 
+        // Los sellos de la firma (HU 49093) los fija el servidor comparando con la versión vigente: una declaración que no cambió conserva los suyos.
+        datos = seccion.Esquema.Sellar(datos, Vigente?.Datos, contexto, origen);
         var canonico = seccion.Esquema.Canonico(datos);
         var huellaDatos = JsonDeFicha.Huella(canonico);
         var anterior = Vigente;
@@ -192,6 +194,7 @@ public sealed class SeccionDeFicha
     public static CompletitudDeSeccion Anticipar(SeccionDeFicha? actual, DefinicionDeSeccion seccion, object datos, int soportes, ContextoDeSeccion contexto,
         ICatalogosDeFicha catalogos)
     {
+        datos = seccion.Esquema.Sellar(datos, actual?.Vigente?.Datos, contexto, OrigenDeSeccion.Tercero);
         var huellaDatos = JsonDeFicha.Huella(seccion.Esquema.Canonico(datos));
         var referencia = actual?.Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero)?.HuellaDatos;
         var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, referencia is not null && referencia != huellaDatos, soportes);
