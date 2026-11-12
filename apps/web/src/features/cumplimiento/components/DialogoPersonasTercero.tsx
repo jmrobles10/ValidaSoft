@@ -6,6 +6,7 @@ import { ErrorRecuperable } from '../../../shared/componentes';
 import { mensajeDeError } from '../../../shared/errores';
 import { usePersonasDelTerceroSagrilaft } from '../api';
 import { marcasDePersona, participacionEnTexto } from '../informeSagrilaft';
+import { DeclaracionPepDePersona } from './DeclaracionPepDePersona';
 
 /** Personas relacionadas de un tercero (representante, suplentes, socios y PEP de su ficha) con su participación, PEP y beneficiario final. */
 export function DialogoPersonasTercero({ empresaId, terceroId, tercero, onCerrar }: { empresaId: string; terceroId: string; tercero: string; onCerrar: () => void }) {
@@ -22,7 +23,7 @@ export function DialogoPersonasTercero({ empresaId, terceroId, tercero, onCerrar
         </Typography>
       </DialogTitle>
       <DialogContent>
-        {consulta.isPending && <EsqueletoTabla columnas={5} filas={3} etiqueta={t('cumplimiento.sagrilaft.personas.titulo', { tercero })} />}
+        {consulta.isPending && <EsqueletoTabla columnas={6} filas={3} etiqueta={t('cumplimiento.sagrilaft.personas.titulo', { tercero })} />}
         {consulta.isError && <ErrorRecuperable mensaje={`${t('cumplimiento.sagrilaft.personas.error')} ${mensajeDeError(consulta.error, t)}`} onReintentar={() => void consulta.refetch()} />}
         {consulta.data && personas.length === 0 && <EstadoVacio icono={Users} titulo={t('cumplimiento.sagrilaft.personas.sin')} compacto />}
         {personas.length > 0 && (
@@ -30,7 +31,7 @@ export function DialogoPersonasTercero({ empresaId, terceroId, tercero, onCerrar
             <Table size="small" aria-label={t('cumplimiento.sagrilaft.personas.titulo', { tercero })}>
               <TableHead>
                 <TableRow>
-                  {(['persona', 'rol', 'identificacion', 'participacion', 'marcas'] as const).map((c) => (
+                  {(['persona', 'rol', 'identificacion', 'participacion', 'marcas', 'declaracion'] as const).map((c) => (
                     <TableCell key={c} align={c === 'participacion' ? 'right' : 'left'}>
                       {t(`cumplimiento.sagrilaft.personas.columnas.${c}`)}
                     </TableCell>
@@ -56,6 +57,9 @@ export function DialogoPersonasTercero({ empresaId, terceroId, tercero, onCerrar
                             ))}
                           </Stack>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <DeclaracionPepDePersona empresaId={empresaId} terceroId={terceroId} persona={p} />
                       </TableCell>
                     </TableRow>
                   );

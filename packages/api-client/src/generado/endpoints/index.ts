@@ -18,6 +18,7 @@ export * from './consulta-certificacion/consulta-certificacion';
 export * from './consumo-de-ia/consumo-de-ia';
 export * from './contactos-de-vinculo/contactos-de-vinculo';
 export * from './cuenta-designada/cuenta-designada';
+export * from './declaraciones-pep/declaraciones-pep';
 export * from './delegaciones/delegaciones';
 export * from './documentos-de-vinculo/documentos-de-vinculo';
 export * from './dominio-de-correo/dominio-de-correo';

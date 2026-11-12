@@ -66,21 +66,21 @@ public static class InformeSagrilaftEndpoints
             "Folio", "Tercero", "Tipo de identificación", "Identificación", "Tipo de persona", "Tipo de vínculo", "País", "Ciudad", "Correo", "Actividad (CIIU)",
             "Estado del vínculo", "Última consulta de listas", "Proveedor", "Estado de listas", "Coincidencias por analizar", "Fecha del estudio", "Oficial",
             "Nivel de riesgo", "Debida diligencia", "Concepto", "Conflicto de interés", "Próxima debida diligencia", "Días para la próxima", "Estado de la debida diligencia",
-            "Personas", "PEP"
+            "Personas", "PEP", "PEP sin declaración"
         ];
         var terceros = informe.Filas.Select(f => (IReadOnlyList<object?>)
         [
             f.Folio, f.Tercero, f.TipoIdentificacion, f.Identificacion, f.TipoPersona, f.TipoVinculo, f.Pais, f.Ciudad, f.Correo, f.Actividad, f.EstadoVinculo,
             Fecha(f.UltimaConsultaListas), f.ProveedorListas, f.EstadoListas, f.CoincidenciasPorAnalizar, Fecha(f.FechaEstudio), f.Oficial, f.NivelRiesgo,
             f.DebidaDiligencia, f.Concepto, f.ConflictoDeInteres is { } c ? (c ? "Sí" : "No") : null, Fecha(f.ProximaRevision), f.DiasParaRevision,
-            f.EstadoDebidaDiligencia, f.Personas, f.Pep
+            f.EstadoDebidaDiligencia, f.Personas, f.Pep, f.PepSinDeclaracion
         ]);
-        string[] encabezadoPersonas = ["Tercero", "Identificación del tercero", "Rol", "Tipo de identificación", "Identificación", "Nombre", "Participación (%)", "PEP", "Vínculo PEP", "Beneficiario final"];
+        string[] encabezadoPersonas = ["Tercero", "Identificación del tercero", "Rol", "Tipo de identificación", "Identificación", "Nombre", "Participación (%)", "PEP", "Vínculo PEP", "Beneficiario final", "Declaración PEP"];
         var filasPersonas = informe.Filas
             .SelectMany(f => personas.GetValueOrDefault(f.TerceroId, []).Select(p => (IReadOnlyList<object?>)
             [
                 f.Tercero, f.Identificacion, p.Rol, p.TipoIdentificacion, p.Identificacion, p.Nombre, p.Participacion, p.EsPep ? "Sí" : "No",
-                p.VinculoPep ? "Sí" : "No", p.BeneficiarioFinal ? "Sí" : "No"
+                p.VinculoPep ? "Sí" : "No", p.BeneficiarioFinal ? "Sí" : "No", p.EsPep ? (p.DeclaracionPep ? "Sí" : "No") : "—"
             ]));
         string[] encabezadoVerificaciones =
         [
@@ -155,7 +155,7 @@ public static class InformeSagrilaftEndpoints
                 tercero.TipoPersona.ToString(), ultimo.TipoVinculoNombre, datos?.Pais ?? tercero.Identificacion.Pais, datos?.Ciudad, datos?.Correo ?? vinculo.CorreoTercero,
                 datos?.CiiuPrincipal, vinculo.Estado.ToString(), listas?.RegistradaEn, listas?.Proveedor, estadoListas,
                 listas?.Coincidencias.Count(x => !x.Resuelta) ?? 0, estudio?.Fecha, estudio?.Por, estudio?.Datos.NivelRiesgo, estudio?.Datos.DebidaDiligencia.ToString(),
-                estudio?.Datos.Concepto.ToString(), estudio?.Datos.ConflictoDeInteres, proxima, dias, estadoDd, delTercero.Count, delTercero.Count(p => p.EsPep)));
+                estudio?.Datos.Concepto.ToString(), estudio?.Datos.ConflictoDeInteres, proxima, dias, estadoDd, delTercero.Count, delTercero.Count(p => p.EsPep), delTercero.Count(p => p.EsPep && !p.DeclaracionPep)));
         }
 
         var riesgo = filas.Where(f => f.NivelRiesgo is not null).GroupBy(f => f.NivelRiesgo!.Value).OrderBy(g => g.Key).Select(g => new RiesgoDto(g.Key, g.Count())).ToList();
@@ -208,10 +208,24 @@ public static class InformeSagrilaftEndpoints
             var datos = JsonDeFicha.Deserializar<DatosLegales>(seccion.Vigente!.Datos);
             resultado[seccion.TerceroId] =
             [
-                .. (datos.Personas ?? []).Select(p => new PersonaInformeDto(p.Rol?.ToString() ?? "Persona", p.TipoIdentificacion ?? string.Empty, p.Numero ?? string.Empty,
+                .. (datos.Personas ?? []).Select((p, indice) => new PersonaInformeDto(p.Rol?.ToString() ?? "Persona", p.TipoIdentificacion ?? string.Empty, p.Numero ?? string.Empty,
                     string.Join(' ', new[] { p.Nombres, p.Apellidos }.Where(n => !string.IsNullOrWhiteSpace(n))).Trim(), p.Porcentaje, p.Pep == true, p.VinculoPep == true,
-                    p.Rol == RolPersonaRelacionada.Socio && p.Porcentaje >= 5m))
+                    p.Rol == RolPersonaRelacionada.Socio && p.Porcentaje >= 5m, p.Pep == true && p.DeclaracionPep is not null, indice))
             ];
+        }
+
+        // La persona natural no tiene información legal: su PEP es el propio (la General) y es la persona que se muestra (DP-12).
+        var generales = await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId.IsOneOf(terceroIds) && s.Seccion == CodigosDeSeccion.General).ToListAsync(ct);
+        foreach (var seccion in generales.Where(s => s.Vigente is not null && !resultado.ContainsKey(s.TerceroId)))
+        {
+            var general = JsonDeFicha.Deserializar<DatosGenerales>(seccion.Vigente!.Datos);
+            if (general.TipoPersona == TipoPersona.Natural && general.Pep == true)
+                resultado[seccion.TerceroId] =
+                [
+                    new PersonaInformeDto("Tercero", general.TipoIdentificacion ?? string.Empty, general.Numero ?? string.Empty,
+                        string.Join(' ', new[] { general.Nombres, general.Apellidos }.Where(n => !string.IsNullOrWhiteSpace(n))).Trim(), null, true,
+                        general.VinculoPep == true, false, general.DeclaracionPep is not null, -1)
+                ];
         }
 
         return resultado;

@@ -6,6 +6,7 @@
  */
 import type { CiudadErpDto } from './ciudadErpDto';
 import type { CodigoNombreDto } from './codigoNombreDto';
+import type { DeclaracionPepErpDto } from './declaracionPepErpDto';
 import type { DireccionEstructuradaDto } from './direccionEstructuradaDto';
 import type { RepresentanteLegalErpDto } from './representanteLegalErpDto';
 
@@ -53,4 +54,5 @@ export interface ContenidoGeneralDto {
   fechaExpedicion?: string | null;
   /** @nullable */
   lugarExpedicion?: string | null;
+  declaracionPep?: null | DeclaracionPepErpDto;
 }

@@ -10105,6 +10105,73 @@
         }
       }
     },
+    "/api/v1/terceros/{terceroId}/declaraciones-pep/pdf": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.DeclaracionesPepEndpoints"
+        ],
+        "summary": "GET_api_v1_terceros_terceroId_declaraciones_pep_pdf",
+        "description": "GET_api_v1_terceros_terceroId_declaraciones_pep_pdf",
+        "operationId": "GET_api_v1_terceros_terceroId_declaraciones_pep_pdf",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "seccion",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/ficha": {
       "get": {
         "tags": [
@@ -19687,6 +19754,16 @@
               "null",
               "string"
             ]
+          },
+          "declaracionPep": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DeclaracionPepErpDto"
+              }
+            ]
           }
         }
       },
@@ -21418,6 +21495,35 @@
           },
           "valor": {
             "type": "string"
+          }
+        }
+      },
+      "DeclaracionPepErpDto": {
+        "required": [
+          "fechaFirma",
+          "firmaEnCalidad",
+          "firmaHuella"
+        ],
+        "type": "object",
+        "properties": {
+          "fechaFirma": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "firmaEnCalidad": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "firmaHuella": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -25708,6 +25814,15 @@
               "string"
             ],
             "format": "int32"
+          },
+          "pepSinDeclaracion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -29092,6 +29207,19 @@
           },
           "beneficiarioFinal": {
             "type": "boolean"
+          },
+          "declaracionPep": {
+            "type": "boolean",
+            "default": false
+          },
+          "indice": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -29228,6 +29356,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "declaracionPep": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DeclaracionPepErpDto"
+              }
             ]
           }
         }
@@ -37561,6 +37699,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.DeclaracionesPepEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.FichaMaestraEndpoints"

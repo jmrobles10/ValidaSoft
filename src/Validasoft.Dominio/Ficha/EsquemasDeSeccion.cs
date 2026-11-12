@@ -27,6 +27,12 @@ public interface IEsquemaDeSeccion
     /// <summary>Recorta textos, normaliza códigos y cifras y fija lo que no edita el tercero (identificación, DV, periodo).</summary>
     object Normalizar(object datos, ContextoDeSeccion contexto);
 
+    /// <summary>
+    /// Fija lo que decide el servidor y no el tercero (hoy, los sellos de la firma de una declaración PEP): compara con los datos de la
+    /// versión vigente (<paramref name="anterior"/>, nulo si no hay) para conservar lo que no cambió. Se llama con los datos ya normalizados.
+    /// </summary>
+    object Sellar(object datos, JsonElement? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen);
+
     IReadOnlyList<ReferenciaACatalogo> Referencias(object datos);
 
     void Revisar(object datos, ContextoDeSeccion contexto, ICatalogosDeFicha catalogos, RevisionDeSeccion revision);
@@ -122,7 +128,13 @@ public abstract partial class EsquemaDeSeccion<T> : IEsquemaDeSeccion where T : 
 
     public object Deserializar(JsonElement canonico) => JsonDeFicha.Deserializar<T>(canonico);
 
+    public object Sellar(object datos, JsonElement? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen) =>
+        Sellar((T)datos, anterior is { ValueKind: JsonValueKind.Object } json ? JsonDeFicha.Deserializar<T>(json) : null, contexto, origen);
+
     protected abstract T Normalizar(T datos, ContextoDeSeccion contexto);
+
+    /// <summary>Por omisión no hay nada que sellar.</summary>
+    protected virtual T Sellar(T datos, T? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen) => datos;
 
     protected virtual IEnumerable<ReferenciaACatalogo> Referencias(T datos) => [];
 
@@ -274,6 +286,20 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
     [GeneratedRegex(@"^[A-Z]{1,2}$")]
     private static partial Regex RegexLetra();
 
+    // Cambia la forma de los datos (declaración PEP) y la regla (el «Sí» a PEP exige la declaración).
+    public override int VersionEsquema => 2;
+
+    public override int VersionReglas => 2;
+
+    protected override DatosGenerales Sellar(DatosGenerales d, DatosGenerales? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen) =>
+        d.DeclaracionPep is null
+            ? d
+            : d with
+            {
+                DeclaracionPep = DeclaracionPepReglas.Sellar(d.DeclaracionPep, anterior?.DeclaracionPep, d.Pep == true, anterior?.Pep == true,
+                    origen == OrigenDeSeccion.Tercero, contexto.Hoy, contexto.IpDeFirma)
+            };
+
     protected override DatosGenerales Normalizar(DatosGenerales d, ContextoDeSeccion contexto)
     {
         var id = contexto.Identificacion;
@@ -324,7 +350,10 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
             DireccionEstructurada = d.DireccionEstructurada is { } e ? NormalizarDireccion(e) : null,
             CiiuPrincipal = principal,
             CiiuSecundarias = Lista(d.CiiuSecundarias, c => Codigo(CatalogoDePlataforma.ActividadesEconomicas, c), ordenar: false)?.Distinct().ToList(),
-            PaginaWeb = PaginaWeb(d.PaginaWeb)
+            PaginaWeb = PaginaWeb(d.PaginaWeb),
+            DeclaracionPep = contexto.EsJuridica ? null : DeclaracionPepReglas.Normalizar(d.DeclaracionPep, new OrigenDeDeclaracionPep(true, null,
+                string.Join(' ', new[] { Texto(d.Nombres), Texto(d.Apellidos) }.OfType<string>()) is { Length: > 0 } nombre ? nombre : null, id.Tipo, id.Numero, null,
+                Texto(d.Direccion)))
         };
     }
 
@@ -349,6 +378,8 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
                 throw NoAplica("fecha_expedicion", "Fecha de expedición", "una persona jurídica");
             if (Texto(d.LugarExpedicion) is not null)
                 throw NoAplica("lugar_expedicion", "Lugar de expedición", "una persona jurídica");
+            if (d.DeclaracionPep is not null)
+                throw NoAplica("declaracion_pep", "Declaración PEP", "una persona jurídica: se diligencia por cada persona de la información legal");
         }
         else if (Texto(d.RazonSocial) is not null)
         {
@@ -412,6 +443,8 @@ public sealed partial class EsquemaGeneral : EsquemaDeSeccion<DatosGenerales>
         Longitud(r, d.Apellidos, "apellidos", "Apellidos", 150);
         NoFutura(r, d.FechaExpedicion, contexto.Hoy, "fecha_expedicion", "Fecha de expedición");
         Longitud(r, d.LugarExpedicion, "lugar_expedicion", "Lugar de expedición", 100);
+        if (!contexto.EsJuridica)
+            DeclaracionPepReglas.Revisar(d.DeclaracionPep, d.Pep == true, "declaracion_pep", contexto, r);
 
         r.Requerido(d.Correo, "correo", "Correo electrónico");
         Correo(r, d.Correo, "correo");
@@ -662,6 +695,36 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
 {
     public const int MaximoPersonas = 100;
 
+    // Cambia la forma de los datos (declaración PEP por persona) y la regla (el «Sí» a PEP exige la declaración).
+    public override int VersionEsquema => 2;
+
+    public override int VersionReglas => 2;
+
+    protected override DatosLegales Sellar(DatosLegales d, DatosLegales? anterior, ContextoDeSeccion contexto, OrigenDeSeccion origen)
+    {
+        if (d.Personas is null || d.Personas.All(p => p.DeclaracionPep is null))
+            return d;
+        var delTercero = origen == OrigenDeSeccion.Tercero;
+        return d with
+        {
+            Personas =
+            [
+                .. d.Personas.Select(p =>
+                {
+                    if (p.DeclaracionPep is null)
+                        return p;
+                    // La misma persona en la versión anterior: mismo rol e identificación (la identidad de la fila).
+                    var previa = anterior?.Personas?.FirstOrDefault(x => x.Rol == p.Rol && x.TipoIdentificacion == p.TipoIdentificacion && x.Numero == p.Numero);
+                    return p with
+                    {
+                        DeclaracionPep = DeclaracionPepReglas.Sellar(p.DeclaracionPep, previa?.DeclaracionPep, p.Pep == true, previa?.Pep == true, delTercero,
+                            contexto.Hoy, contexto.IpDeFirma)
+                    };
+                })
+            ]
+        };
+    }
+
     protected override DatosLegales Normalizar(DatosLegales d, ContextoDeSeccion contexto) => d with
     {
         Personas = Filas(d.Personas, NormalizarPersona),
@@ -681,7 +744,7 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
         var tipo = Mayusculas(p.TipoIdentificacion);
         var numero = Mayusculas(p.Numero);
         var id = IdentificacionValida(tipo, numero);
-        return p with
+        var normal = p with
         {
             TipoRepresentacion = Texto(p.TipoRepresentacion),
             TipoIdentificacion = tipo,
@@ -698,6 +761,13 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
             Residencia = Mayusculas(p.Residencia),
             Correo = Minusculas(p.Correo),
             Telefono = Texto(p.Telefono)
+        };
+        // Los datos básicos de la declaración se copian de la persona ya normalizada (nombre, documento y rol).
+        return normal with
+        {
+            DeclaracionPep = DeclaracionPepReglas.Normalizar(p.DeclaracionPep, new OrigenDeDeclaracionPep(false, normal.Rol,
+                string.Join(' ', new[] { normal.Nombres, normal.Apellidos }.OfType<string>()) is { Length: > 0 } nombre ? nombre : null, normal.TipoIdentificacion,
+                normal.Numero, normal.Nacionalidad, null))
         };
     }
 
@@ -753,6 +823,7 @@ public sealed class EsquemaLegal : EsquemaDeSeccion<DatosLegales>
             Pais(r, p.Residencia, $"{campo}.residencia");
             Correo(r, p.Correo, $"{campo}.correo");
             Telefono(r, p.Telefono, $"{campo}.telefono");
+            DeclaracionPepReglas.Revisar(p.DeclaracionPep, p.Pep == true, $"{campo}.declaracion_pep", contexto, r);
             if (p.Rol is not null && p.Numero is not null && !vistas.Add((p.Rol, p.TipoIdentificacion, p.Numero)))
                 r.Formato(campo, "persona-duplicada", "Esa persona ya está registrada con ese rol.");
         }

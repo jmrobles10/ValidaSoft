@@ -272,7 +272,8 @@ public static partial class TraductorDelPortal
             Pep = propia?.TerCamEsPep,
             VinculoPep = propia?.TerCamVinculoPep,
             FechaExpedicion = propia is null ? null : Fecha(propia.TerFechaExpedicion, "fecha_expedicion", avisos),
-            LugarExpedicion = propia?.TerLugarExpedicion
+            LugarExpedicion = propia?.TerLugarExpedicion,
+            DeclaracionPep = natural ? Declaracion(origen, propia, string.Empty, catalogos, avisos) : null
         };
     }
 
@@ -544,7 +545,8 @@ public static partial class TraductorDelPortal
                 Nacionalidad = PaisDePersona(c.TerNacionalidad, $"{campo}.nacionalidad", catalogos, avisos),
                 Residencia = PaisDePersona(c.TerPaisResidencia, $"{campo}.residencia", catalogos, avisos),
                 Correo = c.TerCorreo,
-                Telefono = c.TerCelular
+                Telefono = c.TerCelular,
+                DeclaracionPep = Declaracion(origen, c, campo, catalogos, avisos)
             });
         }
 
@@ -609,6 +611,102 @@ public static partial class TraductorDelPortal
         if (iso is null && !string.IsNullOrWhiteSpace(texto))
             avisos.Rechazar(campo, "pais-no-reconocido", "El país del Portal no corresponde a un código ISO 3166-1.", texto);
         return iso;
+    }
+
+    // ---------- declaración jurada PEP (HU 49093 del Portal) ----------
+
+    /// <summary>
+    /// La declaración PEP <b>activa</b> de un contacto que responde «Sí» a «¿Es PEP?». Se importa con la huella de la firma (la imagen vive en el disco del
+    /// Portal y Validasoft no la lee): el tercero la vuelve a firmar al cambiar la declaración. Lo que no se pueda convertir (un país sin código ISO, un tipo
+    /// de documento sin equivalente) queda vacío con una advertencia y la declaración como faltante de la sección.
+    /// </summary>
+    private static DeclaracionPep? Declaracion(TerceroDelPortal origen, TerCamaraComercio? c, string prefijo, CatalogosDelPortal catalogos, Avisos avisos)
+    {
+        if (c is not { TerCamEsPep: true } || origen.DeclaracionesPep?.FirstOrDefault(x => x.TerCamId == c.TerCamId) is not { } d)
+            return null;
+
+        string Ruta(string r) => prefijo.Length == 0 ? r : $"{prefijo}.{r}";
+
+        string? Pais(string? texto, string ruta)
+        {
+            var iso = CodigosDelPortal.Pais(texto, catalogos.Paises);
+            if (iso is null && !string.IsNullOrWhiteSpace(texto))
+                avisos.Advertir(Ruta(ruta), "pais-no-reconocido", "El país de la declaración PEP no corresponde a un código ISO 3166-1: queda sin diligenciar.", texto);
+            return iso;
+        }
+
+        string? Documento(string? tipo, string ruta)
+        {
+            var codigo = CodigosDelPortal.TipoDeIdentificacion(tipo);
+            if (codigo is null && !string.IsNullOrWhiteSpace(tipo))
+                avisos.Advertir(Ruta(ruta), "tipo-documento-sin-equivalente", "El tipo de documento de la declaración PEP no tiene equivalente: queda sin diligenciar.", tipo);
+            return codigo;
+        }
+
+        static DateOnly? Dia(DateTime? fecha) => fecha is { } f ? DateOnly.FromDateTime(f) : null;
+
+        var paises = new List<string>();
+        if (d.TieneCuentasExterior && !string.IsNullOrWhiteSpace(d.PaisesCuentasExterior))
+        {
+            string[] nombres;
+            try
+            {
+                nombres = System.Text.Json.JsonSerializer.Deserialize<string[]>(d.PaisesCuentasExterior) ?? [];
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                avisos.Advertir(Ruta("declaracion_pep.paises_cuentas_exterior"), "paises-ilegibles", "Los países de las cuentas en el exterior no son una lista legible.", d.PaisesCuentasExterior);
+                nombres = [];
+            }
+
+            paises.AddRange(nombres.Select(n => Pais(n, "declaracion_pep.paises_cuentas_exterior")).OfType<string>());
+        }
+
+        return new DeclaracionPep
+        {
+            Nacionalidad = Pais(d.Nacionalidad, "declaracion_pep.nacionalidad"),
+            Direccion = d.Direccion,
+            Cargo = d.CargoDesempenado,
+            Institucion = d.Institucion,
+            Pais = Pais(d.PaisInstitucion, "declaracion_pep.pais"),
+            FechaVinculacion = Dia(d.FechaVinculacion),
+            Vigente = d.CargoVigente,
+            FechaDesvinculacion = Dia(d.FechaDesvinculacion),
+            CuentasExterior = d.TieneCuentasExterior,
+            PaisesCuentasExterior = paises.Count == 0 ? null : paises,
+            Conyuge = string.IsNullOrWhiteSpace(d.ConyugeNombre + d.ConyugeTipoDocumento + d.ConyugeNumeroDocumento)
+                ? null
+                : new ConyugePep { Nombre = d.ConyugeNombre, TipoIdentificacion = Documento(d.ConyugeTipoDocumento, "declaracion_pep.conyuge.tipo_identificacion"), Numero = d.ConyugeNumeroDocumento },
+            Familiares = d.Familiares is { Count: > 0 } familiares
+                ? [.. familiares.Select(f => new FamiliarPep { Nombre = f.NombreCompleto, Parentesco = f.Parentesco, TipoIdentificacion = Documento(f.TipoDocumento, "declaracion_pep.familiares"), Numero = f.NumeroDocumento })]
+                : null,
+            Sociedades = d.Sociedades is { Count: > 0 } sociedades
+                ? [.. sociedades.Select(s => new SociedadPep
+                {
+                    Nombre = s.NombreRazonSocial,
+                    Identificacion = s.Identificacion,
+                    Calidad = s.Calidad switch { 1 => CalidadEnSociedad.Socio, 2 => CalidadEnSociedad.Administrador, 3 => CalidadEnSociedad.Fideicomitente, 4 => CalidadEnSociedad.Otra, _ => null },
+                    CalidadOtra = s.CalidadOtraCual
+                })]
+                : null,
+            VinculoConPep = new VinculoConPep
+            {
+                Tiene = d.TieneVinculoPep,
+                Nombre = d.VinculoPepNombre,
+                Parentesco = d.VinculoPepParentesco,
+                CargoInstitucion = d.VinculoPepCargoInstitucion,
+                FechaVinculacion = Dia(d.VinculoPepFechaVinculacion),
+                FechaDesvinculacion = Dia(d.VinculoPepFechaDesvinculacion),
+                Vigente = d.VinculoPepVigente
+            },
+            AceptaJuramento = d.AceptaJuramento,
+            FirmaEnCalidad = d.FirmaEnCalidad == 2 ? Dominio.Ficha.FirmaEnCalidad.RepresentanteLegal : Dominio.Ficha.FirmaEnCalidad.NombrePropio,
+            FirmanteNombre = d.FirmanteNombre,
+            FirmanteTipoIdentificacion = Documento(d.FirmanteTipoDocumento, "declaracion_pep.firmante_tipo_identificacion"),
+            FirmanteNumero = d.FirmanteNumeroDocumento,
+            FirmaHuella = string.IsNullOrWhiteSpace(d.FirmaHash) ? null : d.FirmaHash.Trim().ToLowerInvariant(),
+            FechaFirma = Dia(d.FechaFirma)
+        };
     }
 
     private static DatosSst? Sst(TerSISO? s) =>

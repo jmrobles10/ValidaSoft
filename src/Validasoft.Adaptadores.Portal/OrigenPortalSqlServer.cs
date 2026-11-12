@@ -155,6 +155,10 @@ public sealed class OrigenPortalSqlServer(string cadena) : IOrigenPortal
                 r => (Terid: Int(r, 0), Fila: new TercerosConstructora(Int(r, 1), Int(r, 2), FechaN(r, 3))), ct))
             .ToLookup(x => x.Terid, x => x.Fila);
 
+        // HU 49093 del Portal: las tablas de la declaración PEP solo existen si esa rama está desplegada. Con SQL dinámico guardado por OBJECT_ID, un
+        // Portal sin ellas no falla ni devuelve filas (una consulta con un nombre inexistente ni siquiera compilaría).
+        var declaracionesPep = await DeclaracionesPepAsync(conexion, Rango, ct);
+
         return
         [
             .. terceros.Select(t => new TerceroDelPortal(t,
@@ -167,8 +171,58 @@ public sealed class OrigenPortalSqlServer(string cadena) : IOrigenPortal
                 [.. camara[t.Terid]],
                 sisos.GetValueOrDefault(t.Terid),
                 [.. especialidades[t.Terid]],
-                [.. constructoras[t.Terid]]))
+                [.. constructoras[t.Terid]],
+                [.. declaracionesPep[t.Terid]]))
         ];
+    }
+
+    /// <summary>
+    /// Las declaraciones PEP <b>activas</b> del lote con sus familiares y sociedades. Las tablas son del Portal con la HU 49093: si no existen
+    /// (<c>OBJECT_ID</c> nulo) no se lee nada. Solo columnas de texto o fecha: la imagen de la firma no está en la base, sino en el disco del Portal.
+    /// </summary>
+    private static async Task<ILookup<int, TerDeclaracionPep>> DeclaracionesPepAsync(SqlConnection conexion, Func<SqlParameter[]> rango, CancellationToken ct)
+    {
+        const string Param = "N'@desde INT, @hasta INT', @desde, @hasta";
+        var cabeceras = await LeerAsync(conexion,
+            $$"""
+            IF OBJECT_ID(N'dbo.TerDeclaracionPep', N'U') IS NOT NULL
+            EXEC sp_executesql N'
+                SELECT IdTercero, Id, TerCamId, RelacionEmpresa, RelacionOtroCual, Nacionalidad, Direccion, CargoDesempenado, Institucion, PaisInstitucion,
+                       FechaVinculacion, FechaDesvinculacion, CargoVigente, TieneCuentasExterior, PaisesCuentasExterior, ConyugeNombre, ConyugeTipoDocumento,
+                       ConyugeNumeroDocumento, TieneVinculoPep, VinculoPepNombre, VinculoPepParentesco, VinculoPepCargoInstitucion, VinculoPepFechaVinculacion,
+                       VinculoPepFechaDesvinculacion, VinculoPepVigente, AceptaJuramento, FirmaEnCalidad, FirmanteNombre, FirmanteTipoDocumento,
+                       FirmanteNumeroDocumento, FechaFirma, FirmaHash
+                FROM dbo.TerDeclaracionPep WHERE IdTercero BETWEEN @desde AND @hasta AND Activa = 1', {{Param}}
+            """, rango(),
+            r => (Terid: Int(r, 0), Id: Int(r, 1), Fila: new TerDeclaracionPep(Int(r, 2), Int(r, 3), Str(r, 4), Str(r, 5), Str(r, 6), Str(r, 7), Str(r, 8), Str(r, 9),
+                FechaN(r, 10), FechaN(r, 11), Bool(r, 12), Bool(r, 13), Str(r, 14), Str(r, 15), Str(r, 16), Str(r, 17), Bool(r, 18), Str(r, 19), Str(r, 20),
+                Str(r, 21), FechaN(r, 22), FechaN(r, 23), Bool(r, 24), Bool(r, 25), Int(r, 26), Str(r, 27), Str(r, 28), Str(r, 29), FechaN(r, 30), Str(r, 31))), ct);
+        if (cabeceras.Count == 0)
+            return Enumerable.Empty<TerDeclaracionPep>().ToLookup(d => d.TerCamId);
+
+        var familiares = (await LeerAsync(conexion,
+                $$"""
+                IF OBJECT_ID(N'dbo.TerDeclaracionPepFamiliar', N'U') IS NOT NULL
+                EXEC sp_executesql N'
+                    SELECT f.IdDeclaracionPep, f.NombreCompleto, f.Parentesco, f.TipoDocumento, f.NumeroDocumento
+                    FROM dbo.TerDeclaracionPepFamiliar f JOIN dbo.TerDeclaracionPep d ON d.Id = f.IdDeclaracionPep
+                    WHERE d.IdTercero BETWEEN @desde AND @hasta AND d.Activa = 1 ORDER BY f.Id', {{Param}}
+                """, rango(), r => (Id: Int(r, 0), Fila: new TerDeclaracionPepFamiliar(Str(r, 1), Str(r, 2), Str(r, 3), Str(r, 4))), ct))
+            .ToLookup(x => x.Id, x => x.Fila);
+        var sociedades = (await LeerAsync(conexion,
+                $$"""
+                IF OBJECT_ID(N'dbo.TerDeclaracionPepSociedad', N'U') IS NOT NULL
+                EXEC sp_executesql N'
+                    SELECT s.IdDeclaracionPep, s.NombreRazonSocial, s.Identificacion, s.Calidad, s.CalidadOtraCual
+                    FROM dbo.TerDeclaracionPepSociedad s JOIN dbo.TerDeclaracionPep d ON d.Id = s.IdDeclaracionPep
+                    WHERE d.IdTercero BETWEEN @desde AND @hasta AND d.Activa = 1 ORDER BY s.Id', {{Param}}
+                """, rango(), r => (Id: Int(r, 0), Fila: new TerDeclaracionPepSociedad(Str(r, 1), Str(r, 2), Int(r, 3), Str(r, 4))), ct))
+            .ToLookup(x => x.Id, x => x.Fila);
+
+        // Una por contacto (UNIQUE(TerCamId) en el Portal); por tercero, para entregarlas con el resto de sus filas.
+        return cabeceras
+            .Select(c => (c.Terid, Fila: c.Fila with { Familiares = [.. familiares[c.Id]], Sociedades = [.. sociedades[c.Id]] }))
+            .ToLookup(x => x.Terid, x => x.Fila);
     }
 
     private async Task<SqlConnection> AbrirAsync(CancellationToken ct)

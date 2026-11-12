@@ -121,6 +121,15 @@ public sealed record ContextoDeSeccion(TipoPersona TipoPersona, Identificacion I
 {
     /// <summary>Consorcio y unión temporal se tratan como persona jurídica en la ficha.</summary>
     public bool EsJuridica => TipoPersona != TipoPersona.Natural;
+
+    /// <summary>
+    /// Guarda el propio tercero (HU 49093): quien responde «Sí» a «¿Es PEP?» no guarda sin su declaración completa (422). Lo que llega de un
+    /// sistema de origen y el recálculo no lo exigen: la declaración que falta queda como faltante de la completitud.
+    /// </summary>
+    public bool ExigeDeclaracionPep { get; init; }
+
+    /// <summary>IP desde la que el tercero firma una declaración PEP (la evidencia de su aceptación); nula si no se conoce.</summary>
+    public string? IpDeFirma { get; init; }
 }
 
 /// <summary>Acumula lo que encuentran las reglas de una sección: errores de formato y faltantes de completitud.</summary>

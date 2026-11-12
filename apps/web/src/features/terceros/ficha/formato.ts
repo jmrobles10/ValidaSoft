@@ -81,3 +81,6 @@ export function tituloDeFila(clave: string, fila: Record<string, unknown>, indic
   }
   return t('fichaMaestra.fila', { n: String(indice + 1) });
 }
+
+/** La declaración jurada PEP (HU 49093) solo cuenta mientras la respuesta es «Sí»: con «No» queda guardada, inactiva, y no se muestra ni se descarga. */
+export const declaracionActiva = (dueno: Record<string, unknown>): Record<string, unknown> | null => (dueno.pep === true && esObjeto(dueno.declaracion_pep) ? dueno.declaracion_pep : null);

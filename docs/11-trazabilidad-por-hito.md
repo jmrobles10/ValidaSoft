@@ -230,7 +230,7 @@ Movidos fuera de H2 tras la segunda relectura: `POST /public/v1/autorregistro` �
 | `Ia:FailClosed` | bool | `true` |
 | `Antivirus:Modo` | enum(`Obligatorio\|Opcional\|Deshabilitado`) | `Opcional` dev / `Obligatorio` prod |
 | `Retencion:GraciaDiasNoReferenciadas` | int | `90` |
-| `TipoDocumentoCanonicoDto.*` (semilla canónica, T-10) | — | **03 Anexo A** (`RUT`, `CAMARA_COMERCIO`, `CEDULA`, `PASAPORTE`, `CERTIFICADO_ANTECEDENTES`, `ESTADOS_FINANCIEROS`, `DECLARACION_RENTA`, `CERTIFICACION_BANCARIA`, `CUENTA_BANCARIA`, `DATOS_MAESTROS`, `INFO_TRIBUTARIA`, `INFO_LEGAL`, `BENEFICIARIO_FINAL`, `DECLARACION_PEP`, `SG_SST`, `HOJA_DE_VIDA`, `TITULO_ACADEMICO`, `POLIZA`, `AUTORIZACION_TRATAMIENTO_DATOS`, `TERMINOS_Y_CONDICIONES`, `FORMULARIO_SARLAFT`, `AFILIACION_SEGURIDAD_SOCIAL`, `PAZ_Y_SALVO`, `FORMATO_VINCULACION`) |
+| `TipoDocumentoCanonicoDto.*` (semilla canónica, T-10) | — | **03 Anexo A** (`RUT`, `CAMARA_COMERCIO`, `CEDULA`, `PASAPORTE`, `CERTIFICADO_ANTECEDENTES`, `ESTADOS_FINANCIEROS`, `DECLARACION_RENTA`, `CERTIFICACION_BANCARIA`, `CUENTA_BANCARIA`, `DATOS_MAESTROS`, `INFO_TRIBUTARIA`, `INFO_LEGAL`, `BENEFICIARIO_FINAL`, `SG_SST`, `HOJA_DE_VIDA`, `TITULO_ACADEMICO`, `POLIZA`, `AUTORIZACION_TRATAMIENTO_DATOS`, `TERMINOS_Y_CONDICIONES`, `FORMULARIO_SARLAFT`, `AFILIACION_SEGURIDAD_SOCIAL`, `PAZ_Y_SALVO`, `FORMATO_VINCULACION`) |
 
 #### 2.2.10 Pruebas
 - Unit: `Documento` — promoción sin IA (hash+AV+MIME), con IA (tipo+legible+identidad); dedupe por hash; `Devuelta` no promueve; comparación por campos (`Identica`/`SinCambios`/`CambiosDetectados`); retirar la actual ⇒ `VersionActualRestituida` a la anterior; `RelacionEntreTerceros` sin duplicados y con cierre por `hasta`.
@@ -703,7 +703,7 @@ Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones e
 | `Expediente` | `VerificacionExternaRegistrada`, `CoincidenciaResuelta(VigenteHasta=+12m)`, `VeredictoAutomaticoEmitido(Origen: Sistema, Evidencia)`, `VeredictoSugerido`, `RevisionHumanaSolicitada`, `VerificacionExpirada` | Verificación bloqueante `Pendiente\|CoincidenciaPorAnalizar\|Expirada` impide `ExpedienteAprobado`; veredicto automático solo con `NivelRevision = Automatico` y reglas 03 §11; reversible |
 | `Tercero` / `RelacionEntreTerceros` (ADR-0010) y `Vinculo` | `CambioDeRelacionDetectado(Confianza)` (bóveda) → `RelacionConfirmada` (tercero) → `ExpirarVerificacionesDeRepresentante` ⇒ `VerificacionesDeRepresentanteExpiradas(Tipos[])` en cada vínculo (03 adición 3) | Cámara nueva con otro representante ⇒ el sistema **detecta** el cambio y el tercero lo confirma (I-10: sin rechazo automático); solo entonces la cédula aceptada del saliente queda `Desactualizada`, sus listas `Expirada` y el requisito de cédula del entrante nace `Pendiente` (o `Cargado` si su bóveda ya la tiene) |
 | `IVerificador` (adaptadores) | `ListasRestrictivas` (proveedores con contrato + `EvidenciaManual`), `EstudioDeCumplimiento` (campos legado: verificado en listas, conflicto de interés, nivel de riesgo 1–3, debida diligencia, evidencias, vigencia 30 d) | Idempotente por `(ExpedienteId, Tipo, ReferenciaExterna)`; se consulta al tercero **y a cada persona relacionada** (UBO, PEP, representante) |
-| Tipos canónicos activados en flujos (ya en Anexo A desde H2) | `BENEFICIARIO_FINAL`, `DECLARACION_PEP` (formularios globales que referencian personas relacionadas; `FORMULARIO_SARLAFT` PorVinculo los referencia sin duplicarlos, I-20) | — |
+| Tipos canónicos activados en flujos (ya en Anexo A desde H2) | `BENEFICIARIO_FINAL` (formulario global que referencia personas relacionadas; `FORMULARIO_SARLAFT` PorVinculo lo referencia sin duplicarlo, I-20; la declaración PEP se retiró del catálogo: vive en la ficha, DP-13) | — |
 | `PresupuestoIa` (documento por tenant) | `PresupuestoAl80`, `PresupuestoAgotado` | agotado ⇒ aplica `PlanDto.accionAlAgotar` (`DegradarAManual` por defecto, fijado por Plataforma, I-23); la **lectura** nunca se detiene ni se cobra al tenant (B-2); nunca bloquea la carga |
 
 #### 2.7.2 Endpoints
@@ -747,7 +747,7 @@ Tres huecos de la auditoría contra el SRM, implementados sobre H6 (decisiones e
 | `web:/configuracion/tenant/revision-automatica` (nivel por tipo, umbrales, muestreo, presupuesto y consumo) | formularios, `KpiCard` | `GET /tenant/revision-automatica`, `UsoTenant` |
 | `web:/expedientes/:id` pestaña Verificaciones (listas, estudio de cumplimiento con evidencias, UBO/PEP, coincidencias) | `VisorDocumento` | `GET /expedientes/{id}` |
 | `web:/informes/cumplimiento` (SAGRILAFT) | tablas, Excel | `GET /informes/cumplimiento` |
-| `public:` botón "Pedir revisión humana"; formularios `BENEFICIARIO_FINAL`, `DECLARACION_PEP` | `FormularioDinamico` | `POST /public/v1/expedientes/{id}/requisitos/{rid}/revision-humana` |
+| `public:` botón "Pedir revisión humana"; formulario `BENEFICIARIO_FINAL` | `FormularioDinamico` | `POST /public/v1/expedientes/{id}/requisitos/{rid}/revision-humana` |
 
 #### 2.7.8 Jobs/sagas/scheduled
 | Nombre | Dispara | Pasos |

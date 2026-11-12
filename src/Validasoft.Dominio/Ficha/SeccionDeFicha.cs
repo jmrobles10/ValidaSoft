@@ -163,13 +163,16 @@ public sealed class SeccionDeFicha
         if (seccion.Codigo != Seccion)
             throw new InvalidOperationException("La definición no es la de esta sección.");
 
+        // Los sellos de la firma (HU 49093) los fija el servidor comparando con la versión vigente: una declaración que no cambió conserva los suyos.
+        datos = seccion.Esquema.Sellar(datos, Vigente?.Datos, contexto, origen);
         var canonico = seccion.Esquema.Canonico(datos);
         var huellaDatos = JsonDeFicha.Huella(canonico);
         var anterior = Vigente;
         // Referencia del cambio: la última versión que quedó completa. Mientras la sección es un borrador que nunca estuvo
         // completo, diligenciarla no es «cambiarla»; y una versión incompleta por falta de soporte no se vuelve referencia.
-        var referencia = Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero)?.HuellaDatos;
-        var cambio = ExigeSoporteDelCambio(origen) && referencia is not null && referencia != huellaDatos;
+        var versionDeReferencia = Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero);
+        var referencia = versionDeReferencia?.HuellaDatos;
+        var cambio = ExigeSoporteDelCambio(origen) && versionDeReferencia is not null && HuellaParaSoporte(versionDeReferencia.Datos) != HuellaParaSoporte(canonico);
         var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, cambio, soportes.Count);
         ReglasDeFicha.AsegurarFormato(resultado);
 
@@ -192,9 +195,10 @@ public sealed class SeccionDeFicha
     public static CompletitudDeSeccion Anticipar(SeccionDeFicha? actual, DefinicionDeSeccion seccion, object datos, int soportes, ContextoDeSeccion contexto,
         ICatalogosDeFicha catalogos)
     {
-        var huellaDatos = JsonDeFicha.Huella(seccion.Esquema.Canonico(datos));
-        var referencia = actual?.Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero)?.HuellaDatos;
-        var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, referencia is not null && referencia != huellaDatos, soportes);
+        datos = seccion.Esquema.Sellar(datos, actual?.Vigente?.Datos, contexto, OrigenDeSeccion.Tercero);
+        var canonico = seccion.Esquema.Canonico(datos);
+        var referencia = actual?.Versiones.Where(v => v.Completitud.Completa).MaxBy(v => v.Numero);
+        var resultado = ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, referencia is not null && HuellaParaSoporte(referencia.Datos) != HuellaParaSoporte(canonico), soportes);
         ReglasDeFicha.AsegurarFormato(resultado);
         return resultado.Completitud;
     }
@@ -209,7 +213,10 @@ public sealed class SeccionDeFicha
             return null;
 
         var datos = seccion.Esquema.Deserializar(vigente.Datos);
-        var cambio = ExigeSoporteDelCambio(vigente.Origen) && vigente.HuellaDatosAnterior is not null && vigente.HuellaDatosAnterior != vigente.HuellaDatos;
+        // La versión de referencia es la que tiene esa huella; sin ella (no debería pasar) se compara por la huella completa.
+        var referencia = vigente.HuellaDatosAnterior is null ? null : Versiones.FirstOrDefault(v => v.HuellaDatos == vigente.HuellaDatosAnterior);
+        var cambio = ExigeSoporteDelCambio(vigente.Origen) && vigente.HuellaDatosAnterior is not null &&
+                     (referencia is null ? vigente.HuellaDatosAnterior != vigente.HuellaDatos : HuellaParaSoporte(referencia.Datos) != HuellaParaSoporte(vigente.Datos));
         var completitud = ReglasDeFicha.ParaRecalculo(ReglasDeFicha.Evaluar(seccion, datos, contexto, catalogos, cambio, vigente.Soportes.Count));
         return completitud.Igual(vigente.Completitud) ? null : new CompletitudDeSeccionRecalculada(vigente.Numero, completitud, ahora);
     }
@@ -247,14 +254,54 @@ public sealed class SeccionDeFicha
         var referencia = desdeVersion is { } desde
             ? Versiones.FirstOrDefault(v => v.Numero == desde && v.Numero < numero)
             : Versiones.Where(v => v.Numero < numero && v.Completitud.Completa).MaxBy(v => v.Numero);
-        if (referencia is null || referencia.HuellaDatos == version.HuellaDatos)
+        if (referencia is null || HuellaParaSoporte(referencia.Datos) == HuellaParaSoporte(version.Datos))
             return null;
         if (version.Soportes.Any(s => !referencia.Soportes.Any(r => r.DocumentoId == s.DocumentoId && r.Version == s.Version)))
             return null;
 
-        var cambios = ComparacionDeSecciones.Comparar(referencia.Datos, version.Datos);
+        // La respuesta a PEP y su declaración jurada no piden soporte: la declaración es la evidencia (DP-17).
+        var cambios = ComparacionDeSecciones.Comparar(referencia.Datos, version.Datos).Where(c => !EsDePep(c.Campo)).ToList();
         return cambios.Count == 0 ? null : new SinSoporteDelCambio(cambios.Any(c => EsCambioCritico(c, referencia.Datos, version.Datos)), cambios);
     }
+
+    /// <summary>
+    /// Huella de los datos <b>sin lo de PEP</b> (la respuesta y su declaración, en la General y en cada persona de la legal): con ella se decide
+    /// si un cambio exige soporte. Una declaración jurada es su propia evidencia: declarar o cambiar la declaración no pide un documento más
+    /// (DP-17). Cualquier otro cambio sí.
+    /// </summary>
+    public static string HuellaParaSoporte(JsonElement datos)
+    {
+        if (datos.ValueKind != JsonValueKind.Object || System.Text.Json.Nodes.JsonNode.Parse(datos.GetRawText()) is not System.Text.Json.Nodes.JsonObject raiz)
+            return JsonDeFicha.Huella(datos);
+        QuitarPep(raiz);
+        if (raiz["personas"] is System.Text.Json.Nodes.JsonArray personas)
+            foreach (var persona in personas.OfType<System.Text.Json.Nodes.JsonObject>())
+                QuitarPep(persona);
+        // Las versiones guardadas vuelven de la base con las claves en otro orden (jsonb no conserva el de la escritura): se compara sin orden.
+        return JsonDeFicha.Huella(JsonSerializer.SerializeToElement(Ordenado(raiz)));
+    }
+
+    /// <summary>Copia del nodo con las claves de cada objeto en orden ordinal (las listas conservan el suyo).</summary>
+    private static System.Text.Json.Nodes.JsonNode? Ordenado(System.Text.Json.Nodes.JsonNode? nodo) => nodo switch
+    {
+        System.Text.Json.Nodes.JsonObject objeto => new System.Text.Json.Nodes.JsonObject(objeto.OrderBy(p => p.Key, StringComparer.Ordinal)
+            .Select(p => new KeyValuePair<string, System.Text.Json.Nodes.JsonNode?>(p.Key, Ordenado(p.Value)))),
+        System.Text.Json.Nodes.JsonArray lista => new System.Text.Json.Nodes.JsonArray(lista.Select(Ordenado).ToArray()),
+        null => null,
+        _ => nodo.DeepClone()
+    };
+
+    private static void QuitarPep(System.Text.Json.Nodes.JsonObject objeto)
+    {
+        objeto.Remove("pep");
+        objeto.Remove("declaracion_pep");
+    }
+
+    /// <summary>¿La ruta es la respuesta a PEP o algo de su declaración (<c>pep</c>, <c>declaracion_pep…</c>, <c>personas[i].pep</c>, <c>personas[i].declaracion_pep…</c>)?</summary>
+    private static bool EsDePep(string campo) =>
+        campo == "pep" || campo.StartsWith("declaracion_pep", StringComparison.Ordinal) ||
+        (campo.StartsWith("personas[", StringComparison.Ordinal) && campo.IndexOf("].", StringComparison.Ordinal) is var fin and > 0 &&
+         (campo[(fin + 2)..] == "pep" || campo[(fin + 2)..].StartsWith("declaracion_pep", StringComparison.Ordinal)));
 
     private bool EsCambioCritico(CambioDeCampo cambio, JsonElement anterior, JsonElement nuevo) => Seccion switch
     {

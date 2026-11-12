@@ -107,7 +107,7 @@ public class FichaMaestraTests
         var r = Evaluar(CodigosDeSeccion.General, GeneralCompletaJuridica, Juridica);
         r.Errores.ShouldBeEmpty();
         r.Completitud.Completa.ShouldBeTrue();
-        r.Completitud.ReglaVersion.ShouldBe(1);
+        r.Completitud.ReglaVersion.ShouldBe(2);
 
         var datos = (DatosGenerales)Leer(CodigosDeSeccion.General, GeneralCompletaJuridica, Juridica);
         datos.Correo.ShouldBe("compras@aceros.co");

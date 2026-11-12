@@ -13,6 +13,85 @@ export interface DireccionEstructurada {
   complemento?: string | null;
 }
 
+// ---------- Declaración jurada PEP (dentro de la sección: `declaracion_pep`) ----------
+
+export const RELACIONES_EMPRESA = ['Proveedor', 'Socio', 'Otro'] as const;
+export type RelacionEmpresa = (typeof RELACIONES_EMPRESA)[number];
+
+export const CALIDADES_SOCIEDAD = ['Socio', 'Administrador', 'Fideicomitente', 'Otra'] as const;
+export type CalidadSociedad = (typeof CALIDADES_SOCIEDAD)[number];
+
+export const FIRMAS_EN_CALIDAD = ['NombrePropio', 'RepresentanteLegal'] as const;
+export type FirmaEnCalidad = (typeof FIRMAS_EN_CALIDAD)[number];
+
+export interface ConyugePep {
+  nombre?: string | null;
+  tipo_identificacion?: string | null;
+  numero?: string | null;
+}
+
+export interface FamiliarPep {
+  nombre?: string | null;
+  parentesco?: string | null;
+  tipo_identificacion?: string | null;
+  numero?: string | null;
+}
+
+export interface SociedadPep {
+  nombre?: string | null;
+  identificacion?: string | null;
+  calidad?: CalidadSociedad | null;
+  calidad_otra?: string | null;
+}
+
+/** Sección 3: vínculo familiar o asociados cercanos a otra PEP. */
+export interface VinculoConPep {
+  tiene?: boolean | null;
+  nombre?: string | null;
+  parentesco?: string | null;
+  cargo_institucion?: string | null;
+  fecha_vinculacion?: string | null;
+  fecha_desvinculacion?: string | null;
+  vigente?: boolean | null;
+}
+
+/**
+ * Declaración jurada PEP de una persona (HU 49093). Los datos básicos (relación, nombre, identificación) y los sellos
+ * (`firma_huella`, `fecha_firma`, `firma_ip`) los fija el servidor; lo que se envíe de ellos se ignora.
+ */
+export interface DeclaracionPep {
+  relacion_empresa?: RelacionEmpresa | null;
+  relacion_otra?: string | null;
+  nombre?: string | null;
+  tipo_identificacion?: string | null;
+  numero?: string | null;
+  nacionalidad?: string | null;
+  direccion?: string | null;
+  cargo?: string | null;
+  institucion?: string | null;
+  pais?: string | null;
+  fecha_vinculacion?: string | null;
+  vigente?: boolean | null;
+  fecha_desvinculacion?: string | null;
+  cuentas_exterior?: boolean | null;
+  paises_cuentas_exterior?: string[] | null;
+  conyuge?: ConyugePep | null;
+  familiares?: FamiliarPep[] | null;
+  sociedades?: SociedadPep[] | null;
+  vinculo_con_pep?: VinculoConPep | null;
+  acepta_juramento?: boolean | null;
+  firma_en_calidad?: FirmaEnCalidad | null;
+  firmante_nombre?: string | null;
+  firmante_tipo_identificacion?: string | null;
+  firmante_numero?: string | null;
+  /** PNG en base64, sin el prefijo `data:`. */
+  firma_png?: string | null;
+  // Sellados por el servidor.
+  firma_huella?: string | null;
+  fecha_firma?: string | null;
+  firma_ip?: string | null;
+}
+
 export interface DatosGenerales {
   razon_social?: string | null;
   nombres?: string | null;
@@ -37,6 +116,8 @@ export interface DatosGenerales {
   vinculo_pep?: boolean | null;
   fecha_expedicion?: string | null;
   lugar_expedicion?: string | null;
+  /** Solo persona natural: se exige con `pep: true` y se conserva «inactiva» si luego responde No. */
+  declaracion_pep?: DeclaracionPep | null;
 }
 
 export interface Resolucion {
@@ -107,6 +188,7 @@ export interface PersonaRelacionada {
   residencia?: string | null;
   correo?: string | null;
   telefono?: string | null;
+  declaracion_pep?: DeclaracionPep | null;
 }
 
 export interface FirmaRevisora {
@@ -142,5 +224,7 @@ export interface PropsFormulario<T> {
   onCambiar: (cambio: Partial<T>) => void;
   /** Error de formato (422) o faltante del servidor de la ruta (`personas[0].pep`); `null` si no hay. */
   mensaje: (ruta: string) => string | null;
+  /** ¿Hay un error o faltante del servidor en alguna ruta que empiece por el prefijo (`personas[0].declaracion_pep`)? */
+  hayEnRuta?: (prefijo: string) => boolean;
   deshabilitado: boolean;
 }

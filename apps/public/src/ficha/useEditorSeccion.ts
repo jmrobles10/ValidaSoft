@@ -87,6 +87,13 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
     return senalados && estaSenalado(ruta, senalados.campos) ? senalados.mensaje : null;
   };
 
+  /** ¿Hay un error 422 o un faltante en alguna ruta que empiece por el prefijo (`personas[0].declaracion_pep`) y no se ha vuelto a tocar? */
+  const hayEnRuta = (prefijo: string): boolean => {
+    if (editados.has(claveDeRuta(prefijo))) return false;
+    const bajo = (ruta: string | null | undefined) => ruta === prefijo || ruta?.startsWith(`${prefijo}.`) === true || ruta?.startsWith(`${prefijo}[`) === true;
+    return erroresCampo.some((e) => bajo(e.campo)) || faltantes.some((f) => bajo(f.campo));
+  };
+
   /** El error 422 de cualquier ruta bajo una clave (`soportes[1]`, `personas[0].numero`), si no se ha vuelto a tocar. */
   const errorEn = (clave: string): string | null =>
     editados.has(clave)
@@ -122,7 +129,7 @@ export function useEditorSeccion(codigo: CodigoSeccion, periodo: number | null, 
   // Un error que no es de un campo (sesión, red, 5xx…) va arriba del formulario.
   const errorGeneral = guardado.isError && !errorCampo ? guardado.error : null;
 
-  return { datos, conPrellenado, cambiar, soportes, soportesRetirados, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
+  return { datos, conPrellenado, cambiar, soportes, soportesRetirados, cambiarSoportes, faltantes, errorCampo, errorGeneral, mensaje, hayEnRuta, errorEn, guardar, guardando: guardado.isPending, sinGuardar, cuerpo: JSON.stringify(cuerpo) };
 }
 
 export type EditorSeccion = ReturnType<typeof useEditorSeccion>;

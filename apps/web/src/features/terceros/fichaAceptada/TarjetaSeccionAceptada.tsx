@@ -14,6 +14,8 @@ import { SeccionFicha } from '../SeccionesVinculo';
 
 interface Props {
   empresaId: string;
+  /** El tercero de la ficha: con él se descarga el PDF de la declaración PEP de las personas aceptadas. */
+  terceroId?: string;
   seccion: SeccionAceptadaVistaDto;
 }
 
@@ -22,7 +24,7 @@ interface Props {
  * datos. Si el tercero guardó después una versión nueva, va **aparte**, en un bloque propio con borde: qué cambió frente a lo
  * aceptado, su soporte (o que no trae un documento nuevo) y la revalidación que la revisa. Lo aceptado nunca se mezcla con lo nuevo.
  */
-export function TarjetaSeccionAceptada({ empresaId, seccion }: Props) {
+export function TarjetaSeccionAceptada({ empresaId, terceroId, seccion }: Props) {
   const { t } = useTranslation();
   const [verDatos, setVerDatos] = useState(false);
   const { aceptada, cambioPosterior } = seccion;
@@ -78,7 +80,7 @@ export function TarjetaSeccionAceptada({ empresaId, seccion }: Props) {
           <Collapse in={verDatos} unmountOnExit>
             <Box sx={{ pt: 1 }}>
               <SeccionFicha titulo={t('fichaAceptada.aceptada.datos')}>
-                <DatosDeSeccion datos={esObjeto(aceptada.datos) ? aceptada.datos : {}} />
+                <DatosDeSeccion datos={esObjeto(aceptada.datos) ? aceptada.datos : {}} empresaId={empresaId} terceroId={terceroId} seccion={seccion.seccion} version={aceptada.version} />
               </SeccionFicha>
             </Box>
           </Collapse>

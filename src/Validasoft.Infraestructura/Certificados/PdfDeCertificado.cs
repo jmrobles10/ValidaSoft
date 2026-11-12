@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.IO.Compression;
 using QRCoder;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Dominio.Certificados;
@@ -313,6 +314,24 @@ internal sealed class LienzoPdf
 
     private StringBuilder Actual => _paginas[_actual];
 
+    private readonly List<(string Nombre, int Ancho, int Alto, byte[] Datos)> _imagenes = [];
+
+    /// <summary>
+    /// Dibuja una imagen RGB de 8 bits (la firma de una declaración) con su esquina inferior izquierda en (x, y) y el tamaño dado en
+    /// puntos. Los píxeles van comprimidos con Flate dentro del archivo; la misma imagen dibujada dos veces se guarda una sola vez.
+    /// </summary>
+    public void Imagen(double x, double y, double ancho, double alto, int pixelesAncho, int pixelesAlto, byte[] rgb)
+    {
+        var existente = _imagenes.FindIndex(i => i.Ancho == pixelesAncho && i.Alto == pixelesAlto && i.Datos.AsSpan().SequenceEqual(rgb));
+        if (existente < 0)
+        {
+            _imagenes.Add(($"Im{_imagenes.Count + 1}", pixelesAncho, pixelesAlto, rgb));
+            existente = _imagenes.Count - 1;
+        }
+
+        Actual.Append(Invariante, $"q {N(ancho)} 0 0 {N(alto)} {N(x)} {N(y)} cm /{_imagenes[existente].Nombre} Do Q\n");
+    }
+
     public void NuevaPagina()
     {
         _paginas.Add(new StringBuilder());
@@ -389,6 +408,21 @@ internal sealed class LienzoPdf
             $"/Creator (Validasoft) /Producer (Validasoft) /CreationDate ({Fecha(fecha)}) >>"
         };
 
+        // Las imágenes (la firma de una declaración PEP) van como objetos propios; el binario viaja en Latin-1 para conservar cada byte.
+        var xobjetos = new List<string>();
+        foreach (var (nombre, ancho, alto, datos) in _imagenes)
+        {
+            using var comprimido = new MemoryStream();
+            using (var flate = new ZLibStream(comprimido, CompressionLevel.Optimal, leaveOpen: true))
+                flate.Write(datos);
+            var bytes = comprimido.ToArray();
+            objetos.Add($"<< /Type /XObject /Subtype /Image /Width {ancho} /Height {alto} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode " +
+                        $"/Length {bytes.Length} >>\nstream\n{Encoding.Latin1.GetString(bytes)}\nendstream");
+            xobjetos.Add($"/{nombre} {objetos.Count} 0 R");
+        }
+
+        var recursos = xobjetos.Count == 0 ? string.Empty : $" /XObject << {string.Join(' ', xobjetos)} >>";
+
         var hijos = new List<string>();
         foreach (var pagina in _paginas)
         {
@@ -396,14 +430,14 @@ internal sealed class LienzoPdf
             objetos.Add($"<< /Length {Encoding.ASCII.GetByteCount(contenido)} >>\nstream\n{contenido}endstream");
             var contenidoId = objetos.Count;
             objetos.Add($"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {N(_ancho)} {N(_alto)}] /Contents {contenidoId} 0 R " +
-                        "/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> >>");
+                        $"/Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >>{recursos} >> >>");
             hijos.Add($"{objetos.Count} 0 R");
         }
 
         objetos[1] = $"<< /Type /Pages /Kids [{string.Join(' ', hijos)}] /Count {hijos.Count} >>";
 
         using var salida = new MemoryStream();
-        void Escribir(string texto) => salida.Write(Encoding.ASCII.GetBytes(texto));
+        void Escribir(string texto) => salida.Write(Encoding.Latin1.GetBytes(texto));
         Escribir("%PDF-1.7\n");
         salida.Write([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]); // comentario binario: el archivo no es texto plano
         var posiciones = new List<long>();

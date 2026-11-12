@@ -101,7 +101,34 @@ public static class ComparacionDeSecciones
         ["reglamento_interno"] = "Reglamento interno de trabajo",
         ["politica_hseq"] = "Política HSEQ",
         ["licencias_y_permisos"] = "Licencias y permisos",
-        ["especialidades"] = "Especialidad"
+        ["especialidades"] = "Especialidad",
+        ["declaracion_pep"] = "Declaración PEP",
+        ["relacion_empresa"] = "Relación con la empresa",
+        ["relacion_otra"] = "Relación con la empresa (cuál)",
+        ["nombre"] = "Nombre",
+        ["institucion"] = "Institución",
+        ["fecha_vinculacion"] = "Fecha de vinculación",
+        ["fecha_desvinculacion"] = "Fecha de desvinculación",
+        ["vigente"] = "Vigente",
+        ["cuentas_exterior"] = "Cuentas financieras en el exterior",
+        ["paises_cuentas_exterior"] = "Países de las cuentas en el exterior",
+        ["conyuge"] = "Cónyuge o compañero(a) permanente",
+        ["familiares"] = "Familiar",
+        ["sociedades"] = "Sociedad",
+        ["parentesco"] = "Parentesco",
+        ["identificacion"] = "Identificación",
+        ["calidad"] = "En calidad de",
+        ["calidad_otra"] = "Calidad (cuál)",
+        ["vinculo_con_pep"] = "Vínculo con otra PEP",
+        ["tiene"] = "Tiene vínculo",
+        ["cargo_institucion"] = "Cargo e institución",
+        ["acepta_juramento"] = "Declaración bajo juramento",
+        ["firma_en_calidad"] = "Firma en calidad de",
+        ["firmante_nombre"] = "Nombre del firmante",
+        ["firmante_tipo_identificacion"] = "Tipo de documento del firmante",
+        ["firmante_numero"] = "Número de documento del firmante",
+        ["firma_huella"] = "Huella de la firma",
+        ["fecha_firma"] = "Fecha de la firma"
     };
 
     private static readonly Dictionary<string, string> Roles = new(StringComparer.Ordinal)
@@ -144,6 +171,9 @@ public static class ComparacionDeSecciones
         // Orden: el de la versión nueva y luego lo que solo tenía la anterior.
         foreach (var clave in b.Keys.Concat(a.Keys.Where(k => !b.ContainsKey(k))))
         {
+            // La imagen de la firma (base64) y la IP de quien firmó no son un cambio legible: lo dice la huella de la firma y la fecha.
+            if (clave is "firma_png" or "firma_ip")
+                continue;
             var campo = ruta.Length == 0 ? clave : $"{ruta}.{clave}";
             var etiqueta = titulo.Length == 0 ? Etiqueta(clave) : $"{titulo} · {Etiqueta(clave)}";
             var tieneA = a.TryGetValue(clave, out var va);
