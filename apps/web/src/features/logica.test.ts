@@ -137,8 +137,9 @@ describe('historial del vínculo', () => {
   it('usa el nombre conocido del usuario y tolera tipos nuevos', () => {
     const otro = eventoATimeline({ ...historial[2]!, actorId: 'otro' }, { usuarioActual: null, nombres: new Map([['otro', 'Rubén']]) }, t);
     expect(otro.actor.nombre).toBe('Rubén');
-    const nuevo = eventoATimeline({ ...historial[2]!, tipo: 'cuenta_designada_aprobada', datos: {} }, { usuarioActual: null }, t);
-    expect(nuevo.titulo).toBe('cuenta designada aprobada');
+    // Un evento que el dominio aún no tiene en es-CO se muestra con su nombre legible y la inicial en mayúscula (PP-2).
+    const nuevo = eventoATimeline({ ...historial[2]!, tipo: 'evento_futuro_sin_rotulo', datos: {} }, { usuarioActual: null }, t);
+    expect(nuevo.titulo).toBe('Evento futuro sin rotulo');
   });
 });
 
