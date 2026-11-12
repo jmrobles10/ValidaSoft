@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5191/"
+      "url": "http://localhost:5197/"
     }
   ],
   "paths": {
@@ -1006,6 +1006,13 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "enRevision",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -18868,6 +18875,10 @@
               "string"
             ],
             "format": "int32"
+          },
+          "enRevision": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -25366,6 +25377,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "enRevision": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26660,6 +26675,15 @@
             "format": "int32"
           },
           "vinculosPorVencer": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
+          },
+          "vinculosEnRevision": {
             "pattern": "^-?(?:0|[1-9]\\d*)$",
             "type": [
               "integer",
@@ -36864,6 +36888,10 @@
               "string"
             ],
             "format": "date"
+          },
+          "enRevision": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -36985,6 +37013,10 @@
               "string"
             ],
             "format": "date"
+          },
+          "enRevision": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

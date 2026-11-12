@@ -31,6 +31,14 @@ describe('aviso de la vigencia del vínculo', () => {
     expect(screen.getByText('Venció el 06/11/2027. Aún no se abre su renovación.')).toBeInTheDocument();
   });
 
+  it('con una actualización abierta (en revisión) el expediente abierto no es la renovación: no dice que esté abierta', () => {
+    const { unmount } = montar({ estado: 'PorVencer', vigenteHasta: '2027-11-06', expedienteAbiertoId: 'e1', enRevision: true });
+    expect(screen.getByText('Vence el 06/11/2027. No tiene una renovación abierta.')).toBeInTheDocument();
+    unmount();
+    montar({ estado: 'Vencido', vigenteHasta: '2027-11-06', expedienteAbiertoId: 'e1', enRevision: true });
+    expect(screen.getByText('Venció el 06/11/2027. Aún no se abre su renovación.')).toBeInTheDocument();
+  });
+
   it('un vínculo vencido por un documento no inventa una fecha de vigencia', () => {
     montar({ estado: 'Vencido', vigenteHasta: null, expedienteAbiertoId: 'e1' });
     expect(screen.getByText('La validación de este tercero venció')).toBeInTheDocument();

@@ -93,7 +93,7 @@ public static class Mapeos
             [.. v.Referencias.Select(r => new ReferenciaExternaDto(r.Sistema, r.Id))],
             v.Origen.ToString(), v.CreadoEn, v.ActualizadoEn, v.Version, v.ExpedienteAbiertoId, v.AperturaDeExpedientePendiente,
             v.UltimoResultado?.ToString(),
-            v.Contactos.ADto(), v.VigenteHasta);
+            v.Contactos.ADto(), v.VigenteHasta, v.EnRevisionPorActualizacion);
 
     /// <summary>Los contactos del tercero con la empresa como los ve la API (rol en texto).</summary>
     public static IReadOnlyList<ContactoDeEmpresaDto> ADto(this IEnumerable<ContactoDeEmpresa> contactos) =>
@@ -116,5 +116,6 @@ public static class Mapeos
     public static VinculoPublicoDto APublico(this Vinculo v, Empresa? empresa, TipoVinculo? tipo) =>
         new(v.Id, empresa.APublica(v.EmpresaId),
             new TipoVinculoResumenDto(v.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
-            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId, null, v.Contactos.ADto(), v.VigenteHasta);
+            v.Estado.ToString(), v.InvitacionAceptada, v.InvitacionAceptadaEn, v.ExpedienteAbiertoId ?? v.UltimoExpedienteId, null, v.Contactos.ADto(), v.VigenteHasta,
+            v.EnRevisionPorActualizacion);
 }

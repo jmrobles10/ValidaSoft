@@ -81,6 +81,7 @@ export const informes = {
     estados: {
       Invitado: 'Invitado',
       EnValidacion: 'En validación',
+      EnRevision: 'En revisión',
       Activo: 'Activo',
       PorVencer: 'Por vencer',
       Vencido: 'Vencido',

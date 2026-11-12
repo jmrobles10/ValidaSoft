@@ -168,6 +168,11 @@ export interface ConsultaCertificacionDto {
   /** `false` desde Validasoft; el integrador lo pone en `true` cuando responde desde su copia local. */
   fuenteRespaldo: boolean;
   antiguedadSegundos?: number | null;
+  /**
+   * Solo informativo: el tercero tiene una actualización abierta con la empresa (actualizó información que ya había aprobado y la empresa la
+   * revisa). No cambia `estadoVinculo` (sigue `Activo`, `PorVencer` o `Vencido`) ni el certificado, la vigencia o `bloqueado`.
+   */
+  enRevision?: boolean;
 }
 
 /** Sobre común de un evento público: el mismo JSON en el webhook y en `GET /eventos`. */

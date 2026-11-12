@@ -61,6 +61,22 @@ describe('historial del vínculo: vigencia periódica (VV-1)', () => {
     expect(eventoATimeline(evento('vigencia_del_vinculo_fijada', { VigenteHasta: null }), contexto, t).detalle).toBe('Sin vencimiento periódico');
   });
 
+  it('un expediente inicial pasa el vínculo a En validación; una actualización lo deja En revisión y una renovación no cambia nada que se vea (VR-1)', () => {
+    const abierto = (tipo: number) => eventoATimeline(evento('expediente_vinculado', { ExpedienteId: 'e1', Tipo: tipo, Folio: 'N-E-1' }), contexto, t);
+    expect(abierto(0)).toMatchObject({ antes: 'Invitado', despues: 'EnValidacion', detalle: 'N-E-1' });
+    expect(abierto(2)).toMatchObject({ despues: 'EnRevision', detalle: 'N-E-1' });
+    expect(abierto(2).antes).toBeUndefined();
+    expect(abierto(1).antes).toBeUndefined();
+    expect(abierto(1).despues).toBeUndefined();
+    expect(eventoATimeline(evento('expediente_vinculado', { Tipo: 'Actualizacion', Folio: 'N-E-2' }), contexto, t)).toMatchObject({ despues: 'EnRevision' });
+  });
+
+  it('aprobar un expediente deja el vínculo Activo, sin decir de qué estado venía (puede ser el inicial o una actualización con el vínculo ya activo)', () => {
+    const activado = eventoATimeline(evento('vinculo_activado', { ExpedienteId: 'e1' }), contexto, t);
+    expect(activado).toMatchObject({ despues: 'Activo' });
+    expect(activado.antes).toBeUndefined();
+  });
+
   it('el primer aviso pasa el vínculo de Activo a Por vencer (pre-vencimiento) con la fecha de vencimiento', () => {
     expect(eventoATimeline(evento('vinculo_por_vencer', { VigenteHasta: '2027-11-06', DiasRestantes: 30, AvisosCumplidos: [30] }), contexto, t)).toMatchObject({
       titulo: 'Vínculo en pre-vencimiento',

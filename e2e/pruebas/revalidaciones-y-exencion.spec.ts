@@ -119,7 +119,8 @@ test('Sofía aprueba en lote las revalidaciones sin cambios; la que cambió se r
   await expect(vinculoB.getByText('Expediente cerrado', { exact: true })).toHaveCount(1);
   await expect(vinculoB.getByText('Expediente abierto', { exact: true })).toHaveCount(2);
 
-  // El tercero A ve su vínculo activo con las dos versiones nuevas aprobadas; el B, su actualización del RUT todavía en revisión.
+  // El tercero A ve su vínculo activo con las dos versiones nuevas aprobadas; el B, su actualización del RUT todavía en revisión: el encabezado y la
+  // tarjeta del documento dicen lo mismo (VR-1), no «aprobó tu información» arriba y «En revisión» abajo.
   await a.pagina.goto('/empresas');
   await abrirEmpresa(a.pagina, e.sur.nombre, 'CLIENTE');
   await esperarEstadoDelTercero(a.pagina, 'Aprobado');
@@ -128,7 +129,8 @@ test('Sofía aprueba en lote las revalidaciones sin cambios; la que cambió se r
   await capturar(a.pagina, 'revalidaciones-tercero');
   await b.pagina.goto('/empresas');
   await abrirEmpresa(b.pagina, e.sur.nombre, 'CLIENTE');
-  await esperarEstadoDelTercero(b.pagina, 'Aprobado');
+  await esperarEstadoDelTercero(b.pagina, 'EnRevision');
+  await expect(b.pagina.getByRole('main')).not.toContainText('aprobó tu información');
   await expect(tarjeta(b.pagina, RUT)).toContainText('Versión 2');
   await expect(tarjeta(b.pagina, RUT)).toContainText('En revisión');
 

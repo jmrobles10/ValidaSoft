@@ -84,8 +84,11 @@ public static class InicioEndpoints
         var desde = Informes.Exportaciones.InicioDelDia(CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()).AddDays(1 - ventana));
         var empresaId = empresa.EmpresaId;
 
+        // «En revisión» (VR-1) es lo que la pantalla muestra de un vínculo con una actualización abierta: ya no cuenta como Activo, Por vencer
+        // ni Vencido (así las cifras suman lo mismo que la lista filtrada), y tiene la suya.
         var vinculos = await empresa.Vinculos().Select(v => v.Estado).ToListAsync(ct);
-        int Vinculos(EstadoVinculo estado) => vinculos.Count(e => e == estado);
+        var enRevision = await empresa.Vinculos().Where(Vinculo.EsEnRevisionPorActualizacion).Select(v => v.Estado).ToListAsync(ct);
+        int Vinculos(EstadoVinculo estado) => vinculos.Count(e => e == estado) - enRevision.Count(e => e == estado);
 
         var abiertos = await empresa.Expedientes()
             .Where(e => e.Estado == EstadoExpediente.Abierto || e.Estado == EstadoExpediente.EnRevision || e.Estado == EstadoExpediente.Observado)
@@ -109,6 +112,6 @@ public static class InicioEndpoints
             certificados.Count(c => c.Estado == EstadoCertificado.Vigente),
             certificados.Count(c => c.Estado == EstadoCertificado.ConPendientes),
             certificados.Count(c => c.Bloqueante),
-            Vinculos(EstadoVinculo.PorVencer));
+            Vinculos(EstadoVinculo.PorVencer), enRevision.Count);
     }
 }

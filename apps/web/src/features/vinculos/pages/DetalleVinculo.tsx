@@ -22,6 +22,7 @@ import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
 import { AvisoDeVigencia } from '../components/AvisoDeVigencia';
 import { DialogoAccion } from '../components/DialogoAccion';
+import { estadoVisibleDelVinculo } from '../estadoVisible';
 import { TarjetaContactos } from '../contactos/TarjetaContactos';
 import { TarjetaCuentaDesignada } from '../cuentaDesignada/TarjetaCuentaDesignada';
 import { TarjetaMonitoreoListas } from '../../cumplimiento/components/TarjetaMonitoreoListas';
@@ -129,7 +130,7 @@ function Encabezado({ vinculo, acciones, onAccion, antes }: { vinculo: VinculoDt
           {tercero.data && <span aria-hidden>·</span>}
           <span>{vinculo.tipoVinculo.nombre}</span>
           <span aria-hidden>·</span>
-          <ChipEstado estado={vinculo.estado} fecha={vinculo.bloqueo?.desde ?? vinculo.actualizadoEn} />
+          <ChipEstado estado={estadoVisibleDelVinculo(vinculo)} fecha={vinculo.bloqueo?.desde ?? vinculo.actualizadoEn} />
         </Stack>
       }
       acciones={

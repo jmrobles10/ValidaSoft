@@ -33,6 +33,10 @@ public sealed record LegadoDto(int EstadoTercero);
 /// <param name="FuenteRespaldo">Siempre <c>false</c> desde Validasoft; el integrador lo pone en <c>true</c> cuando responde
 /// desde su copia local (docs/08 §5).</param>
 /// <param name="AntiguedadSegundos">Solo con <see cref="FuenteRespaldo"/>: edad de la copia local.</param>
+/// <param name="EnRevision">Campo nuevo (VR-1), solo informativo: el tercero actualizó información que la empresa ya había aprobado y su
+/// actualización sigue abierta (es lo que la empresa y el tercero ven como «En revisión»). <b>No cambia nada de lo demás</b>:
+/// <see cref="EstadoVinculo"/> sigue siendo <c>Activo</c>, <c>PorVencer</c> o <c>Vencido</c> y el certificado, la vigencia, <see cref="Bloqueado"/> y
+/// <see cref="RevalidacionPendiente"/> (que lista lo que falta revisar) se calculan como siempre. Quien no lo conoce lo ignora.</param>
 public sealed record ConsultaCertificacionDto(
     bool Certificado,
     string? Folio,
@@ -49,4 +53,5 @@ public sealed record ConsultaCertificacionDto(
     string? UrlVerificacion,
     LegadoDto? Legacy,
     bool FuenteRespaldo = false,
-    int? AntiguedadSegundos = null);
+    int? AntiguedadSegundos = null,
+    bool EnRevision = false);

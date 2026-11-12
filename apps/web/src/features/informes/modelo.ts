@@ -3,7 +3,10 @@ import { LOCALE } from '@validasoft/ui';
 
 export const ESTADOS_EXPEDIENTE: readonly EstadoExpediente[] = ['Abierto', 'EnRevision', 'Observado', 'Aprobado', 'Rechazado', 'Anulado', 'Caducado'];
 export const TIPOS_EXPEDIENTE: readonly TipoExpediente[] = ['Inicial', 'Renovacion', 'Actualizacion'];
-export const ESTADOS_VINCULO: readonly EstadoVinculo[] = ['Invitado', 'EnValidacion', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado'];
+/** Lo que el informe cuenta como «estado» de un vínculo: los del dominio y «En revisión» (VR-1: una actualización abierta; el estado no cambia). */
+export const ESTADOS_VINCULO: readonly (EstadoVinculo | 'EnRevision')[] = [
+  'Invitado', 'EnValidacion', 'EnRevision', 'Activo', 'PorVencer', 'Vencido', 'Bloqueado', 'Desvinculado', 'Anulado',
+];
 export const CAMPOS_FECHA = ['Apertura', 'Cierre'] as const;
 export type CampoFecha = (typeof CAMPOS_FECHA)[number];
 

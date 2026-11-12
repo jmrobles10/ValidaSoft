@@ -76,6 +76,8 @@ public sealed record DocumentosDelInformeDto(int ConVencimiento, int Vigentes, i
 /// <summary>
 /// Una fila del informe de terceros y vínculos. <see cref="Documentos"/> es nulo sin <c>documentos:leer</c>.
 /// <see cref="SeccionesPendientes"/>: secciones de la ficha que el expediente en curso aún no aprueba (nombres).
+/// <see cref="EnRevision"/> (VR-1): el vínculo tiene una actualización abierta; <see cref="Estado"/> no cambia, pero el informe lo cuenta y
+/// lo muestra como «En revisión» (igual que la lista de vínculos).
 /// </summary>
 public sealed record FilaInformeVinculoDto(
     Guid VinculoId,
@@ -87,7 +89,8 @@ public sealed record FilaInformeVinculoDto(
     CertificadoDelInformeDto? Certificado,
     ExpedienteDelInformeDto? ExpedienteEnCurso,
     DocumentosDelInformeDto? Documentos,
-    IReadOnlyList<string> SeccionesPendientes);
+    IReadOnlyList<string> SeccionesPendientes,
+    bool EnRevision = false);
 
 public sealed record ResumenVinculosDto(int Total, IReadOnlyList<ConteoDto> PorEstado, int ConCertificadoVigente, int ConDocumentosPorVencer,
     int ConDocumentosVencidos, int ConSeccionesPendientes);

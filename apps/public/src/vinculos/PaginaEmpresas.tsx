@@ -51,9 +51,9 @@ function TarjetaEmpresa({ vinculo: v }: { vinculo: VinculoPublicoDto }) {
   const conExpediente = expedienteId !== '' && situacion === 'vigente' && v.invitacionAceptada;
   const expediente = useExpedientePublico(expedienteId, conExpediente);
   const conocido = avanceDelTercero(v, conExpediente ? expediente.data : null);
-  // Mientras llega el expediente no se muestra «En validación» ni «Por vencer»: la renovación abierta cambia lo que le toca (VV-3),
-  // así que el chip espera en vez de mostrar un estado que luego se contradice.
-  const esperando = conExpediente && expediente.isPending && (conocido === null || conocido.tipo === 'porVencer');
+  // Mientras llega el expediente no se muestra «En validación» ni «Por vencer»: la renovación abierta cambia lo que le toca (VV-3), y una
+  // actualización abierta puede estar observada (VR-1), así que el chip espera en vez de mostrar un estado que luego se contradice.
+  const esperando = conExpediente && expediente.isPending && (conocido === null || conocido.tipo === 'porVencer' || v.enRevision === true);
   const avance = esperando ? null : conocido;
   const [editandoContactos, setEditandoContactos] = useState(false);
   const textoDelBoton = (tipo: AvanceTercero['tipo'] | undefined) => {

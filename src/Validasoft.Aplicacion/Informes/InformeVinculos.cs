@@ -50,7 +50,7 @@ public static class InformeVinculosEndpoints
                 "En gracia", "Vencidos", "Próximo vencimiento", "Secciones pendientes de validar"],
             filas.Select(f => (IReadOnlyList<object?>)
             [
-                f.Tercero.Nombre, InformeEstadoExpedientesEndpoints.Identificacion(f.Tercero.Identificacion), f.TipoVinculo.Nombre, TextoEstado(f.Estado),
+                f.Tercero.Nombre, InformeEstadoExpedientesEndpoints.Identificacion(f.Tercero.Identificacion), f.TipoVinculo.Nombre, TextoEstado(f.EnRevision ? EnRevisionClave : f.Estado),
                 Exportaciones.Local(f.CreadoEn), f.InvitacionAceptada ? "Sí" : "No", f.Certificado?.Folio, TextoCertificado(f.Certificado?.Estado),
                 f.Certificado?.VigenteHasta, f.ExpedienteEnCurso?.Folio,
                 f.ExpedienteEnCurso is { } x ? InformeEstadoExpedientesEndpoints.TextoEstado(x.Estado) : null,
@@ -75,21 +75,41 @@ public static class InformeVinculosEndpoints
             ct);
     }
 
+    /// <summary>
+    /// Lo que el informe cuenta y filtra como «estado» de un vínculo con una actualización abierta (VR-1): una situación derivada, no un
+    /// <see cref="EstadoVinculo"/>. Admite <c>estado=EnRevision</c> junto a los estados de siempre.
+    /// </summary>
+    public const string EnRevisionClave = "EnRevision";
+
     internal static async Task<IReadOnlyList<FilaInformeVinculoDto>> CalcularAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto,
         TimeProvider reloj, string? estado, Guid? tipoVinculoId, Guid? terceroId, CancellationToken ct)
     {
         var estados = new List<EstadoVinculo>();
+        var conEnRevision = false;
         foreach (var valor in (estado ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            estados.Add(Enum.TryParse<EstadoVinculo>(valor, true, out var e) && Enum.IsDefined(e)
-                ? e
-                : throw ReglaDeNegocioException.Validacion("estado-invalido", $"'{valor}' no es un estado de vínculo."));
+        {
+            if (string.Equals(valor, EnRevisionClave, StringComparison.OrdinalIgnoreCase))
+                conEnRevision = true;
+            else
+                estados.Add(Enum.TryParse<EstadoVinculo>(valor, true, out var e) && Enum.IsDefined(e)
+                    ? e
+                    : throw ReglaDeNegocioException.Validacion("estado-invalido", $"'{valor}' no es un estado de vínculo."));
+        }
 
         var consulta = empresa.Vinculos();
-        if (estados.Count > 0)
-        {
-            var arreglo = estados.ToArray();
-            consulta = consulta.Where(v => v.Estado.IsOneOf(arreglo));
-        }
+        var arreglo = estados.ToArray();
+        // Cada vínculo cuenta en una sola situación: uno con una actualización abierta es «En revisión» y no aparece como Activo, Por vencer o Vencido.
+        if (conEnRevision && arreglo.Length == 0)
+            consulta = consulta.Where(Vinculo.EsEnRevisionPorActualizacion);
+        else if (conEnRevision)
+            consulta = consulta.Where(v =>
+                (v.ExpedienteAbiertoId != null && v.ExpedienteAbiertoTipo == TipoExpediente.Actualizacion &&
+                 (v.Estado == EstadoVinculo.Activo || v.Estado == EstadoVinculo.PorVencer || v.Estado == EstadoVinculo.Vencido)) ||
+                (v.Estado.IsOneOf(arreglo) && (v.ExpedienteAbiertoId == null || v.ExpedienteAbiertoTipo != TipoExpediente.Actualizacion ||
+                                              (v.Estado != EstadoVinculo.Activo && v.Estado != EstadoVinculo.PorVencer && v.Estado != EstadoVinculo.Vencido))));
+        else if (arreglo.Length > 0)
+            consulta = consulta.Where(v => v.Estado.IsOneOf(arreglo) && (v.ExpedienteAbiertoId == null || v.ExpedienteAbiertoTipo != TipoExpediente.Actualizacion ||
+                                                                        (v.Estado != EstadoVinculo.Activo && v.Estado != EstadoVinculo.PorVencer && v.Estado != EstadoVinculo.Vencido)));
         if (tipoVinculoId is { } tipo)
             consulta = consulta.Where(v => v.TipoVinculoId == tipo);
         if (terceroId is { } tercero)
@@ -148,13 +168,15 @@ public static class InformeVinculosEndpoints
                 new TipoVinculoResumenDto(v.TipoVinculoId, tipoVinculo?.Codigo ?? string.Empty, tipoVinculo?.Nombre ?? string.Empty),
                 v.Estado.ToString(), v.CreadoEn, v.InvitacionAceptada, certificado,
                 expediente is null ? null : new ExpedienteDelInformeDto(expediente.Id, expediente.Folio, expediente.Tipo.ToString(), expediente.Estado.ToString()),
-                documentos, secciones);
+                documentos, secciones, v.EnRevisionPorActualizacion);
         })];
     }
 
     internal static ResumenVinculosDto Resumir(IReadOnlyList<FilaInformeVinculoDto> filas) =>
         new(filas.Count,
-            [.. Enum.GetValues<EstadoVinculo>().Select(e => new ConteoDto(e.ToString(), filas.Count(f => f.Estado == e.ToString()))).Where(c => c.Cantidad > 0)],
+            [.. Enum.GetValues<EstadoVinculo>().Select(e => new ConteoDto(e.ToString(), filas.Count(f => !f.EnRevision && f.Estado == e.ToString())))
+                .Append(new ConteoDto(EnRevisionClave, filas.Count(f => f.EnRevision)))
+                .Where(c => c.Cantidad > 0)],
             filas.Count(f => f.Certificado is { Estado: nameof(EstadoCertificado.Vigente) }),
             filas.Count(f => f.Documentos is { } d && d.PorVencer + d.EnGracia > 0),
             filas.Count(f => f.Documentos is { Vencidos: > 0 }),
@@ -164,6 +186,7 @@ public static class InformeVinculosEndpoints
     {
         nameof(EstadoVinculo.EnValidacion) => "En validación",
         nameof(EstadoVinculo.PorVencer) => "Por vencer",
+        EnRevisionClave => "En revisión",
         _ => estado
     };
 

@@ -159,6 +159,21 @@ describe('Inicio', () => {
     expect(within(vinculos).getByRole('link', { name: 'Por vencer' })).toHaveAttribute('href', '/e/emp/vinculos?estado=PorVencer');
   });
 
+  it('muestra cuántos vínculos están en revisión por una actualización y enlaza a su lista; en cero no hay tarjeta', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
+    montar(AL_DIA, { ...INDICADORES, vinculosEnRevision: 3 });
+    const vinculos = await screen.findByRole('region', { name: 'Vínculos' });
+    expect(within(vinculos).getByRole('link', { name: 'En revisión' })).toHaveAttribute('href', '/e/emp/vinculos?estado=EnRevision');
+    expect(within(vinculos).getByText('3')).toBeInTheDocument();
+  });
+
+  it('sin vínculos en revisión no aparece la tarjeta «En revisión»', async () => {
+    permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
+    montar(AL_DIA, { ...INDICADORES, vinculosEnRevision: 0 });
+    const vinculos = await screen.findByRole('region', { name: 'Vínculos' });
+    expect(within(vinculos).queryByText('En revisión')).not.toBeInTheDocument();
+  });
+
   it('sin vínculos por vencer no aparece la tarjeta «Por vencer»', async () => {
     permisos.scopes = new Set([SCOPES.expedientesLeer, SCOPES.vinculosLeer]);
     montar(AL_DIA, { ...INDICADORES, vinculosPorVencer: 0 });
