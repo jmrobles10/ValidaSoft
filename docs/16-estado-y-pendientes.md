@@ -101,8 +101,8 @@ Sale del lote de integración. Decisiones **OP-1…OP-21** en el [registro](deci
 
 ### 3.2 SRM — aplicar en AyF (rama local, en espera)
 Rama **local** `feature/validasoft-ayf` en `C:\Fuentes_Git\SRM` (sale de `Feature_INT_NOVIEMBRE_SRM`, 6 commits, **sin
-push**). Por decisión de Producto queda en espera hasta validar todo el alcance de Validasoft; no se sube ni se crea
-WI. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
+push**). Por decisión de Producto (G-4, 2026-11-11) queda en espera: primero se prueba Validasoft solo, sin integrarlo en
+ningún sistema; no se sube ni se crea WI hasta que Producto lo pida. Detalle en `BackEnd\INTEGRACION_VALIDASOFT.md` de esa rama.
 - **Qué hace:**
   - receptor de webhooks de Validasoft con firma verificada e idempotencia;
   - worker con reintentos;
@@ -257,6 +257,7 @@ Hecho en la rama, a la espera de su PR. **Paridad con el oficial del SRM** (revi
   - formato de la respuesta, búsqueda por documento y si entrega PDF;
   - un usuario de pruebas;
   - rotar la credencial expuesta en ADPRO ([15 §2](15-infolaft.md)).
+  - **cuenta única de la plataforma (G-2):** Infolaft es uno solo para todos los clientes; las credenciales de los proveedores de listas pasan de cada empresa (hoy, cifradas con la clave del grupo, CU-10) a la configuración de la plataforma, y el consumo por empresa (VE-11) se conserva para atribuir el costo.
 
 ### 4.5 H9 — pendientes
 - ~~Sandbox con datos aislados~~ **Hecho (SB-1…SB-6, 2026-11-11):** tenant hermano con la configuración del grupo, buzón de correo, IA y listas simuladas y reinicio ([05 §2.6.3](05-api-contratos-y-webhooks.md), [07 §5.4](07-seguridad-identidad-y-tenancy.md)). Falta, como mejora, una pantalla en la consola con el buzón y el botón de reinicio (hoy es por API y SDK; la llave de prueba sí se emite desde Configuración › API keys).
@@ -305,12 +306,12 @@ de un vínculo; el crypto-shredding cubre el texto de la solicitud, no lo declar
 
 ### 4.9 E2E de todas las variantes
 La suite tiene unas 25 specs (57 pruebas) y las ramas en curso suman las del proceso de validación. Faltan, como mínimo:
-- **Persona natural y jurídica en el wizard:** la natural no ve Legal ni Financiera y la jurídica exige socio.
-- **Multiempresa con la ficha:** dos empresas validan la misma sección y una revalida tras un cambio.
+- ~~**Persona natural y jurídica en el wizard:** la natural no ve Legal ni Financiera y la jurídica exige socio.~~ **Hecha** (`e2e/pruebas/asistente-tipo-persona.spec.ts`, 2026-11-11): cada tipo recorre su asistente completo por la UI hasta pasar a revisión; lo pedido (cédula frente a Cámara; Legal y Financiera solo a la jurídica) y los campos de la general cambian con el tipo.
+- ~~**Multiempresa con la ficha:** dos empresas validan la misma sección y una revalida tras un cambio.~~ **Hecha** (`e2e/pruebas/multiempresa-documento-global.spec.ts`): el mismo RUT y la misma información validados por dos empresas; con una versión nueva una revalida y la otra ve su aceptación desactualizada sin enterarse de la decisión de la primera (G-1).
 - ~~**Integración externa completa con el SDK:** sistema → invitación → webhooks → consulta de certificación →
   embebido.~~ **Hecha en el sandbox** (`e2e/pruebas/integracion-sandbox.spec.ts`, 2026-11-11).
-- **Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación →
-  certificado.
+- ~~**Alta de una empresa nueva hasta certificar a un proveedor:** consola → invitación → carga → aprobación → certificado.~~ **Hecha** (`e2e/pruebas/alta-empresa-certificacion.spec.ts`): grupo y empresa desde la consola, configuración mínima, invitación, carga, aprobación y certificado verificable en `/verificar`.
+- ~~**«Volver a postularme» de punta a punta:**~~ **Hecho** (`e2e/pruebas/volver-a-postularme.spec.ts`): rechazo con documentos, motivo visible para el tercero, nueva revisión, versión corregida, aprobación de las dos áreas y certificado.
 - **IA con el proveedor simulado:** cupo agotado y escalamiento.
 - **Aprobación de revalidaciones en lote** y eximir un requisito.
 - **Verificaciones:** coincidencia confirmada (rechazo), estudio vencido y monitoreo.
@@ -374,11 +375,12 @@ Pendiente:
   - la API se recompila en una carpeta de artefactos nueva y se reinicia.
 
 ## Decisiones abiertas
+
+**Sección G cerrada (2026-11-11).** Producto resolvió las decisiones 2, 4 y 5 (registro [G-1…G-4](decisiones/registro.md#5-tresquinquagies-decisiones-de-producto-de-la-sección-g-2026-11-11)); solo queda abierta la 1.
+
 1. 2FA: ¿en Validasoft o en el sistema integrador? (§4.6)
-2. Infolaft: ¿proveedor único para los clientes de Sinco o uno por cliente? ¿Se usa desde el SRM durante la
-   coexistencia? ([15](15-infolaft.md))
+2. ~~Infolaft: ¿proveedor único para los clientes de Sinco o uno por cliente? ¿Se usa desde el SRM durante la coexistencia? ([15](15-infolaft.md))~~ Resuelta en G-2 y G-4: **uno solo para todos los clientes, con la cuenta de la plataforma**, y solo desde Validasoft. Pendiente de implementar: pasar las credenciales de los proveedores de listas de cada empresa a la configuración de la plataforma (§4.4).
 3. ~~¿El oficial de cumplimiento puede rechazar el expediente directamente?~~ Resuelta en CU-7: sí, solo ante un hallazgo (§4.4).
-4. Señal entre empresas: hoy el bloqueo o rechazo de una empresa es privado y no se ve en otra. ¿Debe compartirse
-   algún hecho grave (p. ej. una coincidencia confirmada en listas restrictivas) sin revelar quién decidió?
-5. Integración con el SRM (§3.2): cuándo se sube la rama, quién aporta la cuenta de servicio de AyF, y cómo se
-   representa «Bloqueado» en el SRM y en AyF.
+4. ~~Señal entre empresas: ¿debe compartirse algún hecho grave sin revelar quién decidió?~~ Resuelta en G-1: **no se comparte ningún hecho grave; las decisiones de cada empresa son privadas.**
+5. ~~Integración con el SRM (§3.2): cuándo se sube la rama, cuenta de servicio de AyF y «Bloqueado».~~ Resuelta en G-4: **todavía no; primero se prueba Validasoft solo, sin integrarlo en ningún sistema.** La rama del SRM sigue en espera (§3.2).
+6. ~~Nueva vigencia tras renovar: ¿desde la aprobación o desde el vencimiento anterior?~~ Resuelta en G-3 (ya era VV-12): **desde la aprobación.**
