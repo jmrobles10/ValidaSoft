@@ -229,7 +229,10 @@ public sealed partial class RequisitosApiTests
     public async Task El_importador_trae_la_imagen_de_la_firma_si_su_huella_coincide_y_si_no_importa_la_declaracion_sin_imagen_con_aviso()
     {
         var baseFixture = NuevoFixturePortal();
-        var catalogos = JsonSerializer.Deserialize<Validasoft.Adaptadores.Portal.ArchivoDelPortal>(baseFixture.Json(), Validasoft.Adaptadores.Portal.OrigenPortalArchivo.Opciones)!.Catalogos;
+        var catalogos = JsonSerializer.Deserialize<Validasoft.Adaptadores.Portal.ArchivoDelPortal>(baseFixture.Json(), Validasoft.Adaptadores.Portal.OrigenPortalArchivo.Opciones)!.Catalogos
+            // Sin especialidades: es un catálogo global y la prueba del importador genérico cuenta cuántas crea («Creados» = 4) y que aún no existen; si esta
+            // corrida real se adelanta (el orden de las pruebas no está fijado), esa prueba vería 0.
+            with { Especialidades = null };
         var imagen = Convert.FromBase64String(FirmaPngBase64());
         var huella = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(imagen));
 
