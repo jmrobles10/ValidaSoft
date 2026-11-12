@@ -93,7 +93,7 @@ export function PaginaFichaTercero() {
       <Box sx={REJILLA}>
         <Stack spacing={3} sx={{ minWidth: 0 }}>
           <VinculosDeLaFicha empresaId={empresa.id} empresaNombre={empresa.nombre} vinculos={vinculos} puedeVer={permisos.puede(SCOPES.vinculosLeer)} />
-          {secciones && <InformacionTercero empresaId={empresa.id} secciones={secciones} vinculos={vinculos} />}
+          {secciones && <InformacionTercero empresaId={empresa.id} terceroId={tercero.id} secciones={secciones} vinculos={vinculos} />}
         </Stack>
         <Stack spacing={2} sx={{ minWidth: 0 }}>
           <DatosTercero tercero={tercero} />

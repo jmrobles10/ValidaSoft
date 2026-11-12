@@ -12,6 +12,8 @@ import { esObjeto } from './formato';
 
 interface Props {
   empresaId: string;
+  /** El tercero de la ficha: con él se descarga el PDF de la declaración PEP de sus personas. */
+  terceroId?: string;
   secciones: readonly SeccionFichaDto[];
   vinculos: readonly VinculoEnFichaDto[];
 }
@@ -21,7 +23,7 @@ interface Props {
  * estado (completa o lo que falta), versión y fecha, lo que la empresa activa tiene aceptado (F2, FM-29), los datos en
  * solo lectura y sus soportes. Sin acciones: la sección se acepta u observa en el expediente.
  */
-export function InformacionTercero({ empresaId, secciones, vinculos }: Props) {
+export function InformacionTercero({ empresaId, terceroId, secciones, vinculos }: Props) {
   const { t } = useTranslation();
   const titulo = t('fichaMaestra.titulo');
   return (
@@ -41,13 +43,13 @@ export function InformacionTercero({ empresaId, secciones, vinculos }: Props) {
           </Typography>
         </Tarjeta>
       ) : (
-        secciones.map((s) => <TarjetaSeccion key={`${s.seccion}-${String(s.periodo)}`} empresaId={empresaId} seccion={s} vinculos={vinculos} />)
+        secciones.map((s) => <TarjetaSeccion key={`${s.seccion}-${String(s.periodo)}`} empresaId={empresaId} terceroId={terceroId} seccion={s} vinculos={vinculos} />)
       )}
     </Stack>
   );
 }
 
-function TarjetaSeccion({ empresaId, seccion, vinculos }: { empresaId: string; seccion: SeccionFichaDto; vinculos: readonly VinculoEnFichaDto[] }) {
+function TarjetaSeccion({ empresaId, terceroId, seccion, vinculos }: { empresaId: string; terceroId?: string; seccion: SeccionFichaDto; vinculos: readonly VinculoEnFichaDto[] }) {
   const { t } = useTranslation();
   const nombre = seccion.periodo ? t('fichaMaestra.nombreConPeriodo', { nombre: seccion.nombre, periodo: String(seccion.periodo) }) : seccion.nombre;
   const completitud = seccion.completitud;
@@ -87,7 +89,7 @@ function TarjetaSeccion({ empresaId, seccion, vinculos }: { empresaId: string; s
           </SeccionFicha>
         )}
         <SeccionFicha titulo={t('fichaMaestra.datos')}>
-          <DatosDeSeccion datos={esObjeto(seccion.datos) ? seccion.datos : {}} />
+          <DatosDeSeccion datos={esObjeto(seccion.datos) ? seccion.datos : {}} empresaId={empresaId} terceroId={terceroId} seccion={seccion.seccion} version={seccion.version} />
         </SeccionFicha>
         <SeccionFicha titulo={t('fichaMaestra.soportes')}>
           {seccion.soportes.length === 0 ? (

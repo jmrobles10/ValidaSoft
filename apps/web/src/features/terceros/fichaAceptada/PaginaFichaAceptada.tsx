@@ -97,7 +97,7 @@ export function PaginaFichaAceptada() {
           {datos.secciones.length === 0 ? (
             <EstadoVacio titulo={t('fichaAceptada.vacia.titulo')} texto={t('fichaAceptada.vacia.texto')} />
           ) : (
-            datos.secciones.map((s) => <TarjetaSeccionAceptada key={`${s.seccion}-${String(s.periodo)}`} empresaId={empresa.id} seccion={s} />)
+            datos.secciones.map((s) => <TarjetaSeccionAceptada key={`${s.seccion}-${String(s.periodo)}`} empresaId={empresa.id} terceroId={datos.terceroId} seccion={s} />)
           )}
         </Stack>
         <Tarjeta titulo={t('fichaAceptada.resumen.titulo')} etiqueta={t('fichaAceptada.resumen.titulo')}>

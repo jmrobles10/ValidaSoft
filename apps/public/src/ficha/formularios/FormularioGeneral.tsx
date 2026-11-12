@@ -4,6 +4,7 @@ import { CampoCifra, CampoFechaFicha, CampoSiNo, CampoTexto, Rejilla } from '../
 import { PAISES } from '../paises';
 import { CampoCatalogo, SelectorUnico } from '../selectores';
 import type { DatosGenerales, PropsFormulario } from '../tipos';
+import { PreguntaPep } from '../pep/PreguntaPep';
 import { DireccionPorPartes } from './DireccionPorPartes';
 
 const MAXIMO_SECUNDARIAS = 3;
@@ -14,7 +15,7 @@ const esTipoPersona = (valor: string): valor is (typeof TIPOS_PERSONA)[number] =
  * Información general (`FICHA_GENERAL`). Tipo de persona, identificación y DV los fija la API con el registro del
  * tercero: aquí solo se muestran. Persona jurídica (o consorcio) diligencia la razón social; natural, nombres y apellidos.
  */
-export function FormularioGeneral({ datos, onCambiar, mensaje, deshabilitado, tipoPersona }: PropsFormulario<DatosGenerales> & { tipoPersona: string }) {
+export function FormularioGeneral({ datos, onCambiar, mensaje, hayEnRuta, deshabilitado, tipoPersona }: PropsFormulario<DatosGenerales> & { tipoPersona: string }) {
   const { t } = useTranslation();
   const natural = tipoPersona === 'Natural';
   const identificacion = datos.numero
@@ -105,7 +106,16 @@ export function FormularioGeneral({ datos, onCambiar, mensaje, deshabilitado, ti
       <CampoSiNo etiqueta={t('ficha.general.certificadoIso')} valor={datos.certificado_iso} onCambiar={(v) => onCambiar({ certificado_iso: v })} mensaje={mensaje('certificado_iso')} deshabilitado={deshabilitado} />
       {natural && (
         <>
-          <CampoSiNo etiqueta={t('ficha.general.pep')} valor={datos.pep} onCambiar={(v) => onCambiar({ pep: v })} mensaje={mensaje('pep')} deshabilitado={deshabilitado} />
+          <PreguntaPep
+            etiqueta={t('ficha.general.pep')}
+            pep={datos.pep}
+            declaracion={datos.declaracion_pep}
+            origen={{ tipo: 'natural', nombres: datos.nombres, apellidos: datos.apellidos, tipoIdentificacion: datos.tipo_identificacion, numero: datos.numero, direccion: datos.direccion }}
+            onCambiar={onCambiar}
+            mensaje={mensaje}
+            hayEnRuta={hayEnRuta}
+            deshabilitado={deshabilitado}
+          />
           <CampoSiNo etiqueta={t('ficha.general.vinculoPep')} valor={datos.vinculo_pep} onCambiar={(v) => onCambiar({ vinculo_pep: v })} mensaje={mensaje('vinculo_pep')} deshabilitado={deshabilitado} />
         </>
       )}

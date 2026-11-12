@@ -45,12 +45,14 @@ interface PropsCampoFechaFicha {
   mensaje?: string | null;
   ayuda?: string;
   deshabilitado?: boolean;
+  /** Última fecha elegible (ISO), p. ej. hoy en una fecha que no puede ser futura. */
+  maximo?: string;
 }
 
 /** Fecha con el selector de la aplicación (`dd/mm/aaaa` y calendario); sin fecha es `null`, como en `CampoTexto`. */
-export function CampoFechaFicha({ etiqueta, valor, onCambiar, mensaje, ayuda, deshabilitado = false }: PropsCampoFechaFicha) {
+export function CampoFechaFicha({ etiqueta, valor, onCambiar, mensaje, ayuda, deshabilitado = false, maximo }: PropsCampoFechaFicha) {
   return (
-    <CampoFecha etiqueta={etiqueta} valor={valor} onCambiar={(iso) => onCambiar(iso === '' ? null : iso)} error={Boolean(mensaje)} ayuda={mensaje ?? ayuda} deshabilitado={deshabilitado} fullWidth />
+    <CampoFecha etiqueta={etiqueta} valor={valor} onCambiar={(iso) => onCambiar(iso === '' ? null : iso)} error={Boolean(mensaje)} ayuda={mensaje ?? ayuda} deshabilitado={deshabilitado} maximo={maximo} fullWidth />
   );
 }
 

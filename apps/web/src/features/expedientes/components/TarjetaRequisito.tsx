@@ -108,7 +108,7 @@ export function TarjetaRequisito({ expediente, requisito, areas, contexto, nombr
       )}
       {/* Lo que decidió la revisión automática en cada área (ADR-0012): sugerencia, aprobación del sistema o pase a una persona. */}
       {!seccion && <RevisionesAutomaticasDelRequisito expediente={expediente} requisito={requisito} areas={areas} contexto={contexto} nombres={nombres} />}
-      {seccion && <DetalleSeccionRequisito requisito={requisito} seccion={seccion} documentos={documentos} puedeVer={puedeVer} onVer={onVer} />}
+      {seccion && <DetalleSeccionRequisito requisito={requisito} seccion={seccion} documentos={documentos} puedeVer={puedeVer} onVer={onVer} empresaId={expediente.empresaId} terceroId={expediente.tercero.id} />}
       {/* Un documento que respalda secciones de la ficha («Usar como soporte», F5): qué respalda y el resultado de su cruce. */}
       {!seccion && requisito.soporteDeSecciones && (
         <Box sx={{ mt: 1 }}>
