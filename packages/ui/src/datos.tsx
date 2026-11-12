@@ -1,4 +1,4 @@
-import { Avatar, Box, Stack, Typography, type SxProps, type Theme } from '@mui/material';
+import { Avatar, Box, Stack, Tooltip, Typography, type SxProps, type Theme } from '@mui/material';
 import { Building2, Plug, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -29,6 +29,31 @@ export function Dato({ etiqueta, children, ancho = false }: { etiqueta: string; 
         {children}
       </Typography>
     </Stack>
+  );
+}
+
+/**
+ * Un valor que puede ser muy largo (un correo, una referencia, un identificador) dentro de un `Dato`: nunca se parte a mitad de la palabra.
+ * Con `partirEn="@"` un correo que no cabe en una línea se parte justo después de la «@» (el usuario arriba y el dominio abajo); si aun así una
+ * parte no cabe, se recorta con puntos suspensivos. El valor completo está en el tooltip, y el texto sigue siendo seleccionable para copiarlo.
+ * Con `mono` usa la fuente de los identificadores.
+ */
+export function ValorLargo({ valor, partirEn, mono = false }: { valor: string; partirEn?: string; mono?: boolean }) {
+  const corte = partirEn ? valor.indexOf(partirEn) : -1;
+  const partes = partirEn && corte > 0 ? [valor.slice(0, corte + partirEn.length), valor.slice(corte + partirEn.length)] : [valor];
+  return (
+    <Tooltip title={valor} placement="top-start" enterDelay={500} describeChild>
+      <Box
+        component="span"
+        sx={{ display: 'flex', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%', ...(mono && { typography: 'mono' }) }}
+      >
+        {partes.map((parte) => (
+          <Box key={parte} component="span" sx={{ display: 'block', minWidth: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {parte}
+          </Box>
+        ))}
+      </Box>
+    </Tooltip>
   );
 }
 
