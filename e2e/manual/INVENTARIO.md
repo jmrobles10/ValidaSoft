@@ -258,7 +258,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `integracion/sistema-integrador` ☐ | Sistema integrador | Grupo base | Registrar un sistema: código, clave pública, orígenes permitidos, identidades de personas |
+| `integracion/sistema-integrador` ☑ | Sistema integrador | Grupo base | Registrar un sistema: código, clave pública, orígenes permitidos, identidades de personas |
 | `integracion/api-keys` ☐ | Sistema integrador | Sistema registrado | Crear una llave con sus permisos (scopes) y empresas, verla una sola vez, rotar y revocar |
 | `integracion/webhooks` ☐ | Sistema integrador | Receptor de la prueba (`soporte/receptor.ts`, spec `eventos`) | Crear la suscripción, eventos, secreto, firma verificada, entregas en orden |
 | `integracion/webhook-entrega-fallida-y-reenvio` ☐ | Sistema integrador | Receptor que falla (spec `eventos`) | Entrega fallida, reintentos, reenviar desde la pantalla |
