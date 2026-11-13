@@ -245,7 +245,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `plataforma/agregar-empresa-a-un-grupo` ☑ | Plataforma | Grupo existente | Agregar una empresa, prefijo de folio, la empresa aparece en el grupo |
 | `plataforma/sistemas-de-un-grupo` ☑ | Plataforma | Grupo con un sistema integrado | Ver, desactivar y reactivar un sistema, efecto sobre sus llaves y sesiones |
 | `plataforma/plan-del-grupo` ☑ | Plataforma | Grupo con límites (spec `derechos-plan-correo`) | Plan, límites y uso, cambiar, aviso al grupo |
-| `plataforma/plan-de-ia-y-llave-openai` ☐ | Plataforma | Empresa sin plan (spec `ia-cupo-y-escalamiento`) | Plan de IA, validaciones incluidas, llave de OpenAI (nunca visible), «Probar llave» |
+| `plataforma/plan-de-ia-y-llave-openai` ☑ | Plataforma | Empresa sin plan (spec `ia-cupo-y-escalamiento`) | Plan de IA, validaciones incluidas, llave de OpenAI (nunca visible), «Probar llave» |
 | `plataforma/consumo-y-tarifa-de-ia` ☐ | Plataforma | Consumo de IA de varias empresas | Uso por cliente con su tarifa, exportar |
 | `plataforma/operadores` ☐ | Plataforma | Operadores directos | Crear, desactivar y reactivar, passkey para cambios sensibles |
 | `plataforma/secretos` ☐ | Plataforma | — | Secretos de la plataforma, qué se puede ver y cambiar, step-up con passkey |
