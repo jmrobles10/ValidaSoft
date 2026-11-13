@@ -123,11 +123,11 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `revision/desaprobar-un-expediente-aprobado` ☑ | Administrador de empresa | Vínculo aprobado con certificado (spec `desaprobacion`) | Desaprobar, vínculo a validación, certificado revocado, otro certificado al aprobar de nuevo |
 | `revision/anular-un-veredicto` ☑ | Administrador de empresa | Área que ya aprobó (spec `ciclo-vinculo`) | Anular el veredicto de un área, cierre manual de una observación |
 | `revision/actualizacion-de-un-documento` ☑ | Revisor/área | Versión nueva durante la revisión (spec `actualizaciones`) | Aviso en tiempo real, el diálogo abierto no deja confirmar, ver el cambio |
-| `revision/revalidaciones-en-lote` ☐ | Revisor/área | Revalidaciones sin cambios y una con cambios (spec `revalidaciones-y-exencion`) | Lista de Revalidaciones, selección en lote (la que cambió no se selecciona), efecto en el certificado |
+| `revision/revalidaciones-en-lote` ☑ | Revisor/área | Revalidaciones sin cambios y una con cambios (spec `revalidaciones-y-exencion`) | Lista de Revalidaciones, selección en lote (la que cambió no se selecciona), efecto en el certificado |
 | `revision/eximir-un-documento` ☑ | Administrador de empresa | Expediente con RUT requerido (spec `revalidaciones-y-exencion`) | Eximir con motivo, las áreas no lo revisan, el tercero lo ve eximido |
-| `revision/historial-del-expediente` ☐ | Revisor/área | Expediente con observación, respuesta y aprobación | Línea de tiempo: quién, qué y cuándo, rótulos, valores largos |
+| `revision/historial-del-expediente` ☑ | Revisor/área | Expediente con observación, respuesta y aprobación | Línea de tiempo: quién, qué y cuándo, rótulos, valores largos |
 | `revision/visor-y-datos-de-un-documento` ☐ | Revisor/área | Documento con campos y, si hay IA, análisis | Visor, versiones, datos declarados, vigencia, descargar (queda auditado) |
-| `revision/recordatorio-de-observaciones` ☐ | Revisor/área | Expediente observado (spec `novedades-tercero`) | Recordatorio individual desde el expediente, qué llega al tercero (correo y campana) |
+| `revision/recordatorio-de-observaciones` ☑ | Revisor/área | Expediente observado (spec `novedades-tercero`) | Recordatorio individual desde el expediente, qué llega al tercero (correo y campana) |
 | `revision/responder-con-lo-corregido` ☐ | Revisor/área | El tercero respondió a una observación (spec `novedades-tercero`) | Aviso a las áreas que vuelven a revisar lo corregido, qué cambió |
 
 ### documentos (6) e informes (7)
