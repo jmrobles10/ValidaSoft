@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { esSesionDePlataforma } from '@validasoft/api-client';
-import { Isotipo, VARIABLE_TOPE } from '@validasoft/ui';
+import { Logo, VARIABLE_TOPE } from '@validasoft/ui';
 import { Moon, ShieldCheck, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,7 @@ export function SoloTenant({ children }: { children: ReactNode }) {
 
 /**
  * Consola de Plataforma (P-15-2, PT-4): solo con la sesión de un operador (sin tenant, `plataforma:tenants`). Una fila de
- * 48 px como el AppShell de la empresa: isotipo, «Plataforma», sus secciones y quién opera desde qué sistema.
+ * 48 px como el AppShell de la empresa: logo, «Plataforma», sus secciones y quién opera desde qué sistema.
  */
 export function ShellPlataforma() {
   const { t } = useTranslation();
@@ -80,12 +80,7 @@ export function ShellPlataforma() {
           minWidth: 0,
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, flex: 'none' }}>
-          <Isotipo />
-          <Typography component="span" sx={{ fontSize: 15, lineHeight: '20px', fontWeight: 600, letterSpacing: '-0.01em' }}>
-            {t('app.nombre')}
-          </Typography>
-        </Box>
+        <Logo tamano={20} titulo={t('app.nombre')} />
         <Box aria-hidden sx={{ flex: 'none', width: '1px', height: 24, bgcolor: 'divider' }} />
         <Typography component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 14, fontWeight: 600, flex: 'none' }}>
           <ShieldCheck size={16} strokeWidth={1.75} aria-hidden />

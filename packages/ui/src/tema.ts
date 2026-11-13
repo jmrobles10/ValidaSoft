@@ -25,7 +25,7 @@ declare module '@mui/material/styles' {
     superficie: { nivel1: string; nivel2: string; elevada: string };
     borde: { sutil: string; control: string };
     acento: { main: string; tinte: string };
-    marca: { azul: string; verde: string; profundo: string; degradado: string };
+    marca: { azul: string; verde: string; profundo: string; degradado: string; soft: string; texto: string };
     tooltip: { fondo: string; texto: string };
     esqueleto: string;
     scrim: string;
@@ -37,7 +37,7 @@ declare module '@mui/material/styles' {
     superficie?: { nivel1: string; nivel2: string; elevada: string };
     borde?: { sutil: string; control: string };
     acento?: { main: string; tinte: string };
-    marca?: { azul: string; verde: string; profundo: string; degradado: string };
+    marca?: { azul: string; verde: string; profundo: string; degradado: string; soft: string; texto: string };
     tooltip?: { fondo: string; texto: string };
     esqueleto?: string;
     scrim?: string;
@@ -151,7 +151,7 @@ export function createValidasoftTheme(modo: Modo = 'light', { app = 'web', color
       superficie: { nivel1: c.superficieNivel1, nivel2: c.superficieNivel2, elevada: c.superficieElevada },
       borde: { sutil: c.bordeSutil, control: c.bordeControl },
       acento: { main: acento, tinte: primario ? primario.tinte : c.acentoTinte },
-      marca: { azul: c.marcaAzul, verde: c.marcaVerde, profundo: c.marcaProfundo, degradado: `linear-gradient(135deg, ${c.marcaAzul}, ${c.marcaVerde})` },
+      marca: { azul: c.marcaAzul, verde: c.marcaVerde, profundo: c.marcaProfundo, degradado: `linear-gradient(135deg, ${c.marcaAzul}, ${c.marcaVerde})`, soft: c.marcaSoft, texto: c.marcaTexto },
       tooltip: { fondo: c.tooltipFondo, texto: c.tooltipTexto },
       esqueleto: c.esqueleto,
       scrim: c.scrim,

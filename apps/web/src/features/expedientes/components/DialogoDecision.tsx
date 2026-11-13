@@ -197,7 +197,10 @@ export function DialogoDecision({ dialogo, expediente, empresaId, motivos, aplic
     if (incompleto || !aplica) return;
     mutacion.mutate(entrada(), {
       onSuccess: (resultado) => {
-        mostrar(resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado' ? t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio }) : textos.exito);
+        // Que el expediente quede aprobado (y con él se emita el certificado) es el momento que cierra la revisión: lleva la animación de marca.
+        const aprobado = resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado';
+        if (aprobado) mostrar(t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio }), 'success', { celebrar: true });
+        else mostrar(textos.exito);
         onCerrar();
       },
     });

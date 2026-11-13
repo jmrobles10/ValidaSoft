@@ -29,7 +29,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.js', '*.mjs', 'apps/web/scripts/*.mjs', 'e2e/soporte/*.mjs', 'packages/api-client/openapi/*.mjs'],
+          allowDefaultProject: ['eslint.config.js', '*.mjs', 'apps/web/scripts/*.mjs', 'e2e/soporte/*.mjs', 'packages/api-client/openapi/*.mjs', 'marca/*.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },
@@ -67,8 +67,8 @@ export default tseslint.config(
     ...jsxA11y.flatConfigs.recommended,
   },
   {
-    // Biblioteca: exporta componentes junto con sus tipos y helpers puros; el HMR no aplica.
-    files: ['packages/**/*.{ts,tsx}'],
+    // Biblioteca y herramientas: exportan componentes junto con sus tipos y helpers puros (o ninguno: el arnés de la marca); el HMR no aplica.
+    files: ['packages/**/*.{ts,tsx}', 'marca/**/*.{ts,tsx}'],
     rules: { 'react-refresh/only-export-components': 'off' },
   },
   {

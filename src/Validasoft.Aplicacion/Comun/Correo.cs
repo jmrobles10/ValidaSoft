@@ -234,7 +234,9 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
             var asuntoAprobado = $"{correo.Empresa} aprobó tu validación {correo.Folio}";
             var textoAprobado = $"{correo.Empresa} aprobó tu validación {correo.Folio}: tu vínculo está activo y ya tienes tu certificado.\n\n" +
                                 $"Entra a Validasoft ({UrlPublica}) con tu correo para verlo y compartirlo.";
-            var htmlAprobado = $"<p>{WebUtility.HtmlEncode(correo.Empresa)} aprobó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b>: " +
+            // La aprobación es el momento bueno del proceso: abre con el GIF de éxito de marca (MA-1).
+            var htmlAprobado = MarcoDeCorreo.ImagenDeExito("Tu validación fue aprobada") +
+                               $"<p>{WebUtility.HtmlEncode(correo.Empresa)} aprobó tu validación <b>{WebUtility.HtmlEncode(correo.Folio)}</b>: " +
                                "tu vínculo está activo y ya tienes tu certificado.</p>" +
                                $"<p>Entra a <a href=\"{WebUtility.HtmlEncode(UrlPublica)}\">Validasoft</a> con tu correo para verlo y compartirlo.</p>";
             return new MensajeDeCorreo(correo.Para, asuntoAprobado, textoAprobado, htmlAprobado);

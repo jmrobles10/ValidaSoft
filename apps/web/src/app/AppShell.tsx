@@ -1,6 +1,6 @@
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import { SCOPES } from '@validasoft/api-client';
-import { Isotipo, SelectorEmpresa, VARIABLE_TOPE, visualmenteOculto } from '@validasoft/ui';
+import { Logo, SelectorEmpresa, VARIABLE_TOPE, visualmenteOculto } from '@validasoft/ui';
 import { Link2, Moon, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, useNavigate } from 'react-router';
@@ -22,7 +22,7 @@ import { SECCIONES_CONFIGURACION } from './secciones';
 
 /**
  * AppShell embebido (dirección Registro): una sola fila de 48 px dentro del iframe del anfitrión, sin login ni menú
- * lateral propios. Isotipo, empresa activa, secciones (pestañas con «Más» adaptativo), campana, Configuración (engranaje)
+ * lateral propios. Logo, empresa activa, secciones (pestañas con «Más» adaptativo), campana, Configuración (engranaje)
  * y "Sesión desde SRM".
  */
 export function AppShell() {
@@ -104,12 +104,7 @@ export function AppShell() {
           minWidth: 0,
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, flex: 'none' }}>
-          <Isotipo />
-          <Typography component="span" sx={{ fontSize: 15, lineHeight: '20px', fontWeight: 600, letterSpacing: '-0.01em' }}>
-            {t('app.nombre')}
-          </Typography>
-        </Box>
+        <Logo tamano={20} titulo={t('app.nombre')} />
         <Box aria-hidden sx={{ flex: 'none', width: '1px', height: 24, bgcolor: 'divider' }} />
         <SelectorEmpresa
           etiqueta={t('empresas.etiqueta')}

@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Card, Stack, TextField, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { aplicarCambiosPendientes, esErrorApi, useCambiosPendientes, useEdicionEnCurso } from '@validasoft/api-client';
-import { AvisoCambiosNuevos, ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
+import { AnimacionExitoUnaVez, AvisoCambiosNuevos, ChipEstado, formatearFecha, PaginaEstado } from '@validasoft/ui';
 import { SearchX, Upload } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -98,6 +98,8 @@ export function PaginaExpediente() {
 
       <Card sx={{ p: 2, mb: 2 }}>
         <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', mb: 1 }}>
+          {/* Lo que le toca al tercero es «Aprobado» (no una actualización en revisión): la primera vez que lo ve en la sesión, el éxito de marca; después, el mismo dibujo quieto. */}
+          {avance?.tipo === 'aprobado' && <AnimacionExitoUnaVez clave={`expediente-aprobado:${expediente.id}`} tamano={28} decorativa />}
           {avance ? <ChipAvance avance={avance} /> : <ChipEstado estado={expediente.estado} fecha={expediente.actualizadoEn} size="medium" />}
           <Typography sx={{ color: 'text.secondary', fontSize: 13 }}>
             {t('expediente.actualizado', { fecha: formatearFecha(expediente.actualizadoEn) })}

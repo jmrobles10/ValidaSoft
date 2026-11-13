@@ -189,16 +189,32 @@ public sealed class LogosDePdfTests
     }
 
     [Fact]
-    public void El_degradado_lineal_y_el_arco_del_isotipo_de_Validasoft_se_dibujan()
+    public void La_V_del_logotipo_de_Validasoft_es_el_check_verde_relleno_con_sus_curvas()
     {
-        var isotipo = SvgDibujable.Leer(LogosDePdf.IsotipoDeValidasoft).ShouldNotBeNull();
-        var pdf = Contenido(isotipo, 34, 34);
-        pdf.ShouldContain("/ShadingType 2");
-        pdf.ShouldContain("/Pattern cs /P1 scn");
-        pdf.ShouldContain("/C0 [0.239216 0.419608 1]");   // #3D6BFF
-        pdf.ShouldContain("/C1 [0.133333 0.827451 0.541176]"); // #22D38A
-        pdf.ShouldContain("1 1 1 RG");                    // la «V» en blanco
-        pdf.ShouldContain("3.25 w 1 J 1 j");              // trazo redondeado
+        var v = SvgDibujable.Leer(LogosDePdf.VDeValidasoft).ShouldNotBeNull();
+        v.Ancho.ShouldBe(64);
+        v.Alto.ShouldBe(60);
+        var pdf = Contenido(v, 64, 60);
+        pdf.ShouldContain("0.133333 0.827451 0.541176 rg");  // #22D38A
+        pdf.ShouldContain(" c\n");                            // las curvas del trazo caligráfico
+        pdf.ShouldNotContain("/ShadingType");                // sin degradado
+        pdf.ShouldNotContain("/Subtype /Image");             // vectores, no una imagen
+    }
+
+    [Fact]
+    public void El_logotipo_de_Validasoft_dibuja_la_V_y_alida_y_Soft_pegadas_con_su_color_y_sin_deformarse()
+    {
+        var pdf = new Validasoft.Infraestructura.Certificados.LienzoPdf();
+        LogosDePdf.Validasoft.Dibujar(pdf, 48, 700, 110, 34);
+        var texto = Encoding.Latin1.GetString(pdf.Construir("t", "a", new DateTimeOffset(2026, 11, 12, 0, 0, 0, TimeSpan.Zero), (_, _) => { }));
+        texto.ShouldContain("0.133333 0.827451 0.541176 rg");   // la «V» verde
+        texto.ShouldContain("0.039216 0.058824 0.109804 rg");   // «alida»: #0A0F1C
+        texto.ShouldContain("0.184314 0.333333 0.85098 rg");    // «Soft»: #2F55D9
+        texto.ShouldContain("(alida) Tj");
+        texto.ShouldContain("(Soft) Tj");
+        // «alida» va en la fuente negrita (F2) y «Soft» en la normal (F1).
+        texto.ShouldContain("/F2 ");
+        texto.ShouldContain("/F1 ");
     }
 
     [Fact]
@@ -229,7 +245,8 @@ public sealed class LogosDePdfTests
             LogosDePdf.Resolver(sinLogo).ShouldBeSameAs(LogosDePdf.Validasoft);
         }
 
-        LogosDePdf.Validasoft.Proporcion.ShouldBe(1.0);
+        // El logotipo no es cuadrado: la «V» (64/60 de la letra), pegada a «alida» y «Soft» (−0,23) y las dos palabras en Helvetica, ≈ 4,9 de ancho por 1 de alto.
+        LogosDePdf.Validasoft.Proporcion.ShouldBeInRange(4.7, 5.1);
     }
 
     // ---------- El PDF ----------
@@ -280,6 +297,7 @@ public sealed class LogosDePdfTests
         conPng.ShouldContain("/Subtype /Image");
         conPng.ShouldContain("/Width 120 /Height 40");
         conPng.ShouldNotContain("/Pattern");
+        conPng.ShouldNotContain("(alida)");   // el logo de la empresa reemplaza al de Validasoft
         conPng.ShouldContain("(Constructora Norte S.A.S.)");
 
         // SVG de la empresa: vectores, sin imagen.
@@ -287,12 +305,14 @@ public sealed class LogosDePdfTests
         var conSvg = Encoding.Latin1.GetString(GenerarPdf("Constructora Sur S.A.S.", svg, "logo-svg"));
         conSvg.ShouldNotContain("/Subtype /Image");
         conSvg.ShouldContain("0.878431 0.478431 0.121569 rg"); // #E07A1F
+        conSvg.ShouldNotContain("(alida)");
 
-        // Sin logo, o con uno que no se puede dibujar: el de Validasoft (el degradado de marca).
+        // Sin logo, o con uno que no se puede dibujar: el logotipo de Validasoft (la «V» verde y «alida» «Soft»).
         foreach (var (logo, nombre) in new (string?, string)[] { (null, "logo-validasoft"), ("https://ejemplo.co/logo.png", "logo-url") })
         {
             var texto = Encoding.Latin1.GetString(GenerarPdf("Validasoft", logo, nombre));
-            texto.ShouldContain("/ShadingType 2");
+            texto.ShouldContain("0.133333 0.827451 0.541176 rg");
+            texto.ShouldContain("(alida) Tj");
             texto.ShouldNotContain("/Subtype /Image");
         }
     }

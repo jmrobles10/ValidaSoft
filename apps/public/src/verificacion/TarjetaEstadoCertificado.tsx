@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Card, Stack, Typography } from '@mui/material';
 import type { CertificadoPublicoDto } from '@validasoft/api-client';
-import { ChipEstado, tonoDe } from '@validasoft/ui';
+import { AnimacionExito, ChipEstado, tonoDe } from '@validasoft/ui';
 import { ArrowRight, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
@@ -32,12 +32,18 @@ export function TarjetaEstadoCertificado({ certificado: c, huella }: { certifica
           <Typography sx={{ fontWeight: 500, fontSize: 15, flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{c.emisor.empresa}</Typography>
           {estado && <ChipEstado estado={estado} bloqueante={c.bloqueante} size="medium" />}
         </Stack>
-        <Typography id="estado-certificado" variant="h3" component="h2">
-          {titulo}
-        </Typography>
-        <Typography sx={{ color: 'text.secondary', mt: 0.5, fontSize: 15, lineHeight: '22px' }}>
-          {texto}
-        </Typography>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          {/* Un certificado vigente se «confirma» al abrirlo: la animación de éxito de marca (el estado ya está en texto, así que es decorativa). */}
+          {tono === 'exito' && <AnimacionExito tamano={44} decorativa />}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography id="estado-certificado" variant="h3" component="h2">
+              {titulo}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', mt: 0.5, fontSize: 15, lineHeight: '22px' }}>
+              {texto}
+            </Typography>
+          </Box>
+        </Stack>
         {c.reemplazadoPor && (
           <Button
             component={RouterLink}

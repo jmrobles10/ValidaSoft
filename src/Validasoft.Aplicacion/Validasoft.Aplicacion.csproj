@@ -9,6 +9,10 @@
     <PackageReference Include="BouncyCastle.Cryptography" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Logotipo y GIF de éxito de los correos (MA-1): los genera `marca/generar.mjs`; viajan dentro del mensaje (cid:). -->
+    <EmbeddedResource Include="Comun\RecursosDeMarca\*" LogicalName="Validasoft.Marca.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Validasoft.Dominio\Validasoft.Dominio.csproj" />
     <ProjectReference Include="..\Validasoft.Contratos\Validasoft.Contratos.csproj" />
   </ItemGroup>

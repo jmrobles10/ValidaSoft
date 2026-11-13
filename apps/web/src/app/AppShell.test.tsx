@@ -35,6 +35,14 @@ afterEach(() => {
 });
 
 describe('AppShell', () => {
+  it('lleva el logotipo de Validasoft en la barra (la «V» y «alidaSoft»), con su nombre accesible', () => {
+    permisos.scopes = new Set([SCOPES.vinculosLeer]);
+    montar('/e/emp/vinculos');
+    const logo = screen.getByRole('img', { name: 'Validasoft' });
+    expect(logo).toHaveTextContent('alidaSoft');
+    expect(within(screen.getByRole('banner')).getByRole('img', { name: 'Validasoft' })).toBe(logo);
+  });
+
   it('sin auditoria:leer no muestra la pestaña Auditoría', () => {
     permisos.scopes = new Set([SCOPES.vinculosLeer]);
     montar('/e/emp/vinculos');

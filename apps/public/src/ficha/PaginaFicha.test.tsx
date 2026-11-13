@@ -47,6 +47,8 @@ describe('Mi información: resumen', () => {
     });
     expect(await screen.findByText('Tu información está completa')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Continuar' })).not.toBeInTheDocument();
+    // El aviso lleva el éxito de marca en lugar del check genérico (la primera vez de la sesión se anima, después queda quieto).
+    expect(screen.getByRole('alert').querySelector('svg g.pop')).not.toBeNull();
   });
 
   it('a la persona natural no le muestra Legal ni Financiera, ni la deja abrirlas', async () => {

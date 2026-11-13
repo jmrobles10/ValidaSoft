@@ -112,11 +112,15 @@ Convención por feature: `api/` (hooks TanStack sobre el cliente generado + quer
 | `info` (automático / IA) | #7BA7FF | #3F63C9 |
 | `text.primary / secondary / disabled` | #EEF1F7 / #8791A7 / #5A6480 | #0A0F1C / #4C5670 / #8791A7 |
 | `gradient.brand` | `linear-gradient(135deg,#3D6BFF,#22D38A)` | igual |
+| `marcaAzul / marcaVerde` (aro y check del logo) | #6E8FFF / #2BE29A | #3D6BFF / #22D38A |
+| `marcaTexto / marcaSoft` («alida» y «Soft» del logotipo) | #F2F5FB / #7C9BFF | #0A0F1C / #2F55D9 |
 | Radios | `lg` 18 (tarjetas, modales) · `md` 12 (inputs, botones) · `sm` 9 (chips, celdas) |
 | Espaciado | base 8; densidad `comfortable` (público) / `compact` (bandejas) |
 | Tipografía | Geist: h1 32/600 tracking −0.02em, h2 24/600, h3 18/600, body 14/400, caption 12/500; Geist Mono 13 para folio, hash, fechas en tablas |
 
 `createValidasoftTheme(mode)` extiende `createTheme` con `palette.estado.*` (module augmentation) y overrides (botones sin mayúsculas, chips radio 9, DataGrid sin bordes verticales).
+
+**Marca.** El logo «Anillo» (logotipo sin aro, ícono, favicon) y sus animaciones de éxito y de carga son componentes del paquete (`Logo`, `AnimacionExito`, `Cargando`); su geometría y sus colores salen de `packages/ui/src/marca/geometria.ts` y de los tokens `marca*`. Construcción, usos correctos e incorrectos, tamaños mínimos y cómo se regeneran los recursos (favicon, íconos de la app, GIF): [marca.md](marca.md) y decisiones MA-1…MA-8.
 
 ### 2.2 Componentes propios
 
@@ -233,7 +237,7 @@ Todas las rutas de operación están **dentro de una empresa**; las de `/configu
 
 ### 3.3 Barra superior de la web de empresa (`apps/web`, NAV-1…NAV-7)
 
-Una sola fila de 48 px (también dentro del iframe del anfitrión): isotipo, `SelectorEmpresa`, **secciones**, y a la derecha «Sesión desde …», la campana, **Configuración** (engranaje) y el tema. Con las nueve secciones de un administrador (Inicio, Bandeja, Revalidaciones, Vencimientos, Cumplimiento, Certificados, Vínculos, Informes, Auditoría) las pestañas no caben en un iframe angosto, y una barra de scroll horizontal bajo ellas se veía mal: la barra **nunca se desplaza en horizontal**.
+Una sola fila de 48 px (también dentro del iframe del anfitrión): el logotipo de Validasoft (el logo «Anillo», [docs/marca.md](marca.md)), `SelectorEmpresa`, **secciones**, y a la derecha «Sesión desde …», la campana, **Configuración** (engranaje) y el tema. Con las nueve secciones de un administrador (Inicio, Bandeja, Revalidaciones, Vencimientos, Cumplimiento, Certificados, Vínculos, Informes, Auditoría) las pestañas no caben en un iframe angosto, y una barra de scroll horizontal bajo ellas se veía mal: la barra **nunca se desplaza en horizontal**.
 
 | Elemento | Comportamiento |
 |---|---|

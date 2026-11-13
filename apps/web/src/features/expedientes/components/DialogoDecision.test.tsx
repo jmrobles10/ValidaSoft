@@ -90,6 +90,8 @@ describe('DialogoDecision', () => {
     await waitFor(() => expect(onCerrar).toHaveBeenCalled());
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(useAvisos.getState().actual?.mensaje).toBe('Expediente NORTE-E-2026-000001 aprobado: ya no falta ninguna área.');
+    // Cerrar la revisión como aprobada es el momento que lleva la animación de éxito de marca en el aviso.
+    expect(useAvisos.getState().actual?.celebrar).toBe(true);
   });
 
   it('el cambio que produce la propia decisión no muestra «ya no aplica»', async () => {

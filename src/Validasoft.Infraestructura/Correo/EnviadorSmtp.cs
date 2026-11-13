@@ -24,14 +24,7 @@ public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorS
         var puerto = seccion.GetValue("Puerto", 25);
         var seguridad = Enum.TryParse<SecureSocketOptions>(seccion["Seguridad"], true, out var opcion) ? opcion : SecureSocketOptions.Auto;
 
-        var correo = new MimeMessage();
-        // Con el dominio de correo de la empresa verificado (OD-20) sale desde su dirección; si no, con el de la plataforma.
-        correo.From.Add(mensaje.Remitente is { } propio
-            ? new MailboxAddress(propio.Nombre, propio.Direccion)
-            : MailboxAddress.Parse(seccion["Remitente"] is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>"));
-        correo.To.Add(MailboxAddress.Parse(mensaje.Para));
-        correo.Subject = mensaje.Asunto;
-        correo.Body = new BodyBuilder { TextBody = mensaje.Texto, HtmlBody = mensaje.Html }.ToMessageBody();
+        var correo = ArmarMensaje(mensaje, seccion["Remitente"]);
 
         using var cliente = new SmtpClient();
         await cliente.ConnectAsync(host, puerto, seguridad, ct);
@@ -41,5 +34,27 @@ public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorS
         await cliente.DisconnectAsync(true, ct);
 
         logger.LogInformation("Correo enviado: {Asunto}", mensaje.Asunto);
+    }
+
+    /// <summary>
+    /// El mensaje MIME listo para enviar: remitente (el propio de la empresa si su dominio está verificado, si no el de la plataforma), el
+    /// texto plano y el HTML dentro del marco de marca con las imágenes que pide por <c>cid:</c> adjuntas en línea, sin pedirlas a ningún
+    /// servidor (MA-1).
+    /// </summary>
+    internal static MimeMessage ArmarMensaje(MensajeDeCorreo mensaje, string? remitentePorOmision)
+    {
+        var correo = new MimeMessage();
+        // Con el dominio de correo de la empresa verificado (OD-20) sale desde su dirección; si no, con el de la plataforma.
+        correo.From.Add(mensaje.Remitente is { } propio
+            ? new MailboxAddress(propio.Nombre, propio.Direccion)
+            : MailboxAddress.Parse(remitentePorOmision is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>"));
+        correo.To.Add(MailboxAddress.Parse(mensaje.Para));
+        correo.Subject = mensaje.Asunto;
+        var html = MarcoDeCorreo.Envolver(mensaje.Html);
+        var cuerpo = new BodyBuilder { TextBody = mensaje.Texto, HtmlBody = html };
+        foreach (var recurso in MarcoDeCorreo.RecursosUsados(html))
+            cuerpo.LinkedResources.Add(recurso.Nombre, recurso.Contenido, ContentType.Parse(recurso.TipoMime)).ContentId = recurso.ContentId;
+        correo.Body = cuerpo.ToMessageBody();
+        return correo;
     }
 }

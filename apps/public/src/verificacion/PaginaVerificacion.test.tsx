@@ -48,6 +48,9 @@ describe('verificación pública del certificado', () => {
     const fetch = montarSellado(certificado, claves);
 
     expect(await screen.findByRole('heading', { name: 'Este certificado está vigente' })).toBeInTheDocument();
+    // Un certificado vigente se «confirma» con la animación de éxito de marca (decorativa: el estado ya está en texto).
+    expect(document.querySelector('svg g.pop')).not.toBeNull();
+    expect(screen.queryByRole('img', { name: 'Listo' })).not.toBeInTheDocument();
     expect(screen.getByText(/Constructora Verificación S\.A\.S\. validó los documentos de Cliente de Verificación S\.A\.S\..*Vence el 08\/12\/2026\./)).toBeInTheDocument();
     expect(screen.getByText('NIT 90*****67')).toBeInTheDocument();
     expect(screen.getByText('VERIF-C-2026-000001-1')).toBeInTheDocument();
@@ -90,6 +93,7 @@ describe('verificación pública del certificado', () => {
     montarSellado(certificado, claves);
 
     expect(await screen.findByRole('heading', { name: 'Este certificado fue revocado' })).toBeInTheDocument();
+    expect(document.querySelector('svg g.pop')).toBeNull(); // sin celebración cuando no es vigente
     expect(screen.getByText('Dejó de valer el 20/11/2026 y no puede volver a usarse. Constructora Verificación S.A.S. puede decirte el motivo.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Descargar PDF' })).not.toBeInTheDocument();
     expect(screen.getByText('El PDF solo se entrega mientras el certificado está vigente.')).toBeInTheDocument();
