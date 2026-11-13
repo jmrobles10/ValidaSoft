@@ -262,7 +262,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `integracion/api-keys` ☑ | Sistema integrador | Sistema registrado | Crear una llave con sus permisos (scopes) y empresas, verla una sola vez, rotar y revocar |
 | `integracion/webhooks` ☑ | Sistema integrador | Receptor de la prueba (`soporte/receptor.ts`, spec `eventos`) | Crear la suscripción, eventos, secreto, firma verificada, entregas en orden |
 | `integracion/webhook-entrega-fallida-y-reenvio` ☑ | Sistema integrador | Receptor que falla (spec `eventos`) | Entrega fallida, reintentos, reenviar desde la pantalla |
-| `integracion/invitar-por-api` ☐ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
+| `integracion/invitar-por-api` ☑ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
 | `integracion/consulta-de-certificacion` ☐ | Sistema integrador | Tercero aprobado (spec `integracion`) | `GET /consultas/certificacion`, respuesta resumida, `If-None-Match` y 304 |
 | `integracion/eventos-pull-y-en-vivo` ☐ | Sistema integrador | Eventos de un vínculo | `GET /eventos` con cursor, SSE, tipos de evento |
 | `integracion/sandbox` ☐ | Sistema integrador | Grupo con sandbox (spec `integracion-sandbox`) | Crear, sincronizar y reiniciar el sandbox, llaves de prueba |
