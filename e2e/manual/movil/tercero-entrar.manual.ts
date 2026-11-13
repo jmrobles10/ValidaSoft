@@ -19,7 +19,7 @@ recorrido(
   async ({ page }) => {
     const e = await crearEscenario();
     const tercero = nuevoTercero('Aceros del Pacífico S.A.S.');
-    const invitacion = await invitar(e, e.norte, tercero);
+    await invitar(e, e.norte, tercero);
 
     // 1. Entrar con el correo.
     await page.goto('/entrar');

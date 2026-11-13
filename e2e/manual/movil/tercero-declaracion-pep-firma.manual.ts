@@ -1,5 +1,6 @@
 import { expect, paso, recorrido } from '../nucleo';
 import { escribirFecha } from '../../soporte/fechas';
+import { areaDe } from '../nucleo/semillas';
 import { abrirSeccion, guardarSeccionCompleta, llenarContactoYDomicilio, publicarFlujoDeFicha } from '../../soporte/ficha';
 import { dialogoDeclaracion, diligenciarDeclaracion, TITULO_DECLARACION } from '../../soporte/declaracion-pep';
 import { aceptarInvitacion, entrarPorInvitacion } from '../../soporte/proveedor';
@@ -21,7 +22,7 @@ recorrido(
   },
   async ({ page }) => {
     const e = await crearEscenario();
-    await publicarFlujoDeFicha(e, e.sur, 'PEP_FICHA_GENERAL', e.sur.areas.revision!, 'CLIENTE', [{ seccion: 'FICHA_GENERAL' }]);
+    await publicarFlujoDeFicha(e, e.sur, 'PEP_FICHA_GENERAL', areaDe(e.sur, 'revision'), 'CLIENTE', [{ seccion: 'FICHA_GENERAL' }]);
     const tercero = nuevaPersonaNatural('Ana María Pérez Gómez');
     const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
     await entrarPorInvitacion(page, invitacion);
