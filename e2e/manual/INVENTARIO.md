@@ -91,20 +91,20 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `vinculos/lista-y-filtros` ☐ | Administrador de empresa | Vínculos en varios estados (Invitado, En validación, Activo, Por vencer, Bloqueado) | Vínculos: columnas, filtros por estado y tipo, búsqueda, abrir uno |
-| `vinculos/detalle-del-vinculo` ☐ | Administrador de empresa | Vínculo activo con referencias externas y contactos | Datos del tercero, estado, invitación, referencias por sistema, contactos, historial con sus rótulos |
-| `vinculos/reenviar-invitacion` ☐ | Administrador de empresa | Vínculo invitado | «Reenviar invitación», correo y vigencia del enlace, aviso, el correo nuevo |
-| `vinculos/bloquear-y-desbloquear` ☐ | Administrador de empresa | Vínculo activo | Bloquear con motivo y fecha, lo que ve el tercero (nada del motivo), certificado, desbloquear (spec `certificado`) |
-| `vinculos/desvincular-y-reintegrar-sin-revalidar` ☐ | Administrador de empresa | Vínculo aprobado (spec `reintegro`) | Desvincular, certificado revocado, reintegrar restituyendo lo aprobado |
-| `vinculos/reintegrar-revalidando` ☐ | Administrador de empresa | Vínculo desvinculado con documentos vencidos (spec `reintegro`) | El diálogo explica por qué no se puede sin revalidar, renovación completa |
-| `vinculos/anular-vinculo` ☐ | Administrador de empresa | Vínculo con expediente abierto (spec `ciclo-vinculo`) | Anular con la palabra de confirmación, efecto en el expediente |
-| `vinculos/abrir-expediente-manual` ☐ | Administrador de empresa | Vínculo invitado, sin aceptar (FL-6) | Abrir el expediente sin esperar al tercero, aparece en la bandeja |
-| `vinculos/tercero-360` ☐ | Administrador de empresa | Tercero con dos empresas (spec `tercero360`) | Ficha del tercero, datos, vínculos con esta empresa, lo que no se comparte entre empresas |
-| `vinculos/ficha-aceptada-del-vinculo` ☐ | Administrador de empresa | Ficha completa y aprobada (spec `ficha`) | «Ver la ficha aceptada»: por sección lo aceptado y lo que cambió después |
-| `vinculos/cuenta-designada-aprobar` ☐ | Oficial de cumplimiento | Tipo de vínculo con cuenta designada (spec `cuentas`) | Cuenta por aprobar, cuatro ojos (quien la pidió no la aprueba), aprobar y rechazar |
-| `vinculos/vinculo-con-actualizacion-pendiente` ☐ | Administrador de empresa | Aprobado por dos empresas y RUT nuevo (spec `vinculo-en-revision`) | «En revisión» en lista, filtro, inicio y detalle; certificado «En verificación»; aviso de la actualización no aprobada |
-| `vinculos/bloqueado-no-recibe-version` ☐ | Administrador de empresa | Vínculo bloqueado y versión nueva (spec `pendientes-pequenos`) | El bloqueado no recibe el RUT nuevo; al desbloquear queda «En revisión» |
-| `vinculos/referencias-externas` ☐ | Sistema integrador | Vínculo creado por un sistema con su referencia | Dónde se ve la referencia por sistema, buscar por referencia, varios sistemas |
+| `vinculos/lista-y-filtros` ☑ | Administrador de empresa | Vínculos en varios estados (Invitado, En validación, Activo, Por vencer, Bloqueado) | Vínculos: columnas, filtros por estado y tipo, búsqueda, abrir uno |
+| `vinculos/detalle-del-vinculo` ☑ | Administrador de empresa | Vínculo activo con referencias externas y contactos | Datos del tercero, estado, invitación, referencias por sistema, contactos, historial con sus rótulos |
+| `vinculos/reenviar-invitacion` ☑ | Administrador de empresa | Vínculo invitado | «Reenviar invitación», correo y vigencia del enlace, aviso, el correo nuevo |
+| `vinculos/bloquear-y-desbloquear` ☑ | Administrador de empresa | Vínculo activo | Bloquear con motivo y fecha, lo que ve el tercero (nada del motivo), certificado, desbloquear (spec `certificado`) |
+| `vinculos/desvincular-y-reintegrar-sin-revalidar` ☑ | Administrador de empresa | Vínculo aprobado (spec `reintegro`) | Desvincular, certificado revocado, reintegrar restituyendo lo aprobado |
+| `vinculos/reintegrar-revalidando` ☑ | Administrador de empresa | Vínculo desvinculado con documentos vencidos (spec `reintegro`) | El diálogo explica por qué no se puede sin revalidar, renovación completa |
+| `vinculos/anular-vinculo` ☑ | Administrador de empresa | Vínculo con expediente abierto (spec `ciclo-vinculo`) | Anular con la palabra de confirmación, efecto en el expediente |
+| `vinculos/abrir-expediente-manual` ☑ | Administrador de empresa | Vínculo invitado, sin aceptar (FL-6) | Abrir el expediente sin esperar al tercero, aparece en la bandeja |
+| `vinculos/tercero-360` ☑ | Administrador de empresa | Tercero con dos empresas (spec `tercero360`) | Ficha del tercero, datos, vínculos con esta empresa, lo que no se comparte entre empresas |
+| `vinculos/ficha-aceptada-del-vinculo` ☑ | Administrador de empresa | Ficha completa y aprobada (spec `ficha`) | «Ver la ficha aceptada»: por sección lo aceptado y lo que cambió después |
+| `vinculos/cuenta-designada-aprobar` ☑ | Oficial de cumplimiento | Tipo de vínculo con cuenta designada (spec `cuentas`) | Cuenta por aprobar, cuatro ojos (quien la pidió no la aprueba), aprobar y rechazar |
+| `vinculos/vinculo-con-actualizacion-pendiente` ☑ | Administrador de empresa | Aprobado por dos empresas y RUT nuevo (spec `vinculo-en-revision`) | «En revisión» en lista, filtro, inicio y detalle; certificado «En verificación»; aviso de la actualización no aprobada |
+| `vinculos/bloqueado-no-recibe-version` ☑ | Administrador de empresa | Vínculo bloqueado y versión nueva (spec `pendientes-pequenos`) | El bloqueado no recibe el RUT nuevo; al desbloquear queda «En revisión» |
+| `vinculos/referencias-externas` ☑ | Sistema integrador | Vínculo creado por un sistema con su referencia | Dónde se ve la referencia por sistema, buscar por referencia, varios sistemas |
 
 ### revision (19)
 
@@ -134,19 +134,19 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `documentos/vencimientos` ☐ | Administrador de empresa | Documentos en distintos estados de vigencia (spec `vencimientos`) | Vencimientos: lista, filtros, por vencer, en gracia, vencidos |
-| `documentos/ciclo-de-vigencia` ☐ | Administrador de empresa | Tipo con aviso y gracia y fecha simulada (specs `vencimientos`, `vigencias`) | Vigente → por vencer (aviso) → gracia → vencido, avisos que recibe el tercero |
-| `documentos/vigencia-del-vinculo` ☐ | Administrador de empresa | Flujo con vigencia periódica (spec `vigencias`) | Por vencer, renovación, vencido y el certificado, qué cambia en la lista |
-| `documentos/documento-compartido-entre-empresas` ☐ | Revisor/área | Dos empresas, mismo RUT (spec `multiempresa-documento-global`) | Una acepta la v2 y la otra ve su aceptación desactualizada, sin ver la decisión de la otra |
+| `documentos/vencimientos` ☑ | Administrador de empresa | Documentos en distintos estados de vigencia (spec `vencimientos`) | Vencimientos: lista, filtros, por vencer, en gracia, vencidos |
+| `documentos/ciclo-de-vigencia` ☑ | Administrador de empresa | Tipo con aviso y gracia y fecha simulada (specs `vencimientos`, `vigencias`) | Vigente → por vencer (aviso) → gracia → vencido, avisos que recibe el tercero |
+| `documentos/vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con vigencia periódica (spec `vigencias`) | Por vencer, renovación, vencido y el certificado, qué cambia en la lista |
+| `documentos/documento-compartido-entre-empresas` ☑ | Revisor/área | Dos empresas, mismo RUT (spec `multiempresa-documento-global`) | Una acepta la v2 y la otra ve su aceptación desactualizada, sin ver la decisión de la otra |
 | `documentos/descargar-un-documento` ☐ | Revisor/área | Documento aprobado | Descargar, el registro en la auditoría de accesos |
-| `documentos/recordatorio-desde-vencimientos` ☐ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
-| `informes/estado-de-expedientes` ☐ | Administrador de empresa | Expedientes en varios estados (spec `informes`) | Informe con tiempos por área, filtros, resumen, descargar Excel |
-| `informes/informe-de-vinculos` ☐ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
-| `informes/plazos-de-revision` ☐ | Administrador de empresa | Plazos por área y expedientes fuera de plazo (spec `operacion`) | Informe SLA, tablas por área y por persona, cumplimiento |
-| `informes/exportar-un-expediente` ☐ | Auditor | Expediente aprobado con documentos (spec `informes`) | Exportar el ZIP, qué trae (documentos, resumen PDF, línea de tiempo), el registro en la auditoría |
-| `informes/auditoria` ☐ | Administrador de empresa | Acciones de configuración y descargas (spec `auditoria`) | Auditoría: filtros, detalle de un cambio (antes/después), accesos a documentos, exportar a Excel |
-| `informes/certificados` ☐ | Administrador de empresa | Certificados vigentes y revocados (spec `certificados`) | Lista de certificados, estado, PDF, abrir la ficha del tercero |
-| `informes/certificado-bloquear-y-revocar` ☐ | Administrador de empresa | Certificado vigente (spec `certificado`) | Bloquear y desbloquear, revocar, qué ve quien verifica |
+| `documentos/recordatorio-desde-vencimientos` ☑ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
+| `informes/estado-de-expedientes` ☑ | Administrador de empresa | Expedientes en varios estados (spec `informes`) | Informe con tiempos por área, filtros, resumen, descargar Excel |
+| `informes/informe-de-vinculos` ☑ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
+| `informes/plazos-de-revision` ☑ | Administrador de empresa | Plazos por área y expedientes fuera de plazo (spec `operacion`) | Informe SLA, tablas por área y por persona, cumplimiento |
+| `informes/exportar-un-expediente` ☑ | Auditor | Expediente aprobado con documentos (spec `informes`) | Exportar el ZIP, qué trae (documentos, resumen PDF, línea de tiempo), el registro en la auditoría |
+| `informes/auditoria` ☑ | Administrador de empresa | Acciones de configuración y descargas (spec `auditoria`) | Auditoría: filtros, detalle de un cambio (antes/después), accesos a documentos, exportar a Excel |
+| `informes/certificados` ☑ | Administrador de empresa | Certificados vigentes y revocados (spec `certificados`) | Lista de certificados, estado, PDF, abrir la ficha del tercero |
+| `informes/certificado-bloquear-y-revocar` ☑ | Administrador de empresa | Certificado vigente (spec `certificado`) | Bloquear y desbloquear, revocar, qué ve quien verifica |
 
 ---
 
