@@ -454,7 +454,11 @@ export function areasElegibles(areas: readonly AreaDto[], etapas: readonly Etapa
   return areas.filter((a) => a.id === actual || (a.activa && !usadas.has(a.id)));
 }
 
-/** Firma comparable del contenido editable (para saber si hay cambios sin guardar). */
+/**
+ * Firma comparable del contenido editable (para saber si hay cambios sin guardar). El `id` de cada requisito no cuenta: el servidor lo asigna
+ * al crear el borrador, y con él la firma del formulario recién guardado ya no coincidía con la del borrador y el editor mostraba «cambios
+ * sin guardar» (y no dejaba publicar) justo después de «Crear borrador».
+ */
 export function firmaBorrador(borrador: BorradorFlujo): string {
   return JSON.stringify({
     nombre: borrador.nombre.trim(),
@@ -465,7 +469,7 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     recordatorio: recordatorioADto(borrador),
     vigencia: vigenciaADto(borrador),
     etapas: etapasADto(borrador.etapas),
-    requisitos: requisitosADto(borrador.requisitos),
+    requisitos: requisitosADto(borrador.requisitos).map((r) => ({ ...r, id: null })),
     verificaciones: verificacionesADto(borrador.verificaciones),
   });
 }
