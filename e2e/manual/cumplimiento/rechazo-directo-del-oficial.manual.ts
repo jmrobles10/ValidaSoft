@@ -1,4 +1,4 @@
-import { enRevision, esperarListas, pedirVerificaciones, personaEmbebida } from '../../soporte/cumplimiento';
+import { enRevision, esperarListas, pedirVerificaciones } from '../../soporte/cumplimiento';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { expect, paso, recorrido } from '../nucleo';
 import { crearEscenario } from '../../soporte/semilla';
