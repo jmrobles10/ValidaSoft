@@ -24,7 +24,7 @@ recorrido(
     await paso(page, {
       titulo: 'Usa la barra inferior para moverte',
       explicacion:
-        'En el celular las secciones están abajo, siempre a la vista: Mi bóveda, Mis empresas, Mi información y Mis cuentas. La sección en la que estás queda marcada. ' +
+        'En el celular las secciones están abajo, siempre a la vista: Mi bóveda, Mis empresas, Mi información, Mis cuentas y Privacidad. La sección en la que estás queda marcada. ' +
         'Arriba quedan el logotipo, la campana de avisos y «Salir»; el menú de secciones de la parte de arriba solo aparece en la pantalla grande.',
       resaltar: page.getByRole('heading', { level: 2, name: 'Constructora Norte S.A.S.' }),
     });
