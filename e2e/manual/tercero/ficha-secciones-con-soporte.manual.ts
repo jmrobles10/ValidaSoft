@@ -20,7 +20,7 @@ recorrido(
     ],
     relacionados: ['tercero/ficha-actualizar-desde-mi-rut', 'tercero/ficha-barra-y-pendientes'],
   },
-  async ({ page, browser }) => {
+  async ({ page }) => {
     const e = await escenarioConFichaCompleta();
     const tercero = nuevoTercero('Aceros Ficha Soporte S.A.S.');
     const invitacion = await invitar(e, e.sur, tercero, 'PROVEEDOR');

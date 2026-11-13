@@ -48,7 +48,7 @@ recorrido(
     const tarjetaRut = page.getByRole('article').filter({ has: page.getByRole('heading', { name: RUT, exact: true }) });
     await expect(tarjetaRut).toHaveCount(1);
     const lista = tarjetaRut.getByRole('list', { name: 'Con tus empresas' });
-    await expect(lista).toContainText(`${e.sur.nombre}`);
+    await expect(lista).toContainText(e.sur.nombre);
     await expect(lista).toContainText('Aprobó la versión 1, la vigente.');
     await expect(lista).toContainText('Revisando la versión 1.');
     await paso(page, {

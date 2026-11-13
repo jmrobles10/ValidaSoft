@@ -1,5 +1,5 @@
 import { pdf } from '../../soporte/archivos';
-import { abrirEmpresa, aceptarInvitacion, completarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
+import { completarInvitacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
 
@@ -18,7 +18,7 @@ recorrido(
     ],
     relacionados: ['tercero/boveda-mis-documentos', 'tercero/boveda-documento-compartido'],
   },
-  async ({ page, browser }) => {
+  async ({ page }) => {
     const e = await crearEscenario();
     const tercero = nuevoTercero('Ferretería La Esquina S.A.S.');
     const invitacion = await invitar(e, e.sur, tercero, 'PROVEEDOR');

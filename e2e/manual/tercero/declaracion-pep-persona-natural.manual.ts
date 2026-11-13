@@ -1,3 +1,4 @@
+import { areaDe } from '../nucleo/semillas';
 import { abrirSeccion, guardarSeccionCompleta, llenarContactoYDomicilio, publicarFlujoDeFicha } from '../../soporte/ficha';
 import { dialogoDeclaracion, diligenciarDeclaracion } from '../../soporte/declaracion-pep';
 import { escribirFecha } from '../../soporte/fechas';
@@ -22,7 +23,7 @@ recorrido(
   },
   async ({ page }) => {
     const e = await crearEscenario();
-    await publicarFlujoDeFicha(e, e.sur, 'PEP_NATURAL_MANUAL', e.sur.areas.revision!, 'CLIENTE', [{ seccion: 'FICHA_GENERAL' }]);
+    await publicarFlujoDeFicha(e, e.sur, 'PEP_NATURAL_MANUAL', areaDe(e.sur, 'revision'), 'CLIENTE', [{ seccion: 'FICHA_GENERAL' }]);
     const tercero = nuevaPersonaNatural('Ana María Pérez Gómez');
     const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
     await entrarPorInvitacion(page, invitacion);

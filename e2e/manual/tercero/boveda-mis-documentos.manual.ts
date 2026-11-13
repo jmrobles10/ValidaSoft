@@ -19,7 +19,7 @@ recorrido(
     ],
     relacionados: ['tercero/boveda-subir-un-documento', 'tercero/boveda-documento-compartido', 'tercero/subir-version-nueva'],
   },
-  async ({ page, browser }) => {
+  async ({ page }) => {
     const e = await crearEscenario();
     const tercero = nuevoTercero('Ferretería La Esquina S.A.S.');
     const enNorte = await invitar(e, e.norte, tercero, 'PROVEEDOR');
@@ -54,8 +54,8 @@ recorrido(
 
     // 2. Qué tiene cada empresa de ese documento.
     await expect(tarjetaRut.getByRole('list', { name: 'Con tus empresas' })).toBeVisible();
-    await expect(tarjetaRut).toContainText(`${e.norte.nombre}`);
-    await expect(tarjetaRut).toContainText(`${e.sur.nombre}`);
+    await expect(tarjetaRut).toContainText(e.norte.nombre);
+    await expect(tarjetaRut).toContainText(e.sur.nombre);
     await expect(tarjetaRut).toContainText('Revisando la versión 1.');
     await paso(page, {
       titulo: 'Revisa qué tiene cada empresa del documento',

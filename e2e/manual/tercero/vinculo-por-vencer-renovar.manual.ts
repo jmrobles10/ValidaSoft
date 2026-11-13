@@ -1,3 +1,4 @@
+import { areaDe } from '../nucleo/semillas';
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
@@ -36,7 +37,7 @@ recorrido(
   },
   async ({ page, browser }) => {
     const e = await crearEscenario();
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_VIGENCIA_MANUAL', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }], {
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_VIGENCIA_MANUAL', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }], {
       dias: 90,
       diasAviso: [30, 5],
       diasGracia: 3,

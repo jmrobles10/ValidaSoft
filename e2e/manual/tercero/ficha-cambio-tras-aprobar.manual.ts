@@ -1,3 +1,4 @@
+import { areaDe } from '../nucleo/semillas';
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
@@ -24,7 +25,7 @@ recorrido(
   },
   async ({ page, browser }) => {
     const e = await crearEscenario();
-    await publicarFlujoDeFicha(e, e.sur, 'CLIENTE_CAMBIO_POSTERIOR', e.sur.areas.revision!, 'CLIENTE', [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
+    await publicarFlujoDeFicha(e, e.sur, 'CLIENTE_CAMBIO_POSTERIOR', areaDe(e.sur, 'revision'), 'CLIENTE', [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
     const tercero = nuevoTercero(RAZON_SOCIAL);
     const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
     await entrarPorInvitacion(page, invitacion);

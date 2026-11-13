@@ -1,3 +1,4 @@
+import { areaDe } from '../nucleo/semillas';
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
@@ -30,7 +31,7 @@ recorrido(
   async ({ page, browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_FICHA', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_FICHA', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
     const tercero = nuevoTercero(RAZON_SOCIAL);
     const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
     const nit = tercero.identificacion.numero;

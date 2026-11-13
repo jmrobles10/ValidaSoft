@@ -1,3 +1,4 @@
+import { areaDe } from '../nucleo/semillas';
 import { abrirSeccion, guardarSeccionCompleta, publicarFlujoDeFicha, REPRESENTANTE, SOCIO } from '../../soporte/ficha';
 import { dialogoDeclaracion, diligenciarDeclaracion } from '../../soporte/declaracion-pep';
 import { aceptarInvitacion, entrarPorInvitacion } from '../../soporte/proveedor';
@@ -40,7 +41,7 @@ recorrido(
   },
   async ({ page }) => {
     const e = await crearEscenario();
-    await publicarFlujoDeFicha(e, e.sur, 'PEP_JURIDICA_MANUAL', e.sur.areas.revision!, 'CLIENTE', [{ seccion: 'FICHA_LEGAL' }]);
+    await publicarFlujoDeFicha(e, e.sur, 'PEP_JURIDICA_MANUAL', areaDe(e.sur, 'revision'), 'CLIENTE', [{ seccion: 'FICHA_LEGAL' }]);
     const tercero = nuevoTercero('Ferretería Andina S.A.S.');
     const invitacion = await invitar(e, e.sur, tercero, 'CLIENTE');
     await entrarPorInvitacion(page, invitacion);
