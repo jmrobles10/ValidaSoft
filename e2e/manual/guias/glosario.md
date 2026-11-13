@@ -54,7 +54,7 @@ Las palabras de esta página son las que usan la aplicación, la API y los docum
 | Folio raíz y emisión | El folio base (`{PREFIJO}-C-{año}-{secuencia de 6 dígitos}`) identifica el certificado del vínculo; cada emisión suma su número (`…-1`, `…-2`). |
 | Huella | Los primeros 12 caracteres hexadecimales del hash del contenido; desambigua el folio entre grupos. |
 | Sello | Firma Ed25519 de la plataforma sobre el contenido canónico del certificado. |
-| Cuenta designada | La cuenta bancaria que el tercero elige para cobrarle a una empresa; la aprueba la empresa con cuatro ojos. |
+| Cuenta designada | La cuenta bancaria que el tercero elige para cobrarle a una empresa; la aprueba la empresa con cuatro ojos. Si el tipo de vínculo la exige, el expediente no se aprueba hasta que esté aprobada. |
 | Referencia externa | La clave de un tercero o un vínculo en un sistema integrado (`{sistema, id}`). |
 
 ## Cumplimiento
