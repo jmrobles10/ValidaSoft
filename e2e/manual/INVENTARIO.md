@@ -71,7 +71,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `movil/tercero-navegacion` ☑ | Tercero | Tercero con dos empresas | Barra inferior, cada pestaña, campana, salir (celular: 390 × 844) |
 | `movil/tercero-subir-documento` ☑ | Tercero | Documento pendiente | Elegir archivo en el celular, versión guardada, volver |
 | `movil/tercero-mi-informacion` ☑ | Tercero | Flujo con las 6 secciones | Selector «Paso N de 6», una sección completa, barra de guardar |
-| `movil/tercero-declaracion-pep-firma` ☐ | Tercero | Natural con PEP | Firma dibujada con el dedo en el diálogo, guardar |
+| `movil/tercero-declaracion-pep-firma` ☑ | Tercero | Natural con PEP | Firma dibujada con el dedo en el diálogo, guardar |
 | `movil/tercero-campana` ☐ | Tercero | Avisos pendientes | Panel de la campana en pantalla chica, preferencias |
 | `movil/verificar-certificado` ☐ | Público | Certificado emitido | La verificación pública en celular |
 | `movil/app-de-la-empresa` ☐ | Revisor/área | Revisor con expediente en bandeja | La app de la empresa a 390 px: menú «Más», bandeja, expediente (usa `celular: true`) |
