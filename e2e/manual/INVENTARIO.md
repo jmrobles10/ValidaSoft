@@ -189,7 +189,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `operacion/lote-pausar-reanudar-cancelar` ☐ | Administrador de empresa | Lote grande en proceso | Pausar, reanudar, cancelar, reintentar fallidos, informe por fila |
 | `operacion/campana-de-renovacion` ☑ | Administrador de empresa | Vínculos por vencer (spec `operacion`) | Filtro, vista previa de a quién afecta, aviso antes de confirmar, proceso en segundo plano, correo y campana del tercero |
 | `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar |
-| `operacion/plazo-de-cargue-y-caducidad` ☐ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
+| `operacion/plazo-de-cargue-y-caducidad` ☑ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
 | `operacion/plazos-de-revision` ☐ | Administrador de empresa | Plazo por defecto y por área (spec `operacion`) | Configuración, avisos de plazo (campana y correo), indicador en la bandeja |
 | `operacion/delegacion-de-revision` ☐ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
 | `operacion/recordatorio-en-lote` ☐ | Revisor/área | Varios expedientes observados (spec `novedades-tercero`) | Recordatorio desde la bandeja (uno por día), correo y campana |
