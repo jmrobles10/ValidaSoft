@@ -126,9 +126,9 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `revision/revalidaciones-en-lote` ☑ | Revisor/área | Revalidaciones sin cambios y una con cambios (spec `revalidaciones-y-exencion`) | Lista de Revalidaciones, selección en lote (la que cambió no se selecciona), efecto en el certificado |
 | `revision/eximir-un-documento` ☑ | Administrador de empresa | Expediente con RUT requerido (spec `revalidaciones-y-exencion`) | Eximir con motivo, las áreas no lo revisan, el tercero lo ve eximido |
 | `revision/historial-del-expediente` ☑ | Revisor/área | Expediente con observación, respuesta y aprobación | Línea de tiempo: quién, qué y cuándo, rótulos, valores largos |
-| `revision/visor-y-datos-de-un-documento` ☐ | Revisor/área | Documento con campos y, si hay IA, análisis | Visor, versiones, datos declarados, vigencia, descargar (queda auditado) |
+| `revision/visor-y-datos-de-un-documento` ☑ | Revisor/área | Documento con campos y, si hay IA, análisis | Visor, versiones, datos declarados, vigencia, descargar (queda auditado) |
 | `revision/recordatorio-de-observaciones` ☑ | Revisor/área | Expediente observado (spec `novedades-tercero`) | Recordatorio individual desde el expediente, qué llega al tercero (correo y campana) |
-| `revision/responder-con-lo-corregido` ☐ | Revisor/área | El tercero respondió a una observación (spec `novedades-tercero`) | Aviso a las áreas que vuelven a revisar lo corregido, qué cambió |
+| `revision/responder-con-lo-corregido` ☑ | Revisor/área | El tercero respondió a una observación (spec `novedades-tercero`) | Aviso a las áreas que vuelven a revisar lo corregido, qué cambió |
 
 ### documentos (6) e informes (7)
 
