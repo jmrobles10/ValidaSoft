@@ -251,8 +251,8 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `plataforma/secretos` ☑ | Plataforma | — | Secretos de la plataforma, qué se puede ver y cambiar, step-up con passkey |
 | `plataforma/listas-restrictivas-de-la-plataforma` ☑ | Plataforma | Cuenta de Infolaft (spec `pendientes-pequenos`) | Configurar la cuenta, cuota; la empresa solo ve «Disponible» |
 | `plataforma/solicitudes-de-habeas-de-la-plataforma` ☑ | Plataforma | Solicitud sobre la bóveda global | Atenderla desde la consola, plazos, constancia |
-| `plataforma/ingresos-de-los-operadores` ☐ | Plataforma | Varios ingresos | Auditoría de ingresos, filtros, clave de arranque |
-| `plataforma/acceso-de-soporte-a-una-empresa` ☐ | Plataforma | Acceso concedido por la empresa | Entrar a una empresa con acceso de soporte, solo lectura, nunca documentos |
+| `plataforma/ingresos-de-los-operadores` ☑ | Plataforma | Varios ingresos | Auditoría de ingresos, filtros, clave de arranque |
+| `plataforma/acceso-de-soporte-a-una-empresa` ☑ | Administrador de empresa | Acceso concedido por la empresa (la consola no tiene pantalla de entrada del soporte; se documenta el lado de la empresa) | Entrar a una empresa con acceso de soporte, solo lectura, nunca documentos |
 
 ### integracion (11)
 
