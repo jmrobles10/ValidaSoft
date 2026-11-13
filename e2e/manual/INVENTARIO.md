@@ -229,7 +229,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `cumplimiento/registrar-consulta-por-fuera` ☑ | Oficial de cumplimiento | Consulta hecha en otro sitio (spec `evidencia-manual`) | Subir el PDF, dónde y cuándo, coincidencias, quedan por analizar |
 | `cumplimiento/monitoreo-periodico` ☑ | Oficial de cumplimiento | Vínculo activo con monitoreo (spec `cumplimiento-vigilancia`) | Reconsulta sola, la persona nueva llega a la bandeja del oficial, confirmar y salir de la bandeja |
 | `cumplimiento/rechazo-directo-del-oficial` ☑ | Oficial de cumplimiento | Hallazgo grave confirmado (spec `evidencia-manual`) | Rechaza el expediente sin pasar por un área, motivos y justificación |
-| `cumplimiento/bandeja-del-oficial` ☐ | Oficial de cumplimiento | Varias coincidencias y estudios | Página Cumplimiento: pendientes, filtros, abrir |
+| `cumplimiento/bandeja-del-oficial` ☑ | Oficial de cumplimiento | Varias coincidencias y estudios | Página Cumplimiento: pendientes, filtros, abrir |
 | `cumplimiento/informe-sagrilaft` ☐ | Oficial de cumplimiento | Estudios y declaraciones PEP (spec `informe-sagrilaft`) | Informe, «Sin declaración», filtros, descargar Excel con columnas PEP |
 | `cumplimiento/adjuntos-del-estudio` ☐ | Oficial de cumplimiento | Estudio en curso | Adjuntar soportes al estudio, descargar, quitar |
 
