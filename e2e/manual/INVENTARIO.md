@@ -78,7 +78,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `movil/tercero-estado-de-la-revision` ☑ | Tercero | Expedientes abiertos, observado y aprobado | Frase de estado y tarjetas de documentos en celular |
 | `movil/tercero-boveda` ☑ | Tercero | Bóveda con varias versiones | Lista de documentos y sus versiones en celular |
 | `movil/tercero-cuentas` ☑ | Tercero | Cuenta por designar | Mis cuentas y los diálogos en celular |
-| `movil/tercero-privacidad` ☐ | Tercero | — | Privacidad y la solicitud en celular |
+| `movil/tercero-privacidad` ☑ | Tercero | — | Privacidad y la solicitud en celular |
 | `movil/tercero-entrar` ☑ | Tercero | Invitación | `/entrar` y el código de 6 recuadros en celular |
 
 ---
