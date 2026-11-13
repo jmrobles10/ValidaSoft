@@ -104,7 +104,7 @@ export function indiceDeDominio(dominio, escritos) {
 }
 
 /** README general del manual: sin cifras ni fechas, para que varias personas puedan regenerarlo a la vez sin chocar. */
-export function indiceGeneral(catalogo) {
+export function indiceGeneral(catalogo, seccionesDeGuias = []) {
   const lineas = [
     '# Manual de Validasoft',
     '',
@@ -120,6 +120,16 @@ export function indiceGeneral(catalogo) {
     '',
     ...catalogo.actores.map((a) => `- **${a.nombre}**: ${a.descripcion}`),
     '',
+    ...(seccionesDeGuias.length > 0
+      ? [
+          '## Guías',
+          '',
+          'Lo que no sale de un recorrido (se escribe en `e2e/manual/guias/`):',
+          '',
+          ...seccionesDeGuias.flatMap((s) => [`- **${s.nombre}**: ${s.guias.map((g) => `[${g.titulo}](guias/${g.slug}.md)`).join(' · ')}`]),
+          '',
+        ]
+      : []),
     '## Referencia de la API',
     '',
     '- [API de Validasoft](api/README.md): cada recurso con sus operaciones, permisos, parámetros, cuerpos, respuestas y ejemplos, generada de `packages/api-client/openapi/v1.json`.',

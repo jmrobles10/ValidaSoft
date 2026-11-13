@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 640" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<title id="titulo">Ciclo de vida de un vínculo</title>
+<desc id="descripcion">Estados del vínculo entre una empresa y un tercero y sus transiciones: invitado, en validación, activo, por vencer, vencido, bloqueado, desvinculado y anulado.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-grupo" x="10" y="20" width="1000" height="490" rx="14"/>
+<text class="d-t-s" x="24" y="38">Estados con vida</text>
+<rect class="d-caja-gris" x="30" y="70" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="105" y="93">Invitado</text>
+<text class="d-t-s d-c" x="105" y="110">sin expediente abierto</text>
+<rect class="d-caja-a" x="300" y="70" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="375" y="93">EnValidacion</text>
+<text class="d-t-s d-c" x="375" y="110">expediente abierto</text>
+<rect class="d-caja-ok" x="570" y="70" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="645" y="93">Activo</text>
+<text class="d-t-s d-c" x="645" y="110">aprobado y vigente</text>
+<rect class="d-caja-aviso" x="840" y="70" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="915" y="93">PorVencer</text>
+<text class="d-t-s d-c" x="915" y="110">avisó; aún vale</text>
+<rect class="d-caja-peligro" x="840" y="230" width="150" height="70" rx="10"/>
+<text class="d-t-b d-c" x="915" y="253">Vencido</text>
+<text class="d-t-s d-c" x="915" y="270">falta renovar</text>
+<rect class="d-caja-peligro" x="570" y="400" width="150" height="70" rx="10"/>
+<text class="d-t-b d-c" x="645" y="423">Bloqueado</text>
+<text class="d-t-s d-c" x="645" y="440">privado de la empresa</text>
+<text class="d-t-s" x="30" y="270">En revisión no es un estado: es una</text>
+<text class="d-t-s" x="30" y="286">situación de Activo, PorVencer o Vencido</text>
+<text class="d-t-s" x="30" y="302">con un expediente de actualización abierto.</text>
+<path class="d-l" d="M180 92 L300 92" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="193" y="73" width="94" height="16" rx="4"/>
+<text class="d-t-s d-c" x="240" y="85">abre expediente</text>
+<path class="d-l" d="M300 116 L180 116" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="205" y="115" width="70" height="16" rx="4"/>
+<text class="d-t-s d-c" x="240" y="127">no aprobado</text>
+<path class="d-l" d="M450 92 L570 92" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="484" y="73" width="52" height="16" rx="4"/>
+<text class="d-t-s d-c" x="510" y="85">aprobado</text>
+<path class="d-l" d="M570 116 L450 116" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="478" y="115" width="64" height="16" rx="4"/>
+<text class="d-t-s d-c" x="510" y="127">desaprobar</text>
+<path class="d-l" d="M720 92 L840 92" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="762" y="73" width="36" height="16" rx="4"/>
+<text class="d-t-s d-c" x="780" y="85">aviso</text>
+<path class="d-l" d="M840 116 L720 116" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="752" y="115" width="56" height="16" rx="4"/>
+<text class="d-t-s d-c" x="780" y="127">renovado</text>
+<path class="d-l" d="M915 130 L915 230" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="920" y="171" width="40" height="16" rx="4"/>
+<text class="d-t-s d-c" x="940" y="183">vence</text>
+<path class="d-l" d="M840 265 L675 265 L675 130" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="730" y="248" width="56" height="16" rx="4"/>
+<text class="d-t-s d-c" x="758" y="260">renovado</text>
+<path class="d-l" d="M610 130 L610 400" marker-start="url(#f)" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="480" y="289" width="120" height="16" rx="4"/>
+<text class="d-t-s d-c" x="540" y="301">bloquear · desbloquear</text>
+<rect class="d-caja-gris" x="300" y="550" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="375" y="573">Desvinculado</text>
+<text class="d-t-s d-c" x="375" y="590">terminado, reintegrable</text>
+<rect class="d-caja-gris" x="840" y="550" width="150" height="60" rx="10"/>
+<text class="d-t-b d-c" x="915" y="573">Anulado</text>
+<text class="d-t-s d-c" x="915" y="590">terminal</text>
+<path class="d-l" d="M345 510 L345 550" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="265" y="519" width="70" height="16" rx="4"/>
+<text class="d-t-s d-c" x="300" y="531">desvincular</text>
+<path class="d-l" d="M405 550 L405 510" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="434" y="519" width="62" height="16" rx="4"/>
+<text class="d-t-s d-c" x="465" y="531">reintegrar</text>
+<path class="d-l" d="M915 510 L915 550" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="938" y="519" width="44" height="16" rx="4"/>
+<text class="d-t-s d-c" x="960" y="531">anular</text>
+</svg>
