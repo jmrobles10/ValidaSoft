@@ -27,33 +27,33 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `tercero/aceptar-invitacion-persona-juridica` ✅ | Tercero | Grupo con flujo de Proveedor (RUT, Cámara, 6 secciones); invitación | Correo, código, textos legales, requisitos, «Mi información» completa, subir documentos, en revisión |
-| `tercero/aceptar-invitacion-persona-natural` ☐ | Tercero | `publicarFlujoDeFicha` CLIENTE de Sur con RUT, cédula (`soloPara('Natural')`) y 4 secciones; `nuevaPersonaNatural` (spec `asistente-tipo-persona`) | Correo sin código (Cliente), textos, requisitos con cédula, «no aplica» en Legal y Financiera, general con expedición y PEP, 4 secciones, documentos, en revisión |
-| `tercero/entrar-sin-invitacion` ☐ | Tercero | Tercero con una invitación pendiente (spec `ingreso`) | `/entrar` con el correo, «Revisa tu correo», enlace, código, Mis empresas; correo desconocido (misma respuesta); límite de intentos |
-| `tercero/mis-empresas-varias-invitaciones` ☐ | Tercero | Invitado por Norte y Sur, y proveedor + cliente de una misma empresa (spec `multiempresa`) | Lista de tarjetas por empresa y tipo, estados, abrir una, el enlace de cada correo abre su invitación |
-| `tercero/invitacion-vencida-o-usada` ☐ | Tercero | Invitación cuyo enlace ya se usó o venció (`enlace-usado`, `enlace-vencido`) | Pantalla de enlace no válido, cómo recibir otro, qué pasa con un enlace de otra empresa |
-| `tercero/subir-documento-con-formulario` ☐ | Tercero | Flujo de Sur con CERT_SST (fecha de expedición, vence a 30 días; `SST` en `semilla.ts`) | Formulario con archivo y fecha, formato no admitido, archivo repetido, versión 1, vigencia y fecha de vencimiento |
-| `tercero/responder-observaciones` ☐ | Tercero | Expediente observado por la empresa con `observar` (spec `decisiones`) | Frase «te pide corregir», motivos por documento, subir versión corregida, «Enviar respuesta» con explicación, vuelve a revisión |
-| `tercero/subir-version-nueva` ☐ | Tercero | Vínculo aprobado (spec `actualizaciones`) | «Subir otra versión», versión 2, estado «En revisión» del documento y del vínculo, qué ve la empresa |
-| `tercero/expediente-aprobado` ☐ | Tercero | Expediente aprobado por todas las áreas | Frase de aprobado, vínculo activo, documentos vigentes, certificado y su verificación (spec `certificado`) |
-| `tercero/rechazo-y-volver-a-postularme` ☐ | Tercero | Rechazo con motivos y flujo con reintento (specs `volver-a-postularme`, `reintento`) | Motivos sin la justificación interna, espera en días, «Volver a postularme», documentos de la bóveda, nueva revisión |
-| `tercero/boveda-mis-documentos` ☐ | Tercero | Tercero con varios documentos y dos empresas | Mi bóveda: tarjetas por documento, versiones, con quién se comparte, vigencia, descargar |
-| `tercero/boveda-subir-un-documento` ☐ | Tercero | Tercero sin invitación abierta | `/boveda/subir`: elegir el tipo, archivo, datos del formulario, «Ya la tiene», confirmar |
-| `tercero/boveda-documento-compartido` ☐ | Tercero | Dos empresas que piden el mismo RUT (spec `multiempresa-documento-global`) | Una sola versión en la bóveda, cada empresa la revisa, versión nueva y cada empresa revalida |
-| `tercero/retirar-una-version` ☐ | Tercero | Versión subida (spec `retiro-version`) | Retirar, diálogo con las consecuencias, aviso a las empresas, qué queda |
-| `tercero/ficha-secciones-con-soporte` ☐ | Tercero | Flujo con las 6 secciones; soporte en la bóveda (spec `ficha-f5`) | «Documento que respalda esta información», elegir o subir un soporte, aviso de coherencia |
-| `tercero/ficha-actualizar-desde-mi-rut` ☐ | Tercero | RUT en la bóveda (spec `ficha-pendientes`) | «Actualizar desde mi RUT», lo que propone, aplicar, la PEP se conserva |
-| `tercero/ficha-barra-y-pendientes` ☐ | Tercero | Ficha a medias | «Faltan N datos», guardar sin completar, volver; Legal sin socio y el aviso; sección que no aplica |
-| `tercero/ficha-cambio-tras-aprobar` ☐ | Tercero | Ficha aceptada por una empresa (spec `revalidaciones-y-exencion`) | Cambiar dirección, la empresa ve el cambio posterior y debe volver a aceptar, qué ve el tercero |
-| `tercero/declaracion-pep-persona-natural` ☐ | Tercero | Persona natural en la ficha (spec `declaracion-pep`) | «Sí» a PEP abre el diálogo, datos, condición, vínculo con otra PEP, juramento y firma dibujada o subida, guardar |
-| `tercero/declaracion-pep-personas-relacionadas` ☐ | Tercero | Jurídica con representante y socios (spec `declaracion-pep`) | PEP por persona en Legal, varias PEP relacionadas (hasta 30), firma por apoderado |
-| `tercero/descargar-mi-declaracion-pep` ☐ | Tercero | Declaración ya firmada (spec `declaracion-pep-descarga`) | Descargar PDF propio, qué incluye (logo de la empresa o de Validasoft), solo lo guardado |
-| `tercero/cuentas-bancarias` ☐ | Tercero | Empresa cuyo tipo de vínculo exige cuenta designada (spec `cuentas`) | Mis cuentas: agregar, designar para una empresa, retirar, estado de aprobación (cuatro ojos) |
-| `tercero/campana-y-avisos` ☐ | Tercero | Observación y avisos de la empresa (specs `novedades-tercero`, `tiempo-real`) | Campana con la marca de la empresa, abrir desde ahí, preferencias (apagar un tipo), avisos en vivo sin recargar |
-| `tercero/contactos-por-empresa` ☐ | Tercero | Vínculo con dos contactos (spec `contactos-por-empresa`) | Editar los contactos de una empresa sin tocar los de otra |
-| `tercero/documento-por-vencer-y-vencido` ☐ | Tercero | Documento con avisos y gracia (specs `vencimientos`, `vigencias`) | «Vigente», «Por vencer» con aviso, en gracia, vencido, subir uno nuevo |
-| `tercero/vinculo-por-vencer-renovar` ☐ | Tercero | Flujo con vigencia periódica del vínculo y fecha simulada (spec `vigencias`) | Encabezado «Por vencer», renovación, vencido, qué pasa con el certificado |
-| `tercero/vinculo-en-revision-por-actualizacion` ☐ | Tercero | Aprobado por dos empresas y versión nueva del RUT (spec `vinculo-en-revision`) | Encabezado de «Mis empresas» y de la revisión, tarjeta del documento, actualización rechazada y su aviso |
-| `tercero/documento-eximido-y-vinculo-bloqueado` ☐ | Tercero | Documento eximido; vínculo bloqueado (specs `revalidaciones-y-exencion`, `pendientes-pequenos`) | El documento figura eximido; con el vínculo bloqueado no se puede enviar y el tercero no ve el motivo |
+| `tercero/aceptar-invitacion-persona-natural` ☑ | Tercero | `publicarFlujoDeFicha` CLIENTE de Sur con RUT, cédula (`soloPara('Natural')`) y 4 secciones; `nuevaPersonaNatural` (spec `asistente-tipo-persona`) | Correo sin código (Cliente), textos, requisitos con cédula, «no aplica» en Legal y Financiera, general con expedición y PEP, 4 secciones, documentos, en revisión |
+| `tercero/entrar-sin-invitacion` ☑ | Tercero | Tercero con una invitación pendiente (spec `ingreso`) | `/entrar` con el correo, «Revisa tu correo», enlace, código, Mis empresas; correo desconocido (misma respuesta); límite de intentos |
+| `tercero/mis-empresas-varias-invitaciones` ☑ | Tercero | Invitado por Norte y Sur, y proveedor + cliente de una misma empresa (spec `multiempresa`) | Lista de tarjetas por empresa y tipo, estados, abrir una, el enlace de cada correo abre su invitación |
+| `tercero/invitacion-vencida-o-usada` ☑ | Tercero | Invitación cuyo enlace ya se usó o venció (`enlace-usado`, `enlace-vencido`) | Pantalla de enlace no válido, cómo recibir otro, qué pasa con un enlace de otra empresa |
+| `tercero/subir-documento-con-formulario` ☑ | Tercero | Flujo de Sur con CERT_SST (fecha de expedición, vence a 30 días; `SST` en `semilla.ts`) | Formulario con archivo y fecha, formato no admitido, archivo repetido, versión 1, vigencia y fecha de vencimiento |
+| `tercero/responder-observaciones` ☑ | Tercero | Expediente observado por la empresa con `observar` (spec `decisiones`) | Frase «te pide corregir», motivos por documento, subir versión corregida, «Enviar respuesta» con explicación, vuelve a revisión |
+| `tercero/subir-version-nueva` ☑ | Tercero | Vínculo aprobado (spec `actualizaciones`) | «Subir otra versión», versión 2, estado «En revisión» del documento y del vínculo, qué ve la empresa |
+| `tercero/expediente-aprobado` ☑ | Tercero | Expediente aprobado por todas las áreas | Frase de aprobado, vínculo activo, documentos vigentes, certificado y su verificación (spec `certificado`) |
+| `tercero/rechazo-y-volver-a-postularme` ☑ | Tercero | Rechazo con motivos y flujo con reintento (specs `volver-a-postularme`, `reintento`) | Motivos sin la justificación interna, espera en días, «Volver a postularme», documentos de la bóveda, nueva revisión |
+| `tercero/boveda-mis-documentos` ☑ | Tercero | Tercero con varios documentos y dos empresas | Mi bóveda: tarjetas por documento, versiones, con quién se comparte, vigencia, descargar |
+| `tercero/boveda-subir-un-documento` ☑ | Tercero | Tercero sin invitación abierta | `/boveda/subir`: elegir el tipo, archivo, datos del formulario, «Ya la tiene», confirmar |
+| `tercero/boveda-documento-compartido` ☑ | Tercero | Dos empresas que piden el mismo RUT (spec `multiempresa-documento-global`) | Una sola versión en la bóveda, cada empresa la revisa, versión nueva y cada empresa revalida |
+| `tercero/retirar-una-version` ☑ | Tercero | Versión subida (spec `retiro-version`) | Retirar, diálogo con las consecuencias, aviso a las empresas, qué queda |
+| `tercero/ficha-secciones-con-soporte` ☑ | Tercero | Flujo con las 6 secciones; soporte en la bóveda (spec `ficha-f5`) | «Documento que respalda esta información», elegir o subir un soporte, aviso de coherencia |
+| `tercero/ficha-actualizar-desde-mi-rut` ☑ | Tercero | RUT en la bóveda (spec `ficha-pendientes`) | «Actualizar desde mi RUT», lo que propone, aplicar, la PEP se conserva |
+| `tercero/ficha-barra-y-pendientes` ☑ | Tercero | Ficha a medias | «Faltan N datos», guardar sin completar, volver; Legal sin socio y el aviso; sección que no aplica |
+| `tercero/ficha-cambio-tras-aprobar` ☑ | Tercero | Ficha aceptada por una empresa (spec `revalidaciones-y-exencion`) | Cambiar dirección, la empresa ve el cambio posterior y debe volver a aceptar, qué ve el tercero |
+| `tercero/declaracion-pep-persona-natural` ☑ | Tercero | Persona natural en la ficha (spec `declaracion-pep`) | «Sí» a PEP abre el diálogo, datos, condición, vínculo con otra PEP, juramento y firma dibujada o subida, guardar |
+| `tercero/declaracion-pep-personas-relacionadas` ☑ | Tercero | Jurídica con representante y socios (spec `declaracion-pep`) | PEP por persona en Legal, varias PEP relacionadas (hasta 30), firma por apoderado |
+| `tercero/descargar-mi-declaracion-pep` ☑ | Tercero | Declaración ya firmada (spec `declaracion-pep-descarga`) | Descargar PDF propio, qué incluye (logo de la empresa o de Validasoft), solo lo guardado |
+| `tercero/cuentas-bancarias` ☑ | Tercero | Empresa cuyo tipo de vínculo exige cuenta designada (spec `cuentas`) | Mis cuentas: agregar, designar para una empresa, retirar, estado de aprobación (cuatro ojos) |
+| `tercero/campana-y-avisos` ☑ | Tercero | Observación y avisos de la empresa (specs `novedades-tercero`, `tiempo-real`) | Campana con la marca de la empresa, abrir desde ahí, preferencias (apagar un tipo), avisos en vivo sin recargar |
+| `tercero/contactos-por-empresa` ☑ | Tercero | Vínculo con dos contactos (spec `contactos-por-empresa`) | Editar los contactos de una empresa sin tocar los de otra |
+| `tercero/documento-por-vencer-y-vencido` ☑ | Tercero | Documento con avisos y gracia (specs `vencimientos`, `vigencias`) | «Vigente», «Por vencer» con aviso, en gracia, vencido, subir uno nuevo |
+| `tercero/vinculo-por-vencer-renovar` ☑ | Tercero | Flujo con vigencia periódica del vínculo y fecha simulada (spec `vigencias`) | Encabezado «Por vencer», renovación, vencido, qué pasa con el certificado |
+| `tercero/vinculo-en-revision-por-actualizacion` ☑ | Tercero | Aprobado por dos empresas y versión nueva del RUT (spec `vinculo-en-revision`) | Encabezado de «Mis empresas» y de la revisión, tarjeta del documento, actualización rechazada y su aviso |
+| `tercero/documento-eximido-y-vinculo-bloqueado` ☑ | Tercero | Documento eximido; vínculo bloqueado (specs `revalidaciones-y-exencion`, `pendientes-pequenos`) | El documento figura eximido; con el vínculo bloqueado no se puede enviar y el tercero no ve el motivo |
 
 ### privacidad, publico y movil (21)
 
@@ -159,27 +159,27 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `configuracion/tipo-de-documento-y-flujo` ✅ | Administrador de empresa | Grupo base | Tipo de documento propio (formulario, archivo, vigencia) y flujo publicado por defecto |
-| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☐ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
-| `configuracion/tipo-de-documento-de-la-plataforma` ☐ | Administrador de empresa | Grupo base | Partir de un documento de la plataforma (RUT, Cámara), techos de formato y peso, error por regla más laxa, ámbito compartido |
-| `configuracion/tipos-de-vinculo` ☐ | Administrador de empresa | Grupo base | Crear un tipo, «Exige código en el enlace», «Cuenta designada», desactivar |
-| `configuracion/flujo-etapas-y-areas-en-paralelo` ☐ | Administrador de empresa | Áreas Compras y Cumplimiento (`crearEscenario`) | Dos etapas, dos áreas en paralelo, aprobadores y SLA, «Puede rechazar» y «Automática» |
-| `configuracion/flujo-condiciones-por-tipo-de-persona` ☐ | Administrador de empresa | Tipos RUT, CEDULA y CAMARA (spec `condiciones`) | «Se pide a»: todos, solo jurídicas, solo naturales, condición personalizada |
-| `configuracion/flujo-secciones-de-la-ficha` ☐ | Administrador de empresa | Grupo base | Agregar secciones de «Mi información» como requisito, periodos de la financiera, vigencia y días de revalidación |
-| `configuracion/flujo-plazo-reintento-y-recordatorios` ☐ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
-| `configuracion/flujo-vigencia-del-vinculo` ☐ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
-| `configuracion/flujo-verificaciones-de-cumplimiento` ☐ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
+| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☑ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
+| `configuracion/tipo-de-documento-de-la-plataforma` ☑ | Administrador de empresa | Grupo base | Partir de un documento de la plataforma (RUT, Cámara), techos de formato y peso, error por regla más laxa, ámbito compartido |
+| `configuracion/tipos-de-vinculo` ☑ | Administrador de empresa | Grupo base | Crear un tipo, «Exige código en el enlace», «Cuenta designada», desactivar |
+| `configuracion/flujo-etapas-y-areas-en-paralelo` ☑ | Administrador de empresa | Áreas Compras y Cumplimiento (`crearEscenario`) | Dos etapas, dos áreas en paralelo, aprobadores y SLA, «Puede rechazar» y «Automática» |
+| `configuracion/flujo-condiciones-por-tipo-de-persona` ☑ | Administrador de empresa | Tipos RUT, CEDULA y CAMARA (spec `condiciones`) | «Se pide a»: todos, solo jurídicas, solo naturales, condición personalizada |
+| `configuracion/flujo-secciones-de-la-ficha` ☑ | Administrador de empresa | Grupo base | Agregar secciones de «Mi información» como requisito, periodos de la financiera, vigencia y días de revalidación |
+| `configuracion/flujo-plazo-reintento-y-recordatorios` ☑ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
+| `configuracion/flujo-vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
+| `configuracion/flujo-verificaciones-de-cumplimiento` ☑ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
 | `configuracion/flujo-versiones-y-borradores` ☐ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
-| `configuracion/flujo-por-defecto` ☐ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
-| `configuracion/areas-y-miembros` ☐ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
+| `configuracion/flujo-por-defecto` ☑ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
+| `configuracion/areas-y-miembros` ☑ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
 | `configuracion/usuarios-y-roles` ☐ | Administrador de empresa | Sistema integrado con identidades | Crear una persona, roles por empresa o de todo el grupo (Administrador, Revisor, Oficial, Auditor), identidad en el sistema, desactivar |
-| `configuracion/empresas-y-textos-legales` ☐ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
-| `configuracion/datos-y-marca` ☐ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
-| `configuracion/plantillas-de-correo` ☐ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
-| `configuracion/dominio-de-correo` ☐ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
-| `configuracion/motivos` ☐ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
-| `configuracion/plan-del-grupo` ☐ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
-| `configuracion/accesos-de-soporte` ☐ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
-| `configuracion/permisos-por-rol` ☐ | Administrador de empresa | Una persona por rol (Administrador, Revisor, Oficial, Auditor) | Qué secciones ve cada rol, «sin permiso», botones que desaparecen |
+| `configuracion/empresas-y-textos-legales` ☑ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
+| `configuracion/datos-y-marca` ☑ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
+| `configuracion/plantillas-de-correo` ☑ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
+| `configuracion/dominio-de-correo` ☑ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
+| `configuracion/motivos` ☑ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
+| `configuracion/plan-del-grupo` ☑ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
+| `configuracion/accesos-de-soporte` ☑ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
+| `configuracion/permisos-por-rol` ☑ | Administrador de empresa | Una persona por rol (Administrador, Revisor, Oficial, Auditor) | Qué secciones ve cada rol, «sin permiso», botones que desaparecen |
 
 ### operacion (10)
 
