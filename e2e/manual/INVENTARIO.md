@@ -254,7 +254,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `plataforma/ingresos-de-los-operadores` ☑ | Plataforma | Varios ingresos | Auditoría de ingresos, filtros, clave de arranque |
 | `plataforma/acceso-de-soporte-a-una-empresa` ☑ | Administrador de empresa | Acceso concedido por la empresa (la consola no tiene pantalla de entrada del soporte; se documenta el lado de la empresa) | Entrar a una empresa con acceso de soporte, solo lectura, nunca documentos |
 
-### integracion (11)
+### integracion (12)
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
@@ -262,6 +262,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `integracion/api-keys` ☑ | Sistema integrador | Sistema registrado | Crear una llave con sus permisos (scopes) y empresas, verla una sola vez, rotar y revocar |
 | `integracion/webhooks` ☑ | Sistema integrador | Receptor de la prueba (`soporte/receptor.ts`, spec `eventos`) | Crear la suscripción, eventos, secreto, firma verificada, entregas en orden |
 | `integracion/webhook-entrega-fallida-y-reenvio` ☑ | Sistema integrador | Receptor que falla (spec `eventos`) | Entrega fallida, reintentos, reenviar desde la pantalla |
+| `integracion/webhook-ingreso-directo` ☑ | Administrador de empresa | Grupo con ingreso directo y dos sistemas integrados; receptor local | Crear un webhook entrando directo a Validasoft: el panel pide el sistema integrado dueño; con un solo sistema lo toma; sin ninguno explica cómo crear uno |
 | `integracion/invitar-por-api` ☑ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
 | `integracion/consulta-de-certificacion` ☑ | Sistema integrador | Tercero aprobado (spec `integracion`) | `GET /consultas/certificacion`, respuesta resumida, `If-None-Match` y 304 |
 | `integracion/eventos-pull-y-en-vivo` ☑ | Sistema integrador | Eventos de un vínculo | `GET /eventos` con cursor, SSE, tipos de evento |
