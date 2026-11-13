@@ -201,7 +201,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `ia/plan-y-uso-de-ia` ☑ | Administrador de empresa | `activarIa(e, empresa)` con proveedor simulado | Plan y uso: cupo del mes, consumo, avisos, qué ve el tercero (nada) |
-| `ia/revision-automatica-niveles` ☐ | Administrador de empresa | IA activa (spec `revision-automatica`) | Manual, Asistido y Automático, qué cambia en cada uno, tope y muestreo |
+| `ia/revision-automatica-niveles` ☑ | Administrador de empresa | IA activa (spec `revision-automatica`) | Manual, Asistido y Automático, qué cambia en cada uno, tope y muestreo |
 | `ia/revision-asistida-y-excepciones` ☐ | Revisor/área | Nivel Asistido con un documento dudoso (spec `revision-automatica`) | Excepciones: documento con lectura dudosa, motivo, decidir |
 | `ia/revision-automatica-aprueba-sola` ☐ | Revisor/área | Nivel Automático (spec `revision-automatica`) | Documento aprobado solo, «Sistema» en el historial, revisión humana por muestreo |
 | `ia/cupo-agotado` ☐ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
