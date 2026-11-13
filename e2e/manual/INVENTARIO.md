@@ -37,7 +37,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `tercero/expediente-aprobado` ☑ | Tercero | Expediente aprobado por todas las áreas | Frase de aprobado, vínculo activo, documentos vigentes, certificado y su verificación (spec `certificado`) |
 | `tercero/rechazo-y-volver-a-postularme` ☑ | Tercero | Rechazo con motivos y flujo con reintento (specs `volver-a-postularme`, `reintento`) | Motivos sin la justificación interna, espera en días, «Volver a postularme», documentos de la bóveda, nueva revisión |
 | `tercero/boveda-mis-documentos` ☑ | Tercero | Tercero con varios documentos y dos empresas | Mi bóveda: tarjetas por documento, versiones, con quién se comparte, vigencia, descargar |
-| `tercero/boveda-subir-un-documento` ☐ | Tercero | Tercero sin invitación abierta | `/boveda/subir`: elegir el tipo, archivo, datos del formulario, «Ya la tiene», confirmar |
+| `tercero/boveda-subir-un-documento` ☑ | Tercero | Tercero sin invitación abierta | `/boveda/subir`: elegir el tipo, archivo, datos del formulario, «Ya la tiene», confirmar |
 | `tercero/boveda-documento-compartido` ☐ | Tercero | Dos empresas que piden el mismo RUT (spec `multiempresa-documento-global`) | Una sola versión en la bóveda, cada empresa la revisa, versión nueva y cada empresa revalida |
 | `tercero/retirar-una-version` ☐ | Tercero | Versión subida (spec `retiro-version`) | Retirar, diálogo con las consecuencias, aviso a las empresas, qué queda |
 | `tercero/ficha-secciones-con-soporte` ☐ | Tercero | Flujo con las 6 secciones; soporte en la bóveda (spec `ficha-f5`) | «Documento que respalda esta información», elegir o subir un soporte, aviso de coherencia |
