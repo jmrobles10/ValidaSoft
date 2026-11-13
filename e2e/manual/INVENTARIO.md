@@ -99,7 +99,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `vinculos/reintegrar-revalidando` ☑ | Administrador de empresa | Vínculo desvinculado con documentos vencidos (spec `reintegro`) | El diálogo explica por qué no se puede sin revalidar, renovación completa |
 | `vinculos/anular-vinculo` ☑ | Administrador de empresa | Vínculo con expediente abierto (spec `ciclo-vinculo`) | Anular con la palabra de confirmación, efecto en el expediente |
 | `vinculos/abrir-expediente-manual` ☑ | Administrador de empresa | Vínculo invitado, sin aceptar (FL-6) | Abrir el expediente sin esperar al tercero, aparece en la bandeja |
-| `vinculos/tercero-360` ☐ | Administrador de empresa | Tercero con dos empresas (spec `tercero360`) | Ficha del tercero, datos, vínculos con esta empresa, lo que no se comparte entre empresas |
+| `vinculos/tercero-360` ☑ | Administrador de empresa | Tercero con dos empresas (spec `tercero360`) | Ficha del tercero, datos, vínculos con esta empresa, lo que no se comparte entre empresas |
 | `vinculos/ficha-aceptada-del-vinculo` ☐ | Administrador de empresa | Ficha completa y aprobada (spec `ficha`) | «Ver la ficha aceptada»: por sección lo aceptado y lo que cambió después |
 | `vinculos/cuenta-designada-aprobar` ☐ | Oficial de cumplimiento | Tipo de vínculo con cuenta designada (spec `cuentas`) | Cuenta por aprobar, cuatro ojos (quien la pidió no la aprueba), aprobar y rechazar |
 | `vinculos/vinculo-con-actualizacion-pendiente` ☐ | Administrador de empresa | Aprobado por dos empresas y RUT nuevo (spec `vinculo-en-revision`) | «En revisión» en lista, filtro, inicio y detalle; certificado «En verificación»; aviso de la actualización no aprobada |
