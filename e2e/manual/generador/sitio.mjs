@@ -1,7 +1,7 @@
 // Páginas HTML de los recorridos: portada, listas por actor y por dominio, y la página de cada recorrido.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { escapar, medidasPng, parrafos, plural, textoEnHtml } from './comun.mjs';
+import { escapar, medidasPng, nombreDeImagen, parrafos, plural, textoEnHtml } from './comun.mjs';
 import { bloqueDeGuiasParaPortada } from './guias.mjs';
 import { pagina } from './plantilla.mjs';
 
@@ -10,12 +10,13 @@ const rutaDeActor = (a) => `actor/${a.slug}.html`;
 const rutaDeDominio = (d) => `dominio/${d.slug}.html`;
 
 /** Contexto con búsquedas rápidas sobre el catálogo y los recorridos. */
-export function crearContexto(recorridos, catalogo) {
+export function crearContexto(recorridos, catalogo, { extensionDeImagen = '' } = {}) {
   const porId = new Map(recorridos.map((r) => [r.id, r]));
   return {
     recorridos,
     catalogo,
     porId,
+    extensionDeImagen,
     dominio: (slug) => catalogo.dominios.find((d) => d.slug === slug),
     actor: (nombre) => catalogo.actores.find((a) => a.nombre === nombre),
     deDominio: (slug) => recorridos.filter((r) => r.dominio === slug),
@@ -95,7 +96,7 @@ function paginaDeDominio(ctx, dominio, generado) {
   return pagina({ titulo: dominio.nombre, descripcion: dominio.descripcion, raiz: '../', seccion: 'recorridos', lateral: lateral(ctx, '../', `dominio:${dominio.slug}`), migas: [{ texto: 'Manual', href: '../index.html' }, { texto: dominio.nombre }], contenido, generado });
 }
 
-function figura(r, imagen, tipo, alt, leyendaPropia, estilo = '') {
+function figura(r, imagen, tipo, alt, leyendaPropia, estilo = '', extension = '') {
   const medidas = (() => {
     try {
       return medidasPng(readFileSync(join(r.carpeta, imagen)));
@@ -103,7 +104,7 @@ function figura(r, imagen, tipo, alt, leyendaPropia, estilo = '') {
       return null;
     }
   })();
-  const src = `../../img/${r.dominio}/${r.archivo}/${imagen}`;
+  const src = `../../img/${r.dominio}/${r.archivo}/${nombreDeImagen(imagen, extension)}`;
   const tamano = medidas ? ` width="${String(medidas.ancho)}" height="${String(medidas.alto)}"` : '';
   const leyenda = leyendaPropia ?? (tipo === 'celular' ? 'Celular' : 'Escritorio');
   return `<figure class="captura ${tipo}"${estilo}><button type="button" data-zoom="${escapar(src)}" data-alt="${escapar(alt)}" aria-label="Ampliar el pantallazo: ${escapar(alt)}"><img src="${escapar(src)}"${tamano} loading="lazy" alt="${escapar(alt)}"></button><figcaption>${leyenda}</figcaption></figure>`;
@@ -128,9 +129,9 @@ function bloqueDePaso(ctx, r, p) {
     : '';
   const alt = `Paso ${String(p.orden)}: ${p.titulo}`;
   const extras = (p.imagenes.extras ?? []).length
-    ? `<div class="capturas capturas-extra">${p.imagenes.extras.map((x) => figura(r, x.archivo, 'extra', `${alt} (${String(x.ancho)} px de ancho)`, `${String(x.ancho)} px de ancho`, ` style="flex: ${String(x.ancho)} 1 0; max-width: ${String(x.ancho)}px"`)).join('')}</div>`
+    ? `<div class="capturas capturas-extra">${p.imagenes.extras.map((x) => figura(r, x.archivo, 'extra', `${alt} (${String(x.ancho)} px de ancho)`, `${String(x.ancho)} px de ancho`, ` style="flex: ${String(x.ancho)} 1 0; max-width: ${String(x.ancho)}px"`, ctx.extensionDeImagen)).join('')}</div>`
     : '';
-  const capturas = `<div class="capturas">${figura(r, p.imagenes.claro, 'claro', `${alt} (escritorio)`)}${p.imagenes.celular ? figura(r, p.imagenes.celular, 'celular', `${alt} (celular)`) : ''}</div>${extras}`;
+  const capturas = `<div class="capturas">${figura(r, p.imagenes.claro, 'claro', `${alt} (escritorio)`, undefined, '', ctx.extensionDeImagen)}${p.imagenes.celular ? figura(r, p.imagenes.celular, 'celular', `${alt} (celular)`, undefined, '', ctx.extensionDeImagen) : ''}</div>${extras}`;
   return `<section class="paso" id="paso-${String(p.orden)}" aria-labelledby="titulo-paso-${String(p.orden)}"><header><span class="numero" aria-hidden="true">${String(p.orden)}</span><h2 id="titulo-paso-${String(p.orden)}">${escapar(p.titulo)}</h2></header><div class="paso-texto">${texto}${ruta}${variantes}${configuracion}</div>${capturas}</section>`;
 }
 
@@ -170,8 +171,8 @@ function paginaDeRecorrido(ctx, r, generado) {
  * Todas las páginas de los recorridos. Devuelve las páginas (`ruta` relativa al sitio, `html`), las entradas del buscador y las imágenes a
  * copiar (`origen` absoluto, `destino` relativo al sitio).
  */
-export function construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints, seccionesDeGuias = [] }) {
-  const ctx = crearContexto(recorridos, catalogo);
+export function construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints, seccionesDeGuias = [], extensionDeImagen = '' }) {
+  const ctx = crearContexto(recorridos, catalogo, { extensionDeImagen });
   const paginas = [{ ruta: 'index.html', html: paginaPortada(ctx, { generado, totalEndpoints, seccionesDeGuias }) }];
   for (const a of catalogo.actores) paginas.push({ ruta: rutaDeActor(a), html: paginaDeActor(ctx, a, generado) });
   for (const d of catalogo.dominios) paginas.push({ ruta: rutaDeDominio(d), html: paginaDeDominio(ctx, d, generado) });
@@ -180,7 +181,7 @@ export function construirSitioDeRecorridos(recorridos, catalogo, { generado, tot
     paginas.push({ ruta: rutaDeRecorrido(r), html: paginaDeRecorrido(ctx, r, generado) });
     for (const p of r.pasos) {
       for (const imagen of [p.imagenes.claro, p.imagenes.celular, ...(p.imagenes.extras ?? []).map((x) => x.archivo)]) {
-        if (imagen) imagenes.push({ origen: join(r.carpeta, imagen), destino: `img/${r.dominio}/${r.archivo}/${imagen}` });
+        if (imagen) imagenes.push({ origen: join(r.carpeta, imagen), destino: `img/${r.dominio}/${r.archivo}/${nombreDeImagen(imagen, extensionDeImagen)}` });
       }
     }
   }

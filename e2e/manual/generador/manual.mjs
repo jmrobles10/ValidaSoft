@@ -8,13 +8,15 @@
 //
 // Guías:    e2e/manual/guias/*.md (arquitectura, flujo de punta a punta, configuración, integración) → salida/manual/g/ y docs/manual/guias/
 // Opciones: --solo-api · --sin-api · --recorridos <carpeta> · --salida <carpeta> · --docs <carpeta>
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+//           --png (deja los pantallazos en PNG, sin comprimir) · --calidad <1-100> (WebP; 62 por omisión)
+import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fechaLarga, leerRecorridos } from './comun.mjs';
 import { construirModeloApi, htmlDeApi, markdownDeApi } from './api.mjs';
 import { leerFuentes } from './api-fuente.mjs';
 import { archivosDeGuias, construirSitioDeGuias, cssDeDiagramas, leerGuias, leerInventario, resolutorDeRecorridosEscritos, validarGuias } from './guias.mjs';
+import { abrirConversor } from './imagenes.mjs';
 import { indiceDeDominio, indiceGeneral, markdownDeRecorrido, recorridosEscritos } from './markdown.mjs';
 import { construirSitioDeRecorridos, crearContexto } from './sitio.mjs';
 
@@ -22,13 +24,15 @@ const aqui = dirname(fileURLToPath(import.meta.url));
 const RAIZ = resolve(aqui, '..', '..', '..');
 
 function opciones(argv) {
-  const o = { soloApi: false, sinApi: false };
+  const o = { soloApi: false, sinApi: false, png: false, calidad: 62 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--solo-api') o.soloApi = true;
     else if (a === '--sin-api') o.sinApi = true;
+    else if (a === '--png') o.png = true;
+    else if (a === '--calidad') o.calidad = Math.min(100, Math.max(1, Number(argv[++i])));
     else if (['--recorridos', '--salida', '--docs'].includes(a)) o[a.slice(2)] = resolve(argv[++i] ?? '');
-    else throw new Error(`Opción desconocida: ${a}. Usa --solo-api, --sin-api, --recorridos <carpeta>, --salida <carpeta> o --docs <carpeta>.`);
+    else throw new Error(`Opción desconocida: ${a}. Usa --solo-api, --sin-api, --png, --calidad <1-100>, --recorridos <carpeta>, --salida <carpeta> o --docs <carpeta>.`);
   }
   return o;
 }
@@ -80,15 +84,29 @@ async function main() {
 
   // ---- Sitio HTML ----
   rmSync(carpetaSitio, { recursive: true, force: true });
-  const sitio = construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints: modeloApi?.total ?? 0, seccionesDeGuias: lecturaDeGuias.secciones });
+  // Los pantallazos se comprimen a WebP con el Chromium de Playwright (el sitio completo cabe así en una publicación de 64 MB); `--png` los deja como salen.
+  const conversor = o.png || o.soloApi || recorridos.length === 0 ? null : await abrirConversor(RAIZ, { calidad: o.calidad });
+  const extensionDeImagen = conversor ? '.webp' : '';
+  const sitio = construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints: modeloApi?.total ?? 0, seccionesDeGuias: lecturaDeGuias.secciones, extensionDeImagen });
   const guiasHtml = construirSitioDeGuias(lecturaDeGuias, { recorridos, generado });
   for (const alerta of guiasHtml.alertas) console.warn(`Aviso (guías): ${alerta}`);
   const api = modeloApi ? htmlDeApi(modeloApi, generado) : { paginas: [], indice: [] };
   for (const p of [...sitio.paginas, ...guiasHtml.paginas, ...api.paginas]) escribir(join(carpetaSitio, p.ruta), p.html);
-  for (const i of sitio.imagenes) {
-    mkdirSync(dirname(join(carpetaSitio, i.destino)), { recursive: true });
-    copyFileSync(i.origen, join(carpetaSitio, i.destino));
-  }
+  let bytesDeImagenes = 0;
+  const pendientes = [...sitio.imagenes];
+  const trabajador = async () => {
+    for (let i = pendientes.shift(); i; i = pendientes.shift()) {
+      const destino = join(carpetaSitio, i.destino);
+      mkdirSync(dirname(destino), { recursive: true });
+      if (conversor && i.destino.endsWith('.webp')) bytesDeImagenes += await conversor.convertir(i.origen, destino);
+      else {
+        copyFileSync(i.origen, destino);
+        bytesDeImagenes += statSync(destino).size;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: conversor ? 4 : 1 }, trabajador));
+  await conversor?.cerrar();
   mkdirSync(join(carpetaSitio, 'assets'), { recursive: true });
   escribir(join(carpetaSitio, 'assets', 'manual.css'), `${readFileSync(join(aqui, 'estilos.css'), 'utf8')}
 ${cssDeDiagramas({ sitio: true })}
@@ -101,7 +119,7 @@ ${cssDeDiagramas({ sitio: true })}
   if (!o.soloApi) {
     const ctx = crearContexto(recorridos, catalogo);
     for (const r of recorridos) {
-      const texto = markdownDeRecorrido(r, { dominio: ctx.dominio(r.dominio), carpetaDocs, carpetaImagenes, porId: ctx.porId });
+      const texto = markdownDeRecorrido(r, { dominio: ctx.dominio(r.dominio), carpetaDocs, carpetaImagenes, porId: ctx.porId, extensionDeImagen });
       escribir(join(carpetaDocs, r.dominio, `${r.archivo}.md`), texto);
     }
     for (const d of catalogo.dominios) escribir(join(carpetaDocs, d.slug, 'README.md'), indiceDeDominio(d, recorridosEscritos(carpetaDocs, d.slug)));
@@ -127,6 +145,7 @@ ${cssDeDiagramas({ sitio: true })}
   const pasos = recorridos.reduce((n, r) => n + r.pasos.length, 0);
   console.log(`Manual generado: ${String(recorridos.length)} recorridos (${String(pasos)} pasos), ${String(lecturaDeGuias.guias.length)} guías${modeloApi ? `, ${String(modeloApi.total)} operaciones de la API en ${String(modeloApi.modulos.length)} módulos` : ''}.`);
   console.log(`  Sitio HTML:  ${join(carpetaSitio, 'index.html')}`);
+  if (sitio.imagenes.length > 0) console.log(`  Imágenes:    ${String(sitio.imagenes.length)} (${extensionDeImagen === '.webp' ? `WebP, calidad ${String(o.calidad)}` : 'PNG'}), ${(bytesDeImagenes / 1048576).toFixed(1)} MB`);
   console.log(`  Markdown:    ${carpetaDocs}`);
 }
 

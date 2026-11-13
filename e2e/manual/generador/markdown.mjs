@@ -1,7 +1,7 @@
 // Markdown de los recorridos (docs/manual/<dominio>/<archivo>.md): texto con referencias a los pantallazos, sin binarios en git.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, posix, relative, sep } from 'node:path';
-import { textoEnMarkdown } from './comun.mjs';
+import { nombreDeImagen, textoEnMarkdown } from './comun.mjs';
 
 /** Ruta relativa con barras normales (las imágenes viven en la salida gitignorada). */
 const relativa = (desde, hacia) => relative(desde, hacia).split(sep).join(posix.sep);
@@ -13,7 +13,7 @@ const valor = (texto) => JSON.stringify(texto);
  * Markdown de un recorrido. `carpetaDocs` es `docs/manual`, `carpetaImagenes` es `salida/manual/img` y `porId` resuelve los recorridos
  * relacionados. El texto no lleva fechas ni identificadores de la corrida: dos corridas iguales dan el mismo archivo.
  */
-export function markdownDeRecorrido(r, { dominio, carpetaDocs, carpetaImagenes, porId }) {
+export function markdownDeRecorrido(r, { dominio, carpetaDocs, carpetaImagenes, porId, extensionDeImagen = '' }) {
   const carpetaDelArchivo = join(carpetaDocs, r.dominio);
   const enlace = (id) => {
     const destino = porId.get(id);
@@ -44,7 +44,7 @@ export function markdownDeRecorrido(r, { dominio, carpetaDocs, carpetaImagenes, 
     lineas.push(`## Paso ${String(p.orden)}. ${p.titulo}`, '');
     lineas.push(...p.explicacion.split(/\n\s*\n/).flatMap((t) => [textoEnMarkdown(t.replace(/\s*\n\s*/g, ' ').trim(), enlace), '']));
     if (p.ruta) lineas.push(`> **Pantalla:** \`${p.ruta}\``, '');
-    const imagen = (nombre) => relativa(carpetaDelArchivo, join(carpetaImagenes, r.dominio, r.archivo, nombre));
+    const imagen = (nombre) => relativa(carpetaDelArchivo, join(carpetaImagenes, r.dominio, r.archivo, nombreDeImagen(nombre, extensionDeImagen)));
     lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (escritorio)](${imagen(p.imagenes.claro)})`, '');
     for (const x of p.imagenes.extras ?? []) lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (${String(x.ancho)} px de ancho)](${imagen(x.archivo)})`, '');
     if (p.imagenes.celular) lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (celular)](${imagen(p.imagenes.celular)})`, '');

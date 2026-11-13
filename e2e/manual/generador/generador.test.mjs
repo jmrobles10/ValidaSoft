@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { aplanar, ejemplo, normalizar, tipoLegible } from './api-esquema.mjs';
 import { accesoDeAtributos, analizarCSharp, describirAcceso, erroresDelCuerpo, leerPermisos, xmlATexto } from './api-fuente.mjs';
 import { construirModeloApi, htmlDeApi, markdownDeApi, nombreLegible } from './api.mjs';
-import { aSlug, escapar, medidasPng, parrafos, textoEnHtml, validarManifiesto } from './comun.mjs';
+import { aSlug, escapar, medidasPng, nombreDeImagen, parrafos, textoEnHtml, validarManifiesto } from './comun.mjs';
 import { leerEncabezado, markdownDeRecorrido } from './markdown.mjs';
 import { construirSitioDeRecorridos } from './sitio.mjs';
 
@@ -103,6 +103,30 @@ describe('recorridos', () => {
     expect(pagina).toContain('<a href="../../r/tercero/otro.html">Otro recorrido</a>');
     expect(sitio.indice.find((i) => i.u === 'r/tercero/invitacion.html').x).toContain('Ves la cédula');
     expect(sitio.imagenes).toHaveLength(4);
+  });
+
+  it('con una extensión de imagen, el sitio, las imágenes a copiar y el Markdown usan esa extensión', () => {
+    expect(nombreDeImagen('01-paso-claro.png', '.webp')).toBe('01-paso-claro.webp');
+    expect(nombreDeImagen('01-paso-claro.png', '')).toBe('01-paso-claro.png');
+    const sitio = construirSitioDeRecorridos([RECORRIDO, OTRO], CATALOGO, { generado: 'hoy', totalEndpoints: 3, extensionDeImagen: '.webp' });
+    const pagina = sitio.paginas.find((p) => p.ruta === 'r/tercero/invitacion.html').html;
+    expect(pagina).toContain('img/tercero/invitacion/01-abre-el-enlace-claro.webp');
+    expect(pagina).not.toContain('.png"');
+    expect(sitio.imagenes.every((i) => i.destino.endsWith('.webp') && i.origen.endsWith('.png'))).toBe(true);
+    const porId = new Map([[RECORRIDO.id, RECORRIDO]]);
+    const md = markdownDeRecorrido(RECORRIDO, { dominio: CATALOGO.dominios[0], carpetaDocs: '/repo/docs/manual', carpetaImagenes: '/repo/salida/manual/img', porId, extensionDeImagen: '.webp' });
+    expect(md).toContain('01-abre-el-enlace-claro.webp');
+  });
+
+  it('las capturas a otros anchos salen bajo la principal, de la más ancha a la más angosta, y se copian', () => {
+    const conExtras = { ...RECORRIDO, pasos: [{ ...RECORRIDO.pasos[0], imagenes: { ...RECORRIDO.pasos[0].imagenes, extras: [{ ancho: 900, archivo: '01-abre-el-enlace-900.png' }, { ancho: 700, archivo: '01-abre-el-enlace-700.png' }] } }] };
+    const sitio = construirSitioDeRecorridos([conExtras], CATALOGO, { generado: 'hoy', totalEndpoints: 3 });
+    const pagina = sitio.paginas.find((p) => p.ruta === 'r/tercero/invitacion.html').html;
+    expect(pagina).toContain('900 px de ancho');
+    expect(pagina.indexOf('900 px de ancho')).toBeLessThan(pagina.indexOf('700 px de ancho'));
+    expect(sitio.imagenes).toHaveLength(4);
+    const md = markdownDeRecorrido(conExtras, { dominio: CATALOGO.dominios[0], carpetaDocs: '/repo/docs/manual', carpetaImagenes: '/repo/salida/manual/img', porId: new Map([[conExtras.id, conExtras]]) });
+    expect(md).toContain('(900 px de ancho)');
   });
 });
 
