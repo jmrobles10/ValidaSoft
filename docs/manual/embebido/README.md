@@ -2,4 +2,8 @@
 
 Validasoft dentro de otro sistema: app de la empresa en un iframe y sesiones del tercero embebidas.
 
-_Todavía no hay recorridos en este dominio._
+- [Abre la app de tu empresa dentro de tu sistema](app-de-la-empresa-en-un-iframe.md) — Revisor/área. Rubén usa Validasoft sin ver una pantalla de ingreso: abre la página de su sistema, que muestra la app en un marco y le entrega la sesión por dentro. La app se abre en Constructora Norte y, al cerrar la sesión desde el sistema, la app lo avisa y deja de mostrar datos.
+- [Usa la barra de secciones en cualquier ancho y en modo oscuro](navegacion-adaptativa-y-tema.md) — Revisor/área. La barra superior de la app se adapta al ancho del sistema que la aloja: cuando no caben todas las secciones, las que sobran van al botón «Más». El sistema también puede pedir el tema oscuro, y la app lo aplica sin que Rubén cambie nada.
+- [Declara qué páginas pueden mostrar Validasoft](origenes-permitidos.md) — Sistema integrador. Tu sistema declara los orígenes (dirección y puerto) desde los que se muestran sus pantallas de Validasoft. Solo esos orígenes pueden embeber la app y pedir sesiones para ella: un origen que no declaraste recibe un rechazo y su página no muestra nada del tercero.
+- [Renueva una sesión que venció sin perder lo que estabas haciendo](sesion-vencida.md) — Revisor/área. La sesión de la app dura 30 minutos. Dos minutos antes de que venza, la app pide una sesión nueva a tu sistema; si el sistema no responde a tiempo, la app avisa «Tu sesión venció» y vuelve a pedirla. Lo que Rubén estaba mirando no se pierde.
+- [Muestra la bóveda y la ficha del tercero dentro de tu sistema](tercero-embebido.md) — Tercero. Un sistema ajeno a Validasoft muestra al tercero su bóveda de documentos y su ficha dentro de sus propias pantallas. El tercero no ve marca, menú ni inicio de sesión de Validasoft: el sistema pide una sesión corta para cada pantalla y la entrega al marco.

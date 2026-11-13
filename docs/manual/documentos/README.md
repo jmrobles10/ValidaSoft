@@ -2,4 +2,9 @@
 
 Documentos del tercero, versiones, vigencias, vencimientos y renovaciones.
 
-_Todavía no hay recorridos en este dominio._
+- [Sigue el ciclo de vigencia de un certificado](ciclo-de-vigencia.md) — Administrador de empresa. El administrador de Constructora Sur ve los cuatro momentos por los que pasa un certificado de seguridad y salud en el trabajo: vigente, por vencer, en periodo de gracia y vencido. Cada uno cambia la fila de Vencimientos y lo que el proveedor puede hacer.
+- [Descarga un documento del proveedor y comprueba su registro](descargar-un-documento.md) — Administrador de empresa. La administradora abre el vínculo de un proveedor, ve el RUT que compartió, lo descarga desde el visor y comprueba que la descarga quedó registrada en Auditoría › Accesos, con quién la hizo y cuándo.
+- [Revisa una versión nueva de un documento que comparten dos empresas](documento-compartido-entre-empresas.md) — Revisor/área. Sofía, del área Revisión de Constructora Sur, ve que el tercero cambió su información después de que ella la aprobó. Su revalidación muestra solo lo que cambió. Lo que decide Constructora Norte no aparece en su pantalla.
+- [Recuerda a un tercero un documento que vence](recordatorio-desde-vencimientos.md) — Administrador de empresa. El administrador de Constructora Sur ve en Vencimientos el certificado de un proveedor que vence en pocos días, selecciona la fila y le envía un recordatorio por correo para que suba una versión nueva a tiempo.
+- [Revisa los documentos que vencen en la lista de vencimientos](vencimientos.md) — Administrador de empresa. El administrador de Constructora Sur abre Vencimientos y ve, documento por documento, hasta cuándo sirve cada certificado que los proveedores le compartieron. Distingue lo vigente, lo que está por vencer, lo que está en gracia y lo vencido.
+- [Sigue la vigencia periódica de un vínculo](vigencia-del-vinculo.md) — Administrador de empresa. La administradora de Constructora Sur ve cómo cambia un cliente cuyo vínculo tiene vigencia: activo y con fecha de vencimiento, por vencer con su renovación abierta, y vencido cuando el tercero no ratifica a tiempo. El certificado sigue la misma suerte.

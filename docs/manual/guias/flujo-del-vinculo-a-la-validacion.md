@@ -50,7 +50,7 @@ Sin un flujo publicado por defecto, el tercero que acepta la invitación queda e
 
 > **Configuración:** [Configuración de la empresa](configuracion-de-la-empresa.md#flujos-aprobatorios), [del grupo](configuracion-del-grupo.md) y [de Plataforma](configuracion-de-plataforma.md).
 >
-> **Recorridos:** *Plataforma crea el grupo y la empresa (recorrido pendiente)* · *Plan de IA y llave de OpenAI (recorrido pendiente)* · *Empresas y textos legales (recorrido pendiente)* · [Configura un tipo de documento y publica un flujo que lo pide](../configuracion/tipo-de-documento-y-flujo.md) · *Tipos de vínculo (recorrido pendiente)* · *Áreas y miembros (recorrido pendiente)* · *Etapas y áreas en paralelo (recorrido pendiente)* · *Condiciones por tipo de persona (recorrido pendiente)* · *Secciones de la ficha (recorrido pendiente)* · *Plazo, reintento y recordatorios (recorrido pendiente)* · *Vigencia del vínculo (recorrido pendiente)* · *Verificaciones de cumplimiento (recorrido pendiente)* · *Versiones y borradores (recorrido pendiente)* · *Flujo por defecto (recorrido pendiente)* · *Usuarios y roles (recorrido pendiente)*
+> **Recorridos:** [Crea un grupo con su primera empresa](../plataforma/crear-grupo-y-empresa.md) · [Configura el plan de IA de una empresa y su llave de OpenAI](../plataforma/plan-de-ia-y-llave-openai.md) · [Agrega una empresa del grupo y publica sus textos legales](../configuracion/empresas-y-textos-legales.md) · [Configura un tipo de documento y publica un flujo que lo pide](../configuracion/tipo-de-documento-y-flujo.md) · [Crea un tipo de vínculo y lo desactiva](../configuracion/tipos-de-vinculo.md) · [Crea un área, asígnale personas y desactívala](../configuracion/areas-y-miembros.md) · [Arma una etapa con dos áreas en paralelo y una automática](../configuracion/flujo-etapas-y-areas-en-paralelo.md) · [Pide cada documento según el tipo de persona](../configuracion/flujo-condiciones-por-tipo-de-persona.md) · [Pide secciones de «Mi información» como requisito del flujo](../configuracion/flujo-secciones-de-la-ficha.md) · [Fija el plazo de cargue, los recordatorios y el reintento](../configuracion/flujo-plazo-reintento-y-recordatorios.md) · [Define la vigencia periódica del vínculo](../configuracion/flujo-vigencia-del-vinculo.md) · [Pide listas restrictivas y el estudio SAGRILAFT en el flujo](../configuracion/flujo-verificaciones-de-cumplimiento.md) · [Cambia un flujo publicado con un borrador nuevo](../configuracion/flujo-versiones-y-borradores.md) · [Cambia el flujo por defecto de un tipo de vínculo](../configuracion/flujo-por-defecto.md) · [Agrega una persona, dale roles y desactívala](../configuracion/usuarios-y-roles.md)
 
 ### 2. Se crea el vínculo
 
@@ -65,7 +65,7 @@ También existe el **autorregistro** (`POST /public/v1/autorregistro`: el propio
 
 > **Configuración:** [Tipos de vínculo](configuracion-del-grupo.md#tipos-de-vinculo), [Plan del grupo](configuracion-del-grupo.md#plan-del-grupo) y [guía de integración](guia-de-integracion.md#invitar-a-un-tercero).
 >
-> **Recorridos:** *Invitación por lotes (recorrido pendiente)* · *Pausar, reanudar o cancelar un lote (recorrido pendiente)* · *Invitar por API (recorrido pendiente)* · *Registrar el sistema integrador (recorrido pendiente)* · *API keys (recorrido pendiente)* · *Lista de vínculos y filtros (recorrido pendiente)* · *Detalle del vínculo (recorrido pendiente)* · *Reenviar la invitación (recorrido pendiente)* · *Abrir el expediente a mano (recorrido pendiente)*
+> **Recorridos:** [Invita a varios terceros con un archivo](../operacion/invitacion-por-lotes.md) · [Pausa, reanuda y cancela un lote, y reintenta sus filas fallidas](../operacion/lote-pausar-reanudar-cancelar.md) · [Invita a un proveedor desde tu sistema con la API](../integracion/invitar-por-api.md) · [Registra un sistema integrado con su clave pública](../integracion/sistema-integrador.md) · [Crea una API key con sus permisos y empresas, rótala y revócala](../integracion/api-keys.md) · [Revisa la lista de vínculos y filtra por estado y tipo](../vinculos/lista-y-filtros.md) · [Revisa el detalle de un vínculo](../vinculos/detalle-del-vinculo.md) · [Reenvía la invitación a un tercero](../vinculos/reenviar-invitacion.md) · [Abre el expediente sin esperar a que el tercero acepte](../vinculos/abrir-expediente-manual.md)
 
 ### 3. Invitación y aceptación
 
@@ -80,7 +80,7 @@ Un tercero **sin invitación a mano** puede entrar a `/entrar` con su correo y p
 
 > **Variantes:** según el tipo de vínculo hay código por correo o no; según el tipo de persona (jurídica o natural) el flujo pide otros documentos y secciones; si la empresa no ha publicado sus textos, la pantalla dice «aún no publica sus textos» y no se puede aceptar.
 >
-> **Recorridos:** [Acepta la invitación y completa tu información como persona jurídica](../tercero/aceptar-invitacion-persona-juridica.md) · *Aceptar la invitación como persona natural (recorrido pendiente)* · *Entrar sin invitación (recorrido pendiente)* · *Mis empresas con varias invitaciones (recorrido pendiente)* · *Invitación vencida o ya usada (recorrido pendiente)* · *Lo que aceptaste y textos nuevos (recorrido pendiente)* · *Entrar desde el celular (recorrido pendiente)*
+> **Recorridos:** [Acepta la invitación y completa tu información como persona jurídica](../tercero/aceptar-invitacion-persona-juridica.md) · [Acepta la invitación y completa tu información como persona natural](../tercero/aceptar-invitacion-persona-natural.md) · [Entra a Validasoft con tu correo cuando ya tienes una invitación](../tercero/entrar-sin-invitacion.md) · [Gestiona tus empresas cuando varias te invitaron](../tercero/mis-empresas-varias-invitaciones.md) · [Qué pasa cuando un enlace de invitación ya se usó, venció o no existe](../tercero/invitacion-vencida-o-usada.md) · [Lee y acepta los textos legales de una empresa](../privacidad/lo-que-acepte-y-textos-nuevos.md) · [Entra al portal desde el celular con tu correo y el código](../movil/tercero-entrar.md)
 
 ### 4. El asistente del tercero
 
@@ -96,7 +96,7 @@ El expediente **pasa solo a revisión** cuando todos los requisitos obligatorios
 >
 > **Configuración:** [Tipos de documento](configuracion-del-grupo.md#tipos-de-documento), [Ayuda de documentos](configuracion-de-la-empresa.md#ayuda-de-documentos) y el [flujo](configuracion-de-la-empresa.md#documentos-y-secciones-que-pide).
 >
-> **Recorridos:** *Mi bóveda de documentos (recorrido pendiente)* · *Subir un documento (recorrido pendiente)* · *Subir un documento con formulario (recorrido pendiente)* · *Secciones de la ficha con soporte (recorrido pendiente)* · *Actualizar desde mi RUT (recorrido pendiente)* · *La barra de la ficha y los pendientes (recorrido pendiente)* · *Declaración PEP de una persona natural (recorrido pendiente)* · *Declaración PEP de personas relacionadas (recorrido pendiente)* · *Cuentas bancarias (recorrido pendiente)* · *Contactos por empresa (recorrido pendiente)* · *Ayuda de documentos (recorrido pendiente)* · *Tipo de documento solo de formulario y plantilla (recorrido pendiente)* · *Subir un documento desde el celular (recorrido pendiente)* · *Mi información desde el celular (recorrido pendiente)*
+> **Recorridos:** [Revisa tu bóveda de documentos](../tercero/boveda-mis-documentos.md) · [Sube un documento a tu bóveda](../tercero/boveda-subir-un-documento.md) · [Sube un documento que pide una fecha de expedición](../tercero/subir-documento-con-formulario.md) · [Respalda tu información con un documento de tu bóveda](../tercero/ficha-secciones-con-soporte.md) · [Actualiza tu información desde un RUT nuevo](../tercero/ficha-actualizar-desde-mi-rut.md) · [Completa tu información paso a paso](../tercero/ficha-barra-y-pendientes.md) · [Declara que eres una persona expuesta políticamente](../tercero/declaracion-pep-persona-natural.md) · [Declara la PEP de un socio y de sus personas relacionadas](../tercero/declaracion-pep-personas-relacionadas.md) · [Designa la cuenta en la que te paga una empresa](../tercero/cuentas-bancarias.md) · [Indica con quién hablar en cada empresa](../tercero/contactos-por-empresa.md) · [Escribe la ayuda que ve el tercero al subir un documento](../operacion/ayuda-de-documentos.md) · [Crea un documento con formulario y plantilla descargable](../configuracion/tipo-de-documento-solo-formulario-y-plantilla.md) · [Sube un documento pendiente desde el celular](../movil/tercero-subir-documento.md) · [Completa una sección de Mi información desde el celular](../movil/tercero-mi-informacion.md)
 
 ### 5. Revisión automática con IA
 
@@ -114,7 +114,7 @@ Los veredictos del sistema llevan origen `Sistema`, su confianza y la justificac
 
 > **Configuración:** [Revisión automática](configuracion-de-la-empresa.md#revision-automatica) y [Plan de IA de una empresa](configuracion-de-plataforma.md#plan-de-ia-de-una-empresa).
 >
-> **Recorridos:** *Plan y uso de IA (recorrido pendiente)* · *Niveles de la revisión automática (recorrido pendiente)* · *Revisión asistida y excepciones (recorrido pendiente)* · *La revisión automática aprueba sola (recorrido pendiente)* · *Cupo agotado (recorrido pendiente)* · *Escalamiento a un modelo superior (recorrido pendiente)* · *Cruce de la ficha con los soportes (recorrido pendiente)* · *Análisis de un documento (recorrido pendiente)*
+> **Recorridos:** [Revisa el plan y el uso de IA de la empresa](../ia/plan-y-uso-de-ia.md) · [Elige el nivel de revisión automática con IA](../ia/revision-automatica-niveles.md) · [Atiende una excepción de la revisión asistida](../ia/revision-asistida-y-excepciones.md) · [Revisa un documento que el sistema aprobó solo](../ia/revision-automatica-aprueba-sola.md) · [Atiende los documentos cuando se agota el cupo de IA](../ia/cupo-agotado.md) · [Revisa una lectura dudosa que la IA escaló a un modelo superior](../ia/escalamiento-a-modelo-superior.md) · [Compara la información del tercero con su RUT](../ia/cruce-de-la-ficha-con-los-soportes.md) · [Lee el análisis automático de un documento](../ia/analisis-de-un-documento.md)
 
 ### 6. Revisión por áreas y etapas
 
@@ -128,7 +128,7 @@ Un área aprueba cuando todos sus requisitos y todos sus aprobadores aprobaron; 
 
 > **Configuración:** [Áreas](configuracion-de-la-empresa.md#areas), [Plazos de revisión](configuracion-de-la-empresa.md#plazos-de-revision) y [Delegación de revisión](configuracion-de-la-empresa.md#delegacion-de-revision).
 >
-> **Recorridos:** *Inicio: lo que te toca (recorrido pendiente)* · *Bandeja de revisión (recorrido pendiente)* · *Aprobar un área (recorrido pendiente)* · *Aprobar documento por documento (recorrido pendiente)* · *Etapas en secuencia (recorrido pendiente)* · *Dos aprobadores y separación de funciones (recorrido pendiente)* · *Aprobar en nombre del área (recorrido pendiente)* · *Eximir un documento (recorrido pendiente)* · *Visor y datos de un documento (recorrido pendiente)* · *Historial del expediente (recorrido pendiente)* · *Delegación de revisión (recorrido pendiente)* · *Plazos de revisión (recorrido pendiente)* · *Informe de plazos de revisión (recorrido pendiente)*
+> **Recorridos:** [Revisa lo que te toca desde Inicio](../revision/inicio-lo-que-te-toca.md) · [Filtra la bandeja de revisión y abre un expediente](../revision/bandeja-de-revision.md) · [Aprueba el área de Compras](../revision/aprobar-un-area.md) · [Aprueba el expediente documento por documento](../revision/aprobar-documento-por-documento.md) · [Sigue un expediente que pasa por tres etapas](../revision/etapas-en-secuencia.md) · [Aprueba un área que pide dos personas distintas](../revision/dos-aprobadores-y-separacion-de-funciones.md) · [Aprueba un área en nombre de sus miembros](../revision/aprobar-en-nombre-del-area.md) · [Exime a un tercero de un documento](../revision/eximir-un-documento.md) · [Abre un documento para verlo y descargarlo](../revision/visor-y-datos-de-un-documento.md) · [Lee el historial de un expediente](../revision/historial-del-expediente.md) · [Delega tu revisión mientras estás ausente](../operacion/delegacion-de-revision.md) · [Fija el plazo de revisión de cada área](../operacion/plazos-de-revision.md) · [Mide el cumplimiento de los plazos de revisión](../informes/plazos-de-revision.md)
 
 ### 7. Observaciones y reenvío
 
@@ -144,7 +144,7 @@ Un **rechazo** es distinto: lo hace un área que puede rechazar (o el oficial, a
 
 > **Configuración:** [Motivos](configuracion-del-grupo.md#motivos), [Plantillas de correo](configuracion-de-la-empresa.md#plantillas-de-correo) y [datos generales del flujo](configuracion-de-la-empresa.md#datos-generales).
 >
-> **Recorridos:** *Observar con motivos (recorrido pendiente)* · *Responder las observaciones (recorrido pendiente)* · *Responder con lo corregido (recorrido pendiente)* · *Recordatorio de observaciones (recorrido pendiente)* · *Recordatorio automático por flujo (recorrido pendiente)* · *Plazo de cargue y caducidad (recorrido pendiente)* · *Rechazar un expediente (recorrido pendiente)* · *Rechazo y volver a postularme (recorrido pendiente)*
+> **Recorridos:** [Observa un documento con motivos](../revision/observar-con-motivos.md) · [Corrige lo que la empresa observó y responde](../tercero/responder-observaciones.md) · [Revisa lo que corrigió el proveedor tras una observación](../revision/responder-con-lo-corregido.md) · [Recuerda al proveedor sus observaciones pendientes](../revision/recordatorio-de-observaciones.md) · [Activa el recordatorio automático de observaciones](../operacion/recordatorio-automatico-por-flujo.md) · [Atiende un expediente caducado por falta de plazo y reábrelo](../operacion/plazo-de-cargue-y-caducidad.md) · [Rechaza un expediente por un hallazgo grave](../revision/rechazar-expediente.md) · [Vuelve a postularte después de un rechazo](../tercero/rechazo-y-volver-a-postularme.md)
 
 ### 8. Verificaciones de cumplimiento
 
@@ -154,7 +154,7 @@ Una verificación marcada **bloqueante** (por omisión lo es) impide aprobar el 
 
 > **Configuración:** [Listas restrictivas](configuracion-de-la-empresa.md#listas-restrictivas), [Matriz de riesgo](configuracion-de-la-empresa.md#matriz-de-riesgo) y [verificaciones del flujo](configuracion-de-la-empresa.md#verificaciones-de-cumplimiento).
 >
-> **Recorridos:** *Listas restrictivas de la empresa (recorrido pendiente)* · *Pedir las listas restrictivas (recorrido pendiente)* · *Analizar una coincidencia (recorrido pendiente)* · *Coincidencia confirmada (recorrido pendiente)* · *Estudio de cumplimiento (recorrido pendiente)* · *Estudio vencido y renovación (recorrido pendiente)* · *Bandeja del oficial (recorrido pendiente)* · *Rechazo directo del oficial (recorrido pendiente)* · *Configurar la matriz de riesgo (recorrido pendiente)* · *Monitoreo periódico (recorrido pendiente)* · *Informe SAGRILAFT (recorrido pendiente)*
+> **Recorridos:** [Elige con qué proveedor se consultan las listas restrictivas](../cumplimiento/listas-restrictivas-de-la-empresa.md) · [Revisa las listas restrictivas consultadas al pasar a revisión](../cumplimiento/pedir-listas-restrictivas.md) · [Analiza una coincidencia en las listas y la descarta por homónimo](../cumplimiento/analizar-una-coincidencia.md) · [Confirma una coincidencia y rechaza el vínculo](../cumplimiento/coincidencia-confirmada.md) · [Registra el estudio de cumplimiento de un proveedor](../cumplimiento/estudio-de-cumplimiento.md) · [Renueva un estudio de cumplimiento vencido](../cumplimiento/estudio-vencido-y-renovacion.md) · [Atiende lo pendiente de Cumplimiento desde su bandeja](../cumplimiento/bandeja-del-oficial.md) · [Rechaza el expediente por cumplimiento](../cumplimiento/rechazo-directo-del-oficial.md) · [Configura la matriz de riesgo SAGRILAFT de la empresa](../cumplimiento/matriz-de-riesgo-configuracion.md) · [Sigue el monitoreo de listas de un vínculo activo](../cumplimiento/monitoreo-periodico.md) · [Consulta el informe SAGRILAFT de los terceros](../cumplimiento/informe-sagrilaft.md)
 
 ### 9. Aprobación
 
@@ -167,7 +167,7 @@ Cuando **todas las etapas están aprobadas y las verificaciones bloqueantes est�
 
 Si algo de lo aprobado se ve mal más tarde, un administrador puede **desaprobar** el último expediente aprobado (el mismo vuelve a revisión y el vínculo a `EnValidacion`) o reabrir una etapa.
 
-> **Recorridos:** *El expediente aprobado, visto por el tercero (recorrido pendiente)* · *Desaprobar y reabrir una etapa (recorrido pendiente)* · *Desaprobar un expediente aprobado (recorrido pendiente)* · *Anular un veredicto (recorrido pendiente)*
+> **Recorridos:** [Ve que tu expediente quedó aprobado](../tercero/expediente-aprobado.md) · [Reabre una etapa ya aprobada](../revision/desaprobar-y-reabrir-una-etapa.md) · [Desaprueba un expediente aprobado](../revision/desaprobar-un-expediente-aprobado.md) · [Anula el veredicto de un área](../revision/anular-un-veredicto.md)
 
 ## Parte 2: del certificado a las vigencias
 
@@ -181,7 +181,7 @@ Cualquiera, sin sesión, lo **verifica** en `/verificar/{folio}` (o por `GET /pu
 
 Un **sistema integrador** se entera con `certificado.emitido` y, antes de pagar, **consulta la certificación**: paga solo si `certificado: true` y `bloqueado: false` ([guía de integración](guia-de-integracion.md#consulta-de-certificacion)).
 
-> **Recorridos:** *Certificados (recorrido pendiente)* · *Bloquear y revocar un certificado (recorrido pendiente)* · *Verificar un certificado auténtico (recorrido pendiente)* · *Verificar un certificado inválido (recorrido pendiente)* · *Certificado en otros estados (recorrido pendiente)* · *Verificar con el PDF (recorrido pendiente)* · *Verificar desde el celular (recorrido pendiente)* · *Consulta de certificación (recorrido pendiente)*
+> **Recorridos:** [Encuentra los certificados de la empresa](../informes/certificados.md) · [Bloquea, desbloquea o revoca un certificado](../informes/certificado-bloquear-y-revocar.md) · [Verifica que un certificado es auténtico](../publico/verificar-certificado-autentico.md) · [Comprueba un certificado que no existe o tiene una huella mal escrita](../publico/verificar-certificado-invalido.md) · [Lee el estado de un certificado suspendido o revocado](../publico/certificado-en-otros-estados.md) · [Compara la huella impresa en el PDF con la del certificado](../publico/verificar-con-el-pdf.md) · [Verifica un certificado desde el celular](../movil/verificar-certificado.md) · [Consulta la certificación de un proveedor con ETag](../integracion/consulta-de-certificacion.md)
 
 ### 11. Vigencias, avisos y renovación
 
@@ -194,7 +194,7 @@ La empresa puede adelantarse con una **campaña de renovación** (masiva, por ta
 
 > **Configuración:** [Vigencia de los tipos de documento](configuracion-del-grupo.md#tipos-de-documento) y [vigencia del vínculo](configuracion-de-la-empresa.md#datos-generales).
 >
-> **Recorridos:** *Vencimientos (recorrido pendiente)* · *Ciclo de vigencia (recorrido pendiente)* · *Vigencia del vínculo (recorrido pendiente)* · *Recordatorio desde vencimientos (recorrido pendiente)* · *Documento por vencer y vencido (recorrido pendiente)* · *Vínculo por vencer: renovar (recorrido pendiente)* · *Campaña de renovación (recorrido pendiente)* · *Pausar y reintentar una campaña (recorrido pendiente)* · *Recordatorio en lote (recorrido pendiente)* · *La campana y los avisos del tercero (recorrido pendiente)*
+> **Recorridos:** [Revisa los documentos que vencen en la lista de vencimientos](../documentos/vencimientos.md) · [Sigue el ciclo de vigencia de un certificado](../documentos/ciclo-de-vigencia.md) · [Sigue la vigencia periódica de un vínculo](../documentos/vigencia-del-vinculo.md) · [Recuerda a un tercero un documento que vence](../documentos/recordatorio-desde-vencimientos.md) · [Atiende un documento que está por vencer](../tercero/documento-por-vencer-y-vencido.md) · [Ratifica tu información antes de que venza el vínculo](../tercero/vinculo-por-vencer-renovar.md) · [Abre la renovación de varios clientes a la vez](../operacion/campana-de-renovacion.md) · *Pausar y reintentar una campaña (recorrido pendiente)* · [Recuerda a varios terceros sus observaciones desde la bandeja](../operacion/recordatorio-en-lote.md) · [Entérate de los avisos desde la campana](../tercero/campana-y-avisos.md)
 
 ### 12. Actualización con una versión nueva
 
@@ -208,7 +208,7 @@ Cuando el tercero sube una **versión nueva** de un documento (o cambia una secc
 
 El tercero también puede **retirar** una versión: cada empresa que la tenía debe revalidar. Una actualización abierta se **amplía** con lo que cambia después.
 
-> **Recorridos:** *Subir una versión nueva (recorrido pendiente)* · *Vínculo en revisión por una actualización (recorrido pendiente)* · *Vínculo con actualización pendiente (recorrido pendiente)* · *Actualización de un documento (recorrido pendiente)* · *Revalidaciones en lote (recorrido pendiente)* · *Retirar una versión (recorrido pendiente)* · *Un cambio de la ficha tras aprobar (recorrido pendiente)*
+> **Recorridos:** [Sube una versión nueva de un documento ya aprobado](../tercero/subir-version-nueva.md) · [Mira tu vínculo cuando una actualización está en revisión](../tercero/vinculo-en-revision-por-actualizacion.md) · [Ve un vínculo con una actualización en revisión](../vinculos/vinculo-con-actualizacion-pendiente.md) · [Revisa una versión nueva que llega mientras decides](../revision/actualizacion-de-un-documento.md) · [Aprueba en lote las revalidaciones sin cambios](../revision/revalidaciones-en-lote.md) · [Retira una versión que subiste por error](../tercero/retirar-una-version.md) · [Cambia un dato de tu ficha después de la aprobación](../tercero/ficha-cambio-tras-aprobar.md)
 
 ### 13. Varias empresas: documentos compartidos, decisiones privadas
 
@@ -220,7 +220,7 @@ Un tercero es **uno solo** en toda la plataforma. Si lo invitan tres empresas, s
 
 El tercero ve en **Mis empresas** cada empresa y su avance, y en su bóveda quién recibió cada documento. Si una empresa no le exige un documento, no lo recibe.
 
-> **Recorridos:** *Documento compartido entre empresas (recorrido pendiente)* · *Mi bóveda: documento compartido (recorrido pendiente)* · *Mis empresas con varias invitaciones (recorrido pendiente)* · *Tercero 360 (recorrido pendiente)* · *Descargar un documento (recorrido pendiente)*
+> **Recorridos:** [Revisa una versión nueva de un documento que comparten dos empresas](../documentos/documento-compartido-entre-empresas.md) · [Entiende un documento que comparten dos empresas](../tercero/boveda-documento-compartido.md) · [Gestiona tus empresas cuando varias te invitaron](../tercero/mis-empresas-varias-invitaciones.md) · [Abre la ficha de un tercero que trabaja con dos empresas del grupo](../vinculos/tercero-360.md) · [Descarga un documento del proveedor y comprueba su registro](../documentos/descargar-un-documento.md)
 
 ### 14. Bloqueo, desbloqueo y terminación
 
@@ -229,13 +229,13 @@ El tercero ve en **Mis empresas** cada empresa y su avance, y en su bóveda qui�
 - **Anular** es definitivo.
 - Un administrador puede **revocar** un certificado con justificación, lo que es irreversible.
 
-> **Recorridos:** *Bloquear y desbloquear (recorrido pendiente)* · *Bloqueado no recibe versiones (recorrido pendiente)* · *Desvincular y reintegrar sin revalidar (recorrido pendiente)* · *Reintegrar revalidando (recorrido pendiente)* · *Anular un vínculo (recorrido pendiente)* · *Documento eximido y vínculo bloqueado (recorrido pendiente)*
+> **Recorridos:** [Bloquea un vínculo y luego lo desbloquea](../vinculos/bloquear-y-desbloquear.md) · [Bloquea un vínculo y lo desbloquea con una versión nueva pendiente](../vinculos/bloqueado-no-recibe-version.md) · [Desvincula un tercero y lo reintegra sin revalidar](../vinculos/desvincular-y-reintegrar-sin-revalidar.md) · [Reintegra un vínculo revalidando](../vinculos/reintegrar-revalidando.md) · [Anula un vínculo creado por error](../vinculos/anular-vinculo.md) · [Ve un documento eximido y un vínculo suspendido](../tercero/documento-eximido-y-vinculo-bloqueado.md)
 
 ### 15. Webhooks emitidos en cada hito
 
 Cada hito de arriba deja un evento público que llega por **webhook firmado** (o por pull o SSE), con la referencia externa del vínculo para que cada sistema ubique su registro. Los eventos nunca llevan nombres de revisores, correos ni IP. La tabla de qué hito produce qué evento, la firma y los reintentos están en la [guía de integración](guia-de-integracion.md#webhooks-firmados); el catálogo de 42 tipos, en [Webhooks](configuracion-del-grupo.md#webhooks).
 
-> **Recorridos:** *Webhooks (recorrido pendiente)* · *Entrega fallida y reenvío (recorrido pendiente)* · *Eventos por pull y en vivo (recorrido pendiente)* · *Sandbox (recorrido pendiente)* · *Buzón de pruebas (recorrido pendiente)*
+> **Recorridos:** [Crea un webhook, guarda su secreto y revisa las entregas firmadas](../integracion/webhooks.md) · [Revisa una entrega fallida y la reenvía cuando el sistema vuelve](../integracion/webhook-entrega-fallida-y-reenvio.md) · [Lee los eventos por pull o en vivo con un cursor](../integracion/eventos-pull-y-en-vivo.md) · [Prueba la integración en el sandbox antes de producción](../integracion/sandbox.md) · [Lee y vacía el buzón de correo de pruebas](../integracion/buzon-de-pruebas.md)
 
 ## Variantes que cambian el recorrido
 

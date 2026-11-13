@@ -2,4 +2,8 @@
 
 Habeas data: solicitudes de consulta, corrección y supresión; consentimientos y privacidad.
 
-_Todavía no hay recorridos en este dominio._
+- [Descarga una copia firmada de tu bóveda](exportar-mi-boveda.md) — Tercero. El tercero pide una exportación de su bóveda: Validasoft la prepara en segundo plano, avisa por correo cuando está lista y el tercero la descarga como un ZIP con sus archivos, sus datos y un manifiesto firmado para comprobar que nada cambió.
+- [Responde una solicitud de habeas data del titular](habeas-data-de-la-empresa.md) — Administrador de empresa. Un proveedor pidió a la empresa conocer sus datos desde su portal. La solicitud llega a «Habeas data» con su radicado y el plazo en días hábiles; la administradora la responde y el titular recibe la respuesta y su constancia.
+- [Lee y acepta los textos legales de una empresa](lo-que-acepte-y-textos-nuevos.md) — Tercero. Antes de compartir sus documentos con una empresa, el tercero lee cada texto legal vigente con su versión y lo marca como aceptado. Validasoft registra qué aceptó y en qué versión; si un texto cambia mientras lo lee, debe volver a marcarlo.
+- [Atiende los avisos de plazo de una solicitud de habeas data](plazos-y-avisos-de-habeas.md) — Administrador de empresa. Una solicitud de habeas data se acerca a su fecha límite: la administradora recibe un aviso en su campana y por correo cuando le quedan dos días hábiles o menos, y otro cuando el plazo legal ya pasó. Cada aviso lleva a la solicitud para responderla.
+- [Pide conocer, corregir o suprimir tus datos personales](solicitud-sobre-mis-datos.md) — Tercero. El tercero abre «Privacidad y mis datos», crea una solicitud sobre sus datos (consulta, corrección o supresión), elige a quién se la dirige (Validasoft o una empresa con la que tiene vínculo) y recibe su radicado con la fecha límite de respuesta.
