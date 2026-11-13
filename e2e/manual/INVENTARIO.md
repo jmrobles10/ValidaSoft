@@ -102,7 +102,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `vinculos/tercero-360` ☑ | Administrador de empresa | Tercero con dos empresas (spec `tercero360`) | Ficha del tercero, datos, vínculos con esta empresa, lo que no se comparte entre empresas |
 | `vinculos/ficha-aceptada-del-vinculo` ☑ | Administrador de empresa | Ficha completa y aprobada (spec `ficha`) | «Ver la ficha aceptada»: por sección lo aceptado y lo que cambió después |
 | `vinculos/cuenta-designada-aprobar` ☑ | Oficial de cumplimiento | Tipo de vínculo con cuenta designada (spec `cuentas`) | Cuenta por aprobar, cuatro ojos (quien la pidió no la aprueba), aprobar y rechazar |
-| `vinculos/vinculo-con-actualizacion-pendiente` ☐ | Administrador de empresa | Aprobado por dos empresas y RUT nuevo (spec `vinculo-en-revision`) | «En revisión» en lista, filtro, inicio y detalle; certificado «En verificación»; aviso de la actualización no aprobada |
+| `vinculos/vinculo-con-actualizacion-pendiente` ☑ | Administrador de empresa | Aprobado por dos empresas y RUT nuevo (spec `vinculo-en-revision`) | «En revisión» en lista, filtro, inicio y detalle; certificado «En verificación»; aviso de la actualización no aprobada |
 | `vinculos/bloqueado-no-recibe-version` ☐ | Administrador de empresa | Vínculo bloqueado y versión nueva (spec `pendientes-pequenos`) | El bloqueado no recibe el RUT nuevo; al desbloquear queda «En revisión» |
 | `vinculos/referencias-externas` ☐ | Sistema integrador | Vínculo creado por un sistema con su referencia | Dónde se ve la referencia por sistema, buscar por referencia, varios sistemas |
 
