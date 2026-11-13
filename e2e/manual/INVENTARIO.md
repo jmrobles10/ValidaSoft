@@ -40,7 +40,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `tercero/boveda-subir-un-documento` ☑ | Tercero | Tercero sin invitación abierta | `/boveda/subir`: elegir el tipo, archivo, datos del formulario, «Ya la tiene», confirmar |
 | `tercero/boveda-documento-compartido` ☑ | Tercero | Dos empresas que piden el mismo RUT (spec `multiempresa-documento-global`) | Una sola versión en la bóveda, cada empresa la revisa, versión nueva y cada empresa revalida |
 | `tercero/retirar-una-version` ☑ | Tercero | Versión subida (spec `retiro-version`) | Retirar, diálogo con las consecuencias, aviso a las empresas, qué queda |
-| `tercero/ficha-secciones-con-soporte` ☐ | Tercero | Flujo con las 6 secciones; soporte en la bóveda (spec `ficha-f5`) | «Documento que respalda esta información», elegir o subir un soporte, aviso de coherencia |
+| `tercero/ficha-secciones-con-soporte` ☑ | Tercero | Flujo con las 6 secciones; soporte en la bóveda (spec `ficha-f5`) | «Documento que respalda esta información», elegir o subir un soporte, aviso de coherencia |
 | `tercero/ficha-actualizar-desde-mi-rut` ☐ | Tercero | RUT en la bóveda (spec `ficha-pendientes`) | «Actualizar desde mi RUT», lo que propone, aplicar, la PEP se conserva |
 | `tercero/ficha-barra-y-pendientes` ☐ | Tercero | Ficha a medias | «Faltan N datos», guardar sin completar, volver; Legal sin socio y el aviso; sección que no aplica |
 | `tercero/ficha-cambio-tras-aprobar` ☐ | Tercero | Ficha aceptada por una empresa (spec `revalidaciones-y-exencion`) | Cambiar dirección, la empresa ve el cambio posterior y debe volver a aceptar, qué ve el tercero |
