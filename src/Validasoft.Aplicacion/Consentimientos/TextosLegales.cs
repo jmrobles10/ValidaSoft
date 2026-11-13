@@ -49,21 +49,26 @@ public static class TextosLegales
     };
 
     /// <summary>
-    /// Aviso inicial de la plataforma. <b>Texto provisional</b>: Legal debe reemplazarlo publicando una versión nueva
-    /// (<c>PUT /api/v1/plataforma/textos-legales/aviso</c>).
+    /// Aviso inicial de la plataforma (texto de ejemplo de autorización de tratamiento de datos, Ley 1581 de 2012). Cada
+    /// operación puede reemplazarlo publicando una versión nueva (<c>PUT /api/v1/plataforma/textos-legales/aviso</c>).
     /// </summary>
-    public const string AvisoPlataformaProvisional =
-        "[TEXTO PROVISIONAL — pendiente de revisión por el área Legal; no usar en producción]\n\n" +
-        "Aviso de tratamiento de datos personales de la plataforma Validasoft.\n\n" +
-        "Validasoft actúa como encargado del tratamiento de los datos y documentos que cargas, por cuenta de cada empresa " +
-        "con la que aceptes vincularte, que es la responsable (Ley 1581 de 2012 y Decreto 1377 de 2013). Tus documentos se " +
-        "guardan una sola vez en tu bóveda y solo se comparten con las empresas cuya invitación aceptes.\n\n" +
+    public const string AvisoPlataformaInicial =
+        "Autorización para el tratamiento de datos personales en Validasoft.\n\n" +
+        "Con tu aceptación autorizas, de manera previa, expresa e informada, el tratamiento de tus datos personales y de los " +
+        "documentos que cargues en Validasoft, conforme a la Ley 1581 de 2012, el Decreto 1377 de 2013 y las demás normas " +
+        "colombianas de protección de datos.\n\n" +
+        "Roles: Validasoft actúa como encargado del tratamiento, por cuenta de cada empresa con la que aceptes vincularte, que " +
+        "es la responsable de tus datos. Tus documentos se guardan una sola vez en tu bóveda y solo se comparten con las " +
+        "empresas cuya invitación aceptes.\n\n" +
+        "Finalidad: validar la identidad, la vigencia y la legalidad de los documentos que presentas ante cada empresa, y " +
+        "mantener la trazabilidad de esa validación.\n\n" +
         "Procesamiento con inteligencia artificial: para leer los hechos de tus documentos (tipo, fechas, legibilidad, " +
         "coincidencias) la plataforma puede enviarlos a un proveedor externo de inteligencia artificial, que no los usa para " +
         "entrenar modelos. Las decisiones sobre tu vínculo las toma cada empresa; puedes pedir revisión humana.\n\n" +
         "Transferencia internacional: ese proveedor puede procesar la información en servidores ubicados fuera de Colombia, " +
         "con garantías contractuales de protección equivalentes.\n\n" +
-        "Puedes conocer, actualizar, rectificar y solicitar la supresión de tus datos desde tu bóveda.";
+        "Tus derechos: como titular puedes conocer, actualizar, rectificar y solicitar la supresión de tus datos, revocar esta " +
+        "autorización y presentar reclamos, desde tu bóveda o por los canales que cada empresa te indique.";
 }
 
 /// <summary>Textos legales versionados: aviso de la plataforma y autorización/términos de cada empresa.</summary>
@@ -127,7 +132,7 @@ public static class TextosLegalesEndpoints
 }
 
 /// <summary>
-/// Al arrancar, siembra la versión 1 del aviso de la plataforma si no existe (texto provisional). Si el esquema aún no
+/// Al arrancar, siembra la versión 1 del aviso de la plataforma si no existe (texto de ejemplo). Si el esquema aún no
 /// está creado (entornos sin creación automática), solo lo advierte: se siembra en el siguiente arranque.
 /// </summary>
 public sealed class SembradoDeTextosLegales(IDocumentStore store, TimeProvider reloj, ILogger<SembradoDeTextosLegales> logger) : IHostedService
@@ -140,11 +145,11 @@ public sealed class SembradoDeTextosLegales(IDocumentStore store, TimeProvider r
             if (await TextosLegales.VigenteAsync(sesion, TipoTextoLegal.AvisoPlataforma, null, cancellationToken) is not null)
                 return;
 
-            var aviso = TextoLegal.Publicar(TipoTextoLegal.AvisoPlataforma, null, null, TextosLegales.AvisoPlataformaProvisional, null,
+            var aviso = TextoLegal.Publicar(TipoTextoLegal.AvisoPlataforma, null, null, TextosLegales.AvisoPlataformaInicial, null,
                 "sistema-siembra", reloj.GetUtcNow());
             sesion.Insert(aviso);
             await sesion.SaveChangesAsync(cancellationToken);
-            logger.LogWarning("Se sembró el aviso de la plataforma v1 con texto PROVISIONAL; Legal debe publicar el definitivo.");
+            logger.LogInformation("Se sembró el aviso de la plataforma v1 con el texto de ejemplo; puede reemplazarse publicando una versión nueva.");
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
