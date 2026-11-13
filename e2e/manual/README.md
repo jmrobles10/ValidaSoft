@@ -38,6 +38,7 @@ E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer tercero    
 
 pnpm manual          # genera salida/manual/ (HTML) y docs/manual/ (Markdown) con lo que haya en salida/manual-recorridos/
 pnpm manual:todo     # recorrer + generar
+pnpm manual --incrustar --salida salida/manual-publicable   # sitio para publicar: cada pantallazo va dentro de su página (data URI), sin Markdown; ~250 archivos y ~55 MB
 ```
 
 - **Tu puerto y tu base** (`E2E_PUERTO`, `E2E_BASE_DATOS`, letras minúsculas y guion bajo) son obligatorios si hay otras personas corriendo pruebas: no uses la
@@ -46,6 +47,7 @@ pnpm manual:todo     # recorrer + generar
 - **Para iterar rápido**, deja la API corriendo aparte y corre los recorridos con las mismas variables (Playwright la reutiliza):
   `cd e2e && E2E_AISLADO=1 E2E_PUERTO=<p> E2E_BASE_DATOS=<b> node soporte/api.mjs` (en otra terminal).
 - **Los nombres sin guion son exactos** (`recorrer.mjs`): `pnpm manual:recorrer registrar-consulta` no corre un recorrido que solo contenga ese texto; si el nombre no existe, avisa con los parecidos. Un nombre de archivo que se repite en varios dominios corre en todos y lo avisa. Los demás filtros de Playwright (`--grep`, `--workers`, `--repeat-each`, `--timeout`…) pasan tal cual.
+- **Los pantallazos del sitio salen en WebP** (calidad 62, `--calidad N`; `--png` los deja como salen): con PNG el sitio pesa ~100 MB y tiene más de mil archivos. Un sitio publicado como Artifact admite 255 archivos por publicación y 511 en total, así que para publicarlo se usa `--incrustar` (254 archivos, ~54 MB). El Chromium de Playwright hace la conversión.
 - Un recorrido que termina bien reescribe su carpeta `salida/manual-recorridos/<dominio>/<flujo>/`. Si falla, no deja manifiesto y el generador lo omite.
 - Para ver por qué falló: la terminal muestra el paso y el locator; `e2e/test-results-manual/<prueba>/test-failed-1.png` es el pantallazo del fallo
   (`error-context.md` trae el árbol accesible).

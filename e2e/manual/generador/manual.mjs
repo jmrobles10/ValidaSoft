@@ -9,6 +9,7 @@
 // Guías:    e2e/manual/guias/*.md (arquitectura, flujo de punta a punta, configuración, integración) → salida/manual/g/ y docs/manual/guias/
 // Opciones: --solo-api · --sin-api · --recorridos <carpeta> · --salida <carpeta> · --docs <carpeta>
 //           --png (deja los pantallazos en PNG, sin comprimir) · --calidad <1-100> (WebP; 62 por omisión)
+//           --incrustar (sitio publicable: cada pantallazo va dentro de su página como data URI; sin carpeta img, sin Markdown y con menos de 255 archivos)
 import { copyFileSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,15 +25,16 @@ const aqui = dirname(fileURLToPath(import.meta.url));
 const RAIZ = resolve(aqui, '..', '..', '..');
 
 function opciones(argv) {
-  const o = { soloApi: false, sinApi: false, png: false, calidad: 62 };
+  const o = { soloApi: false, sinApi: false, png: false, incrustar: false, calidad: 62 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--solo-api') o.soloApi = true;
     else if (a === '--sin-api') o.sinApi = true;
     else if (a === '--png') o.png = true;
+    else if (a === '--incrustar') o.incrustar = true;
     else if (a === '--calidad') o.calidad = Math.min(100, Math.max(1, Number(argv[++i])));
     else if (['--recorridos', '--salida', '--docs'].includes(a)) o[a.slice(2)] = resolve(argv[++i] ?? '');
-    else throw new Error(`Opción desconocida: ${a}. Usa --solo-api, --sin-api, --png, --calidad <1-100>, --recorridos <carpeta>, --salida <carpeta> o --docs <carpeta>.`);
+    else throw new Error(`Opción desconocida: ${a}. Usa --solo-api, --sin-api, --png, --incrustar, --calidad <1-100>, --recorridos <carpeta>, --salida <carpeta> o --docs <carpeta>.`);
   }
   return o;
 }
@@ -85,13 +87,13 @@ async function main() {
   // ---- Sitio HTML ----
   rmSync(carpetaSitio, { recursive: true, force: true });
   // Los pantallazos se comprimen a WebP con el Chromium de Playwright (el sitio completo cabe así en una publicación de 64 MB); `--png` los deja como salen.
+  if (o.incrustar && o.png) throw new Error('--incrustar necesita los pantallazos en WebP: no lo combines con --png.');
   const conversor = o.png || o.soloApi || recorridos.length === 0 ? null : await abrirConversor(RAIZ, { calidad: o.calidad });
   const extensionDeImagen = conversor ? '.webp' : '';
   const sitio = construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints: modeloApi?.total ?? 0, seccionesDeGuias: lecturaDeGuias.secciones, extensionDeImagen });
   const guiasHtml = construirSitioDeGuias(lecturaDeGuias, { recorridos, generado });
   for (const alerta of guiasHtml.alertas) console.warn(`Aviso (guías): ${alerta}`);
   const api = modeloApi ? htmlDeApi(modeloApi, generado) : { paginas: [], indice: [] };
-  for (const p of [...sitio.paginas, ...guiasHtml.paginas, ...api.paginas]) escribir(join(carpetaSitio, p.ruta), p.html);
   let bytesDeImagenes = 0;
   const pendientes = [...sitio.imagenes];
   const trabajador = async () => {
@@ -110,6 +112,14 @@ async function main() {
   };
   await Promise.all(Array.from({ length: conversor ? 4 : 1 }, trabajador));
   await conversor?.cerrar();
+  // Las páginas se escriben después de comprimir las imágenes: con --incrustar cada pantallazo viaja dentro de su página (data URI) y la carpeta img desaparece. Un sitio
+  // publicado como Artifact admite hasta 255 archivos por publicación y 511 en total; con las imágenes sueltas serían más de mil.
+  const incrustar = (html) =>
+    html.replace(/(src|data-zoom)="(?:\.\.\/)+(img\/[^"]+\.webp)"/g, (_, atributo, ruta) =>
+      atributo === 'data-zoom' ? 'data-zoom=""' : `src="data:image/webp;base64,${readFileSync(join(carpetaSitio, ruta)).toString('base64')}"`,
+    );
+  for (const p of [...sitio.paginas, ...guiasHtml.paginas, ...api.paginas]) escribir(join(carpetaSitio, p.ruta), o.incrustar && conversor ? incrustar(p.html) : p.html);
+  if (o.incrustar && conversor) rmSync(join(carpetaSitio, 'img'), { recursive: true, force: true });
   mkdirSync(join(carpetaSitio, 'assets'), { recursive: true });
   escribir(join(carpetaSitio, 'assets', 'manual.css'), `${readFileSync(join(aqui, 'estilos.css'), 'utf8')}
 ${cssDeDiagramas({ sitio: true })}
@@ -119,7 +129,7 @@ ${cssDeDiagramas({ sitio: true })}
 
   // ---- Markdown de los recorridos (solo los que se recorrieron; los demás se conservan) ----
   const carpetaImagenes = join(carpetaSitio, 'img');
-  if (!o.soloApi) {
+  if (!o.soloApi && !o.incrustar) {
     const ctx = crearContexto(recorridos, catalogo);
     for (const r of recorridos) {
       const texto = markdownDeRecorrido(r, { dominio: ctx.dominio(r.dominio), carpetaDocs, carpetaImagenes, porId: ctx.porId, extensionDeImagen });
@@ -130,8 +140,8 @@ ${cssDeDiagramas({ sitio: true })}
   }
 
   // ---- Markdown de las guías (se reescribe completo: un archivo que ya no existe en la fuente no debe sobrevivir) ----
-  rmSync(join(carpetaDocs, 'guias'), { recursive: true, force: true });
-  for (const a of archivosDeGuias(lecturaDeGuias, {
+  if (!o.incrustar) rmSync(join(carpetaDocs, 'guias'), { recursive: true, force: true });
+  for (const a of o.incrustar ? [] : archivosDeGuias(lecturaDeGuias, {
     raizDelRepositorio: RAIZ,
     carpetaGuias: join(carpetaDocs, 'guias'),
     carpetaDocs,
@@ -140,7 +150,7 @@ ${cssDeDiagramas({ sitio: true })}
     escribir(join(carpetaDocs, 'guias', a.ruta), a.texto);
 
   // ---- Markdown de la API ----
-  if (modeloApi) {
+  if (modeloApi && !o.incrustar) {
     rmSync(join(carpetaDocs, 'api'), { recursive: true, force: true });
     for (const a of markdownDeApi(modeloApi)) escribir(join(carpetaDocs, 'api', a.ruta), a.texto);
   }

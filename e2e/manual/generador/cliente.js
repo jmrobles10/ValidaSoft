@@ -173,7 +173,9 @@
       var origen = ev.target instanceof Element ? ev.target.closest('[data-zoom]') : null;
       if (!origen) return;
       ev.preventDefault();
-      imagenVisor.src = origen.getAttribute('data-zoom');
+      // Con el sitio incrustado el pantallazo vive en la propia imagen de la página (data-zoom va vacío para no duplicar los bytes).
+      var imagenOrigen = origen.querySelector('img');
+      imagenVisor.src = origen.getAttribute('data-zoom') || (imagenOrigen ? imagenOrigen.currentSrc || imagenOrigen.src : '');
       imagenVisor.alt = origen.getAttribute('data-alt') || '';
       pie.textContent = origen.getAttribute('data-alt') || '';
       visor.showModal();
