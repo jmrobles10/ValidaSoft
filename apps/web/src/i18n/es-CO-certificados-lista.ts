@@ -1,4 +1,4 @@
-/** Textos es-CO de la lista de certificados de la empresa (CE-11); se integran en `es-CO.ts` como `certificados.lista`. */
+/** Textos es-CO de la lista de certificados de la empresa (CE-13); se integran en `es-CO.ts` como `certificados.lista`. */
 
 export const certificadosLista = {
   titulo: 'Certificados',

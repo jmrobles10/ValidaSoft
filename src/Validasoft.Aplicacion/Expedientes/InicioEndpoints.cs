@@ -14,7 +14,7 @@ using Wolverine.Http;
 namespace Validasoft.Aplicacion.Expedientes;
 
 /// <summary>
-/// Inicio de la empresa activa (IN-1, IN-2, docs/06 <c>/inicio</c>): lo que le toca a quien consulta y los indicadores de
+/// Inicio de la empresa activa (INI-1, INI-2, docs/06 <c>/inicio</c>): lo que le toca a quien consulta y los indicadores de
 /// la empresa. Se calculan al consultar sobre la bandeja, los vínculos, los expedientes y los certificados de la empresa
 /// (aún no son las proyecciones <c>KpisEmpresa</c>/<c>MisPendientes</c> de docs/03 §14).
 /// </summary>

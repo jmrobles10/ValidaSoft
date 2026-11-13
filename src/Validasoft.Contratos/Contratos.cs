@@ -502,13 +502,13 @@ public sealed record RecordarVencimientosDto(IReadOnlyList<VencimientoARecordarD
 /// <summary><see cref="Omitidos"/>: ya se recordaron hoy o el vínculo no tiene correo.</summary>
 public sealed record RecordatorioEnviadoDto(int Correos, int Documentos, int Omitidos);
 
-// ---------- Inicio de la empresa (IN-1, IN-2) ----------
+// ---------- Inicio de la empresa (INI-1, INI-2) ----------
 
 /// <summary>Lo que espera a un área: expedientes en revisión con su decisión pendiente y cuántos días lleva el más antiguo.</summary>
 public sealed record PendientesDeAreaDto(Guid AreaId, string Codigo, string Nombre, int Cantidad, int MasAntiguoDias);
 
 /// <summary>
-/// Lo que le toca a quien consulta en la empresa activa (IN-1, docs/03 §14 <c>MisPendientes</c>): por cada área suya (todas
+/// Lo que le toca a quien consulta en la empresa activa (INI-1, docs/03 §14 <c>MisPendientes</c>): por cada área suya (todas
 /// para una integración), las revalidaciones de sus áreas, las cuentas por aprobar si puede aprobarlas, las aperturas
 /// pendientes si administra expedientes y los documentos por vencer o vencidos en 30 días.
 /// </summary>
@@ -516,7 +516,7 @@ public sealed record MisPendientesDto(IReadOnlyList<PendientesDeAreaDto> PorArea
     int CuentasPorAprobar, int AperturasPendientes, int DocumentosPorVencer, int DocumentosVencidos);
 
 /// <summary>
-/// Indicadores de la empresa activa (IN-2). Los de flujo cuentan expedientes cerrados en los últimos <see cref="Dias"/>
+/// Indicadores de la empresa activa (INI-2). Los de flujo cuentan expedientes cerrados en los últimos <see cref="Dias"/>
 /// días; los de estado son la foto de hoy. Tiempos en días corridos, de la apertura al cierre aprobado.
 /// <see cref="VinculosEnRevision"/> (VR-1): vínculos con una actualización abierta; no cuentan en <see cref="VinculosActivos"/>,
 /// <see cref="VinculosPorVencer"/> ni <see cref="VinculosVencidos"/> (cada vínculo está en una sola cifra, la misma que ve en su lista).

@@ -7,7 +7,7 @@ import { Indicadores } from './Indicadores';
 import { LoQueTeToca } from './LoQueTeToca';
 
 /**
- * Inicio de la empresa (IN-1, IN-2): primero lo que le toca a quien entra, con enlace a cada pantalla; debajo, los
+ * Inicio de la empresa (INI-1, INI-2): primero lo que le toca a quien entra, con enlace a cada pantalla; debajo, los
  * indicadores de la empresa. Es la primera pantalla para quien lee expedientes.
  */
 export function PaginaInicio() {

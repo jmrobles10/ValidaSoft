@@ -5,7 +5,7 @@ import { abrirDesdeBandeja, aprobarArea, irASeccion } from '../soporte/empresa';
 import { completarInvitacion } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST } from '../soporte/semilla';
 
-/** Lista de certificados de la empresa (CE-11). */
+/** Lista de certificados de la empresa (CE-13). */
 
 const RUT = 'Registro Único Tributario';
 

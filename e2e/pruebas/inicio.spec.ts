@@ -4,7 +4,7 @@ import { abrirEmbebido } from '../soporte/embebido';
 import { completarInvitacion } from '../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero } from '../soporte/semilla';
 
-/** Inicio de la empresa (IN-1, IN-2): lo que le toca a cada revisor y los indicadores. */
+/** Inicio de la empresa (INI-1, INI-2): lo que le toca a cada revisor y los indicadores. */
 
 const RUT = 'Registro Único Tributario';
 const CAMARA = 'Certificado de existencia y representación legal';
