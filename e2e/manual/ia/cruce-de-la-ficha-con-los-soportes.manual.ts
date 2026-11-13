@@ -5,6 +5,7 @@ import { llenarGeneralJuridica } from '../../soporte/ficha';
 import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -23,7 +24,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CRUCE', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CRUCE', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }]);
     const cliente = nuevoTercero('Aceros del Cruce S.A.S.');
     const invitacion = await invitar(e, e.sur, cliente, 'CLIENTE');
 

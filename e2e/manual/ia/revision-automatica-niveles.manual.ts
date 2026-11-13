@@ -2,6 +2,7 @@ import { llamar } from '../../soporte/api';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { activarIa, crearEscenario, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -20,7 +21,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_NIVELES', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_NIVELES', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }]);
 
     const paginaAna = await (await browser.newContext()).newPage();
     const ana = await abrirEmbebido(paginaAna, e, e.ana, e.sur, 'revision-automatica');

@@ -5,6 +5,7 @@ import { abrirDesdeBandeja } from '../../soporte/empresa';
 import { completarInvitacion, completarInvitacionYEsperarRevisionOAprobacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -23,7 +24,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur, 1);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CUPO', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CUPO', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }]);
     await llamar('PUT', '/api/v1/configuracion/revision-automatica', {
       llave: e.admin,
       empresa: e.sur.id,
@@ -33,7 +34,7 @@ recorrido(
         porcentajeMuestreo: 0,
         topeMensualAprobaciones: null,
         tiposAutorizados: ['RUT'],
-        areasAutorizadas: [e.sur.areas.revision!.id],
+        areasAutorizadas: [areaDe(e.sur, 'revision').id],
         esperaIaMinutos: 10,
       },
     });

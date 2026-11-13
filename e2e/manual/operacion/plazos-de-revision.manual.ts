@@ -16,7 +16,7 @@ recorrido(
     precondiciones: ['Un grupo con Constructora Norte, con las áreas Compras y Cumplimiento, y un proveedor que ya entregó sus documentos y quedó en revisión.'],
     relacionados: ['operacion/delegacion-de-revision', 'revision/aprobar-un-area'],
   },
-  async ({ page, browser }) => {
+  async ({ browser }) => {
     const e = await crearEscenario();
     const paginaAna = await (await browser.newContext()).newPage();
     const ana = await abrirEmbebido(paginaAna, e, e.ana, e.norte, 'plazos-de-revision');
@@ -68,8 +68,9 @@ recorrido(
       llave: e.admin,
       empresa: e.norte.id,
     });
-    const compras = expedientes.datos[0]!.etapas.flatMap((x) => x.areas).find((a) => a.codigo === 'COMPRAS' || a.codigo === 'compras');
-    const vence = new Date(compras!.slaVence!);
+    const compras = expedientes.datos[0]?.etapas.flatMap((x) => x.areas).find((a) => a.codigo === 'COMPRAS' || a.codigo === 'compras');
+    if (!compras?.slaVence) throw new Error('El expediente no trae el plazo de Compras.');
+    const vence = new Date(compras.slaVence);
     const inicio = new Date(vence.getTime() - 10 * 3600 * 1000);
     const aviso = await llamar<{ avisos: number }>('POST', '/api/v1/plataforma/sla/revisar', {
       llave: CLAVE_PLATAFORMA,

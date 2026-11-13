@@ -5,6 +5,7 @@ import { abrirDesdeBandeja, regionDeArea } from '../../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -24,7 +25,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_ESC', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { tipoDocumento: 'CERTIFICACION_BANCARIA' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_ESC', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { tipoDocumento: 'CERTIFICACION_BANCARIA' }]);
     await llamar('PUT', '/api/v1/configuracion/revision-automatica', { llave: e.admin, empresa: e.sur.id, cuerpo: { nivel: 'Asistido' } });
 
     const tercero = nuevoTercero('Aceros Escalados S.A.S.');

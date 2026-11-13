@@ -4,6 +4,7 @@ import { abrirDesdeBandeja } from '../../soporte/empresa';
 import { completarInvitacion } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -20,7 +21,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_ANALISIS', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_ANALISIS', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }]);
     const cliente = nuevoTercero('Aceros Analizados S.A.S.');
     const paginaCliente = await (await browser.newContext()).newPage();
     await completarInvitacion(paginaCliente, await invitar(e, e.sur, cliente, 'CLIENTE'), [

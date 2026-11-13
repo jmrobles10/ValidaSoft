@@ -7,6 +7,7 @@ import { llenarGeneralJuridica } from '../../soporte/ficha';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
 import { crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RAZON_SOCIAL = 'Aceros de la Campaña S.A.S.';
 
@@ -24,7 +25,7 @@ recorrido(
   },
   async ({ browser }) => {
     const e = await crearEscenario();
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CAMPANIA', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }], {
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_CAMPANIA', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { seccion: 'FICHA_GENERAL' }], {
       dias: 90,
       diasAviso: [30, 5],
       diasGracia: 3,

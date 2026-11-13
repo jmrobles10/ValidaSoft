@@ -18,7 +18,7 @@ recorrido(
     ],
     relacionados: ['operacion/recordatorio-automatico-por-flujo', 'operacion/invitacion-por-lotes'],
   },
-  async ({ page, browser }) => {
+  async ({ browser }) => {
     const e = await crearEscenario();
     const invitacion = await invitar(e, e.norte, nuevoTercero('Plazo Vencido S.A.S.'));
     const tercero = await (await browser.newContext()).newPage();

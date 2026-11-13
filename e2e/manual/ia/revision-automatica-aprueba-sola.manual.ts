@@ -4,6 +4,7 @@ import { abrirEmbebido } from '../../soporte/embebido';
 import { completarInvitacionYEsperarRevisionOAprobacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -23,7 +24,7 @@ recorrido(
   async ({ browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_APRUEBA', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_APRUEBA', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }]);
     await llamar('PUT', '/api/v1/configuracion/revision-automatica', {
       llave: e.admin,
       empresa: e.sur.id,
@@ -33,7 +34,7 @@ recorrido(
         porcentajeMuestreo: 0,
         topeMensualAprobaciones: null,
         tiposAutorizados: ['RUT'],
-        areasAutorizadas: [e.sur.areas.revision!.id],
+        areasAutorizadas: [areaDe(e.sur, 'revision').id],
         esperaIaMinutos: 10,
       },
     });
@@ -46,7 +47,7 @@ recorrido(
     ]);
     await esperarEstadoDelTercero(paginaCliente, 'Aprobado');
     const expedientes = await llamar<{ datos: { id: string }[] }>('GET', '/api/v1/expedientes', { llave: e.admin, empresa: e.sur.id });
-    const expedienteId = expedientes.datos[0]!.id;
+    const expedienteId = expedientes.datos[0]?.id ?? '';
 
     const paginaSofia = await (await browser.newContext()).newPage();
     const sofia = await abrirEmbebido(paginaSofia, e, e.sofia, e.sur, `expedientes/${expedienteId}`);
