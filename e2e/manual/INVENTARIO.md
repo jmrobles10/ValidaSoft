@@ -159,27 +159,27 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `configuracion/tipo-de-documento-y-flujo` ✅ | Administrador de empresa | Grupo base | Tipo de documento propio (formulario, archivo, vigencia) y flujo publicado por defecto |
-| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☐ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
-| `configuracion/tipo-de-documento-de-la-plataforma` ☐ | Administrador de empresa | Grupo base | Partir de un documento de la plataforma (RUT, Cámara), techos de formato y peso, error por regla más laxa, ámbito compartido |
-| `configuracion/tipos-de-vinculo` ☐ | Administrador de empresa | Grupo base | Crear un tipo, «Exige código en el enlace», «Cuenta designada», desactivar |
-| `configuracion/flujo-etapas-y-areas-en-paralelo` ☐ | Administrador de empresa | Áreas Compras y Cumplimiento (`crearEscenario`) | Dos etapas, dos áreas en paralelo, aprobadores y SLA, «Puede rechazar» y «Automática» |
-| `configuracion/flujo-condiciones-por-tipo-de-persona` ☐ | Administrador de empresa | Tipos RUT, CEDULA y CAMARA (spec `condiciones`) | «Se pide a»: todos, solo jurídicas, solo naturales, condición personalizada |
-| `configuracion/flujo-secciones-de-la-ficha` ☐ | Administrador de empresa | Grupo base | Agregar secciones de «Mi información» como requisito, periodos de la financiera, vigencia y días de revalidación |
-| `configuracion/flujo-plazo-reintento-y-recordatorios` ☐ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
-| `configuracion/flujo-vigencia-del-vinculo` ☐ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
-| `configuracion/flujo-verificaciones-de-cumplimiento` ☐ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
+| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☑ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
+| `configuracion/tipo-de-documento-de-la-plataforma` ☑ | Administrador de empresa | Grupo base | Partir de un documento de la plataforma (RUT, Cámara), techos de formato y peso, error por regla más laxa, ámbito compartido |
+| `configuracion/tipos-de-vinculo` ☑ | Administrador de empresa | Grupo base | Crear un tipo, «Exige código en el enlace», «Cuenta designada», desactivar |
+| `configuracion/flujo-etapas-y-areas-en-paralelo` ☑ | Administrador de empresa | Áreas Compras y Cumplimiento (`crearEscenario`) | Dos etapas, dos áreas en paralelo, aprobadores y SLA, «Puede rechazar» y «Automática» |
+| `configuracion/flujo-condiciones-por-tipo-de-persona` ☑ | Administrador de empresa | Tipos RUT, CEDULA y CAMARA (spec `condiciones`) | «Se pide a»: todos, solo jurídicas, solo naturales, condición personalizada |
+| `configuracion/flujo-secciones-de-la-ficha` ☑ | Administrador de empresa | Grupo base | Agregar secciones de «Mi información» como requisito, periodos de la financiera, vigencia y días de revalidación |
+| `configuracion/flujo-plazo-reintento-y-recordatorios` ☑ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
+| `configuracion/flujo-vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
+| `configuracion/flujo-verificaciones-de-cumplimiento` ☑ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
 | `configuracion/flujo-versiones-y-borradores` ☐ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
-| `configuracion/flujo-por-defecto` ☐ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
-| `configuracion/areas-y-miembros` ☐ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
+| `configuracion/flujo-por-defecto` ☑ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
+| `configuracion/areas-y-miembros` ☑ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
 | `configuracion/usuarios-y-roles` ☐ | Administrador de empresa | Sistema integrado con identidades | Crear una persona, roles por empresa o de todo el grupo (Administrador, Revisor, Oficial, Auditor), identidad en el sistema, desactivar |
-| `configuracion/empresas-y-textos-legales` ☐ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
-| `configuracion/datos-y-marca` ☐ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
-| `configuracion/plantillas-de-correo` ☐ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
-| `configuracion/dominio-de-correo` ☐ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
-| `configuracion/motivos` ☐ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
-| `configuracion/plan-del-grupo` ☐ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
-| `configuracion/accesos-de-soporte` ☐ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
-| `configuracion/permisos-por-rol` ☐ | Administrador de empresa | Una persona por rol (Administrador, Revisor, Oficial, Auditor) | Qué secciones ve cada rol, «sin permiso», botones que desaparecen |
+| `configuracion/empresas-y-textos-legales` ☑ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
+| `configuracion/datos-y-marca` ☑ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
+| `configuracion/plantillas-de-correo` ☑ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
+| `configuracion/dominio-de-correo` ☑ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
+| `configuracion/motivos` ☑ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
+| `configuracion/plan-del-grupo` ☑ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
+| `configuracion/accesos-de-soporte` ☑ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
+| `configuracion/permisos-por-rol` ☑ | Administrador de empresa | Una persona por rol (Administrador, Revisor, Oficial, Auditor) | Qué secciones ve cada rol, «sin permiso», botones que desaparecen |
 
 ### operacion (10)
 
