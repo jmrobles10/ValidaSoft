@@ -1096,6 +1096,19 @@ Cierra cinco pendientes pequeños que quedaban abiertos: HI-5 (2), el pulido del
 
 - **VR-10 (1)**: resuelta en PP-9. **G-2**: implementada (PP-4…PP-8). **HI-5 (2)**: resuelta en PP-1 (HI-5 (1) sigue igual: una novedad que aparece sola entre dos consultas solo existe con un proveedor real; (3) la cerró VR-1).
 
+## 5-octoquinquagies. El CI sin la e2e: pruebas de punta a punta bajo demanda (2026-11-12, E2E)
+
+Producto (2026-11-12): «el CI no necesita la e2e; córrela solo cuando sea estrictamente necesario». La suite de Playwright (106 pruebas en la medición del 2026-11-11) tarda ≈ 17 min en la réplica local, con un tope de 55 min en el runner: 17 de los ≈ 43 min de la puerta local antes de subir. Origen **E** = decisión de Producto, **A** = Arquitectura (cómo se aplica; puede objetarse con una fila nueva). Descrito en docs/04 §11, docs/13 §10, `infra/ci-local/README.md` y `e2e/README.md`.
+
+| Id | Tema | Decisión | Origen |
+|---|---|---|---|
+| E2E-1 | La e2e sale del CI y corre bajo demanda | `.github/workflows/ci.yml` (push y pull request) queda con **backend, frontend e imagen Docker**; ningún trabajo depende de la e2e. El trabajo «Pruebas de punta a punta (Playwright)» pasa a `.github/workflows/e2e.yml`, que **solo** se dispara con `workflow_dispatch` (nunca en push, pull request ni programado). | E |
+| E2E-2 | Cuándo se corre | Solo cuando hace falta: (1) cuando un cambio **toca la conexión entre las piezas** —arranque de la API y de los hosts, autenticación e ingreso, configuración del stack (compose, `appsettings`, variables de entorno, el empaquetado de las apps)—, porque eso solo se ve con las piezas reales juntas; y (2) **antes de una entrega**. No se corre para validar una regla de negocio, de pantalla o de datos. | E |
+| E2E-3 | Qué se prueba dónde | Las reglas se prueban con **pruebas de dominio, de integración (Testcontainers) y de Vitest**, que siguen en cada push y pull request. Una regla nueva no se da por probada solo con un caso de la e2e. Los archivos de `e2e/pruebas` no se borran ni se desactivan: siguen disponibles para el momento en que se corran. | A |
+| E2E-4 | El flujo `e2e.yml` | Conserva **exactamente** el contenedor de Playwright (imagen oficial de la versión de `e2e/package.json`, `--network host`), los servicios (PostgreSQL, Mailpit y MinIO con compose), la API levantada con `e2e/soporte/api.mjs` y los pasos de antes. Agrega una entrada opcional `grep` (filtro por título, `playwright test --grep`; vacía corre toda la suite) que llega por una variable de entorno y nunca dentro del texto del comando (sin inyección de comandos). Dispara a mano desde Actions → `e2e` → *Run workflow*. | A |
+| E2E-5 | La réplica local y su prueba de sincronía | `infra/ci-local` lee los dos flujos. Por omisión corre **backend y frontend** (lo que corre `ci.yml`, sin la imagen); la e2e solo con `--solo e2e` (filtro: `--e2e-args "--grep texto"`). `sincronia.test.mjs` vigila que la e2e siga fuera de `ci.yml` (un trabajo `e2e` allí, o un `needs` que la espere, falla) y que `e2e.yml` solo tenga `workflow_dispatch`. Matiza CI-1/CI-2: la «suite completa» de la puerta local antes de subir (docs/13 §10) es backend y frontend (≈ 26 min en vez de ≈ 43 min); la e2e entra a la puerta cuando el cambio toca la conexión entre las piezas (E2E-2). | A |
+| E2E-6 | Riesgo y cómo se acota | Una regresión de conexión entre piezas ya no se ve en cada push. Se acota con E2E-2 (la corrida es obligatoria cuando el cambio toca esa conexión y antes de cada entrega) y con que las pruebas de integración siguen levantando la API (`TestServer`) contra PostgreSQL y MinIO reales con Testcontainers. Si en la práctica se escapan roturas, esta decisión se revisa (por ejemplo, correr la e2e de noche) con una fila nueva. | A |
+
 ## 6. Consecuencias estructurales a propagar
 
 | Decisión | Documentos afectados | Acción |

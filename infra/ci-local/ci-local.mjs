@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Réplica local del CI de Validasoft: corre en contenedores Linux lo mismo que `.github/workflows/ci.yml`.
+// Réplica local del CI de Validasoft: corre en contenedores Linux lo mismo que `.github/workflows/ci.yml` (backend, frontend, imagen) y,
+// con `--solo e2e`, lo de `.github/workflows/e2e.yml` (la e2e corre bajo demanda en GitHub, decisión E2E-1).
 // Se usa desde `ci-local.sh` (Git Bash) o `ci-local.ps1` (PowerShell); el detalle está en infra/ci-local/README.md.
 //
-// Idea: el flujo se LEE (lib/plan.mjs) y cada trabajo corre en un contenedor con la imagen oficial que corresponde a lo que el flujo
+// Idea: los flujos se LEEN (lib/plan.mjs) y cada trabajo corre en un contenedor con la imagen oficial que corresponde a lo que el flujo
 // instala en el runner (SDK de .NET 10.0, Node 22, la imagen de Playwright de la versión exacta de e2e/package.json). Los comandos
 // son los del flujo, tal cual. Solo cambia lo que no puede ser igual en una máquina compartida: los servicios del e2e van en una
 // red Docker propia (sin puertos del host) y cada corrida lleva un identificador propio, así dos agentes pueden correr a la vez.
@@ -25,28 +26,29 @@ const VOLUMEN_CACHE = 'validasoft-cilocal-cache';
 const PREFIJO = 'validasoft-ci';
 const NOMBRE_DEL_ANFITRION = 'host.docker.internal';
 const RUTA_CI = '.github/workflows/ci.yml';
+const RUTA_E2E = '.github/workflows/e2e.yml';
 const RUTA_COMPOSE = 'infra/compose/compose.yaml';
 
-const AYUDA = `Réplica local del CI de Validasoft (ci.yml) en contenedores Linux.
+const AYUDA = `Réplica local del CI de Validasoft (ci.yml y e2e.yml) en contenedores Linux.
 
 Uso: ci-local.sh [opciones]            (Git Bash)
      ci-local.ps1 [opciones]           (PowerShell)
 
-  --solo <trabajo>[,<trabajo>]   backend, frontend, e2e o imagen (por omisión: backend, frontend y e2e)
+  --solo <trabajo>[,<trabajo>]   backend, frontend, e2e o imagen (por omisión: backend y frontend, como ci.yml; la e2e es bajo demanda: --solo e2e)
   --directorio <ruta>            carpeta (worktree) a probar, con sus cambios sin confirmar (por omisión: la del propio script)
   --rama <rama|commit>           prueba lo confirmado en esa rama o commit, sin tocar ninguna carpeta (p. ej. origin/main)
   --salida <ruta>                dónde dejar logs y reportes (por omisión: <temp>/validasoft-ci-local/<id>)
   --paralelo                     corre los trabajos a la vez, como el CI (por omisión: uno tras otro)
-  --e2e-args "<args>"            argumentos extra para «playwright test» (p. ej. pruebas/x.spec.ts); no sirve como puerta de subida
+  --e2e-args "<args>"            argumentos extra para «playwright test» (p. ej. pruebas/x.spec.ts o --grep texto), con --solo e2e
   --cpus <n>                     CPU de cada contenedor de trabajo (por omisión 4, lo del runner de GitHub; 0 = sin límite)
   --testcontainers-host <host>   TESTCONTAINERS_HOST_OVERRIDE del trabajo backend (por omisión host.docker.internal)
   --verboso                      muestra la salida de cada paso en vivo (siempre queda en los logs)
   --conservar                    no borra contenedores ni la copia de trabajo al terminar (para inspeccionar; luego --limpiar)
-  --plan                         muestra qué haría (imágenes y pasos leídos de ci.yml) y sale
+  --plan                         muestra qué haría (imágenes y pasos leídos de ci.yml y e2e.yml) y sale
   --limpiar                      borra restos de corridas que ya no están vivas (contenedores, redes, copias) y sale
   --ayuda                        esto
 
-Salida: 0 todo verde, 1 algún trabajo en rojo, 2 error de uso, de entorno o de sincronía con ci.yml.`;
+Salida: 0 todo verde, 1 algún trabajo en rojo, 2 error de uso, de entorno o de sincronía con ci.yml o e2e.yml.`;
 
 // --- Argumentos ------------------------------------------------------------------------------------------------------
 
@@ -152,10 +154,15 @@ async function resolverObjetivo(op) {
 
 // --- Plan ------------------------------------------------------------------------------------------------------------
 
-async function cargarPlan(objetivo, rutaFlujo) {
+async function cargarPlan(objetivo) {
   const leer = (ruta) => leerDelObjetivo(objetivo, ruta);
+  const leerFlujoDeE2e = () =>
+    leer(RUTA_E2E).catch(() => {
+      throw new Error(`SINCRONÍA con los flujos (ci.yml, e2e.yml): ${objetivo.descripcion} no tiene ${RUTA_E2E} (¿falta rebasar sobre main? la e2e vive en su propio flujo, bajo demanda).`);
+    });
   const archivos = {
-    ci: await leer(rutaFlujo),
+    ci: await leer(RUTA_CI),
+    e2e: await leerFlujoDeE2e(),
     compose: await leer(RUTA_COMPOSE),
     paquete: await leer('package.json'),
     paqueteE2e: await leer('e2e/package.json'),
@@ -163,7 +170,7 @@ async function cargarPlan(objetivo, rutaFlujo) {
   const plan = planificar(archivos);
   for (const t of Object.values(plan.trabajos)) {
     for (const p of t.pasos) {
-      if (p.tipo === 'compose' && p.archivo !== RUTA_COMPOSE) throw new Error(`SINCRONÍA con ci.yml: el flujo usa ${p.archivo} y la réplica espera ${RUTA_COMPOSE}.`);
+      if (p.tipo === 'compose' && p.archivo !== RUTA_COMPOSE) throw new Error(`SINCRONÍA con los flujos (ci.yml, e2e.yml): el flujo usa ${p.archivo} y la réplica espera ${RUTA_COMPOSE}.`);
     }
   }
   return { plan, archivos };
@@ -189,7 +196,7 @@ function describirPlan(plan, trabajos) {
       lineas.push(`   - ${p.nombre}${p.condicion === 'exito' ? '' : ` [${p.condicion}]`}: ${que}`);
     }
   }
-  lineas.push(`playwright: v${plan.playwright}-noble`);
+  if (trabajos.includes('e2e')) lineas.push(`playwright: v${plan.playwright}-noble`);
   return lineas;
 }
 
@@ -292,7 +299,7 @@ class Trabajo {
 
   variablesDeEntorno() {
     const env = {
-      ...this.c.plan.entorno,
+      ...this.t.entorno,
       CI: 'true',
       GITHUB_WORKSPACE: this.ws,
       RUNNER_OS: 'Linux',
@@ -379,7 +386,7 @@ async function pasoCompose(tr, paso) {
 
 async function pasoPlaywright(tr, paso) {
   const bandera = paso.banderas;
-  if (bandera.red !== 'host') throw new Error('SINCRONÍA con ci.yml: el paso de Playwright ya no usa «--network host».');
+  if (bandera.red !== 'host') throw new Error('SINCRONÍA con los flujos (ci.yml, e2e.yml): el paso de Playwright ya no usa «--network host».');
   if (!tr.contenedor) await tr.asegurarContenedor();
   // La versión se calcula con las mismas líneas del flujo (VERSION=…), dentro del contenedor que ya tiene el código y Node.
   let version = String(tr.c.plan.playwright);
@@ -399,7 +406,7 @@ async function pasoPlaywright(tr, paso) {
   // `--network host` del runner -> la red del contenedor de la API: localhost:5090 sigue siendo la API (y los webhooks de la prueba llegan a ella).
   args.push('--network', `container:${tr.contenedor}`);
   for (const v of bandera.volumenes) {
-    if (espacio(v) !== `${tr.ws}:${tr.ws}`) throw new Error(`SINCRONÍA con ci.yml: el volumen «${v}» del paso de Playwright no está replicado.`);
+    if (espacio(v) !== `${tr.ws}:${tr.ws}`) throw new Error(`SINCRONÍA con los flujos (ci.yml, e2e.yml): el volumen «${v}» del paso de Playwright no está replicado.`);
     args.push('-v', `${VOLUMEN_CACHE}:/cache`);
   }
   if (bandera.directorio) args.push('-w', espacio(bandera.directorio));
@@ -452,7 +459,7 @@ async function pasoConstruir(tr, paso, log) {
   return `imagen construida (${etiqueta}) y descartada`;
 }
 
-/** Copia a la carpeta de salida los reportes que ci.yml sube como artefactos (`upload-artifact`), pase lo que pase. */
+/** Copia a la carpeta de salida los reportes que ci.yml y e2e.yml suben como artefactos (`upload-artifact`), pase lo que pase. */
 async function recolectar(tr) {
   if (!tr.contenedor) return;
   for (const p of tr.t.pasos.filter((x) => x.tipo === 'artefactos')) {
@@ -604,7 +611,7 @@ async function principal() {
     return 0;
   }
   const objetivo = await resolverObjetivo(op);
-  const { plan, archivos } = await cargarPlan(objetivo, RUTA_CI);
+  const { plan, archivos } = await cargarPlan(objetivo);
   const trabajos = op.solo.length ? [...new Set(op.solo)] : TRABAJOS_POR_OMISION;
   if (op.plan) {
     escribir(`Origen: ${objetivo.descripcion}`);

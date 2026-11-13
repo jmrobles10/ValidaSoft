@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Réplica local del CI (ci.yml) en contenedores Linux. Entrada para Git Bash; el trabajo lo hace ci-local.mjs.
-#   infra/ci-local/ci-local.sh                      # backend, frontend y e2e sobre esta carpeta
+# Réplica local del CI (ci.yml y, con --solo e2e, e2e.yml) en contenedores Linux. Entrada para Git Bash; el trabajo lo hace ci-local.mjs.
+#   infra/ci-local/ci-local.sh                      # backend y frontend sobre esta carpeta (como ci.yml)
+#   infra/ci-local/ci-local.sh --solo e2e           # la e2e, bajo demanda (e2e.yml)
 #   infra/ci-local/ci-local.sh --solo frontend      # un trabajo
 #   infra/ci-local/ci-local.sh --rama origin/main   # lo confirmado en una rama, sin tocar ninguna carpeta
 #   infra/ci-local/ci-local.sh --ayuda

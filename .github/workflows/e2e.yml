@@ -1,0 +1,106 @@
+# Pruebas de punta a punta (Playwright), BAJO DEMANDA (decisión E2E-1 en docs/decisiones/registro.md). No corre en push ni en pull request:
+# se dispara a mano (Actions -> e2e -> Run workflow), solo cuando de verdad hace falta (un cambio que toque la conexión entre las piezas:
+# arranque, autenticación, configuración del stack; o antes de una entrega). Las reglas se prueban con las pruebas de dominio, de
+# integración y de Vitest que sí corren en ci.yml.
+#   e2e -> Playwright (en su imagen oficial, con los navegadores ya dentro) contra la API que sirve las dos apps, con PostgreSQL, Mailpit y
+#          MinIO reales (e2e/).
+# Entrada opcional `grep`: filtra las pruebas por título (`playwright test --grep`); vacía corre toda la suite.
+name: e2e
+
+on:
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: Filtro opcional por título de prueba (expresión regular de playwright test --grep). Vacío corre toda la suite
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+# Una ejecución nueva sobre la misma rama cancela la anterior.
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  e2e:
+    name: Pruebas de punta a punta (Playwright)
+    runs-on: ubuntu-24.04
+    # Instalar y compilar (≈ 10 min en el runner) + la suite con 2 trabajadores y 1 reintento (ver e2e/playwright.config.ts).
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+
+      # PostgreSQL, Mailpit (correo) y MinIO (archivos) como en desarrollo; la API los usa con appsettings.Development.json.
+      - name: Servicios
+        run: docker compose -f infra/compose/compose.yaml up -d --wait postgres mailpit minio
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar
+        run: pnpm install --frozen-lockfile
+
+      # La API (con las dos apps) corre en el runner, junto a los servicios de arriba: e2e/soporte/api.mjs compila las apps, publica la API y la
+      # sirve en :5090. Queda en segundo plano; el paso espera a que responda (o falle si se detiene).
+      - name: Levantar la API
+        run: |
+          nohup node e2e/soporte/api.mjs > api-e2e.log 2>&1 &
+          echo $! > api-e2e.pid
+          for i in $(seq 1 240); do
+            curl -fs http://localhost:5090/health/ready > /dev/null && exit 0
+            if ! kill -0 "$(cat api-e2e.pid)" 2>/dev/null; then
+              echo "La API se detuvo antes de quedar lista:"
+              tail -n 200 api-e2e.log
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "La API no quedó lista en 20 minutos:"
+          tail -n 200 api-e2e.log
+          exit 1
+
+      # Chromium y sus librerías del sistema vienen en la imagen oficial de Playwright, con la MISMA versión exacta que fija e2e/package.json:
+      # no se descargan ni se instalan en el runner (el paso `playwright install --with-deps` se colgaba ~10 min y fallaba en todas las ramas).
+      # Corre con la red del runner (--network host): la API en :5090 y Mailpit en :8025 son los mismos de siempre. E2E_BASE_URL hace que
+      # playwright.config.ts use esa API en vez de levantar otra. El repositorio se monta en la misma ruta, así los enlaces de pnpm siguen valiendo.
+      # El filtro de la entrada `grep` llega por una variable de entorno (nunca dentro del texto del comando) y se pasa como `--grep`.
+      - name: Probar (Playwright en su imagen oficial)
+        env:
+          E2E_GREP: ${{ inputs.grep }}
+        run: |
+          VERSION="$(node -p "require('./e2e/package.json').devDependencies['@playwright/test'].replace(/^[^0-9]*/, '')")"
+          echo "Imagen de Playwright: v${VERSION}-noble"
+          FILTRO=()
+          if [ -n "${E2E_GREP}" ]; then FILTRO=(--grep "${E2E_GREP}"); fi
+          docker run --rm --init --ipc=host --network host \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$GITHUB_WORKSPACE/e2e" \
+            -e CI=true -e E2E_BASE_URL=http://localhost:5090 -e E2E_MAILPIT=http://localhost:8025 \
+            "mcr.microsoft.com/playwright:v${VERSION}-noble" \
+            ./node_modules/.bin/playwright test "${FILTRO[@]}"
+
+      - name: Publicar informe y trazas
+        if: ${{ !success() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-informe
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+            api-e2e.log
+          retention-days: 7

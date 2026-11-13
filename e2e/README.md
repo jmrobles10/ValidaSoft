@@ -12,7 +12,9 @@ Con una API ya levantada que sirva las dos apps: `E2E_BASE_URL=http://localhost:
 
 En local las pruebas corren **aisladas** del entorno de desarrollo: base `validasoft_e2e` (se crea sola) y Mailpit propio (perfil `e2e` del compose, bandeja en http://localhost:8026). Así sus invitaciones y códigos no llegan al Mailpit de desarrollo, y la API de desarrollo no toma sus mensajes de la cola. Para usar la base y el Mailpit de desarrollo: `E2E_COMPARTIDO=1`. Para correr dos suites a la vez: otro `E2E_PUERTO` y otra `E2E_BASE_DATOS` (letras minúsculas y guion bajo). En CI no hace falta: el entorno ya es limpio.
 
-Para correr **exactamente lo del CI**, en un contenedor Linux y con los servicios en una red propia (sin tocar ningún puerto de la máquina), usa la réplica local: `infra/ci-local/ci-local.sh --solo e2e` (ver `infra/ci-local/README.md`).
+**La e2e no corre en el CI de cada push ni pull request** (decisión E2E-1, [registro](../docs/decisiones/registro.md)): se corre **bajo demanda**, cuando un cambio toca la conexión entre las piezas (arranque, autenticación, configuración del stack) o antes de una entrega. En GitHub: Actions → `e2e` → *Run workflow* (`.github/workflows/e2e.yml`, con el filtro opcional `grep` por título de prueba). Las reglas se prueban con las pruebas de dominio, de integración y de Vitest, que sí corren en `ci.yml`.
+
+Para correr **exactamente lo de ese flujo**, en un contenedor Linux y con los servicios en una red propia (sin tocar ningún puerto de la máquina), usa la réplica local: `infra/ci-local/ci-local.sh --solo e2e` (ver `infra/ci-local/README.md`; el filtro: `--e2e-args "--grep texto"`).
 
 ## Cómo se arma cada caso
 
