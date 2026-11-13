@@ -38,7 +38,7 @@ recorrido(
         'Cada sesión muestra dónde y cuándo se abrió, para que reconozcas la que no es tuya.',
       resaltar: page.getByText('Esta sesión', { exact: true }),
       variantes: [
-        { cuando: 'Entraste desde un sistema integrado', entonces: 'Mi cuenta te indica que tu acceso se gestiona en ese sistema, y no ofrece cambiar el método de ingreso.' },
+        { cuando: 'Entraste desde un sistema integrado', entonces: 'Mi cuenta te indica que tu acceso se gestiona en ese sistema y no muestra cómo cambiarlo.' },
       ],
     });
 
