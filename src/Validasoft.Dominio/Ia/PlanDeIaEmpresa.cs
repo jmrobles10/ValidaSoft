@@ -122,13 +122,19 @@ public sealed partial class PlanDeIaEmpresa
         ActualizadoEn = ahora;
     }
 
-    /// <summary>Forma de una API key de OpenAI: 20 a 512 caracteres sin espacios. Devuelve la llave recortada o 422 <c>api-key-invalida</c>.</summary>
+    /// <summary>
+    /// Forma de una API key de OpenAI: empieza por <c>sk-</c> (también las de proyecto <c>sk-proj-</c>, de cuenta de servicio
+    /// <c>sk-svcacct-</c> y las anteriores), solo letras, números, guion y guion bajo, de 20 a 512 caracteres y sin espacios. Es
+    /// una validación de forma, no de vigencia (eso lo hace «Probar llave»). Devuelve la llave recortada o 422 <c>api-key-invalida</c>;
+    /// el mensaje nunca repite lo que se escribió.
+    /// </summary>
     public static string ValidarLlave(string llave)
     {
         var limpia = (llave ?? string.Empty).Trim();
-        if (limpia.Length is < 20 or > 512 || limpia.Any(char.IsWhiteSpace))
+        if (limpia.Length is < 20 or > 512 || !RegexLlave().IsMatch(limpia))
             throw ReglaDeNegocioException.Validacion("api-key-invalida",
-                "La API key de OpenAI no parece válida: debe tener entre 20 y 512 caracteres y no llevar espacios.");
+                "La API key de OpenAI no parece válida: empieza por sk- (también sk-proj- o sk-svcacct-), tiene entre 20 y 512 caracteres, " +
+                "solo letras, números, guiones y guion bajo, y no lleva espacios.");
         return limpia;
     }
 
@@ -145,4 +151,7 @@ public sealed partial class PlanDeIaEmpresa
 
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$")]
     private static partial Regex RegexModelo();
+
+    [GeneratedRegex("^sk-[A-Za-z0-9_-]+$")]
+    private static partial Regex RegexLlave();
 }

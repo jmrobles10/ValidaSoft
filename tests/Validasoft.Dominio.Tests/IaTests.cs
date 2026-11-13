@@ -115,6 +115,8 @@ public class IaTests
     [InlineData(10, -2, "sk-prueba-0123456789abcd", null, null, "tope-adicional-invalido")]
     [InlineData(10, null, "corta", null, null, "api-key-invalida")]
     [InlineData(10, null, "sk-con espacios-0123456789", null, null, "api-key-invalida")]
+    [InlineData(10, null, "pk-prueba-0123456789abcdefgh", null, null, "api-key-invalida")]
+    [InlineData(10, null, "sk-con.puntos.0123456789abcd", null, null, "api-key-invalida")]
     [InlineData(10, null, null, "modelo con espacios", null, "modelo-invalido")]
     [InlineData(10, null, null, null, 1.5, "umbral-confianza-invalido")]
     public void El_plan_valida_sus_valores(int incluidas, int? tope, string? llave, string? modelo, double? umbral, string codigo)
@@ -124,6 +126,31 @@ public class IaTests
         Should.Throw<ReglaDeNegocioException>(() => plan.Actualizar(
                 new CambiosDePlanIa(incluidas, true, tope, llave, modelo, null, umbral is null ? null : (decimal)umbral.Value, true), s => s, Ahora))
             .Codigo.ShouldBe(codigo);
+    }
+
+    [Theory]
+    [InlineData("sk-0123456789abcdefghijklmnopqrstuvwxyz0123456789AB")] // formato anterior
+    [InlineData("sk-proj-AbC123_dEf-456GhI789jKl012mNo345")] // de proyecto (guion y guion bajo)
+    [InlineData("sk-svcacct-AbC123_dEf-456GhI789jKl012mNo345")] // de cuenta de servicio
+    [InlineData("  sk-admin-AbC123_dEf-456GhI789jKl012mNo345  ")] // con espacios alrededor: se recortan
+    public void La_llave_acepta_las_formas_actuales_de_OpenAI_y_la_guarda_recortada(string llave)
+    {
+        PlanDeIaEmpresa.ValidarLlave(llave).ShouldBe(llave.Trim());
+
+        var plan = Plan(10, llave: llave);
+        plan.ApiKeyOpenAiProtegida.ShouldBe("protegida:" + llave.Trim());
+        plan.UltimosCuatroLlave.ShouldBe(llave.Trim()[^4..]);
+    }
+
+    [Fact]
+    public void El_mensaje_de_llave_invalida_no_repite_la_llave_escrita()
+    {
+        const string escrita = "no-es-una-llave-0123456789abcdef";
+
+        var error = Should.Throw<ReglaDeNegocioException>(() => PlanDeIaEmpresa.ValidarLlave(escrita));
+
+        error.Codigo.ShouldBe("api-key-invalida");
+        error.Message.ShouldNotContain(escrita);
     }
 
     // ---------- cupo (IA-3, IA-4) ----------

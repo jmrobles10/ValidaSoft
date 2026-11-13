@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { EncabezadoPagina, Tarjeta } from '../../shared/componentes';
+import { nombreYaDiceGrupo } from './modelo';
 
 function ValorCopiable({ etiqueta, ayuda, valor }: { etiqueta: string; ayuda: string; valor: string }) {
   const { t } = useTranslation();
@@ -46,7 +47,7 @@ export function ResultadoAlta({ alta }: { alta: TenantCreadoDto }) {
   const empresa = alta.empresa;
   return (
     <>
-      <EncabezadoPagina titulo={t('plataforma.alta.listo.titulo', { nombre: alta.tenant.nombre })} subtitulo={alta.tenant.slug} />
+      <EncabezadoPagina titulo={t(nombreYaDiceGrupo(alta.tenant.nombre) ? 'plataforma.alta.listo.tituloConNombreCompleto' : 'plataforma.alta.listo.titulo', { nombre: alta.tenant.nombre })} subtitulo={alta.tenant.slug} />
       <Stack spacing={2}>
         <Alert severity="warning">{t('plataforma.alta.listo.aviso')}</Alert>
         <Tarjeta>

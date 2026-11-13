@@ -64,7 +64,7 @@ Ruta `/plataforma/grupos/{grupo}/empresas/{empresa}/plan-ia` · `PUT …/plan-ia
 | Modelo por defecto y modelo de escalamiento | Modelo del primer análisis y del segundo; solo escala si es distinto del primero. | `gpt-6-luna` y `gpt-6.1-terra` | Letras, números y `. _ : -`, hasta 100 caracteres. |
 | Umbral de confianza | Se escala si la confianza queda bajo el umbral, el documento es ilegible, hay alertas de manipulación o cambia un campo crítico. También es el piso de la confianza mínima de la revisión automática de la empresa. | 0,85 | De 0 a 1. |
 | Plan activo | Inactivo: la empresa no paga análisis y sus documentos se revisan a mano. Pagar requiere plan activo y llave. | Inactivo en la API; la pantalla propone «activo» cuando no hay plan | Sí o no. |
-| API key de OpenAI | Paga los análisis de la empresa. Es de solo escritura: se cifra con la clave maestra y solo vuelve «Configurada · ••••XXXX». | Sin llave | De 20 a 512 caracteres sin espacios; sin valor conserva, vacía quita, un valor reemplaza. |
+| API key de OpenAI | Paga los análisis de la empresa. Es de solo escritura: se cifra con la clave maestra y solo vuelve «Configurada · ••••XXXX». | Sin llave | Empieza por `sk-` (también `sk-proj-` o `sk-svcacct-`), de 20 a 512 caracteres con letras, números, guion y guion bajo, sin espacios; sin valor conserva, vacía quita, un valor reemplaza. |
 | Probar llave | Consulta `GET {UrlBase}/models` sin consumir tokens (15 s). | — | Responde `valida`, `invalida`, `limite`, `sin-llave` o `error`. |
 
 Fuente: `src/Validasoft.Aplicacion/Ia/IaEndpoints.cs`, `src/Validasoft.Dominio/Ia/PlanDeIaEmpresa.cs`, `src/Validasoft.Dominio/Ia/UsoDeIa.cs`.

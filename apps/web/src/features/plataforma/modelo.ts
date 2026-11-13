@@ -93,6 +93,11 @@ export function slugDesdeNombre(nombre: string): string {
     .replace(/-+$/g, '');
 }
 
+/** ¿El nombre ya empieza por «Grupo»? El título «Grupo … creado» no debe repetir la palabra («Grupo Grupo Cumbre»). */
+export function nombreYaDiceGrupo(nombre: string): boolean {
+  return /^grupo(\s|$)/i.test(nombre.trim());
+}
+
 export function slugValido(slug: string): boolean {
   return /^[a-z0-9](?:[a-z0-9-]{1,28})[a-z0-9]$/.test(slug.trim());
 }
@@ -203,10 +208,13 @@ export function modeloValido(modelo: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(modelo.trim());
 }
 
-/** Como `PlanDeIaEmpresa.ValidarLlave`: 20 a 512 caracteres, sin espacios. */
+/**
+ * Como `PlanDeIaEmpresa.ValidarLlave`: empieza por `sk-` (también `sk-proj-`, `sk-svcacct-` y las anteriores), solo letras,
+ * números, guion y guion bajo, de 20 a 512 caracteres y sin espacios. Es la forma, no la vigencia: eso lo dice «Probar llave».
+ */
 export function llaveValida(llave: string): boolean {
   const limpia = llave.trim();
-  return limpia.length >= 20 && limpia.length <= 512 && !/\s/.test(limpia);
+  return limpia.length >= 20 && limpia.length <= 512 && /^sk-[A-Za-z0-9_-]+$/.test(limpia);
 }
 
 export function validarPlanIa(b: BorradorPlanIa): ErrorPlanIa[] {
