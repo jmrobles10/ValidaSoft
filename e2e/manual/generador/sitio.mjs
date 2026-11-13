@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { escapar, medidasPng, parrafos, plural, textoEnHtml } from './comun.mjs';
+import { bloqueDeGuiasParaPortada } from './guias.mjs';
 import { pagina } from './plantilla.mjs';
 
 export const rutaDeRecorrido = (r) => `r/${r.dominio}/${r.archivo}.html`;
@@ -56,7 +57,7 @@ function entradasDeBusqueda(ctx) {
   });
 }
 
-function paginaPortada(ctx, { generado, totalEndpoints }) {
+function paginaPortada(ctx, { generado, totalEndpoints, seccionesDeGuias = [] }) {
   const pasos = ctx.recorridos.reduce((suma, r) => suma + r.pasos.length, 0);
   const actores = ctx.catalogo.actores
     .map((a) => `<a class="tarjeta" href="${rutaDeActor(a)}"><h3>${escapar(a.nombre)}</h3><p>${escapar(a.descripcion)}</p><span class="cuenta">${plural(ctx.deActor(a.nombre).length, 'recorrido', 'recorridos')}</span></a>`)
@@ -72,7 +73,7 @@ function paginaPortada(ctx, { generado, totalEndpoints }) {
     totalEndpoints > 0
       ? `<h2 class="seccion-titulo">Referencia de la API</h2><div class="rejilla"><a class="tarjeta" href="api/index.html"><h3>API de Validasoft</h3><p>Cada recurso con sus operaciones, permisos, parámetros, cuerpos, respuestas y ejemplos, generados del contrato OpenAPI.</p><span class="cuenta">${plural(totalEndpoints, 'operación', 'operaciones')}</span></a></div>`
       : '';
-  const contenido = `<div class="heroe"><h1>Manual de Validasoft</h1><p>Cada flujo del producto se ejecuta de verdad en la aplicación; los pantallazos, los pasos y las variantes salen de esa ejecución, así que el manual no se desactualiza en silencio.</p><div class="cifras"><div class="cifra"><b>${String(ctx.recorridos.length)}</b><span>recorridos</span></div><div class="cifra"><b>${String(pasos)}</b><span>pasos con pantallazo</span></div><div class="cifra"><b>${String(totalEndpoints)}</b><span>operaciones de la API</span></div></div></div>${cuerpo}${api}`;
+  const contenido = `<div class="heroe"><h1>Manual de Validasoft</h1><p>Cada flujo del producto se ejecuta de verdad en la aplicación; los pantallazos, los pasos y las variantes salen de esa ejecución, así que el manual no se desactualiza en silencio.</p><div class="cifras"><div class="cifra"><b>${String(ctx.recorridos.length)}</b><span>recorridos</span></div><div class="cifra"><b>${String(pasos)}</b><span>pasos con pantallazo</span></div><div class="cifra"><b>${String(totalEndpoints)}</b><span>operaciones de la API</span></div></div></div>${cuerpo}${bloqueDeGuiasParaPortada(seccionesDeGuias)}${api}`;
   return pagina({ titulo: 'Portada', descripcion: 'Manual de Validasoft: recorridos documentados con pantallazos y referencia de la API.', raiz: './', seccion: 'recorridos', lateral: lateral(ctx, './', 'portada'), contenido, generado });
 }
 
@@ -166,9 +167,9 @@ function paginaDeRecorrido(ctx, r, generado) {
  * Todas las páginas de los recorridos. Devuelve las páginas (`ruta` relativa al sitio, `html`), las entradas del buscador y las imágenes a
  * copiar (`origen` absoluto, `destino` relativo al sitio).
  */
-export function construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints }) {
+export function construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints, seccionesDeGuias = [] }) {
   const ctx = crearContexto(recorridos, catalogo);
-  const paginas = [{ ruta: 'index.html', html: paginaPortada(ctx, { generado, totalEndpoints }) }];
+  const paginas = [{ ruta: 'index.html', html: paginaPortada(ctx, { generado, totalEndpoints, seccionesDeGuias }) }];
   for (const a of catalogo.actores) paginas.push({ ruta: rutaDeActor(a), html: paginaDeActor(ctx, a, generado) });
   for (const d of catalogo.dominios) paginas.push({ ruta: rutaDeDominio(d), html: paginaDeDominio(ctx, d, generado) });
   const imagenes = [];

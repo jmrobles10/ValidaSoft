@@ -9208,7 +9208,7 @@ curl -X GET "https://{host}/api/v1/informes/sla/excel" \
 
 ## Inicio
 
-Inicio de la empresa activa (IN-1, IN-2, docs/06 `/inicio`): lo que le toca a quien consulta y los indicadores de la empresa. Se calculan al consultar sobre la bandeja, los vínculos, los expedientes y los certificados de la empresa (aún no son las proyecciones `KpisEmpresa`/`MisPendientes` de docs/03 §14).
+Inicio de la empresa activa (INI-1, INI-2, docs/06 `/inicio`): lo que le toca a quien consulta y los indicadores de la empresa. Se calculan al consultar sobre la bandeja, los vínculos, los expedientes y los certificados de la empresa (aún no son las proyecciones `KpisEmpresa`/`MisPendientes` de docs/03 §14).
 
 ### `GET /api/v1/indicadores`
 

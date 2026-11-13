@@ -586,7 +586,7 @@ Respuesta `200`:
 
 ## Lista de certificados
 
-Lista de certificados de la empresa activa (CE-11, docs/06 P2 «Certificados»).
+Lista de certificados de la empresa activa (CE-13, docs/06 P2 «Certificados»).
 
 ### `GET /api/v1/certificados`
 

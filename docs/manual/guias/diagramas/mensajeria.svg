@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<style>
+svg.diagrama{--d-fondo:#ffffff;--d-superficie:#ffffff;--d-superficie2:#eef1f5;--d-borde:#9aa6b5;--d-texto:#1b2129;--d-suave:#596473;--d-linea:#5b6778;--d-acento:#1c5bd0;--d-acento-fondo:#e6eeff;--d-ok:#0b7a4b;--d-ok-fondo:#e3f4ea;--d-aviso:#a85a00;--d-aviso-fondo:#fff3dc;--d-peligro:#bf2a2a;--d-peligro-fondo:#fde8e8;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+@media (prefers-color-scheme:dark){svg.diagrama{--d-fondo:#0d1117;--d-superficie:#161b22;--d-superficie2:#1e252e;--d-borde:#566274;--d-texto:#e5e9ef;--d-suave:#99a4b1;--d-linea:#8794a5;--d-acento:#78a6ff;--d-acento-fondo:#1b2a47;--d-ok:#4cc790;--d-ok-fondo:#12281c;--d-aviso:#f0a14a;--d-aviso-fondo:#2a2312;--d-peligro:#f27a7a;--d-peligro-fondo:#3a1a1a}}
+.diagrama .d-fondo{fill:var(--d-fondo)}
+.diagrama .d-caja{fill:var(--d-superficie);stroke:var(--d-borde);stroke-width:1.4}
+.diagrama .d-caja-gris{fill:var(--d-superficie2);stroke:var(--d-borde);stroke-width:1.4}
+.diagrama .d-caja-a{fill:var(--d-acento-fondo);stroke:var(--d-acento);stroke-width:1.5}
+.diagrama .d-caja-ok{fill:var(--d-ok-fondo);stroke:var(--d-ok);stroke-width:1.5}
+.diagrama .d-caja-aviso{fill:var(--d-aviso-fondo);stroke:var(--d-aviso);stroke-width:1.5}
+.diagrama .d-caja-peligro{fill:var(--d-peligro-fondo);stroke:var(--d-peligro);stroke-width:1.5}
+.diagrama .d-grupo{fill:none;stroke:var(--d-borde);stroke-width:1.3;stroke-dasharray:6 5}
+.diagrama .d-carril{fill:var(--d-superficie2);stroke:none}
+.diagrama .d-rotulo{fill:var(--d-superficie);stroke:none}
+.diagrama .d-t{fill:var(--d-texto);font-size:13px}
+.diagrama .d-t-s{fill:var(--d-suave);font-size:11.5px}
+.diagrama .d-t-b{fill:var(--d-texto);font-size:13.5px;font-weight:700}
+.diagrama .d-t-h{fill:var(--d-texto);font-size:15px;font-weight:700}
+.diagrama .d-t-a{fill:var(--d-acento);font-size:12px;font-weight:700}
+.diagrama .d-c{text-anchor:middle}
+.diagrama .d-num{fill:var(--d-acento);stroke:none}
+.diagrama .d-num-t{fill:var(--d-superficie);font-size:11px;font-weight:700;text-anchor:middle}
+.diagrama .d-l{fill:none;stroke:var(--d-linea);stroke-width:1.5}
+.diagrama .d-l-p{fill:none;stroke:var(--d-linea);stroke-width:1.5;stroke-dasharray:5 4}
+.diagrama .d-l-a{fill:none;stroke:var(--d-acento);stroke-width:1.7}
+.diagrama .d-l-ok{fill:none;stroke:var(--d-ok);stroke-width:1.7}
+.diagrama .d-l-peligro{fill:none;stroke:var(--d-peligro);stroke-width:1.7}
+.diagrama .d-marca{fill:var(--d-linea)}
+.diagrama .d-marca-a{fill:var(--d-acento)}
+.diagrama .d-marca-ok{fill:var(--d-ok)}
+.diagrama .d-marca-peligro{fill:var(--d-peligro)}
+</style>
+<rect class="d-fondo" width="100%" height="100%"/>
+<title id="titulo">Mensajería, eventos públicos y tiempo real</title>
+<desc id="descripcion">Cada escritura confirma eventos, documentos y mensajes del outbox en una sola transacción. Los mensajes van a colas locales durables; el daemon de Marten lee el event store y produce eventos públicos, entregas de webhook, avisos y correos.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-caja" x="30" y="40" width="190" height="100" rx="10"/>
+<text class="d-t-b d-c" x="125" y="63">Petición HTTP</text>
+<text class="d-t-s d-c" x="125" y="80">o mensaje de una cola</text>
+<text class="d-t-s d-c" x="125" y="95">o proceso periódico</text>
+<rect class="d-caja" x="270" y="40" width="230" height="100" rx="10"/>
+<text class="d-t-b d-c" x="385" y="63">Caso de uso</text>
+<text class="d-t-s d-c" x="385" y="80">abre la sesión de Marten</text>
+<text class="d-t-s d-c" x="385" y="95">con outbox y llama</text>
+<text class="d-t-s d-c" x="385" y="110">al método del agregado</text>
+<rect class="d-caja-ok" x="550" y="40" width="260" height="100" rx="10"/>
+<text class="d-t-b d-c" x="680" y="63">Una transacción de PostgreSQL</text>
+<text class="d-t-s d-c" x="680" y="80">eventos del stream y documentos</text>
+<text class="d-t-s d-c" x="680" y="95">lecturas escritas con ellos</text>
+<text class="d-t-s d-c" x="680" y="110">sobres del outbox</text>
+<path class="d-l" d="M220 90 L270 90" marker-end="url(#f)"/>
+<path class="d-l" d="M500 90 L550 90" marker-end="url(#f)"/>
+<rect class="d-caja" x="860" y="40" width="210" height="100" rx="10"/>
+<text class="d-t-b d-c" x="965" y="63">Colas locales durables</text>
+<text class="d-t-s d-c" x="965" y="80">correo · requisitos · vigencias</text>
+<text class="d-t-s d-c" x="965" y="95">ia · lotes · campañas</text>
+<text class="d-t-s d-c" x="965" y="110">plazos · habeas · plan</text>
+<path class="d-l" d="M810 90 L860 90" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="793" y="71" width="84" height="16" rx="4"/>
+<text class="d-t-s d-c" x="835" y="83">tras el commit</text>
+<rect class="d-caja" x="860" y="180" width="210" height="80" rx="10"/>
+<text class="d-t-b d-c" x="965" y="203">Manejadores idempotentes</text>
+<text class="d-t-s d-c" x="965" y="220">reintentos de 1 s, 5 s y 30 s</text>
+<text class="d-t-s d-c" x="965" y="235">y cola de errores</text>
+<path class="d-l" d="M965 140 L965 180" marker-end="url(#f)"/>
+<path class="d-l-p" d="M680 140 L680 240 L125 240 L125 300" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="295" y="229" width="210" height="16" rx="4"/>
+<text class="d-t-s d-c" x="400" y="241">los eventos quedan en el event store</text>
+<rect class="d-caja" x="30" y="300" width="190" height="110" rx="10"/>
+<text class="d-t-b d-c" x="125" y="323">Daemon de Marten</text>
+<text class="d-t-s d-c" x="125" y="340">hot/cold: un nodo líder</text>
+<text class="d-t-s d-c" x="125" y="355">lee el event store en orden</text>
+<text class="d-t-s d-c" x="125" y="370">por bloqueo consultivo</text>
+<rect class="d-caja-a" x="270" y="300" width="300" height="140" rx="10"/>
+<text class="d-t-b d-c" x="420" y="323">Suscripción eventos-publicos</text>
+<text class="d-t-s d-c" x="420" y="340">en la misma transacción que su avance:</text>
+<text class="d-t-s d-c" x="420" y="355">el evento público con su cursor</text>
+<text class="d-t-s d-c" x="420" y="370">una entrega por cada webhook que lo acepta</text>
+<text class="d-t-s d-c" x="420" y="385">la campana, los correos y los avisos de cambio</text>
+<rect class="d-caja" x="620" y="300" width="200" height="100" rx="10"/>
+<text class="d-t-b d-c" x="720" y="323">Cola webhooks</text>
+<text class="d-t-s d-c" x="720" y="340">secuencial: en orden</text>
+<text class="d-t-s d-c" x="720" y="355">POST con Validasoft-Signature</text>
+<text class="d-t-s d-c" x="720" y="370">reintentos de 1 min a 6 h</text>
+<rect class="d-caja-gris" x="870" y="300" width="200" height="100" rx="10"/>
+<text class="d-t-b d-c" x="970" y="323">Receptor del integrador</text>
+<text class="d-t-s d-c" x="970" y="340">responde 2xx en 5 s</text>
+<text class="d-t-s d-c" x="970" y="355">y deduplica por el id del evento</text>
+<path class="d-l" d="M220 355 L270 355" marker-end="url(#f)"/>
+<path class="d-l" d="M570 350 L620 350" marker-end="url(#f)"/>
+<path class="d-l" d="M820 350 L870 350" marker-end="url(#f)"/>
+<rect class="d-caja" x="270" y="490" width="260" height="60" rx="10"/>
+<text class="d-t-b d-c" x="400" y="513">Pull</text>
+<text class="d-t-s d-c" x="400" y="530">GET /api/v1/eventos?desde={cursor}</text>
+<rect class="d-caja" x="570" y="490" width="330" height="76" rx="10"/>
+<text class="d-t-b d-c" x="735" y="513">Tiempo real (SSE)</text>
+<text class="d-t-s d-c" x="735" y="530">/api/v1/eventos/stream</text>
+<text class="d-t-s d-c" x="735" y="545">/api/v1/notificaciones/stream</text>
+<text class="d-t-s d-c" x="735" y="560">/public/v1/notificaciones/stream (tercero)</text>
+<path class="d-l" d="M360 440 L360 490" marker-end="url(#f)"/>
+<path class="d-l" d="M500 440 L500 470 L720 470 L720 490" marker-end="url(#f)"/>
+<text class="d-t-s" x="270" y="598">Los avisos de cambio no llevan datos: la pantalla abierta vuelve a pedir lo que veía a la API, con sus permisos.</text>
+</svg>

@@ -13,6 +13,16 @@ Si el producto cambia y el recorrido falla, el manual está desactualizado: eso 
 La lista de lo que hay que documentar está en [`INVENTARIO.md`](INVENTARIO.md). **Tú solo escribes recorridos** (y, si encuentras un defecto real del producto,
 lo anotas en tu informe: no toques el código del producto).
 
+## Guías: lo que no sale de un recorrido
+
+Arquitectura, el flujo completo del vínculo a la validación, el glosario, la configuración y la guía de integración se escriben **a mano** en [`guias/`](guias/) (un archivo `<slug>.md` por guía) y `pnpm manual` las integra: páginas del sitio (`salida/manual/g/`, con índice, buscador y diagramas en línea) y Markdown en `docs/manual/guias/`.
+
+- **Encabezado** (obligatorio): `titulo`, `seccion` (las guías de una misma sección van juntas; las secciones salen en el orden de su `orden` más bajo), `orden` (número) y `resumen` (de 40 a 400 caracteres).
+- **Markdown admitido**: títulos `##`/`###`/`####`, párrafos, listas, tablas, bloques de código, citas (`> **Nota:** …`; también `Recorridos`, `Importante`, `Ojo` y `Verdad`), `**negrita**`, `*cursiva*` y `código`. Los `|` dentro de una celda se escriben `|`.
+- **Enlaces especiales**: `[[dominio/archivo|Texto]]` a un recorrido (el nombre debe estar en [INVENTARIO.md](INVENTARIO.md); mientras no exista se ve como «pendiente» con su Texto y, cuando exista, se enlaza con su título real; no lo uses dentro de una tabla); `[texto](guia:slug#ancla)` a otra guía; `[texto](api:modulo)` a un módulo de la referencia de la API (`api:` es el índice); `[texto](repo:ruta)` a un archivo del repositorio.
+- **Diagramas**: SVG hechos a mano en `guias/diagramas/` y referenciados con `![descripción](diagramas/x.svg)`. Usan las clases `d-*` (cajas `d-caja`, `d-caja-a`, `d-caja-ok`, `d-caja-aviso`, `d-caja-peligro`; textos `d-t`, `d-t-b`, `d-t-s`; líneas `d-l`…) y **nunca colores fijos**, para leerse en claro y oscuro; el SVG raíz lleva `class="diagrama"`, `role="img"` y un `<title id="titulo">`. En el sitio se incrustan (el tema del sitio los colorea) y en `docs/manual/guias/diagramas/` se publican con sus estilos y un fondo propio.
+- `pnpm manual` avisa de recorridos fuera del inventario, enlaces, anclas, módulos de la API y diagramas que no existen y diagramas sin usar; las pruebas de `generador/guias.test.mjs` hacen lo mismo con las guías reales y fallan si algo se rompe.
+
 ## Comandos
 
 ```bash
@@ -195,4 +205,5 @@ Dominios (carpeta del archivo): `acceso`, `tercero`, `vinculos`, `revision`, `do
   (`manual/**/*.manual.ts`). No hace parte de `pnpm e2e` ni del CI.
 - `nucleo/manual.ts` (`recorrido`, `paso`) escribe `salida/manual-recorridos/<dominio>/<flujo>/manifiesto.json` y los PNG; `nucleo/captura.ts` hace la espera, el resaltado y el recorte.
 - `generador/` convierte los manifiestos en el sitio y el Markdown; `generador/api*.mjs` genera la referencia de la API de `packages/api-client/openapi/v1.json` y del código de los
-  endpoints (permisos y descripciones). Pruebas en `generador/generador.test.mjs` y `nucleo/validacion.test.ts` (corren con `pnpm test`).
+  endpoints (permisos y descripciones); `generador/guias.mjs` integra las guías de `guias/` (Markdown propio, enlaces, diagramas SVG y buscador). Pruebas en
+  `generador/generador.test.mjs`, `generador/guias.test.mjs` y `nucleo/validacion.test.ts` (corren con `pnpm test`).

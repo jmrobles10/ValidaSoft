@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 784" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<title id="titulo">Del certificado a la actualización, por actor</title>
+<desc id="descripcion">Diagrama por actor: Validasoft emite el certificado, el sistema integrador lo consulta y el público lo verifica; con el tiempo vencen documentos y vínculo; el tercero ratifica o sube una versión nueva, cada empresa revisa solo lo que cambió y puede bloquear o desbloquear el vínculo.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-carril" x="10" y="10" width="204" height="764" rx="8"/>
+<rect class="d-caja" x="18" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="112" y="40">Validasoft</text>
+<rect class="d-carril" x="224" y="10" width="204" height="764" rx="8"/>
+<rect class="d-caja" x="232" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="326" y="40">Sistema integrador</text>
+<rect class="d-carril" x="438" y="10" width="204" height="764" rx="8"/>
+<rect class="d-caja" x="446" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="540" y="40">Público</text>
+<rect class="d-carril" x="652" y="10" width="204" height="764" rx="8"/>
+<rect class="d-caja" x="660" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="754" y="40">Tercero</text>
+<rect class="d-carril" x="866" y="10" width="204" height="764" rx="8"/>
+<rect class="d-caja" x="874" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="968" y="40">Empresa</text>
+<rect class="d-caja-ok" x="20" y="80" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="112" y="100">Emite el certificado:</text>
+<text class="d-t-s d-c" x="112" y="115">folio, PDF y sello</text>
+<circle class="d-num" cx="26" cy="88" r="10"/><text class="d-num-t" x="26" y="92">1</text>
+<rect class="d-caja" x="234" y="168" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="326" y="188">Recibe certificado.emitido</text>
+<text class="d-t-s d-c" x="326" y="203">y consulta antes de pagar</text>
+<circle class="d-num" cx="240" cy="176" r="10"/><text class="d-num-t" x="240" y="180">2</text>
+<rect class="d-caja" x="448" y="168" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="540" y="188">Verifica el folio</text>
+<text class="d-t-s d-c" x="540" y="203">en /verificar/{folio}</text>
+<circle class="d-num" cx="454" cy="176" r="10"/><text class="d-num-t" x="454" y="180">3</text>
+<rect class="d-caja-aviso" x="20" y="256" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="112" y="276">Avisa y vence:</text>
+<text class="d-t-s d-c" x="112" y="291">documentos, vínculo</text>
+<text class="d-t-s d-c" x="112" y="304">y certificado</text>
+<circle class="d-num" cx="26" cy="264" r="10"/><text class="d-num-t" x="26" y="268">4</text>
+<rect class="d-caja" x="662" y="344" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="754" y="364">Ratifica o actualiza</text>
+<text class="d-t-s d-c" x="754" y="379">su información</text>
+<circle class="d-num" cx="668" cy="352" r="10"/><text class="d-num-t" x="668" y="356">5</text>
+<rect class="d-caja" x="662" y="432" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="754" y="452">Sube una versión nueva</text>
+<text class="d-t-s d-c" x="754" y="467">de un documento</text>
+<circle class="d-num" cx="668" cy="440" r="10"/><text class="d-num-t" x="668" y="444">6</text>
+<rect class="d-caja-a" x="20" y="520" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="112" y="540">Comparte con cada</text>
+<text class="d-t-s d-c" x="112" y="555">empresa que lo exige:</text>
+<text class="d-t-s d-c" x="112" y="568">vínculo «En revisión»</text>
+<circle class="d-num" cx="26" cy="528" r="10"/><text class="d-num-t" x="26" y="532">7</text>
+<rect class="d-caja" x="876" y="608" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="968" y="628">Revisa lo que cambió:</text>
+<text class="d-t-s d-c" x="968" y="643">aprueba, observa</text>
+<text class="d-t-s d-c" x="968" y="656">o rechaza</text>
+<circle class="d-num" cx="882" cy="616" r="10"/><text class="d-num-t" x="882" y="620">8</text>
+<rect class="d-caja-peligro" x="876" y="696" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="968" y="716">Puede bloquear y</text>
+<text class="d-t-s d-c" x="968" y="731">desbloquear el vínculo</text>
+<circle class="d-num" cx="882" cy="704" r="10"/><text class="d-num-t" x="882" y="708">9</text>
+<path class="d-l" d="M112 144 L112 156 L326 156 L326 168" marker-end="url(#f)"/>
+<path class="d-l" d="M112 144 L112 156 L540 156 L540 168" marker-end="url(#f)"/>
+<path class="d-l-p" d="M112 144 L112 256" marker-end="url(#f)"/>
+<path class="d-l" d="M112 320 L112 332 L754 332 L754 344" marker-end="url(#f)"/>
+<path class="d-l" d="M754 408 L754 432" marker-end="url(#f)"/>
+<path class="d-l" d="M754 496 L754 508 L112 508 L112 520" marker-end="url(#f)"/>
+<path class="d-l" d="M112 584 L112 596 L968 596 L968 608" marker-end="url(#f)"/>
+<path class="d-l" d="M968 672 L968 696" marker-end="url(#f)"/>
+</svg>

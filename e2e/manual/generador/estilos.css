@@ -1183,6 +1183,182 @@ pre code {
   font-size: 0.85rem;
 }
 
+/* ---------- Guías (arquitectura, flujo de punta a punta, configuración, integración) ---------- */
+.lateral-secciones {
+  display: none;
+}
+
+.subseccion-titulo {
+  margin: 26px 0 10px;
+  font-size: 1rem;
+  color: var(--suave);
+  font-weight: 650;
+}
+
+.guia {
+  margin-top: 8px;
+}
+
+.guia h2 {
+  margin: 44px 0 12px;
+  padding-top: 8px;
+  font-size: 1.45rem;
+  border-top: 1px solid var(--borde);
+  scroll-margin-top: 76px;
+}
+
+.guia h3 {
+  margin: 30px 0 8px;
+  font-size: 1.12rem;
+  scroll-margin-top: 76px;
+}
+
+.guia h4 {
+  margin: 22px 0 6px;
+  font-size: 0.98rem;
+  color: var(--suave);
+  scroll-margin-top: 76px;
+}
+
+.guia .ancla {
+  margin-left: 8px;
+  font-size: 0.8em;
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+}
+
+.guia h2:hover .ancla,
+.guia h3:hover .ancla,
+.guia h4:hover .ancla,
+.guia .ancla:focus {
+  opacity: 0.7;
+}
+
+.guia p,
+.guia li {
+  max-width: 78ch;
+}
+
+.guia ul,
+.guia ol {
+  padding-left: 22px;
+}
+
+.guia li + li {
+  margin-top: 4px;
+}
+
+.tabla-guia {
+  margin: 14px 0 20px;
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+.tabla-guia table {
+  min-width: 560px;
+}
+
+.tabla-guia td code,
+.tabla-guia th code {
+  white-space: normal;
+}
+
+.nota-guia {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--acento);
+  border-radius: 10px;
+  background: var(--superficie);
+  font-size: 0.95rem;
+}
+
+.nota-guia > :first-child {
+  margin-top: 0;
+}
+
+.nota-guia > :last-child {
+  margin-bottom: 0;
+}
+
+.nota-guia.recorridos {
+  border-left-color: var(--post);
+  background: var(--acento-suave);
+}
+
+.nota-guia.importante,
+.nota-guia.ojo {
+  border-left-color: var(--put);
+  background: var(--variantes-fondo);
+  color: var(--variantes-texto);
+}
+
+.nota-guia.verdad {
+  border-left-color: var(--get);
+  background: var(--config-fondo);
+  color: var(--config-texto);
+}
+
+.pendiente {
+  border-bottom: 1px dashed var(--suave);
+  color: var(--suave);
+  cursor: help;
+}
+
+.ruta-repo code {
+  background: var(--codigo-fondo);
+}
+
+.diagrama-figura {
+  margin: 20px 0 26px;
+}
+
+.diagrama-marco {
+  overflow-x: auto;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.diagrama-marco svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 720px;
+}
+
+.diagrama-figura figcaption {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--suave);
+}
+
+@media (max-width: 960px) {
+  .lateral-secciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .lateral-secciones a {
+    padding: 6px 12px;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.9rem;
+  }
+
+  .lateral-secciones a[aria-current='page'] {
+    background: var(--acento-suave);
+    border-color: var(--acento);
+  }
+}
+
 /* ---------- Celular ---------- */
 @media (max-width: 960px) {
   .disposicion {
