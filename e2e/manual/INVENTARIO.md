@@ -170,7 +170,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `configuracion/flujo-verificaciones-de-cumplimiento` ☐ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
 | `configuracion/flujo-versiones-y-borradores` ☐ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
 | `configuracion/flujo-por-defecto` ☐ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
-| `configuracion/areas-y-miembros` ☐ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
+| `configuracion/areas-y-miembros` ☑ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
 | `configuracion/usuarios-y-roles` ☐ | Administrador de empresa | Sistema integrado con identidades | Crear una persona, roles por empresa o de todo el grupo (Administrador, Revisor, Oficial, Auditor), identidad en el sistema, desactivar |
 | `configuracion/empresas-y-textos-legales` ☐ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
 | `configuracion/datos-y-marca` ☐ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
