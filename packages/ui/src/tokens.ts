@@ -1,4 +1,6 @@
-/* Validasoft: tokens del design system. GENERADO desde tokens.json; no editar a mano. */
+/* Validasoft: tokens del design system. GENERADO desde tokens.json; no editar a mano.
+ * Excepción (MA-1): los tokens de marca `marcaAzul`, `marcaVerde`, `marcaSoft` y `marcaTexto` del modo oscuro y los dos últimos del claro
+ * se agregaron aquí con el logo «Anillo»; al regenerar desde tokens.json deben conservarse (docs/marca.md). */
 
 export type Modo = 'light' | 'dark';
 
@@ -23,6 +25,8 @@ export const COLOR = {
     marcaAzul: '#3D6BFF',
     marcaVerde: '#22D38A',
     marcaProfundo: '#0E2A6B',
+    marcaSoft: '#2F55D9',
+    marcaTexto: '#0A0F1C',
     scrim: 'rgba(10, 15, 28, 0.48)',
     tooltipFondo: '#1A2236',
     tooltipTexto: '#FFFFFF',
@@ -69,9 +73,11 @@ export const COLOR = {
     acento: '#7C9BFF',
     acentoTinte: '#131F44',
     foco: '#7BA7FF',
-    marcaAzul: '#3D6BFF',
-    marcaVerde: '#22D38A',
+    marcaAzul: '#6E8FFF',
+    marcaVerde: '#2BE29A',
     marcaProfundo: '#0E2A6B',
+    marcaSoft: '#7C9BFF',
+    marcaTexto: '#F2F5FB',
     scrim: 'rgba(0, 0, 0, 0.64)',
     tooltipFondo: '#E6EAF3',
     tooltipTexto: '#0A0F1C',

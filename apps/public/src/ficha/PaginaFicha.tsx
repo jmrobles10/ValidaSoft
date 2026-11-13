@@ -1,7 +1,7 @@
 import { Alert, AlertTitle, Box, Button, Chip, LinearProgress, Paper, Stack, Typography } from '@mui/material';
 import type { EstadoSeccionFichaDto } from '@validasoft/api-client';
-import { formatearFecha } from '@validasoft/ui';
-import { ArrowRight, CheckCircle2, ChevronRight, TriangleAlert } from 'lucide-react';
+import { AnimacionExitoUnaVez, formatearFecha } from '@validasoft/ui';
+import { ArrowRight, ChevronRight, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -58,7 +58,8 @@ export function PaginaFicha() {
     <>
       <CabeceraPagina titulo={t('ficha.titulo')} sub={t('ficha.sub')} accion={continuar} />
       {estado.completa && (
-        <Alert severity="success" icon={<CheckCircle2 size={20} aria-hidden />} sx={{ mb: 2 }}>
+        // La primera vez que la persona ve su información completa en la sesión, el ícono hace la animación de éxito de marca.
+        <Alert severity="success" icon={<AnimacionExitoUnaVez clave="ficha-completa" tamano={22} decorativa />} sx={{ mb: 2 }}>
           <AlertTitle>{t('ficha.completaTitulo')}</AlertTitle>
           {t('ficha.completaTexto')}
         </Alert>

@@ -90,7 +90,8 @@ test('persona natural: el botón «Descargar PDF» aparece solo con la declaraci
   expect(propio.nombre).toMatch(/^declaracion-pep-ana-maria-perez-gomez-[a-z0-9]+-\d{8}\.pdf$/);
   expect(propio.pdf.startsWith('%PDF-1.7')).toBe(true);
   expect(propio.pdf).toContain('(Validasoft)');
-  expect(propio.pdf).toContain('/ShadingType 2'); // el isotipo con su degradado
+  expect(propio.pdf).toContain('(alida) Tj'); // el logotipo de Validasoft: la «V» verde y «alida» «Soft»
+  expect(propio.pdf).toContain('0.133333 0.827451 0.541176 rg');
   expect(propio.pdf).toContain('/Subtype /Image'); // la firma
   expect(propio.pdf).toContain('(Alcalde encargado)');
   expect(propio.pdf).toContain('Carrera 7 # 32-16');
@@ -109,7 +110,7 @@ test('persona natural: el botón «Descargar PDF» aparece solo con la declaraci
   const deLaEmpresa = await descargar(paginaSofia, sofia.getByRole('button', { name: `Descargar el PDF de la declaración PEP de ${tercero.nombre}` }), 'declaracion-pep-de-la-empresa-logo-png');
   expect(deLaEmpresa.nombre).toMatch(/^declaracion-pep-ana-maria-perez-gomez-[a-z0-9]+-\d{8}\.pdf$/);
   expect(deLaEmpresa.pdf).toContain('/Width 360 /Height 120'); // el logo PNG de la empresa
-  expect(deLaEmpresa.pdf).not.toContain('/ShadingType');
+  expect(deLaEmpresa.pdf).not.toContain('(alida) Tj');
   expect(deLaEmpresa.pdf).toContain('(Alcalde encargado)');
 });
 
@@ -172,7 +173,7 @@ test('persona jurídica: cada persona PEP con declaración guardada tiene su bot
   }).toPass({ timeout: 60_000 });
   const deLaEmpresa = await descargar(paginaSofia, sofia.getByRole('button', { name: 'Descargar el PDF de la declaración PEP de Jorge Iván Castro Pinto' }), 'declaracion-pep-de-la-empresa-logo-svg');
   expect(deLaEmpresa.pdf).toContain('0.878431 0.478431 0.121569 rg'); // #E07A1F
-  expect(deLaEmpresa.pdf).not.toContain('/ShadingType');
+  expect(deLaEmpresa.pdf).not.toContain('(alida) Tj');
   expect(deLaEmpresa.pdf).toContain('Calle 80 # 12-34');
 });
 

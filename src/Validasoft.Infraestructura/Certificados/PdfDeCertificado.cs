@@ -4,6 +4,7 @@ using System.IO.Compression;
 using QRCoder;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Dominio.Certificados;
+using Validasoft.Infraestructura.Ficha;
 
 namespace Validasoft.Infraestructura.Certificados;
 
@@ -20,6 +21,7 @@ public sealed class GeneradorPdfDeCertificados : IGeneradorDePdfDeCertificados
     private const double Margen = 48;
     private const double LadoQr = 70.87; // 25 mm
     private const double TopeDelPie = Margen + 112;
+    private const double AltoDelLogo = 12;
 
     private static readonly CultureInfo Invariante = CultureInfo.InvariantCulture;
 
@@ -79,6 +81,10 @@ public sealed class GeneradorPdfDeCertificados : IGeneradorDePdfDeCertificados
                                                        (c.Empresa.Identificacion.DigitoVerificacion is { } dv ? $"-{dv}" : string.Empty), 0.35);
         var titulo = "CERTIFICADO VERIFICABLE";
         pdf.Texto(Ancho - Margen - Medidas.Ancho(titulo, Fuente.HelveticaBold, 10), y - 12, Fuente.HelveticaBold, 10, titulo, 0.35);
+        // El certificado lo valida la plataforma: su logotipo (MA-1) va bajo el título, a la derecha. El nombre de la empresa sigue a la izquierda.
+        var logo = LogosDePdf.Validasoft;
+        var anchoLogo = AltoDelLogo * logo.Proporcion;
+        logo.Dibujar(pdf, Ancho - Margen - anchoLogo, y - 36, anchoLogo, AltoDelLogo);
         y -= 40;
         pdf.Linea(Margen, y, Ancho - Margen, y, 0.6);
 
@@ -390,6 +396,19 @@ internal sealed class LienzoPdf
             _ => "F4"
         };
         Actual.Append(Invariante, $"BT {N(gris)} g /{nombre} {N(tamano)} Tf {N(x)} {N(y)} Td (").Append(Cadena(texto)).Append(") Tj ET\n");
+    }
+
+    /// <summary>Texto en color RGB (0 a 1) en (x, y) de la línea base; el color no pasa a lo que se dibuje después.</summary>
+    public void TextoColor(double x, double y, Fuente fuente, double tamano, string texto, (double R, double G, double B) color)
+    {
+        var nombre = fuente switch
+        {
+            Fuente.Helvetica => "F1",
+            Fuente.HelveticaBold => "F2",
+            Fuente.Courier => "F3",
+            _ => "F4"
+        };
+        Actual.Append(Invariante, $"q {Preciso(color.R)} {Preciso(color.G)} {Preciso(color.B)} rg BT /{nombre} {N(tamano)} Tf {N(x)} {N(y)} Td (").Append(Cadena(texto)).Append(") Tj ET Q\n");
     }
 
     public void Linea(double x1, double y1, double x2, double y2, double grosor) =>

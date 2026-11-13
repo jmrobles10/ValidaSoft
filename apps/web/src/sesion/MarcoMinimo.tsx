@@ -1,5 +1,5 @@
-import { Box, Typography } from '@mui/material';
-import { Isotipo } from '@validasoft/ui';
+import { Box } from '@mui/material';
+import { Logo } from '@validasoft/ui';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,10 +12,7 @@ export function MarcoMinimo({ children }: { children: ReactNode }) {
         component="header"
         sx={{ display: 'flex', alignItems: 'center', gap: 1, height: (th) => th.densidad.cabeceraEmbebida, px: 2, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}
       >
-        <Isotipo />
-        <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em' }}>
-          {t('app.nombre')}
-        </Typography>
+        <Logo tamano={20} titulo={t('app.nombre')} />
       </Box>
       {children}
     </Box>

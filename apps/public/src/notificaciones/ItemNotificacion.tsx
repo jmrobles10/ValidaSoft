@@ -1,13 +1,13 @@
 import { Box, ListItem, ListItemButton, Typography } from '@mui/material';
 import type { NotificacionTerceroDto } from '@validasoft/api-client';
-import { formatearFechaHora, Isotipo, visualmenteOculto } from '@validasoft/ui';
+import { formatearFechaHora, Logo, visualmenteOculto } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
 import { LogoEmpresa } from '../shared/componentes';
 import { haceCuanto } from './bandeja';
 
 /**
  * Una notificación de la campana: la marca de la empresa que la origina (logo y, si la tiene, su color en el borde), el título, el
- * texto y hace cuánto llegó. Las que no son de ninguna empresa (una propuesta desde un documento) llevan el isotipo de Validasoft.
+ * texto y hace cuánto llegó. Las que no son de ninguna empresa (una propuesta desde un documento) llevan el ícono de Validasoft.
  */
 export function ItemNotificacion({ notificacion, ahora, onAbrir }: { notificacion: NotificacionTerceroDto; ahora: number; onAbrir: (n: NotificacionTerceroDto) => void }) {
   const { t } = useTranslation();
@@ -27,7 +27,7 @@ export function ItemNotificacion({ notificacion, ahora, onAbrir }: { notificacio
           borderLeftColor: empresa?.colorMarca ?? 'transparent',
         }}
       >
-        <Box sx={{ flex: 'none', mt: '2px' }}>{empresa ? <LogoEmpresa nombre={empresa.nombre} logoUrl={empresa.logoUrl} tamano={32} /> : <Isotipo tamano={28} />}</Box>
+        <Box sx={{ flex: 'none', mt: '2px' }}>{empresa ? <LogoEmpresa nombre={empresa.nombre} logoUrl={empresa.logoUrl} tamano={32} /> : <Logo variante="icono" tamano={28} />}</Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
             <Typography component="span" sx={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: '20px', fontWeight: sinLeer ? 600 : 500 }}>

@@ -1,10 +1,11 @@
 import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { configurarCliente, reiniciarCliente, type ExpedienteDto, type MotivoTipificadoDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useAvisos } from '../../../shared/useAvisos';
 import { area, expediente, requisito, requisitoSeccion } from '../datosPrueba';
 import type { DialogoDeArea } from '../reglas';
 import { DialogoDecisionArea } from './DialogoDecisionArea';
@@ -25,8 +26,8 @@ const CAMARA = requisito({
   tipoDocumento: { id: 'td-cc', codigo: 'CAMARA', nombre: 'Cámara de comercio', tipoCanonico: 'CamaraComercio', ambito: 'Global' },
 });
 
-function abrir(dialogo: DialogoDeArea, requisitos = [requisito(), CAMARA]) {
-  const fetch = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) => new Promise<Response>(() => undefined));
+function abrir(dialogo: DialogoDeArea, requisitos = [requisito(), CAMARA], respuesta?: () => Promise<Response>) {
+  const fetch = vi.fn((_url: RequestInfo | URL, _init?: RequestInit) => (respuesta ? respuesta() : new Promise<Response>(() => undefined)));
   configurarCliente({ fetch });
   const datos: ExpedienteDto = { ...expediente('EnRevision'), requisitos };
   render(
@@ -39,7 +40,10 @@ function abrir(dialogo: DialogoDeArea, requisitos = [requisito(), CAMARA]) {
   return fetch;
 }
 
-afterEach(() => reiniciarCliente());
+afterEach(() => {
+  reiniciarCliente();
+  useAvisos.getState().cerrar();
+});
 
 describe('DialogoDecisionArea: nada se envía con el formulario incompleto', () => {
   it('«Observar» empieza deshabilitado con 0 documentos y dice qué falta', () => {
@@ -81,6 +85,28 @@ describe('DialogoDecisionArea: nada se envía con el formulario incompleto', () 
   it('«Aprobar área» con documentos por decidir se puede enviar', () => {
     abrir({ tipo: 'aprobarArea', area: area(), documentos: [{ requisitoId: 'r-rut', versionVigente: 1 }] });
     expect(screen.getByRole('button', { name: 'Aprobar área (1 documento)' })).toBeEnabled();
+  });
+});
+
+describe('DialogoDecisionArea: el aviso al cerrar la revisión', () => {
+  const responder = (estado: string) => () =>
+    Promise.resolve(new Response(JSON.stringify({ ...expediente('EnRevision'), estado }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+  it('si la decisión del área deja el expediente aprobado, el aviso lleva la animación de éxito de marca', async () => {
+    const usuario = userEvent.setup();
+    abrir({ tipo: 'aprobarArea', area: area(), documentos: [{ requisitoId: 'r-rut', versionVigente: 1 }] }, [requisito(), CAMARA], responder('Aprobado'));
+    await usuario.click(screen.getByRole('button', { name: 'Aprobar área (1 documento)' }));
+    await waitFor(() => expect(useAvisos.getState().actual).not.toBeNull());
+    expect(useAvisos.getState().actual?.mensaje).toMatch(/aprobado: ya no falta ninguna área/);
+    expect(useAvisos.getState().actual?.celebrar).toBe(true);
+  });
+
+  it('si el expediente sigue en revisión, el aviso es el de siempre, sin celebrar', async () => {
+    const usuario = userEvent.setup();
+    abrir({ tipo: 'aprobarArea', area: area(), documentos: [{ requisitoId: 'r-rut', versionVigente: 1 }] }, [requisito(), CAMARA], responder('EnRevision'));
+    await usuario.click(screen.getByRole('button', { name: 'Aprobar área (1 documento)' }));
+    await waitFor(() => expect(useAvisos.getState().actual).not.toBeNull());
+    expect(useAvisos.getState().actual?.celebrar).toBe(false);
   });
 });
 

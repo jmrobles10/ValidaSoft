@@ -1,6 +1,6 @@
 import { Box, Button, Skeleton, Stack } from '@mui/material';
-import { EsqueletoFormulario, PaginaEstado } from '@validasoft/ui';
-import { Clock, Link2, LogOut, ShieldAlert } from 'lucide-react';
+import { Cargando, EsqueletoFormulario, PaginaEstado } from '@validasoft/ui';
+import { Clock, LogOut, ShieldAlert } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconoCarga } from '../shared/componentes';
@@ -11,13 +11,16 @@ import type { EstadoSesion } from './sesionStore';
 import { useMutation } from '@tanstack/react-query';
 import { useSesion } from './sesionStore';
 
-/** Esperando la sesión: esqueleto con la forma de la pantalla y qué hacer si tarda. Nunca un spinner a pantalla completa. */
+/**
+ * Esperando la sesión: esqueleto con la forma de la pantalla y qué hacer si tarda. Nunca un spinner a pantalla completa: la carga de marca
+ * es solo el indicador de la línea de estado (el tiempo de espera lo pone el sistema que aloja la app).
+ */
 function Esperando() {
   const { t } = useTranslation();
   return (
     <Stack spacing={1.5} sx={{ p: 3 }} aria-busy>
       <Stack direction="row" spacing={1} role="status" sx={{ alignItems: 'center', color: 'text.secondary', fontSize: 13, mb: 1 }}>
-        <Link2 size={16} strokeWidth={1.75} aria-hidden />
+        <Cargando tamano={22} decorativa />
         <span>{t('sesion.conectando')}</span>
       </Stack>
       <Skeleton variant="rounded" width={180} height={24} />

@@ -1,0 +1,23 @@
+{
+  "name": "@validasoft/marca",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Recursos de marca de Validasoft: favicon, íconos de la app, logotipos y GIF de éxito y de carga, generados desde los componentes de @validasoft/ui (docs/marca.md).",
+  "scripts": {
+    "generar": "node generar.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@fontsource-variable/geist": "^5.2.0",
+    "@mui/material": "^9.5.0",
+    "@validasoft/ui": "workspace:*",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

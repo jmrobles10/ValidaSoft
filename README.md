@@ -27,6 +27,7 @@ Sistema de validación documental para cualquier vínculo comercial (proveedor, 
 | 11 | [Trazabilidad por hito](docs/11-trazabilidad-por-hito.md) | Qué endpoints, DTOs, eventos, alertas y pantallas entrega cada hito |
 | 12 | [Plan de ejecución con Claude](docs/12-plan-de-ejecucion-con-claude.md) | Tareas por hito con modelo, esfuerzo de razonamiento y días-persona |
 | 13 | [Flujo de trabajo con Claude Code](docs/13-flujo-de-trabajo-con-claude-code.md) | Qué sesión abrir, con qué modelo, qué prompt dar, en qué orden y cómo se pasan trabajo |
+| — | [Marca](docs/marca.md) | El logo «Anillo»: construcción, colores, usos, animaciones y cómo se regeneran los recursos (`marca/`) |
 | ADR | [Decisiones de arquitectura](docs/adr/) | Por qué se decidió cada cosa estructural |
 | — | [Cuestionario](docs/decisiones/cuestionario.md) y [Registro de decisiones](docs/decisiones/registro.md) | Las 97 preguntas del experto y lo que Producto decidió |
 

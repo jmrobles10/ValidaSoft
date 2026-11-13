@@ -6,7 +6,7 @@ export * from './estados';
 export * from './marcaEmpresa';
 export * from './formato';
 export * from './accesibilidad';
-export * from './Isotipo';
+export * from './marca';
 export * from './patrones';
 export * from './campos';
 export * from './campoFecha';

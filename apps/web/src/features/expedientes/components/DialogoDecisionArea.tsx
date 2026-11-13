@@ -96,13 +96,12 @@ export function DialogoDecisionArea({
       { tipo: 'veredictoArea', areaId: area.areaId, decision },
       {
         onSuccess: (resultado) => {
-          mostrar(
-            resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado'
-              ? t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio })
-              : observando
-                ? t('expedientes.decisionArea.exitoObservar', { count: marcas.size })
-                : t('expedientes.decisionArea.exitoAprobar', { area: area.nombre }),
-          );
+          // Que la decisión de esta área cierre el expediente como aprobado (y emita el certificado) es el momento que lleva la animación de marca.
+          if (resultado.estado === 'Aprobado' && expediente.estado !== 'Aprobado') {
+            mostrar(t('expedientes.exitoExpedienteAprobado', { folio: resultado.folio }), 'success', { celebrar: true });
+          } else {
+            mostrar(observando ? t('expedientes.decisionArea.exitoObservar', { count: marcas.size }) : t('expedientes.decisionArea.exitoAprobar', { area: area.nombre }));
+          }
           onCerrar();
         },
       },

@@ -36,24 +36,62 @@ internal sealed class LogoVectorial(SvgDibujable svg) : LogoDePdf
 }
 
 /// <summary>
+/// El logotipo de Validasoft: la «V» (el check verde, del alto de la letra) muy pegada a «alida» (peso medio, color de texto) y «Soft» (peso
+/// normal, color de marca), con las fuentes estándar del PDF (Helvetica, negrita para «alida»; la tipografía de marca no se incrusta).
+/// Todo en puntos: la letra mide el alto disponible y el conjunto se centra en el rectángulo sin deformarse.
+/// </summary>
+internal sealed class LogoDeValidasoft(SvgDibujable v) : LogoDePdf
+{
+    /// <summary>Ancho de la «V» en tamaños de letra: su caja es de 64 × 60.</summary>
+    private const double AnchoDeLaV = 64.0 / 60.0;
+
+    /// <summary>Margen derecho de la «V» en tamaños de letra (va pegada a la «a»).</summary>
+    private const double MargenDeLaV = -0.23;
+
+    private const string Cuerpo = "alida";
+    private const string Marca = "Soft";
+
+    // #0A0F1C y #2F55D9.
+    private static readonly (double R, double G, double B) ColorDelTexto = (10 / 255.0, 15 / 255.0, 28 / 255.0);
+    private static readonly (double R, double G, double B) ColorDeLaMarca = (47 / 255.0, 85 / 255.0, 217 / 255.0);
+
+    /// <summary>Ancho natural con la letra de 1 punto.</summary>
+    private static double AnchoNatural => AnchoDeLaV + MargenDeLaV + (Medidas.Ancho(Cuerpo, Fuente.HelveticaBold, 1) + Medidas.Ancho(Marca, Fuente.Helvetica, 1));
+
+    public override double Proporcion => AnchoNatural;
+
+    public override void Dibujar(LienzoPdf pdf, double x, double y, double ancho, double alto)
+    {
+        var letra = Math.Min(ancho / AnchoNatural, alto);
+        var izquierda = x + (ancho - AnchoNatural * letra) / 2;
+        var baseY = y + (alto - letra) / 2;
+        v.Dibujar(pdf, izquierda, baseY, AnchoDeLaV * letra, letra);
+        var xTexto = izquierda + (AnchoDeLaV + MargenDeLaV) * letra;
+        pdf.TextoColor(xTexto, baseY, Fuente.HelveticaBold, letra, Cuerpo, ColorDelTexto);
+        pdf.TextoColor(xTexto + Medidas.Ancho(Cuerpo, Fuente.HelveticaBold, letra), baseY, Fuente.Helvetica, letra, Marca, ColorDeLaMarca);
+    }
+}
+
+/// <summary>
 /// Los logos de los PDF del producto: el de la empresa si tiene uno configurado que se pueda dibujar (PNG o SVG embebido como data URI,
 /// que es como la configuración lo guarda) y, si no, el de Validasoft. Un logo por URL <c>https</c> no se descarga: generar un PDF no abre
 /// conexiones de salida a direcciones que escribió un administrador (SSRF); se sube el archivo y queda embebido.
 /// </summary>
 internal static partial class LogosDePdf
 {
-    /// <summary>El isotipo de Validasoft (el mismo del producto: la «V» redondeada sobre el degradado de marca).</summary>
-    public const string IsotipoDeValidasoft =
+    /// <summary>
+    /// La «V» del logotipo de Validasoft (MA-1, docs/marca.md): el check caligráfico verde recortado a su caja (<c>viewBox 22 16 64 60</c>). Los
+    /// números son los de <c>packages/ui/src/marca/geometria.ts</c>; <c>marca/sincronia.test.ts</c> comprueba que no se separen.
+    /// </summary>
+    public const string VDeValidasoft =
         """
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-          <defs><linearGradient id="marca" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D6BFF"/><stop offset="1" stop-color="#22D38A"/></linearGradient></defs>
-          <rect width="32" height="32" rx="9" fill="url(#marca)"/>
-          <path d="M10 11.25 15.1 21a1 1 0 0 0 1.8 0L22 11.25" fill="none" stroke="#FFFFFF" stroke-width="3.25" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="22 16 64 60">
+          <path d="M24 38 C26 34 30 34 32 37 L47 61 C56 45 66 32 80 19 C82 17 85 19 83 22 C70 37 60 52 51 71 C49 75 44 75 42 71 Z" fill="#22D38A"/>
         </svg>
         """;
 
     private static readonly Lazy<LogoDePdf> DeValidasoft = new(() =>
-        new LogoVectorial(SvgDibujable.Leer(IsotipoDeValidasoft) ?? throw new InvalidOperationException("El isotipo de Validasoft no se pudo leer.")));
+        new LogoDeValidasoft(SvgDibujable.Leer(VDeValidasoft) ?? throw new InvalidOperationException("La «V» de Validasoft no se pudo leer.")));
 
     /// <summary>El logo de Validasoft.</summary>
     public static LogoDePdf Validasoft => DeValidasoft.Value;

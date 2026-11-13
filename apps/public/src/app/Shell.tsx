@@ -1,5 +1,5 @@
 import { BottomNavigation, BottomNavigationAction, Box, Button, Stack, Typography } from '@mui/material';
-import { Isotipo } from '@validasoft/ui';
+import { Logo } from '@validasoft/ui';
 import { Building2, FolderCheck, IdCard, Landmark, LogOut, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
@@ -52,13 +52,14 @@ function ShellNormal() {
       {/* Fija: al desplazarse, el tercero sigue viendo dónde está. */}
       <Box component="header" sx={{ position: 'sticky', top: 0, zIndex: 20, borderBottom: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', maxWidth: ancha ? 1160 : 960, mx: 'auto', px: 2, height: 56 }}>
-          <Isotipo tamano={28} />
-          <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: 15, lineHeight: '20px' }}>{t('comun.marca')}</Typography>
-            <Typography sx={{ color: 'text.secondary', fontSize: 12, lineHeight: '16px' }}>
+          <Logo tamano={22} titulo={t('comun.marca')} />
+          {/* Con sesión las secciones de la barra ya dicen dónde está la persona: el rótulo solo acompaña al logotipo en las pantallas de entrada y verificación. */}
+          {!activa && (
+            <Typography noWrap sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '16px', borderLeft: 1, borderColor: 'divider', pl: 1.5, minWidth: 0 }}>
               {verificando ? t('verificacion.marca') : t('comun.misDocumentos')}
             </Typography>
-          </Box>
+          )}
+          <Box sx={{ flex: 1 }} />
           {activa && (
             <Stack component="nav" aria-label={t('nav.secciones')} direction="row" spacing={0.5} sx={{ display: { xs: 'none', md: 'flex' } }}>
               {SECCIONES.map((s) => (
@@ -92,7 +93,7 @@ function ShellNormal() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 1 }} sx={{ alignItems: 'center', justifyContent: 'center', py: 2, px: 2, color: 'text.secondary', fontSize: 13, textAlign: 'center' }}>
           <span>{t('comun.pie')}</span>
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-            <Isotipo tamano={14} />
+            <Logo variante="icono" tamano={14} decorativo />
             {t('comun.conValidasoft')}
           </Box>
         </Stack>

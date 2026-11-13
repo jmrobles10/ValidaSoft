@@ -109,5 +109,13 @@ describe('Mi revisión con una empresa: actualización abierta de un vínculo ac
     expect(await screen.findByText('Aprobado')).toBeInTheDocument();
     expect(screen.getByText(/Constructora Norte aprobó tu información/)).toBeInTheDocument();
     expect(screen.queryByText('En revisión')).not.toBeInTheDocument();
+    // Lo que le toca al tercero es «Aprobado»: lleva el éxito de marca (decorativo; el estado ya está en texto).
+    expect(document.querySelector('svg g.pop')).not.toBeNull();
+  });
+
+  it('el éxito de marca no sale mientras la empresa revisa una actualización ni cuando se rechazó', async () => {
+    montar([vinculo({ enRevision: true })], expediente({ estado: 'EnRevision' }));
+    expect(await screen.findByText('En revisión')).toBeInTheDocument();
+    expect(document.querySelector('svg g.pop')).toBeNull();
   });
 });

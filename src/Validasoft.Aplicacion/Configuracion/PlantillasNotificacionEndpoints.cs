@@ -79,7 +79,8 @@ public static class PlantillasNotificacionEndpoints
         var datos = await DatosAsync(empresa, empresa.EmpresaId, ct);
         var ejemplo = EjemplosDeCorreo.Redactar(redactor, definicion.Evento, datos.Nombre, datos.Prefijo, reloj.GetUtcNow());
         var mensaje = ComposicionDeCorreo.Aplicar(ejemplo.Mensaje, textos, ejemplo.Variables);
-        return new VistaPreviaCorreoDto(mensaje.Asunto, mensaje.Texto, mensaje.Html);
+        // Las imágenes de marca que el correo pide por cid: (el GIF de la aprobación) se incrustan para que la vista previa las muestre.
+        return new VistaPreviaCorreoDto(mensaje.Asunto, mensaje.Texto, MarcoDeCorreo.EnLinea(mensaje.Html));
     }
 
     private static EventoDePlantilla Evento(string evento) =>

@@ -4,10 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0B1120" media="(prefers-color-scheme: dark)" />
     <title>Validasoft</title>
+    <!-- Marca (MA-1): favicon con modo claro/oscuro, íconos de la app y manifest; se generan con `pnpm --filter @validasoft/marca generar`. -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
-    <div id="raiz"></div>
+    <div id="raiz"><!-- marca:splash:inicio -->
+    <style>
+      .vs-splash { position: fixed; inset: 0; display: grid; place-items: center; background: #FAFBFD; }
+      .vs-splash svg { width: 56px; height: 56px; display: block; }
+      .vs-aro { stroke: #3D6BFF; }
+      .vs-check { fill: #22D38A; }
+      .vs-giro { transform-origin: 50px 50px; animation: vs-girar 1000ms linear infinite; }
+      .vs-guia { stroke-dasharray: 96 96; stroke-dashoffset: 96; animation: vs-trazar 1400ms ease-in-out infinite; }
+      @keyframes vs-girar { to { transform: rotate(360deg); } }
+      @keyframes vs-trazar { 0% { stroke-dashoffset: 96; } 45%, 60% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -96; } }
+      @keyframes vs-pulso { 50% { opacity: 0.55; } }
+      @media (prefers-color-scheme: dark) { .vs-splash { background: #060A14; } .vs-aro { stroke: #6E8FFF; } .vs-check { fill: #2BE29A; } }
+      @media (prefers-reduced-motion: reduce) { .vs-splash svg { animation: vs-pulso 2s ease-in-out infinite; } .vs-giro { animation: none; } .vs-guia { animation: none; stroke-dashoffset: 0; } }
+    </style>
+    <div class="vs-splash" role="status" aria-label="Cargando Validasoft">
+      <svg viewBox="-3 -6 110 110" aria-hidden="true" focusable="false">
+        <defs><mask id="vs-mascara" maskUnits="userSpaceOnUse" x="-20" y="-20" width="140" height="140"><path class="vs-guia" d="M28 37 L46 68 L82 20" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/></mask></defs>
+        <circle class="vs-aro" cx="50" cy="50" r="45" fill="none" stroke-width="5" opacity="0.2"/>
+        <circle class="vs-aro vs-giro" cx="50" cy="50" r="45" fill="none" stroke-width="5" stroke-linecap="round" stroke-dasharray="80 210"/>
+        <g transform="translate(47 70) scale(1.15) translate(-47 -70)"><path class="vs-check" d="M24 38 C26 34 30 34 32 37 L47 61 C56 45 66 32 80 19 C82 17 85 19 83 22 C70 37 60 52 51 71 C49 75 44 75 42 71 Z" mask="url(#vs-mascara)"/></g>
+      </svg>
+    </div>
+    <!-- marca:splash:fin --></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
