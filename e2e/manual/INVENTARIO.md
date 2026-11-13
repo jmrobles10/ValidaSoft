@@ -191,7 +191,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar |
 | `operacion/plazo-de-cargue-y-caducidad` ☑ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
 | `operacion/plazos-de-revision` ☑ | Administrador de empresa | Plazo por defecto y por área (spec `operacion`) | Configuración, avisos de plazo (campana y correo), indicador en la bandeja |
-| `operacion/delegacion-de-revision` ☐ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
+| `operacion/delegacion-de-revision` ☑ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
 | `operacion/recordatorio-en-lote` ☐ | Revisor/área | Varios expedientes observados (spec `novedades-tercero`) | Recordatorio desde la bandeja (uno por día), correo y campana |
 | `operacion/recordatorio-automatico-por-flujo` ☐ | Administrador de empresa | Flujo con recordatorio automático (spec `operacion`) | Modo «Empresa» o cada N días, lo que recibe el tercero |
 | `operacion/ayuda-de-documentos` ☐ | Administrador de empresa | Tipos de documento (spec `operacion`) | Texto de ayuda por documento y empresa, lo que lee el tercero al subir, plantillas de pre-vencimiento y preferencias |
