@@ -185,7 +185,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `operacion/invitacion-por-lotes` ☐ | Administrador de empresa | Grupo base (spec `lotes`) | Descargar la plantilla, subir el archivo, vista previa con errores por fila, confirmar, lote procesado |
+| `operacion/invitacion-por-lotes` ☑ | Administrador de empresa | Grupo base (spec `lotes`) | Descargar la plantilla, subir el archivo, vista previa con errores por fila, confirmar, lote procesado |
 | `operacion/lote-pausar-reanudar-cancelar` ☐ | Administrador de empresa | Lote grande en proceso | Pausar, reanudar, cancelar, reintentar fallidos, informe por fila |
 | `operacion/campana-de-renovacion` ☐ | Administrador de empresa | Vínculos por vencer (spec `operacion`) | Filtro, vista previa de a quién afecta, aviso antes de confirmar, proceso en segundo plano, correo y campana del tercero |
 | `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar |
