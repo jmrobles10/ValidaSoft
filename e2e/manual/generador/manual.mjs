@@ -98,7 +98,10 @@ async function main() {
     for (let i = pendientes.shift(); i; i = pendientes.shift()) {
       const destino = join(carpetaSitio, i.destino);
       mkdirSync(dirname(destino), { recursive: true });
-      if (conversor && i.destino.endsWith('.webp')) bytesDeImagenes += await conversor.convertir(i.origen, destino);
+      if (conversor && i.destino.endsWith('.webp')) {
+        const bytes = await conversor.convertir(i.origen, destino); // (`x += await …` perdería sumas: se lee x antes de esperar)
+        bytesDeImagenes += bytes;
+      }
       else {
         copyFileSync(i.origen, destino);
         bytesDeImagenes += statSync(destino).size;

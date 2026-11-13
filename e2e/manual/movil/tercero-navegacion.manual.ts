@@ -26,7 +26,8 @@ recorrido(
       explicacion:
         'En el celular las secciones están abajo, siempre a la vista: Mi bóveda, Mis empresas, Mi información, Mis cuentas y Privacidad. La sección en la que estás queda marcada. ' +
         'Arriba quedan el logotipo, la campana de avisos y «Salir»; el menú de secciones de la parte de arriba solo aparece en la pantalla grande.',
-      resaltar: page.getByRole('heading', { level: 2, name: 'Constructora Norte S.A.S.' }),
+      // La barra de secciones visible en cada tamaño: la de arriba en escritorio y la de abajo en el celular (los que no se ven no se resaltan).
+      resaltar: page.getByRole('navigation', { name: 'Secciones' }),
     });
 
     // 2. Mis empresas: dos tarjetas.
