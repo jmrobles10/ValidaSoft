@@ -99,7 +99,7 @@ public static class CorreoDeVigenciaPendienteHandler
         {
             <= 0 => "hoy",
             1 => "mañana",
-            var dias => $"en {dias} días"
+            var dias => $"en {Dominio.Comun.Plural.Dias(dias)}"
         };
         var (asunto, parrafo) = correo.Aviso switch
         {

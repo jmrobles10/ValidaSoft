@@ -232,7 +232,7 @@ public static class SolicitudesHabeasDelTerceroEndpoints
         {
             await AvisosAAdministradores.AvisarAsync(sesiones, mensajes, tenantId, new DestinatariosDeAviso(empresaId, ConOficial: true),
                 TiposNotificacion.HabeasSolicitud, $"Solicitud de {derecho} de datos personales",
-                $"Un tercero presentó una solicitud de {derecho} (radicado {evento.Radicado}). Tienes hasta el {evento.VenceEl:dd/MM/yyyy} para responderla ({evento.DiasHabiles} días hábiles).",
+                $"Un tercero presentó una solicitud de {derecho} (radicado {evento.Radicado}). Tienes hasta el {evento.VenceEl:dd/MM/yyyy} para responderla ({Plural.DiasHabiles(evento.DiasHabiles)}).",
                 $"/e/{empresaId}/habeas-data", $"habeas-recibida:{evento.SolicitudId:N}", nombreDestino, ahora, ct);
             await using var sesion = sesiones.ParaTenant(tenantId);
             Auditoria.Registrar(sesion, contexto, ServicioDeSolicitudesHabeas.Entidad, evento.SolicitudId.ToString(), AccionConfiguracion.Creado, null, auditado, ahora, empresaId);

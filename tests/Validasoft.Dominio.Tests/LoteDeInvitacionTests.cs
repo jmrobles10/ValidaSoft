@@ -108,6 +108,29 @@ public sealed class LoteDeInvitacionTests
     }
 
     [Fact]
+    public void Las_filas_que_la_tanda_en_curso_termina_despues_de_cancelar_se_cuentan_en_los_totales()
+    {
+        var lote = Nuevo(pendientes: 4, invalidas: 0, duplicadas: 0);
+        // Al cancelar: 1 exitosa y 3 pendientes; la tanda que estaba corriendo alcanza a invitar 2 filas más.
+        Aplicar(lote, [lote.Cancelar(new TotalesDeLote(4, 3, 1, 0, 0, 0), Ahora)]);
+        var canceladoEn = lote.TerminadoEn;
+
+        var despues = new TotalesDeLote(4, 1, 3, 0, 0, 0);
+        var avance = lote.RegistrarAvance(despues, Ahora.AddSeconds(2));
+        avance.ShouldHaveSingleItem().ShouldBeOfType<AvanceDeLoteRegistrado>();
+        Aplicar(lote, avance);
+
+        lote.Totales.ShouldBe(despues);
+        lote.Totales.Exitosas.ShouldBe(3); // lo que de verdad se procesó, no la foto de cuando se canceló
+        lote.Estado.ShouldBe(EstadoLote.Cancelado); // sigue cancelado: no se reanuda ni se da por terminado
+        lote.Ejecucion.ShouldBeNull();
+        lote.TerminadoEn.ShouldBe(canceladoEn);
+
+        // Sin cambios en los conteos no hay evento que escribir.
+        lote.RegistrarAvance(despues, Ahora.AddSeconds(3)).ShouldBeEmpty();
+    }
+
+    [Fact]
     public void La_fila_registra_su_resultado()
     {
         var fila = new FilaDeLote { Id = FilaDeLote.Clave(Guid.NewGuid(), 7), N = 7, Estado = EstadoFilaLote.Pendiente };

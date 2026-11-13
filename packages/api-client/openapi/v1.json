@@ -24281,6 +24281,10 @@
             "items": {
               "$ref": "#/components/schemas/AdjuntoDeCumplimientoDto"
             }
+          },
+          "esperandoCuentaDesignada": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -24363,6 +24367,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "esperandoCuentaDesignada": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

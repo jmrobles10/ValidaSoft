@@ -9,9 +9,11 @@ namespace Validasoft.Aplicacion.Comun;
 /// <summary>
 /// Correo listo para enviar (texto plano y HTML). <see cref="TenantId"/>: el tenant de quien lo origina; si es un sandbox el correo
 /// no sale a su destinatario sino al buzón de pruebas (SB-4). Nulo = no es de un tenant (acceso del tercero sin empresa).
+/// <see cref="ResponderA"/>: la dirección a la que llegan las respuestas (cabecera <c>Reply-To</c>): el correo de soporte que la
+/// empresa configuró; el enviador la completa para los correos de una empresa (nulo = las respuestas van al remitente).
 /// </summary>
 public sealed record MensajeDeCorreo(string Para, string Asunto, string Texto, string Html, Guid? TenantId = null, Guid? EmpresaId = null,
-    RemitenteDeCorreo? Remitente = null)
+    RemitenteDeCorreo? Remitente = null, string? ResponderA = null)
 {
     /// <summary>
     /// El mismo correo atribuido al tenant que lo origina (lo usan todos los manejadores de la cola <c>correo</c>) y, si es de una empresa,

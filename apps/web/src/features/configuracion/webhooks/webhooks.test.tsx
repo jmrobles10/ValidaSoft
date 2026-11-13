@@ -2,7 +2,7 @@ import { ThemeProvider } from '@mui/material';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { configurarCliente, reiniciarCliente, type EmpresaDto, type WebhookDto } from '@validasoft/api-client';
+import { configurarCliente, reiniciarCliente, type EmpresaDto, type SistemaIntegradoDto, type WebhookDto } from '@validasoft/api-client';
 import { createValidasoftTheme } from '@validasoft/ui';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -74,7 +74,10 @@ describe('modelo de webhooks', () => {
     expect(validarUrl('no es una url')).toBe('url-invalida');
     expect(validarUrl('https://ana:clave@srm.cliente.co')).toBe('url-invalida');
     expect(validarUrl('  ')).toBe('url-requerida');
-    expect(validarWebhook({ url: 'https://a.co', descripcion: '', tipos: [], empresas: [TODOS] })).toEqual(['tipos-requeridos']);
+    expect(validarWebhook({ sistemaId: '', url: 'https://a.co', descripcion: '', tipos: [], empresas: [TODOS] })).toEqual(['tipos-requeridos']);
+    // Al crear sin venir de un sistema integrado, el sistema dueño es obligatorio (la API responde 422 `sistema-requerido`).
+    expect(validarWebhook({ sistemaId: '', url: 'https://a.co', descripcion: '', tipos: [TODOS], empresas: [TODOS] }, true)).toEqual(['sistema-requerido']);
+    expect(validarWebhook({ sistemaId: 's1', url: 'https://a.co', descripcion: '', tipos: [TODOS], empresas: [TODOS] }, true)).toEqual([]);
   });
 
   it('agrupa el catálogo por prefijo y desmarcar un tipo con «todos» deja los demás explícitos', () => {
@@ -97,7 +100,7 @@ function CrearConSecreto() {
   return creado?.secreto ? (
     <DialogoSecreto secreto={creado.secreto} anteriorVence={null} onCerrar={() => setCreado(null)} />
   ) : (
-    <DrawerWebhook webhook={null} catalogo={CATALOGO} empresas={EMPRESAS} onCerrar={() => undefined} onCreado={setCreado} />
+    <DrawerWebhook webhook={null} catalogo={CATALOGO} empresas={EMPRESAS} sistemas={undefined} sistemaDeLaSesion="SRM" onCerrar={() => undefined} onCreado={setCreado} />
   );
 }
 
@@ -132,10 +135,70 @@ describe('crear un webhook', () => {
   });
 });
 
+const SISTEMAS: SistemaIntegradoDto[] = [
+  { id: 's1', codigo: 'SRM', nombre: 'SRM de Constructora Norte', clavePublicaPem: 'x', activo: true, creadoEn: '2026-11-01T10:00:00Z', origenesPermitidos: [] },
+  { id: 's2', codigo: 'ERP', nombre: 'ERP contable', clavePublicaPem: 'x', activo: true, creadoEn: '2026-11-02T10:00:00Z', origenesPermitidos: [] },
+  { id: 's3', codigo: 'VIEJO', nombre: 'Sistema retirado', clavePublicaPem: 'x', activo: false, creadoEn: '2026-10-01T10:00:00Z', origenesPermitidos: [] },
+];
+
+describe('crear un webhook sin venir de un sistema integrado (ingreso directo)', () => {
+  function montarDirecto(sistemas: SistemaIntegradoDto[] | undefined) {
+    return montar(
+      <DrawerWebhook webhook={null} catalogo={CATALOGO} empresas={EMPRESAS} sistemas={sistemas} sistemaDeLaSesion={null} onCerrar={() => undefined} onCreado={() => undefined} />,
+      () => json({ ...WEBHOOK, secreto: 'whsec_abc123' }, 201),
+    );
+  }
+
+  it('pide elegir el sistema integrado (solo los activos) y lo manda como sistemaId, que la API exige', async () => {
+    const usuario = userEvent.setup();
+    const peticiones = montarDirecto(SISTEMAS);
+    await usuario.type(screen.getByRole('textbox', { name: /Dirección/ }), 'https://srm.cliente.co/hook');
+    const crear = screen.getByRole('button', { name: 'Crear webhook' });
+    expect(crear).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Elige el sistema integrado.');
+
+    await usuario.click(screen.getByRole('combobox', { name: /Sistema integrado/ }));
+    expect(screen.queryByRole('option', { name: /Sistema retirado/ })).not.toBeInTheDocument();
+    await usuario.click(screen.getByRole('option', { name: 'ERP contable · ERP' }));
+
+    await waitFor(() => expect(crear).toBeEnabled());
+    await usuario.click(crear);
+    await waitFor(() => expect(peticiones).toHaveLength(1));
+    expect(peticiones[0]).toMatchObject({ url: '/api/v1/webhooks', metodo: 'POST', cuerpo: { url: 'https://srm.cliente.co/hook', sistemaId: 's2' } });
+  });
+
+  it('con un solo sistema activo no hay nada que elegir: va ese', async () => {
+    const usuario = userEvent.setup();
+    const peticiones = montarDirecto([SISTEMAS[0]!, SISTEMAS[2]!]);
+    await usuario.type(screen.getByRole('textbox', { name: /Dirección/ }), 'https://srm.cliente.co/hook');
+    const crear = screen.getByRole('button', { name: 'Crear webhook' });
+    await waitFor(() => expect(crear).toBeEnabled());
+    await usuario.click(crear);
+    await waitFor(() => expect(peticiones).toHaveLength(1));
+    expect(peticiones[0]?.cuerpo).toMatchObject({ sistemaId: 's1' });
+  });
+
+  it('sin sistemas activos avisa cómo crear uno y no deja crear el webhook', async () => {
+    const usuario = userEvent.setup();
+    montarDirecto([SISTEMAS[2]!]);
+    await usuario.type(screen.getByRole('textbox', { name: /Dirección/ }), 'https://srm.cliente.co/hook');
+    expect(screen.getByText(/Aún no hay sistemas integrados activos/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Crear webhook' })).toBeDisabled();
+  });
+
+  it('desde un sistema integrado no se pregunta: la API toma el de la sesión', () => {
+    montar(
+      <DrawerWebhook webhook={null} catalogo={CATALOGO} empresas={EMPRESAS} sistemas={SISTEMAS} sistemaDeLaSesion="SRM" onCerrar={() => undefined} onCreado={() => undefined} />,
+      () => json(WEBHOOK, 201),
+    );
+    expect(screen.queryByRole('combobox', { name: /Sistema integrado/ })).not.toBeInTheDocument();
+  });
+});
+
 describe('eventos de la información del tercero (FD-7)', () => {
   it('muestra seccion.aceptada y los de invitaciones bajo un grupo con nombre en español, y se puede elegir', async () => {
     const usuario = userEvent.setup();
-    montar(<DrawerWebhook webhook={null} catalogo={[...CATALOGO, ...EVENTOS_NUEVOS]} empresas={EMPRESAS} onCerrar={() => undefined} onCreado={() => undefined} />, () => json(WEBHOOK, 201));
+    montar(<DrawerWebhook webhook={null} catalogo={[...CATALOGO, ...EVENTOS_NUEVOS]} empresas={EMPRESAS} sistemas={undefined} sistemaDeLaSesion="SRM" onCerrar={() => undefined} onCreado={() => undefined} />, () => json(WEBHOOK, 201));
     // Cada grupo tiene su título: ninguno sale con el prefijo crudo del tipo.
     expect(screen.getByText('Información del tercero')).toBeInTheDocument();
     expect(screen.getByText('Invitaciones')).toBeInTheDocument();

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
@@ -11,6 +12,7 @@ using Validasoft.Dominio.Ficha;
 using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
+using Wolverine;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Vinculos;
@@ -159,15 +161,22 @@ public static class CuentaDesignadaEndpoints
         IProtectorDeCamposDelGrupo campos, CancellationToken ct) =>
         await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, campos, ct);
 
-    /// <summary>Aprueba la cuenta propuesta (una persona con <c>cuentas:aprobar</c>); con la segunda persona queda designada.</summary>
+    /// <summary>
+    /// Aprueba la cuenta propuesta (una persona con <c>cuentas:aprobar</c>); con la segunda persona queda designada y, si el expediente
+    /// abierto del vínculo la exigía y esperaba por ella (CB-4), se aprueba en la misma transacción.
+    /// </summary>
     [WolverinePost("/api/v1/vinculos/{id}/cuenta-designada/aprobar")]
     [Authorize(Policy = Permisos.CuentasAprobar)]
     public static async Task<CuentaDesignadaDelVinculoDto> Aprobar(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto,
-        IProtectorDeCamposDelGrupo campos, TimeProvider reloj, CancellationToken ct)
+        IProtectorDeCamposDelGrupo campos, IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
     {
         var usuario = UsuarioRequerido(contexto);
+        var ahora = reloj.GetUtcNow();
         var stream = await empresa.VinculoParaEscribirAsync(id, null, ct);
-        stream.AppendMany(stream.Aggregate!.AprobarCuenta(usuario, reloj.GetUtcNow()));
+        var eventos = stream.Aggregate!.AprobarCuenta(usuario, ahora);
+        stream.AppendMany(eventos);
+        if (eventos.OfType<CuentaDesignadaAprobada>().Any())
+            await ProcesoDeValidacion.ConfirmarCuentaDesignadaAsync(empresa.Sesion, stream, new CorreoAlTercero(mensajes, protector), empresa.Certificados, ahora, ct);
         await empresa.Sesion.SaveChangesAsync(ct);
         return await DtoAsync(empresa, await empresa.CargarVinculoAsync(id, ct), contexto, campos, ct);
     }

@@ -86,7 +86,7 @@ recorrido(
     await paso(page, {
       titulo: 'Reactiva el sistema',
       explicacion:
-        'Al reactivarlo, el sistema vuelve a poder pedir sesiones con sus llaves vigentes. Las sesiones y los tokens de antes no se recuperan, y las llaves que se revocaron no vuelven: esas se emiten de nuevo desde el grupo.',
+        'Al reactivarlo, el sistema vuelve a ser válido: sus aserciones se aceptan otra vez y sus orígenes pueden volver a embeber Validasoft. Las sesiones y los tokens de antes no se recuperan, y las API keys no vuelven: se revocaron todas al desactivarlo, así que hay que emitir otras desde el grupo para que su backend vuelva a pedir sesiones.',
       resaltar: lista.getByRole('button', { name: `Desactivar ${SISTEMA}` }),
       avisos: true,
     });

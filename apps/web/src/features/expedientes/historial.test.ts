@@ -119,3 +119,26 @@ describe('historial: el tercero retiró una versión (RT-3)', () => {
     expect(normal.detalle).toBe('Registro Único Tributario');
   });
 });
+
+describe('historial: cuenta bancaria designada (CB-4)', () => {
+  const evento = (tipo: string, datos: Record<string, unknown>): EventoHistorialDto => ({
+    version: 9,
+    tipo,
+    fecha: '2026-11-13T12:00:00Z',
+    actorTipo: 'Usuario',
+    actorId: 'u1',
+    sistema: null,
+    datos,
+  });
+
+  it('la exigencia al abrir dice si la cuenta ya estaba aprobada o se espera', () => {
+    const pendiente = eventoExpedienteATimeline(evento('cuenta_designada_requerida', { aprobada: false }), contexto, t);
+    expect(pendiente.titulo).toBe('Exige cuenta bancaria designada');
+    expect(pendiente.detalle).toBe('Se aprueba cuando la empresa apruebe la cuenta que designe el tercero');
+    expect(eventoExpedienteATimeline(evento('cuenta_designada_requerida', { aprobada: true }), contexto, t).detalle).toBe('La cuenta designada ya estaba aprobada');
+  });
+
+  it('la aprobación de la cuenta tiene su rótulo', () => {
+    expect(eventoExpedienteATimeline(evento('cuenta_designada_confirmada', {}), contexto, t).titulo).toBe('Cuenta bancaria designada aprobada');
+  });
+});

@@ -95,6 +95,7 @@ export const plataforma = {
     },
     listo: {
       titulo: 'Grupo {{nombre}} creado',
+      tituloConNombreCompleto: '{{nombre}} creado',
       aviso: 'Copia y entrega estas llaves por un canal seguro: no se vuelven a mostrar. Si se pierden, el administrador del grupo puede emitir otras.',
       llaveSistema: 'API key del sistema {{sistema}}',
       llaveSistemaAyuda: 'La usa el backend del sistema, con la aserción X-Usuario-Delegado de cada persona. Nunca en un navegador.',
@@ -177,7 +178,7 @@ export const plataforma = {
       'precio-invalido': 'Escribe un precio entre 0 y 100 000 000, con hasta dos decimales, o déjalo vacío para usar la tarifa general.',
       'modelo-invalido': 'El nombre del modelo lleva letras, números, puntos o guiones.',
       'umbral-invalido': 'El umbral de confianza va de 0 a 1.',
-      'llave-invalida': 'La API key debe tener entre 20 y 512 caracteres, sin espacios.',
+      'llave-invalida': 'La API key empieza por sk- (también sk-proj- o sk-svcacct-), tiene entre 20 y 512 caracteres y no lleva espacios.',
     },
   },
   listas: {

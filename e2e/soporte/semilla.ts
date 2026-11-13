@@ -112,16 +112,18 @@ export async function crearEscenario(opciones: OpcionesEscenario = {}): Promise<
   const olga = await crearPersona('olga', 'Olga Oficial', [{ rol: 'OficialCumplimiento', empresaId: norte.id }]);
   const sofia = await crearPersona('sofia', 'Sofía Revisora', [{ rol: 'Revisor', empresaId: sur.id }]);
 
-  // Cada tenant nace con PROVEEDOR (enlace con OTP); CLIENTE se crea sin OTP.
+  // Cada tenant nace con PROVEEDOR (enlace con OTP y cuenta designada exigida); CLIENTE se crea sin OTP. Estos escenarios aprueban
+  // expedientes sin hablar de cuentas: PROVEEDOR deja de exigirla (con ella el expediente espera la cuenta aprobada, CB-4).
   for (const [codigo, nombre, exigeOtpEnEnlace] of [
     ['PROVEEDOR', 'Proveedor', true],
     ['CLIENTE', 'Cliente', false],
   ] as const) {
-    await llamar('POST', '/api/v1/tipos-vinculo', {
-      llave: admin,
-      cuerpo: { codigo, nombre, atributosPermitidos: [], exigeCuentaDesignada: false, exigeOtpEnEnlace },
-    }).catch((error: unknown) => {
+    const cuerpo = { codigo, nombre, atributosPermitidos: [], exigeCuentaDesignada: false, exigeOtpEnEnlace };
+    await llamar('POST', '/api/v1/tipos-vinculo', { llave: admin, cuerpo }).catch(async (error: unknown) => {
       if (!(error instanceof ErrorDeApi && error.codigo === 'tipo-vinculo-duplicado')) throw error;
+      const existentes = await llamar<{ id: string; codigo: string }[]>('GET', '/api/v1/tipos-vinculo', { llave: admin });
+      const existente = existentes.find((t) => t.codigo === codigo);
+      if (existente) await llamar('PUT', `/api/v1/tipos-vinculo/${existente.id}`, { llave: admin, cuerpo });
     });
   }
 

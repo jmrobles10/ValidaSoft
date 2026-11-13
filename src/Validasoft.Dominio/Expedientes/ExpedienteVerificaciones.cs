@@ -127,7 +127,7 @@ public sealed partial class Expediente
     /// <summary>Tiene verificaciones (informe SAGRILAFT).</summary>
     public bool ConVerificaciones { get; set; }
 
-    /// <summary>Todas las áreas aprobaron pero falta alguna verificación bloqueante para cerrar.</summary>
+    /// <summary>Todas las áreas aprobaron pero falta algo para cerrar: una verificación bloqueante o la cuenta designada (CB-4, <see cref="EsperandoCuentaDesignada"/>).</summary>
     [JsonIgnore]
     public bool EsperandoVerificaciones => Estado == EstadoExpediente.EnRevision && Etapas.Count > 0 && Etapas.All(e => e.Estado == EstadoEtapa.Aprobada);
 

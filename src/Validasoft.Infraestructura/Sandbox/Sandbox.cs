@@ -63,6 +63,23 @@ public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos e
         return remitente;
     }
 
+    /// <summary>
+    /// El correo de soporte que la empresa configuró (<c>Empresa.ReplyTo</c>): a él llegan las respuestas de sus correos (<c>Reply-To</c>).
+    /// Nulo si no lo configuró. Se recuerda 30 segundos por empresa; al cambiarlo se olvida en el nodo que lo cambió.
+    /// </summary>
+    private async Task<string?> ResponderADeLaEmpresaAsync(Guid empresaId, CancellationToken ct)
+    {
+        var llave = Aplicacion.Configuracion.DominioDeCorreoEndpoints.LlaveDelResponderA(empresaId);
+        if (cache.TryGetValue(llave, out string? guardado))
+            return guardado;
+
+        await using var global = store.QuerySession();
+        var soporte = (await global.LoadAsync<Empresa>(empresaId, ct))?.ReplyTo;
+        var direccion = string.IsNullOrWhiteSpace(soporte) ? null : soporte.Trim();
+        cache.Set(llave, direccion, VigenciaDelRemitente);
+        return direccion;
+    }
+
     public async Task EnviarAsync(MensajeDeCorreo mensaje, CancellationToken ct)
     {
         if (mensaje.TenantId is { } tenantId && await entornos.EsSandboxAsync(tenantId, ct))
@@ -76,6 +93,8 @@ public sealed class EnviadorDeCorreo(ITransporteDeCorreo transporte, IEntornos e
 
         if (mensaje is { Remitente: null, TenantId: { } tenant, EmpresaId: { } empresa })
             mensaje = mensaje with { Remitente = await RemitenteDeLaEmpresaAsync(tenant, empresa, ct) };
+        if (mensaje is { ResponderA: null, TenantId: not null, EmpresaId: { } deLaEmpresa })
+            mensaje = mensaje with { ResponderA = await ResponderADeLaEmpresaAsync(deLaEmpresa, ct) };
         await transporte.EnviarAsync(mensaje, ct);
     }
 }

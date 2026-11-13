@@ -8,7 +8,7 @@ import { tipoDeVisor } from './api';
 import { estadoRevision } from './revisionIa';
 import type { TipoEsperado } from './RevisionAutomatica';
 import { ResumenVersion } from './ResumenVersion';
-import { useArchivoDelVisor, type ContenidoDelVisor } from './useArchivoDelVisor';
+import { ofrecerDescarga, useArchivoDelVisor, type ContenidoDelVisor } from './useArchivoDelVisor';
 
 /** Lo que el visor necesita de una versión: sirve desde la lista de documentos del vínculo y desde un requisito. */
 export interface DocumentoEnVisor {
@@ -69,7 +69,8 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
           </Typography>
         </Box>
         {conArchivo && (
-          <Button component="a" href={descarga?.url} download={descarga?.nombre} disabled={!descarga} variant="outlined" startIcon={<Download size={16} aria-hidden />}>
+          // Siempre un botón (con `disabled` mientras llega la URL): como enlace cambiaba de rol al cargar el archivo.
+          <Button disabled={!descarga} onClick={() => descarga && ofrecerDescarga(descarga)} variant="outlined" startIcon={<Download size={16} aria-hidden />}>
             {t('documentos.descargar')}
           </Button>
         )}

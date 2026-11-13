@@ -313,6 +313,9 @@ describe('Sistemas de un grupo (PI-7)', () => {
 
     const confirmar = await screen.findByRole('dialog', { name: /^Reactivar CRM de Andina/ });
     expect(within(confirmar).getByText(/Las sesiones y los tokens de antes no se recuperan/)).toBeInTheDocument();
+    // Lo verdadero: al desactivar se revocaron todas sus API keys, así que no hay «llaves vigentes» que reactivar.
+    expect(within(confirmar).getByText(/hay que emitir otras/)).toBeInTheDocument();
+    expect(within(confirmar).queryByText(/con sus llaves vigentes/)).not.toBeInTheDocument();
     await usuario.click(within(confirmar).getByRole('button', { name: 'Reactivar' }));
 
     await waitFor(() => expect(peticiones.some((p) => p.metodo === 'POST' && p.ruta.endsWith('/sistemas/s2/reactivar'))).toBe(true));

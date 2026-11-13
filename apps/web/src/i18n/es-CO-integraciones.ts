@@ -27,6 +27,10 @@ export const webhooks = {
     desactivada: 'Desactivado',
   },
   campos: {
+    sistema: 'Sistema integrado',
+    sistemaAyuda: 'El sistema dueño de este webhook: sus eventos se le avisan a él.',
+    sistemaElegir: 'Elige el sistema',
+    sinSistemas: 'Aún no hay sistemas integrados activos. Crea uno en Configuración › Sistemas integrados.',
     url: 'Dirección (URL)',
     urlAyuda: 'Debe ser https. Responde 2xx en menos de 5 segundos y procesa después.',
     descripcion: 'Descripción (opcional)',
@@ -46,6 +50,7 @@ export const webhooks = {
     invitaciones: 'Invitaciones',
   },
   errores: {
+    'sistema-requerido': 'Elige el sistema integrado.',
     'url-requerida': 'Escribe la dirección.',
     'url-invalida': 'La dirección no es válida.',
     'url-no-permitida': 'Usa https (http solo hacia localhost, en desarrollo).',

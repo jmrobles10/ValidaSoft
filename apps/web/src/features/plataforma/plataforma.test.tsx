@@ -13,6 +13,8 @@ import {
   cuerpoAltaGrupo,
   cuerpoPlanIa,
   estadoPlanIa,
+  llaveValida,
+  nombreYaDiceGrupo,
   slugDesdeNombre,
   validarGrupo,
   validarPlanIa,
@@ -58,6 +60,14 @@ describe('alta de grupo', () => {
     expect(slugDesdeNombre('x'.repeat(40))).toHaveLength(30);
   });
 
+  it('reconoce el nombre que ya empieza por «Grupo» para no repetir la palabra en el título', () => {
+    expect(nombreYaDiceGrupo('Grupo Cumbre')).toBe(true);
+    expect(nombreYaDiceGrupo('  grupo andino')).toBe(true);
+    expect(nombreYaDiceGrupo('Grupo')).toBe(true);
+    expect(nombreYaDiceGrupo('Cumbre')).toBe(false);
+    expect(nombreYaDiceGrupo('Grupos del Sur')).toBe(false);
+  });
+
   it('valida cada parte en el orden del formulario', () => {
     expect(validarGrupo(grupoCompleto(), undefined)).toEqual([]);
     const vacio = borradorGrupoNuevo(borradorEmpresaNuevo());
@@ -99,6 +109,17 @@ describe('plan de IA', () => {
     expect(cuerpoPlanIa({ ...b, llave: { tipo: 'quitar' } }).apiKeyOpenAi).toBe('');
     expect(cuerpoPlanIa({ ...b, llave: { tipo: 'reemplazar', valor: ' sk-proj-0123456789abcdefghij ' } }).apiKeyOpenAi).toBe('sk-proj-0123456789abcdefghij');
     expect(validarPlanIa({ ...b, llave: { tipo: 'reemplazar', valor: 'corta' } })).toEqual(['llave-invalida']);
+  });
+
+  it('acepta las formas actuales de la llave de OpenAI y rechaza lo que no lo parece', () => {
+    expect(llaveValida('sk-0123456789abcdefghijklmnopqrstuvwxyz0123456789ABCD')).toBe(true);
+    expect(llaveValida('sk-proj-AbC123_dEf-456GhI789jKl012')).toBe(true);
+    expect(llaveValida('  sk-svcacct-AbC123_dEf-456GhI789jKl012  ')).toBe(true);
+    expect(llaveValida('sk-corta')).toBe(false);
+    expect(llaveValida('pk-0123456789abcdefghijklmnopqrstuvwxyz')).toBe(false);
+    expect(llaveValida('sk-con espacios 0123456789abcdefghij')).toBe(false);
+    expect(llaveValida('sk-con.puntos.0123456789abcdefghij')).toBe(false);
+    expect(llaveValida(`sk-${'a'.repeat(510)}`)).toBe(false);
   });
 
   it('valida cupo, tope, modelos y umbral; sin adicional no hay tope', () => {

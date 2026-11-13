@@ -213,6 +213,11 @@ export function eventoExpedienteATimeline(
           .map((v) => tipoDeVerificacion(v, t))
           .join(' · '),
       };
+    // Cuenta bancaria designada (CB-4): el tipo de vínculo la exige para aprobar el expediente, y la empresa la aprobó.
+    case 'cuenta_designada_requerida':
+      return { ...base, detalle: t(campo(datos, 'aprobada') === true ? 'expedientes.historial.cuentaYaAprobada' : 'expedientes.historial.cuentaPendiente') };
+    case 'cuenta_designada_confirmada':
+      return base;
     case 'verificacion_externa_registrada':
       return {
         ...base,

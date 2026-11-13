@@ -375,6 +375,8 @@ Hay dos embebidos: el de las **personas de tu empresa** (esta sección) y el del
    | `validasoft:tema` | `{ mode: 'light' \| 'dark' }` |
    | `validasoft:cerrar-sesion` | — |
 
+   **Alto del iframe.** Tienes dos formas, y la pantalla se adapta a la que uses sin que se lo digas: (a) dejar que `validasoft:resize` estire el iframe al alto del contenido (lo que hace el SDK); o (b) darle tú un alto fijo (p. ej. la ventana menos tu cabecera). En las pantallas de edición con encabezado fijo (Configuración, expediente, ficha) la app mantiene un alto propio con su propio scroll: si pide un alto y el iframe no cambia de tamaño, entiende que el alto es tuyo y llena el que tiene; si lo estiras, se queda del alto que pidió. De ninguna forma el contenido queda cortado afuera: lo que no cabe se desplaza dentro del iframe.
+
    La ruta del iframe (`#/e/{empresa}/{pantalla}`): `bandeja`, `certificados`, `vinculos`, `invitaciones`, `configuracion/…`. En el sandbox, la empresa es la copia de pruebas (§5) y el token se canjea con la llave de prueba.
 
 ### 8.1 El tercero embebido (bóveda, expediente y ficha)

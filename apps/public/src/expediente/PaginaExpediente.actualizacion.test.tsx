@@ -66,6 +66,25 @@ function montar(vinculos: VinculoPublicoDto[], cuerpo: ExpedientePublicoDto) {
 
 afterEach(() => reiniciarCliente());
 
+describe('Mi revisión con una empresa: falta la cuenta bancaria designada (CB-4)', () => {
+  it('avisa que la empresa aprueba cuando su cuenta esté designada y aprobada, y lleva a Mis cuentas', async () => {
+    montar([vinculo({ estado: 'EnValidacion', expedienteId: 'exp-1' })], expediente({ tipo: 'Inicial', estado: 'EnRevision', esperandoCuentaDesignada: true }));
+
+    const titulo = await screen.findByRole('heading', { level: 1, name: 'Tu revisión con Constructora Norte' });
+    const principal = within(titulo.closest('main') ?? document.body);
+    expect(await principal.findByText('Falta tu cuenta bancaria designada')).toBeInTheDocument();
+    expect(principal.getByText(/Constructora Norte aprueba tu validación cuando tu cuenta bancaria para esta empresa esté designada y aprobada/)).toBeInTheDocument();
+    expect(principal.getByRole('link', { name: 'Ver mis cuentas' })).toHaveAttribute('href', '/cuentas');
+  });
+
+  it('sin la espera no aparece el aviso', async () => {
+    montar([vinculo({ enRevision: true })], expediente({ tipo: 'Inicial', estado: 'EnRevision' }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Tu revisión con Constructora Norte' });
+    expect(screen.queryByText('Falta tu cuenta bancaria designada')).not.toBeInTheDocument();
+  });
+});
+
 describe('Mi revisión con una empresa: actualización abierta de un vínculo activo', () => {
   it('en revisión: el encabezado dice «En revisión» y que la empresa está revisando, no «Aprobado» ni «tu vínculo está activo»', async () => {
     montar([vinculo({ enRevision: true })], expediente({ estado: 'EnRevision' }));

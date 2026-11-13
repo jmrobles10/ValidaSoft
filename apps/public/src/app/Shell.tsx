@@ -17,6 +17,24 @@ const SECCIONES = [
 ] as const;
 
 /**
+ * Cada acción de la barra inferior reparte el ancho según su rótulo (no por partes iguales) y el rótulo nunca baja de línea:
+ * «Mi información» y «Mis empresas» no caben en 78 px (390 px entre cinco) con el tamaño por omisión de MUI (12 px, 14 px la
+ * activa). El tamaño es el mismo activa o no (así el ancho no salta) y se achica con la pantalla hasta un mínimo legible.
+ */
+const TAMANO_ROTULO_INFERIOR = 'clamp(10px, 2.8vw, 12px)';
+const ACCION_INFERIOR = {
+  minWidth: 0,
+  maxWidth: 'none',
+  flex: '1 1 auto',
+  px: 0.25,
+  '& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected': {
+    fontSize: TAMANO_ROTULO_INFERIOR,
+    lineHeight: '14px',
+    whiteSpace: 'nowrap',
+  },
+} as const;
+
+/**
  * Shell del tercero, móvil primero (design system «Registro», PantallaPublicoShell): cabecera con la marca, contenido de
  * una columna (máx. 720 px), pie "con Validasoft" y, con sesión, navegación inferior en el celular y superior en escritorio.
  */
@@ -115,6 +133,7 @@ function ShellNormal() {
                 label={t(s.clave)}
                 icon={<s.icono size={22} aria-hidden />}
                 aria-current={actual === s.ruta ? 'page' : undefined}
+                sx={ACCION_INFERIOR}
               />
             ))}
           </BottomNavigation>

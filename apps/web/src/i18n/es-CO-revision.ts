@@ -45,6 +45,10 @@ export const expedientes = {
     rechazadoTitulo: 'Expediente rechazado',
     esperandoVerificacionesTitulo: 'Falta cumplimiento para aprobar',
     esperandoVerificaciones: 'Todas las áreas aprobaron. El expediente se aprueba cuando se satisfaga: {{verificaciones}}.',
+    esperandoCuentaTitulo: 'Falta la cuenta bancaria designada',
+    esperandoCuenta:
+      'Este tipo de vínculo exige una cuenta bancaria designada y aprobada. El expediente se aprueba solo cuando dos personas de la empresa aprueben la cuenta que designe el tercero; si la rechazan, sigue esperando a que designe otra.',
+    esperandoCuentaAccion: 'Ver la cuenta',
     rechazado: '{{area}} lo rechazó el {{fecha}}. El vínculo volvió a Invitado.',
     // Una actualización rechazada o anulada deja el vínculo como estaba (RV-2, VR-13): el tercero ve que no se aprobó.
     rechazadoActualizacion: '{{area}} la rechazó el {{fecha}}. El vínculo conserva lo que ya estaba aprobado y el tercero ve que esta actualización no se aprobó.',
@@ -376,6 +380,8 @@ export const expedientes = {
       requisito_eximido: 'Documento eximido',
       requisito_ratificado: 'El tercero ratificó',
       verificaciones_requeridas: 'Verificaciones que pide el flujo',
+      cuenta_designada_requerida: 'Exige cuenta bancaria designada',
+      cuenta_designada_confirmada: 'Cuenta bancaria designada aprobada',
       verificacion_externa_registrada: 'Listas restrictivas consultadas',
       coincidencia_resuelta: 'Coincidencia resuelta',
       estudio_de_cumplimiento_registrado: 'Estudio de cumplimiento',
@@ -404,6 +410,8 @@ export const expedientes = {
     observoDocumento: '{{area}} observó {{documento}} (v{{n}})',
     eximido: '{{documento}} eximido',
     ratificado: 'El tercero ratificó {{documento}}: sigue igual',
+    cuentaYaAprobada: 'La cuenta designada ya estaba aprobada',
+    cuentaPendiente: 'Se aprueba cuando la empresa apruebe la cuenta que designe el tercero',
     consultaListas_one: '{{proveedor}} · {{personas}} personas · {{count}} coincidencia',
     consultaListas_other: '{{proveedor}} · {{personas}} personas · {{count}} coincidencias',
     coincidencia: '{{decision}}: {{lista}}',

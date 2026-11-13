@@ -63,10 +63,10 @@ export function FilaSagrilaft({ fila: f, empresaId, onVerPersonas }: { fila: Fil
             {formatearFecha(f.proximaRevision ?? '')}
             <Typography sx={{ ...SECUNDARIO, color: revision.tipo === 'vencida' ? 'error.main' : 'text.secondary' }}>
               {revision.tipo === 'vencida'
-                ? t('cumplimiento.sagrilaft.tabla.revisionVencida', { dias: String(revision.dias) })
+                ? t('cumplimiento.sagrilaft.tabla.revisionVencida', { count: revision.dias })
                 : revision.tipo === 'hoy'
                   ? t('cumplimiento.sagrilaft.tabla.revisionHoy')
-                  : t('cumplimiento.sagrilaft.tabla.revisionVence', { dias: String(revision.dias) })}
+                  : t('cumplimiento.sagrilaft.tabla.revisionVence', { count: revision.dias })}
             </Typography>
           </>
         )}

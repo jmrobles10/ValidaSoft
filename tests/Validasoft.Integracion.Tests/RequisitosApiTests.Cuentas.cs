@@ -79,6 +79,118 @@ public sealed partial class RequisitosApiTests
             .Estado.ShouldBe("Retirada");
     }
 
+    [Fact]
+    public async Task El_expediente_de_un_tipo_que_exige_cuenta_espera_en_revision_y_se_aprueba_solo_cuando_la_empresa_aprueba_la_cuenta()
+    {
+        var e = await PrepararAsync();
+        await ExigirCuentaDelProveedorAsync(e.Norte.Admin, true); // CB-4: PROVEEDOR exige la cuenta designada aprobada
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara"));
+        await AceptarAsync(sesion, vinculo.Id);
+        var olga = await OficialAsync(e, "Olga Tesorería");
+
+        var expedienteId = await ExpedienteAbiertoDelVinculoAsync(e, vinculo.Id);
+
+        // Todas las áreas aprueban, pero sin cuenta designada aprobada el expediente no se aprueba: espera en revisión.
+        await AreasAprueban(e, expedienteId);
+        var enEspera = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200);
+        enEspera.Estado.ShouldBe("EnRevision");
+        enEspera.Etapas.ShouldAllBe(etapa => etapa.Estado == "Aprobada");
+        enEspera.EsperandoCuentaDesignada.ShouldBeTrue();
+        enEspera.EsperandoVerificaciones.ShouldBeFalse(); // no falta cumplimiento: solo la cuenta
+        (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).Estado.ShouldNotBe("Activo");
+        // El tercero también ve que falta su cuenta designada aprobada.
+        (await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{expedienteId}", sesion.AccessToken, null, 200))
+            .EsperandoCuentaDesignada.ShouldBeTrue();
+
+        // El tercero designa su cuenta y la empresa la rechaza: el expediente sigue esperando (no se rechaza).
+        var url = $"/api/v1/vinculos/{vinculo.Id}/cuenta-designada";
+        var designar = $"/public/v1/vinculos/{vinculo.Id}/cuenta-designada";
+        var primera = await TerceroAsync<CuentaBancariaPublicaDto>("POST", "/public/v1/boveda/cuentas-bancarias", sesion.AccessToken,
+            new RegistrarCuentaBancariaDto("Bancolombia", "Ahorros", "031-123456-78", "Aceros del Norte S.A.S.", "NIT 900123456"), 201);
+        await SubirAsync(sesion, "CERTIFICACION_BANCARIA", Pdf("Certificación Bancolombia"));
+        await TerceroAsync<CuentaBancariaPublicaDto>("POST", designar, sesion.AccessToken, new DesignarCuentaDto(primera.Id), 200);
+        await ApiAsync<CuentaDesignadaDelVinculoDto>("POST", $"{url}/rechazar", Delegado(e.Norte, e.Carlos), new MotivoDto("El titular no coincide con la certificación."), 200);
+        var tras = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200);
+        (tras.Estado, tras.EsperandoCuentaDesignada).ShouldBe(("EnRevision", true));
+
+        // Designa otra: con una sola aprobación aún espera; con la segunda persona la cuenta queda designada y el expediente se aprueba solo.
+        var segunda = await TerceroAsync<CuentaBancariaPublicaDto>("POST", "/public/v1/boveda/cuentas-bancarias", sesion.AccessToken,
+            new RegistrarCuentaBancariaDto("Davivienda", "Corriente", "4700 1234 9999", "Aceros del Norte S.A.S.", "NIT 900123456"), 201);
+        await TerceroAsync<CuentaBancariaPublicaDto>("POST", designar, sesion.AccessToken, new DesignarCuentaDto(segunda.Id), 200);
+        await ApiAsync<CuentaDesignadaDelVinculoDto>("POST", $"{url}/aprobar", Delegado(e.Norte, e.Carlos), new { }, 200);
+        (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200)).Estado.ShouldBe("EnRevision");
+
+        await ApiAsync<CuentaDesignadaDelVinculoDto>("POST", $"{url}/aprobar", Delegado(e.Norte, olga), new { }, 200);
+
+        var aprobado = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200);
+        aprobado.Estado.ShouldBe("Aprobado");
+        aprobado.EsperandoCuentaDesignada.ShouldBeFalse();
+        (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(e.Norte), null, 200)).Estado.ShouldBe("Activo");
+        (await ApiAsync<CertificadoDelVinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}/certificado", Admin(e.Norte), null, 200)).Actual!.Estado.ShouldBe("Vigente");
+        (await TerceroAsync<ExpedientePublicoDto>("GET", $"/public/v1/expedientes/{expedienteId}", sesion.AccessToken, null, 200))
+            .EsperandoCuentaDesignada.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Si_la_cuenta_ya_esta_aprobada_cuando_las_areas_aprueban_el_expediente_cierra_sin_esperar()
+    {
+        var e = await PrepararAsync();
+        await ExigirCuentaDelProveedorAsync(e.Norte.Admin, true);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(e.Norte, "PROVEEDOR", correo);
+        var sesion = await SesionAsync(correo);
+        await SubirAsync(sesion, "RUT", Pdf("RUT"));
+        await SubirAsync(sesion, "CAMARA_COMERCIO", Pdf("Cámara"));
+        await AceptarAsync(sesion, vinculo.Id);
+        var olga = await OficialAsync(e, "Olga Tesorería");
+
+        // La cuenta se designa y se aprueba con el expediente en revisión, antes de que las áreas decidan.
+        var url = $"/api/v1/vinculos/{vinculo.Id}/cuenta-designada";
+        var cuenta = await TerceroAsync<CuentaBancariaPublicaDto>("POST", "/public/v1/boveda/cuentas-bancarias", sesion.AccessToken,
+            new RegistrarCuentaBancariaDto("Bancolombia", "Ahorros", "031-123456-78", "Aceros del Norte S.A.S.", "NIT 900123456"), 201);
+        await SubirAsync(sesion, "CERTIFICACION_BANCARIA", Pdf("Certificación Bancolombia"));
+        await TerceroAsync<CuentaBancariaPublicaDto>("POST", $"/public/v1/vinculos/{vinculo.Id}/cuenta-designada", sesion.AccessToken, new DesignarCuentaDto(cuenta.Id), 200);
+        await ApiAsync<CuentaDesignadaDelVinculoDto>("POST", $"{url}/aprobar", Delegado(e.Norte, e.Carlos), new { }, 200);
+        await ApiAsync<CuentaDesignadaDelVinculoDto>("POST", $"{url}/aprobar", Delegado(e.Norte, olga), new { }, 200);
+
+        var expedienteId = await ExpedienteAbiertoDelVinculoAsync(e, vinculo.Id);
+        (await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200)).Estado.ShouldBe("EnRevision");
+        await AreasAprueban(e, expedienteId);
+
+        var cerrado = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Admin(e.Norte), null, 200);
+        (cerrado.Estado, cerrado.EsperandoCuentaDesignada).ShouldBe(("Aprobado", false));
+    }
+
+    /// <summary>El expediente abierto del vínculo (espera a que se abra, hasta 20 s).</summary>
+    private async Task<Guid> ExpedienteAbiertoDelVinculoAsync(Escenario e, Guid vinculoId)
+    {
+        var limite = DateTime.UtcNow.AddSeconds(20);
+        while (true)
+        {
+            if ((await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculoId}", Admin(e.Norte), null, 200)).ExpedienteAbiertoId is { } id)
+                return id;
+            DateTime.UtcNow.ShouldBeLessThan(limite);
+            await Task.Delay(200);
+        }
+    }
+
+    /// <summary>Cada área aprueba los documentos que le tocan.</summary>
+    private async Task AreasAprueban(Escenario e, Guid expedienteId)
+    {
+        foreach (var (area, persona, codigo) in new[] { (e.Compras, e.Laura, "COMPRAS"), (e.Cumplimiento, e.Carlos, "CUMPLIMIENTO") })
+        {
+            var leido = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{expedienteId}", Delegado(e.Norte, persona), null, 200);
+            var porDecidir = Area(leido, codigo).DocumentosPorDecidir ?? [];
+            if (porDecidir.Count > 0)
+                await AreaAsync<ExpedienteDto>(e, expedienteId, area, persona,
+                    new VeredictoDto("Aprobado", Versiones: porDecidir.ToDictionary(d => d.RequisitoId, d => d.VersionVigente)));
+        }
+    }
+
     /// <summary>Otra persona de Norte con el rol de oficial de cumplimiento (aprueba cuentas).</summary>
     private async Task<Persona> OficialAsync(Escenario e, string nombre)
     {

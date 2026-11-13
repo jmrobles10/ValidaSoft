@@ -19,6 +19,7 @@ import { AvisoObservado } from '../../recordatorios/AvisoObservado';
 import { useVinculo } from '../../vinculos/api';
 import { identificacionResumida } from '../../vinculos/tercero';
 import { useExpediente, useMotivos } from '../api';
+import { AvisoEsperandoCuenta } from '../components/AvisoEsperandoCuenta';
 import { DialogoDecision } from '../components/DialogoDecision';
 import { EtapasExpediente } from '../components/EtapasExpediente';
 import { DialogoDecisionArea } from '../components/DialogoDecisionArea';
@@ -212,6 +213,7 @@ export function DetalleExpediente() {
           })}
         </Alert>
       )}
+      {expediente.esperandoCuentaDesignada && <AvisoEsperandoCuenta empresaId={empresa.id} vinculoId={expediente.vinculoId} />}
       {expediente.ultimaDesaprobacion && ESTADOS_ABIERTOS.includes(expediente.estado) && (
         <Alert severity="info" icon={<Undo2 size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>
           <AlertTitle>{t('expedientes.avisos.devueltoTitulo')}</AlertTitle>

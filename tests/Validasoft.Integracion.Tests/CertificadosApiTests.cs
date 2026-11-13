@@ -334,7 +334,20 @@ public sealed class CertificadosApiTests(ApiFixture fixture)
         var credencial = new Credencial(admin, empresa.Id);
         var cumplimiento = await ApiAsync<AreaDto>("POST", "/api/v1/areas", credencial, new CrearAreaDto("OFICIAL_CUMPLIMIENTO", "Oficial de cumplimiento"), 201);
         await ApiAsync<AreaDto>("PUT", $"/api/v1/areas/{cumplimiento.Id}/miembros", credencial, new MiembrosAreaDto([laura.Usuario.Id]), 200);
+        await ExigirCuentaDelProveedorAsync(admin, false);
         return new Escenario(admin, empresa, otra, llave.Valor!, rsa, cumplimiento, laura);
+    }
+
+    /// <summary>
+    /// El tipo PROVEEDOR nace exigiendo cuenta designada: con ella, el expediente espera en revisión hasta que la empresa apruebe la cuenta (CB-4).
+    /// Las pruebas que aprueban expedientes sin hablar de cuentas la quitan; las de la cuenta la vuelven a poner.
+    /// </summary>
+    private async Task ExigirCuentaDelProveedorAsync(string admin, bool exige)
+    {
+        var tipos = await ApiAsync<List<TipoVinculoDto>>("GET", "/api/v1/tipos-vinculo", new Credencial(admin), null, 200);
+        var proveedor = tipos.Single(t => t.Codigo == "PROVEEDOR");
+        await ApiAsync<TipoVinculoDto>("PUT", $"/api/v1/tipos-vinculo/{proveedor.Id}", new Credencial(admin),
+            new CrearTipoVinculoDto(proveedor.Codigo, proveedor.Nombre, proveedor.AtributosPermitidos, exige, proveedor.ExigeOtpEnEnlace), 200);
     }
 
     private static string Sufijo() => Guid.NewGuid().ToString("N")[..7].ToUpperInvariant();

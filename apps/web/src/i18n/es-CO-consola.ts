@@ -120,7 +120,7 @@ export const consola = {
     desactivarTitulo: 'Desactivar {{nombre}}',
     desactivarAyuda: 'El sistema deja de poder pedir sesiones y sus llaves dejan de servir ahora mismo. Su historial se conserva y se puede reactivar.',
     reactivarTitulo: 'Reactivar {{nombre}}',
-    reactivarAyuda: 'El sistema vuelve a poder pedir sesiones con sus llaves vigentes. Las sesiones y los tokens de antes no se recuperan.',
+    reactivarAyuda: 'El sistema vuelve a ser válido: sus aserciones se aceptan otra vez y sus orígenes pueden volver a embeber Validasoft. Sus API keys no vuelven (se revocaron al desactivarlo): hay que emitir otras para que su backend pida sesiones. Las sesiones y los tokens de antes no se recuperan.',
     desactivado: '{{nombre}} quedó desactivado.',
     reactivado: '{{nombre}} está activo de nuevo.',
   },

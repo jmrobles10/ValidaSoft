@@ -26,4 +26,5 @@ export interface ExpedientePublicoDto {
   tipo?: string;
   /** @nullable */
   plazoCargueHasta?: string | null;
+  esperandoCuentaDesignada?: boolean;
 }

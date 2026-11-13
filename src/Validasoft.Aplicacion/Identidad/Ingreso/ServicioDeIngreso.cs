@@ -182,7 +182,7 @@ public sealed partial class ServicioDeIngreso(
             sesion.Store(desafio);
             await sesion.SaveChangesAsync(ct);
             await RegistrarFalloDeCodigoAsync(EventoDeIngreso.CodigoIncorrecto, desafio.Correo, "codigo-incorrecto", cliente, ct);
-            throw new ReglaDeNegocioException(TipoFalla.Validacion, "codigo-invalido", $"El código no es correcto. Te quedan {desafio.IntentosRestantes} intentos.")
+            throw new ReglaDeNegocioException(TipoFalla.Validacion, "codigo-invalido", $"El código no es correcto. Te quedan {Plural.Intentos(desafio.IntentosRestantes)}.")
             {
                 Datos = new Dictionary<string, object?> { ["intentosRestantes"] = desafio.IntentosRestantes }
             };

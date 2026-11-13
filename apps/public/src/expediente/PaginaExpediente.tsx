@@ -124,6 +124,22 @@ export function PaginaExpediente() {
 
       {vinculo?.actualizacionNoAprobada && situacion === 'vigente' && <AvisoActualizacionNoAprobada vinculo={vinculo} breve />}
 
+      {/* Todas las áreas aprobaron: solo falta que {empresa} apruebe la cuenta bancaria que designa el tercero (CB-4). */}
+      {expediente.esperandoCuentaDesignada && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          action={
+            <Button component={RouterLink} to="/cuentas" color="inherit" size="small">
+              {t('expediente.cuentaDesignada.accion')}
+            </Button>
+          }
+        >
+          <AlertTitle>{t('expediente.cuentaDesignada.titulo')}</AlertTitle>
+          {t('expediente.cuentaDesignada.texto', { empresa })}
+        </Alert>
+      )}
+
       {/* El aviso habla de documentos vencidos: una renovación periódica del vínculo que solo pide secciones de la ficha ya lo explica el resumen de arriba. */}
       {expediente.tipo === 'Renovacion' &&
         expediente.estado === 'Abierto' &&

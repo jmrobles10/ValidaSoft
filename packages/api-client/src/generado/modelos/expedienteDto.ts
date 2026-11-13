@@ -56,4 +56,5 @@ export interface ExpedienteDto {
   recordatorioObservaciones?: null | RecordatorioObservacionesDto;
   /** @nullable */
   adjuntosDeCumplimiento?: AdjuntoDeCumplimientoDto[] | null;
+  esperandoCuentaDesignada?: boolean;
 }
