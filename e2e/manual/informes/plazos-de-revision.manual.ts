@@ -44,7 +44,9 @@ recorrido(
       llave: e.admin,
       empresa: e.norte.id,
     });
-    const compras = expedientes.datos[0]!.etapas.flatMap((x) => x.areas).find((a) => a.codigo === 'COMPRAS' || a.codigo === 'compras');
+    const primero = expedientes.datos[0];
+    if (!primero) throw new Error('No hay expediente de Norte.');
+    const compras = primero.etapas.flatMap((x) => x.areas).find((a) => a.codigo === 'COMPRAS' || a.codigo === 'compras');
     if (!compras?.slaVence) throw new Error('El expediente no tiene plazo de revisión en Compras.');
     const inicio = new Date(new Date(compras.slaVence).getTime() - 10 * 3600 * 1000);
     await llamar('POST', '/api/v1/plataforma/sla/revisar', { llave: CLAVE_PLATAFORMA, cuerpo: { tenantId: e.tenantId, fecha: new Date(inicio.getTime() + 9 * 3600 * 1000).toISOString() } });
