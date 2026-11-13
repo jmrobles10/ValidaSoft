@@ -58,7 +58,10 @@ public sealed record LotePausado(DateTimeOffset Fecha);
 /// <summary>Reanudado con una ejecución nueva: las tandas de la anterior que sigan en la cola se ignoran.</summary>
 public sealed record LoteReanudado(Guid Ejecucion, DateTimeOffset Fecha);
 
-/// <summary>Cancelado: lo pendiente ya no se procesa (queda como estaba en el informe).</summary>
+/// <summary>
+/// Cancelado: lo pendiente ya no se procesa (queda como estaba en el informe). Los totales son la foto del momento de cancelar;
+/// si la tanda en curso termina filas después, un <see cref="AvanceDeLoteRegistrado"/> los corrige.
+/// </summary>
 public sealed record LoteCancelado(TotalesDeLote Totales, DateTimeOffset Fecha);
 
 /// <summary>Las filas fallidas vuelven a <c>Pendiente</c> y el lote se procesa otra vez (solo ellas).</summary>
@@ -173,10 +176,14 @@ public sealed class LoteDeInvitacion
 
     /// <summary>
     /// Avance al final de una tanda (en proceso o pausado: la tanda en curso termina). Sin pendientes, además termina.
-    /// Terminal o cancelado: nada.
+    /// Cancelado: la tanda que estaba en curso al cancelar alcanza a terminar las filas que ya tenía en mano (la cancelación
+    /// solo se nota entre filas), así que sus totales se actualizan —solo los conteos, el lote sigue cancelado y no se reanuda ni
+    /// se termina— para que reflejen lo que de verdad se procesó y no la foto del momento de cancelar. Terminado: nada.
     /// </summary>
     public IReadOnlyList<object> RegistrarAvance(TotalesDeLote totales, DateTimeOffset ahora)
     {
+        if (Estado == EstadoLote.Cancelado)
+            return totales == Totales ? [] : [new AvanceDeLoteRegistrado(totales, ahora)];
         if (EsTerminal)
             return [];
         var avance = new AvanceDeLoteRegistrado(totales, ahora);
