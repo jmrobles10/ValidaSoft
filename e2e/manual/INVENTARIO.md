@@ -61,7 +61,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 |---|---|---|---|
 | `privacidad/solicitud-sobre-mis-datos` ☑ | Tercero | Tercero con vínculo (spec `derechos-plan-correo`) | Privacidad: nueva solicitud (consulta, corrección, supresión), radicado, estados, constancia |
 | `privacidad/exportar-mi-boveda` ☑ | Tercero | Bóveda con documentos | Pedir la exportación, estado, descarga, qué incluye |
-| `privacidad/lo-que-acepte-y-textos-nuevos` ☐ | Tercero | Empresa que publica una versión nueva de un texto legal | Textos aceptados y su versión, aviso de texto actualizado, volver a aceptar |
+| `privacidad/lo-que-acepte-y-textos-nuevos` ☑ | Tercero | Empresa que publica una versión nueva de un texto legal | Textos aceptados y su versión, aviso de texto actualizado, volver a aceptar |
 | `publico/verificar-certificado-autentico` ☐ | Público | Certificado emitido (spec `certificado`) | `/verificar/{folio}`: pasos de la verificación criptográfica, datos del certificado, descargar el PDF |
 | `publico/verificar-certificado-invalido` ☐ | Público | Folio o huella inexistente | Mensaje claro, cómo reintentar, qué no revela |
 | `publico/certificado-en-otros-estados` ☐ | Público | Certificados bloqueado, revocado, reemplazado, en verificación y con pendientes (specs `certificado`, `vinculo-en-revision`) | Cada estado con su aviso y qué significa para quien consulta |
