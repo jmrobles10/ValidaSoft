@@ -274,11 +274,11 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `embebido/app-de-la-empresa-en-un-iframe` ☐ | Revisor/área | Página anfitriona (`soporte/embebido.ts`) | La app dentro del sistema, sesión por `postMessage`, selector de empresa, salir |
-| `embebido/navegacion-adaptativa-y-tema` ☐ | Revisor/área | Anfitrión a 1536, 1100 y 700 px (spec `navegacion`) | «Más» adaptativo, engranaje de Configuración, modo oscuro |
-| `embebido/tercero-embebido` ☐ | Tercero | Anfitrión del tercero (spec `embebido-tercero`) | `POST /sesiones-tercero`, bóveda, expediente y ficha en el iframe del sistema |
-| `embebido/sesion-vencida` ☐ | Revisor/área | Sesión de corta duración | «Tu sesión venció», nueva sesión del sistema, lo guardado se conserva |
-| `embebido/origenes-permitidos` ☐ | Sistema integrador | Sistema con orígenes | Qué origen puede embeber, error por origen no permitido |
+| `embebido/app-de-la-empresa-en-un-iframe` ☑ | Revisor/área | Página anfitriona (`soporte/embebido.ts`) | La app dentro del sistema, sesión por `postMessage`, selector de empresa, salir |
+| `embebido/navegacion-adaptativa-y-tema` ☑ | Revisor/área | Anfitrión a 1536, 1100 y 700 px (spec `navegacion`) | «Más» adaptativo, engranaje de Configuración, modo oscuro |
+| `embebido/tercero-embebido` ☑ | Tercero | Anfitrión del tercero (spec `embebido-tercero`) | `POST /sesiones-tercero`, bóveda, expediente y ficha en el iframe del sistema |
+| `embebido/sesion-vencida` ☑ | Revisor/área | Sesión de corta duración | «Tu sesión venció», nueva sesión del sistema, lo guardado se conserva |
+| `embebido/origenes-permitidos` ☑ | Sistema integrador | Sistema con orígenes | Qué origen puede embeber, error por origen no permitido |
 | `acceso/ingreso-directo-por-correo` ☐ | Revisor/área | Persona con acceso directo (spec `ingreso`) | Ingreso sin contraseña: correo, enlace y código, sesión |
 | `acceso/ingreso-con-passkey` ☐ | Revisor/área | Persona con passkey | Registrar una passkey, entrar con ella |
 | `acceso/mi-cuenta-sesiones-y-codigos` ☐ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
