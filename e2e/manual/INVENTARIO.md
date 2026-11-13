@@ -279,13 +279,13 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `embebido/tercero-embebido` ☑ | Tercero | Anfitrión del tercero (spec `embebido-tercero`) | `POST /sesiones-tercero`, bóveda, expediente y ficha en el iframe del sistema |
 | `embebido/sesion-vencida` ☑ | Revisor/área | Sesión de corta duración | «Tu sesión venció», nueva sesión del sistema, lo guardado se conserva |
 | `embebido/origenes-permitidos` ☑ | Sistema integrador | Sistema con orígenes | Qué origen puede embeber, error por origen no permitido |
-| `acceso/ingreso-directo-por-correo` ☐ | Revisor/área | Persona con acceso directo (spec `ingreso`) | Ingreso sin contraseña: correo, enlace y código, sesión |
-| `acceso/ingreso-con-passkey` ☐ | Revisor/área | Persona con passkey | Registrar una passkey, entrar con ella |
-| `acceso/mi-cuenta-sesiones-y-codigos` ☐ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
-| `acceso/ingreso-configuracion-del-grupo` ☐ | Administrador de empresa | Grupo base | Modos de ingreso, duración e inactividad de la sesión, passkey para todos |
-| `acceso/sso-configurar` ☐ | Administrador de empresa | Proveedor OIDC simulado (spec `plataforma-identidad`) | Proveedor, dominios verificados, creación de personas, roles por grupo, modo exclusivo |
+| `acceso/ingreso-directo-por-correo` ☑ | Revisor/área | Persona con acceso directo (spec `ingreso`) | Ingreso sin contraseña: correo, enlace y código, sesión |
+| `acceso/ingreso-con-passkey` ☑ | Revisor/área | Persona con passkey | Registrar una passkey, entrar con ella |
+| `acceso/mi-cuenta-sesiones-y-codigos` ☑ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
+| `acceso/ingreso-configuracion-del-grupo` ☑ | Administrador de empresa | Grupo base | Modos de ingreso, duración e inactividad de la sesión, passkey para todos |
+| `acceso/sso-configurar` ☑ | Administrador de empresa | Proveedor OIDC simulado (spec `plataforma-identidad`) | Proveedor, dominios verificados, creación de personas, roles por grupo, modo exclusivo |
 | `acceso/sso-ingresar` ☐ | Revisor/área | SSO configurado | Entrar con el proveedor del cliente, persona creada al vuelo con su rol |
-| `acceso/codigos-de-recuperacion` ☐ | Administrador de empresa | Persona con passkey | Generar y usar un código de recuperación |
+| `acceso/codigos-de-recuperacion` ☑ | Administrador de empresa | Persona con passkey | Generar y usar un código de recuperación |
 
 ---
 
