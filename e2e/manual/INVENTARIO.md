@@ -139,7 +139,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `documentos/vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con vigencia periódica (spec `vigencias`) | Por vencer, renovación, vencido y el certificado, qué cambia en la lista |
 | `documentos/documento-compartido-entre-empresas` ☑ | Revisor/área | Dos empresas, mismo RUT (spec `multiempresa-documento-global`) | Una acepta la v2 y la otra ve su aceptación desactualizada, sin ver la decisión de la otra |
 | `documentos/descargar-un-documento` ☐ | Revisor/área | Documento aprobado | Descargar, el registro en la auditoría de accesos |
-| `documentos/recordatorio-desde-vencimientos` ☐ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
+| `documentos/recordatorio-desde-vencimientos` ☑ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
 | `informes/estado-de-expedientes` ☐ | Administrador de empresa | Expedientes en varios estados (spec `informes`) | Informe con tiempos por área, filtros, resumen, descargar Excel |
 | `informes/informe-de-vinculos` ☐ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
 | `informes/plazos-de-revision` ☐ | Administrador de empresa | Plazos por área y expedientes fuera de plazo (spec `operacion`) | Informe SLA, tablas por área y por persona, cumplimiento |
