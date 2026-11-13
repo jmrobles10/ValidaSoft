@@ -1,0 +1,29 @@
+{
+  "actores": [
+    { "nombre": "Plataforma", "slug": "plataforma", "descripcion": "Operadores de la consola de Plataforma: dan de alta grupos y empresas, administran planes, listas, secretos y soporte." },
+    { "nombre": "Administrador de empresa", "slug": "administrador", "descripcion": "Administra el grupo empresarial: configura tipos de documento, flujos, áreas, personas, integraciones y plantillas." },
+    { "nombre": "Revisor/área", "slug": "revisor", "descripcion": "Persona de un área que revisa expedientes: aprueba, observa, rechaza y atiende su bandeja." },
+    { "nombre": "Oficial de cumplimiento", "slug": "oficial", "descripcion": "Responsable de SAGRILAFT: listas restrictivas, estudios de cumplimiento, matriz de riesgo y monitoreo." },
+    { "nombre": "Tercero", "slug": "tercero", "descripcion": "Proveedor, cliente o aliado que valida su información: acepta invitaciones, sube documentos y completa su ficha." },
+    { "nombre": "Sistema integrador", "slug": "integrador", "descripcion": "Sistema externo (ERP, SRM, portal) que invita terceros, consulta certificaciones y recibe eventos por API y webhooks." },
+    { "nombre": "Público", "slug": "publico", "descripcion": "Cualquier persona sin sesión: verifica un certificado o lee las páginas públicas." }
+  ],
+  "dominios": [
+    { "slug": "acceso", "nombre": "Acceso y cuenta", "descripcion": "Cómo entran las personas: ingreso directo sin contraseña, passkeys, inicio de sesión único (SSO) y Mi cuenta." },
+    { "slug": "tercero", "nombre": "Portal del tercero", "descripcion": "Todo lo que hace el tercero: invitación, Mis empresas, revisión, documentos, ficha, cuentas designadas y avisos." },
+    { "slug": "vinculos", "nombre": "Vínculos y terceros", "descripcion": "Invitar, buscar y seguir a los terceros de la empresa, su ficha y el ciclo de vida del vínculo." },
+    { "slug": "revision", "nombre": "Revisión de expedientes", "descripcion": "Bandeja de revisión, decisión de cada área, observaciones, rechazos, desaprobaciones y revalidaciones." },
+    { "slug": "documentos", "nombre": "Documentos y vigencias", "descripcion": "Documentos del tercero, versiones, vigencias, vencimientos y renovaciones." },
+    { "slug": "configuracion", "nombre": "Configuración", "descripcion": "Cada sección de Configuración del grupo y de la empresa, con sus variantes." },
+    { "slug": "cumplimiento", "nombre": "Cumplimiento y SAGRILAFT", "descripcion": "Listas restrictivas, estudio de cumplimiento, matriz de riesgo, declaración PEP y monitoreo." },
+    { "slug": "informes", "nombre": "Informes, auditoría y certificados", "descripcion": "Informes y exportes, auditoría de accesos y certificados verificables." },
+    { "slug": "operacion", "nombre": "Operación masiva y continua", "descripcion": "Invitación por lotes, campañas de renovación, plazos de revisión, recordatorios y delegaciones." },
+    { "slug": "ia", "nombre": "IA y revisión automática", "descripcion": "Plan y uso de IA, niveles de revisión automática y lo que ve cada persona." },
+    { "slug": "privacidad", "nombre": "Datos personales", "descripcion": "Habeas data: solicitudes de consulta, corrección y supresión; consentimientos y privacidad." },
+    { "slug": "plataforma", "nombre": "Consola de Plataforma", "descripcion": "Grupos, empresas, planes, operadores, secretos, listas y accesos de soporte." },
+    { "slug": "integracion", "nombre": "Integración", "descripcion": "API, llaves, sistemas integradores, webhooks, eventos, sandbox, SSO de sistemas e importación." },
+    { "slug": "embebido", "nombre": "Uso embebido", "descripcion": "Validasoft dentro de otro sistema: app de la empresa en un iframe y sesiones del tercero embebidas." },
+    { "slug": "publico", "nombre": "Verificación pública", "descripcion": "Páginas sin sesión: verificación de certificados y enlaces públicos." },
+    { "slug": "movil", "nombre": "Experiencia móvil", "descripcion": "Recorridos pensados para el celular: navegación, subida de documentos y avisos." }
+  ]
+}

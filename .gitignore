@@ -20,3 +20,6 @@ packages/sdk/LICENSE.md
 
 # Resultado de la última corrida de k6 (tests/carga)
 tests/carga/resultado-carga.json
+
+# Manual generado por recorridos e2e (pnpm manual:todo): pantallazos, manifiestos y sitio HTML
+salida/
