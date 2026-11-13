@@ -4,6 +4,7 @@ import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
 import { llenarGeneralJuridica } from '../../soporte/ficha';
 import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../../soporte/proveedor';
+import { leerVinculo } from '../../soporte/flujos';
 import { crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, revisarVigencias } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
 
@@ -71,11 +72,14 @@ recorrido(
       await expect(tarjetaSur).toContainText('En pre-vencimiento', { timeout: 1500 });
     }).toPass({ timeout: 45_000 });
     await expect(tarjetaSur).toContainText(`ratifica tu información con ${e.sur.nombre} antes del ${enPantalla(hasta)}`);
+    await expect(tarjetaSur.getByRole('link', { name: 'Ratificar mi información' })).toBeVisible();
+    // El vínculo está «Por vencer»: todavía vigente, a la espera de la ratificación.
+    expect((await leerVinculo(e, invitacion)).estado).toBe('PorVencer');
     await paso(page, {
       titulo: 'Mira que tu vínculo está por vencer',
       explicacion:
-        'La tarjeta de la empresa dice «En pre-vencimiento» y la fecha límite para ratificar tu información. Mientras tanto tu vínculo sigue activo: solo necesitas confirmarlo antes de esa fecha. ' +
-        'El enlace «Ratificar mi información» te lleva a la sección que la empresa quiere renovar.',
+        'La tarjeta de la empresa dice «En pre-vencimiento» y la fecha límite para ratificar tu información. Tu vínculo está «Por vencer» pero todavía no venció: solo necesitas confirmarlo antes de esa fecha. ' +
+        'El enlace «Ratificar mi información» abre tu revisión con la empresa, donde está lo que debes ratificar.',
       resaltar: tarjetaSur,
     });
 
@@ -96,10 +100,12 @@ recorrido(
 
     // 3. Queda confirmada.
     await expect(page.getByText(`Confirmaste tu información de Información general. ${e.sur.nombre} la dio por renovada.`)).toBeVisible();
+    // El vínculo vuelve a «Activo» (ya no está por vencer).
+    await expect.poll(async () => (await leerVinculo(e, invitacion)).estado, { timeout: 30_000 }).toBe('Activo');
     await paso(page, {
       titulo: 'Confirma que la renovación quedó hecha',
       explicacion:
-        'Validasoft confirma que ratificaste la sección y que la empresa la dio por renovada. El vínculo sigue activo con una vigencia nueva que se cuenta desde esa aprobación.',
+        'Validasoft confirma que ratificaste la sección y que la empresa la dio por renovada. El vínculo vuelve a «Activo» y su vigencia se cuenta de nuevo desde esa aprobación, con los días que fije el flujo.',
       resaltar: page.getByText(`Confirmaste tu información de Información general. ${e.sur.nombre} la dio por renovada.`),
     });
   },
