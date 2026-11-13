@@ -16,7 +16,7 @@ import { ESPERA_BUSQUEDA_MS, ESTADOS_FILTRO_CERTIFICADOS, leerFiltros, parametro
 const TAMANO_PAGINA = 25;
 
 /**
- * Certificados de la empresa (CE-11): la emisión actual de cada vínculo, con su estado y hasta cuándo es vigente.
+ * Certificados de la empresa (CE-13): la emisión actual de cada vínculo, con su estado y hasta cuándo es vigente.
  * Filtros en la URL; al abrir una fila se va al vínculo, donde están las emisiones y las descargas.
  */
 export function PaginaCertificados() {

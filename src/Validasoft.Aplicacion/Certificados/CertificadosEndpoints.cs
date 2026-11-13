@@ -288,7 +288,7 @@ internal static class MapeosCertificados
     }
 }
 
-/// <summary>Lista de certificados de la empresa activa (CE-11, docs/06 P2 «Certificados»).</summary>
+/// <summary>Lista de certificados de la empresa activa (CE-13, docs/06 P2 «Certificados»).</summary>
 public static class ListaDeCertificadosEndpoints
 {
     /// <summary>

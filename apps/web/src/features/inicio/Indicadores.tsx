@@ -10,7 +10,7 @@ import { Cifra, GrupoCifras } from './Cifras';
 import { aNumero, formatearConteo, formatearDias, leerVentana, VENTANA_POR_DEFECTO, VENTANAS, type Ventana } from './modelo';
 
 /**
- * Indicadores de la empresa (IN-2): vínculos y certificados al momento; expedientes en curso al momento y, en la ventana
+ * Indicadores de la empresa (INI-2): vínculos y certificados al momento; expedientes en curso al momento y, en la ventana
  * elegida (7, 30 o 90 días, en la URL), los aprobados, rechazados y el tiempo de la apertura a la aprobación.
  */
 export function Indicadores({ empresaId, puedeVerVinculos, puedeVerCertificados = false }: { empresaId: string; puedeVerVinculos: boolean; puedeVerCertificados?: boolean }) {

@@ -1,4 +1,4 @@
-/** Textos es-CO de la pantalla de inicio (IN-1 lo que te toca, IN-2 indicadores; se integran en `es-CO.ts`). */
+/** Textos es-CO de la pantalla de inicio (INI-1 lo que te toca, INI-2 indicadores; se integran en `es-CO.ts`). */
 
 export const inicio = {
   titulo: 'Inicio',

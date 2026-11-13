@@ -4,7 +4,7 @@ namespace Validasoft.Integracion.Tests;
 
 public sealed partial class RequisitosApiTests
 {
-    // ---------- lista de certificados (CE-11) ----------
+    // ---------- lista de certificados (CE-13) ----------
 
     [Fact]
     public async Task La_lista_de_certificados_filtra_por_estado_y_texto_y_marca_los_bloqueantes()

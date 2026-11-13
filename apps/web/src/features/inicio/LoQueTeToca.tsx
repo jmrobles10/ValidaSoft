@@ -96,7 +96,7 @@ function Pendientes({ datos, empresaId }: { datos: MisPendientesDto; empresaId: 
   );
 }
 
-/** «Lo que te toca» (IN-1): expedientes por revisar en tus áreas y los demás pendientes, cada uno con su pantalla. */
+/** «Lo que te toca» (INI-1): expedientes por revisar en tus áreas y los demás pendientes, cada uno con su pantalla. */
 export function LoQueTeToca({ empresaId }: { empresaId: string }) {
   const { t } = useTranslation();
   const consulta = useMisPendientes(empresaId);
