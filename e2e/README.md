@@ -54,3 +54,7 @@ Para correr **exactamente lo del CI**, en un contenedor Linux y con los servicio
 | `pendientes-pequenos.spec.ts` | El detalle del vínculo con el correo largo sin cortes feos (se parte solo en la «@» a 1280, 1024 y 700 px) y el rótulo «Consentimientos registrados» con mayúscula (PP-2, PP-3); un vínculo bloqueado que no recibe el RUT nuevo y que, al desbloquearlo, queda «En revisión» con el certificado «En verificación» (PP-9, B-5); y la cuenta de Infolaft de la plataforma: Plataforma la configura en su consola y la empresa solo ve que está «Disponible» y su cuota, sin credenciales (PP-4…PP-6). Deja capturas con `E2E_CAPTURAS` |
 
 Los vencimientos se prueban sin mover el reloj: el proveedor declara una fecha de expedición vieja y los avisos o vencimientos que caen en el pasado se ejecutan enseguida.
+
+## Manual generado por recorridos
+
+Los recorridos de `manual/` (proyecto aparte, `playwright.manual.config.ts`; **no** corren en `pnpm e2e` ni en el CI) ejecutan los flujos reales con pantallazos y los convierten en el manual de Validasoft y en la referencia de la API (`pnpm manual:recorrer`, `pnpm manual`). Ver [`manual/README.md`](manual/README.md) y la lista de lo que falta documentar en [`manual/INVENTARIO.md`](manual/INVENTARIO.md).
