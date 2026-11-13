@@ -248,7 +248,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `plataforma/plan-de-ia-y-llave-openai` ☑ | Plataforma | Empresa sin plan (spec `ia-cupo-y-escalamiento`) | Plan de IA, validaciones incluidas, llave de OpenAI (nunca visible), «Probar llave» |
 | `plataforma/consumo-y-tarifa-de-ia` ☑ | Plataforma | Consumo de IA de varias empresas | Uso por cliente con su tarifa, exportar |
 | `plataforma/operadores` ☑ | Plataforma | Operadores directos | Crear, desactivar y reactivar, passkey para cambios sensibles |
-| `plataforma/secretos` ☐ | Plataforma | — | Secretos de la plataforma, qué se puede ver y cambiar, step-up con passkey |
+| `plataforma/secretos` ☑ | Plataforma | — | Secretos de la plataforma, qué se puede ver y cambiar, step-up con passkey |
 | `plataforma/listas-restrictivas-de-la-plataforma` ☐ | Plataforma | Cuenta de Infolaft (spec `pendientes-pequenos`) | Configurar la cuenta, cuota; la empresa solo ve «Disponible» |
 | `plataforma/solicitudes-de-habeas-de-la-plataforma` ☐ | Plataforma | Solicitud sobre la bóveda global | Atenderla desde la consola, plazos, constancia |
 | `plataforma/ingresos-de-los-operadores` ☐ | Plataforma | Varios ingresos | Auditoría de ingresos, filtros, clave de arranque |
