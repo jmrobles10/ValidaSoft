@@ -143,7 +143,7 @@ export async function llenarSst(page: Page): Promise<void> {
 export async function llenarEspecialidades(page: Page): Promise<void> {
   await abrirSeccion(page, 'especialidades', 'Especialidades');
   await page.getByRole('searchbox', { name: 'Buscar especialidad' }).fill('premezclado');
-  await page.getByRole('checkbox', { name: 'Concreto premezclado' }).check();
+  await page.getByRole('checkbox', { name: 'Concreto premezclado', exact: true }).check();
   await expect(page.getByRole('region', { name: 'Tus especialidades' })).toContainText('Concreto premezclado');
   await guardarSeccionCompleta(page, 'Guardaste Especialidades: está completa.');
 }

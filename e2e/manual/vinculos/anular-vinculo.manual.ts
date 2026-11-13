@@ -50,12 +50,17 @@ recorrido(
 
     await dialogo.getByRole('button', { name: 'Anular vínculo' }).click();
     await expect(app.getByText('Vínculo anulado.')).toBeVisible();
-    await expect(app.getByRole('row', { name: `Abrir vínculo de ${tercero.correo}` })).toHaveCount(0);
+    const chip = app.getByTitle(/^Anulado el \d{2}\/\d{2}\/\d{4}$/);
+    const entrada = app.getByText('Vínculo anulado', { exact: true });
+    await expect(chip).toBeVisible();
+    await expect(entrada).toBeVisible();
+    await expect(app.getByText('Invitación enviada a un tercero equivocado')).toBeVisible();
     await paso(page, {
       titulo: 'Comprueba que el vínculo quedó anulado',
       explicacion:
-        'Validasoft confirma que el vínculo fue anulado y el detalle muestra su estado Anulado. El vínculo deja de aparecer en la lista de vínculos activos de la empresa y el historial conserva el motivo y la fecha.',
-      resaltar: app.getByText('Vínculo anulado.'),
+        'Validasoft confirma con el aviso «Vínculo anulado.» y se queda en el detalle, que ahora muestra el estado «Anulado» con su fecha (1). El historial (2) conserva la anulación con el estado anterior, el motivo y quién la hizo. ' +
+        'El vínculo deja de aparecer entre los vigentes de la empresa y ya no recibe invitaciones ni expedientes.',
+      resaltar: [chip, entrada],
       avisos: true,
     });
   },

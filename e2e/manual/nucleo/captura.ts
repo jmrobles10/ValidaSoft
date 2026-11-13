@@ -1,4 +1,5 @@
 import type { Frame, Locator, Page } from '@playwright/test';
+import { PATRONES_DE_SECRETOS } from './secretos';
 import { normalizarRuta } from './validacion';
 
 /**
@@ -44,6 +45,8 @@ export interface OpcionesDeCaptura {
 
 export interface ResultadoDeCaptura {
   resaltados: number;
+  /** Cuántos secretos se cubrieron con el recuadro «oculto» (llaves, tokens, códigos de recuperación). */
+  secretosOcultos: number;
 }
 
 function marcos(page: Page): Frame[] {
@@ -62,9 +65,34 @@ export async function esperarCarga(page: Page, tiempo = 25_000): Promise<void> {
           CARGANDO,
           { timeout: restante, polling: 100 },
         );
-        await marco.evaluate(
-          () => Promise.all([document.fonts.ready, new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))]).then(() => undefined),
-        );
+        await marco.evaluate(async () => {
+          await document.fonts.ready;
+          // Imágenes (logos, miniaturas) ya decodificadas: un pantallazo no debe mostrar un hueco donde irá una imagen.
+          await Promise.all(
+            [...document.images]
+              .filter((i) => !i.complete)
+              .map(
+                (i) =>
+                  new Promise((r) => {
+                    i.addEventListener('load', r, { once: true });
+                    i.addEventListener('error', r, { once: true });
+                    setTimeout(r, 5000);
+                  }),
+              ),
+          );
+          // Diseño asentado: listas virtuales y animaciones de entrada terminan de acomodarse en unos cuadros; se espera a que el alto del
+          // documento y de la raíz de la app no cambie en tres revisiones seguidas.
+          const medida = () =>
+            `${String(document.documentElement.scrollHeight)}|${String(document.body.scrollHeight)}|${String(document.getElementById('raiz')?.getBoundingClientRect().height ?? 0)}`;
+          let anterior = '';
+          let iguales = 0;
+          for (let i = 0; i < 40 && iguales < 3; i++) {
+            await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 60)));
+            const actual = medida();
+            iguales = actual === anterior ? iguales + 1 : 0;
+            anterior = actual;
+          }
+        });
       } catch (error) {
         if (marco.isDetached()) continue;
         throw new Error(
@@ -142,6 +170,144 @@ async function resaltar(localizadores: Locator[], completa: boolean): Promise<nu
     );
   }
   return total;
+}
+
+/**
+ * Cubre con un recuadro «oculto» todo lo que parece un secreto (llaves, tokens, códigos de recuperación; ver `secretos.ts`) y lo que el producto marca con
+ * `data-secreto`: texto, campos de formulario y bloques de código, en la página y en el iframe. Lo que ocupa varias líneas se cubre línea por línea y lleva
+ * la palabra «oculto» una sola vez. Las claves públicas y los certificados (`-----BEGIN PUBLIC KEY-----`) no son secretos y se dejan ver. Los recuadros
+ * llevan `data-manual-resaltado` y se quitan con el resaltado. Devuelve cuántos cubrió.
+ */
+async function ocultarSecretos(page: Page, completa: boolean): Promise<number> {
+  let total = 0;
+  for (const marco of marcos(page)) {
+    total += await marco
+      .evaluate(
+        (datos) => {
+          const expresiones = datos.patrones.map((p) => ({ origen: p.origen, banderas: p.banderas, grupo: p.grupo }));
+          const doc = document;
+          const dx = datos.completa ? window.scrollX : 0;
+          const dy = datos.completa ? window.scrollY : 0;
+          let hechos = 0;
+          /** Cubre un grupo de cajas (las líneas de un mismo secreto); la palabra va en la más ancha. */
+          const cubrir = (cajas: DOMRectList | DOMRect[]) => {
+            const lista = [...cajas].filter((c) => c.width >= 2 && c.height >= 2);
+            if (lista.length === 0) return;
+            const ancha = lista.reduce((a, b) => (b.width > a.width ? b : a));
+            for (const caja of lista) {
+              const recuadro = doc.createElement('div');
+              recuadro.setAttribute('data-manual-resaltado', '');
+              if (caja === ancha) recuadro.textContent = 'oculto';
+              const alto = Math.max(caja.height, 14);
+              Object.assign(recuadro.style, {
+                position: datos.completa ? 'absolute' : 'fixed',
+                left: `${String(caja.left + dx - 2)}px`,
+                top: `${String(caja.top + dy - (alto - caja.height) / 2 - 1)}px`,
+                width: `${String(caja.width + 4)}px`,
+                height: `${String(alto + 2)}px`,
+                boxSizing: 'border-box',
+                background: '#3b4350',
+                color: '#fff',
+                borderRadius: '4px',
+                font: `600 ${String(Math.min(12, alto))}px/${String(alto + 2)}px system-ui, sans-serif`,
+                textAlign: 'center',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: '2147483647',
+              });
+              doc.documentElement.appendChild(recuadro);
+            }
+            hechos++;
+          };
+          const visible = (el: Element) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+          const esPublico = (texto: string) => /-----BEGIN (PUBLIC KEY|CERTIFICATE|RSA PUBLIC KEY)-----/.test(texto);
+          const esSecreto = (texto: string) => !esPublico(texto) && expresiones.some((e) => new RegExp(e.origen, e.banderas).test(texto));
+
+          // 1) Lo que el producto marca como secreto.
+          const marcados = [...doc.querySelectorAll('[data-secreto]')].filter(visible);
+          for (const el of marcados) {
+            const rango = doc.createRange();
+            rango.selectNodeContents(el);
+            cubrir(rango.getClientRects());
+          }
+          // 2) Campos de formulario con un secreto escrito.
+          for (const campo of doc.querySelectorAll('input, textarea')) {
+            const valor = (campo as HTMLInputElement).value;
+            if (valor && visible(campo) && esSecreto(valor)) cubrir([campo.getBoundingClientRect()]);
+          }
+          // 3) Texto suelto que coincide con un patrón.
+          const recorrido = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+          for (let nodo = recorrido.nextNode(); nodo; nodo = recorrido.nextNode()) {
+            const padre = nodo.parentElement;
+            const texto = nodo.nodeValue ?? '';
+            if (!padre || texto.length < 8 || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/.test(padre.tagName) || !visible(padre)) continue;
+            if (marcados.some((m) => m.contains(nodo)) || esPublico(texto)) continue;
+            for (const e of expresiones) {
+              for (const c of texto.matchAll(new RegExp(e.origen, e.banderas.includes('g') ? e.banderas : `${e.banderas}g`))) {
+                const valor = c[e.grupo];
+                if (!valor) continue;
+                const inicio = c.index + (e.grupo === 0 ? 0 : c[0].indexOf(valor));
+                const rango = doc.createRange();
+                rango.setStart(nodo, inicio);
+                rango.setEnd(nodo, inicio + valor.length);
+                cubrir(rango.getClientRects());
+              }
+            }
+          }
+          return hechos;
+        },
+        { patrones: PATRONES_DE_SECRETOS.map((p) => ({ origen: p.origen, banderas: p.banderas, grupo: p.grupo })), completa },
+      )
+      .catch(() => 0);
+  }
+  return total;
+}
+
+/**
+ * La app de la empresa, en las páginas de «altura fija» (Configuración, detalle del expediente y del vínculo, ficha del tercero, consola; ver
+ * `sesion/alturaFija.ts`), mide su alto UNA vez al montarse (embebida de otro origen: `screen.availHeight − 240`) y se queda con ese alto y con un
+ * scroll propio en `main`. En el manual el iframe mide otra cosa (800, o todo el contenido en la captura completa) y el pantallazo salía con una
+ * franja en blanco abajo o con el contenido cortado. Aquí se lleva la raíz de la app al alto del iframe (o, para la captura completa, al que
+ * necesita para que `main` no tenga scroll). Devuelve el alto aplicado, o `null` si la página no es de altura fija.
+ */
+async function ajustarAltoDeLaApp(contenido: Frame, completa: boolean): Promise<number | null> {
+  return contenido
+    .evaluate((entera) => {
+      const raiz = document.getElementById('raiz')?.firstElementChild;
+      if (!(raiz instanceof HTMLElement) || getComputedStyle(raiz).overflowY !== 'hidden') return null;
+      if (raiz.getAttribute('data-manual-alto-previo') === null) raiz.setAttribute('data-manual-alto-previo', raiz.style.height);
+      let alto = window.innerHeight;
+      raiz.style.setProperty('height', `${String(alto)}px`);
+      if (entera) {
+        // El contenedor que se desplaza (por lo general `main`): lo que le falta para mostrarse completo se suma al alto de la raíz.
+        let falta = 0;
+        for (const el of raiz.querySelectorAll('*')) {
+          const o = getComputedStyle(el).overflowY;
+          if ((o === 'auto' || o === 'scroll') && el.scrollHeight - el.clientHeight > falta) falta = el.scrollHeight - el.clientHeight;
+        }
+        alto += falta;
+        raiz.style.setProperty('height', `${String(alto)}px`);
+      }
+      return alto;
+    }, completa)
+    .catch(() => null);
+}
+
+async function restaurarAltoDeLaApp(page: Page): Promise<void> {
+  for (const marco of marcos(page)) {
+    await marco
+      .evaluate(() => {
+        const raiz = document.getElementById('raiz')?.firstElementChild;
+        if (!(raiz instanceof HTMLElement)) return;
+        const previo = raiz.getAttribute('data-manual-alto-previo');
+        if (previo === null) return;
+        if (previo === '') raiz.style.removeProperty('height');
+        else raiz.style.setProperty('height', previo);
+        raiz.removeAttribute('data-manual-alto-previo');
+      })
+      .catch(() => undefined);
+  }
 }
 
 /** Oculta los avisos emergentes (snackbars): tapan contenido y desaparecen solos, así que no deben depender del momento de la captura. */
@@ -239,7 +405,10 @@ export async function capturar(page: Page, destino: string, opciones: OpcionesDe
   const estiloMarco = embebido ? await marco.evaluate((el) => (el as HTMLIFrameElement).style.height) : '';
   try {
     await ajustarVentana(page, opciones.ancho, opciones.alto + desfase);
+    const contenido = embebido ? await (await marco.elementHandle()).contentFrame() : null;
+    if (contenido) await ajustarAltoDeLaApp(contenido, false);
     if (opciones.esperarCarga) await esperarCarga(page);
+    if (contenido && opciones.completa) await ajustarAltoDeLaApp(contenido, true);
     if (opciones.completa && embebido) await estirarMarco(page, marco);
 
     if (!opciones.avisos) await ocultarAvisos(page);
@@ -249,6 +418,8 @@ export async function capturar(page: Page, destino: string, opciones: OpcionesDe
     // El puntero quieto sobre un menú o un botón lo pinta en estado «hover»: se lleva a una esquina vacía.
     if (!opciones.mantenerPuntero) await page.mouse.move(1, 1);
     if (!opciones.completa && opciones.resaltar[0]) await llevarALaVista(page, opciones.resaltar[0]);
+    // Los secretos se cubren antes de resaltar: el recuadro naranja de un paso que explica una llave queda por encima del «oculto».
+    const secretosOcultos = await ocultarSecretos(page, opciones.completa);
     const resaltados = opciones.resaltar.length > 0 ? await resaltar(opciones.resaltar, opciones.completa) : 0;
     if (opciones.resaltar.length > 0 && resaltados === 0 && !opciones.resaltadoOpcional) {
       throw new Error('Ningún elemento de «resaltar» está visible en la pantalla: revisa el locator (¿es el elemento correcto y ya se muestra?).');
@@ -256,9 +427,10 @@ export async function capturar(page: Page, destino: string, opciones: OpcionesDe
     const comun = { path: destino, animations: 'disabled', caret: 'hide' } as const;
     if (embebido) await marco.screenshot(comun);
     else await page.screenshot({ ...comun, fullPage: opciones.completa });
-    return { resaltados };
+    return { resaltados, secretosOcultos };
   } finally {
     await quitarResaltado(page);
+    if (embebido) await restaurarAltoDeLaApp(page);
     if (!opciones.avisos) await mostrarAvisos(page);
     if (embebido) await marco.evaluate((el, valor) => ((el as HTMLIFrameElement).style.height = valor), estiloMarco).catch(() => undefined);
     if (original) await ajustarVentana(page, original.width, original.height);

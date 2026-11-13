@@ -57,8 +57,12 @@ recorrido(
       resaltar: [dialogo.getByText('No se puede reintegrar sin revalidar:'), dialogo.getByRole('radio', { name: /Reintegrar sin revalidar/ })],
       variantes: [
         {
-          cuando: 'El vínculo estaba aprobado y uno de sus documentos venció',
-          entonces: 'Lo aprobado ya no está vigente, así que la opción sin revalidar no se ofrece: hay que revalidar.',
+          cuando: 'El vínculo estaba aprobado y uno de sus documentos terminó su vigencia (o está en gracia)',
+          entonces: 'El diálogo lo lista como «Su vigencia terminó: …» y la opción sin revalidar no se ofrece: lo aprobado ya no está vigente y hay que revalidar.',
+        },
+        {
+          cuando: 'El tercero subió una versión nueva en su bóveda que la empresa no revisó',
+          entonces: 'El diálogo lo lista como «Cambió en la bóveda del tercero, sin que la empresa lo revisara: …» y tampoco se ofrece reintegrar sin revalidar.',
         },
       ],
     });

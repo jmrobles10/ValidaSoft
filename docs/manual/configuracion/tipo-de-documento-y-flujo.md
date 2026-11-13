@@ -41,7 +41,7 @@ Desde el engranaje de Configuración entras a «Tipos de documento». La tabla l
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 1: Abre Configuración › Tipos de documento (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/01-abre-configuracion-tipos-de-documento-claro.png)
+![Paso 1: Abre Configuración › Tipos de documento (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/01-abre-configuracion-tipos-de-documento-claro.webp)
 
 **Configuración que lo afecta**
 
@@ -53,7 +53,7 @@ Un panel lateral recoge la configuración. Elige «Ninguno: es un documento prop
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 2: Identifica el documento (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/02-identifica-el-documento-claro.png)
+![Paso 2: Identifica el documento (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/02-identifica-el-documento-claro.webp)
 
 **Variantes**
 
@@ -66,7 +66,7 @@ El documento puede ser solo un archivo, solo un formulario con datos o las dos c
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 3: Elige cómo lo entrega el proveedor (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/03-elige-como-lo-entrega-el-proveedor-claro.png)
+![Paso 3: Elige cómo lo entrega el proveedor (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/03-elige-como-lo-entrega-el-proveedor-claro.webp)
 
 **Variantes**
 
@@ -79,7 +79,7 @@ Marca los formatos permitidos (ninguno marcado equivale a PDF, JPG, PNG o WebP) 
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 4: Limita el archivo que se puede subir (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/04-limita-el-archivo-que-se-puede-subir-claro.png)
+![Paso 4: Limita el archivo que se puede subir (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/04-limita-el-archivo-que-se-puede-subir-claro.webp)
 
 **Variantes**
 
@@ -91,7 +91,7 @@ Indica cuánto tiempo sirve el documento: siempre, un número de días desde su 
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 5: Define la vigencia y los avisos (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/05-define-la-vigencia-y-los-avisos-claro.png)
+![Paso 5: Define la vigencia y los avisos (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/05-define-la-vigencia-y-los-avisos-claro.webp)
 
 **Variantes**
 
@@ -108,7 +108,7 @@ Al pulsar «Crear tipo» el panel se cierra, aparece el aviso de que quedó crea
 
 > **Pantalla:** `/e/{empresa}/tipos-documento`
 
-![Paso 6: Crea el tipo y revísalo en la tabla (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/06-crea-el-tipo-y-revisalo-en-la-tabla-claro.png)
+![Paso 6: Crea el tipo y revísalo en la tabla (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/06-crea-el-tipo-y-revisalo-en-la-tabla-claro.webp)
 
 ## Paso 7. Abre Configuración › Flujos aprobatorios
 
@@ -116,7 +116,7 @@ Un flujo define qué áreas revisan a cada tipo de vínculo, en qué orden y qu�
 
 > **Pantalla:** `/e/{empresa}/flujos`
 
-![Paso 7: Abre Configuración › Flujos aprobatorios (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/07-abre-configuracion-flujos-aprobatorios-claro.png)
+![Paso 7: Abre Configuración › Flujos aprobatorios (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/07-abre-configuracion-flujos-aprobatorios-claro.webp)
 
 **Configuración que lo afecta**
 
@@ -128,7 +128,7 @@ Un flujo nuevo empieza con su código (mayúsculas, números y guion bajo; no ca
 
 > **Pantalla:** `/e/{empresa}/flujos/nuevo`
 
-![Paso 8: Escribe los datos generales del flujo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/08-escribe-los-datos-generales-del-flujo-claro.png)
+![Paso 8: Escribe los datos generales del flujo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/08-escribe-los-datos-generales-del-flujo-claro.webp)
 
 **Variantes**
 
@@ -142,7 +142,7 @@ Las etapas se revisan en secuencia; las áreas de una misma etapa revisan al mis
 
 > **Pantalla:** `/e/{empresa}/flujos/nuevo`
 
-![Paso 9: Elige las áreas que revisan en cada etapa (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/09-elige-las-areas-que-revisan-en-cada-etapa-claro.png)
+![Paso 9: Elige las áreas que revisan en cada etapa (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/09-elige-las-areas-que-revisan-en-cada-etapa-claro.webp)
 
 **Variantes**
 
@@ -159,7 +159,7 @@ Las etapas se revisan en secuencia; las áreas de una misma etapa revisan al mis
 
 > **Pantalla:** `/e/{empresa}/flujos/nuevo`
 
-![Paso 10: Pide el documento nuevo en el flujo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/10-pide-el-documento-nuevo-en-el-flujo-claro.png)
+![Paso 10: Pide el documento nuevo en el flujo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/10-pide-el-documento-nuevo-en-el-flujo-claro.webp)
 
 **Variantes**
 
@@ -176,7 +176,7 @@ Con «Crear borrador» el flujo queda guardado como borrador v1: todavía no lo 
 
 > **Pantalla:** `/e/{empresa}/flujos/{id}`
 
-![Paso 11: Guarda el flujo como borrador (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/11-guarda-el-flujo-como-borrador-claro.png)
+![Paso 11: Guarda el flujo como borrador (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/11-guarda-el-flujo-como-borrador-claro.webp)
 
 ## Paso 12. Publica la versión
 
@@ -184,7 +184,7 @@ Antes de publicar, Validasoft te avisa qué va a pasar: los expedientes nuevos u
 
 > **Pantalla:** `/e/{empresa}/flujos/{id}`
 
-![Paso 12: Publica la versión (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/12-publica-la-version-claro.png)
+![Paso 12: Publica la versión (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/12-publica-la-version-claro.webp)
 
 ## Paso 13. Usa el flujo por defecto para el tipo de vínculo
 
@@ -192,7 +192,7 @@ Publicar no cambia a qué flujo va cada invitación: eso lo decide el flujo por 
 
 > **Pantalla:** `/e/{empresa}/flujos/{id}`
 
-![Paso 13: Usa el flujo por defecto para el tipo de vínculo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/13-usa-el-flujo-por-defecto-para-el-tipo-de-vinculo-claro.png)
+![Paso 13: Usa el flujo por defecto para el tipo de vínculo (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/13-usa-el-flujo-por-defecto-para-el-tipo-de-vinculo-claro.webp)
 
 ## Paso 14. Comprueba el resultado en la lista de flujos
 
@@ -200,7 +200,7 @@ La lista muestra el flujo nuevo con su versión publicada (v1) y la marca «Por 
 
 > **Pantalla:** `/e/{empresa}/flujos`
 
-![Paso 14: Comprueba el resultado en la lista de flujos (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/14-comprueba-el-resultado-en-la-lista-de-flujos-claro.png)
+![Paso 14: Comprueba el resultado en la lista de flujos (escritorio)](../../../salida/manual/img/configuracion/tipo-de-documento-y-flujo/14-comprueba-el-resultado-en-la-lista-de-flujos-claro.webp)
 
 **Variantes**
 

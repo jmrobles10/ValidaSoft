@@ -53,6 +53,11 @@ export interface OpcionesDePaso {
   resaltar?: Locator | Locator[];
   /** También captura 390×844. Por omisión sí para el Tercero y el Público, no para los demás actores. */
   celular?: boolean;
+  /**
+   * Anchos de ventana (px) en los que se captura también este paso, además de 1280 y del celular: `[900, 700]` muestra cómo se adapta la pantalla al achicarse.
+   * Cada ancho suma una imagen (alto 800); entre 320 y 1600, sin repetir 1280 ni 390 (el celular se pide con `celular`).
+   */
+  anchos?: number[];
   /** Captura la página completa en vez de solo la ventana (1280×800). Úsalo en pantallas largas, no en diálogos. */
   completa?: boolean;
   /** Si el paso muestra a propósito un indicador de carga, pon `false` para no esperar a que desaparezca. */
@@ -72,8 +77,10 @@ export interface PasoDelManifiesto {
   /** Ruta de la app en el momento del paso, sin identificadores (`/e/{empresa}/bandeja`). */
   ruta: string | null;
   /** Rutas relativas a la carpeta del recorrido. */
-  imagenes: { claro: string; celular: string | null };
+  imagenes: { claro: string; celular: string | null; /** Capturas a otros anchos (`anchos` del paso), de la más ancha a la más angosta. */ extras?: { ancho: number; archivo: string }[] };
   resaltados: number;
+  /** Cuántos secretos (llaves, tokens, códigos de recuperación) se cubrieron con el recuadro «oculto» en los pantallazos del paso. */
+  secretosOcultos?: number;
   completa: boolean;
 }
 

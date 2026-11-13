@@ -800,6 +800,14 @@ h4 {
   width: 236px;
 }
 
+.capturas-extra {
+  flex-wrap: wrap;
+}
+
+.captura.extra {
+  min-width: 220px;
+}
+
 .captura button {
   display: block;
   width: 100%;
@@ -1413,6 +1421,11 @@ pre code {
   .captura.celular {
     width: 236px;
     align-self: center;
+  }
+
+  .captura.extra {
+    flex: none !important;
+    max-width: none !important;
   }
 
   .navegacion-recorridos {

@@ -118,7 +118,15 @@ export async function paso(page: Page, opciones: OpcionesDePaso): Promise<void> 
 
     const claro = await capturar(page, join(estado.carpeta, `${base}-claro.png`), { ...comun, ...ESCRITORIO, resaltadoOpcional: false });
     const conCelular = opciones.celular ?? ACTORES_CON_CELULAR.has(estado.meta.actor);
-    if (conCelular) await capturar(page, join(estado.carpeta, `${base}-celular.png`), { ...comun, ...CELULAR, resaltadoOpcional: true });
+    let secretosOcultos = claro.secretosOcultos;
+    if (conCelular) secretosOcultos += (await capturar(page, join(estado.carpeta, `${base}-celular.png`), { ...comun, ...CELULAR, resaltadoOpcional: true })).secretosOcultos;
+
+    const extras: { ancho: number; archivo: string }[] = [];
+    for (const ancho of [...(opciones.anchos ?? [])].sort((a, b) => b - a)) {
+      const archivo = `${base}-${String(ancho)}.png`;
+      await capturar(page, join(estado.carpeta, archivo), { ...comun, ancho, alto: ESCRITORIO.alto, resaltadoOpcional: true });
+      extras.push({ ancho, archivo });
+    }
 
     estado.pasos.push({
       orden,
@@ -127,8 +135,9 @@ export async function paso(page: Page, opciones: OpcionesDePaso): Promise<void> 
       variantes: normalizarVariantes(opciones.variantes),
       configuracion: normalizarConfiguracion(opciones.configuracion),
       ruta,
-      imagenes: { claro: `${base}-claro.png`, celular: conCelular ? `${base}-celular.png` : null },
+      imagenes: { claro: `${base}-claro.png`, celular: conCelular ? `${base}-celular.png` : null, ...(extras.length > 0 && { extras }) },
       resaltados: claro.resaltados,
+      ...(secretosOcultos > 0 && { secretosOcultos }),
       completa,
     });
   });

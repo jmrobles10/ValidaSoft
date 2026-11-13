@@ -47,6 +47,9 @@ export function textoEnMarkdown(texto, enlace = () => null) {
   });
 }
 
+/** Nombre de la imagen en la salida: con `extension` (`.webp`) cambia la del pantallazo; sin ella, se deja como está. */
+export const nombreDeImagen = (nombre, extension) => (extension ? String(nombre).replace(/\.png$/i, extension) : nombre);
+
 /** Ancho y alto de un PNG (cabecera IHDR), o `null` si no lo es. */
 export function medidasPng(buffer) {
   if (buffer.length < 24 || buffer.readUInt32BE(0) !== 0x89504e47) return null;

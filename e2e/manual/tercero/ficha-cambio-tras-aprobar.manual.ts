@@ -2,7 +2,7 @@ import { areaDe } from '../nucleo/semillas';
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
-import { abrirSeccion, guardarSeccionCompleta, llenarGeneralJuridica, publicarFlujoDeFicha } from '../../soporte/ficha';
+import { abrirFichaAceptada, abrirSeccion, guardarSeccionCompleta, llenarGeneralJuridica, publicarFlujoDeFicha } from '../../soporte/ficha';
 import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
@@ -36,6 +36,7 @@ recorrido(
     await subirDocumento(page, RUT, pdf(`RUT ${tercero.identificacion.numero} v1`));
     await esperarEstadoDelTercero(page, 'EnRevision');
     const sofia = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.sofia, e.sur);
+    const ventanaSofia = sofia;
     await abrirDesdeBandeja(sofia, tercero.nombre, 'Revisión', 'Cliente');
     await aprobarArea(sofia, 'Revisión');
     await page.goto('/empresas');
@@ -61,8 +62,19 @@ recorrido(
       titulo: 'Guarda el cambio y revisa su efecto',
       explicacion:
         'Al guardar, la sección queda con la dirección nueva y Sur recibe el cambio posterior: la empresa debe volver a revisar esta sección para que siga valiendo. ' +
-        'Mientras tanto, lo que ya aprobó sigue vigente, y así lo ves en «Mis empresas».',
+        'Lo que la empresa aceptó sigue siendo la versión 1 hasta que revise la nueva, y tu pantalla pasa a decir que la empresa está revisando tu información (versión 2).',
       resaltar: page.getByRole('main'),
     });
+
+    // Lo que afirma la explicación: la empresa ve el cambio como pendiente de revisión (lo aceptado sigue siendo la versión 1) y el tercero ve que la empresa está revisando su información.
+    await expect(async () => {
+      await abrirFichaAceptada(ventanaSofia, tercero.nombre);
+      await expect(ventanaSofia.getByText('1 sección tiene una versión nueva pendiente de revisión')).toBeVisible({ timeout: 1500 });
+    }).toPass({ timeout: 45_000 });
+    await expect(ventanaSofia.getByRole('region', { name: 'Información general' })).toContainText('Aceptada · versión 1');
+    await page.goto('/empresas');
+    await abrirEmpresa(page, e.sur.nombre, 'CLIENTE');
+    await expect(page.getByText(`${e.sur.nombre} está revisando tu información.`, { exact: false })).toBeVisible();
+    await expect(page.getByText('Versión 2 de tu información', { exact: false })).toBeVisible();
   },
 );

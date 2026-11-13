@@ -42,9 +42,9 @@ Una empresa invita a un proveedor persona jurídica. Recibe el correo, entra con
 
 La empresa te escribe desde Validasoft con el asunto «Constructora Sur S.A.S. te invita a validar tu vínculo como proveedor». El correo dice quién te invita y trae el enlace «Abrir Validasoft». El enlace es personal, de un solo uso y tiene fecha de vencimiento; si lo pierdes o se vence, la empresa puede enviarte otra invitación.
 
-![Paso 1: Abre la invitación que llega a tu correo (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/01-abre-la-invitacion-que-llega-a-tu-correo-claro.png)
+![Paso 1: Abre la invitación que llega a tu correo (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/01-abre-la-invitacion-que-llega-a-tu-correo-claro.webp)
 
-![Paso 1: Abre la invitación que llega a tu correo (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/01-abre-la-invitacion-que-llega-a-tu-correo-celular.png)
+![Paso 1: Abre la invitación que llega a tu correo (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/01-abre-la-invitacion-que-llega-a-tu-correo-celular.webp)
 
 **Variantes**
 
@@ -60,9 +60,9 @@ Como el tipo de vínculo «Proveedor» exige verificar el correo, Validasoft env
 
 > **Pantalla:** `/e/{enlace}`
 
-![Paso 2: Escribe el código de acceso (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/02-escribe-el-codigo-de-acceso-claro.png)
+![Paso 2: Escribe el código de acceso (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/02-escribe-el-codigo-de-acceso-claro.webp)
 
-![Paso 2: Escribe el código de acceso (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/02-escribe-el-codigo-de-acceso-celular.png)
+![Paso 2: Escribe el código de acceso (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/02-escribe-el-codigo-de-acceso-celular.webp)
 
 **Variantes**
 
@@ -78,9 +78,9 @@ Antes de entregar nada ves quién te invita y los textos que debes aceptar: el a
 
 > **Pantalla:** `/empresas/{id}`
 
-![Paso 3: Lee y acepta los textos legales (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/03-lee-y-acepta-los-textos-legales-claro.png)
+![Paso 3: Lee y acepta los textos legales (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/03-lee-y-acepta-los-textos-legales-claro.webp)
 
-![Paso 3: Lee y acepta los textos legales (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/03-lee-y-acepta-los-textos-legales-celular.png)
+![Paso 3: Lee y acepta los textos legales (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/03-lee-y-acepta-los-textos-legales-celular.webp)
 
 **Variantes**
 
@@ -97,9 +97,9 @@ En «Tu revisión con …» una frase (1) resume el estado («Te faltan 8 docume
 
 > **Pantalla:** `/expediente/{id}`
 
-![Paso 4: Revisa lo que te pide la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/04-revisa-lo-que-te-pide-la-empresa-claro.png)
+![Paso 4: Revisa lo que te pide la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/04-revisa-lo-que-te-pide-la-empresa-claro.webp)
 
-![Paso 4: Revisa lo que te pide la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/04-revisa-lo-que-te-pide-la-empresa-celular.png)
+![Paso 4: Revisa lo que te pide la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/04-revisa-lo-que-te-pide-la-empresa-celular.webp)
 
 **Variantes**
 
@@ -117,9 +117,9 @@ En «Tu revisión con …» una frase (1) resume el estado («Te faltan 8 docume
 
 > **Pantalla:** `/ficha`
 
-![Paso 5: Entra a «Mi información» (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/05-entra-a-mi-informacion-claro.png)
+![Paso 5: Entra a «Mi información» (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/05-entra-a-mi-informacion-claro.webp)
 
-![Paso 5: Entra a «Mi información» (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/05-entra-a-mi-informacion-celular.png)
+![Paso 5: Entra a «Mi información» (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/05-entra-a-mi-informacion-celular.webp)
 
 ## Paso 6. Diligencia la información general
 
@@ -127,9 +127,9 @@ La identificación, el tipo de persona, la razón social y el correo llegan prel
 
 > **Pantalla:** `/ficha/general`
 
-![Paso 6: Diligencia la información general (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/06-diligencia-la-informacion-general-claro.png)
+![Paso 6: Diligencia la información general (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/06-diligencia-la-informacion-general-claro.webp)
 
-![Paso 6: Diligencia la información general (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/06-diligencia-la-informacion-general-celular.png)
+![Paso 6: Diligencia la información general (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/06-diligencia-la-informacion-general-celular.webp)
 
 **Variantes**
 
@@ -141,9 +141,9 @@ Elige las responsabilidades de la casilla 53 de tu RUT y responde las preguntas 
 
 > **Pantalla:** `/ficha/tributaria`
 
-![Paso 7: Completa la información tributaria (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/07-completa-la-informacion-tributaria-claro.png)
+![Paso 7: Completa la información tributaria (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/07-completa-la-informacion-tributaria-claro.webp)
 
-![Paso 7: Completa la información tributaria (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/07-completa-la-informacion-tributaria-celular.png)
+![Paso 7: Completa la información tributaria (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/07-completa-la-informacion-tributaria-celular.webp)
 
 ## Paso 8. Agrega a tu representante legal y a tus socios
 
@@ -151,9 +151,9 @@ La información legal pide las personas que están detrás de la empresa: repres
 
 > **Pantalla:** `/ficha/legal`
 
-![Paso 8: Agrega a tu representante legal y a tus socios (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/08-agrega-a-tu-representante-legal-y-a-tus-socios-claro.png)
+![Paso 8: Agrega a tu representante legal y a tus socios (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/08-agrega-a-tu-representante-legal-y-a-tus-socios-claro.webp)
 
-![Paso 8: Agrega a tu representante legal y a tus socios (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/08-agrega-a-tu-representante-legal-y-a-tus-socios-celular.png)
+![Paso 8: Agrega a tu representante legal y a tus socios (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/08-agrega-a-tu-representante-legal-y-a-tus-socios-celular.webp)
 
 **Variantes**
 
@@ -165,9 +165,9 @@ La sección no queda completa solo con el representante legal: la empresa exige 
 
 > **Pantalla:** `/ficha/legal`
 
-![Paso 9: Guarda la información legal (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/09-guarda-la-informacion-legal-claro.png)
+![Paso 9: Guarda la información legal (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/09-guarda-la-informacion-legal-claro.webp)
 
-![Paso 9: Guarda la información legal (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/09-guarda-la-informacion-legal-celular.png)
+![Paso 9: Guarda la información legal (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/09-guarda-la-informacion-legal-celular.webp)
 
 **Variantes**
 
@@ -179,9 +179,9 @@ Indica la fecha de corte del último cierre y las cifras de activos, pasivos, pa
 
 > **Pantalla:** `/ficha/financiera`
 
-![Paso 10: Registra la información financiera (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/10-registra-la-informacion-financiera-claro.png)
+![Paso 10: Registra la información financiera (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/10-registra-la-informacion-financiera-claro.webp)
 
-![Paso 10: Registra la información financiera (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/10-registra-la-informacion-financiera-celular.png)
+![Paso 10: Registra la información financiera (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/10-registra-la-informacion-financiera-celular.webp)
 
 ## Paso 11. Responde seguridad y salud en el trabajo
 
@@ -189,9 +189,9 @@ Son preguntas de Sí o No sobre tu sistema de gestión de seguridad y salud en e
 
 > **Pantalla:** `/ficha/sst`
 
-![Paso 11: Responde seguridad y salud en el trabajo (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/11-responde-seguridad-y-salud-en-el-trabajo-claro.png)
+![Paso 11: Responde seguridad y salud en el trabajo (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/11-responde-seguridad-y-salud-en-el-trabajo-claro.webp)
 
-![Paso 11: Responde seguridad y salud en el trabajo (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/11-responde-seguridad-y-salud-en-el-trabajo-celular.png)
+![Paso 11: Responde seguridad y salud en el trabajo (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/11-responde-seguridad-y-salud-en-el-trabajo-celular.webp)
 
 ## Paso 12. Elige tus especialidades
 
@@ -199,9 +199,9 @@ Busca por nombre y marca las especialidades que ofreces; quedan resumidas en «T
 
 > **Pantalla:** `/ficha/especialidades`
 
-![Paso 12: Elige tus especialidades (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/12-elige-tus-especialidades-claro.png)
+![Paso 12: Elige tus especialidades (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/12-elige-tus-especialidades-claro.webp)
 
-![Paso 12: Elige tus especialidades (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/12-elige-tus-especialidades-celular.png)
+![Paso 12: Elige tus especialidades (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/12-elige-tus-especialidades-celular.webp)
 
 ## Paso 13. Confirma que tu información está completa
 
@@ -209,9 +209,9 @@ Con las seis secciones guardadas, «Mi información» muestra «Tu información 
 
 > **Pantalla:** `/ficha`
 
-![Paso 13: Confirma que tu información está completa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/13-confirma-que-tu-informacion-esta-completa-claro.png)
+![Paso 13: Confirma que tu información está completa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/13-confirma-que-tu-informacion-esta-completa-claro.webp)
 
-![Paso 13: Confirma que tu información está completa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/13-confirma-que-tu-informacion-esta-completa-celular.png)
+![Paso 13: Confirma que tu información está completa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/13-confirma-que-tu-informacion-esta-completa-celular.webp)
 
 ## Paso 14. Vuelve a tu revisión con la empresa
 
@@ -219,9 +219,9 @@ Con las seis secciones guardadas, «Mi información» muestra «Tu información 
 
 > **Pantalla:** `/empresas`
 
-![Paso 14: Vuelve a tu revisión con la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/14-vuelve-a-tu-revision-con-la-empresa-claro.png)
+![Paso 14: Vuelve a tu revisión con la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/14-vuelve-a-tu-revision-con-la-empresa-claro.webp)
 
-![Paso 14: Vuelve a tu revisión con la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/14-vuelve-a-tu-revision-con-la-empresa-celular.png)
+![Paso 14: Vuelve a tu revisión con la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/14-vuelve-a-tu-revision-con-la-empresa-celular.webp)
 
 ## Paso 15. Elige el archivo del documento
 
@@ -229,9 +229,9 @@ Cada documento tiene su propia pantalla de carga con las reglas del tipo: format
 
 > **Pantalla:** `/boveda/subir`
 
-![Paso 15: Elige el archivo del documento (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/15-elige-el-archivo-del-documento-claro.png)
+![Paso 15: Elige el archivo del documento (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/15-elige-el-archivo-del-documento-claro.webp)
 
-![Paso 15: Elige el archivo del documento (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/15-elige-el-archivo-del-documento-celular.png)
+![Paso 15: Elige el archivo del documento (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/15-elige-el-archivo-del-documento-celular.webp)
 
 **Configuración que lo afecta**
 
@@ -243,9 +243,9 @@ Validasoft confirma «Listo. Es tu versión 1» del documento y dice qué empres
 
 > **Pantalla:** `/boveda/subir`
 
-![Paso 16: Confirma la versión que quedó guardada (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/16-confirma-la-version-que-quedo-guardada-claro.png)
+![Paso 16: Confirma la versión que quedó guardada (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/16-confirma-la-version-que-quedo-guardada-claro.webp)
 
-![Paso 16: Confirma la versión que quedó guardada (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/16-confirma-la-version-que-quedo-guardada-celular.png)
+![Paso 16: Confirma la versión que quedó guardada (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/16-confirma-la-version-que-quedo-guardada-celular.webp)
 
 ## Paso 17. Espera la revisión de la empresa
 
@@ -253,9 +253,9 @@ Cuando no falta ningún documento ni sección, el expediente pasa solo a revisi�
 
 > **Pantalla:** `/expediente/{id}`
 
-![Paso 17: Espera la revisión de la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/17-espera-la-revision-de-la-empresa-claro.png)
+![Paso 17: Espera la revisión de la empresa (escritorio)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/17-espera-la-revision-de-la-empresa-claro.webp)
 
-![Paso 17: Espera la revisión de la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/17-espera-la-revision-de-la-empresa-celular.png)
+![Paso 17: Espera la revisión de la empresa (celular)](../../../salida/manual/img/tercero/aceptar-invitacion-persona-juridica/17-espera-la-revision-de-la-empresa-celular.webp)
 
 **Variantes**
 

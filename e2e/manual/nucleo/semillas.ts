@@ -1,6 +1,7 @@
-import { llamar } from '../../soporte/api';
+import { API, llamar } from '../../soporte/api';
+import { enlace, esperarCorreo, literal } from '../../soporte/correo';
 import { publicarFlujoDeFicha, soloPara, type RequisitoDeFicha } from '../../soporte/ficha';
-import { crearEscenario, type Area, type Empresa, type Escenario } from '../../soporte/semilla';
+import { crearEscenario, ORIGEN_SISTEMA, type Area, type Empresa, type Escenario, type Invitacion } from '../../soporte/semilla';
 
 /** Área de la empresa por su código (falla con un mensaje claro si no existe, en vez de un `undefined` más adelante). */
 export function areaDe(empresa: Empresa, codigo: string): Area {
@@ -73,4 +74,31 @@ export async function escenarioConFlujoDeClientePorTipo(): Promise<Escenario> {
     ...SECCIONES_DE_LA_FICHA,
   ]);
   return e;
+}
+
+/** El tercero acepta la invitación de CLIENTE por el enlace del correo (sin pantalla): sin ella el sistema no puede embeber nada suyo. */
+export async function aceptarInvitacionDeClientePorApi(invitacion: Invitacion): Promise<void> {
+  const correo = await esperarCorreo(invitacion.correo, new RegExp(`^${literal(invitacion.empresa.nombre)} te invita a validar tu vínculo como cliente$`));
+  const token = new URL(enlace(correo, '/e/')).pathname.split('/').pop() ?? '';
+  const canje = await fetch(`${API}/public/v1/enlaces/${token}/canjear`, { method: 'POST' });
+  if (canje.status !== 200) throw new Error(`No se pudo canjear el enlace de la invitación (${String(canje.status)}).`);
+  const { accessToken } = (await canje.json()) as { accessToken: string };
+  const cabeceras = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+  const ver = (await (await fetch(`${API}/public/v1/invitaciones/${invitacion.vinculoId}`, { headers: cabeceras })).json()) as {
+    textosPorAceptar: { tipo: string; textoVersion: number }[];
+  };
+  const aceptada = await fetch(`${API}/public/v1/invitaciones/${invitacion.vinculoId}/aceptar`, {
+    method: 'POST',
+    headers: cabeceras,
+    body: JSON.stringify({ consentimientos: ver.textosPorAceptar.map((t) => ({ tipo: t.tipo, textoVersion: t.textoVersion, aceptado: true })) }),
+  });
+  if (aceptada.status !== 200) throw new Error(`No se pudo aceptar la invitación (${String(aceptada.status)}).`);
+}
+
+/** Registra un segundo origen para el sistema E2E (además de `ORIGEN_SISTEMA`): una página alojada ahí también puede mostrar Validasoft. */
+export async function permitirOtroOrigenDelSistema(e: Escenario, otroOrigen: string): Promise<void> {
+  const sistemas = await llamar<{ id: string; codigo: string }[]>('GET', '/api/v1/sistemas', { llave: e.admin });
+  const sistema = sistemas.find((x) => x.codigo === 'E2E');
+  if (!sistema) throw new Error('El sistema E2E no existe.');
+  await llamar('PUT', `/api/v1/sistemas/${sistema.id}/origenes`, { llave: e.admin, cuerpo: { origenes: [ORIGEN_SISTEMA, otroOrigen] } });
 }

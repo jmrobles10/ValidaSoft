@@ -2,4 +2,9 @@
 
 Páginas sin sesión: verificación de certificados y enlaces públicos.
 
-_Todavía no hay recorridos en este dominio._
+- [Lee el estado de un certificado suspendido o revocado](certificado-en-otros-estados.md) — Público. Cuando la empresa suspende el vínculo o revoca el certificado, el enlace de verificación lo dice con un título propio y su consecuencia: quien lo consulta no debe aceptarlo, no se entrega el PDF y la página no revela el motivo interno.
+- [Entiende la pantalla «Conectando con tu sistema» de una pantalla embebida](embebido-esperando-sesion.md) — Público. Las pantallas del tercero embebidas (`/embed/…`) no tienen inicio de sesión propio: esperan a que el sistema que las aloja les entregue una sesión. Aquí se ve qué pasa al abrirlas sin sistema, cuando el sistema no responde y cuando entrega una sesión que no corresponde.
+- [Llega a una dirección que no existe y vuelve a entrar](pagina-no-encontrada.md) — Público. Cuando un enlace está roto o se escribe mal una dirección, Validasoft muestra «No encontramos este enlace» con una salida clara: entrar con el correo para llegar a los documentos.
+- [Verifica que un certificado es auténtico](verificar-certificado-autentico.md) — Público. Cualquier persona con el enlace del código QR o el folio de un certificado vigente lo consulta sin iniciar sesión: ve quién lo emite, a quién certifica y si la firma de Validasoft corresponde a su contenido, y descarga el PDF.
+- [Comprueba un certificado que no existe o tiene una huella mal escrita](verificar-certificado-invalido.md) — Público. Si el folio o la huella no corresponden a ningún certificado de Validasoft, la página no lo da por bueno: explica qué revisar en el PDF o en el código QR y no muestra datos de ninguna empresa ni de ningún titular.
+- [Compara la huella impresa en el PDF con la del certificado](verificar-con-el-pdf.md) — Público. Quien recibe el PDF del certificado escanea su código QR. Si el enlace no trae la huella completa, la página verifica el contenido y pide comparar la huella que muestra con la impresa en el PDF; las dos deben coincidir para confiar en el documento.

@@ -50,10 +50,16 @@ recorrido(
 
     // 1. Representante (no PEP) y socio (PEP): al responder «Sí» se abre su declaración.
     const representante = await agregar(page, REPRESENTANTE, 'No');
+    // Con «No» no se abre ninguna declaración (lo que dice la variante del primer paso).
+    await expect(dialogoDeclaracion(page)).toHaveCount(0);
     await representante.getByRole('button', { name: 'Listo' }).click();
     const socio = await agregar(page, { ...SOCIO, porcentaje: '100' }, 'Sí');
     const dialogo = dialogoDeclaracion(page);
     await expect(dialogo).toBeVisible();
+    // Lo que afirma la explicación: el nombre sale de lo escrito sobre el socio y la dirección está vacía, para quien declara.
+    await expect(dialogo.getByLabel('Nombre completo o razón social', { exact: true })).toHaveValue(`${SOCIO.nombres} ${SOCIO.apellidos}`);
+    await expect(dialogo.getByLabel('Documento', { exact: true })).toHaveValue(new RegExp(SOCIO.numero));
+    await expect(dialogo.getByRole('textbox', { name: 'Dirección', exact: true })).toHaveValue('');
     await paso(page, {
       titulo: 'Responde «Sí» a la PEP del socio',
       explicacion:
@@ -83,6 +89,9 @@ recorrido(
     await socio.getByRole('button', { name: 'Listo' }).click();
     const lista = page.getByRole('list', { name: 'Personas relacionadas' });
     await expect(lista.getByRole('listitem', { name: /Jorge Iván Castro Pinto/ }).getByText('Falta la declaración PEP')).toHaveCount(0);
+    // Quien respondió «No» no tiene declaración ni aviso de que le falte.
+    await expect(lista.getByRole('listitem', { name: new RegExp(REPRESENTANTE.nombres) })).toBeVisible();
+    await expect(lista.getByText('Falta la declaración PEP')).toHaveCount(0);
     await guardarSeccionCompleta(page, 'Guardaste Información legal: está completa.');
     await paso(page, {
       titulo: 'Guarda la información legal',

@@ -71,9 +71,10 @@ recorrido(
     await paso(page, {
       titulo: 'Distingue los estados de vigencia',
       explicacion:
-        'Vigente: falta más de la anticipación de aviso. Por vencer: el documento sigue sirviendo, pero le quedan pocos días. En gracia: ya venció, pero el tercero aún puede subir una versión nueva hasta la fecha que se indica. ' +
-        'Vencida: pasó el periodo de gracia y el tercero debe subir una versión nueva.',
-      resaltar: [filaVigente, filaPorVencer, filaVencida],
+        'Vigente (1): falta más de la anticipación de aviso. Por vencer (2): el documento sigue sirviendo, pero le quedan pocos días. En gracia: ya venció, pero el tercero aún puede subir una versión nueva hasta la fecha que se indica. ' +
+        'Vencida (3): pasó el periodo de gracia y el tercero debe subir una versión nueva.',
+      // Los estados (no las filas enteras): tres filas pegadas con su recuadro se encimaban y los números quedaban tapados.
+      resaltar: [filaVigente.getByText('Vigente', { exact: true }), filaPorVencer.getByText('Por vencer', { exact: true }), filaVencida.getByText('Vencida', { exact: true })],
     });
   },
 );

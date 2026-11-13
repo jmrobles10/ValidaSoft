@@ -42,6 +42,13 @@ export function validarPaso(opciones: OpcionesDePaso, orden: number): string[] {
   if (largo < MIN_EXPLICACION) errores.push(`${donde}: la explicación es muy corta (${String(largo)} caracteres; mínimo ${String(MIN_EXPLICACION)}). Cuenta qué ve la persona, qué hace y qué pasa después.`);
   if (largo > MAX_EXPLICACION) errores.push(`${donde}: la explicación es muy larga (máximo ${String(MAX_EXPLICACION)} caracteres): pártela en dos pasos.`);
   if (/\b(?:TODO|FIXME)\b/.test(opciones.explicacion) || /lorem ipsum/i.test(opciones.explicacion)) errores.push(`${donde}: la explicación tiene texto pendiente.`);
+  const anchos = opciones.anchos ?? [];
+  if (anchos.length > 4) errores.push(`${donde}: máximo 4 anchos adicionales.`);
+  if (new Set(anchos).size !== anchos.length) errores.push(`${donde}: hay anchos repetidos en «anchos».`);
+  for (const ancho of anchos) {
+    if (!Number.isInteger(ancho) || ancho < 320 || ancho > 1600) errores.push(`${donde}: el ancho ${String(ancho)} debe ser un entero entre 320 y 1600.`);
+    else if (ancho === 1280 || ancho === 390) errores.push(`${donde}: ${String(ancho)} px ya se captura (${ancho === 1280 ? 'escritorio' : 'celular: usa celular: true'}); no lo repitas en «anchos».`);
+  }
   for (const v of normalizarVariantes(opciones.variantes)) {
     if (!v.cuando.trim() || !v.entonces.trim()) errores.push(`${donde}: cada variante necesita «cuando» y «entonces» (como objeto, o como texto «Cuando X: Y»).`);
   }

@@ -23,16 +23,34 @@ recorrido(
     await expect(app.getByRole('heading', { level: 1, name: 'Bandeja de revisión' })).toBeVisible();
 
     const barra = app.getByRole('navigation', { name: 'Secciones' });
+    const mas = barra.locator('button[aria-haspopup="menu"]');
+    const secciones = barra.getByRole('link');
     await expect(barra.getByRole('link', { name: 'Bandeja', exact: true })).toBeVisible();
-    await expect(barra.locator('button[aria-haspopup="menu"]')).toHaveCount(0);
+
+    // Con 1280 px caben todas; al achicar el ancho, las últimas secciones pasan a «Más» (se mide para afirmarlo en la explicación).
+    const enlaces: Record<number, number> = {};
+    for (const ancho of [1280, 1100, 900, 700]) {
+      await page.setViewportSize({ width: ancho, height: 800 });
+      await expect(barra).toBeVisible();
+      await expect(mas).toHaveCount(ancho === 1280 ? 0 : 1);
+      enlaces[ancho] = await secciones.count();
+    }
+    expect(enlaces[1100]).toBeLessThan(enlaces[1280] ?? 0);
+    expect(enlaces[900]).toBeLessThan(enlaces[1100] ?? 0);
+    expect(enlaces[700]).toBeLessThan(enlaces[900] ?? 0);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(mas).toHaveCount(0);
     await paso(page, {
-      titulo: 'Mira la barra con todas las secciones',
+      titulo: 'Mira cómo se adapta la barra al ancho',
       explicacion:
-        'En un ancho amplio, como el de una pantalla de escritorio, las secciones de la empresa se ven en la barra superior y cada una se abre con un clic. ' +
-        'A este ancho no aparece el botón «Más» y la barra no se desplaza en horizontal.',
+        'En el ancho de escritorio (la captura principal, 1280 px) las secciones de la empresa caben todas en la barra superior y cada una se abre con un clic. ' +
+        'Al achicar el ancho del sistema que aloja la app (capturas de 1100, 900 y 700 px), las últimas secciones pasan al botón «Más» y la barra se queda con las primeras. ' +
+        'Se recalcula sola, sin recargar la página.',
       resaltar: barra,
+      anchos: [1100, 900, 700],
       variantes: [
         { cuando: 'Tu rol no tiene acceso a una sección', entonces: 'Esa sección no aparece en la barra: la barra solo muestra lo que puedes usar.' },
+        { cuando: 'La sección en la que estás quedó dentro de «Más»', entonces: 'El botón lleva el nombre de esa sección (por ejemplo «Bandeja») en lugar de «Más» y se ve marcado.' },
       ],
     });
 

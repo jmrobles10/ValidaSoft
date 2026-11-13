@@ -39,16 +39,27 @@ recorrido(
     // 1. La campana muestra cuántas notificaciones no has leído.
     const campana = page.getByRole('button', { name: /^Notificaciones, \d+ sin leer$/ });
     await expect(campana).toBeVisible({ timeout: 45_000 });
+    const sinLeer = Number(/(\d+) sin leer/.exec((await campana.getAttribute('aria-label')) ?? '')?.[1]);
+    expect(sinLeer).toBeGreaterThanOrEqual(1);
     await paso(page, {
       titulo: 'Mira la campana de notificaciones',
       explicacion:
-        'La campana de la barra superior muestra un número cuando tienes notificaciones sin leer. Aquí hay una: Constructora Norte te pidió corregir el RUT. ' +
+        `La campana de la barra superior muestra un número cuando tienes notificaciones sin leer. Aquí hay ${String(sinLeer)}: entre ellas, Constructora Norte te pidió corregir el RUT. ` +
         'El número se actualiza solo: si llega un aviso nuevo mientras miras la página, la campana cambia sin que recargues.',
       resaltar: campana,
     });
 
+    // Lo que dice la explicación: un aviso nuevo llega en vivo. Rubén le recuerda al tercero sus observaciones y la campana sube en uno sin recargar la página.
+    await ruben.getByRole('button', { name: 'Recordar al tercero', exact: true }).click();
+    const recordatorio = ruben.getByRole('dialog', { name: '¿Recordarle sus observaciones al tercero?' });
+    await recordatorio.getByRole('button', { name: 'Enviar recordatorio', exact: true }).click();
+    await expect(recordatorio).toBeHidden();
+    const campanaConDos = page.getByRole('button', { name: `Notificaciones, ${String(sinLeer + 1)} sin leer` });
+    await expect(campanaConDos).toBeVisible({ timeout: 45_000 });
+
     // 2. Preferencias de correo.
-    await campana.click();
+    await campanaConDos.click();
+    await expect(page.getByRole('dialog').getByText(/corregir/i).first()).toBeVisible();
     await paso(page, {
       titulo: 'Revisa tus notificaciones',
       explicacion:
@@ -77,5 +88,13 @@ recorrido(
       resaltar: page.getByText('Guardamos tus preferencias de correo.'),
     });
 
+    // Lo que dice la explicación del segundo paso: «Marcar todas como leídas» quita el número y pulsar un aviso lleva a su pantalla.
+    await page.getByRole('button', { name: /^Notificaciones/ }).click();
+    await page.getByRole('button', { name: 'Marcar todas como leídas' }).click();
+    await expect(page.getByRole('dialog').getByText('Sin leer', { exact: true })).toHaveCount(0);
+    await page.goto('/boveda');
+    await page.getByRole('button', { name: /^Notificaciones/ }).click();
+    await page.getByRole('dialog').getByRole('button').filter({ hasText: /corregir|observ/i }).first().click();
+    await expect(page.getByRole('heading', { level: 1, name: /^Tu revisión con / })).toBeVisible();
   },
 );
