@@ -52,7 +52,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `tercero/contactos-por-empresa` ☑ | Tercero | Vínculo con dos contactos (spec `contactos-por-empresa`) | Editar los contactos de una empresa sin tocar los de otra |
 | `tercero/documento-por-vencer-y-vencido` ☑ | Tercero | Documento con avisos y gracia (specs `vencimientos`, `vigencias`) | «Vigente», «Por vencer» con aviso, en gracia, vencido, subir uno nuevo |
 | `tercero/vinculo-por-vencer-renovar` ☑ | Tercero | Flujo con vigencia periódica del vínculo y fecha simulada (spec `vigencias`) | Encabezado «Por vencer», renovación, vencido, qué pasa con el certificado |
-| `tercero/vinculo-en-revision-por-actualizacion` ☐ | Tercero | Aprobado por dos empresas y versión nueva del RUT (spec `vinculo-en-revision`) | Encabezado de «Mis empresas» y de la revisión, tarjeta del documento, actualización rechazada y su aviso |
+| `tercero/vinculo-en-revision-por-actualizacion` ☑ | Tercero | Aprobado por dos empresas y versión nueva del RUT (spec `vinculo-en-revision`) | Encabezado de «Mis empresas» y de la revisión, tarjeta del documento, actualización rechazada y su aviso |
 | `tercero/documento-eximido-y-vinculo-bloqueado` ☐ | Tercero | Documento eximido; vínculo bloqueado (specs `revalidaciones-y-exencion`, `pendientes-pequenos`) | El documento figura eximido; con el vínculo bloqueado no se puede enviar y el tercero no ve el motivo |
 
 ### privacidad, publico y movil (21)
