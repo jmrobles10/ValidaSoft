@@ -207,7 +207,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `ia/cupo-agotado` ☑ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
 | `ia/escalamiento-a-modelo-superior` ☑ | Revisor/área | Lectura dudosa (spec `ia-cupo-y-escalamiento`) | Confianza, «Revisado por un modelo de mayor capacidad», tokens y costo en «Plan y uso de IA» |
 | `ia/cruce-de-la-ficha-con-los-soportes` ☑ | Revisor/área | IA activa y ficha con soporte (spec `ficha-f5`) | Cruce ficha ↔ documento, coincidencias y diferencias, qué decide la persona |
-| `ia/analisis-de-un-documento` ☐ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
+| `ia/analisis-de-un-documento` ☑ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
 | `privacidad/habeas-data-de-la-empresa` ☐ | Oficial de cumplimiento | Solicitud del tercero (spec `derechos-plan-correo`) | Habeas data: solicitudes con plazo, responder, plan de supresión, constancia |
 | `privacidad/plazos-y-avisos-de-habeas` ☐ | Administrador de empresa | Solicitud cerca de vencer | Aviso de plazo (enlaza a esta pantalla), vencida, quién atiende |
 | `cumplimiento/matriz-de-riesgo-configuracion` ☐ | Oficial de cumplimiento | Grupo base (spec `matriz-riesgo`) | Factores, límites y niveles del riesgo SAGRILAFT, guardar, efecto en el estudio |
