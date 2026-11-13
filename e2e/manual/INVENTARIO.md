@@ -141,7 +141,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `documentos/descargar-un-documento` ☐ | Revisor/área | Documento aprobado | Descargar, el registro en la auditoría de accesos |
 | `documentos/recordatorio-desde-vencimientos` ☑ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
 | `informes/estado-de-expedientes` ☑ | Administrador de empresa | Expedientes en varios estados (spec `informes`) | Informe con tiempos por área, filtros, resumen, descargar Excel |
-| `informes/informe-de-vinculos` ☐ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
+| `informes/informe-de-vinculos` ☑ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
 | `informes/plazos-de-revision` ☐ | Administrador de empresa | Plazos por área y expedientes fuera de plazo (spec `operacion`) | Informe SLA, tablas por área y por persona, cumplimiento |
 | `informes/exportar-un-expediente` ☐ | Auditor | Expediente aprobado con documentos (spec `informes`) | Exportar el ZIP, qué trae (documentos, resumen PDF, línea de tiempo), el registro en la auditoría |
 | `informes/auditoria` ☐ | Administrador de empresa | Acciones de configuración y descargas (spec `auditoria`) | Auditoría: filtros, detalle de un cambio (antes/después), accesos a documentos, exportar a Excel |
