@@ -3,7 +3,7 @@ import { expect } from '@playwright/test';
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
-import { completarInvitacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
+import { aceptarInvitacion, completarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST, type Escenario, type Invitacion, type Tercero } from '../../soporte/semilla';
 
 /** Nombres de los requisitos del escenario (los mismos que usan las especificaciones de `e2e/pruebas`). */
@@ -20,9 +20,17 @@ export async function terceroEnRevision(page: Page, nombre: string, todo = true)
   const e = await crearEscenario();
   const tercero = nuevoTercero(nombre);
   const invitacion = await invitar(e, e.norte, tercero);
-  const documentos = [{ nombre: RUT, archivo: pdf(`RUT ${nombre}`) }];
-  if (todo) documentos.push({ nombre: CAMARA, archivo: pdf(`Camara ${nombre}`) });
-  await completarInvitacion(page, invitacion, documentos);
+  if (todo) {
+    await completarInvitacion(page, invitacion, [
+      { nombre: RUT, archivo: pdf(`RUT ${nombre}`) },
+      { nombre: CAMARA, archivo: pdf(`Camara ${nombre}`) },
+    ]);
+  } else {
+    // Sin el certificado el expediente no pasa a «En revisión»: se entrega solo el RUT y se deja pendiente el resto.
+    await entrarPorInvitacion(page, invitacion);
+    await aceptarInvitacion(page, invitacion);
+    await subirDocumento(page, RUT, pdf(`RUT ${nombre}`));
+  }
   return { e, invitacion, tercero };
 }
 
