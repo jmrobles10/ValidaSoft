@@ -223,7 +223,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 |---|---|---|---|
 | `cumplimiento/pedir-listas-restrictivas` ☑ | Oficial de cumplimiento | Flujo con verificación bloqueante; proveedor simulado (`pedirVerificaciones`, spec `verificaciones`) | La consulta corre sola al pasar a revisión, resultado «Satisfecha», quiénes se consultaron |
 | `cumplimiento/analizar-una-coincidencia` ☑ | Oficial de cumplimiento | Nombre con coincidencia en OFAC (spec `verificaciones`) | Coincidencia por analizar, comparar datos, descartar con motivo, la verificación se satisface |
-| `cumplimiento/coincidencia-confirmada` ☐ | Oficial de cumplimiento | Coincidencia que se confirma (spec `cumplimiento-vigilancia`) | Impide aprobar, termina en rechazo, la otra empresa del tercero no se toca |
+| `cumplimiento/coincidencia-confirmada` ☑ | Oficial de cumplimiento | Coincidencia que se confirma (spec `cumplimiento-vigilancia`) | Impide aprobar, termina en rechazo, la otra empresa del tercero no se toca |
 | `cumplimiento/estudio-de-cumplimiento` ☐ | Oficial de cumplimiento | Estudio pedido (spec `cumplimiento-vigilancia`, `matriz-riesgo`) | Nivel de riesgo calculado, conflicto de interés, debida diligencia, concepto, registrar |
 | `cumplimiento/estudio-vencido-y-renovacion` ☐ | Oficial de cumplimiento | Estudio vencido con fecha simulada (spec `cumplimiento-vigilancia`) | Aviso, bloqueo para aprobar, renovar |
 | `cumplimiento/registrar-consulta-por-fuera` ☐ | Oficial de cumplimiento | Consulta hecha en otro sitio (spec `evidencia-manual`) | Subir el PDF, dónde y cuándo, coincidencias, quedan por analizar |
