@@ -21,6 +21,8 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
     private const double Margen = 48;
     private const double AnchoUtil = Ancho - 2 * Margen;
     private const double AnchoEtiqueta = 170;
+    private const double AltoDelLogo = 34;
+    private const double AnchoMaximoDelLogo = 110;
     private static readonly CultureInfo Invariante = CultureInfo.InvariantCulture;
 
     private static readonly Dictionary<string, string> NombresDePaises = new(StringComparer.Ordinal)
@@ -38,8 +40,14 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         var declaracion = d.Declaracion;
         var pdf = new LienzoPdf();
         var y = Alto - Margen;
-        pdf.Texto(Margen, y - 14, Fuente.HelveticaBold, 16, d.Empresa);
-        pdf.Texto(Margen, y - 30, Fuente.Helvetica, 9, "Declaración jurada de persona expuesta políticamente (PEP)", 0.35);
+        // Encabezado: el logo de la empresa (o el de Validasoft) a la izquierda y, a su lado, el nombre y el título del documento.
+        var logo = LogosDePdf.Resolver(d.LogoUrl);
+        var anchoLogo = Math.Min(AnchoMaximoDelLogo, AltoDelLogo * logo.Proporcion);
+        logo.Dibujar(pdf, Margen, y - AltoDelLogo - 2, anchoLogo, AltoDelLogo);
+        var xTexto = Margen + anchoLogo + 12;
+        var (empresa, tamano) = AjustarNombre(d.Empresa, Ancho - Margen - xTexto);
+        pdf.Texto(xTexto, y - 14, Fuente.HelveticaBold, tamano, empresa);
+        pdf.Texto(xTexto, y - 30, Fuente.Helvetica, 9, "Declaración jurada de persona expuesta políticamente (PEP)", 0.35);
         y -= 42;
         pdf.Linea(Margen, y, Ancho - Margen, y, 0.6);
         y -= 4;
@@ -93,21 +101,22 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         y = Seccion(pdf, y, "3. Vínculo familiar o asociados cercanos a una PEP");
         var vinculo = declaracion.VinculoConPep;
         y = Dato(pdf, y, "¿Tiene algún vínculo familiar o societario con una PEP?", SiNo(vinculo?.Tiene));
-        if (vinculo is { Tiene: true })
+        if (vinculo is { Tiene: true, Vinculos: { Count: > 0 } pepRelacionadas })
         {
-            y = Dato(pdf, y, "Nombre de la PEP", vinculo.Nombre);
-            y = Dato(pdf, y, "Vínculo o grado de parentesco", vinculo.Parentesco);
-            y = Dato(pdf, y, "Cargo e institución", vinculo.CargoInstitucion);
-            y = Dato(pdf, y, "Fecha de vinculación", Fecha(vinculo.FechaVinculacion));
-            y = Dato(pdf, y, "Fecha de desvinculación", vinculo.Vigente == true ? "Vigente" : Fecha(vinculo.FechaDesvinculacion));
+            y = Fila(pdf, y, true, ("Nombre de la PEP", 130), ("Vínculo", 112), ("Cargo y entidad", 120), ("Periodo", AnchoUtil - 362));
+            foreach (var p in pepRelacionadas)
+            {
+                y = Fila(pdf, y, false, (p.Nombre ?? "—", 130), ((p.Tipo == TipoVinculoPep.AsociadoCercano ? "Asociado cercano: " : "Familiar: ") + (p.Relacion ?? "—"), 112),
+                    (string.Join(", ", new[] { p.Cargo, p.Entidad, p.Pais is { } pais ? Pais(pais) : null }.Where(x => !string.IsNullOrWhiteSpace(x))), 120),
+                    ($"{Fecha(p.FechaVinculacion)} – {(p.Vigente == true ? "vigente" : Fecha(p.FechaDesvinculacion))}", AnchoUtil - 362));
+            }
         }
-
         // El juramento, quién firma y la firma van juntos: si no caben en lo que queda de la página, empiezan en la siguiente.
         y = Espacio(pdf, y, 360);
         y = Seccion(pdf, y, "4. Juramento y firma");
         y = Parrafo(pdf, y, Juramento, 9.5);
         y -= 4;
-        y = Dato(pdf, y, "Firma en calidad de", declaracion.FirmaEnCalidad == FirmaEnCalidad.RepresentanteLegal ? "Representante legal" : "Nombre propio");
+        y = Dato(pdf, y, "Firma en calidad de", declaracion.FirmaEnCalidad switch { FirmaEnCalidad.RepresentanteLegal => "Representante legal", FirmaEnCalidad.Apoderado => "Apoderado", _ => "Nombre propio" });
         y = Dato(pdf, y, "Firmante", $"{declaracion.FirmanteNombre} · {Documento(declaracion.FirmanteTipoIdentificacion, declaracion.FirmanteNumero)}");
         y = Firma(pdf, y, declaracion);
 
@@ -115,6 +124,21 @@ public sealed class GeneradorPdfDeDeclaracionPep : IGeneradorDePdfDeDeclaracionP
         return pdf.Construir($"Declaración jurada PEP {declaracion.Numero}", $"{declaracion.Nombre} · {d.Tercero}", d.Generado, (lienzo, n) =>
             lienzo.Texto(Margen, Margen - 14, Fuente.Helvetica, 7,
                 $"{d.Seccion}, versión {d.Version} del {Fecha(DateOnly.FromDateTime(Exportaciones.Local(d.FechaVersion)))} · generado el {momento} · página {n.Item1} de {n.Item2}", 0.45));
+    }
+
+    /// <summary>El nombre en la línea del encabezado: a 16 pt si cabe, si no a 12 y, si aun así no cabe, cortado con puntos suspensivos.</summary>
+    private static (string Texto, double Tamano) AjustarNombre(string nombre, double disponible)
+    {
+        foreach (var tamano in new[] { 16.0, 12.0 })
+        {
+            if (Medidas.Ancho(nombre, Fuente.HelveticaBold, tamano) <= disponible)
+                return (nombre, tamano);
+        }
+
+        var corte = nombre.Length;
+        while (corte > 1 && Medidas.Ancho(nombre[..corte] + "…", Fuente.HelveticaBold, 12) > disponible)
+            corte--;
+        return (nombre[..corte].TrimEnd() + "…", 12);
     }
 
     private static string Relacion(DeclaracionPep d) => d.RelacionEmpresa switch

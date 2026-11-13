@@ -10188,6 +10188,53 @@
         }
       }
     },
+    "/public/v1/ficha/{seccion}/declaracion-pep/pdf": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Ficha.DeclaracionesPepDelTerceroEndpoints"
+        ],
+        "summary": "GET_public_v1_ficha_seccion_declaracion_pep_pdf",
+        "description": "GET_public_v1_ficha_seccion_declaracion_pep_pdf",
+        "operationId": "GET_public_v1_ficha_seccion_declaracion_pep_pdf",
+        "parameters": [
+          {
+            "name": "seccion",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "persona",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/terceros/{terceroId}/declaraciones-pep/pdf": {
       "get": {
         "tags": [
@@ -38078,6 +38125,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.CatalogosDeFichaEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Ficha.DeclaracionesPepDelTerceroEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Ficha.DeclaracionesPepEndpoints"

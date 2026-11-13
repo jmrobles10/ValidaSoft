@@ -12,9 +12,11 @@ namespace Validasoft.Adaptadores.Portal;
 /// Configuración <c>Validasoft:Importacion:Portal</c>: <c>CadenaDeConexion</c> (SQL Server del Portal, solo lectura; sin valor por
 /// omisión) y <c>Archivo</c> (ruta de un JSON con la forma de <see cref="ArchivoDelPortal"/>, para desarrollo, pruebas o un
 /// sincronizador sin red). Si están las dos, manda el archivo. La clave de cada tercero es su <c>Terid</c>; las unidades de
-/// aceptación son las constructoras (<c>ConstId</c>) donde el tercero estaba Completada (3) o en Actualizacion (4).
+/// aceptación son las constructoras (<c>ConstId</c>) donde el tercero estaba Completada (3) o en Actualizacion (4). La imagen de la firma de las declaraciones
+/// PEP vive en el disco del Portal: <c>Firmas:RutaBase</c> (carpeta con el contenido de <c>DeclaracionesPEP</c>) o <c>Firmas:UrlBase</c> (+ <c>Firmas:Token</c>) dicen de dónde
+/// leerla (<see cref="IOrigenDeArchivosDelPortal"/>); sin ninguna, las declaraciones se importan sin imagen y con una advertencia.
 /// </summary>
-public sealed class AdaptadorPortal(IConfiguration configuracion) : IAdaptadorDeOrigen
+public sealed class AdaptadorPortal(IConfiguration configuracion, IOrigenDeArchivosDelPortal? archivos = null) : IAdaptadorDeOrigen
 {
     public const string CodigoDelSistema = "portal";
 
@@ -33,11 +35,11 @@ public sealed class AdaptadorPortal(IConfiguration configuracion) : IAdaptadorDe
 
     public void ValidarArchivo(string json) => _ = OrigenPortalArchivo.DesdeJson(json);
 
-    public IOrigenDeTerceros DesdeArchivo(string json) => new OrigenDeTercerosPortal(OrigenPortalArchivo.DesdeJson(json));
+    public IOrigenDeTerceros DesdeArchivo(string json) => new OrigenDeTercerosPortal(OrigenPortalArchivo.DesdeJson(json), archivos);
 
     public IOrigenDeTerceros Conectado() =>
         new OrigenDeTercerosPortal(new OrigenPortalSqlServer(Cadena ?? throw ReglaDeNegocioException.Conflicto("origen-no-configurado",
-            $"No hay cadena de conexión del origen «{CodigoDelSistema}» ({Seccion}:CadenaDeConexion).")));
+            $"No hay cadena de conexión del origen «{CodigoDelSistema}» ({Seccion}:CadenaDeConexion).")), archivos);
 
     public IOrigenDeTerceros Configurado()
     {
@@ -53,7 +55,7 @@ public sealed class AdaptadorPortal(IConfiguration configuracion) : IAdaptadorDe
 }
 
 /// <summary>El origen del Portal (SQL Server o archivo) visto como un origen genérico de terceros.</summary>
-internal sealed class OrigenDeTercerosPortal(IOrigenPortal origen) : IOrigenDeTerceros
+internal sealed class OrigenDeTercerosPortal(IOrigenPortal origen, IOrigenDeArchivosDelPortal? archivos = null) : IOrigenDeTerceros
 {
     private readonly Lazy<Task<CatalogosDelPortal>> _catalogos = new(() => origen.CatalogosAsync(CancellationToken.None));
 
@@ -64,7 +66,10 @@ internal sealed class OrigenDeTercerosPortal(IOrigenPortal origen) : IOrigenDeTe
     {
         int? cursor = despuesDe is null ? null : int.Parse(despuesDe, CultureInfo.InvariantCulture);
         var catalogos = await _catalogos.Value.WaitAsync(ct);
-        return [.. (await origen.TercerosAsync(cursor, tamano, ct)).Select(t => Mapear(t, catalogos))];
+        var terceros = new List<TerceroDeOrigen>();
+        foreach (var tercero in await origen.TercerosAsync(cursor, tamano, ct))
+            terceros.Add(Mapear(await ConFirmasAsync(tercero, ct), catalogos));
+        return terceros;
     }
 
     public async Task<TerceroDeOrigen?> TerceroAsync(string clave, CancellationToken ct)
@@ -72,7 +77,25 @@ internal sealed class OrigenDeTercerosPortal(IOrigenPortal origen) : IOrigenDeTe
         if (!int.TryParse(clave, NumberStyles.None, CultureInfo.InvariantCulture, out var terid))
             return null;
         var tercero = await origen.TerceroAsync(terid, ct);
-        return tercero is null ? null : Mapear(tercero, await _catalogos.Value.WaitAsync(ct));
+        return tercero is null ? null : Mapear(await ConFirmasAsync(tercero, ct), await _catalogos.Value.WaitAsync(ct));
+    }
+
+    /// <summary>
+    /// Lee la imagen de la firma de cada declaración PEP que se va a importar (solo la de un contacto que hoy responde «Sí»): el Portal la guarda en su disco y
+    /// aquí se pide por el origen de archivos. Lo que no se pueda leer queda sin imagen; el traductor lo avisa y verifica la huella.
+    /// </summary>
+    private async Task<TerceroDelPortal> ConFirmasAsync(TerceroDelPortal t, CancellationToken ct)
+    {
+        if (archivos is null || t.DeclaracionesPep is not { Count: > 0 } declaraciones)
+            return t;
+        var leidas = new List<TerDeclaracionPep>();
+        foreach (var d in declaraciones)
+        {
+            var seImporta = t.CamaraComercio?.Any(c => c.TerCamId == d.TerCamId && c.TerCamEsPep == true) == true;
+            leidas.Add(seImporta && d.FirmaImagen is null && !string.IsNullOrWhiteSpace(d.FirmaRuta) ? d with { FirmaImagen = await archivos.LeerAsync(d.FirmaRuta, ct) } : d);
+        }
+
+        return t with { DeclaracionesPep = leidas };
     }
 
     private static TerceroDeOrigen Mapear(TerceroDelPortal t, CatalogosDelPortal catalogos) =>
@@ -86,5 +109,7 @@ public static class AdaptadorPortalServicios
 {
     /// <summary>Registra el adaptador del Portal para el importador y el sincronizador genéricos (<c>/api/v1/plataforma/importacion/portal</c>).</summary>
     public static IServiceCollection AgregarAdaptadorPortal(this IServiceCollection servicios) =>
-        servicios.AddSingleton<IAdaptadorDeOrigen, AdaptadorPortal>();
+        servicios
+            .AddSingleton<IOrigenDeArchivosDelPortal>(proveedor => ArchivosDelPortal.Configurado(proveedor.GetRequiredService<IConfiguration>()))
+            .AddSingleton<IAdaptadorDeOrigen, AdaptadorPortal>();
 }

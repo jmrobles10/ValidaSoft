@@ -117,17 +117,28 @@ describe('validarDeclaracionPep', () => {
     expect(validar(completa({ sociedades: Array.from({ length: 31 }, () => sociedad) }))).toEqual({ sociedades: 'maxFilas' });
   });
 
-  it('el vínculo con otra PEP: con Sí pide sus datos y su periodo; con No nada más', () => {
-    expect(validar(completa({ vinculo_con_pep: { tiene: true } }))).toEqual({
-      'vinculo_con_pep.nombre': 'requerido',
-      'vinculo_con_pep.parentesco': 'requerido',
-      'vinculo_con_pep.cargo_institucion': 'requerido',
-      'vinculo_con_pep.fecha_vinculacion': 'requerido',
-      'vinculo_con_pep.fecha_desvinculacion': 'requerido',
+  it('el vínculo con otras PEP: con Sí pide al menos una, completa y con su periodo; con No nada más', () => {
+    expect(validar(completa({ vinculo_con_pep: { tiene: true } }))).toEqual({ 'vinculo_con_pep.vinculos': 'requerido' });
+    expect(validar(completa({ vinculo_con_pep: { tiene: true, vinculos: [{}] } }))).toEqual({ 'vinculo_con_pep.vinculos': 'requerido' }); // la fila vacía no cuenta
+    expect(validar(completa({ vinculo_con_pep: { tiene: true, vinculos: [{ nombre: 'Rosa' }] } }))).toEqual({
+      'vinculo_con_pep.vinculos[0].tipo': 'requerido',
+      'vinculo_con_pep.vinculos[0].relacion': 'requerido',
+      'vinculo_con_pep.vinculos[0].cargo': 'requerido',
+      'vinculo_con_pep.vinculos[0].entidad': 'requerido',
+      'vinculo_con_pep.vinculos[0].pais': 'requerido',
+      'vinculo_con_pep.vinculos[0].fecha_vinculacion': 'requerido',
+      'vinculo_con_pep.vinculos[0].fecha_desvinculacion': 'requerido',
     });
-    expect(
-      validar(completa({ vinculo_con_pep: { tiene: true, nombre: 'Rosa', parentesco: 'Madre', cargo_institucion: 'Senadora', fecha_vinculacion: '2018-05-05', vigente: true } })),
-    ).toEqual({});
+    const rosa = { tipo: 'Familiar', relacion: 'Padre / Madre · 1.° consanguinidad', nombre: 'Rosa', cargo: 'Senadora', entidad: 'Senado', pais: 'CO', fecha_vinculacion: '2018-05-05', vigente: true } as const;
+    expect(validar(completa({ vinculo_con_pep: { tiene: true, vinculos: [rosa, { ...rosa, tipo: 'AsociadoCercano', relacion: 'Socio(a) o asociado(a) comercial' }] } }))).toEqual({});
+    // La relación sale de la lista del tipo.
+    expect(validar(completa({ vinculo_con_pep: { tiene: true, vinculos: [{ ...rosa, tipo: 'AsociadoCercano' }] } }))).toEqual({ 'vinculo_con_pep.vinculos[0].relacion': 'relacionInvalida' });
+    expect(validar(completa({ vinculo_con_pep: { tiene: true, vinculos: Array.from({ length: 31 }, () => rosa) } }))).toEqual({ 'vinculo_con_pep.vinculos': 'maxFilas' });
+  });
+
+  it('el representante legal y el apoderado deben escribir quién firma; a nombre propio no', () => {
+    expect(validar(completa({ firma_en_calidad: 'Apoderado' }), NATURAL)).toEqual({ firmante_nombre: 'requerido', firmante_tipo_identificacion: 'requerido', firmante_numero: 'requerido' });
+    expect(validar(completa({ firma_en_calidad: 'Apoderado', firmante_nombre: 'Pedro Gil', firmante_tipo_identificacion: 'CC', firmante_numero: '80123456' }), NATURAL)).toEqual({});
   });
 
   it('el representante legal debe escribir quién firma; a nombre propio no', () => {

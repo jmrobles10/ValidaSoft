@@ -9,30 +9,30 @@ import { FirmaPad } from './FirmaPad';
 const esCalidad = (valor: string): valor is FirmaEnCalidad => FIRMAS_EN_CALIDAD.some((c) => c === valor);
 
 /**
- * Sección 4 (sin el check del juramento, que va fijo al pie): en una persona de la información legal se elige si firma a
- * nombre propio o como representante legal (y, en ese caso, quién firma); la persona natural firma siempre a nombre propio.
+ * Sección 4 (sin el check del juramento, que va fijo al pie): se elige en calidad de quién se firma —a nombre propio, como representante
+ * legal o por apoderado— y, en los dos últimos casos, quién firma (nombre y documento). La persona natural no tiene representante
+ * legal: firma a nombre propio o por apoderado.
  */
 export function SeccionFirma({ d, cambiar, mensaje, basicos }: PropsSeccion) {
   const { t } = useTranslation();
-  const representante = !basicos.soloNombrePropio && d.firma_en_calidad === 'RepresentanteLegal';
+  const calidades = basicos.soloNombrePropio ? FIRMAS_EN_CALIDAD.filter((c) => c !== 'RepresentanteLegal') : FIRMAS_EN_CALIDAD;
+  const conFirmante = d.firma_en_calidad === 'Apoderado' || (!basicos.soloNombrePropio && d.firma_en_calidad === 'RepresentanteLegal');
   return (
     <SeccionDeclaracion titulo={t('ficha.pep.secciones.juramento')}>
-      {!basicos.soloNombrePropio && (
-        <TextField
+      <TextField
           select
           label={t('ficha.pep.firmante.calidad')}
           value={d.firma_en_calidad ?? 'NombrePropio'}
           onChange={(e) => cambiar({ firma_en_calidad: esCalidad(e.target.value) ? e.target.value : 'NombrePropio' })}
           fullWidth
         >
-          {FIRMAS_EN_CALIDAD.map((c) => (
+          {calidades.map((c) => (
             <MenuItem key={c} value={c}>
               {t(`ficha.pep.firmante.calidades.${c}`)}
             </MenuItem>
           ))}
         </TextField>
-      )}
-      {representante && (
+      {conFirmante && (
         <Rejilla>
           <CampoTexto etiqueta={t('ficha.pep.firmante.nombre')} valor={d.firmante_nombre} onCambiar={(v) => cambiar({ firmante_nombre: v })} mensaje={mensaje('firmante_nombre')} maxLength={MAXIMO.nombre} />
           <CampoTipoDocumento etiqueta={t('ficha.pep.firmante.tipoDocumento')} valor={d.firmante_tipo_identificacion} onCambiar={(v) => cambiar({ firmante_tipo_identificacion: v })} mensaje={mensaje('firmante_tipo_identificacion')} />

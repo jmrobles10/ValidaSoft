@@ -140,6 +140,8 @@ export const fichaMaestra = {
     firma: 'Firma',
     firmaNombrePropio: 'A nombre propio',
     firmaRepresentante: 'Como representante legal: {{nombre}} ({{documento}})',
+    firmaApoderado: 'Por apoderado: {{nombre}} ({{documento}})',
+    tiposVinculo: { Familiar: 'Familiar', AsociadoCercano: 'Asociado cercano' },
     huella: 'Huella {{huella}}…',
   },
 } as const;

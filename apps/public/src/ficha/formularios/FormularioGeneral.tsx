@@ -115,6 +115,7 @@ export function FormularioGeneral({ datos, onCambiar, mensaje, hayEnRuta, deshab
             mensaje={mensaje}
             hayEnRuta={hayEnRuta}
             deshabilitado={deshabilitado}
+            descarga={{ seccion: 'FICHA_GENERAL' }}
           />
           <CampoSiNo etiqueta={t('ficha.general.vinculoPep')} valor={datos.vinculo_pep} onCambiar={(v) => onCambiar({ vinculo_pep: v })} mensaje={mensaje('vinculo_pep')} deshabilitado={deshabilitado} />
         </>

@@ -28,6 +28,7 @@ import { RatificacionesDeSeccion } from './RatificacionesDeSeccion';
 import { DialogoSalidaSinGuardar } from './SalidaSinGuardar';
 import { enlaceSeccion, esFaltanteDeSoporte, periodosElegibles, type DefinicionSeccion } from './secciones';
 import { SelectorSoporte } from './SelectorSoporte';
+import { DescargaDeDeclaracionDisponible } from './pep/descargaPdf';
 import { useEditorSeccion } from './useEditorSeccion';
 import { observacionesDeSeccion } from './useObservacionesDeSeccion';
 import { deLaSeccion, useRatificacionesPendientes } from './useRatificacionesPendientes';
@@ -172,7 +173,9 @@ export function EditorSeccion({ definicion, periodo, estado, inicial, onReinicia
             deshabilitado={editor.guardando}
           />
           <Faltantes faltantes={editor.faltantes} senal={senalFaltantes} />
-          <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} selectorPeriodo={selectorPeriodo} />
+          <DescargaDeDeclaracionDisponible.Provider value={!editor.sinGuardar && !editor.conPrellenado && inicial.version !== null}>
+            <FormularioDeSeccion codigo={definicion.codigo} estado={estado} editor={editor} selectorPeriodo={selectorPeriodo} />
+          </DescargaDeDeclaracionDisponible.Provider>
           <SelectorSoporte
             definicion={definicion}
             soportes={editor.soportes}

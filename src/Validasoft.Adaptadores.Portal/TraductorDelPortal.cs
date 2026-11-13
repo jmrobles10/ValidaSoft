@@ -100,8 +100,8 @@ public static partial class TraductorDelPortal
         if (natural && origen.CamaraComercio?.Count(c => !EsFilaPropia(c, tercero)) is > 0)
             avisos.Advertir("personas", "no-aplica-a-persona-natural",
                 "La persona natural no diligencia la información legal (FM-17): las filas de TerCamaraComercio no se importan.");
-        else
-            Agregar(CodigosDeSeccion.Legal, null, Legal(origen, catalogos, avisos));
+        else if (!natural)
+            Agregar(CodigosDeSeccion.Legal, null, Legal(origen, catalogos, avisos)); // la fila propia del natural ya se tradujo en la General: traducirla otra vez repetiría sus avisos
 
         avisos.Seccion = CodigosDeSeccion.Financiera;
         if (natural && origen.InfoFinanciera is { Count: > 0 })
@@ -616,8 +616,8 @@ public static partial class TraductorDelPortal
     // ---------- declaración jurada PEP (HU 49093 del Portal) ----------
 
     /// <summary>
-    /// La declaración PEP <b>activa</b> de un contacto que responde «Sí» a «¿Es PEP?». Se importa con la huella de la firma (la imagen vive en el disco del
-    /// Portal y Validasoft no la lee): el tercero la vuelve a firmar al cambiar la declaración. Lo que no se pueda convertir (un país sin código ISO, un tipo
+    /// La declaración PEP <b>activa</b> de un contacto que responde «Sí» a «¿Es PEP?». Se importa con la firma (la imagen que el adaptador leyó del disco del
+    /// Portal, si su huella coincide; ver <see cref="FirmaImportada"/>) o, si no hay imagen utilizable, solo con la huella que guardó el Portal. Lo que no se pueda convertir (un país sin código ISO, un tipo
     /// de documento sin equivalente) queda vacío con una advertencia y la declaración como faltante de la sección.
     /// </summary>
     private static DeclaracionPep? Declaracion(TerceroDelPortal origen, TerCamaraComercio? c, string prefijo, CatalogosDelPortal catalogos, Avisos avisos)
@@ -662,6 +662,8 @@ public static partial class TraductorDelPortal
             paises.AddRange(nombres.Select(n => Pais(n, "declaracion_pep.paises_cuentas_exterior")).OfType<string>());
         }
 
+        var firma = FirmaImportada(d, Ruta, avisos);
+
         return new DeclaracionPep
         {
             Nacionalidad = Pais(d.Nacionalidad, "declaracion_pep.nacionalidad"),
@@ -689,23 +691,114 @@ public static partial class TraductorDelPortal
                     CalidadOtra = s.CalidadOtraCual
                 })]
                 : null,
-            VinculoConPep = new VinculoConPep
-            {
-                Tiene = d.TieneVinculoPep,
-                Nombre = d.VinculoPepNombre,
-                Parentesco = d.VinculoPepParentesco,
-                CargoInstitucion = d.VinculoPepCargoInstitucion,
-                FechaVinculacion = Dia(d.VinculoPepFechaVinculacion),
-                FechaDesvinculacion = Dia(d.VinculoPepFechaDesvinculacion),
-                Vigente = d.VinculoPepVigente
-            },
+            VinculoConPep = VinculoPep(d, Ruta, avisos, Pais),
             AceptaJuramento = d.AceptaJuramento,
-            FirmaEnCalidad = d.FirmaEnCalidad == 2 ? Dominio.Ficha.FirmaEnCalidad.RepresentanteLegal : Dominio.Ficha.FirmaEnCalidad.NombrePropio,
+            FirmaEnCalidad = FirmaEnCalidadDe(d.FirmaEnCalidad),
             FirmanteNombre = d.FirmanteNombre,
             FirmanteTipoIdentificacion = Documento(d.FirmanteTipoDocumento, "declaracion_pep.firmante_tipo_identificacion"),
             FirmanteNumero = d.FirmanteNumeroDocumento,
-            FirmaHuella = string.IsNullOrWhiteSpace(d.FirmaHash) ? null : d.FirmaHash.Trim().ToLowerInvariant(),
+            FirmaPng = firma.Png,
+            FirmaHuella = firma.Huella,
             FechaFirma = Dia(d.FechaFirma)
+        };
+    }
+
+    /// <summary>
+    /// La firma de una declaración importada. Con la imagen leída del disco del Portal y <b>solo si su SHA-256 es el que el Portal guardó</b> (y es un PNG
+    /// que Validasoft sabe dibujar) se importa la imagen, y la huella es la de esa imagen. Si falta, no coincide o no sirve, la declaración se importa igual
+    /// pero <b>sin imagen</b> (con la huella del Portal como constancia de que allá estaba firmada) y con una advertencia que la corrida muestra: no se rechaza.
+    /// </summary>
+    private static (string? Png, string? Huella) FirmaImportada(TerDeclaracionPep d, Func<string, string> ruta, Avisos avisos)
+    {
+        var campo = ruta("declaracion_pep.firma_png");
+        var huellaDelPortal = string.IsNullOrWhiteSpace(d.FirmaHash) ? null : d.FirmaHash.Trim().ToLowerInvariant();
+        if (d.FirmaImagen is not { Length: > 0 } imagen)
+        {
+            avisos.Advertir(campo, "firma-sin-imagen",
+                "No se pudo leer la imagen de la firma del Portal: la declaración se importa sin imagen (solo queda la huella de la firma que el Portal guardó).", d.FirmaRuta);
+            return (null, huellaDelPortal);
+        }
+
+        var huella = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(imagen));
+        if (huellaDelPortal is null || huella != huellaDelPortal)
+        {
+            avisos.Advertir(campo, "firma-huella-no-coincide",
+                "La imagen de la firma que se leyó no coincide con la huella que guardó el Portal: la declaración se importa sin imagen, para no dar por firmada otra imagen.", d.FirmaRuta);
+            return (null, huellaDelPortal);
+        }
+
+        if (FirmaPng.Error(imagen) is { } error)
+        {
+            avisos.Advertir(campo, "firma-imagen-invalida", $"La imagen de la firma del Portal no se puede usar ({error}): la declaración se importa sin imagen.", d.FirmaRuta);
+            return (null, huellaDelPortal);
+        }
+
+        return (Convert.ToBase64String(imagen), huella);
+    }
+
+    /// <summary>Firma a nombre propio (1), como representante legal (2) o por apoderado (3), como en la HU del Portal.</summary>
+    private static FirmaEnCalidad FirmaEnCalidadDe(int calidad) => calidad switch
+    {
+        2 => Dominio.Ficha.FirmaEnCalidad.RepresentanteLegal,
+        3 => Dominio.Ficha.FirmaEnCalidad.Apoderado,
+        _ => Dominio.Ficha.FirmaEnCalidad.NombrePropio
+    };
+
+    /// <summary>
+    /// El vínculo con otras PEP (sección 3). Las versiones nuevas del Portal guardan varias PEP relacionadas (<c>TerDeclaracionPepVinculo</c>, tipo familiar o asociado cercano,
+    /// con relación, cargo, entidad, país y periodo) y dejan en blanco las columnas del vínculo único de la fase 1: se importan todas. Sin filas vale lo de la fase 1
+    /// (una sola, de tipo familiar, sin país ni entidad: queda como faltante lo que no traía).
+    /// </summary>
+    private static VinculoConPep VinculoPep(TerDeclaracionPep d, Func<string, string> ruta, Avisos avisos, Func<string?, string, string?> pais)
+    {
+        static DateOnly? Dia(DateTime? fecha) => fecha is { } f ? DateOnly.FromDateTime(f) : null;
+
+        if (d.Vinculos is { Count: > 0 } vinculos)
+            return new VinculoConPep
+            {
+                Tiene = true,
+                Vinculos =
+                [
+                    .. vinculos.Select((v, i) => new PepRelacionada
+                    {
+                        Tipo = v.TipoVinculo == 2 ? TipoVinculoPep.AsociadoCercano : TipoVinculoPep.Familiar,
+                        Relacion = v.Relacion?.Trim(),
+                        Nombre = v.NombreCompleto,
+                        Cargo = v.Cargo,
+                        Entidad = v.Entidad,
+                        Pais = pais(v.Pais, $"declaracion_pep.vinculo_con_pep.vinculos[{i}].pais"),
+                        FechaVinculacion = Dia(v.FechaVinculacion),
+                        FechaDesvinculacion = v.Actual ? null : Dia(v.FechaRetiro),
+                        Vigente = v.Actual
+                    })
+                ]
+            };
+
+        if (!d.TieneVinculoPep)
+            return new VinculoConPep { Tiene = false };
+        if (string.IsNullOrWhiteSpace(d.VinculoPepNombre + d.VinculoPepParentesco + d.VinculoPepCargoInstitucion))
+            return new VinculoConPep { Tiene = true };
+        var parentesco = d.VinculoPepParentesco?.Trim();
+        var enLista = parentesco is not null && DeclaracionPepReglas.RelacionesFamiliar.Contains(parentesco);
+        if (parentesco is not null && !enLista)
+            avisos.Advertir(ruta("declaracion_pep.vinculo_con_pep.vinculos[0].relacion"), "parentesco-sin-equivalente",
+                "El parentesco de la PEP relacionada no es uno de la lista de la HU: queda sin diligenciar.", parentesco);
+        return new VinculoConPep
+        {
+            Tiene = true,
+            Vinculos =
+            [
+                new PepRelacionada
+                {
+                    Tipo = TipoVinculoPep.Familiar,
+                    Relacion = enLista ? parentesco : null,
+                    Nombre = d.VinculoPepNombre,
+                    Cargo = d.VinculoPepCargoInstitucion,
+                    FechaVinculacion = Dia(d.VinculoPepFechaVinculacion),
+                    FechaDesvinculacion = d.VinculoPepVigente ? null : Dia(d.VinculoPepFechaDesvinculacion),
+                    Vigente = d.VinculoPepVigente
+                }
+            ]
         };
     }
 

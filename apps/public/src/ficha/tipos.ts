@@ -21,7 +21,7 @@ export type RelacionEmpresa = (typeof RELACIONES_EMPRESA)[number];
 export const CALIDADES_SOCIEDAD = ['Socio', 'Administrador', 'Fideicomitente', 'Otra'] as const;
 export type CalidadSociedad = (typeof CALIDADES_SOCIEDAD)[number];
 
-export const FIRMAS_EN_CALIDAD = ['NombrePropio', 'RepresentanteLegal'] as const;
+export const FIRMAS_EN_CALIDAD = ['NombrePropio', 'RepresentanteLegal', 'Apoderado'] as const;
 export type FirmaEnCalidad = (typeof FIRMAS_EN_CALIDAD)[number];
 
 export interface ConyugePep {
@@ -44,15 +44,48 @@ export interface SociedadPep {
   calidad_otra?: string | null;
 }
 
-/** Sección 3: vínculo familiar o asociados cercanos a otra PEP. */
-export interface VinculoConPep {
-  tiene?: boolean | null;
+export const TIPOS_VINCULO_PEP = ['Familiar', 'AsociadoCercano'] as const;
+export type TipoVinculoPep = (typeof TIPOS_VINCULO_PEP)[number];
+
+/** Parentescos de un familiar de la PEP (los textos canónicos de la HU: se guardan tal cual). */
+export const PARENTESCOS_PEP = [
+  'Padre / Madre · 1.° consanguinidad',
+  'Hijo(a) · 1.° consanguinidad',
+  'Hermano(a) · 2.° consanguinidad',
+  'Abuelo(a) · 2.° consanguinidad',
+  'Nieto(a) · 2.° consanguinidad',
+  'Suegro(a) · 1.° afinidad',
+  'Yerno / Nuera · 1.° afinidad',
+  'Hijastro(a) · 1.° afinidad',
+  'Cuñado(a) · 2.° afinidad',
+  'Hijo(a) adoptivo(a) · 1.° civil',
+  'Padre / Madre adoptante · 1.° civil',
+] as const;
+export const RELACION_CONYUGE = 'Cónyuge o compañero(a) permanente';
+/** Relación con la PEP según el tipo de vínculo: un familiar es el cónyuge o un parentesco; un asociado cercano, un socio o asociado comercial. */
+export const RELACIONES_PEP: Record<TipoVinculoPep, readonly string[]> = {
+  Familiar: [RELACION_CONYUGE, ...PARENTESCOS_PEP],
+  AsociadoCercano: ['Socio(a) o asociado(a) comercial'],
+};
+
+/** Una persona expuesta políticamente con la que el declarante tiene un vínculo (sección 3), con su cargo y periodo. */
+export interface PepRelacionada {
+  tipo?: TipoVinculoPep | null;
+  relacion?: string | null;
   nombre?: string | null;
-  parentesco?: string | null;
-  cargo_institucion?: string | null;
+  cargo?: string | null;
+  entidad?: string | null;
+  /** ISO 3166-1 alfa-2. */
+  pais?: string | null;
   fecha_vinculacion?: string | null;
   fecha_desvinculacion?: string | null;
   vigente?: boolean | null;
+}
+
+/** Sección 3: vínculo familiar o de asociado cercano con otras PEP; con «Sí», al menos una y hasta 30. */
+export interface VinculoConPep {
+  tiene?: boolean | null;
+  vinculos?: PepRelacionada[] | null;
 }
 
 /**

@@ -27,7 +27,13 @@ const DECLARACION = {
   conyuge: { nombre: 'Luisa Pérez', tipo_identificacion: 'CC', numero: '52000111' },
   familiares: [{ nombre: 'Luis Castro', parentesco: 'Hermano', tipo_identificacion: 'CC', numero: '80111222' }],
   sociedades: [{ nombre: 'Inversiones Andinas S.A.S.', identificacion: '800111222', calidad: 'Otra', calidad_otra: 'Fideicomitente suplente' }],
-  vinculo_con_pep: { tiene: true, nombre: 'Rosa Pinto', parentesco: 'Madre', cargo_institucion: 'Senadora, Senado', fecha_vinculacion: '2018-05-05', vigente: true },
+  vinculo_con_pep: {
+    tiene: true,
+    vinculos: [
+      { tipo: 'Familiar', relacion: 'Padre / Madre · 1.° consanguinidad', nombre: 'Rosa Pinto', cargo: 'Senadora', entidad: 'Senado', pais: 'CO', fecha_vinculacion: '2018-05-05', vigente: true },
+      { tipo: 'AsociadoCercano', relacion: 'Socio(a) o asociado(a) comercial', nombre: 'Tomás Rey', cargo: 'Alcalde', entidad: 'Alcaldía de Sopó', pais: 'CO', fecha_vinculacion: '2019-01-01', fecha_desvinculacion: '2021-01-01', vigente: false },
+    ],
+  },
   acepta_juramento: true,
   firma_en_calidad: 'RepresentanteLegal',
   firmante_nombre: 'Pedro Pérez',
@@ -95,7 +101,8 @@ describe('Declaración jurada PEP en los datos de la sección (empresa)', () => 
     expect(bloque).toHaveTextContent('Luisa Pérez · CC 52000111');
     expect(bloque).toHaveTextContent('Luis Castro · Hermano · CC 80111222');
     expect(bloque).toHaveTextContent('Inversiones Andinas S.A.S. · 800111222 · Fideicomitente suplente');
-    expect(bloque).toHaveTextContent('Sí · Rosa Pinto · Madre · Senadora, Senado · 05/05/2018 – Vigente');
+    expect(bloque).toHaveTextContent('Familiar: Padre / Madre · 1.° consanguinidad · Rosa Pinto · Senadora, Senado, Colombia (CO) · 05/05/2018 – Vigente');
+    expect(bloque).toHaveTextContent('Asociado cercano: Socio(a) o asociado(a) comercial · Tomás Rey · Alcalde, Alcaldía de Sopó, Colombia (CO) · 01/01/2019 – 01/01/2021');
     expect(bloque).toHaveTextContent('Como representante legal: Pedro Pérez (CC 80123456) · Huella abcdef012345…');
     expect(bloque.textContent).not.toContain('iVBORw0KGgo=');
     expect(bloque.textContent).not.toContain('10.0.0.1');

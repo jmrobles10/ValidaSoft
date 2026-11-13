@@ -224,4 +224,61 @@ public sealed partial class RequisitosApiTests
         (await CodigoAsync(await ApiAsync("POST", $"{RutaImportacion}/terceros/1/sincronizar", plataforma, null, 404))).ShouldBe("tercero-origen-no-encontrado");
         (await CodigoAsync(await ApiAsync("POST", $"{RutaImportacion}/{real.Id}/reanudar", plataforma, null, 409))).ShouldBe("corrida-completada");
     }
+
+    [Fact]
+    public async Task El_importador_trae_la_imagen_de_la_firma_si_su_huella_coincide_y_si_no_importa_la_declaracion_sin_imagen_con_aviso()
+    {
+        var baseFixture = NuevoFixturePortal();
+        var catalogos = (JsonSerializer.Deserialize<Validasoft.Adaptadores.Portal.ArchivoDelPortal>(baseFixture.Json(), Validasoft.Adaptadores.Portal.OrigenPortalArchivo.Opciones)!.Catalogos ?? Validasoft.Adaptadores.Portal.CatalogosDelPortal.Vacios)
+            // Sin los catálogos de especialidades (grupos, categorías y especialidades, que comparten el catálogo global «especialidades»): la prueba del
+            // importador genérico cuenta cuántas entradas crea («Creados» = 4) y que aún no existen; si esta corrida real se adelanta (el orden de las
+            // pruebas no está fijado), esa prueba vería menos.
+            with { Grupos = null, Categorias = null, Especialidades = null };
+        var imagen = Convert.FromBase64String(FirmaPngBase64());
+        var huella = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(imagen));
+
+        Validasoft.Adaptadores.Portal.TerceroDelPortal Natural(int terid, string cc, byte[]? firma, string hash) => new(new Validasoft.Adaptadores.Portal.TercerosPortal(terid, 3),
+            new Validasoft.Adaptadores.Portal.TerInformacionGeneral(2, "María", "López Díaz", "N", "CC", cc, null, "maria@correo.co", 2, "Carrera 7 # 1-2", 11, "3001234567", null, false, null, "Colombia"),
+            InfoTributaria: new Validasoft.Adaptadores.Portal.TerInfoTributaria(),
+            CamaraComercio: [new Validasoft.Adaptadores.Portal.TerCamaraComercio(1, 1, "CC", cc, "María", "López", TerCamEsPep: true, TerCamVinculoPep: false, TerFechaExpedicion: "20/05/2001", TerLugarExpedicion: "Medellín")],
+            Siso: new Validasoft.Adaptadores.Portal.TerSISO(),
+            DeclaracionesPep:
+            [
+                new Validasoft.Adaptadores.Portal.TerDeclaracionPep(TerCamId: 1, RelacionEmpresa: 1, Nacionalidad: "Colombia", Direccion: "Carrera 7 # 1-2", CargoDesempenado: "Alcalde municipal",
+                    Institucion: "Alcaldía de Sopó", PaisInstitucion: "Colombia", FechaVinculacion: new DateTime(2018, 1, 1), FechaDesvinculacion: new DateTime(2022, 1, 1), AceptaJuramento: true,
+                    FirmaEnCalidad: 1, FirmanteNombre: "María López Díaz", FirmanteTipoDocumento: "CC", FirmanteNumeroDocumento: cc, FechaFirma: new DateTime(2026, 10, 5), FirmaHash: hash,
+                    FirmaRuta: @"C:\inetpub\Portal\DeclaracionesPEP\1\1\firma.png", FirmaImagen: firma)
+            ]);
+
+        var (teridBueno, teridMalo) = (baseFixture.TeridJ + 10, baseFixture.TeridJ + 11);
+        var (ccBueno, ccMalo) = (Random.Shared.Next(10_000_000, 99_999_999).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Random.Shared.Next(10_000_000, 99_999_999).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        var json = JsonSerializer.Serialize(new Validasoft.Adaptadores.Portal.ArchivoDelPortal(catalogos,
+            [Natural(teridBueno, ccBueno, imagen, huella), Natural(teridMalo, ccMalo, imagen, new string('b', 64))]), Validasoft.Adaptadores.Portal.OrigenPortalArchivo.Opciones);
+
+        var corrida = await ImportarPortalAsync(json, dryRun: false);
+
+        // Las dos declaraciones se importan (ninguna se rechaza); la de la huella que no coincide, sin imagen y con un aviso visible en la corrida.
+        (corrida.Resumen.TercerosCreados, corrida.Resumen.TercerosRechazados).ShouldBe((2, 0));
+        string Clave(int terid) => terid.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        corrida.Resumen.DetalleAdvertencias.Where(a => a.Clave == Clave(teridBueno) && a.Codigo.StartsWith("firma-", StringComparison.Ordinal)).ShouldBeEmpty();
+        var aviso = corrida.Resumen.DetalleAdvertencias.Single(a => a.Clave == Clave(teridMalo) && a.Codigo == "firma-huella-no-coincide");
+        (aviso.Seccion, aviso.Campo).ShouldBe(("FICHA_GENERAL", "declaracion_pep.firma_png"));
+
+        async Task<JsonElement> DeclaracionImportadaAsync(int terid)
+        {
+            var tercero = (await CargarAsync<Tercero>(IdDeLegado.Tercero("portal", Clave(terid)))).ShouldNotBeNull();
+            var seccion = (await CargarAsync<SeccionDeFicha>(SeccionDeFicha.IdPara(tercero.Id, "FICHA_GENERAL", null), "boveda")).ShouldNotBeNull();
+            return seccion.Vigente!.Datos.GetProperty("declaracion_pep");
+        }
+
+        var bueno = await DeclaracionImportadaAsync(teridBueno);
+        bueno.GetProperty("firma_png").GetString().ShouldBe(FirmaPngBase64());
+        bueno.GetProperty("firma_huella").GetString().ShouldBe(huella);
+        bueno.GetProperty("fecha_firma").GetString().ShouldBe("2026-10-05");
+        var malo = await DeclaracionImportadaAsync(teridMalo);
+        malo.TryGetProperty("firma_png", out _).ShouldBeFalse();
+        malo.GetProperty("firma_huella").GetString().ShouldBe(new string('b', 64)); // la del Portal: allá estaba firmada
+        malo.GetProperty("cargo").GetString().ShouldBe("Alcalde municipal");
+    }
 }

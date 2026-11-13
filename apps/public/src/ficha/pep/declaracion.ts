@@ -1,10 +1,10 @@
-import type { DeclaracionPep, FamiliarPep, PersonaRelacionada, RelacionEmpresa, RolPersona, SociedadPep } from '../tipos';
+import type { DeclaracionPep, FamiliarPep, PepRelacionada, PersonaRelacionada, RelacionEmpresa, RolPersona, SociedadPep } from '../tipos';
 
 /** Máximo de familiares y de sociedades (el servidor rechaza más). */
 export const MAXIMO_FILAS = 30;
 
 /** Largos máximos (los del servidor). */
-export const MAXIMO = { cargo: 200, institucion: 200, direccion: 500, nombre: 300, parentesco: 100, numero: 50, otra: 100, cargoInstitucion: 300 } as const;
+export const MAXIMO = { cargo: 200, institucion: 200, direccion: 500, nombre: 300, parentesco: 100, numero: 50, otra: 100, cargoInstitucion: 300, cargoPep: 300, entidad: 200 } as const;
 
 /** Origen de la declaración: el propio tercero (persona natural, en la General) o una persona de la información legal. */
 export type OrigenDeclaracion =
@@ -102,6 +102,8 @@ export function datosBasicos(origen: OrigenDeclaracion): DatosBasicos {
 
 const vacio = (v: string | null | undefined) => texto(v) === '';
 
+export const pepRelacionadaVacia = (p: PepRelacionada) =>
+  !p.tipo && vacio(p.relacion) && vacio(p.nombre) && vacio(p.cargo) && vacio(p.entidad) && vacio(p.pais) && vacio(p.fecha_vinculacion) && vacio(p.fecha_desvinculacion) && !p.vigente;
 export const familiarVacio = (f: FamiliarPep) => vacio(f.nombre) && vacio(f.parentesco) && vacio(f.tipo_identificacion) && vacio(f.numero);
 export const sociedadVacia = (s: SociedadPep) => vacio(s.nombre) && vacio(s.identificacion) && !s.calidad && vacio(s.calidad_otra);
 
@@ -127,7 +129,10 @@ export function declaracionParaEntregar(d: DeclaracionPep, basicos: DatosBasicos
   const sociedades = (d.sociedades ?? []).filter((s) => !sociedadVacia(s));
   const conyugeVacio = !d.conyuge || (vacio(d.conyuge.nombre) && vacio(d.conyuge.tipo_identificacion) && vacio(d.conyuge.numero));
   const vinculo = d.vinculo_con_pep;
-  const representante = !basicos.soloNombrePropio && d.firma_en_calidad === 'RepresentanteLegal';
+  // La persona natural firma a nombre propio o por apoderado; la de la legal, de las tres formas. Representante legal y apoderado escriben su nombre y documento.
+  const calidad = basicos.soloNombrePropio && d.firma_en_calidad !== 'Apoderado' ? 'NombrePropio' : (d.firma_en_calidad ?? 'NombrePropio');
+  const conFirmante = calidad === 'RepresentanteLegal' || calidad === 'Apoderado';
+  const pepRelacionadas = (vinculo?.vinculos ?? []).filter((p) => !pepRelacionadaVacia(p));
   return {
     ...resto,
     relacion_empresa: basicos.relacion,
@@ -144,11 +149,11 @@ export function declaracionParaEntregar(d: DeclaracionPep, basicos: DatosBasicos
     familiares: familiares.length > 0 ? familiares : null,
     sociedades: sociedades.length > 0 ? sociedades.map((s) => (s.calidad === 'Otra' ? s : { ...s, calidad_otra: null })) : null,
     vinculo_con_pep: vinculo?.tiene
-      ? { ...vinculo, vigente: vinculo.vigente === true, fecha_desvinculacion: vinculo.vigente ? null : (vinculo.fecha_desvinculacion ?? null) }
+      ? { tiene: true, vinculos: pepRelacionadas.map((p) => ({ ...p, vigente: p.vigente === true, fecha_desvinculacion: p.vigente ? null : (p.fecha_desvinculacion ?? null) })) }
       : { tiene: vinculo?.tiene ?? false },
-    firma_en_calidad: basicos.soloNombrePropio ? 'NombrePropio' : (d.firma_en_calidad ?? 'NombrePropio'),
-    firmante_nombre: representante ? d.firmante_nombre : null,
-    firmante_tipo_identificacion: representante ? d.firmante_tipo_identificacion : null,
-    firmante_numero: representante ? d.firmante_numero : null,
+    firma_en_calidad: calidad,
+    firmante_nombre: conFirmante ? d.firmante_nombre : null,
+    firmante_tipo_identificacion: conFirmante ? d.firmante_tipo_identificacion : null,
+    firmante_numero: conFirmante ? d.firmante_numero : null,
   };
 }

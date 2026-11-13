@@ -41,6 +41,7 @@ import type {
   CuentaBancariaPublicaDto,
   DescargaDto,
   DescargarCertificadoVerificadoParams,
+  DescargarDeclaracionPepPropiaParams,
   DesignarCuentaDto,
   DocumentoDto,
   EnviarFormularioDto,
@@ -2320,6 +2321,99 @@ export function useBuscarEnCatalogoPublico<TData = Awaited<ReturnType<typeof bus
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getBuscarEnCatalogoPublicoQueryOptions(catalogo,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const descargarDeclaracionPepPropia = (
+    seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<IResult>(
+      {url: `/public/v1/ficha/${seccion}/declaracion-pep/pdf`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getDescargarDeclaracionPepPropiaQueryKey = (seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams,) => {
+    return [
+    `/public/v1/ficha/${seccion}/declaracion-pep/pdf`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getDescargarDeclaracionPepPropiaQueryOptions = <TData = Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError = ErrorType<void>>(seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDescargarDeclaracionPepPropiaQueryKey(seccion,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>> = ({ signal }) => descargarDeclaracionPepPropia(seccion,params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: seccion !== null && seccion !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DescargarDeclaracionPepPropiaQueryResult = NonNullable<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>>
+export type DescargarDeclaracionPepPropiaQueryError = ErrorType<void>
+
+
+export function useDescargarDeclaracionPepPropia<TData = Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError = ErrorType<void>>(
+ seccion: string,
+    params: undefined |  DescargarDeclaracionPepPropiaParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>,
+          TError,
+          Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDescargarDeclaracionPepPropia<TData = Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>,
+          TError,
+          Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDescargarDeclaracionPepPropia<TData = Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDescargarDeclaracionPepPropia<TData = Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError = ErrorType<void>>(
+ seccion: string,
+    params?: DescargarDeclaracionPepPropiaParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof descargarDeclaracionPepPropia>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDescargarDeclaracionPepPropiaQueryOptions(seccion,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

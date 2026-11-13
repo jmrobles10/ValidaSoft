@@ -196,6 +196,16 @@ public sealed partial class RequisitosApiTests
         await TerceroAsync("POST", "/public/v1/boveda/cuentas-bancarias", sesion.AccessToken,
             new RegistrarCuentaBancariaDto("Bancolombia", "Ahorros", "031-123456-78", "Aceros del Norte S.A.S.", "NIT 900123456"), 201);
         await GuardarSeccionAsync(sesion, "FICHA_GENERAL", GeneralCompleta);
+        // Una descarga previa de su declaración PEP (con su IP y agente): es un acceso suyo al portal y se suprime con los demás (DP-19).
+        await using (var escritura = Almacen().LightweightSession())
+        {
+            escritura.Store(new Validasoft.Aplicacion.Ficha.AccesoADeclaracionPep
+            {
+                Id = Guid.CreateVersion7(), TerceroId = terceroId, Seccion = "FICHA_GENERAL", Version = 1, ActorTipo = "Tercero", Ip = "10.0.0.7", UserAgent = "navegador",
+                Sha256 = new string('a', 64), Fecha = DateTimeOffset.UtcNow
+            });
+            await escritura.SaveChangesAsync();
+        }
 
         var solicitud = await SolicitarAsync(sesion, "Supresion", "Todo", null, "Pido que supriman todos mis datos personales.");
         solicitud.Destino.EmpresaId.ShouldBeNull();
@@ -257,6 +267,7 @@ public sealed partial class RequisitosApiTests
         (await boveda.Query<CuentaBancaria>().CountAsync(c => c.TerceroId == terceroId)).ShouldBe(0);
         (await boveda.Query<SeccionDeFicha>().CountAsync(s => s.TerceroId == terceroId)).ShouldBe(0);
         await using var global = Almacen().QuerySession();
+        (await global.Query<Validasoft.Aplicacion.Ficha.AccesoADeclaracionPep>().CountAsync(a => a.TerceroId == terceroId)).ShouldBe(0);
         var tercero = (await global.LoadAsync<Tercero>(terceroId))!;
         tercero.Contactos.ShouldBeEmpty();
         tercero.Nombre.ShouldStartWith("Tercero 9"); // sigue con vínculos y certificados: se conserva para identificar lo retenido

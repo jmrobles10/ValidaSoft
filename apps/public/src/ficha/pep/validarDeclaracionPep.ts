@@ -1,5 +1,5 @@
-import { TIPOS_IDENTIFICACION_PERSONA, type DeclaracionPep, type FamiliarPep, type SociedadPep, type VinculoConPep } from '../tipos';
-import { familiarVacio, MAXIMO, MAXIMO_FILAS, sociedadVacia, type DatosBasicos } from './declaracion';
+import { RELACIONES_PEP, TIPOS_IDENTIFICACION_PERSONA, type DeclaracionPep, type FamiliarPep, type SociedadPep, type VinculoConPep } from '../tipos';
+import { familiarVacio, MAXIMO, MAXIMO_FILAS, pepRelacionadaVacia, sociedadVacia, type DatosBasicos } from './declaracion';
 
 /** Qué falla de un campo; se traduce en `ficha.pep.errores.<código>`. */
 export type CodigoError =
@@ -13,7 +13,8 @@ export type CodigoError =
   | 'juramento'
   | 'firma'
   | 'tipoDocumento'
-  | 'largo';
+  | 'largo'
+  | 'relacionInvalida';
 
 /** Errores por ruta de la declaración (las del contrato: `cargo`, `familiares[0].parentesco`, `vinculo_con_pep.nombre`…). */
 export type ErroresDeclaracion = Record<string, CodigoError>;
@@ -104,10 +105,20 @@ function validarVinculo(errores: ErroresDeclaracion, v: VinculoConPep | null | u
     return;
   }
   if (!v.tiene) return;
-  requerido(errores, 'vinculo_con_pep.nombre', v.nombre, MAXIMO.nombre);
-  requerido(errores, 'vinculo_con_pep.parentesco', v.parentesco, MAXIMO.parentesco);
-  requerido(errores, 'vinculo_con_pep.cargo_institucion', v.cargo_institucion, MAXIMO.cargoInstitucion);
-  validarPeriodo(errores, 'vinculo_con_pep', v, hoy);
+  const filas = (v.vinculos ?? []).filter((p) => !pepRelacionadaVacia(p));
+  if (filas.length === 0) errores['vinculo_con_pep.vinculos'] = 'requerido';
+  else if (filas.length > MAXIMO_FILAS) errores['vinculo_con_pep.vinculos'] = 'maxFilas';
+  filas.forEach((p, i) => {
+    const ruta = (campo: string) => `vinculo_con_pep.vinculos[${String(i)}].${campo}`;
+    if (!p.tipo) errores[ruta('tipo')] = 'requerido';
+    if (vacio(p.relacion) || !p.tipo) errores[ruta('relacion')] = 'requerido';
+    else if (!RELACIONES_PEP[p.tipo].includes(texto(p.relacion))) errores[ruta('relacion')] = 'relacionInvalida';
+    requerido(errores, ruta('nombre'), p.nombre, MAXIMO.nombre);
+    requerido(errores, ruta('cargo'), p.cargo, MAXIMO.cargoPep);
+    requerido(errores, ruta('entidad'), p.entidad, MAXIMO.entidad);
+    requerido(errores, ruta('pais'), p.pais);
+    validarPeriodo(errores, `vinculo_con_pep.vinculos[${String(i)}]`, p, hoy);
+  });
 }
 
 /**
@@ -134,7 +145,7 @@ export function validarDeclaracionPep(d: DeclaracionPep, basicos: DatosBasicos, 
   validarSociedades(errores, d.sociedades ?? []);
   validarVinculo(errores, d.vinculo_con_pep, hoy);
 
-  if (!basicos.soloNombrePropio && d.firma_en_calidad === 'RepresentanteLegal') {
+  if ((!basicos.soloNombrePropio && d.firma_en_calidad === 'RepresentanteLegal') || d.firma_en_calidad === 'Apoderado') {
     requerido(errores, 'firmante_nombre', d.firmante_nombre, MAXIMO.nombre);
     if (vacio(d.firmante_tipo_identificacion)) errores.firmante_tipo_identificacion = 'requerido';
     else if (!esTipoDocumento(d.firmante_tipo_identificacion)) errores.firmante_tipo_identificacion = 'tipoDocumento';
