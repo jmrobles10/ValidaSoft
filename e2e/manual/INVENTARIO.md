@@ -211,7 +211,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `privacidad/habeas-data-de-la-empresa` ☑ | Oficial de cumplimiento | Solicitud del tercero (spec `derechos-plan-correo`) | Habeas data: solicitudes con plazo, responder, plan de supresión, constancia |
 | `privacidad/plazos-y-avisos-de-habeas` ☐ | Administrador de empresa | Solicitud cerca de vencer | Aviso de plazo (enlaza a esta pantalla), vencida, quién atiende |
 | `cumplimiento/matriz-de-riesgo-configuracion` ☑ | Oficial de cumplimiento | Grupo base (spec `matriz-riesgo`) | Factores, límites y niveles del riesgo SAGRILAFT, guardar, efecto en el estudio |
-| `cumplimiento/listas-restrictivas-de-la-empresa` ☐ | Administrador de empresa | Proveedor simulado (spec `verificaciones`) | Proveedor y credenciales de la empresa, consumo del mes, Infolaft «Disponible» de la plataforma |
+| `cumplimiento/listas-restrictivas-de-la-empresa` ☑ | Administrador de empresa | Proveedor simulado (spec `verificaciones`) | Proveedor y credenciales de la empresa, consumo del mes, Infolaft «Disponible» de la plataforma |
 
 ---
 
