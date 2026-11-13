@@ -159,7 +159,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `configuracion/tipo-de-documento-y-flujo` ✅ | Administrador de empresa | Grupo base | Tipo de documento propio (formulario, archivo, vigencia) y flujo publicado por defecto |
-| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☐ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
+| `configuracion/tipo-de-documento-solo-formulario-y-plantilla` ☑ | Administrador de empresa | Grupo base; archivo DOCX o PDF de plantilla | Modo «Formulario» con campos (texto, número, fecha, lista, Sí/No), subir plantilla, versiones, retirar |
 | `configuracion/tipo-de-documento-de-la-plataforma` ☐ | Administrador de empresa | Grupo base | Partir de un documento de la plataforma (RUT, Cámara), techos de formato y peso, error por regla más laxa, ámbito compartido |
 | `configuracion/tipos-de-vinculo` ☐ | Administrador de empresa | Grupo base | Crear un tipo, «Exige código en el enlace», «Cuenta designada», desactivar |
 | `configuracion/flujo-etapas-y-areas-en-paralelo` ☐ | Administrador de empresa | Áreas Compras y Cumplimiento (`crearEscenario`) | Dos etapas, dos áreas en paralelo, aprobadores y SLA, «Puede rechazar» y «Automática» |
