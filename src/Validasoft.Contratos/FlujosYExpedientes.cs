@@ -248,7 +248,8 @@ public sealed record ExpedienteDto(
     int Desaprobaciones = 0,
     DesaprobacionDto? UltimaDesaprobacion = null,
     RecordatorioObservacionesDto? RecordatorioObservaciones = null,
-    IReadOnlyList<AdjuntoDeCumplimientoDto>? AdjuntosDeCumplimiento = null);
+    IReadOnlyList<AdjuntoDeCumplimientoDto>? AdjuntosDeCumplimiento = null,
+    bool EsperandoCuentaDesignada = false);
 
 /// <summary>
 /// Última vez que un administrador devolvió a revisión lo ya decidido del expediente (DS-1, DS-2). <see cref="Alcance"/>:
@@ -361,7 +362,8 @@ public sealed record RequisitoPublicoDto(
 public sealed record ExpedientePublicoDto(
     Guid Id, string Folio, EmpresaPublicaDto Empresa, TipoVinculoResumenDto TipoVinculo, string Estado,
     IReadOnlyList<ObservacionPublicaDto> Observaciones, bool PuedeReenviar, int Reenvios, DateTimeOffset ActualizadoEn,
-    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0, string Tipo = "Inicial", DateTimeOffset? PlazoCargueHasta = null);
+    IReadOnlyList<RequisitoPublicoDto>? Requisitos = null, int RequisitosFaltantes = 0, string Tipo = "Inicial", DateTimeOffset? PlazoCargueHasta = null,
+    bool EsperandoCuentaDesignada = false);
 
 /// <summary>
 /// Plazo del tercero para completar el expediente inicial (P-4-2, LT-1): <see cref="Dias"/> (0 = sin plazo; por defecto 30) y

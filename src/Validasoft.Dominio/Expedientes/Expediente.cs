@@ -21,7 +21,9 @@ public sealed record DatosDeApertura(
     string TipoVinculoCodigo,
     string TipoVinculoNombre,
     ActorDeExpediente AbiertoPor,
-    IReadOnlyList<string> InvitadoPor);
+    IReadOnlyList<string> InvitadoPor,
+    bool ExigeCuentaDesignada = false,
+    bool CuentaDesignadaAprobada = false);
 
 /// <summary>Versión de flujo resuelta (explícita o por defecto) con las áreas ya copiadas.</summary>
 public sealed record FlujoParaExpediente(
@@ -336,6 +338,10 @@ public sealed partial class Expediente
             simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
         if (flujo.Verificaciones is { Count: > 0 } verificaciones)
             simulacion.Emitir(new VerificacionesRequeridas([.. verificaciones], ahora));
+        // La cuenta designada frena el cierre del expediente inicial y de las renovaciones; una actualización (un documento cambió)
+        // no la repite, como tampoco repite las listas (VE-6): la aprobación que la precede ya la exigió.
+        if (datos.ExigeCuentaDesignada && datos.Tipo != TipoExpediente.Actualizacion)
+            simulacion.Emitir(new CuentaDesignadaRequerida(datos.CuentaDesignadaAprobada, ahora));
         Evaluar(simulacion, ahora);
         return simulacion.Eventos;
     }
@@ -803,11 +809,12 @@ public sealed partial class Expediente
 
     /// <summary>
     /// Aprueba el expediente si todas las verificaciones bloqueantes están satisfechas y vigentes (docs/03 §6.3
-    /// <c>EvaluarCierre</c>); si no, queda <c>EnRevision</c> con todas sus etapas aprobadas esperándolas.
+    /// <c>EvaluarCierre</c>) y, si el tipo de vínculo la exige, la cuenta designada está aprobada (CB-4); si no, queda
+    /// <c>EnRevision</c> con todas sus etapas aprobadas esperándolas.
     /// </summary>
     private static void Cerrar(Simulacion simulacion, DateTimeOffset ahora)
     {
-        if (!simulacion.Estado!.VerificacionesSatisfechas(ahora))
+        if (!simulacion.Estado!.VerificacionesSatisfechas(ahora) || !simulacion.Estado.CuentaDesignadaSatisfecha)
             return;
         simulacion.Emitir(new ExpedienteAprobado(ahora));
         AceptarSecciones(simulacion, ahora);
@@ -854,6 +861,8 @@ public sealed partial class Expediente
             case RevisionAutomaticaRegistrada e: Apply(e); break;
             case RevisionAutomaticaResuelta e: Apply(e); break;
             case VerificacionesRequeridas e: Apply(e); break;
+            case CuentaDesignadaRequerida e: Apply(e); break;
+            case CuentaDesignadaConfirmada e: Apply(e); break;
             case VerificacionExternaRegistrada e: Apply(e); break;
             case CoincidenciaResuelta e: Apply(e); break;
             case EstudioDeCumplimientoRegistrado e: Apply(e); break;

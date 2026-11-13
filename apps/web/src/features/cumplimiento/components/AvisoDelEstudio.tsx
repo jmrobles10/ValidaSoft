@@ -16,7 +16,9 @@ export function AvisoDelEstudio({ expediente, concepto, vigenciaDias }: { expedi
           ? t('cumplimiento.estudio.avisoEspera', {
               faltan: efecto.faltan.map((v) => `${t(`cumplimiento.tipos.${v.tipo}`)} (${t(`cumplimiento.estados.${v.estado}`).toLowerCase()})`).join(', '),
             })
-          : t('cumplimiento.estudio.avisoAreas');
+          : efecto.tipo === 'espera-cuenta'
+            ? t('cumplimiento.estudio.avisoCuenta')
+            : t('cumplimiento.estudio.avisoAreas');
 
   return (
     <Alert severity={efecto.tipo === 'desfavorable' ? 'warning' : 'info'} aria-label={t('cumplimiento.estudio.avisoTitulo')}>

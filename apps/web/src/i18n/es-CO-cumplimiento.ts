@@ -206,6 +206,7 @@ export const cumplimiento = {
     avisoAprueba:
       'Es lo último que falta: el expediente se aprueba y el vínculo queda activo. El tercero recibe el correo con el resultado y las áreas del flujo reciben el aviso.',
     avisoEspera: 'Queda registrado, pero el expediente sigue en revisión hasta que se cumpla: {{faltan}}.',
+    avisoCuenta: 'Queda registrado y no falta más cumplimiento, pero el expediente sigue en revisión hasta que la empresa apruebe la cuenta bancaria designada.',
     avisoAreas: 'Queda registrado. El expediente se aprueba cuando las áreas del flujo terminen su revisión y lo demás esté satisfecho.',
     avisoDesfavorable:
       'Con concepto desfavorable la verificación queda fallida y el expediente no se aprueba. Después puedes rechazarlo por cumplimiento.',

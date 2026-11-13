@@ -495,6 +495,11 @@ export const esCO = {
     respuestaAyuda: 'Cuéntale qué corregiste. Si te pidió un documento, súbelo primero en tu bóveda.',
     reenviar: 'Enviar respuesta',
     reenviado: 'Enviaste tu respuesta. {{empresa}} vuelve a revisar.',
+    cuentaDesignada: {
+      titulo: 'Falta tu cuenta bancaria designada',
+      texto: '{{empresa}} aprueba tu validación cuando tu cuenta bancaria para esta empresa esté designada y aprobada. Designa una cuenta (o espera a que {{empresa}} apruebe la que ya designaste).',
+      accion: 'Ver mis cuentas',
+    },
     renovacion: {
       titulo: 'Renueva tus documentos con {{empresa}}',
       texto: 'Un documento que {{empresa}} te pide ya venció. Sube una versión nueva o, si el documento lo permite y no ha cambiado, confírmalo.',

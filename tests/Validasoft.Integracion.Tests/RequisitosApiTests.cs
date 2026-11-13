@@ -985,7 +985,20 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture, ITestOutputHe
             new PublicarTextoLegalDto($"Autorizo a {nombre}"), 200);
         await ApiAsync<TextoLegalDto>("PUT", $"/api/v1/empresas/{datos.Id}/textos-legales/terminos", new Credencial(admin),
             new PublicarTextoLegalDto($"Términos de {nombre}"), 200);
+        await ExigirCuentaDelProveedorAsync(admin, false);
         return new Empresa(admin, datos, llave.Valor!, rsa);
+    }
+
+    /// <summary>
+    /// El tipo PROVEEDOR nace exigiendo cuenta designada: con ella, el expediente espera en revisión hasta que la empresa apruebe la cuenta (CB-4).
+    /// Las pruebas que aprueban expedientes sin hablar de cuentas la quitan; las de la cuenta la vuelven a poner.
+    /// </summary>
+    private async Task ExigirCuentaDelProveedorAsync(string admin, bool exige)
+    {
+        var tipos = await ApiAsync<List<TipoVinculoDto>>("GET", "/api/v1/tipos-vinculo", new Credencial(admin), null, 200);
+        var proveedor = tipos.Single(t => t.Codigo == "PROVEEDOR");
+        await ApiAsync<TipoVinculoDto>("PUT", $"/api/v1/tipos-vinculo/{proveedor.Id}", new Credencial(admin),
+            new CrearTipoVinculoDto(proveedor.Codigo, proveedor.Nombre, proveedor.AtributosPermitidos, exige, proveedor.ExigeOtpEnEnlace), 200);
     }
 
     /// <summary>Crea y publica (queda por defecto) un flujo con todas las áreas activas en paralelo y los requisitos dados.</summary>

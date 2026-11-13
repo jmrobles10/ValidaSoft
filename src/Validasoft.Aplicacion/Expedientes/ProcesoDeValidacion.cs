@@ -172,7 +172,9 @@ public static class ProcesoDeValidacion
         var abiertoPor = actor ?? new ActorDeExpediente(contexto?.ActorTipo ?? ActorTipo.Sistema, contexto?.ActorId ?? "sistema");
         var datos = new DatosDeApertura(vinculo.EmpresaId, vinculo.Id, tipoExpediente, folio, tercero.Id, tercero.Nombre,
             tercero.Identificacion.Clave, vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty,
-            abiertoPor, await QuienesInvitaronAsync(sesion, vinculo.Id, ct));
+            abiertoPor, await QuienesInvitaronAsync(sesion, vinculo.Id, ct),
+            // Si el tipo de vínculo la exige, el expediente no se aprueba sin la cuenta designada aprobada (CB-4).
+            ExigeCuentaDesignada: tipo?.ExigeCuentaDesignada == true, CuentaDesignadaAprobada: vinculo.CuentaDesignada is not null);
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
             flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones,
             // Una actualización (un documento cambió) no repite las listas ni el estudio (VE-6).
@@ -244,12 +246,31 @@ public static class ProcesoDeValidacion
     /// vínculo, certificado si se aprobó y, con <paramref name="correo"/>, el correo de observación con su enlace de acceso.
     /// </summary>
     public static async Task<Expediente> AnexarAsync(IDocumentSession sesion, IEventStream<Expediente> stream, IReadOnlyList<object> eventos,
-        CorreoAlTercero? correo, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
+        CorreoAlTercero? correo, EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct, IEventStream<Vinculo>? vinculoStream = null)
     {
         var estado = Expediente.Reproducir(stream.Aggregate, eventos);
         stream.AppendMany(eventos);
-        await DespuesDeEscribirAsync(sesion, estado, eventos, null, correo, certificados, ahora, ct);
+        await DespuesDeEscribirAsync(sesion, estado, eventos, vinculoStream, correo, certificados, ahora, ct);
         return estado;
+    }
+
+    /// <summary>
+    /// La empresa aprobó la cuenta designada del vínculo (CB-4): si el expediente abierto del vínculo la exigía y esperaba por ella,
+    /// se cierra aprobado <b>en la misma transacción</b> (con su certificado y el correo al tercero, si lo hubo). Si no hay expediente
+    /// abierto, no la exigía o ya la tenía, no hace nada. <paramref name="vinculoStream"/> es el stream del vínculo, ya con los
+    /// eventos de la aprobación anexados.
+    /// </summary>
+    public static async Task ConfirmarCuentaDesignadaAsync(IDocumentSession sesion, IEventStream<Vinculo> vinculoStream, CorreoAlTercero? correo,
+        EmisorDeCertificados certificados, DateTimeOffset ahora, CancellationToken ct)
+    {
+        if (vinculoStream.Aggregate?.ExpedienteAbiertoId is not { } expedienteId)
+            return;
+        var stream = await sesion.Events.FetchForExclusiveWriting<Expediente>(expedienteId, ct);
+        if (stream.Aggregate is not { } expediente)
+            return;
+        var eventos = expediente.ConfirmarCuentaDesignada(ahora);
+        if (eventos.Count > 0)
+            await AnexarAsync(sesion, stream, eventos, correo, certificados, ahora, ct, vinculoStream);
     }
 
     /// <summary>

@@ -143,6 +143,14 @@ describe('Qué pasa al registrar el estudio', () => {
     expect(efectoDelEstudio(sinEstudio(), 'Desfavorable')).toEqual({ tipo: 'desfavorable' });
   });
 
+  it('si el expediente además espera la cuenta bancaria designada, el estudio no lo aprueba: queda esperando la cuenta', () => {
+    expect(efectoDelEstudio({ ...sinEstudio(), esperandoCuentaDesignada: true }, 'Favorable')).toEqual({ tipo: 'espera-cuenta' });
+    expect(efectoDelEstudio({ ...sinEstudio(), esperandoCuentaDesignada: false }, 'Favorable')).toEqual({ tipo: 'aprueba' });
+    // Con un concepto desfavorable o con otra verificación pendiente manda lo suyo.
+    expect(efectoDelEstudio({ ...sinEstudio(), esperandoCuentaDesignada: true }, 'Desfavorable')).toEqual({ tipo: 'desfavorable' });
+    expect(efectoDelEstudio({ ...sinEstudio({ estado: 'CoincidenciaPorAnalizar' }), esperandoCuentaDesignada: true }, 'Favorable').tipo).toBe('espera-verificaciones');
+  });
+
   it('si falta otra verificación bloqueante o las áreas, sigue en revisión', () => {
     const pendiente = efectoDelEstudio(sinEstudio({ estado: 'CoincidenciaPorAnalizar' }), 'Favorable');
     expect(pendiente.tipo).toBe('espera-verificaciones');

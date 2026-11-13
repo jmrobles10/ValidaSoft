@@ -235,17 +235,23 @@ export type EfectoDelEstudio =
   | { tipo: 'desfavorable' }
   /** Las áreas ya aprobaron pero faltan otras verificaciones bloqueantes. */
   | { tipo: 'espera-verificaciones'; faltan: VerificacionDto[] }
+  /** Con el estudio no falta cumplimiento, pero el expediente espera la cuenta bancaria designada y aprobada del vínculo. */
+  | { tipo: 'espera-cuenta' }
   | { tipo: 'espera-areas' };
 
 /**
  * Lo que provoca registrar el estudio con ese concepto: aprobar el expediente si era lo último que faltaba (áreas aprobadas y
  * ninguna otra verificación bloqueante pendiente), dejarlo esperando otra verificación o las áreas, o fallar la verificación.
  */
-export function efectoDelEstudio(expediente: Pick<ExpedienteDto, 'verificaciones' | 'esperandoVerificaciones'>, concepto: ConceptoCumplimiento | null): EfectoDelEstudio {
+export function efectoDelEstudio(
+  expediente: Pick<ExpedienteDto, 'verificaciones' | 'esperandoVerificaciones' | 'esperandoCuentaDesignada'>,
+  concepto: ConceptoCumplimiento | null,
+): EfectoDelEstudio {
   if (concepto === 'Desfavorable') return { tipo: 'desfavorable' };
   const otras = verificacionesQueBloquean(expediente).filter((v) => v.tipo !== 'EstudioDeCumplimiento');
   if (otras.length > 0) return { tipo: 'espera-verificaciones', faltan: otras };
-  return expediente.esperandoVerificaciones === true ? { tipo: 'aprueba' } : { tipo: 'espera-areas' };
+  if (expediente.esperandoVerificaciones === true) return expediente.esperandoCuentaDesignada === true ? { tipo: 'espera-cuenta' } : { tipo: 'aprueba' };
+  return { tipo: 'espera-areas' };
 }
 
 // ── Archivos del oficial ───────────────────────────────────────────────────────────────────────────────────────────

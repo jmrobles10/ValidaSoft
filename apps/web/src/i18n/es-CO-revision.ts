@@ -45,6 +45,10 @@ export const expedientes = {
     rechazadoTitulo: 'Expediente rechazado',
     esperandoVerificacionesTitulo: 'Falta cumplimiento para aprobar',
     esperandoVerificaciones: 'Todas las áreas aprobaron. El expediente se aprueba cuando se satisfaga: {{verificaciones}}.',
+    esperandoCuentaTitulo: 'Falta la cuenta bancaria designada',
+    esperandoCuenta:
+      'Este tipo de vínculo exige una cuenta bancaria designada y aprobada. El expediente se aprueba solo cuando dos personas de la empresa aprueben la cuenta que designe el tercero; si la rechazan, sigue esperando a que designe otra.',
+    esperandoCuentaAccion: 'Ver la cuenta',
     rechazado: '{{area}} lo rechazó el {{fecha}}. El vínculo volvió a Invitado.',
     // Una actualización rechazada o anulada deja el vínculo como estaba (RV-2, VR-13): el tercero ve que no se aprobó.
     rechazadoActualizacion: '{{area}} la rechazó el {{fecha}}. El vínculo conserva lo que ya estaba aprobado y el tercero ve que esta actualización no se aprobó.',
