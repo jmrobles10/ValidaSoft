@@ -47,13 +47,14 @@ recorrido(
     await ver.click();
     const visor = app.getByRole('dialog', { name: new RegExp(`^${RUT} · `) });
     await expect(visor).toBeVisible();
-    await expect(visor.getByRole('button', { name: 'Descargar', exact: true })).toBeVisible();
+    // «Descargar» es un enlace al archivo: mientras el servidor entrega la dirección es un botón apagado y al llegar pasa a ser enlace.
+    await expect(visor.getByRole('link', { name: 'Descargar', exact: true })).toBeVisible();
     await paso(page, {
       titulo: 'Abre el documento en el visor',
       explicacion:
         'El visor muestra el archivo dentro de la pantalla con el título del documento, su número de versión y su fecha de carga. El botón «Descargar» guarda una copia en tu equipo. ' +
         'Cada vez que alguien abre o descarga un documento, la acción queda registrada en la auditoría del expediente.',
-      resaltar: [visor.getByRole('heading', { level: 2 }), visor.getByRole('button', { name: 'Descargar', exact: true })],
+      resaltar: [visor.getByRole('heading', { level: 2 }), visor.getByRole('link', { name: 'Descargar', exact: true })],
       variantes: [
         {
           cuando: 'El documento es un formulario sin archivo',
