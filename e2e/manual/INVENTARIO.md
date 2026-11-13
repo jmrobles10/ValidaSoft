@@ -45,7 +45,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `tercero/ficha-barra-y-pendientes` ☑ | Tercero | Ficha a medias | «Faltan N datos», guardar sin completar, volver; Legal sin socio y el aviso; sección que no aplica |
 | `tercero/ficha-cambio-tras-aprobar` ☐ | Tercero | Ficha aceptada por una empresa (spec `revalidaciones-y-exencion`) | Cambiar dirección, la empresa ve el cambio posterior y debe volver a aceptar, qué ve el tercero |
 | `tercero/declaracion-pep-persona-natural` ☑ | Tercero | Persona natural en la ficha (spec `declaracion-pep`) | «Sí» a PEP abre el diálogo, datos, condición, vínculo con otra PEP, juramento y firma dibujada o subida, guardar |
-| `tercero/declaracion-pep-personas-relacionadas` ☐ | Tercero | Jurídica con representante y socios (spec `declaracion-pep`) | PEP por persona en Legal, varias PEP relacionadas (hasta 30), firma por apoderado |
+| `tercero/declaracion-pep-personas-relacionadas` ☑ | Tercero | Jurídica con representante y socios (spec `declaracion-pep`) | PEP por persona en Legal, varias PEP relacionadas (hasta 30), firma por apoderado |
 | `tercero/descargar-mi-declaracion-pep` ☐ | Tercero | Declaración ya firmada (spec `declaracion-pep-descarga`) | Descargar PDF propio, qué incluye (logo de la empresa o de Validasoft), solo lo guardado |
 | `tercero/cuentas-bancarias` ☐ | Tercero | Empresa cuyo tipo de vínculo exige cuenta designada (spec `cuentas`) | Mis cuentas: agregar, designar para una empresa, retirar, estado de aprobación (cuatro ojos) |
 | `tercero/campana-y-avisos` ☐ | Tercero | Observación y avisos de la empresa (specs `novedades-tercero`, `tiempo-real`) | Campana con la marca de la empresa, abrir desde ahí, preferencias (apagar un tipo), avisos en vivo sin recargar |
