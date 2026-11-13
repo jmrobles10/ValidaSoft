@@ -204,7 +204,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `ia/revision-automatica-niveles` ☑ | Administrador de empresa | IA activa (spec `revision-automatica`) | Manual, Asistido y Automático, qué cambia en cada uno, tope y muestreo |
 | `ia/revision-asistida-y-excepciones` ☑ | Revisor/área | Nivel Asistido con un documento dudoso (spec `revision-automatica`) | Excepciones: documento con lectura dudosa, motivo, decidir |
 | `ia/revision-automatica-aprueba-sola` ☑ | Revisor/área | Nivel Automático (spec `revision-automatica`) | Documento aprobado solo, «Sistema» en el historial, revisión humana por muestreo |
-| `ia/cupo-agotado` ☐ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
+| `ia/cupo-agotado` ☑ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
 | `ia/escalamiento-a-modelo-superior` ☐ | Revisor/área | Lectura dudosa (spec `ia-cupo-y-escalamiento`) | Confianza, «Revisado por un modelo de mayor capacidad», tokens y costo en «Plan y uso de IA» |
 | `ia/cruce-de-la-ficha-con-los-soportes` ☐ | Revisor/área | IA activa y ficha con soporte (spec `ficha-f5`) | Cruce ficha ↔ documento, coincidencias y diferencias, qué decide la persona |
 | `ia/analisis-de-un-documento` ☐ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
