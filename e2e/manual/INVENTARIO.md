@@ -265,8 +265,8 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `integracion/invitar-por-api` ☑ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
 | `integracion/consulta-de-certificacion` ☑ | Sistema integrador | Tercero aprobado (spec `integracion`) | `GET /consultas/certificacion`, respuesta resumida, `If-None-Match` y 304 |
 | `integracion/eventos-pull-y-en-vivo` ☑ | Sistema integrador | Eventos de un vínculo | `GET /eventos` con cursor, SSE, tipos de evento |
-| `integracion/sandbox` ☐ | Sistema integrador | Grupo con sandbox (spec `integracion-sandbox`) | Crear, sincronizar y reiniciar el sandbox, llaves de prueba |
-| `integracion/buzon-de-pruebas` ☐ | Sistema integrador | Sandbox con correos (spec `integracion-sandbox`) | Leer el buzón de correo de pruebas, vaciarlo |
+| `integracion/sandbox` ☑ | Sistema integrador | Grupo con sandbox (spec `integracion-sandbox`) | Crear, sincronizar y reiniciar el sandbox, llaves de prueba |
+| `integracion/buzon-de-pruebas` ☑ | Sistema integrador | Sandbox con correos (spec `integracion-sandbox`) | Leer el buzón de correo de pruebas, vaciarlo |
 | `integracion/importar-del-portal` ☐ | Administrador de empresa | Origen simulado del Portal | Importación: corrida, vista previa, resultado, errores por fila |
 | `integracion/identidad-delegada` ☐ | Sistema integrador | Sistema con clave privada (`asercion` en `soporte/api.ts`) | `POST /sesiones-usuario` con `mostrarCodigo`, el JWT de 5 minutos, `jti` de un solo uso, entrar a la app |
 
