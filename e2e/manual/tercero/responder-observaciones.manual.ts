@@ -3,7 +3,7 @@ import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, observar } from '../../soporte/empresa';
 import { abrirEmpresa, aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, fraseDeEstado, responder, subirDocumento, tarjeta } from '../../soporte/proveedor';
 import { crearEscenario, invitar, nuevoTercero, SST } from '../../soporte/semilla';
-import { expect, paso, recorrido } from '../nucleo';
+import { paso, recorrido } from '../nucleo';
 
 const RUT = 'Registro Único Tributario';
 
@@ -46,7 +46,7 @@ recorrido(
     await paso(page, {
       titulo: 'Lee lo que te pide corregir la empresa',
       explicacion:
-        'La frase de arriba dice que la empresa te pide corregir algo. En la tarjeta del documento observado ves el motivo que marcó el área (aquí, «Ilegible») y la nota que escribió para ti. ' +
+        'La frase de arriba dice que la empresa te pide corregir algo. En la tarjeta del documento observado ves el motivo que marcó el área (aquí, que el documento no se puede leer con claridad) y la nota que escribió para ti. ' +
         'Los documentos que no tienen observación siguen en revisión sin que tengas que hacer nada con ellos. Te llegó un único correo con todos los motivos.',
       resaltar: [fraseDeEstado(page, 'Observado'), tarjeta(page, RUT)],
     });
