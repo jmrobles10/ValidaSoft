@@ -134,7 +134,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `documentos/vencimientos` ☐ | Administrador de empresa | Documentos en distintos estados de vigencia (spec `vencimientos`) | Vencimientos: lista, filtros, por vencer, en gracia, vencidos |
+| `documentos/vencimientos` ☑ | Administrador de empresa | Documentos en distintos estados de vigencia (spec `vencimientos`) | Vencimientos: lista, filtros, por vencer, en gracia, vencidos |
 | `documentos/ciclo-de-vigencia` ☐ | Administrador de empresa | Tipo con aviso y gracia y fecha simulada (specs `vencimientos`, `vigencias`) | Vigente → por vencer (aviso) → gracia → vencido, avisos que recibe el tercero |
 | `documentos/vigencia-del-vinculo` ☐ | Administrador de empresa | Flujo con vigencia periódica (spec `vigencias`) | Por vencer, renovación, vencido y el certificado, qué cambia en la lista |
 | `documentos/documento-compartido-entre-empresas` ☐ | Revisor/área | Dos empresas, mismo RUT (spec `multiempresa-documento-global`) | Una acepta la v2 y la otra ve su aceptación desactualizada, sin ver la decisión de la otra |
