@@ -65,8 +65,8 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `publico/verificar-certificado-autentico` ☑ | Público | Certificado emitido (spec `certificado`) | `/verificar/{folio}`: pasos de la verificación criptográfica, datos del certificado, descargar el PDF |
 | `publico/verificar-certificado-invalido` ☐ | Público | Folio o huella inexistente | Mensaje claro, cómo reintentar, qué no revela |
 | `publico/certificado-en-otros-estados` ☑ | Público | Certificados bloqueado, revocado, reemplazado, en verificación y con pendientes (specs `certificado`, `vinculo-en-revision`) | Cada estado con su aviso y qué significa para quien consulta |
-| `publico/verificar-con-el-pdf` ☐ | Público | PDF del certificado | Subir el PDF, comparar la huella, resultado |
-| `publico/pagina-no-encontrada` ☐ | Público | — | Ruta inexistente, enlace roto, volver |
+| `publico/verificar-con-el-pdf` ☑ | Público | PDF del certificado | Subir el PDF, comparar la huella, resultado |
+| `publico/pagina-no-encontrada` ☑ | Público | — | Ruta inexistente, enlace roto, volver |
 | `publico/embebido-esperando-sesion` ☐ | Público | Página `/embed/{componente}` sin sesión | «Esperando sesión», qué pide al sistema anfitrión, error de origen |
 | `movil/tercero-navegacion` ☐ | Tercero | Tercero con dos empresas | Barra inferior, cada pestaña, campana, salir (celular: 390 × 844) |
 | `movil/tercero-subir-documento` ☐ | Tercero | Documento pendiente | Elegir archivo en el celular, versión guardada, volver |
