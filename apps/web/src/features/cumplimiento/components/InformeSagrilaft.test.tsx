@@ -77,6 +77,22 @@ describe('Informe SAGRILAFT completo (CU-19)', () => {
     expect(sin.getByText('Sin estudio vigente')).toBeInTheDocument();
   });
 
+  it('la revisión de un día va en singular: «Vence en 1 día» y «Venció hace 1 día», nunca «1 días»', async () => {
+    montar({
+      [`GET ${INFORME}`]: () =>
+        informeSagrilaft({
+          filas: [
+            filaSagrilaft({ vinculoId: 'v1', tercero: 'Mañana Ltda', diasParaRevision: 1 }),
+            filaSagrilaft({ vinculoId: 'v2', terceroId: 't2', tercero: 'Ayer Ltda', diasParaRevision: -1 }),
+          ],
+        }),
+    });
+    const tabla = within(await screen.findByRole('table', { name: 'Informe SAGRILAFT' }));
+    expect(within(tabla.getByRole('row', { name: /Mañana Ltda/ })).getByText('Vence en 1 día')).toBeInTheDocument();
+    expect(within(tabla.getByRole('row', { name: /Ayer Ltda/ })).getByText('Venció hace 1 día')).toBeInTheDocument();
+    expect(screen.queryByText(/1 días/)).not.toBeInTheDocument();
+  });
+
   it('filtra por estado del estudio y por nivel de riesgo y deja quitar los filtros', async () => {
     montar();
     const tabla = await screen.findByRole('table', { name: 'Informe SAGRILAFT' });
