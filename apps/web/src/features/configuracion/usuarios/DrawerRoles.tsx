@@ -31,6 +31,8 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
   const invitar = puedeInvitar && (invitarElegido ?? true);
   const [filas, setFilas] = useState<FilaRol[]>(() => aFilas(usuario?.roles ?? []));
 
+  // Solo la primera fila muestra la etiqueta: las demás nombran su control para quien no lo ve (lectores de pantalla).
+  const nombreSinEtiqueta = (clave: 'usuarios.alcanceFila' | 'usuarios.rolFila', indice: number) => (indice === 0 ? undefined : t(clave, { numero: String(indice + 1) }));
   const cambiar = (indice: number, cambios: Partial<FilaRol>) => setFilas((actuales) => actuales.map((f, i) => (i === indice ? { ...f, ...cambios } : f)));
   const enviar = (evento: SubmitEvent) => {
     evento.preventDefault();
@@ -91,7 +93,7 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
                 <TextField
                   select
                   label={indice === 0 ? t('usuarios.alcance') : undefined}
-                  aria-label={t('usuarios.alcance')}
+                  slotProps={{ select: { SelectDisplayProps: { 'aria-label': nombreSinEtiqueta('usuarios.alcanceFila', indice) } } }}
                   value={fila.alcance}
                   onChange={(e) => cambiar(indice, { alcance: e.target.value })}
                   sx={{ flex: 1.3, minWidth: 0 }}
@@ -106,7 +108,7 @@ export function DrawerRoles({ usuario, empresas, guardando, error, onGuardar, on
                 <TextField
                   select
                   label={indice === 0 ? t('usuarios.rol') : undefined}
-                  aria-label={t('usuarios.rol')}
+                  slotProps={{ select: { SelectDisplayProps: { 'aria-label': nombreSinEtiqueta('usuarios.rolFila', indice) } } }}
                   value={fila.rol}
                   onChange={(e) => cambiar(indice, { rol: e.target.value as FilaRol['rol'] })}
                   sx={{ flex: 1, minWidth: 0 }}
