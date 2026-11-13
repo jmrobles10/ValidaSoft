@@ -194,7 +194,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `operacion/delegacion-de-revision` ☑ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
 | `operacion/recordatorio-en-lote` ☑ | Revisor/área | Varios expedientes observados (spec `novedades-tercero`) | Recordatorio desde la bandeja (uno por día), correo y campana |
 | `operacion/recordatorio-automatico-por-flujo` ☑ | Administrador de empresa | Flujo con recordatorio automático (spec `operacion`) | Modo «Empresa» o cada N días, lo que recibe el tercero |
-| `operacion/ayuda-de-documentos` ☐ | Administrador de empresa | Tipos de documento (spec `operacion`) | Texto de ayuda por documento y empresa, lo que lee el tercero al subir, plantillas de pre-vencimiento y preferencias |
+| `operacion/ayuda-de-documentos` ☑ | Administrador de empresa | Tipos de documento (spec `operacion`) | Texto de ayuda por documento y empresa, lo que lee el tercero al subir, plantillas de pre-vencimiento y preferencias |
 
 ### ia (8), privacidad (2) y cumplimiento de configuración (2)
 
