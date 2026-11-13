@@ -21,7 +21,9 @@ recorrido(
   },
   async ({ page }) => {
     const e = await crearEscenario();
-    await publicarFlujoSinDocumentos(e, e.sur, CODIGO_NUEVO, 'PROVEEDOR', [[{ area: e.sur.areas.revision! }]]);
+    const revision = e.sur.areas.revision;
+    if (!revision) throw new Error('Falta el área Revisión de Sur en el escenario');
+    await publicarFlujoSinDocumentos(e, e.sur, CODIGO_NUEVO, 'PROVEEDOR', [[{ area: revision }]]);
     const app = await abrirEmbebido(page, e, e.ana, e.sur, 'flujos');
     await expect(app.getByRole('heading', { level: 1, name: `Flujos aprobatorios de ${e.sur.nombre}` })).toBeVisible();
     const fila = app.getByRole('row', { name: new RegExp(`Abrir flujo Flujo ${CODIGO_NUEVO}`) });
