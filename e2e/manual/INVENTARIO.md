@@ -185,33 +185,33 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `operacion/invitacion-por-lotes` ☐ | Administrador de empresa | Grupo base (spec `lotes`) | Descargar la plantilla, subir el archivo, vista previa con errores por fila, confirmar, lote procesado |
+| `operacion/invitacion-por-lotes` ☑ | Administrador de empresa | Grupo base (spec `lotes`) | Descargar la plantilla, subir el archivo, vista previa con errores por fila, confirmar, lote procesado |
 | `operacion/lote-pausar-reanudar-cancelar` ☐ | Administrador de empresa | Lote grande en proceso | Pausar, reanudar, cancelar, reintentar fallidos, informe por fila |
-| `operacion/campana-de-renovacion` ☐ | Administrador de empresa | Vínculos por vencer (spec `operacion`) | Filtro, vista previa de a quién afecta, aviso antes de confirmar, proceso en segundo plano, correo y campana del tercero |
+| `operacion/campana-de-renovacion` ☑ | Administrador de empresa | Vínculos por vencer (spec `operacion`) | Filtro, vista previa de a quién afecta, aviso antes de confirmar, proceso en segundo plano, correo y campana del tercero |
 | `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar |
-| `operacion/plazo-de-cargue-y-caducidad` ☐ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
-| `operacion/plazos-de-revision` ☐ | Administrador de empresa | Plazo por defecto y por área (spec `operacion`) | Configuración, avisos de plazo (campana y correo), indicador en la bandeja |
-| `operacion/delegacion-de-revision` ☐ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
-| `operacion/recordatorio-en-lote` ☐ | Revisor/área | Varios expedientes observados (spec `novedades-tercero`) | Recordatorio desde la bandeja (uno por día), correo y campana |
-| `operacion/recordatorio-automatico-por-flujo` ☐ | Administrador de empresa | Flujo con recordatorio automático (spec `operacion`) | Modo «Empresa» o cada N días, lo que recibe el tercero |
-| `operacion/ayuda-de-documentos` ☐ | Administrador de empresa | Tipos de documento (spec `operacion`) | Texto de ayuda por documento y empresa, lo que lee el tercero al subir, plantillas de pre-vencimiento y preferencias |
+| `operacion/plazo-de-cargue-y-caducidad` ☑ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
+| `operacion/plazos-de-revision` ☑ | Administrador de empresa | Plazo por defecto y por área (spec `operacion`) | Configuración, avisos de plazo (campana y correo), indicador en la bandeja |
+| `operacion/delegacion-de-revision` ☑ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
+| `operacion/recordatorio-en-lote` ☑ | Revisor/área | Varios expedientes observados (spec `novedades-tercero`) | Recordatorio desde la bandeja (uno por día), correo y campana |
+| `operacion/recordatorio-automatico-por-flujo` ☑ | Administrador de empresa | Flujo con recordatorio automático (spec `operacion`) | Modo «Empresa» o cada N días, lo que recibe el tercero |
+| `operacion/ayuda-de-documentos` ☑ | Administrador de empresa | Tipos de documento (spec `operacion`) | Texto de ayuda por documento y empresa, lo que lee el tercero al subir, plantillas de pre-vencimiento y preferencias |
 
 ### ia (8), privacidad (2) y cumplimiento de configuración (2)
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `ia/plan-y-uso-de-ia` ☐ | Administrador de empresa | `activarIa(e, empresa)` con proveedor simulado | Plan y uso: cupo del mes, consumo, avisos, qué ve el tercero (nada) |
-| `ia/revision-automatica-niveles` ☐ | Administrador de empresa | IA activa (spec `revision-automatica`) | Manual, Asistido y Automático, qué cambia en cada uno, tope y muestreo |
-| `ia/revision-asistida-y-excepciones` ☐ | Revisor/área | Nivel Asistido con un documento dudoso (spec `revision-automatica`) | Excepciones: documento con lectura dudosa, motivo, decidir |
-| `ia/revision-automatica-aprueba-sola` ☐ | Revisor/área | Nivel Automático (spec `revision-automatica`) | Documento aprobado solo, «Sistema» en el historial, revisión humana por muestreo |
-| `ia/cupo-agotado` ☐ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
-| `ia/escalamiento-a-modelo-superior` ☐ | Revisor/área | Lectura dudosa (spec `ia-cupo-y-escalamiento`) | Confianza, «Revisado por un modelo de mayor capacidad», tokens y costo en «Plan y uso de IA» |
-| `ia/cruce-de-la-ficha-con-los-soportes` ☐ | Revisor/área | IA activa y ficha con soporte (spec `ficha-f5`) | Cruce ficha ↔ documento, coincidencias y diferencias, qué decide la persona |
-| `ia/analisis-de-un-documento` ☐ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
-| `privacidad/habeas-data-de-la-empresa` ☐ | Oficial de cumplimiento | Solicitud del tercero (spec `derechos-plan-correo`) | Habeas data: solicitudes con plazo, responder, plan de supresión, constancia |
+| `ia/plan-y-uso-de-ia` ☑ | Administrador de empresa | `activarIa(e, empresa)` con proveedor simulado | Plan y uso: cupo del mes, consumo, avisos, qué ve el tercero (nada) |
+| `ia/revision-automatica-niveles` ☑ | Administrador de empresa | IA activa (spec `revision-automatica`) | Manual, Asistido y Automático, qué cambia en cada uno, tope y muestreo |
+| `ia/revision-asistida-y-excepciones` ☑ | Revisor/área | Nivel Asistido con un documento dudoso (spec `revision-automatica`) | Excepciones: documento con lectura dudosa, motivo, decidir |
+| `ia/revision-automatica-aprueba-sola` ☑ | Revisor/área | Nivel Automático (spec `revision-automatica`) | Documento aprobado solo, «Sistema» en el historial, revisión humana por muestreo |
+| `ia/cupo-agotado` ☑ | Administrador de empresa | Cupo en 100 % (spec `ia-cupo-y-escalamiento`) | «Sin análisis de IA», aviso por campana y correo, el tercero no ve nada |
+| `ia/escalamiento-a-modelo-superior` ☑ | Revisor/área | Lectura dudosa (spec `ia-cupo-y-escalamiento`) | Confianza, «Revisado por un modelo de mayor capacidad», tokens y costo en «Plan y uso de IA» |
+| `ia/cruce-de-la-ficha-con-los-soportes` ☑ | Revisor/área | IA activa y ficha con soporte (spec `ficha-f5`) | Cruce ficha ↔ documento, coincidencias y diferencias, qué decide la persona |
+| `ia/analisis-de-un-documento` ☑ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
+| `privacidad/habeas-data-de-la-empresa` ☑ | Oficial de cumplimiento | Solicitud del tercero (spec `derechos-plan-correo`) | Habeas data: solicitudes con plazo, responder, plan de supresión, constancia |
 | `privacidad/plazos-y-avisos-de-habeas` ☐ | Administrador de empresa | Solicitud cerca de vencer | Aviso de plazo (enlaza a esta pantalla), vencida, quién atiende |
-| `cumplimiento/matriz-de-riesgo-configuracion` ☐ | Oficial de cumplimiento | Grupo base (spec `matriz-riesgo`) | Factores, límites y niveles del riesgo SAGRILAFT, guardar, efecto en el estudio |
-| `cumplimiento/listas-restrictivas-de-la-empresa` ☐ | Administrador de empresa | Proveedor simulado (spec `verificaciones`) | Proveedor y credenciales de la empresa, consumo del mes, Infolaft «Disponible» de la plataforma |
+| `cumplimiento/matriz-de-riesgo-configuracion` ☑ | Oficial de cumplimiento | Grupo base (spec `matriz-riesgo`) | Factores, límites y niveles del riesgo SAGRILAFT, guardar, efecto en el estudio |
+| `cumplimiento/listas-restrictivas-de-la-empresa` ☑ | Administrador de empresa | Proveedor simulado (spec `verificaciones`) | Proveedor y credenciales de la empresa, consumo del mes, Infolaft «Disponible» de la plataforma |
 
 ---
 
