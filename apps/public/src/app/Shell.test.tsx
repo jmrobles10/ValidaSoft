@@ -60,3 +60,18 @@ describe('Shell del tercero: la marca', () => {
     expect(within(pie).queryByRole('img', { name: 'Validasoft' })).not.toBeInTheDocument();
   });
 });
+
+describe('Shell del tercero: la barra inferior del celular', () => {
+  it('cada rótulo va en una sola línea, también el de la sección activa (sin partir «Mi bóveda» ni «Mi información»)', () => {
+    useSesionTercero.setState({ estado: 'activa' });
+    montar('/boveda');
+    const barra = document.querySelector('.MuiBottomNavigation-root');
+    expect(barra).not.toBeNull();
+    const rotulos = [...(barra?.querySelectorAll('.MuiBottomNavigationAction-label') ?? [])];
+    expect(rotulos.map((r) => r.textContent)).toEqual(['Mi bóveda', 'Mis empresas', 'Mi información', 'Mis cuentas', 'Privacidad']);
+    expect(barra?.querySelector('.Mui-selected')).not.toBeNull();
+    for (const rotulo of rotulos) {
+      expect(rotulo).toHaveStyle({ whiteSpace: 'nowrap' });
+    }
+  });
+});
