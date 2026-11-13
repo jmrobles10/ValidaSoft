@@ -175,7 +175,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `configuracion/empresas-y-textos-legales` ☐ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
 | `configuracion/datos-y-marca` ☐ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
 | `configuracion/plantillas-de-correo` ☑ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
-| `configuracion/dominio-de-correo` ☐ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
+| `configuracion/dominio-de-correo` ☑ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
 | `configuracion/motivos` ☑ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
 | `configuracion/plan-del-grupo` ☐ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
 | `configuracion/accesos-de-soporte` ☑ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
