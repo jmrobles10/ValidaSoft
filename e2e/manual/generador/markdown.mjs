@@ -46,6 +46,7 @@ export function markdownDeRecorrido(r, { dominio, carpetaDocs, carpetaImagenes, 
     if (p.ruta) lineas.push(`> **Pantalla:** \`${p.ruta}\``, '');
     const imagen = (nombre) => relativa(carpetaDelArchivo, join(carpetaImagenes, r.dominio, r.archivo, nombre));
     lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (escritorio)](${imagen(p.imagenes.claro)})`, '');
+    for (const x of p.imagenes.extras ?? []) lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (${String(x.ancho)} px de ancho)](${imagen(x.archivo)})`, '');
     if (p.imagenes.celular) lineas.push(`![Paso ${String(p.orden)}: ${p.titulo} (celular)](${imagen(p.imagenes.celular)})`, '');
     if (p.variantes.length > 0) {
       lineas.push('**Variantes**', '', ...p.variantes.map((v) => `- **${textoEnMarkdown(v.cuando, enlace)}:** ${textoEnMarkdown(v.entonces, enlace)}`), '');

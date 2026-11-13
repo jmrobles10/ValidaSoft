@@ -24,6 +24,10 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
+        // La app de la empresa, embebida de otro origen, mide su alto fijo como `screen.availHeight - 240` (sesion/alturaFija.ts): con la pantalla
+        // igual a la ventana (800) las páginas de configuración y de detalle quedaban de 560 px, con el resto del iframe en blanco. Con una pantalla
+        // de 1040 miden exactamente el iframe del pantallazo (800), como en un monitor real.
+        screen: { width: 1280, height: 1040 },
         deviceScaleFactor: 1,
         launchOptions: { args: ['--disable-features=LocalNetworkAccessChecks'] },
       },

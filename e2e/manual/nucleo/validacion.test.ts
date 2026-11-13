@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { secretosEnTexto } from './secretos';
 import type { MetaDeRecorrido, OpcionesDePaso } from './tipos';
 import { aSlug, normalizarConfiguracion, normalizarRuta, normalizarVariantes, validarMeta, validarPaso, type Catalogo } from './validacion';
 
@@ -70,6 +71,37 @@ describe('validarPaso', () => {
     expect(validarPaso({ ...PASO, variantes: [{ cuando: 'Eres natural', entonces: '' }] }, 1)[0]).toMatch(/«cuando» y «entonces»/);
     expect(validarPaso({ ...PASO, configuracion: { ajuste: 'Flujos', ruta: 'sin ruta' } }, 1)[0]).toMatch(/ruta de configuración/);
     expect(validarPaso({ ...PASO, configuracion: { ajuste: 'Flujos', ruta: 'Configuración › Flujos aprobatorios (/flujos)' } }, 1)).toEqual([]);
+  });
+
+  it('los anchos adicionales son enteros entre 320 y 1600, sin repetirse ni repetir escritorio o celular', () => {
+    expect(validarPaso({ ...PASO, anchos: [900, 700] }, 1)).toEqual([]);
+    expect(validarPaso({ ...PASO, anchos: [100] }, 1)[0]).toMatch(/entero entre 320 y 1600/);
+    expect(validarPaso({ ...PASO, anchos: [900, 900] }, 1)[0]).toMatch(/repetidos/);
+    expect(validarPaso({ ...PASO, anchos: [1280] }, 1)[0]).toMatch(/ya se captura/);
+    expect(validarPaso({ ...PASO, anchos: [390] }, 1)[0]).toMatch(/celular: true/);
+    expect(validarPaso({ ...PASO, anchos: [900, 800, 700, 600, 500] }, 1)[0]).toMatch(/máximo 4/);
+  });
+});
+
+describe('secretos de los pantallazos', () => {
+  const cuantos = (texto: string) => secretosEnTexto(texto).length;
+
+  it('reconoce llaves, tokens y códigos de recuperación', () => {
+    expect(cuantos('vsk_dev_grupo-cumbre_3f9a8c7d6e5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f')).toBe(1);
+    expect(cuantos('whsec_9f8e7d6c5b4a3210abcd')).toBe(1);
+    expect(cuantos('La llave sk-proj-AbCdEfGhIjKlMnOpQrSt1234 se guarda cifrada')).toBe(1);
+    expect(cuantos('Authorization: Bearer abcdefghijklmnopqrstuvwxyz0123456789')).toBe(1);
+    expect(cuantos('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1rw')).toBe(1);
+    expect(cuantos('ABCDE-FGHJK')).toBe(1);
+    expect(cuantos('https://x/entrar/AbC123dEf456GhI789jKl012MnO345pQr678StU9')).toBe(1);
+  });
+
+  it('no toca texto corriente ni huellas públicas', () => {
+    expect(cuantos('empieza por sk- y se valida')).toBe(0);
+    expect(cuantos('ADMIN-NORTE')).toBe(0);
+    expect(cuantos('Certificado-de-existencia-y-representacion-legal-2026')).toBe(0);
+    expect(cuantos('a3f5c9e1b7d24680a3f5c9e1b7d24680a3f5c9e1b7d24680a3f5c9e1b7d24680')).toBe(0);
+    expect(cuantos('Constructora Sur S.A.S. NIT 920186647-0')).toBe(0);
   });
 });
 

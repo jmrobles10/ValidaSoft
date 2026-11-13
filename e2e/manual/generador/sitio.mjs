@@ -95,7 +95,7 @@ function paginaDeDominio(ctx, dominio, generado) {
   return pagina({ titulo: dominio.nombre, descripcion: dominio.descripcion, raiz: '../', seccion: 'recorridos', lateral: lateral(ctx, '../', `dominio:${dominio.slug}`), migas: [{ texto: 'Manual', href: '../index.html' }, { texto: dominio.nombre }], contenido, generado });
 }
 
-function figura(r, imagen, tipo, alt) {
+function figura(r, imagen, tipo, alt, leyendaPropia, estilo = '') {
   const medidas = (() => {
     try {
       return medidasPng(readFileSync(join(r.carpeta, imagen)));
@@ -105,8 +105,8 @@ function figura(r, imagen, tipo, alt) {
   })();
   const src = `../../img/${r.dominio}/${r.archivo}/${imagen}`;
   const tamano = medidas ? ` width="${String(medidas.ancho)}" height="${String(medidas.alto)}"` : '';
-  const leyenda = tipo === 'celular' ? 'Celular' : 'Escritorio';
-  return `<figure class="captura ${tipo}"><button type="button" data-zoom="${escapar(src)}" data-alt="${escapar(alt)}" aria-label="Ampliar el pantallazo: ${escapar(alt)}"><img src="${escapar(src)}"${tamano} loading="lazy" alt="${escapar(alt)}"></button><figcaption>${leyenda}</figcaption></figure>`;
+  const leyenda = leyendaPropia ?? (tipo === 'celular' ? 'Celular' : 'Escritorio');
+  return `<figure class="captura ${tipo}"${estilo}><button type="button" data-zoom="${escapar(src)}" data-alt="${escapar(alt)}" aria-label="Ampliar el pantallazo: ${escapar(alt)}"><img src="${escapar(src)}"${tamano} loading="lazy" alt="${escapar(alt)}"></button><figcaption>${leyenda}</figcaption></figure>`;
 }
 
 function bloqueDePaso(ctx, r, p) {
@@ -127,7 +127,10 @@ function bloqueDePaso(ctx, r, p) {
         .join('')}</ul></aside>`
     : '';
   const alt = `Paso ${String(p.orden)}: ${p.titulo}`;
-  const capturas = `<div class="capturas">${figura(r, p.imagenes.claro, 'claro', `${alt} (escritorio)`)}${p.imagenes.celular ? figura(r, p.imagenes.celular, 'celular', `${alt} (celular)`) : ''}</div>`;
+  const extras = (p.imagenes.extras ?? []).length
+    ? `<div class="capturas capturas-extra">${p.imagenes.extras.map((x) => figura(r, x.archivo, 'extra', `${alt} (${String(x.ancho)} px de ancho)`, `${String(x.ancho)} px de ancho`, ` style="flex: ${String(x.ancho)} 1 0; max-width: ${String(x.ancho)}px"`)).join('')}</div>`
+    : '';
+  const capturas = `<div class="capturas">${figura(r, p.imagenes.claro, 'claro', `${alt} (escritorio)`)}${p.imagenes.celular ? figura(r, p.imagenes.celular, 'celular', `${alt} (celular)`) : ''}</div>${extras}`;
   return `<section class="paso" id="paso-${String(p.orden)}" aria-labelledby="titulo-paso-${String(p.orden)}"><header><span class="numero" aria-hidden="true">${String(p.orden)}</span><h2 id="titulo-paso-${String(p.orden)}">${escapar(p.titulo)}</h2></header><div class="paso-texto">${texto}${ruta}${variantes}${configuracion}</div>${capturas}</section>`;
 }
 
@@ -176,7 +179,7 @@ export function construirSitioDeRecorridos(recorridos, catalogo, { generado, tot
   for (const r of recorridos) {
     paginas.push({ ruta: rutaDeRecorrido(r), html: paginaDeRecorrido(ctx, r, generado) });
     for (const p of r.pasos) {
-      for (const imagen of [p.imagenes.claro, p.imagenes.celular]) {
+      for (const imagen of [p.imagenes.claro, p.imagenes.celular, ...(p.imagenes.extras ?? []).map((x) => x.archivo)]) {
         if (imagen) imagenes.push({ origen: join(r.carpeta, imagen), destino: `img/${r.dominio}/${r.archivo}/${imagen}` });
       }
     }
