@@ -167,7 +167,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `configuracion/flujo-secciones-de-la-ficha` ☑ | Administrador de empresa | Grupo base | Agregar secciones de «Mi información» como requisito, periodos de la financiera, vigencia y días de revalidación |
 | `configuracion/flujo-plazo-reintento-y-recordatorios` ☑ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
 | `configuracion/flujo-vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
-| `configuracion/flujo-verificaciones-de-cumplimiento` ☐ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
+| `configuracion/flujo-verificaciones-de-cumplimiento` ☑ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
 | `configuracion/flujo-versiones-y-borradores` ☐ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
 | `configuracion/flujo-por-defecto` ☑ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
 | `configuracion/areas-y-miembros` ☑ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
