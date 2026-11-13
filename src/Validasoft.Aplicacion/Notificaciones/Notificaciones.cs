@@ -445,7 +445,7 @@ public sealed partial class PlanificadorDeNotificaciones
         var areas = (await contexto.AreasAsync(destino.TenantId, expediente.AreaIds, ct)).Where(a => a.EmpresaId == vinculo.EmpresaId).ToList();
         var empresa = await contexto.EmpresaAsync(vinculo.EmpresaId, ct);
         var mensaje = $"El documento {documento.NombreTipo} de {expediente.TerceroNombre} vence el {aviso.VigenteHasta:yyyy-MM-dd} " +
-                      $"({aviso.DiasRestantes} días).";
+                      $"({Dominio.Comun.Plural.Dias(aviso.DiasRestantes)}).";
         return await APersonasAsync(evento, contexto, destino.TenantId, vinculo.EmpresaId, empresa?.Nombre, TiposNotificacion.PorVencer,
             "Documento por vencer", mensaje, expediente.Id, vinculo.Id, expediente.Folio, areas.Select(a => (a.Nombre, a.Miembros, a.Id)).ToList(),
             orden, ct, $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}");
@@ -610,13 +610,13 @@ public sealed partial class PlanificadorDeNotificaciones
 
         var t = terminado.Totales;
         var titulo = t.Fallidas > 0 ? "Lote de invitaciones terminado con errores" : "Lote de invitaciones terminado";
-        var partes = new List<string> { $"{t.Exitosas} de {t.Filas} filas invitadas" };
+        var partes = new List<string> { $"{t.Exitosas} de {Dominio.Comun.Plural.Contar(t.Filas, "fila invitada", "filas invitadas")}" };
         if (t.Fallidas > 0)
-            partes.Add($"{t.Fallidas} fallidas");
+            partes.Add(Dominio.Comun.Plural.Contar(t.Fallidas, "fallida", "fallidas"));
         if (t.Invalidas > 0)
-            partes.Add($"{t.Invalidas} inválidas");
+            partes.Add(Dominio.Comun.Plural.Contar(t.Invalidas, "inválida", "inválidas"));
         if (t.Duplicadas > 0)
-            partes.Add($"{t.Duplicadas} duplicadas");
+            partes.Add(Dominio.Comun.Plural.Contar(t.Duplicadas, "duplicada", "duplicadas"));
         var mensaje = $"«{lote.Nombre}»: {string.Join(", ", partes)}.";
         var ruta = $"/e/{lote.EmpresaId}/invitaciones/lotes/{lote.Id}";
         var notificacion = new Notificacion

@@ -58,8 +58,8 @@ public static class PlazosDeHabeas
             ? $"Venció el plazo de una solicitud de {derecho}"
             : $"Vence pronto una solicitud de {derecho}";
         var mensaje = aviso == AvisoDePlazoHabeas.Vencida
-            ? $"La solicitud {solicitud.Radicado} ({derecho}) venció el {solicitud.VenceEl:dd/MM/yyyy}: ya pasó el plazo legal de {solicitud.DiasHabiles} días hábiles. Responde cuanto antes."
-            : $"La solicitud {solicitud.Radicado} ({derecho}) vence el {solicitud.VenceEl:dd/MM/yyyy}: {Math.Max(0, solicitud.DiasHabilesRestantes(hoy))} días hábiles para responderla.";
+            ? $"La solicitud {solicitud.Radicado} ({derecho}) venció el {solicitud.VenceEl:dd/MM/yyyy}: ya pasó el plazo legal de {Plural.DiasHabiles(solicitud.DiasHabiles)}. Responde cuanto antes."
+            : $"La solicitud {solicitud.Radicado} ({derecho}) vence el {solicitud.VenceEl:dd/MM/yyyy}: te quedan {Plural.DiasHabiles(Math.Max(0, solicitud.DiasHabilesRestantes(hoy)))} para responderla.";
 
         string? nombreDeLaEmpresa = null;
         if (solicitud.EmpresaId is { } empresaId && solicitud.TenantId is { } tenantId)

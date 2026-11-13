@@ -180,7 +180,7 @@ public sealed partial class ServicioDeIngreso
             await registro.RegistrarAsync(EventoDeIngreso.IngresoFallido, false, cliente, cuenta.Cuenta.TenantId, cuenta.Cuenta.Tipo, cuenta.Cuenta.SujetoId, cuenta.Correo,
                 motivo: "recuperacion-incorrecta", ct: ct);
             var quedan = Math.Max(0, DesafioDeIngreso.IntentosMaximos - desafio.IntentosDeRecuperacion);
-            throw new ReglaDeNegocioException(TipoFalla.Validacion, "codigo-de-recuperacion-invalido", $"Ese código de recuperación no es válido o ya se usó. Te quedan {quedan} intentos.")
+            throw new ReglaDeNegocioException(TipoFalla.Validacion, "codigo-de-recuperacion-invalido", $"Ese código de recuperación no es válido o ya se usó. Te quedan {Plural.Intentos(quedan)}.")
             {
                 Datos = new Dictionary<string, object?> { ["intentosRestantes"] = quedan }
             };

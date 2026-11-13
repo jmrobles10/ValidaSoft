@@ -95,7 +95,7 @@ public sealed partial class RequisitosApiTests
         var avisos = await ApiAsync<ResultadoDeRevisionDeHabeasDto>("POST", "/api/v1/plataforma/habeas/revisar-plazos", Plataforma(), new RevisarPlazosDeHabeasDto(AlMediodia(dosAntes)), 200);
         avisos.PorVencer.ShouldBeGreaterThanOrEqualTo(1);
         (await ApiAsync<BandejaNotificacionesDto>("GET", "/api/v1/notificaciones", Delegado(e.Norte, e.Carlos), null, 200)).Datos
-            .ShouldContain(n => n.Tipo == "habeas.plazo" && n.Titulo.Contains("Vence pronto"));
+            .ShouldContain(n => n.Tipo == "habeas.plazo" && n.Titulo.Contains("Vence pronto") && n.Mensaje.Contains("te quedan 2 días hábiles para responderla"));
         (await ApiAsync<ResultadoDeRevisionDeHabeasDto>("POST", "/api/v1/plataforma/habeas/revisar-plazos", Plataforma(), new RevisarPlazosDeHabeasDto(AlMediodia(dosAntes)), 200))
             .PorVencer.ShouldBe(0);
         var enAviso = (await ApiAsync<PaginaDto<SolicitudHabeasDto>>("GET", "/api/v1/solicitudes-habeas?estado=abiertas", Admin(e.Norte), null, 200)).Datos.Single();

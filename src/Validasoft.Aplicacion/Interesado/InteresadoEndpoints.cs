@@ -75,7 +75,7 @@ public static class EnlacesPublicosEndpoints
             // El intento fallido se guarda antes de responder; el enlace usa concurrencia optimista (IN-5).
             await sesion.SaveChangesAsync(ct);
             throw new ReglaDeNegocioException(TipoFalla.Validacion, "otp-invalido",
-                $"El código no es correcto. Te quedan {enlace.IntentosRestantes} intentos.")
+                $"El código no es correcto. Te quedan {Plural.Intentos(enlace.IntentosRestantes)}.")
             {
                 Datos = new Dictionary<string, object?> { ["intentosRestantes"] = enlace.IntentosRestantes }
             };
