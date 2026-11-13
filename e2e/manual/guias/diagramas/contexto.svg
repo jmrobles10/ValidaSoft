@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 640" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<title id="titulo">Contexto de Validasoft</title>
+<desc id="descripcion">Validasoft en el centro. A la izquierda las personas que lo usan, arriba los sistemas integradores, abajo el público que verifica certificados y a la derecha los servicios externos detrás de interfaces.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-caja-a" x="380" y="100" width="300" height="410" rx="10"/>
+<text class="d-t-h d-c" x="530" y="126">Validasoft</text>
+<text class="d-t-s d-c" x="530" y="143">Validación de terceros para varios</text>
+<text class="d-t-s d-c" x="530" y="158">grupos de empresas</text>
+<rect class="d-caja" x="400" y="190" width="260" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="213">Bóveda del tercero</text>
+<text class="d-t-s d-c" x="530" y="230">documentos y ficha, una sola vez</text>
+<rect class="d-caja" x="400" y="268" width="260" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="291">Vínculos y expedientes</text>
+<text class="d-t-s d-c" x="530" y="308">cada empresa decide en privado</text>
+<rect class="d-caja" x="400" y="346" width="260" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="369">Certificados verificables</text>
+<text class="d-t-s d-c" x="530" y="386">folio, huella y sello Ed25519</text>
+<rect class="d-caja" x="400" y="424" width="260" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="447">Eventos públicos</text>
+<text class="d-t-s d-c" x="530" y="464">webhooks firmados, pull y SSE</text>
+<rect class="d-caja" x="30" y="118" width="290" height="84" rx="10"/>
+<text class="d-t-b d-c" x="175" y="141">Tercero</text>
+<text class="d-t-s d-c" x="175" y="158">Proveedor, cliente, empleado o aliado</text>
+<text class="d-t-s d-c" x="175" y="173">Portal del tercero: enlace + código por correo</text>
+<path class="d-l" d="M320 160 L380 160" marker-start="url(#f)" marker-end="url(#f)"/>
+<rect class="d-caja" x="30" y="258" width="290" height="84" rx="10"/>
+<text class="d-t-b d-c" x="175" y="281">Personas de la empresa</text>
+<text class="d-t-s d-c" x="175" y="298">Administrador, revisor, oficial de</text>
+<text class="d-t-s d-c" x="175" y="313">cumplimiento y auditor · App web /app/</text>
+<path class="d-l" d="M320 300 L380 300" marker-start="url(#f)" marker-end="url(#f)"/>
+<rect class="d-caja" x="30" y="398" width="290" height="84" rx="10"/>
+<text class="d-t-b d-c" x="175" y="421">Operador de Plataforma</text>
+<text class="d-t-s d-c" x="175" y="438">Consola /plataforma: grupos, empresas,</text>
+<text class="d-t-s d-c" x="175" y="453">planes, IA, secretos y soporte</text>
+<path class="d-l" d="M320 440 L380 440" marker-start="url(#f)" marker-end="url(#f)"/>
+<rect class="d-caja" x="350" y="14" width="360" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="37">Sistemas integradores</text>
+<text class="d-t-s d-c" x="530" y="54">SRM, Marco, Portal u otro ERP · API con llave de sistema</text>
+<path class="d-l" d="M530 76 L530 100" marker-start="url(#f)" marker-end="url(#f)"/>
+<text class="d-t-s" x="542" y="94">webhooks · pull · iframes</text>
+<rect class="d-caja" x="350" y="560" width="360" height="62" rx="10"/>
+<text class="d-t-b d-c" x="530" y="583">Público</text>
+<text class="d-t-s d-c" x="530" y="600">Cualquiera, sin sesión: verifica un certificado</text>
+<path class="d-l" d="M530 560 L530 510" marker-end="url(#f)"/>
+<text class="d-t-s" x="542" y="540">GET /verificar/{folio}</text>
+<rect class="d-grupo" x="740" y="60" width="305" height="470" rx="14"/>
+<text class="d-t-s" x="754" y="78">Detrás de interfaces (se pueden cambiar)</text>
+<rect class="d-caja" x="758" y="108" width="270" height="72" rx="10"/>
+<text class="d-t-b d-c" x="893" y="131">Proveedor de IA</text>
+<text class="d-t-s d-c" x="893" y="148">OpenAI, con la llave de cada empresa;</text>
+<text class="d-t-s d-c" x="893" y="163">un simulado en desarrollo y pruebas</text>
+<path class="d-l" d="M680 144 L758 144" marker-end="url(#f)"/>
+<rect class="d-caja" x="758" y="194" width="270" height="72" rx="10"/>
+<text class="d-t-b d-c" x="893" y="217">Listas restrictivas</text>
+<text class="d-t-s d-c" x="893" y="234">Infolaft (cuenta de la plataforma),</text>
+<text class="d-t-s d-c" x="893" y="249">Stradata, Compliance o simulado</text>
+<path class="d-l" d="M680 230 L758 230" marker-end="url(#f)"/>
+<rect class="d-caja" x="758" y="280" width="270" height="72" rx="10"/>
+<text class="d-t-b d-c" x="893" y="303">Proveedor de identidad</text>
+<text class="d-t-s d-c" x="893" y="320">Código por correo, passkeys (WebAuthn),</text>
+<text class="d-t-s d-c" x="893" y="335">OIDC genérico y WorkOS</text>
+<path class="d-l" d="M680 316 L758 316" marker-end="url(#f)"/>
+<rect class="d-caja" x="758" y="366" width="270" height="72" rx="10"/>
+<text class="d-t-b d-c" x="893" y="389">Correo saliente</text>
+<text class="d-t-s d-c" x="893" y="406">SMTP · Mailpit en desarrollo y pruebas</text>
+<path class="d-l" d="M680 402 L758 402" marker-end="url(#f)"/>
+<rect class="d-caja" x="758" y="446" width="270" height="62" rx="10"/>
+<text class="d-t-b d-c" x="893" y="469">Almacén de archivos</text>
+<text class="d-t-s d-c" x="893" y="486">S3 compatible: MinIO u otro</text>
+<path class="d-l" d="M680 482 L758 482" marker-end="url(#f)"/>
+</svg>

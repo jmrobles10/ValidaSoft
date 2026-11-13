@@ -6,6 +6,7 @@
 //           docs/manual/<dominio>/    Markdown por recorrido (texto; las imágenes viven en la salida)
 //           docs/manual/api/          referencia de la API en Markdown
 //
+// Guías:    e2e/manual/guias/*.md (arquitectura, flujo de punta a punta, configuración, integración) → salida/manual/g/ y docs/manual/guias/
 // Opciones: --solo-api · --sin-api · --recorridos <carpeta> · --salida <carpeta> · --docs <carpeta>
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -13,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { fechaLarga, leerRecorridos } from './comun.mjs';
 import { construirModeloApi, htmlDeApi, markdownDeApi } from './api.mjs';
 import { leerFuentes } from './api-fuente.mjs';
+import { archivosDeGuias, construirSitioDeGuias, cssDeDiagramas, leerGuias, leerInventario, resolutorDeRecorridosEscritos, validarGuias } from './guias.mjs';
 import { indiceDeDominio, indiceGeneral, markdownDeRecorrido, recorridosEscritos } from './markdown.mjs';
 import { construirSitioDeRecorridos, crearContexto } from './sitio.mjs';
 
@@ -66,19 +68,33 @@ async function main() {
     modeloApi = construirModeloApi({ bruto, transformado, fuentes: leerFuentes(join(RAIZ, 'src', 'Validasoft.Aplicacion')) });
   }
 
+  // ---- Guías (e2e/manual/guias): lo que no sale de un recorrido ----
+  const lecturaDeGuias = leerGuias(join(aqui, '..', 'guias'));
+  for (const aviso of lecturaDeGuias.avisos) console.warn(`Aviso: ${aviso}`);
+  for (const problema of validarGuias(lecturaDeGuias, {
+    inventario: leerInventario(join(aqui, '..', 'INVENTARIO.md')),
+    modulosApi: modeloApi ? new Set([...modeloApi.modulos.map((m) => m.slug), 'convenciones']) : undefined,
+    recorridos: new Set(recorridos.map((r) => r.id)),
+  }))
+    console.warn(`Aviso (guías): ${problema}`);
+
   // ---- Sitio HTML ----
   rmSync(carpetaSitio, { recursive: true, force: true });
-  const sitio = construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints: modeloApi?.total ?? 0 });
+  const sitio = construirSitioDeRecorridos(recorridos, catalogo, { generado, totalEndpoints: modeloApi?.total ?? 0, seccionesDeGuias: lecturaDeGuias.secciones });
+  const guiasHtml = construirSitioDeGuias(lecturaDeGuias, { recorridos, generado });
+  for (const alerta of guiasHtml.alertas) console.warn(`Aviso (guías): ${alerta}`);
   const api = modeloApi ? htmlDeApi(modeloApi, generado) : { paginas: [], indice: [] };
-  for (const p of [...sitio.paginas, ...api.paginas]) escribir(join(carpetaSitio, p.ruta), p.html);
+  for (const p of [...sitio.paginas, ...guiasHtml.paginas, ...api.paginas]) escribir(join(carpetaSitio, p.ruta), p.html);
   for (const i of sitio.imagenes) {
     mkdirSync(dirname(join(carpetaSitio, i.destino)), { recursive: true });
     copyFileSync(i.origen, join(carpetaSitio, i.destino));
   }
   mkdirSync(join(carpetaSitio, 'assets'), { recursive: true });
-  copyFileSync(join(aqui, 'estilos.css'), join(carpetaSitio, 'assets', 'manual.css'));
+  escribir(join(carpetaSitio, 'assets', 'manual.css'), `${readFileSync(join(aqui, 'estilos.css'), 'utf8')}
+${cssDeDiagramas({ sitio: true })}
+`);
   escribir(join(carpetaSitio, 'assets', 'manual.js'), readFileSync(join(aqui, 'cliente.js'), 'utf8'));
-  escribir(join(carpetaSitio, 'assets', 'buscador.js'), `window.MANUAL_INDICE = ${JSON.stringify([...sitio.indice, ...api.indice])};\n`);
+  escribir(join(carpetaSitio, 'assets', 'buscador.js'), `window.MANUAL_INDICE = ${JSON.stringify([...sitio.indice, ...guiasHtml.indice, ...api.indice])};\n`);
 
   // ---- Markdown de los recorridos (solo los que se recorrieron; los demás se conservan) ----
   const carpetaImagenes = join(carpetaSitio, 'img');
@@ -89,8 +105,18 @@ async function main() {
       escribir(join(carpetaDocs, r.dominio, `${r.archivo}.md`), texto);
     }
     for (const d of catalogo.dominios) escribir(join(carpetaDocs, d.slug, 'README.md'), indiceDeDominio(d, recorridosEscritos(carpetaDocs, d.slug)));
-    escribir(join(carpetaDocs, 'README.md'), indiceGeneral(catalogo));
+    escribir(join(carpetaDocs, 'README.md'), indiceGeneral(catalogo, lecturaDeGuias.secciones));
   }
+
+  // ---- Markdown de las guías (se reescribe completo: un archivo que ya no existe en la fuente no debe sobrevivir) ----
+  rmSync(join(carpetaDocs, 'guias'), { recursive: true, force: true });
+  for (const a of archivosDeGuias(lecturaDeGuias, {
+    raizDelRepositorio: RAIZ,
+    carpetaGuias: join(carpetaDocs, 'guias'),
+    carpetaDocs,
+    ...resolutorDeRecorridosEscritos(recorridos, carpetaDocs),
+  }))
+    escribir(join(carpetaDocs, 'guias', a.ruta), a.texto);
 
   // ---- Markdown de la API ----
   if (modeloApi) {
@@ -99,7 +125,7 @@ async function main() {
   }
 
   const pasos = recorridos.reduce((n, r) => n + r.pasos.length, 0);
-  console.log(`Manual generado: ${String(recorridos.length)} recorridos (${String(pasos)} pasos)${modeloApi ? `, ${String(modeloApi.total)} operaciones de la API en ${String(modeloApi.modulos.length)} módulos` : ''}.`);
+  console.log(`Manual generado: ${String(recorridos.length)} recorridos (${String(pasos)} pasos), ${String(lecturaDeGuias.guias.length)} guías${modeloApi ? `, ${String(modeloApi.total)} operaciones de la API en ${String(modeloApi.modulos.length)} módulos` : ''}.`);
   console.log(`  Sitio HTML:  ${join(carpetaSitio, 'index.html')}`);
   console.log(`  Markdown:    ${carpetaDocs}`);
 }
