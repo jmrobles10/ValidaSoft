@@ -59,27 +59,27 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `privacidad/solicitud-sobre-mis-datos` ☐ | Tercero | Tercero con vínculo (spec `derechos-plan-correo`) | Privacidad: nueva solicitud (consulta, corrección, supresión), radicado, estados, constancia |
-| `privacidad/exportar-mi-boveda` ☐ | Tercero | Bóveda con documentos | Pedir la exportación, estado, descarga, qué incluye |
-| `privacidad/lo-que-acepte-y-textos-nuevos` ☐ | Tercero | Empresa que publica una versión nueva de un texto legal | Textos aceptados y su versión, aviso de texto actualizado, volver a aceptar |
-| `publico/verificar-certificado-autentico` ☐ | Público | Certificado emitido (spec `certificado`) | `/verificar/{folio}`: pasos de la verificación criptográfica, datos del certificado, descargar el PDF |
-| `publico/verificar-certificado-invalido` ☐ | Público | Folio o huella inexistente | Mensaje claro, cómo reintentar, qué no revela |
-| `publico/certificado-en-otros-estados` ☐ | Público | Certificados bloqueado, revocado, reemplazado, en verificación y con pendientes (specs `certificado`, `vinculo-en-revision`) | Cada estado con su aviso y qué significa para quien consulta |
-| `publico/verificar-con-el-pdf` ☐ | Público | PDF del certificado | Subir el PDF, comparar la huella, resultado |
-| `publico/pagina-no-encontrada` ☐ | Público | — | Ruta inexistente, enlace roto, volver |
+| `privacidad/solicitud-sobre-mis-datos` ☑ | Tercero | Tercero con vínculo (spec `derechos-plan-correo`) | Privacidad: nueva solicitud (consulta, corrección, supresión), radicado, estados, constancia |
+| `privacidad/exportar-mi-boveda` ☑ | Tercero | Bóveda con documentos | Pedir la exportación, estado, descarga, qué incluye |
+| `privacidad/lo-que-acepte-y-textos-nuevos` ☑ | Tercero | Empresa que publica una versión nueva de un texto legal | Textos aceptados y su versión, aviso de texto actualizado, volver a aceptar |
+| `publico/verificar-certificado-autentico` ☑ | Público | Certificado emitido (spec `certificado`) | `/verificar/{folio}`: pasos de la verificación criptográfica, datos del certificado, descargar el PDF |
+| `publico/verificar-certificado-invalido` ☑ | Público | Folio o huella inexistente | Mensaje claro, cómo reintentar, qué no revela |
+| `publico/certificado-en-otros-estados` ☑ | Público | Certificados bloqueado, revocado, reemplazado, en verificación y con pendientes (specs `certificado`, `vinculo-en-revision`) | Cada estado con su aviso y qué significa para quien consulta |
+| `publico/verificar-con-el-pdf` ☑ | Público | PDF del certificado | Subir el PDF, comparar la huella, resultado |
+| `publico/pagina-no-encontrada` ☑ | Público | — | Ruta inexistente, enlace roto, volver |
 | `publico/embebido-esperando-sesion` ☐ | Público | Página `/embed/{componente}` sin sesión | «Esperando sesión», qué pide al sistema anfitrión, error de origen |
-| `movil/tercero-navegacion` ☐ | Tercero | Tercero con dos empresas | Barra inferior, cada pestaña, campana, salir (celular: 390 × 844) |
-| `movil/tercero-subir-documento` ☐ | Tercero | Documento pendiente | Elegir archivo en el celular, versión guardada, volver |
-| `movil/tercero-mi-informacion` ☐ | Tercero | Flujo con las 6 secciones | Selector «Paso N de 6», una sección completa, barra de guardar |
-| `movil/tercero-declaracion-pep-firma` ☐ | Tercero | Natural con PEP | Firma dibujada con el dedo en el diálogo, guardar |
-| `movil/tercero-campana` ☐ | Tercero | Avisos pendientes | Panel de la campana en pantalla chica, preferencias |
-| `movil/verificar-certificado` ☐ | Público | Certificado emitido | La verificación pública en celular |
-| `movil/app-de-la-empresa` ☐ | Revisor/área | Revisor con expediente en bandeja | La app de la empresa a 390 px: menú «Más», bandeja, expediente (usa `celular: true`) |
-| `movil/tercero-estado-de-la-revision` ☐ | Tercero | Expedientes abiertos, observado y aprobado | Frase de estado y tarjetas de documentos en celular |
-| `movil/tercero-boveda` ☐ | Tercero | Bóveda con varias versiones | Lista de documentos y sus versiones en celular |
-| `movil/tercero-cuentas` ☐ | Tercero | Cuenta por designar | Mis cuentas y los diálogos en celular |
-| `movil/tercero-privacidad` ☐ | Tercero | — | Privacidad y la solicitud en celular |
-| `movil/tercero-entrar` ☐ | Tercero | Invitación | `/entrar` y el código de 6 recuadros en celular |
+| `movil/tercero-navegacion` ☑ | Tercero | Tercero con dos empresas | Barra inferior, cada pestaña, campana, salir (celular: 390 × 844) |
+| `movil/tercero-subir-documento` ☑ | Tercero | Documento pendiente | Elegir archivo en el celular, versión guardada, volver |
+| `movil/tercero-mi-informacion` ☑ | Tercero | Flujo con las 6 secciones | Selector «Paso N de 6», una sección completa, barra de guardar |
+| `movil/tercero-declaracion-pep-firma` ☑ | Tercero | Natural con PEP | Firma dibujada con el dedo en el diálogo, guardar |
+| `movil/tercero-campana` ☑ | Tercero | Avisos pendientes | Panel de la campana en pantalla chica, preferencias |
+| `movil/verificar-certificado` ☑ | Público | Certificado emitido | La verificación pública en celular |
+| `movil/app-de-la-empresa` ☑ | Revisor/área | Revisor con expediente en bandeja | La app de la empresa a 390 px: menú «Más», bandeja, expediente (usa `celular: true`) |
+| `movil/tercero-estado-de-la-revision` ☑ | Tercero | Expedientes abiertos, observado y aprobado | Frase de estado y tarjetas de documentos en celular |
+| `movil/tercero-boveda` ☑ | Tercero | Bóveda con varias versiones | Lista de documentos y sus versiones en celular |
+| `movil/tercero-cuentas` ☑ | Tercero | Cuenta por designar | Mis cuentas y los diálogos en celular |
+| `movil/tercero-privacidad` ☑ | Tercero | — | Privacidad y la solicitud en celular |
+| `movil/tercero-entrar` ☑ | Tercero | Invitación | `/entrar` y el código de 6 recuadros en celular |
 
 ---
 
