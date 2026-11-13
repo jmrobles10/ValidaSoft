@@ -42,10 +42,12 @@ export async function mensajesDe(destinatario: string): Promise<{ ID: string; Su
 }
 
 /** El detalle de un mensaje, o `null` si Mailpit no contestó (un corte momentáneo de la conexión). */
-async function detalleDe(id: string): Promise<{ Text: string; HTML: string; Subject: string; From?: { Address: string } } | null> {
+async function detalleDe(id: string): Promise<{ Text: string; HTML: string; Subject: string; From?: { Address: string }; Inline?: { PartID: string; ContentID: string }[] } | null> {
   try {
     const respuesta = await fetch(`${MAILPIT}/api/v1/message/${id}`);
-    return respuesta.ok ? ((await respuesta.json()) as { Text: string; HTML: string; Subject: string; From?: { Address: string } }) : null;
+    return respuesta.ok
+      ? ((await respuesta.json()) as { Text: string; HTML: string; Subject: string; From?: { Address: string }; Inline?: { PartID: string; ContentID: string }[] })
+      : null;
   } catch {
     return null;
   }
@@ -67,7 +69,13 @@ export async function esperarCorreo(destinatario: string, asunto: RegExp, { excl
         .sort((a, b) => b.Created.localeCompare(a.Created))[0];
       const detalle = candidato ? await detalleDe(candidato.ID) : null;
       if (candidato && detalle) {
-        return { id: candidato.ID, asunto: detalle.Subject, texto: detalle.Text, html: detalle.HTML, desde: detalle.From?.Address ?? '' };
+        // El logo va como imagen adjunta en línea (`cid:…`): fuera del lector de correo no se resuelve, así que se apunta a su parte en Mailpit para que se vea
+        // cuando un recorrido del manual dibuja el correo con `page.setContent`.
+        const html = detalle.HTML.replace(/cid:([^"'s)]+)/g, (original, cid: string) => {
+          const parte = detalle.Inline?.find((i) => i.ContentID === cid);
+          return parte ? `${MAILPIT}/api/v1/message/${candidato.ID}/part/${parte.PartID}` : original;
+        });
+        return { id: candidato.ID, asunto: detalle.Subject, texto: detalle.Text, html, desde: detalle.From?.Address ?? '' };
       }
     }
     await pausa(500);

@@ -2,6 +2,7 @@ import { publicarFlujoSinDocumentos } from '../../soporte/flujos';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { crearEscenario } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const CODIGO = 'PROV_VERSIONES';
 const NOMBRE_NUEVO = 'Proveedores con revisión de Compras';
@@ -21,7 +22,7 @@ recorrido(
   },
   async ({ page }) => {
     const e = await crearEscenario();
-    const revision = e.sur.areas.revision;
+    const revision = areaDe(e.sur, 'revision');
     await publicarFlujoSinDocumentos(e, e.sur, CODIGO, 'PROVEEDOR', [[{ area: revision }]]);
     const app = await abrirEmbebido(page, e, e.ana, e.sur, 'flujos');
     await app.getByRole('row', { name: new RegExp(`Abrir flujo Flujo ${CODIGO}`) }).click();

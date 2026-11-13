@@ -16,7 +16,7 @@ function filasDeProveedores(cantidad: number, prefijo: string) {
     return {
       tipoIdentificacion: 'NIT',
       numeroIdentificacion: t.identificacion.numero,
-      digitoVerificacion: t.identificacion.digitoVerificacion === null ? null : String(t.identificacion.digitoVerificacion),
+      digitoVerificacion: t.identificacion.digitoVerificacion,
       nombre: t.nombre,
       correo: t.correo,
       tipoVinculo: 'PROVEEDOR',
