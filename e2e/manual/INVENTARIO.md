@@ -145,8 +145,8 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `informes/plazos-de-revision` ☑ | Administrador de empresa | Plazos por área y expedientes fuera de plazo (spec `operacion`) | Informe SLA, tablas por área y por persona, cumplimiento |
 | `informes/exportar-un-expediente` ☑ | Auditor | Expediente aprobado con documentos (spec `informes`) | Exportar el ZIP, qué trae (documentos, resumen PDF, línea de tiempo), el registro en la auditoría |
 | `informes/auditoria` ☑ | Administrador de empresa | Acciones de configuración y descargas (spec `auditoria`) | Auditoría: filtros, detalle de un cambio (antes/después), accesos a documentos, exportar a Excel |
-| `informes/certificados` ☐ | Administrador de empresa | Certificados vigentes y revocados (spec `certificados`) | Lista de certificados, estado, PDF, abrir la ficha del tercero |
-| `informes/certificado-bloquear-y-revocar` ☐ | Administrador de empresa | Certificado vigente (spec `certificado`) | Bloquear y desbloquear, revocar, qué ve quien verifica |
+| `informes/certificados` ☑ | Administrador de empresa | Certificados vigentes y revocados (spec `certificados`) | Lista de certificados, estado, PDF, abrir la ficha del tercero |
+| `informes/certificado-bloquear-y-revocar` ☑ | Administrador de empresa | Certificado vigente (spec `certificado`) | Bloquear y desbloquear, revocar, qué ve quien verifica |
 
 ---
 
