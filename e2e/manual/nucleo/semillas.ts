@@ -102,3 +102,18 @@ export async function permitirOtroOrigenDelSistema(e: Escenario, otroOrigen: str
   if (!sistema) throw new Error('El sistema E2E no existe.');
   await llamar('PUT', `/api/v1/sistemas/${sistema.id}/origenes`, { llave: e.admin, cuerpo: { origenes: [ORIGEN_SISTEMA, otroOrigen] } });
 }
+
+/**
+ * Hace que el tipo de vínculo PROVEEDOR del grupo exija cuenta bancaria designada (CB-4): el expediente que se abra después no se aprueba
+ * hasta que la cuenta del vínculo esté aprobada. La semilla de las pruebas la apaga (`crearEscenario`) para no hablar de cuentas en los
+ * demás recorridos; llámala ANTES de invitar, porque la exigencia se copia al abrir el expediente.
+ */
+export async function exigirCuentaDesignada(e: Escenario): Promise<void> {
+  const tipos = await llamar<{ id: string; codigo: string; nombre: string; exigeOtpEnEnlace: boolean }[]>('GET', '/api/v1/tipos-vinculo', { llave: e.admin });
+  const proveedor = tipos.find((t) => t.codigo === 'PROVEEDOR');
+  if (!proveedor) throw new Error('El grupo no tiene el tipo de vínculo PROVEEDOR.');
+  await llamar('PUT', `/api/v1/tipos-vinculo/${proveedor.id}`, {
+    llave: e.admin,
+    cuerpo: { codigo: proveedor.codigo, nombre: proveedor.nombre, atributosPermitidos: [], exigeCuentaDesignada: true, exigeOtpEnEnlace: proveedor.exigeOtpEnEnlace },
+  });
+}

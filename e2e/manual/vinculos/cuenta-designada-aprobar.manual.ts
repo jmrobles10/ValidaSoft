@@ -1,8 +1,10 @@
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
+import { abrirDesdeBandeja, aprobarArea, aprobarUltimaAreaYEsperarCuenta, regionDeArea } from '../../soporte/empresa';
 import { completarInvitacion } from '../../soporte/proveedor';
-import { crearEscenario, invitar, nuevoTercero } from '../../soporte/semilla';
+import { crearEscenario, expedienteAbierto, invitar, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { exigirCuentaDesignada } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 const CAMARA = 'Certificado de existencia y representación legal';
@@ -13,15 +15,17 @@ recorrido(
     actor: 'Oficial de cumplimiento',
     titulo: 'Aprueba la cuenta bancaria designada de un proveedor',
     resumen:
-      'La oficial de cumplimiento revisa la cuenta bancaria que un proveedor designó para pagos de Constructora Norte, la coteja con el número completo y la aprueba. La cuenta solo queda designada cuando la aprueban dos personas distintas.',
+      'Las dos áreas aprueban el expediente de un proveedor, pero no se cierra: el tipo de vínculo exige una cuenta bancaria designada y aprobada. La oficial de cumplimiento coteja la cuenta con el número completo y la aprueba; con la segunda aprobación de otra persona, la cuenta queda designada y el expediente se aprueba solo.',
     precondiciones: [
-      'Un grupo con Constructora Norte y una oficial de cumplimiento, y un tipo de proveedor que exige cuenta designada.',
-      'Un proveedor que completó su invitación, registró una cuenta bancaria con certificación y la designó para Norte.',
+      'Un grupo con Constructora Norte, una oficial de cumplimiento, un revisor de Compras y una administradora, y el tipo de vínculo Proveedor con «Exige cuenta bancaria designada» activado.',
+      'Un proveedor que completó su invitación, registró una cuenta bancaria con certificación y la designó para Norte, y el área Compras ya aprobó su parte.',
     ],
-    relacionados: ['vinculos/detalle-del-vinculo', 'configuracion/tipo-de-documento-y-flujo'],
+    relacionados: ['vinculos/detalle-del-vinculo', 'configuracion/tipos-de-vinculo', 'tercero/cuentas-bancarias'],
   },
   async ({ page, browser }) => {
     const e = await crearEscenario();
+    // La semilla apaga la exigencia en el tipo Proveedor; este recorrido la necesita encendida (CB-4) antes de abrir el expediente.
+    await exigirCuentaDesignada(e);
     const tercero = nuevoTercero('Ferretería El Tornillo S.A.S.');
     const invitacion = await invitar(e, e.norte, tercero);
 
@@ -55,7 +59,47 @@ recorrido(
     await paginaTercero.getByRole('dialog').getByRole('button', { name: 'Designar cuenta' }).click();
     await expect(paginaTercero.getByText(`Pendiente de aprobación de ${e.norte.nombre}`)).toBeVisible();
 
-    const app = await abrirEmbebido(page, e, e.olga, e.norte, `vinculos/${invitacion.vinculoId}`);
+    // Siembra: Compras aprueba su parte; la última área en decidir es Cumplimiento, la de Olga.
+    const expediente = await expedienteAbierto(e, invitacion);
+    const ruben = await abrirEmbebido(await (await browser.newContext()).newPage(), e, e.ruben, e.norte, 'bandeja');
+    await abrirDesdeBandeja(ruben, tercero.nombre, 'Compras');
+    await aprobarArea(ruben, 'Compras');
+
+    // 1. Olga aprueba la última área: el expediente no se cierra, espera la cuenta.
+    const app = await abrirEmbebido(page, e, e.olga, e.norte, 'bandeja');
+    await abrirDesdeBandeja(app, tercero.nombre, 'Cumplimiento');
+    await aprobarUltimaAreaYEsperarCuenta(app, 'Cumplimiento');
+    const aviso = app.getByRole('alert').filter({ hasText: 'Falta la cuenta bancaria designada' });
+    await expect(aviso).toBeVisible();
+    await expect(aviso).toContainText('Este tipo de vínculo exige una cuenta bancaria designada y aprobada.');
+    await expect(app.getByText('Expediente aprobado', { exact: true })).toHaveCount(0);
+    await paso(page, {
+      titulo: 'Aprueba tu área: el expediente espera la cuenta',
+      explicacion:
+        'Compras ya había aprobado y ahora aprobaste Cumplimiento, la última área. Aun así el expediente no se cierra: sigue «En revisión» porque el tipo de vínculo Proveedor exige una cuenta bancaria designada y aprobada, y todavía no lo está. ' +
+        'El aviso «Falta la cuenta bancaria designada» lo dice, y «Ver la cuenta» te lleva al vínculo, donde dos personas de la empresa aprueban la cuenta que designó el proveedor. ' +
+        'Rechazar esa cuenta no rechaza el expediente: sigue esperando a que el proveedor designe otra.',
+      resaltar: [aviso, regionDeArea(app, 'Cumplimiento')],
+      variantes: [
+        {
+          cuando: 'El tipo de vínculo no exige cuenta designada',
+          entonces: 'Al aprobar la última área el expediente se aprueba al instante: no aparece este aviso y la cuenta no frena el cierre.',
+        },
+        {
+          cuando: 'El vínculo ya tenía una cuenta designada aprobada cuando se abrió el expediente',
+          entonces: 'La cuenta ya cuenta como cumplida: el expediente se aprueba apenas decide la última área.',
+        },
+      ],
+      configuracion: {
+        ajuste: 'Exige cuenta bancaria designada (tipo de vínculo)',
+        ruta: 'Configuración › Tipos de vínculo (/tipos-vinculo)',
+        efecto: 'Con la exigencia activa, el expediente no se aprueba hasta que la cuenta designada del vínculo esté aprobada, aunque todas las áreas hayan aprobado.',
+      },
+    });
+
+    // 2. «Ver la cuenta» lleva al vínculo, donde está la tarjeta para aprobarla.
+    await aviso.getByRole('link', { name: 'Ver la cuenta' }).click();
+    await expect(aviso).toBeHidden();
     const tarjeta = app.locator('section', { hasText: 'Cuenta bancaria designada' });
     await expect(tarjeta).toContainText('Por aprobar');
     await expect(tarjeta).toContainText('0 de 2 aprobaciones');
@@ -63,7 +107,7 @@ recorrido(
       titulo: 'Revisa la cuenta que el proveedor quiere designar',
       explicacion:
         'En el detalle del vínculo, la tarjeta «Cuenta bancaria designada» muestra la cuenta por aprobar con su banco, tipo y número enmascarado, y cuántas aprobaciones lleva. ' +
-        'Antes de aprobar, coteja el número completo con la certificación bancaria del proveedor.',
+        'Antes de aprobar, coteja el número completo con la certificación bancaria del proveedor. Aquí llegas desde el aviso del expediente, pero también puedes abrir el vínculo desde la lista de vínculos.',
       resaltar: tarjeta,
       variantes: [
         {
@@ -74,7 +118,7 @@ recorrido(
       configuracion: {
         ajuste: 'Exige cuenta bancaria designada (tipo de vínculo)',
         ruta: 'Configuración › Tipos de vínculo (/tipos-vinculo)',
-        efecto: 'Si el tipo la exige, el cierre del vínculo necesita una cuenta designada aprobada.',
+        efecto: 'Si el tipo la exige, el expediente del vínculo necesita una cuenta designada aprobada para cerrarse.',
       },
     });
 
@@ -99,6 +143,23 @@ recorrido(
       explicacion:
         'Con la segunda aprobación de otra persona de la empresa, la cuenta queda designada y la tarjeta muestra quién aprobó. La cuenta nueva reemplaza a la anterior.',
       resaltar: tarjetaAna,
+      avisos: true,
+    });
+
+    // 4. El expediente que esperaba la cuenta se aprueba solo.
+    const paginaFinal = await (await browser.newContext()).newPage();
+    const cierre = await abrirEmbebido(paginaFinal, e, e.ana, e.norte, `expedientes/${expediente}`);
+    await expect(cierre.getByRole('heading', { level: 1, name: tercero.nombre })).toBeVisible();
+    await expect(cierre.getByRole('alert').getByText('Expediente aprobado')).toBeVisible();
+    await expect(cierre.getByRole('alert').filter({ hasText: 'Falta la cuenta bancaria designada' })).toHaveCount(0);
+    const historial = cierre.getByText('Cuenta bancaria designada aprobada', { exact: true });
+    await expect(historial.first()).toBeVisible();
+    await paso(paginaFinal, {
+      titulo: 'El expediente se aprueba solo',
+      explicacion:
+        'En el mismo momento en que la segunda persona aprueba la cuenta, el expediente que esperaba se cierra: queda «Expediente aprobado», el vínculo pasa a activo, se emite el certificado y el proveedor recibe el correo de aprobación. Nadie tiene que volver a pulsar «aprobar». ' +
+        'El historial deja constancia: «Exige cuenta bancaria designada» cuando el expediente se abrió y «Cuenta bancaria designada aprobada» cuando se cumplió la exigencia.',
+      resaltar: [cierre.getByRole('alert').getByText('Expediente aprobado'), historial.first()],
       avisos: true,
     });
   },
