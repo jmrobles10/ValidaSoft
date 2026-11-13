@@ -110,8 +110,8 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `revision/inicio-lo-que-te-toca` ☐ | Revisor/área | Expedientes en revisión y observados (spec `inicio`) | Inicio: cifras, «Lo que te toca», indicadores, ir a la bandeja |
-| `revision/bandeja-de-revision` ☐ | Revisor/área | Varios expedientes de dos áreas | Columnas (tercero, tipo, área, plazo), filtros, indicador de plazo, abrir |
+| `revision/inicio-lo-que-te-toca` ☑ | Revisor/área | Expedientes en revisión y observados (spec `inicio`) | Inicio: cifras, «Lo que te toca», indicadores, ir a la bandeja |
+| `revision/bandeja-de-revision` ☑ | Revisor/área | Varios expedientes de dos áreas | Columnas (tercero, tipo, área, plazo), filtros, indicador de plazo, abrir |
 | `revision/aprobar-un-area` ☐ | Revisor/área | Proveedor «En revisión» en Norte (spec `decisiones`) | Abrir, revisar documentos, «Aprobar área», diálogo, estado de las demás áreas |
 | `revision/aprobar-documento-por-documento` ☐ | Revisor/área | Expediente con documentos por área (spec `decisiones`) | Aprobar cada documento en la versión vista, el área se cierra al decidir todos |
 | `revision/observar-con-motivos` ☐ | Revisor/área | Expediente en revisión (spec `decisiones`) | «Observar», documentos y motivos tipificados, nota, qué recibe el tercero (un solo correo) |
