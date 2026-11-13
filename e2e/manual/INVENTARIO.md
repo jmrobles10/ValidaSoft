@@ -177,7 +177,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `configuracion/plantillas-de-correo` ☑ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
 | `configuracion/dominio-de-correo` ☑ | Administrador de empresa | Grupo base (spec `derechos-plan-correo`) | Fijar un dominio, registros DNS (SPF, DKIM), verificar, quitar |
 | `configuracion/motivos` ☑ | Administrador de empresa | Grupo base | Motivos tipificados de observación y rechazo, crear, desactivar, cómo los lee el tercero |
-| `configuracion/plan-del-grupo` ☐ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
+| `configuracion/plan-del-grupo` ☑ | Administrador de empresa | Grupo con límites (spec `derechos-plan-correo`) | Plan y uso del grupo, aviso de límite que enlaza a esta pantalla |
 | `configuracion/accesos-de-soporte` ☑ | Administrador de empresa | Grupo base | Conceder un acceso de soporte a Plataforma con vigencia, qué puede ver (nunca documentos), revocar |
 | `configuracion/permisos-por-rol` ☐ | Administrador de empresa | Una persona por rol (Administrador, Revisor, Oficial, Auditor) | Qué secciones ve cada rol, «sin permiso», botones que desaparecen |
 
