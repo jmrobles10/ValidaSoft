@@ -258,34 +258,34 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `integracion/sistema-integrador` ☐ | Sistema integrador | Grupo base | Registrar un sistema: código, clave pública, orígenes permitidos, identidades de personas |
-| `integracion/api-keys` ☐ | Sistema integrador | Sistema registrado | Crear una llave con sus permisos (scopes) y empresas, verla una sola vez, rotar y revocar |
-| `integracion/webhooks` ☐ | Sistema integrador | Receptor de la prueba (`soporte/receptor.ts`, spec `eventos`) | Crear la suscripción, eventos, secreto, firma verificada, entregas en orden |
-| `integracion/webhook-entrega-fallida-y-reenvio` ☐ | Sistema integrador | Receptor que falla (spec `eventos`) | Entrega fallida, reintentos, reenviar desde la pantalla |
-| `integracion/invitar-por-api` ☐ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
-| `integracion/consulta-de-certificacion` ☐ | Sistema integrador | Tercero aprobado (spec `integracion`) | `GET /consultas/certificacion`, respuesta resumida, `If-None-Match` y 304 |
-| `integracion/eventos-pull-y-en-vivo` ☐ | Sistema integrador | Eventos de un vínculo | `GET /eventos` con cursor, SSE, tipos de evento |
-| `integracion/sandbox` ☐ | Sistema integrador | Grupo con sandbox (spec `integracion-sandbox`) | Crear, sincronizar y reiniciar el sandbox, llaves de prueba |
-| `integracion/buzon-de-pruebas` ☐ | Sistema integrador | Sandbox con correos (spec `integracion-sandbox`) | Leer el buzón de correo de pruebas, vaciarlo |
-| `integracion/importar-del-portal` ☐ | Administrador de empresa | Origen simulado del Portal | Importación: corrida, vista previa, resultado, errores por fila |
-| `integracion/identidad-delegada` ☐ | Sistema integrador | Sistema con clave privada (`asercion` en `soporte/api.ts`) | `POST /sesiones-usuario` con `mostrarCodigo`, el JWT de 5 minutos, `jti` de un solo uso, entrar a la app |
+| `integracion/sistema-integrador` ☑ | Sistema integrador | Grupo base | Registrar un sistema: código, clave pública, orígenes permitidos, identidades de personas |
+| `integracion/api-keys` ☑ | Sistema integrador | Sistema registrado | Crear una llave con sus permisos (scopes) y empresas, verla una sola vez, rotar y revocar |
+| `integracion/webhooks` ☑ | Sistema integrador | Receptor de la prueba (`soporte/receptor.ts`, spec `eventos`) | Crear la suscripción, eventos, secreto, firma verificada, entregas en orden |
+| `integracion/webhook-entrega-fallida-y-reenvio` ☑ | Sistema integrador | Receptor que falla (spec `eventos`) | Entrega fallida, reintentos, reenviar desde la pantalla |
+| `integracion/invitar-por-api` ☑ | Sistema integrador | Llave del sistema (spec `integracion`) | `POST /vinculos` con `mostrarCodigo`, el correo, el vínculo en la lista de la empresa, referencia externa |
+| `integracion/consulta-de-certificacion` ☑ | Sistema integrador | Tercero aprobado (spec `integracion`) | `GET /consultas/certificacion`, respuesta resumida, `If-None-Match` y 304 |
+| `integracion/eventos-pull-y-en-vivo` ☑ | Sistema integrador | Eventos de un vínculo | `GET /eventos` con cursor, SSE, tipos de evento |
+| `integracion/sandbox` ☑ | Sistema integrador | Grupo con sandbox (spec `integracion-sandbox`) | Crear, sincronizar y reiniciar el sandbox, llaves de prueba |
+| `integracion/buzon-de-pruebas` ☑ | Sistema integrador | Sandbox con correos (spec `integracion-sandbox`) | Leer el buzón de correo de pruebas, vaciarlo |
+| `integracion/importar-del-portal` ☑ | Plataforma | Origen simulado del Portal | Importación: corrida, vista previa, resultado, errores por fila |
+| `integracion/identidad-delegada` ☑ | Sistema integrador | Sistema con clave privada (`asercion` en `soporte/api.ts`) | `POST /sesiones-usuario` con `mostrarCodigo`, el JWT de 5 minutos, `jti` de un solo uso, entrar a la app |
 
 ### embebido (5) y acceso (7)
 
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
-| `embebido/app-de-la-empresa-en-un-iframe` ☐ | Revisor/área | Página anfitriona (`soporte/embebido.ts`) | La app dentro del sistema, sesión por `postMessage`, selector de empresa, salir |
-| `embebido/navegacion-adaptativa-y-tema` ☐ | Revisor/área | Anfitrión a 1536, 1100 y 700 px (spec `navegacion`) | «Más» adaptativo, engranaje de Configuración, modo oscuro |
-| `embebido/tercero-embebido` ☐ | Tercero | Anfitrión del tercero (spec `embebido-tercero`) | `POST /sesiones-tercero`, bóveda, expediente y ficha en el iframe del sistema |
-| `embebido/sesion-vencida` ☐ | Revisor/área | Sesión de corta duración | «Tu sesión venció», nueva sesión del sistema, lo guardado se conserva |
-| `embebido/origenes-permitidos` ☐ | Sistema integrador | Sistema con orígenes | Qué origen puede embeber, error por origen no permitido |
-| `acceso/ingreso-directo-por-correo` ☐ | Revisor/área | Persona con acceso directo (spec `ingreso`) | Ingreso sin contraseña: correo, enlace y código, sesión |
-| `acceso/ingreso-con-passkey` ☐ | Revisor/área | Persona con passkey | Registrar una passkey, entrar con ella |
-| `acceso/mi-cuenta-sesiones-y-codigos` ☐ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
-| `acceso/ingreso-configuracion-del-grupo` ☐ | Administrador de empresa | Grupo base | Modos de ingreso, duración e inactividad de la sesión, passkey para todos |
-| `acceso/sso-configurar` ☐ | Administrador de empresa | Proveedor OIDC simulado (spec `plataforma-identidad`) | Proveedor, dominios verificados, creación de personas, roles por grupo, modo exclusivo |
+| `embebido/app-de-la-empresa-en-un-iframe` ☑ | Revisor/área | Página anfitriona (`soporte/embebido.ts`) | La app dentro del sistema, sesión por `postMessage`, selector de empresa, salir |
+| `embebido/navegacion-adaptativa-y-tema` ☑ | Revisor/área | Anfitrión a 1536, 1100 y 700 px (spec `navegacion`) | «Más» adaptativo, engranaje de Configuración, modo oscuro |
+| `embebido/tercero-embebido` ☑ | Tercero | Anfitrión del tercero (spec `embebido-tercero`) | `POST /sesiones-tercero`, bóveda, expediente y ficha en el iframe del sistema |
+| `embebido/sesion-vencida` ☑ | Revisor/área | Sesión de corta duración | «Tu sesión venció», nueva sesión del sistema, lo guardado se conserva |
+| `embebido/origenes-permitidos` ☑ | Sistema integrador | Sistema con orígenes | Qué origen puede embeber, error por origen no permitido |
+| `acceso/ingreso-directo-por-correo` ☑ | Revisor/área | Persona con acceso directo (spec `ingreso`) | Ingreso sin contraseña: correo, enlace y código, sesión |
+| `acceso/ingreso-con-passkey` ☑ | Revisor/área | Persona con passkey | Registrar una passkey, entrar con ella |
+| `acceso/mi-cuenta-sesiones-y-codigos` ☑ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
+| `acceso/ingreso-configuracion-del-grupo` ☑ | Administrador de empresa | Grupo base | Modos de ingreso, duración e inactividad de la sesión, passkey para todos |
+| `acceso/sso-configurar` ☑ | Administrador de empresa | Proveedor OIDC simulado (spec `plataforma-identidad`) | Proveedor, dominios verificados, creación de personas, roles por grupo, modo exclusivo |
 | `acceso/sso-ingresar` ☐ | Revisor/área | SSO configurado | Entrar con el proveedor del cliente, persona creada al vuelo con su rol |
-| `acceso/codigos-de-recuperacion` ☐ | Administrador de empresa | Persona con passkey | Generar y usar un código de recuperación |
+| `acceso/codigos-de-recuperacion` ☑ | Administrador de empresa | Persona con passkey | Generar y usar un código de recuperación |
 
 ---
 
