@@ -3,6 +3,7 @@ import { abrirDesdeBandeja } from '../../soporte/empresa';
 import { etapa } from '../../soporte/devolucion';
 import { abrirExpedienteManual, crearArea, crearTipoDeVinculo, invitarVinculo, publicarFlujoSinDocumentos } from '../../soporte/flujos';
 import { crearEscenario, nuevoTercero } from '../../soporte/semilla';
+import { areaDe } from '../nucleo/semillas';
 import { expect, paso, recorrido } from '../nucleo';
 
 recorrido(
@@ -23,9 +24,9 @@ recorrido(
     await crearTipoDeVinculo(e, 'ALIADO', 'Aliado');
     const legal = await crearArea(e, e.norte, 'legal', 'Legal', [e.olga]);
     await publicarFlujoSinDocumentos(e, e.norte, 'SECUENCIA', 'ALIADO', [
-      [{ area: e.norte.areas.compras! }],
+      [{ area: areaDe(e.norte, 'compras') }],
       [{ area: legal }],
-      [{ area: e.norte.areas.cumplimiento!, puedeRechazar: true }],
+      [{ area: areaDe(e.norte, 'cumplimiento'), puedeRechazar: true }],
     ]);
     const tercero = nuevoTercero('Aliados Logísticos S.A.S.');
     const invitacion = await invitarVinculo(e, e.norte, tercero, 'ALIADO');

@@ -1,6 +1,6 @@
 import { pdf } from '../../soporte/archivos';
 import { abrirEmbebido } from '../../soporte/embebido';
-import { abrirDesdeBandeja, aprobarArea, observar, regionDeArea } from '../../soporte/empresa';
+import { abrirDesdeBandeja, aprobarArea, observar } from '../../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero, responder, subirDocumento } from '../../soporte/proveedor';
 import { crearEscenario, expedienteAbierto, invitar, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';

@@ -4,6 +4,7 @@ import { abrirEmbebido } from '../../soporte/embebido';
 import { abrirDesdeBandeja, aprobarArea } from '../../soporte/empresa';
 import { completarInvitacion, esperarEstadoDelTercero } from '../../soporte/proveedor';
 import { activarIa, crearEscenario, invitar, nuevoTercero, publicarFlujoConFicha, type Escenario, type Tercero } from '../../soporte/semilla';
+import { areaDe } from '../nucleo/semillas';
 import { expect, paso, recorrido } from '../nucleo';
 
 const RUT = 'Registro Único Tributario';
@@ -58,7 +59,7 @@ recorrido(
   async ({ page, browser }) => {
     const e = await crearEscenario();
     await activarIa(e, e.sur);
-    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_RV_DOC', e.sur.areas.revision!, [{ tipoDocumento: 'RUT' }, { tipoDocumento: 'CERTIFICACION_BANCARIA' }]);
+    await publicarFlujoConFicha(e, e.sur, 'CLIENTES_RV_DOC', areaDe(e.sur, 'revision'), [{ tipoDocumento: 'RUT' }, { tipoDocumento: 'CERTIFICACION_BANCARIA' }]);
 
     const sofia = await abrirEmbebido(page, e, e.sofia, e.sur, 'bandeja');
     const a = await clienteAprobado(browser, e, sofia, 'Aceros Sin Cambios S.A.S.');

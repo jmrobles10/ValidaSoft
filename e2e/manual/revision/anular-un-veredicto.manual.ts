@@ -1,7 +1,8 @@
 import { abrirEmbebido } from '../../soporte/embebido';
-import { anularVeredicto, tarjetaDeArea } from '../../soporte/devolucion';
+import { tarjetaDeArea } from '../../soporte/devolucion';
 import { abrirExpedienteManual, aprobarPorApi, crearTipoDeVinculo, invitarVinculo, publicarFlujoSinDocumentos } from '../../soporte/flujos';
 import { crearEscenario, nuevoTercero } from '../../soporte/semilla';
+import { areaDe } from '../nucleo/semillas';
 import { expect, paso, recorrido } from '../nucleo';
 
 recorrido(
@@ -17,16 +18,16 @@ recorrido(
     ],
     relacionados: ['revision/desaprobar-y-reabrir-una-etapa', 'revision/aprobar-un-area'],
   },
-  async ({ page, browser }) => {
+  async ({ page }) => {
     const e = await crearEscenario();
     await crearTipoDeVinculo(e, 'ALIADO', 'Aliado');
     await publicarFlujoSinDocumentos(e, e.norte, 'ALIADOS_ANULAR', 'ALIADO', [
-      [{ area: e.norte.areas.compras! }, { area: e.norte.areas.cumplimiento!, puedeRechazar: true }],
+      [{ area: areaDe(e.norte, 'compras') }, { area: areaDe(e.norte, 'cumplimiento'), puedeRechazar: true }],
     ]);
     const tercero = nuevoTercero('Mensajería Rápida S.A.S.');
     const invitacion = await invitarVinculo(e, e.norte, tercero, 'ALIADO');
     const expediente = await abrirExpedienteManual(e, invitacion);
-    await aprobarPorApi(e, invitacion, expediente, e.norte.areas.cumplimiento!, e.olga);
+    await aprobarPorApi(e, invitacion, expediente, areaDe(e.norte, 'cumplimiento'), e.olga);
 
     // 1) Cumplimiento aparece aprobada; Ana ve el menú de administrador de esa área.
     const app = await abrirEmbebido(page, e, e.ana, e.norte, `expedientes/${expediente}`);
