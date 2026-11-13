@@ -13,8 +13,7 @@ recorrido(
     relacionados: ['plataforma/plan-de-ia-y-llave-openai', 'plataforma/plan-del-grupo'],
   },
   async ({ page }) => {
-    const e = await crearEscenario();
-    const grupo = `Grupo E2E ${e.sufijo}`;
+    await crearEscenario();
 
     const consola = await abrirConsolaDePlataforma(page);
     await consola.getByRole('link', { name: 'Uso de IA' }).click();
