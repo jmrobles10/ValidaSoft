@@ -67,7 +67,7 @@ Usa `soporte/proveedor.ts`, `soporte/ficha.ts`, `soporte/correo.ts`. Los del ter
 | `publico/certificado-en-otros-estados` ☑ | Público | Certificados bloqueado, revocado, reemplazado, en verificación y con pendientes (specs `certificado`, `vinculo-en-revision`) | Cada estado con su aviso y qué significa para quien consulta |
 | `publico/verificar-con-el-pdf` ☑ | Público | PDF del certificado | Subir el PDF, comparar la huella, resultado |
 | `publico/pagina-no-encontrada` ☑ | Público | — | Ruta inexistente, enlace roto, volver |
-| `publico/embebido-esperando-sesion` ☐ | Público | Página `/embed/{componente}` sin sesión | «Esperando sesión», qué pide al sistema anfitrión, error de origen |
+| `publico/embebido-esperando-sesion` ☑ | Público | Página `/embed/{componente}` sin sesión | «Esperando sesión», qué pide al sistema anfitrión, error de origen |
 | `movil/tercero-navegacion` ☑ | Tercero | Tercero con dos empresas | Barra inferior, cada pestaña, campana, salir (celular: 390 × 844) |
 | `movil/tercero-subir-documento` ☑ | Tercero | Documento pendiente | Elegir archivo en el celular, versión guardada, volver |
 | `movil/tercero-mi-informacion` ☑ | Tercero | Flujo con las 6 secciones | Selector «Paso N de 6», una sección completa, barra de guardar |
@@ -138,7 +138,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `documentos/ciclo-de-vigencia` ☑ | Administrador de empresa | Tipo con aviso y gracia y fecha simulada (specs `vencimientos`, `vigencias`) | Vigente → por vencer (aviso) → gracia → vencido, avisos que recibe el tercero |
 | `documentos/vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con vigencia periódica (spec `vigencias`) | Por vencer, renovación, vencido y el certificado, qué cambia en la lista |
 | `documentos/documento-compartido-entre-empresas` ☑ | Revisor/área | Dos empresas, mismo RUT (spec `multiempresa-documento-global`) | Una acepta la v2 y la otra ve su aceptación desactualizada, sin ver la decisión de la otra |
-| `documentos/descargar-un-documento` ☐ | Revisor/área | Documento aprobado | Descargar, el registro en la auditoría de accesos |
+| `documentos/descargar-un-documento` ☑ | Revisor/área | Documento aprobado | Descargar, el registro en la auditoría de accesos |
 | `documentos/recordatorio-desde-vencimientos` ☑ | Administrador de empresa | Documentos por vencer (spec `operacion`) | Recordatorio de observaciones desde Vencimientos y Revalidaciones |
 | `informes/estado-de-expedientes` ☑ | Administrador de empresa | Expedientes en varios estados (spec `informes`) | Informe con tiempos por área, filtros, resumen, descargar Excel |
 | `informes/informe-de-vinculos` ☑ | Administrador de empresa | Vínculos de varios tipos | Informe de vínculos, filtros y exportación |
@@ -168,10 +168,10 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `configuracion/flujo-plazo-reintento-y-recordatorios` ☑ | Administrador de empresa | Grupo base | Plazo de cargue y recordatorios, reintento con días de espera, recordatorio de observaciones |
 | `configuracion/flujo-vigencia-del-vinculo` ☑ | Administrador de empresa | Flujo con secciones | Vigencia en días, avisos y gracia, qué exige (una sección) |
 | `configuracion/flujo-verificaciones-de-cumplimiento` ☑ | Administrador de empresa | Grupo base | Pedir listas restrictivas y estudio SAGRILAFT, bloqueante, vigencia y reconsulta |
-| `configuracion/flujo-versiones-y-borradores` ☐ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
+| `configuracion/flujo-versiones-y-borradores` ☑ | Administrador de empresa | Flujo publicado | Editar → borrador v2, descartar cambios, publicar, ver versiones y volver a la vigente |
 | `configuracion/flujo-por-defecto` ☑ | Administrador de empresa | Dos flujos publicados del mismo tipo | Cambiar el flujo por defecto por tipo de vínculo, «Sin flujo por defecto» y aperturas pendientes |
 | `configuracion/areas-y-miembros` ☑ | Administrador de empresa | Personas con rol en la empresa | Crear área, asignar miembros, desactivar, efecto en la bandeja |
-| `configuracion/usuarios-y-roles` ☐ | Administrador de empresa | Sistema integrado con identidades | Crear una persona, roles por empresa o de todo el grupo (Administrador, Revisor, Oficial, Auditor), identidad en el sistema, desactivar |
+| `configuracion/usuarios-y-roles` ☑ | Administrador de empresa | Sistema integrado con identidades | Crear una persona, roles por empresa o de todo el grupo (Administrador, Revisor, Oficial, Auditor), identidad en el sistema, desactivar |
 | `configuracion/empresas-y-textos-legales` ☑ | Administrador de empresa | Grupo base | Crear una empresa (prefijo de folio), publicar autorización y términos, versión nueva, qué ve el tercero |
 | `configuracion/datos-y-marca` ☑ | Administrador de empresa | Grupo base | Logo, nombre comercial, `reply-to`, dónde se ve (correos, PDF del certificado, declaración) |
 | `configuracion/plantillas-de-correo` ☑ | Administrador de empresa | Grupo base (spec `plantillas`) | Lista de plantillas, editar asunto y cuerpo, variables, vista previa, restablecer |
@@ -186,9 +186,9 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | Archivo | Actor | Siembra | Pasos esperados |
 |---|---|---|---|
 | `operacion/invitacion-por-lotes` ☑ | Administrador de empresa | Grupo base (spec `lotes`) | Descargar la plantilla, subir el archivo, vista previa con errores por fila, confirmar, lote procesado |
-| `operacion/lote-pausar-reanudar-cancelar` ☐ | Administrador de empresa | Lote grande en proceso | Pausar, reanudar, cancelar, reintentar fallidos, informe por fila |
+| `operacion/lote-pausar-reanudar-cancelar` ☑ | Administrador de empresa | Lote grande en proceso | Pausar, reanudar, cancelar, reintentar fallidos, informe por fila |
 | `operacion/campana-de-renovacion` ☑ | Administrador de empresa | Vínculos por vencer (spec `operacion`) | Filtro, vista previa de a quién afecta, aviso antes de confirmar, proceso en segundo plano, correo y campana del tercero |
-| `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar |
+| `operacion/campana-pausar-y-reintentar` ☐ | Administrador de empresa | Campaña en proceso | Detalle de la campaña, pausar, reanudar, cancelar, reintentar. **Pendiente**: la campaña solo se queda «Procesando» unos segundos si hay centenares de vínculos aprobados con vigencia y requisitos por renovar (sin ellos las filas salen «Omitida» al instante), y una fila solo falla con un error inesperado; se necesita una siembra masiva de vínculos aprobados que no existe. El patrón de pausar, reanudar, cancelar y reintentar es el del lote: operacion/lote-pausar-reanudar-cancelar |
 | `operacion/plazo-de-cargue-y-caducidad` ☑ | Administrador de empresa | Flujo con plazo corto y fecha simulada (spec `lotes`) | Caducidad por plazo de cargue, recordatorios, reapertura |
 | `operacion/plazos-de-revision` ☑ | Administrador de empresa | Plazo por defecto y por área (spec `operacion`) | Configuración, avisos de plazo (campana y correo), indicador en la bandeja |
 | `operacion/delegacion-de-revision` ☑ | Revisor/área | Rubén y Olga (spec `operacion`) | Delegar entre dos fechas, aviso, la bandeja de quien recibe, separación de funciones, revocar |
@@ -209,7 +209,7 @@ Todos en la app de la empresa como administradora (Ana) salvo donde se indica. C
 | `ia/cruce-de-la-ficha-con-los-soportes` ☑ | Revisor/área | IA activa y ficha con soporte (spec `ficha-f5`) | Cruce ficha ↔ documento, coincidencias y diferencias, qué decide la persona |
 | `ia/analisis-de-un-documento` ☑ | Revisor/área | IA activa | Campos leídos, confianza, legibilidad, cómo se usa en la decisión |
 | `privacidad/habeas-data-de-la-empresa` ☑ | Oficial de cumplimiento | Solicitud del tercero (spec `derechos-plan-correo`) | Habeas data: solicitudes con plazo, responder, plan de supresión, constancia |
-| `privacidad/plazos-y-avisos-de-habeas` ☐ | Administrador de empresa | Solicitud cerca de vencer | Aviso de plazo (enlaza a esta pantalla), vencida, quién atiende |
+| `privacidad/plazos-y-avisos-de-habeas` ☑ | Administrador de empresa | Solicitud cerca de vencer | Aviso de plazo (enlaza a esta pantalla), vencida, quién atiende |
 | `cumplimiento/matriz-de-riesgo-configuracion` ☑ | Oficial de cumplimiento | Grupo base (spec `matriz-riesgo`) | Factores, límites y niveles del riesgo SAGRILAFT, guardar, efecto en el estudio |
 | `cumplimiento/listas-restrictivas-de-la-empresa` ☑ | Administrador de empresa | Proveedor simulado (spec `verificaciones`) | Proveedor y credenciales de la empresa, consumo del mes, Infolaft «Disponible» de la plataforma |
 
@@ -284,7 +284,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 | `acceso/mi-cuenta-sesiones-y-codigos` ☑ | Revisor/área | Persona con sesiones | Mi cuenta: sesiones abiertas y cerrarlas, passkeys, códigos de recuperación |
 | `acceso/ingreso-configuracion-del-grupo` ☑ | Administrador de empresa | Grupo base | Modos de ingreso, duración e inactividad de la sesión, passkey para todos |
 | `acceso/sso-configurar` ☑ | Administrador de empresa | Proveedor OIDC simulado (spec `plataforma-identidad`) | Proveedor, dominios verificados, creación de personas, roles por grupo, modo exclusivo |
-| `acceso/sso-ingresar` ☐ | Revisor/área | SSO configurado | Entrar con el proveedor del cliente, persona creada al vuelo con su rol |
+| `acceso/sso-ingresar` ☐ | Revisor/área | SSO configurado | Entrar con el proveedor del cliente, persona creada al vuelo con su rol. **Pendiente**: el dominio del correo solo se verifica leyendo `https://{dominio}/.well-known/validasoft-verificacion.txt` (HTTPS con certificado público, sin redes internas) y el proveedor OIDC local exige `Validasoft:Sso:PermitirHttpLocal`; el API del e2e no lo permite y el dominio no se puede verificar sin tocar el producto o la base. Hace falta un IdP simulado en Node y un comprobador de dominios de prueba |
 | `acceso/codigos-de-recuperacion` ☑ | Administrador de empresa | Persona con passkey | Generar y usar un código de recuperación |
 
 ---

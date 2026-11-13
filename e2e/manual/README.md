@@ -33,7 +33,8 @@ docker compose -f infra/compose/compose.yaml up -d postgres minio          # el 
 # Correr recorridos (deja manifiestos e imágenes en salida/manual-recorridos/)
 E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer                  # todos
 E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer --grep tercero   # los de un dominio (el título lleva «[dominio] …»)
-E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer tercero/aceptar  # por archivo (parte del nombre)
+E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer tercero/aceptar-invitacion-persona-juridica   # UN recorrido: nombre exacto, `dominio/archivo`
+E2E_PUERTO=<tu puerto> E2E_BASE_DATOS=<tu_base> pnpm manual:recorrer tercero                                           # todos los de un dominio (también `tercero/` o `tercero/*`)
 
 pnpm manual          # genera salida/manual/ (HTML) y docs/manual/ (Markdown) con lo que haya en salida/manual-recorridos/
 pnpm manual:todo     # recorrer + generar
@@ -44,6 +45,7 @@ pnpm manual:todo     # recorrer + generar
   si no cambiaste código del producto.
 - **Para iterar rápido**, deja la API corriendo aparte y corre los recorridos con las mismas variables (Playwright la reutiliza):
   `cd e2e && E2E_AISLADO=1 E2E_PUERTO=<p> E2E_BASE_DATOS=<b> node soporte/api.mjs` (en otra terminal).
+- **Los nombres sin guion son exactos** (`recorrer.mjs`): `pnpm manual:recorrer registrar-consulta` no corre un recorrido que solo contenga ese texto; si el nombre no existe, avisa con los parecidos. Un nombre de archivo que se repite en varios dominios corre en todos y lo avisa. Los demás filtros de Playwright (`--grep`, `--workers`, `--repeat-each`, `--timeout`…) pasan tal cual.
 - Un recorrido que termina bien reescribe su carpeta `salida/manual-recorridos/<dominio>/<flujo>/`. Si falla, no deja manifiesto y el generador lo omite.
 - Para ver por qué falló: la terminal muestra el paso y el locator; `e2e/test-results-manual/<prueba>/test-failed-1.png` es el pantallazo del fallo
   (`error-context.md` trae el árbol accesible).
@@ -132,10 +134,13 @@ Notas de la plantilla:
 | `variantes` | `{ cuando, entonces }[]` (o `'Cuando X: Y'`): qué cambia según tipo de persona, configuración, rol, plan, nivel de IA | — |
 | `configuracion` | `{ ajuste, ruta?, efecto? }` (uno o una lista): qué ajuste controla esto y dónde se cambia (`'Configuración › Flujos aprobatorios (/flujos)'`) | — |
 | `celular` | Captura también 390 × 844 de la **misma página** (sin perder la sesión ni lo escrito) | `true` si el actor es Tercero o Público; `false` en los demás |
+| `anchos` | Anchos de ventana adicionales en px (hasta 4, entre 320 y 1600): `[900, 700]` suma una imagen de 900 × 800 y otra de 700 × 800 de la misma pantalla, para mostrar cómo se adapta. Salen en el sitio bajo la captura principal | — |
 | `completa` | Toda la página en vez de la ventana (para pantallas largas; no lo uses con diálogos ni paneles) | `false` |
 | `avisos` | Deja visibles los avisos emergentes («Guardaste…»). Por omisión se ocultan: tapan la pantalla y desaparecen solos | `false` |
 | `esperarCarga` | `false` si el paso muestra a propósito un skeleton o spinner | `true` |
 | `mantenerPuntero` | No mueve el puntero a una esquina (para mostrar un tooltip o un menú que se abre con el puntero) | `false` |
+
+Lo que `paso` hace solo, además de lo siguiente: **cubre los secretos** con un recuadro «oculto» antes de capturar (llaves `vsk_…`, `whsec_…`, `sk-…`, tokens, códigos de recuperación, enlaces de un solo uso, llaves privadas PEM y todo lo que el producto marque con `data-secreto`; las claves públicas y las huellas SHA-256 se dejan ver: son públicas); **iguala el alto de la app de la empresa** al del pantallazo (sus páginas de configuración y de detalle fijan su alto al montarse y dejaban una franja en blanco o el contenido cortado: `captura.ts`, `ajustarAltoDeLaApp`), y en `completa` lo estira para que `main` no tenga scroll; espera imágenes decodificadas y diseño estable.
 
 Lo que `paso` hace solo: espera a que no haya skeletons, spinners ni regiones ocupadas; parte de lo alto de la página y baja solo si lo resaltado no se ve; recorta el
 iframe de la empresa (sin la barra de la página anfitriona); lleva el puntero a una esquina (sin estados «hover»); y falla con un mensaje claro si algún locator de `resaltar`
