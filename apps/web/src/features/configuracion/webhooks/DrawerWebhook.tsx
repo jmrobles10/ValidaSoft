@@ -1,5 +1,5 @@
-import { Alert, Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
-import type { EmpresaDto, TipoEventoPublicoDto, WebhookDto } from '@validasoft/api-client';
+import { Alert, Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, MenuItem, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
+import type { EmpresaDto, SistemaIntegradoDto, TipoEventoPublicoDto, WebhookDto } from '@validasoft/api-client';
 import { FaltaParaEnviar } from '@validasoft/ui';
 import { X } from 'lucide-react';
 import { useState, type SubmitEvent } from 'react';
@@ -9,25 +9,39 @@ import { mensajeDeError } from '../../../shared/errores';
 import { useGuardarWebhook } from './api';
 import { agruparTipos, alternarTipo, borradorDeWebhook, borradorWebhookNuevo, esGrupoConocido, TODOS, validarUrl, validarWebhook, type BorradorWebhook } from './modelo';
 
-/** Crear o editar una suscripción: URL, qué eventos y de qué empresas. Al crear, el padre muestra el secreto. */
+/**
+ * Crear o editar una suscripción: URL, qué eventos y de qué empresas. Al crear, el padre muestra el secreto. Al crear con
+ * una sesión que no viene de un sistema integrado (`sistemaDeLaSesion` nulo: ingreso directo) hay que elegir el sistema
+ * integrado dueño de la suscripción, como lo exige la API; desde un sistema integrado es el de la sesión.
+ */
 export function DrawerWebhook({
   webhook,
   catalogo,
   empresas,
+  sistemas,
+  sistemaDeLaSesion,
   onCerrar,
   onCreado,
 }: {
   webhook: WebhookDto | null;
   catalogo: readonly TipoEventoPublicoDto[];
   empresas: readonly EmpresaDto[];
+  /** Los sistemas integrados del grupo (`sistemas:administrar`); `undefined` mientras cargan o si no se pueden listar. */
+  sistemas: readonly SistemaIntegradoDto[] | undefined;
+  /** Código del sistema desde el que se abrió la sesión, o `null` si se entró directo a Validasoft. */
+  sistemaDeLaSesion: string | null;
   onCerrar: () => void;
   onCreado: (creado: WebhookDto) => void;
 }) {
   const { t } = useTranslation();
-  const [b, setB] = useState<BorradorWebhook>(() => (webhook ? borradorDeWebhook(webhook) : borradorWebhookNuevo()));
+  const [elegido, setB] = useState<BorradorWebhook>(() => (webhook ? borradorDeWebhook(webhook) : borradorWebhookNuevo()));
+  const requiereSistema = webhook === null && sistemaDeLaSesion === null;
+  const activos = (sistemas ?? []).filter((s) => s.activo);
+  // Con un solo sistema integrado no hay nada que elegir: es ese.
+  const b = requiereSistema && !elegido.sistemaId && activos.length === 1 ? { ...elegido, sistemaId: activos[0]?.id ?? '' } : elegido;
   const [urlTocada, setUrlTocada] = useState(false);
   const guardar = useGuardarWebhook(webhook);
-  const errores = validarWebhook(b);
+  const errores = validarWebhook(b, requiereSistema);
   const errorUrl = urlTocada ? validarUrl(b.url) : null;
   const todosLosTipos = b.tipos.includes(TODOS);
   const todasLasEmpresas = b.empresas.includes(TODOS);
@@ -53,6 +67,27 @@ export function DrawerWebhook({
         </Stack>
         <Stack spacing={2.5} sx={{ p: 2.5, flex: 1, overflowY: 'auto' }}>
           {guardar.isError && <Alert severity="error">{mensajeDeError(guardar.error, t)}</Alert>}
+          {requiereSistema && (
+            <TextField
+              select
+              required
+              label={t('webhooks.campos.sistema')}
+              value={b.sistemaId}
+              onChange={(e) => setB({ ...b, sistemaId: e.target.value })}
+              disabled={activos.length === 0}
+              helperText={activos.length === 0 ? t('webhooks.campos.sinSistemas') : t('webhooks.campos.sistemaAyuda')}
+              slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+            >
+              <MenuItem value="" disabled>
+                {t('webhooks.campos.sistemaElegir')}
+              </MenuItem>
+              {activos.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.nombre} · {s.codigo}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <TextField
             required
             label={t('webhooks.campos.url')}

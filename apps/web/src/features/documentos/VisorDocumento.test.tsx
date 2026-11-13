@@ -51,27 +51,27 @@ describe('VisorDocumento: el botón «Descargar»', () => {
     const { entregarArchivo } = montar();
 
     // Mientras se pide la descarga: botón deshabilitado (no hay enlace todavía).
-    const pendiente = screen.getByRole('button', { name: 'Descargar', exact: true });
+    const pendiente = screen.getByRole('button', { name: 'Descargar' });
     expect(pendiente).toBeDisabled();
     expect(screen.queryByRole('link', { name: 'Descargar' })).not.toBeInTheDocument();
 
     // Llegó la URL: el mismo botón, ya habilitado; sigue sin haber un enlace con ese nombre.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Descargar', exact: true })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Descargar' })).toBeEnabled());
     expect(screen.queryByRole('link', { name: 'Descargar' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Descargar', exact: true })).toBe(pendiente);
+    expect(screen.getByRole('button', { name: 'Descargar' })).toBe(pendiente);
 
     entregarArchivo();
     await waitFor(() => expect(screen.getByTitle(/Registro Único Tributario/)).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: 'Descargar', exact: true })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Descargar' })).toBeEnabled();
   });
 
   it('al pulsarlo ofrece el archivo con su nombre', async () => {
     const clic = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
     const crear = vi.spyOn(document, 'createElement');
     montar();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Descargar', exact: true })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Descargar' })).toBeEnabled());
 
-    await userEvent.click(screen.getByRole('button', { name: 'Descargar', exact: true }));
+    await userEvent.click(screen.getByRole('button', { name: 'Descargar' }));
 
     expect(clic).toHaveBeenCalledTimes(1);
     const enlace = crear.mock.results.map((r) => r.value as unknown).find((e): e is HTMLAnchorElement => e instanceof HTMLAnchorElement);
@@ -81,6 +81,6 @@ describe('VisorDocumento: el botón «Descargar»', () => {
 
   it('una versión de solo formulario no tiene archivo que descargar', () => {
     montar({ ...DOCUMENTO, sinArchivo: true });
-    expect(screen.queryByRole('button', { name: 'Descargar', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Descargar' })).not.toBeInTheDocument();
   });
 });

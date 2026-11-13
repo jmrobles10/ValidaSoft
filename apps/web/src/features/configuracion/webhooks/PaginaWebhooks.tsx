@@ -8,7 +8,9 @@ import { EncabezadoPagina, ErrorRecuperable, SinPermiso } from '../../../shared/
 import { mensajeDeError } from '../../../shared/errores';
 import { usePermisos } from '../../../shared/usePermisos';
 import { useAvisos } from '../../../shared/useAvisos';
+import { useSesion } from '../../../sesion/sesionStore';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
+import { useSistemas } from '../apiKeys/api';
 import { useTiposEvento, useWebhooks } from './api';
 import { DetalleWebhook } from './DetalleWebhook';
 import { DialogoSecreto } from './DialogoSecreto';
@@ -22,9 +24,13 @@ type Edicion = { tipo: 'crear' } | { tipo: 'editar'; webhook: WebhookDto };
 export function PaginaWebhooks() {
   const { t } = useTranslation();
   const { empresa, empresas } = useEmpresaActiva();
-  const puede = usePermisos(empresa.id).puede(SCOPES.webhooksAdministrar);
+  const permisos = usePermisos(empresa.id);
+  const puede = permisos.puede(SCOPES.webhooksAdministrar);
   const consulta = useWebhooks(puede);
   const catalogo = useTiposEvento(puede);
+  // Al crear sin venir de un sistema integrado (ingreso directo) se elige el sistema dueño del webhook.
+  const sistemaDeLaSesion = useSesion((s) => s.sesion?.sistema ?? null);
+  const sistemas = useSistemas(puede && sistemaDeLaSesion === null && permisos.puede(SCOPES.sistemasAdministrar));
   const mostrar = useAvisos((s) => s.mostrar);
   const [elegidoId, setElegidoId] = useState<string | null>(null);
   const [edicion, setEdicion] = useState<Edicion | null>(null);
@@ -121,6 +127,8 @@ export function PaginaWebhooks() {
           webhook={edicion.tipo === 'editar' ? edicion.webhook : null}
           catalogo={catalogo.data ?? []}
           empresas={empresas}
+          sistemas={sistemas.data}
+          sistemaDeLaSesion={sistemaDeLaSesion}
           onCerrar={() => setEdicion(null)}
           onCreado={(creado) => {
             setEdicion(null);

@@ -8,6 +8,8 @@ import type { CrearWebhookDto, EditarWebhookDto, TipoEventoPublicoDto, WebhookDt
 export const TODOS = '*';
 
 export interface BorradorWebhook {
+  /** Sistema integrado dueño de la suscripción (solo al crear). Vacío = el de la sesión, que la API toma sola. */
+  sistemaId: string;
   url: string;
   descripcion: string;
   /** `['*']` = todos los tipos, presentes y futuros. */
@@ -16,16 +18,16 @@ export interface BorradorWebhook {
   empresas: string[];
 }
 
-export type ErrorWebhook = 'url-requerida' | 'url-invalida' | 'url-no-permitida' | 'tipos-requeridos' | 'empresas-requeridas';
+export type ErrorWebhook = 'sistema-requerido' | 'url-requerida' | 'url-invalida' | 'url-no-permitida' | 'tipos-requeridos' | 'empresas-requeridas';
 
 const HOSTS_LOCALES = new Set(['localhost', '127.0.0.1', '[::1]']);
 
 export function borradorWebhookNuevo(): BorradorWebhook {
-  return { url: '', descripcion: '', tipos: [TODOS], empresas: [TODOS] };
+  return { sistemaId: '', url: '', descripcion: '', tipos: [TODOS], empresas: [TODOS] };
 }
 
 export function borradorDeWebhook(w: WebhookDto): BorradorWebhook {
-  return { url: w.url, descripcion: w.descripcion ?? '', tipos: [...w.tipos], empresas: [...w.empresas] };
+  return { sistemaId: w.sistemaId, url: w.url, descripcion: w.descripcion ?? '', tipos: [...w.tipos], empresas: [...w.empresas] };
 }
 
 /** `https://…` (o `http` hacia localhost, que la API solo acepta en desarrollo); sin usuario ni fragmento. */
@@ -44,8 +46,13 @@ export function validarUrl(texto: string): ErrorWebhook | null {
   return 'url-no-permitida';
 }
 
-export function validarWebhook(b: BorradorWebhook): ErrorWebhook[] {
+/**
+ * `requiereSistema`: al crear con una sesión que no viene de un sistema integrado (ingreso directo) la API exige el
+ * `sistemaId` (422 `sistema-requerido`); desde un sistema integrado lo toma de la sesión.
+ */
+export function validarWebhook(b: BorradorWebhook, requiereSistema = false): ErrorWebhook[] {
   const errores: ErrorWebhook[] = [];
+  if (requiereSistema && !b.sistemaId) errores.push('sistema-requerido');
   const url = validarUrl(b.url);
   if (url) errores.push(url);
   if (b.tipos.length === 0) errores.push('tipos-requeridos');
@@ -54,7 +61,7 @@ export function validarWebhook(b: BorradorWebhook): ErrorWebhook[] {
 }
 
 export function cuerpoCrearWebhook(b: BorradorWebhook): CrearWebhookDto {
-  return { url: b.url.trim(), tipos: b.tipos, empresas: b.empresas, descripcion: b.descripcion.trim() || null };
+  return { url: b.url.trim(), tipos: b.tipos, empresas: b.empresas, sistemaId: b.sistemaId || null, descripcion: b.descripcion.trim() || null };
 }
 
 export function cuerpoEditarWebhook(b: BorradorWebhook): EditarWebhookDto {
