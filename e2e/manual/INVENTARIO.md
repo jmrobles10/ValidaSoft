@@ -112,19 +112,19 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 |---|---|---|---|
 | `revision/inicio-lo-que-te-toca` ☑ | Revisor/área | Expedientes en revisión y observados (spec `inicio`) | Inicio: cifras, «Lo que te toca», indicadores, ir a la bandeja |
 | `revision/bandeja-de-revision` ☑ | Revisor/área | Varios expedientes de dos áreas | Columnas (tercero, tipo, área, plazo), filtros, indicador de plazo, abrir |
-| `revision/aprobar-un-area` ☐ | Revisor/área | Proveedor «En revisión» en Norte (spec `decisiones`) | Abrir, revisar documentos, «Aprobar área», diálogo, estado de las demás áreas |
-| `revision/aprobar-documento-por-documento` ☐ | Revisor/área | Expediente con documentos por área (spec `decisiones`) | Aprobar cada documento en la versión vista, el área se cierra al decidir todos |
-| `revision/observar-con-motivos` ☐ | Revisor/área | Expediente en revisión (spec `decisiones`) | «Observar», documentos y motivos tipificados, nota, qué recibe el tercero (un solo correo) |
-| `revision/rechazar-expediente` ☐ | Oficial de cumplimiento | Área con «Puede rechazar» (spec `decisiones`) | «Rechazar», motivos que lee el tercero, justificación interna, el vínculo vuelve a Invitado |
-| `revision/aprobar-en-nombre-del-area` ☐ | Administrador de empresa | Área sin respuesta (spec `decisiones`) | Menú de administrador, justificación obligatoria, queda registrado |
-| `revision/etapas-en-secuencia` ☐ | Revisor/área | Flujo de dos etapas (spec `secuencia`) | Cada área ve el expediente solo cuando le toca, la etapa siguiente empieza al aprobar todas |
-| `revision/dos-aprobadores-y-separacion-de-funciones` ☐ | Revisor/área | Área con 2 aprobadores y separación activada (spec `secuencia`) | «1 de 2» aprobaciones, el mismo aprobador no cuenta dos veces, quien invitó no decide |
-| `revision/desaprobar-y-reabrir-una-etapa` ☐ | Administrador de empresa | Expediente aprobado (spec `desaprobacion`) | Reabrir una etapa, volver a la fase inicial, solo el administrador ve las acciones |
-| `revision/desaprobar-un-expediente-aprobado` ☐ | Administrador de empresa | Vínculo aprobado con certificado (spec `desaprobacion`) | Desaprobar, vínculo a validación, certificado revocado, otro certificado al aprobar de nuevo |
-| `revision/anular-un-veredicto` ☐ | Administrador de empresa | Área que ya aprobó (spec `ciclo-vinculo`) | Anular el veredicto de un área, cierre manual de una observación |
-| `revision/actualizacion-de-un-documento` ☐ | Revisor/área | Versión nueva durante la revisión (spec `actualizaciones`) | Aviso en tiempo real, el diálogo abierto no deja confirmar, ver el cambio |
+| `revision/aprobar-un-area` ☑ | Revisor/área | Proveedor «En revisión» en Norte (spec `decisiones`) | Abrir, revisar documentos, «Aprobar área», diálogo, estado de las demás áreas |
+| `revision/aprobar-documento-por-documento` ☑ | Revisor/área | Expediente con documentos por área (spec `decisiones`) | Aprobar cada documento en la versión vista, el área se cierra al decidir todos |
+| `revision/observar-con-motivos` ☑ | Revisor/área | Expediente en revisión (spec `decisiones`) | «Observar», documentos y motivos tipificados, nota, qué recibe el tercero (un solo correo) |
+| `revision/rechazar-expediente` ☑ | Oficial de cumplimiento | Área con «Puede rechazar» (spec `decisiones`) | «Rechazar», motivos que lee el tercero, justificación interna, el vínculo vuelve a Invitado |
+| `revision/aprobar-en-nombre-del-area` ☑ | Administrador de empresa | Área sin respuesta (spec `decisiones`) | Menú de administrador, justificación obligatoria, queda registrado |
+| `revision/etapas-en-secuencia` ☑ | Revisor/área | Flujo de dos etapas (spec `secuencia`) | Cada área ve el expediente solo cuando le toca, la etapa siguiente empieza al aprobar todas |
+| `revision/dos-aprobadores-y-separacion-de-funciones` ☑ | Revisor/área | Área con 2 aprobadores y separación activada (spec `secuencia`) | «1 de 2» aprobaciones, el mismo aprobador no cuenta dos veces, quien invitó no decide |
+| `revision/desaprobar-y-reabrir-una-etapa` ☑ | Administrador de empresa | Expediente aprobado (spec `desaprobacion`) | Reabrir una etapa, volver a la fase inicial, solo el administrador ve las acciones |
+| `revision/desaprobar-un-expediente-aprobado` ☑ | Administrador de empresa | Vínculo aprobado con certificado (spec `desaprobacion`) | Desaprobar, vínculo a validación, certificado revocado, otro certificado al aprobar de nuevo |
+| `revision/anular-un-veredicto` ☑ | Administrador de empresa | Área que ya aprobó (spec `ciclo-vinculo`) | Anular el veredicto de un área, cierre manual de una observación |
+| `revision/actualizacion-de-un-documento` ☑ | Revisor/área | Versión nueva durante la revisión (spec `actualizaciones`) | Aviso en tiempo real, el diálogo abierto no deja confirmar, ver el cambio |
 | `revision/revalidaciones-en-lote` ☐ | Revisor/área | Revalidaciones sin cambios y una con cambios (spec `revalidaciones-y-exencion`) | Lista de Revalidaciones, selección en lote (la que cambió no se selecciona), efecto en el certificado |
-| `revision/eximir-un-documento` ☐ | Administrador de empresa | Expediente con RUT requerido (spec `revalidaciones-y-exencion`) | Eximir con motivo, las áreas no lo revisan, el tercero lo ve eximido |
+| `revision/eximir-un-documento` ☑ | Administrador de empresa | Expediente con RUT requerido (spec `revalidaciones-y-exencion`) | Eximir con motivo, las áreas no lo revisan, el tercero lo ve eximido |
 | `revision/historial-del-expediente` ☐ | Revisor/área | Expediente con observación, respuesta y aprobación | Línea de tiempo: quién, qué y cuándo, rótulos, valores largos |
 | `revision/visor-y-datos-de-un-documento` ☐ | Revisor/área | Documento con campos y, si hay IA, análisis | Visor, versiones, datos declarados, vigencia, descargar (queda auditado) |
 | `revision/recordatorio-de-observaciones` ☐ | Revisor/área | Expediente observado (spec `novedades-tercero`) | Recordatorio individual desde el expediente, qué llega al tercero (correo y campana) |
