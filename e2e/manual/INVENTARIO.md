@@ -241,7 +241,7 @@ Siembra común: llave de Plataforma (`CLAVE_PLATAFORMA`) y `abrirEmbebidoCon` si
 |---|---|---|---|
 | `plataforma/ingreso-del-operador` ☐ | Plataforma | Operador con passkey y clave de arranque (spec `plataforma-identidad`) | Entrar a la consola, passkey, qué puede ver cada rol de operador |
 | `plataforma/crear-grupo-y-empresa` ☐ | Plataforma | — (spec `alta-empresa-certificacion`) | Nuevo grupo: datos, primera empresa, administrador, sistema y llaves; el resultado se ve una sola vez |
-| `plataforma/lista-de-grupos` ☐ | Plataforma | Varios grupos | Grupos con sus empresas, buscar, abrir la tarjeta |
+| `plataforma/lista-de-grupos` ☑ | Plataforma | Varios grupos | Grupos con sus empresas, buscar, abrir la tarjeta |
 | `plataforma/agregar-empresa-a-un-grupo` ☐ | Plataforma | Grupo existente | Agregar una empresa, prefijo de folio, la empresa aparece en el grupo |
 | `plataforma/sistemas-de-un-grupo` ☐ | Plataforma | Grupo con un sistema integrado | Ver, desactivar y reactivar un sistema, efecto sobre sus llaves y sesiones |
 | `plataforma/plan-del-grupo` ☐ | Plataforma | Grupo con límites (spec `derechos-plan-correo`) | Plan, límites y uso, cambiar, aviso al grupo |
