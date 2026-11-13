@@ -95,7 +95,7 @@ Todo en la app de la empresa (`abrirEmbebido`). Revisor/área: Rubén (Compras d
 | `vinculos/detalle-del-vinculo` ☑ | Administrador de empresa | Vínculo activo con referencias externas y contactos | Datos del tercero, estado, invitación, referencias por sistema, contactos, historial con sus rótulos |
 | `vinculos/reenviar-invitacion` ☑ | Administrador de empresa | Vínculo invitado | «Reenviar invitación», correo y vigencia del enlace, aviso, el correo nuevo |
 | `vinculos/bloquear-y-desbloquear` ☑ | Administrador de empresa | Vínculo activo | Bloquear con motivo y fecha, lo que ve el tercero (nada del motivo), certificado, desbloquear (spec `certificado`) |
-| `vinculos/desvincular-y-reintegrar-sin-revalidar` ☐ | Administrador de empresa | Vínculo aprobado (spec `reintegro`) | Desvincular, certificado revocado, reintegrar restituyendo lo aprobado |
+| `vinculos/desvincular-y-reintegrar-sin-revalidar` ☑ | Administrador de empresa | Vínculo aprobado (spec `reintegro`) | Desvincular, certificado revocado, reintegrar restituyendo lo aprobado |
 | `vinculos/reintegrar-revalidando` ☐ | Administrador de empresa | Vínculo desvinculado con documentos vencidos (spec `reintegro`) | El diálogo explica por qué no se puede sin revalidar, renovación completa |
 | `vinculos/anular-vinculo` ☑ | Administrador de empresa | Vínculo con expediente abierto (spec `ciclo-vinculo`) | Anular con la palabra de confirmación, efecto en el expediente |
 | `vinculos/abrir-expediente-manual` ☑ | Administrador de empresa | Vínculo invitado, sin aceptar (FL-6) | Abrir el expediente sin esperar al tercero, aparece en la bandeja |
