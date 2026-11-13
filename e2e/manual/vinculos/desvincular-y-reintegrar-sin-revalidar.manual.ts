@@ -2,6 +2,7 @@ import { abrirEmbebido } from '../../soporte/embebido';
 import { aprobarPorApi, crearTipoDeVinculo, invitarVinculo, abrirExpedienteManual, leerCertificado, leerVinculo, publicarFlujoSinDocumentos } from '../../soporte/flujos';
 import { crearEscenario, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 recorrido(
   {
@@ -19,10 +20,10 @@ recorrido(
   async ({ page }) => {
     const e = await crearEscenario();
     await crearTipoDeVinculo(e, 'ALIADO', 'Aliado');
-    await publicarFlujoSinDocumentos(e, e.norte, 'ALIADOS', 'ALIADO', [[{ area: e.norte.areas.compras! }]]);
+    await publicarFlujoSinDocumentos(e, e.norte, 'ALIADOS', 'ALIADO', [[{ area: areaDe(e.norte, 'compras') }]]);
     const invitacion = await invitarVinculo(e, e.norte, nuevoTercero(), 'ALIADO');
     const expedienteId = await abrirExpedienteManual(e, invitacion);
-    await aprobarPorApi(e, invitacion, expedienteId, e.norte.areas.compras!, e.ruben);
+    await aprobarPorApi(e, invitacion, expedienteId, areaDe(e.norte, 'compras'), e.ruben);
     expect((await leerVinculo(e, invitacion)).estado).toBe('Activo');
 
     const app = await abrirEmbebido(page, e, e.ana, e.norte, `vinculos/${invitacion.vinculoId}`);

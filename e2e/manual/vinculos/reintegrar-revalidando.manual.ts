@@ -3,6 +3,7 @@ import { accionDeVinculo } from '../../soporte/devolucion';
 import { abrirExpedienteManual, crearTipoDeVinculo, invitarVinculo, leerVinculo, publicarFlujoSinDocumentos } from '../../soporte/flujos';
 import { crearEscenario, nuevoTercero } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 recorrido(
   {
@@ -20,7 +21,7 @@ recorrido(
   async ({ page }) => {
     const e = await crearEscenario();
     await crearTipoDeVinculo(e, 'ALIADO', 'Aliado');
-    await publicarFlujoSinDocumentos(e, e.norte, 'ALIADOS', 'ALIADO', [[{ area: e.norte.areas.compras! }]]);
+    await publicarFlujoSinDocumentos(e, e.norte, 'ALIADOS', 'ALIADO', [[{ area: areaDe(e.norte, 'compras') }]]);
     const invitacion = await invitarVinculo(e, e.norte, nuevoTercero(), 'ALIADO');
     await abrirExpedienteManual(e, invitacion);
 

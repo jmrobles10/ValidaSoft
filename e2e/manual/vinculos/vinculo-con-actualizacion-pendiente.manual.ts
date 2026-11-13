@@ -7,6 +7,7 @@ import { crearTipoDeVinculo, invitarVinculo } from '../../soporte/flujos';
 import { aceptarInvitacion, entrarPorInvitacion, esperarEstadoDelTercero, subirDocumento } from '../../soporte/proveedor';
 import { crearEscenario, nuevoTercero, type Empresa, type Escenario, type Persona } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
+import { areaDe } from '../nucleo/semillas';
 
 const RUT = 'Registro Único Tributario';
 
@@ -51,8 +52,8 @@ recorrido(
     const e = await crearEscenario();
     await crearTipoDeVinculo(e, 'ALIADO', 'Aliado');
     const requisitos = [{ tipoDocumento: 'RUT' }];
-    await publicarFlujoDeFicha(e, e.norte, 'ALIADOS_NORTE', e.norte.areas.compras!, 'ALIADO', requisitos);
-    await publicarFlujoDeFicha(e, e.sur, 'ALIADOS_SUR', e.sur.areas.revision!, 'ALIADO', requisitos);
+    await publicarFlujoDeFicha(e, e.norte, 'ALIADOS_NORTE', areaDe(e.norte, 'compras'), 'ALIADO', requisitos);
+    await publicarFlujoDeFicha(e, e.sur, 'ALIADOS_SUR', areaDe(e.sur, 'revision'), 'ALIADO', requisitos);
     const tercero = nuevoTercero('Aceros en Revisión S.A.S.');
     const enNorte = await invitarVinculo(e, e.norte, tercero, 'ALIADO');
     const enSur = await invitarVinculo(e, e.sur, tercero, 'ALIADO');
