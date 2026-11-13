@@ -132,7 +132,9 @@ recorrido(
 
     // 6. Información general de la natural.
     await abrirSeccion(page, 'general', 'Información general');
-    await expect(page.getByRole('textbox', { name: 'Nombres', exact: true })).toHaveValue('Carlos Andrés');
+    const nombres = page.getByRole('textbox', { name: 'Nombres', exact: true });
+    await expect(nombres).toHaveValue('Carlos Andrés');
+    await nombres.scrollIntoViewIfNeeded();
     await expect(page.getByRole('textbox', { name: 'Apellidos', exact: true })).toHaveValue('Gómez Ruiz');
     await expect(page.getByRole('textbox', { name: 'Razón social', exact: true })).toHaveCount(0);
     await paso(page, {
@@ -140,7 +142,7 @@ recorrido(
       explicacion:
         'Tus nombres y apellidos llegan prellenados con lo que la empresa registró al invitarte; revísalos. En lugar de la razón social, pide la fecha y el lugar de expedición de tu documento. ' +
         'Completa también el teléfono, el domicilio y tu actividad económica, y responde las preguntas de persona expuesta políticamente (PEP): si lo eres, o si tienes vínculo con una, Validasoft te pedirá los datos. Mientras falte un dato, «Guardar y continuar» queda deshabilitado.',
-      resaltar: page.getByRole('radiogroup', { name: '¿Eres una persona expuesta políticamente (PEP)?' }),
+      resaltar: [nombres, page.getByRole('radiogroup', { name: '¿Eres una persona expuesta políticamente (PEP)?' })],
       variantes: [
         { cuando: 'Eres persona jurídica', entonces: 'En vez de nombres y apellidos ves la razón social, y no hay preguntas de PEP propias.' },
       ],
