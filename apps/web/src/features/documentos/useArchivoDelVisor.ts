@@ -2,6 +2,18 @@ import type { DescargaDto } from '@validasoft/api-client';
 import { useEffect, useState } from 'react';
 import { tipoDeVisor, usePedirDescarga } from './api';
 
+/** Ofrece el archivo al navegador con un `<a download>` temporal (la URL prefirmada ya trae `Content-Disposition: attachment`). */
+export function ofrecerDescarga({ url, nombre }: Pick<DescargaDto, 'url' | 'nombre'>): void {
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.rel = 'noopener';
+  enlace.style.display = 'none';
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+}
+
 export type ContenidoDelVisor = { estado: 'cargando' } | { estado: 'listo'; url: string } | { estado: 'error'; error: unknown };
 
 /**
