@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 960" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<title id="titulo">Del vínculo a la aprobación, por actor</title>
+<desc id="descripcion">Diagrama por actor: la empresa configura y crea el vínculo; Validasoft invita al tercero; el tercero acepta y completa su expediente; Validasoft verifica y analiza; las áreas y el oficial revisan, el tercero corrige si hay observaciones y el expediente se aprueba.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-carril" x="10" y="10" width="204" height="940" rx="8"/>
+<rect class="d-caja" x="18" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="112" y="40">Administrador o sistema</text>
+<rect class="d-carril" x="224" y="10" width="204" height="940" rx="8"/>
+<rect class="d-caja" x="232" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="326" y="40">Tercero</text>
+<rect class="d-carril" x="438" y="10" width="204" height="940" rx="8"/>
+<rect class="d-caja" x="446" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="540" y="40">Validasoft</text>
+<rect class="d-carril" x="652" y="10" width="204" height="940" rx="8"/>
+<rect class="d-caja" x="660" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="754" y="40">Áreas de revisión</text>
+<rect class="d-carril" x="866" y="10" width="204" height="940" rx="8"/>
+<rect class="d-caja" x="874" y="18" width="188" height="34" rx="10"/>
+<text class="d-t-b d-c" x="968" y="40">Oficial de cumplimiento</text>
+<rect class="d-caja" x="20" y="80" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="112" y="100">Configura el flujo:</text>
+<text class="d-t-s d-c" x="112" y="115">tipos, áreas, requisitos</text>
+<text class="d-t-s d-c" x="112" y="128">y textos legales</text>
+<circle class="d-num" cx="26" cy="88" r="10"/><text class="d-num-t" x="26" y="92">1</text>
+<rect class="d-caja" x="20" y="168" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="112" y="188">Crea el vínculo</text>
+<text class="d-t-s d-c" x="112" y="203">en la app o por API</text>
+<circle class="d-num" cx="26" cy="176" r="10"/><text class="d-num-t" x="26" y="180">2</text>
+<rect class="d-caja" x="448" y="256" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="540" y="276">Reconcilia al tercero</text>
+<text class="d-t-s d-c" x="540" y="291">y envía la invitación</text>
+<circle class="d-num" cx="454" cy="264" r="10"/><text class="d-num-t" x="454" y="268">3</text>
+<rect class="d-caja" x="234" y="344" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="326" y="364">Abre el enlace, escribe</text>
+<text class="d-t-s d-c" x="326" y="379">el código y acepta</text>
+<text class="d-t-s d-c" x="326" y="392">los textos legales</text>
+<circle class="d-num" cx="240" cy="352" r="10"/><text class="d-num-t" x="240" y="356">4</text>
+<rect class="d-caja" x="448" y="432" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="540" y="452">Abre el expediente y</text>
+<text class="d-t-s d-c" x="540" y="467">comparte lo que ya</text>
+<text class="d-t-s d-c" x="540" y="480">hay en su bóveda</text>
+<circle class="d-num" cx="454" cy="440" r="10"/><text class="d-num-t" x="454" y="444">5</text>
+<rect class="d-caja" x="234" y="520" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="326" y="540">Completa documentos</text>
+<text class="d-t-s d-c" x="326" y="555">y «Mi información»</text>
+<circle class="d-num" cx="240" cy="528" r="10"/><text class="d-num-t" x="240" y="532">6</text>
+<rect class="d-caja" x="448" y="608" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="540" y="628">Verifica los archivos,</text>
+<text class="d-t-s d-c" x="540" y="643">analiza con IA y</text>
+<text class="d-t-s d-c" x="540" y="656">consulta las listas</text>
+<circle class="d-num" cx="454" cy="616" r="10"/><text class="d-num-t" x="454" y="620">7</text>
+<rect class="d-caja-a" x="662" y="696" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="754" y="716">Revisan por etapas:</text>
+<text class="d-t-s d-c" x="754" y="731">aprueban u observan</text>
+<circle class="d-num" cx="668" cy="704" r="10"/><text class="d-num-t" x="668" y="708">8</text>
+<rect class="d-caja-aviso" x="234" y="784" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="326" y="804">Corrige lo observado</text>
+<text class="d-t-s d-c" x="326" y="819">y reenvía</text>
+<circle class="d-num" cx="240" cy="792" r="10"/><text class="d-num-t" x="240" y="796">9</text>
+<rect class="d-caja" x="876" y="784" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="968" y="804">Decide coincidencias</text>
+<text class="d-t-s d-c" x="968" y="819">y registra el estudio</text>
+<circle class="d-num" cx="882" cy="792" r="10"/><text class="d-num-t" x="882" y="796">10</text>
+<rect class="d-caja-ok" x="448" y="872" width="184" height="64" rx="10"/>
+<text class="d-t d-c" x="540" y="892">Aprueba el expediente:</text>
+<text class="d-t-s d-c" x="540" y="907">vínculo Activo y</text>
+<text class="d-t-s d-c" x="540" y="920">certificado emitido</text>
+<circle class="d-num" cx="454" cy="880" r="10"/><text class="d-num-t" x="454" y="884">11</text>
+<path class="d-l" d="M112 144 L112 168" marker-end="url(#f)"/>
+<path class="d-l" d="M112 232 L112 244 L540 244 L540 256" marker-end="url(#f)"/>
+<path class="d-l" d="M540 320 L540 332 L326 332 L326 344" marker-end="url(#f)"/>
+<path class="d-l" d="M326 408 L326 420 L540 420 L540 432" marker-end="url(#f)"/>
+<path class="d-l" d="M540 496 L540 508 L326 508 L326 520" marker-end="url(#f)"/>
+<path class="d-l" d="M326 584 L326 596 L540 596 L540 608" marker-end="url(#f)"/>
+<path class="d-l" d="M540 672 L540 684 L754 684 L754 696" marker-end="url(#f)"/>
+<path class="d-l" d="M754 760 L754 772 L326 772 L326 784" marker-end="url(#f)"/>
+<path class="d-l-p" d="M418 830 L784 830 L784 760" marker-end="url(#f)"/>
+<path class="d-l" d="M846 728 L968 728 L968 784" marker-end="url(#f)"/>
+<path class="d-l" d="M968 848 L968 860 L540 860 L540 872" marker-end="url(#f)"/>
+</svg>

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 720" class="diagrama" role="img" aria-labelledby="titulo descripcion">
+<style>
+svg.diagrama{--d-fondo:#ffffff;--d-superficie:#ffffff;--d-superficie2:#eef1f5;--d-borde:#9aa6b5;--d-texto:#1b2129;--d-suave:#596473;--d-linea:#5b6778;--d-acento:#1c5bd0;--d-acento-fondo:#e6eeff;--d-ok:#0b7a4b;--d-ok-fondo:#e3f4ea;--d-aviso:#a85a00;--d-aviso-fondo:#fff3dc;--d-peligro:#bf2a2a;--d-peligro-fondo:#fde8e8;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+@media (prefers-color-scheme:dark){svg.diagrama{--d-fondo:#0d1117;--d-superficie:#161b22;--d-superficie2:#1e252e;--d-borde:#566274;--d-texto:#e5e9ef;--d-suave:#99a4b1;--d-linea:#8794a5;--d-acento:#78a6ff;--d-acento-fondo:#1b2a47;--d-ok:#4cc790;--d-ok-fondo:#12281c;--d-aviso:#f0a14a;--d-aviso-fondo:#2a2312;--d-peligro:#f27a7a;--d-peligro-fondo:#3a1a1a}}
+.diagrama .d-fondo{fill:var(--d-fondo)}
+.diagrama .d-caja{fill:var(--d-superficie);stroke:var(--d-borde);stroke-width:1.4}
+.diagrama .d-caja-gris{fill:var(--d-superficie2);stroke:var(--d-borde);stroke-width:1.4}
+.diagrama .d-caja-a{fill:var(--d-acento-fondo);stroke:var(--d-acento);stroke-width:1.5}
+.diagrama .d-caja-ok{fill:var(--d-ok-fondo);stroke:var(--d-ok);stroke-width:1.5}
+.diagrama .d-caja-aviso{fill:var(--d-aviso-fondo);stroke:var(--d-aviso);stroke-width:1.5}
+.diagrama .d-caja-peligro{fill:var(--d-peligro-fondo);stroke:var(--d-peligro);stroke-width:1.5}
+.diagrama .d-grupo{fill:none;stroke:var(--d-borde);stroke-width:1.3;stroke-dasharray:6 5}
+.diagrama .d-carril{fill:var(--d-superficie2);stroke:none}
+.diagrama .d-rotulo{fill:var(--d-superficie);stroke:none}
+.diagrama .d-t{fill:var(--d-texto);font-size:13px}
+.diagrama .d-t-s{fill:var(--d-suave);font-size:11.5px}
+.diagrama .d-t-b{fill:var(--d-texto);font-size:13.5px;font-weight:700}
+.diagrama .d-t-h{fill:var(--d-texto);font-size:15px;font-weight:700}
+.diagrama .d-t-a{fill:var(--d-acento);font-size:12px;font-weight:700}
+.diagrama .d-c{text-anchor:middle}
+.diagrama .d-num{fill:var(--d-acento);stroke:none}
+.diagrama .d-num-t{fill:var(--d-superficie);font-size:11px;font-weight:700;text-anchor:middle}
+.diagrama .d-l{fill:none;stroke:var(--d-linea);stroke-width:1.5}
+.diagrama .d-l-p{fill:none;stroke:var(--d-linea);stroke-width:1.5;stroke-dasharray:5 4}
+.diagrama .d-l-a{fill:none;stroke:var(--d-acento);stroke-width:1.7}
+.diagrama .d-l-ok{fill:none;stroke:var(--d-ok);stroke-width:1.7}
+.diagrama .d-l-peligro{fill:none;stroke:var(--d-peligro);stroke-width:1.7}
+.diagrama .d-marca{fill:var(--d-linea)}
+.diagrama .d-marca-a{fill:var(--d-acento)}
+.diagrama .d-marca-ok{fill:var(--d-ok)}
+.diagrama .d-marca-peligro{fill:var(--d-peligro)}
+</style>
+<rect class="d-fondo" width="100%" height="100%"/>
+<title id="titulo">Contenedores de Validasoft</title>
+<desc id="descripcion">Dos aplicaciones React en el navegador y los sistemas integradores llaman a un único proceso .NET que sirve la API y las dos apps y corre las colas y los procesos periódicos. Ese proceso usa PostgreSQL con Marten, un almacén S3, SMTP y proveedores externos detrás de interfaces.</desc>
+<defs><marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca" d="M0 0L10 5L0 10z"/></marker><marker id="f-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-a" d="M0 0L10 5L0 10z"/></marker><marker id="f-ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-ok" d="M0 0L10 5L0 10z"/></marker><marker id="f-peligro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="d-marca-peligro" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="d-grupo" x="20" y="50" width="250" height="430" rx="14"/>
+<text class="d-t-s" x="34" y="68">Quien llama</text>
+<rect class="d-caja" x="36" y="80" width="218" height="110" rx="10"/>
+<text class="d-t-b d-c" x="145" y="103">apps/web</text>
+<text class="d-t-s d-c" x="145" y="120">App de la empresa (React)</text>
+<text class="d-t-s d-c" x="145" y="135">servida en /app/</text>
+<text class="d-t-s d-c" x="145" y="150">revisión, configuración,</text>
+<text class="d-t-s d-c" x="145" y="165">informes y consola /plataforma</text>
+<rect class="d-caja" x="36" y="210" width="218" height="120" rx="10"/>
+<text class="d-t-b d-c" x="145" y="233">apps/public</text>
+<text class="d-t-s d-c" x="145" y="250">Portal del tercero (React)</text>
+<text class="d-t-s d-c" x="145" y="265">servida en /</text>
+<text class="d-t-s d-c" x="145" y="280">verificador de certificados</text>
+<text class="d-t-s d-c" x="145" y="295">y pantallas embebidas /embed</text>
+<rect class="d-caja" x="36" y="350" width="218" height="110" rx="10"/>
+<text class="d-t-b d-c" x="145" y="373">Sistema integrador</text>
+<text class="d-t-s d-c" x="145" y="390">SRM, Marco, Portal…</text>
+<text class="d-t-s d-c" x="145" y="405">su backend llama con API key</text>
+<text class="d-t-s d-c" x="145" y="420">y recibe webhooks</text>
+<path class="d-l" d="M254 135 L290 135"/>
+<path class="d-l" d="M254 270 L290 270"/>
+<path class="d-l" d="M254 405 L290 405"/>
+<path class="d-l" d="M290 135 L290 405"/>
+<path class="d-l" d="M290 135 L340 135" marker-start="url(#f)" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="293" y="117" width="44" height="16" rx="4"/>
+<text class="d-t-s d-c" x="315" y="129">HTTPS</text>
+<rect class="d-grupo" x="320" y="30" width="430" height="680" rx="14"/>
+<text class="d-t-s" x="334" y="48">Un solo proceso .NET 10 · una sola imagen Docker (puerto 8080)</text>
+<rect class="d-caja-a" x="340" y="60" width="390" height="120" rx="10"/>
+<text class="d-t-b d-c" x="535" y="83">API HTTP y archivos de las apps</text>
+<text class="d-t-s d-c" x="535" y="100">Wolverine.Http · OpenAPI en /openapi/v1.json</text>
+<text class="d-t-s d-c" x="535" y="115">API key, sesión de personas y sesión del tercero</text>
+<text class="d-t-s d-c" x="535" y="130">idempotencia · límite por IP · frame-ancestors y CORS</text>
+<text class="d-t-s d-c" x="535" y="145">sirve apps/web en /app/ y apps/public en /</text>
+<rect class="d-caja" x="340" y="200" width="390" height="112" rx="10"/>
+<text class="d-t-b d-c" x="535" y="223">Mensajería: colas locales durables</text>
+<text class="d-t-s d-c" x="535" y="240">Wolverine con outbox e inbox sobre Marten</text>
+<text class="d-t-s d-c" x="535" y="255">correo · requisitos · vigencias · webhooks (en orden)</text>
+<text class="d-t-s d-c" x="535" y="270">ia · lotes · campañas · plazos · habeas · plan</text>
+<text class="d-t-s d-c" x="535" y="285">reintentos de 1 s, 5 s y 30 s y cola de errores</text>
+<rect class="d-caja" x="340" y="332" width="390" height="92" rx="10"/>
+<text class="d-t-b d-c" x="535" y="355">Daemon asíncrono de Marten (hot/cold)</text>
+<text class="d-t-s d-c" x="535" y="372">un nodo líder lee el event store en orden:</text>
+<text class="d-t-s d-c" x="535" y="387">eventos públicos → entregas de webhook, campana,</text>
+<text class="d-t-s d-c" x="535" y="402">avisos de cambio (SSE) y correos a personas</text>
+<rect class="d-caja" x="340" y="444" width="390" height="148" rx="10"/>
+<text class="d-t-b d-c" x="535" y="467">Procesos periódicos</text>
+<text class="d-t-s d-c" x="535" y="484">vigencias del vínculo · plazos de cargue · SLA de revisión</text>
+<text class="d-t-s d-c" x="535" y="499">recordatorios de observaciones · PDF y vencimiento de certificados</text>
+<text class="d-t-s d-c" x="535" y="514">verificaciones de cumplimiento y monitoreo de listas</text>
+<text class="d-t-s d-c" x="535" y="529">revisión automática con IA · habeas data · planes del grupo</text>
+<text class="d-t-s d-c" x="535" y="544">limpieza de ingresos y de aserciones usadas</text>
+<rect class="d-caja" x="340" y="612" width="390" height="76" rx="10"/>
+<text class="d-t-b d-c" x="535" y="635">Dominio y aplicación</text>
+<text class="d-t-s d-c" x="535" y="652">agregados con eventos (vínculo, expediente, documento,</text>
+<text class="d-t-s d-c" x="535" y="667">certificado) y un caso de uso por carpeta</text>
+<rect class="d-caja-ok" x="810" y="50" width="250" height="100" rx="10"/>
+<text class="d-t-b d-c" x="935" y="73">Almacén S3 / MinIO</text>
+<text class="d-t-s d-c" x="935" y="90">bucket boveda y tenant-{grupo}</text>
+<text class="d-t-s d-c" x="935" y="105">objetos por SHA-256</text>
+<text class="d-t-s d-c" x="935" y="120">URLs prefirmadas</text>
+<rect class="d-caja-ok" x="810" y="170" width="250" height="190" rx="10"/>
+<text class="d-t-b d-c" x="935" y="193">PostgreSQL 17 + Marten</text>
+<text class="d-t-s d-c" x="935" y="210">un DocumentStore, eventos conjoined</text>
+<text class="d-t-s d-c" x="935" y="225">esquemas:</text>
+<text class="d-t-s d-c" x="935" y="240">plataforma · boveda · validacion</text>
+<text class="d-t-s d-c" x="935" y="255">identidad · eventos · wolverine</text>
+<text class="d-t-s d-c" x="935" y="270">LISTEN/NOTIFY entre servidores</text>
+<rect class="d-caja" x="810" y="380" width="250" height="56" rx="10"/>
+<text class="d-t-b d-c" x="935" y="403">SMTP</text>
+<text class="d-t-s d-c" x="935" y="420">Mailpit en desarrollo y e2e</text>
+<rect class="d-grupo" x="790" y="456" width="290" height="244" rx="14"/>
+<text class="d-t-s" x="804" y="474">Detrás de interfaces</text>
+<rect class="d-caja" x="810" y="484" width="250" height="50" rx="10"/>
+<text class="d-t-b d-c" x="935" y="507">IA · OpenAI o simulado</text>
+<rect class="d-caja" x="810" y="544" width="250" height="50" rx="10"/>
+<text class="d-t-b d-c" x="935" y="567">Listas restrictivas</text>
+<rect class="d-caja" x="810" y="604" width="250" height="50" rx="10"/>
+<text class="d-t-b d-c" x="935" y="627">SSO (OIDC · WorkOS)</text>
+<path class="d-l" d="M750 100 L810 100" marker-start="url(#f)" marker-end="url(#f)"/>
+<path class="d-l" d="M750 265 L810 265" marker-start="url(#f)" marker-end="url(#f)"/>
+<path class="d-l" d="M750 408 L810 408" marker-end="url(#f)"/>
+<path class="d-l" d="M750 509 L810 509" marker-end="url(#f)"/>
+<path class="d-l" d="M750 569 L810 569" marker-end="url(#f)"/>
+<path class="d-l" d="M750 629 L810 629" marker-end="url(#f)"/>
+<path class="d-l-p" d="M145 50 L145 12 L935 12 L935 50" marker-end="url(#f)"/>
+<rect class="d-rotulo" x="320" y="5" width="440" height="16" rx="4"/>
+<text class="d-t-s d-c" x="540" y="17">el navegador sube y baja archivos directo del almacén con una URL prefirmada</text>
+</svg>

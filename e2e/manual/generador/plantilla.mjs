@@ -10,7 +10,7 @@ const ICONO_MENU =
 
 /**
  * Página completa. `raiz` es el prefijo relativo hasta la raíz del sitio (`./`, `../`, `../../`) y `seccion`, la pestaña activa de la barra
- * (`recorridos` o `api`). `lateral` y `contenido` son HTML ya construido.
+ * (`recorridos`, `guias` o `api`). `lateral` y `contenido` son HTML ya construido.
  */
 export function pagina({ titulo, descripcion = '', raiz, seccion, lateral, migas = [], contenido, generado }) {
   const rastro =
@@ -36,6 +36,7 @@ ${descripcion ? `<meta name="description" content="${escapar(descripcion)}">` : 
   <a class="marca" href="${raiz}index.html"><span class="marca-sello" aria-hidden="true">V</span><span>Validasoft <small>Manual</small></span></a>
   <nav class="barra-enlaces" aria-label="Secciones del manual">
     <a href="${raiz}index.html"${seccion === 'recorridos' ? ' aria-current="page"' : ''}>Recorridos</a>
+    <a href="${raiz}g/index.html"${seccion === 'guias' ? ' aria-current="page"' : ''}>Guías</a>
     <a href="${raiz}api/index.html"${seccion === 'api' ? ' aria-current="page"' : ''}>API</a>
   </nav>
   <div class="buscador" role="search">
@@ -47,7 +48,7 @@ ${descripcion ? `<meta name="description" content="${escapar(descripcion)}">` : 
   <button class="boton-icono" id="cambiar-tema" type="button" aria-label="Cambiar entre modo claro y oscuro">${ICONO_TEMA}</button>
 </header>
 <div class="disposicion">
-  <aside class="lateral" aria-label="Navegación">${lateral}</aside>
+  <aside class="lateral" aria-label="Navegación"><nav class="lateral-secciones" aria-label="Secciones del manual"><a href="${raiz}index.html"${seccion === 'recorridos' ? ' aria-current="page"' : ''}>Recorridos</a><a href="${raiz}g/index.html"${seccion === 'guias' ? ' aria-current="page"' : ''}>Guías</a><a href="${raiz}api/index.html"${seccion === 'api' ? ' aria-current="page"' : ''}>API</a></nav>${lateral}</aside>
   <main class="contenido" id="contenido">
     ${rastro}
     ${contenido}
