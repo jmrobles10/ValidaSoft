@@ -16,7 +16,10 @@
     "generar:api": "pnpm --filter @validasoft/api-client generar",
     "semilla:dev": "pnpm --filter @validasoft/web semilla",
     "dev:public": "pnpm --filter @validasoft/public dev",
-    "e2e": "pnpm --filter @validasoft/e2e test"
+    "e2e": "pnpm --filter @validasoft/e2e test",
+    "manual": "node e2e/manual/generador/manual.mjs",
+    "manual:recorrer": "pnpm --filter @validasoft/e2e manual:recorrer",
+    "manual:todo": "pnpm manual:recorrer && pnpm manual"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

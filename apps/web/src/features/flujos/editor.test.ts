@@ -114,6 +114,13 @@ describe('etapasADto y edición', () => {
     expect(firmaBorrador({ ...cargado, separacionDeFunciones: false })).not.toBe(firmaBorrador(cargado));
     expect(cargado.politicaDevolucion).toBe('AlCerrarArea');
   });
+
+  it('la firma no depende del id que el servidor da a los requisitos: tras «Crear borrador» no hay cambios sin guardar', () => {
+    const recienCreado = borrador({ requisitos: [{ ...requisitoNuevo('rut'), id: null }] });
+    const delServidor = borrador({ requisitos: [{ ...requisitoNuevo('rut'), id: 'asignado-por-el-servidor' }] });
+    expect(firmaBorrador(delServidor)).toBe(firmaBorrador(recienCreado));
+    expect(firmaBorrador({ ...delServidor, requisitos: [{ ...requisitoNuevo('rut'), id: 'asignado-por-el-servidor', obligatorio: false }] })).not.toBe(firmaBorrador(delServidor));
+  });
 });
 
 describe('requisitos del flujo (RQ-1)', () => {

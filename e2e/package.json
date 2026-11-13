@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
+    "manual:recorrer": "playwright test -c playwright.manual.config.ts",
     "typecheck": "tsc -p tsconfig.json",
     "navegadores": "playwright install chromium"
   },
