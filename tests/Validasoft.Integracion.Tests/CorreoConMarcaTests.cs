@@ -62,6 +62,20 @@ public class CorreoConMarcaTests
     }
 
     [Fact]
+    public void El_correo_de_soporte_de_la_empresa_va_como_Reply_To_y_sin_el_las_respuestas_van_al_remitente()
+    {
+        var conSoporte = EnviadorSmtp.ArmarMensaje(
+            new MensajeDeCorreo("ana@aceros.co", "Asunto", "Hola.", "<p>Hola.</p>", ResponderA: "proveedores@norte.example"), "Validasoft <avisos@validasoft.test>");
+        conSoporte.ReplyTo.Mailboxes.Single().Address.ShouldBe("proveedores@norte.example");
+        conSoporte.From.Mailboxes.Single().Address.ShouldBe("avisos@validasoft.test"); // el remitente no cambia
+
+        Armar("<p>Hola.</p>").ReplyTo.ShouldBeEmpty();
+        // Una dirección ilegible no impide que el correo salga.
+        EnviadorSmtp.ArmarMensaje(new MensajeDeCorreo("ana@aceros.co", "Asunto", "Hola.", "<p>Hola.</p>", ResponderA: "esto no es un correo"), null)
+            .ReplyTo.ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Sin_remitente_propio_sale_con_el_configurado_de_la_plataforma()
     {
         Armar("<p>Hola.</p>").From.Mailboxes.Single().Address.ShouldBe("avisos@validasoft.test");

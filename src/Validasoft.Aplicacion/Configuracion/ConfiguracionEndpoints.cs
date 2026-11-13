@@ -1,6 +1,7 @@
 using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Identidad;
 using Validasoft.Aplicacion.Sandbox;
@@ -64,7 +65,7 @@ public static class EmpresasEndpoints
     [WolverinePut("/api/v1/empresas/{id}")]
     [Authorize(Policy = Permisos.EmpresasAdministrar)]
     public static async Task<EmpresaDto> Actualizar(Guid id, ActualizarEmpresaDto dto, ISesiones sesiones, IContextoSolicitud contexto, CacheDeEmpresas cache,
-        TimeProvider reloj, CancellationToken ct)
+        IMemoryCache memoria, TimeProvider reloj, CancellationToken ct)
     {
         var empresa = await CargarAsync(id, sesiones, contexto, ct);
         var antes = empresa.ADto();
@@ -75,6 +76,7 @@ public static class EmpresasEndpoints
         Auditoria.Registrar(sesion, contexto, "Empresa", empresa.Id.ToString(), AccionConfiguracion.Modificado, antes, empresa.ADto(), reloj.GetUtcNow(), empresa.Id);
         await sesion.SaveChangesAsync(ct);
         cache.Olvidar(empresa.Id);
+        memoria.Remove(DominioDeCorreoEndpoints.LlaveDelResponderA(empresa.Id)); // el correo de soporte es el Reply-To de sus correos
         return empresa.ADto();
     }
 

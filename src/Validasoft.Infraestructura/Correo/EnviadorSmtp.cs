@@ -38,7 +38,7 @@ public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorS
 
     /// <summary>
     /// El mensaje MIME listo para enviar: remitente (el propio de la empresa si su dominio está verificado, si no el de la plataforma), el
-    /// texto plano y el HTML dentro del marco de marca con las imágenes que pide por <c>cid:</c> adjuntas en línea, sin pedirlas a ningún
+    /// <c>Reply-To</c> con el correo de soporte de la empresa si lo configuró, el texto plano y el HTML dentro del marco de marca con las imágenes que pide por <c>cid:</c> adjuntas en línea, sin pedirlas a ningún
     /// servidor (MA-1).
     /// </summary>
     internal static MimeMessage ArmarMensaje(MensajeDeCorreo mensaje, string? remitentePorOmision)
@@ -49,6 +49,9 @@ public sealed class EnviadorSmtp(IConfiguration configuracion, ILogger<EnviadorS
             ? new MailboxAddress(propio.Nombre, propio.Direccion)
             : MailboxAddress.Parse(remitentePorOmision is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>"));
         correo.To.Add(MailboxAddress.Parse(mensaje.Para));
+        // El correo de soporte de la empresa recibe las respuestas del tercero (Reply-To); una dirección ilegible no impide el envío.
+        if (mensaje.ResponderA is { Length: > 0 } responderA && MailboxAddress.TryParse(responderA, out var respuestas))
+            correo.ReplyTo.Add(respuestas);
         correo.Subject = mensaje.Asunto;
         var html = MarcoDeCorreo.Envolver(mensaje.Html);
         var cuerpo = new BodyBuilder { TextBody = mensaje.Texto, HtmlBody = html };

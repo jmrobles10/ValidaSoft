@@ -458,6 +458,9 @@ public sealed partial class RequisitosApiTests(ApiFixture fixture, ITestOutputHe
         invitacion.Vinculo.Empresa.ColorMarca.ShouldBe("#E07A1F");
         invitacion.Vinculo.Empresa.ContactoSoporte.ShouldBe("proveedores@norte.example");
         invitacion.Vinculo.Empresa.LogoUrl.ShouldBe("https://cdn.norte.example/logo.svg");
+
+        // Y el correo de soporte es el Reply-To de los correos de la empresa: el tercero que responde le escribe a ese equipo.
+        (await fixture.Correos.EsperarAsync(correo, m => m.Asunto.Contains("te invita"))).ResponderA.ShouldBe("proveedores@norte.example");
     }
 
     // ---------- accesos de soporte de la Plataforma (B-6) ----------

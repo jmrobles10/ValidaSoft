@@ -45,6 +45,9 @@ public static class DominioDeCorreoEndpoints
     /// <summary>La clave con la que el enviador recuerda 30 segundos el remitente de la empresa: al cambiar el dominio se olvida (OD-20).</summary>
     public static string LlaveDelRemitente(Guid empresaId) => "remitente-de-empresa:" + empresaId.ToString("N");
 
+    /// <summary>La clave con la que el enviador recuerda 30 segundos el correo de soporte de la empresa (su <c>Reply-To</c>): al cambiar el contacto se olvida.</summary>
+    public static string LlaveDelResponderA(Guid empresaId) => "responder-a-de-empresa:" + empresaId.ToString("N");
+
     /// <summary>La dirección con la que sale el correo de la plataforma (<c>Validasoft:Correo:Remitente</c>).</summary>
     public static string RemitenteDeLaPlataforma(IConfiguration configuracion) =>
         configuracion["Validasoft:Correo:Remitente"] is { Length: > 0 } remitente ? remitente : "Validasoft <no-responder@validasoft.local>";
