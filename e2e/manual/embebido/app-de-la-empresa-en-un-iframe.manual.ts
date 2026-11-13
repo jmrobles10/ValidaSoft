@@ -46,6 +46,8 @@ recorrido(
     await expect(ana.getByRole('navigation', { name: 'Secciones' })).toBeVisible();
     const selector = ana.getByRole('button', { name: /^Empresa: Constructora Norte S.A.S./ });
     await selector.click();
+    // Con el menú abierto, MUI oculta el resto de la pantalla a los lectores (aria-hidden): el botón se resalta por su atributo, no por su rol.
+    const selectorAbierto = ana.locator('button[aria-label^="Empresa: Constructora Norte S.A.S."]');
     const opciones = ana.getByRole('menu');
     await expect(opciones.getByRole('menuitem', { name: /Constructora Sur S.A.S./ })).toBeVisible();
     await expect(opciones.getByRole('menuitem', { name: /Constructora Norte S.A.S./ })).toBeVisible();
@@ -54,7 +56,7 @@ recorrido(
       explicacion:
         'Quien tiene roles en varias empresas del grupo, como la administradora, ve en la cabecera un selector con el nombre y el NIT de la empresa activa (1). Al abrirlo (2) elige otra empresa y la app cambia de empresa sin salir del marco ni volver a pedir sesión. ' +
         'Al cambiar, se conserva la sección en la que estás (Inicio, Vínculos…), no el recurso abierto: un expediente de una empresa no existe en la otra.',
-      resaltar: [selector, opciones],
+      resaltar: [selectorAbierto, opciones],
       variantes: [
         { cuando: 'Solo tienes rol en una empresa (como Rubén)', entonces: 'No hay selector: la cabecera muestra el nombre y el NIT de esa empresa como un dato fijo.' },
         { cuando: 'El grupo tiene muchas empresas', entonces: 'El menú trae un cuadro «Buscar empresa» para encontrarla escribiendo.' },

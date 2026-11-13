@@ -35,7 +35,8 @@ export const PATRONES_DE_SECRETOS: readonly PatronDeSecreto[] = [
   {
     nombre: 'token opaco',
     // Hasta 4 separadores: un nombre largo con guiones («Certificado-de-existencia-…») no es un token.
-    origen: '(?<=[/=#])(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*\\d)(?=(?:[A-Za-z0-9]*[-_]){0,4}[A-Za-z0-9]*(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{32,}',
+    // Solo dentro de una dirección (`http://…/token`, `?t=token`): una clave pública DKIM o un PEM también tienen «/» y rachas largas de letras y no son secretos.
+    origen: '(?<=https?://[^\\s"\'<>]*[/=#])(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*\\d)(?=(?:[A-Za-z0-9]*[-_]){0,4}[A-Za-z0-9]*(?![A-Za-z0-9_-]))[A-Za-z0-9_-]{32,}',
     banderas: 'g',
     grupo: 0,
   },

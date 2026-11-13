@@ -102,6 +102,9 @@ describe('secretos de los pantallazos', () => {
     expect(cuantos('Certificado-de-existencia-y-representacion-legal-2026')).toBe(0);
     expect(cuantos('a3f5c9e1b7d24680a3f5c9e1b7d24680a3f5c9e1b7d24680a3f5c9e1b7d24680')).toBe(0);
     expect(cuantos('Constructora Sur S.A.S. NIT 920186647-0')).toBe(0);
+    // Una clave pública DKIM tiene «/» y rachas largas de letras, pero no es una dirección con un token.
+    expect(cuantos('p=b/fagBs+9OU2GDp2aoKHio7IjRQIiWYUZ+e2iKFb4VVv99qAGz705TYYOnZqgoeKjsiNFAiJZhRn57aIoVvhVW/32oAbPvTlNhg6dmqC')).toBe(0);
+    expect(cuantos('http://localhost:5410/e/AbC123dEf456GhI789jKl012MnO345pQr678StU9')).toBe(1);
   });
 });
 
