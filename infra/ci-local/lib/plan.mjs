@@ -1,18 +1,34 @@
-// Del flujo de CI (`.github/workflows/ci.yml`) a un plan que la réplica local sabe ejecutar en contenedores Linux.
-// Todo lo que se puede leer del flujo se lee de él (comandos, versiones, rutas, condiciones); lo único fijo es el mapa de
+// De los flujos de CI (`.github/workflows/ci.yml` y `.github/workflows/e2e.yml`) a un plan que la réplica local sabe ejecutar en contenedores Linux.
+// `ci.yml` trae backend, frontend e imagen; `e2e.yml` (solo `workflow_dispatch`: la e2e corre bajo demanda, decisión E2E-1) trae el trabajo e2e.
+// Todo lo que se puede leer de los flujos se lee de ellos (comandos, versiones, rutas, condiciones); lo único fijo es el mapa de
 // «acciones de GitHub → equivalente local» y la forma de tres pasos que no son comandos de shell (servicios con compose,
 // Playwright en su imagen, artefactos). Si el flujo cambia de forma que este archivo no entiende, `planificar` lanza un error
 // que empieza con «SINCRONÍA»: la prueba `sincronia.test.mjs` lo hace saltar en el CI, y la corrida local avisa en vez de
 // ejecutar algo distinto de lo que corre GitHub.
 import { leerYaml } from './yaml.mjs';
 
-/** Trabajos del flujo que la réplica sabe ejecutar. Uno nuevo en ci.yml hace fallar la prueba de sincronía hasta que se replique. */
+/** Trabajos de `ci.yml` (push y pull request) que la réplica sabe ejecutar. Uno nuevo hace fallar la prueba de sincronía hasta que se replique. */
+export const TRABAJOS_DE_CI = ['frontend', 'backend', 'imagen'];
+
+/** Trabajos de `e2e.yml` (solo bajo demanda). */
+export const TRABAJOS_DE_E2E = ['e2e'];
+
+/** Todos los trabajos que la réplica sabe ejecutar. */
 export const TRABAJOS_CONOCIDOS = ['frontend', 'backend', 'e2e', 'imagen'];
 
-/** Trabajos que corren por omisión (`imagen` solo con `--solo imagen`: construir la imagen tarda y rara vez falla distinto). */
-export const TRABAJOS_POR_OMISION = ['frontend', 'backend', 'e2e'];
+/**
+ * Trabajos que corren por omisión: los del CI normal. `e2e` (bajo demanda) e `imagen` solo con `--solo`: la e2e tarda ≈ 17 min y se corre cuando un
+ * cambio toca la conexión entre las piezas o antes de una entrega; construir la imagen tarda y rara vez falla distinto.
+ */
+export const TRABAJOS_POR_OMISION = ['frontend', 'backend'];
 
-const sincronia = (mensaje) => new Error(`SINCRONÍA con ci.yml: ${mensaje}\n  Actualiza infra/ci-local (lib/plan.mjs) o el flujo para que vuelvan a coincidir.`);
+/** Lo que `e2e.yml` agrega al final del comando de Playwright para el filtro opcional (entrada `grep`): la réplica lo quita (se filtra con `--e2e-args`). */
+const FILTRO_OPCIONAL = '${FILTRO[@]}';
+
+/** Variables que un paso puede declarar con `env:` sin que la réplica las ignore en silencio (el filtro de la e2e vale vacío aquí). */
+const ENTORNO_DE_PASO_ADMITIDO = ['E2E_GREP'];
+
+const sincronia = (mensaje) => new Error(`SINCRONÍA con los flujos (ci.yml, e2e.yml): ${mensaje}\n  Actualiza infra/ci-local (lib/plan.mjs) o el flujo para que vuelvan a coincidir.`);
 
 // --- Versiones -------------------------------------------------------------------------------------------------------
 
@@ -136,9 +152,13 @@ export function analizarDockerRun(script) {
     } else throw sincronia(`la bandera «${p}» de «docker run» no está replicada.`);
   }
   const imagen = palabras[i];
-  const comando = palabras.slice(i + 1);
-  if (!imagen || comando.length === 0) throw sincronia('el «docker run» del flujo no trae imagen o comando.');
-  return { previo, banderas, imagen, comando };
+  const palabrasDelComando = palabras.slice(i + 1);
+  if (!imagen || palabrasDelComando.length === 0) throw sincronia('el «docker run» del flujo no trae imagen o comando.');
+  // El filtro opcional (`"${FILTRO[@]}"`) va al final del comando: la réplica lo quita (por omisión está vacío) y lo avisa en `filtro`.
+  const filtro = palabrasDelComando.at(-1) === FILTRO_OPCIONAL;
+  const comando = palabrasDelComando.filter((p) => p !== FILTRO_OPCIONAL);
+  if (comando.length !== palabrasDelComando.length - (filtro ? 1 : 0)) throw sincronia('el filtro opcional de Playwright solo se admite al final del comando.');
+  return { previo, banderas, imagen, comando, filtro };
 }
 
 // --- Pasos -----------------------------------------------------------------------------------------------------------
@@ -193,6 +213,9 @@ export function clasificarPaso(paso, indice) {
     }
   }
   if (typeof paso.run !== 'string') throw sincronia(`el paso «${nombre}» no tiene ni uses ni run.`);
+  for (const variable of Object.keys(paso.env ?? {})) {
+    if (!ENTORNO_DE_PASO_ADMITIDO.includes(variable)) throw sincronia(`el paso «${nombre}» declara la variable de entorno «${variable}» y la réplica solo replica ${ENTORNO_DE_PASO_ADMITIDO.join(', ')}.`);
+  }
   const script = paso.run.trim();
   if (/^docker compose\b/.test(script)) return { ...base, tipo: 'compose', ...analizarCompose(script) };
   if (/^\s*docker run\b/m.test(script)) return { ...base, tipo: 'docker-run', ...analizarDockerRun(script) };
@@ -200,38 +223,30 @@ export function clasificarPaso(paso, indice) {
 }
 
 /**
- * @param {{ ci: string, compose: string, paquete: string, paqueteE2e: string }} archivos contenido de los archivos del objetivo
+ * @param {{ ci: string, e2e: string, compose: string, paquete: string, paqueteE2e: string }} archivos contenido de los archivos del objetivo
  */
 export function planificar(archivos) {
-  const flujo = leerYaml(archivos.ci);
-  if (!flujo?.jobs) throw sincronia('ci.yml no tiene `jobs`.');
   const paquete = JSON.parse(archivos.paquete);
   const compose = leerYaml(archivos.compose);
 
   const trabajos = {};
-  for (const [id, trabajo] of Object.entries(flujo.jobs)) {
-    if (!TRABAJOS_CONOCIDOS.includes(id)) throw sincronia(`el trabajo «${id}» de ci.yml no tiene réplica local.`);
-    const pasos = (trabajo.steps ?? []).map(clasificarPaso);
-    const config = { dotnet: null, node: null, pnpm: null, cachePnpm: false, caches: [] };
-    for (const p of pasos) {
-      if (p.tipo !== 'configurar') continue;
-      if (p.dotnet) config.dotnet = String(p.dotnet);
-      if (p.node) config.node = String(p.node);
-      if (p.pnpmDeclarado) config.pnpm = versionPnpm(paquete, p.pnpm);
-      if (p.cachePnpm) config.cachePnpm = true;
-      if (p.cache) config.caches.push(...p.cache);
+  /** Lee los trabajos de un flujo: solo los esperados en él (la e2e fuera de e2e.yml, o un trabajo nuevo sin réplica, es desincronía). */
+  const leerTrabajos = (nombreDelFlujo, texto, esperados) => {
+    const flujo = leerYaml(texto);
+    if (!flujo?.jobs) throw sincronia(`${nombreDelFlujo} no tiene \`jobs\`.`);
+    for (const [id, trabajo] of Object.entries(flujo.jobs)) {
+      if (!esperados.includes(id)) {
+        const nota = id === 'e2e' ? ' (la e2e vive solo en e2e.yml, bajo demanda: decisión E2E-1)' : '';
+        throw sincronia(`el trabajo «${id}» de ${nombreDelFlujo} no tiene réplica local${nota}.`);
+      }
+      trabajos[id] = { ...planDeTrabajo(id, trabajo, paquete), entorno: flujo.env ?? {} };
     }
-    trabajos[id] = {
-      id,
-      nombre: trabajo.name ?? id,
-      timeoutMin: Number(trabajo['timeout-minutes'] ?? 0),
-      pasos,
-      ...config,
-    };
-  }
-  for (const id of TRABAJOS_CONOCIDOS) {
-    if (!trabajos[id]) throw sincronia(`ci.yml ya no tiene el trabajo «${id}» (la réplica local sí lo espera).`);
-  }
+    for (const id of esperados) {
+      if (!trabajos[id]) throw sincronia(`${nombreDelFlujo} ya no tiene el trabajo «${id}» (la réplica local sí lo espera).`);
+    }
+  };
+  leerTrabajos('ci.yml', archivos.ci, TRABAJOS_DE_CI);
+  leerTrabajos('e2e.yml', archivos.e2e, TRABAJOS_DE_E2E);
 
   // Cada trabajo pide una imagen: SDK de .NET, Node, o las dos juntas (API del e2e); Playwright usa la suya.
   for (const t of Object.values(trabajos)) {
@@ -242,11 +257,31 @@ export function planificar(archivos) {
   }
 
   return {
-    entorno: flujo.env ?? {},
     trabajos,
     servicios: serviciosDeCompose(compose),
     nombresDeServicios: Object.keys(compose?.services ?? {}),
     playwright: versionPlaywright(JSON.parse(archivos.paqueteE2e)),
+  };
+}
+
+/** Un trabajo del flujo -> sus pasos clasificados y lo que configuran (versiones de .NET, Node y pnpm, cachés). */
+function planDeTrabajo(id, trabajo, paquete) {
+  const pasos = (trabajo.steps ?? []).map(clasificarPaso);
+  const config = { dotnet: null, node: null, pnpm: null, cachePnpm: false, caches: [] };
+  for (const p of pasos) {
+    if (p.tipo !== 'configurar') continue;
+    if (p.dotnet) config.dotnet = String(p.dotnet);
+    if (p.node) config.node = String(p.node);
+    if (p.pnpmDeclarado) config.pnpm = versionPnpm(paquete, p.pnpm);
+    if (p.cachePnpm) config.cachePnpm = true;
+    if (p.cache) config.caches.push(...p.cache);
+  }
+  return {
+    id,
+    nombre: trabajo.name ?? id,
+    timeoutMin: Number(trabajo['timeout-minutes'] ?? 0),
+    pasos,
+    ...config,
   };
 }
 

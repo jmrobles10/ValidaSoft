@@ -1,5 +1,6 @@
-# Replica local del CI (ci.yml) en contenedores Linux. Entrada para PowerShell; el trabajo lo hace ci-local.mjs.
-#   .\infra\ci-local\ci-local.ps1                      # backend, frontend y e2e sobre esta carpeta
+# Replica local del CI (ci.yml y, con --solo e2e, e2e.yml) en contenedores Linux. Entrada para PowerShell; el trabajo lo hace ci-local.mjs.
+#   .\infra\ci-local\ci-local.ps1                      # backend y frontend sobre esta carpeta (como ci.yml)
+#   .\infra\ci-local\ci-local.ps1 --solo e2e           # la e2e, bajo demanda (e2e.yml)
 #   .\infra\ci-local\ci-local.ps1 --solo frontend      # un trabajo
 #   .\infra\ci-local\ci-local.ps1 --rama origin/main   # lo confirmado en una rama, sin tocar ninguna carpeta
 #   .\infra\ci-local\ci-local.ps1 --ayuda

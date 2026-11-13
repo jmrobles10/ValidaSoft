@@ -1,4 +1,4 @@
-// Lector de YAML mínimo, solo lo que usan `.github/workflows/ci.yml` e `infra/compose/compose.yaml`: mapas y listas por
+// Lector de YAML mínimo, solo lo que usan `.github/workflows/ci.yml`, `.github/workflows/e2e.yml` e `infra/compose/compose.yaml`: mapas y listas por
 // indentación, escalares planos o entre comillas, listas de una línea (`[a, b]`) y bloques `|` y `>` (con `-`/`+`).
 // Todo escalar queda como texto (o `null` si está vacío). Cualquier construcción que no entienda lanza un error en vez de
 // leerla mal: así un cambio de formato en el flujo rompe la réplica local a la vista (y la prueba de sincronía), no en silencio.
