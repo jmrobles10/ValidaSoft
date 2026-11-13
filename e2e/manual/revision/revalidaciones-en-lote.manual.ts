@@ -78,7 +78,7 @@ recorrido(
       await expect(fila(a.tercero, RUT)).toContainText('Sin cambios', { timeout: 1500 });
       await expect(fila(b.tercero, RUT)).toContainText('Con cambios', { timeout: 1500 });
     }).toPass({ timeout: 120_000 });
-    await paso(page, {
+    await paso(paginaRevalidaciones, {
       titulo: 'Revisa la lista de revalidaciones',
       explicacion:
         'Cada versión nueva de un documento ya aprobado aparece en Revalidaciones con el resultado de la comparación: «Sin cambios» si los datos son los mismos, o «Con cambios» si cambió algo, con la versión anterior y la nueva. ' +
@@ -93,7 +93,7 @@ recorrido(
     await revalidaciones.getByRole('button', { name: 'Aprobar 2 sin cambios' }).click();
     const dialogo = revalidaciones.getByRole('dialog', { name: '¿Aprobar 2 revalidaciones?' });
     await expect(dialogo).toContainText('cada una con su propio registro en el historial del expediente');
-    await paso(page, {
+    await paso(paginaRevalidaciones, {
       titulo: 'Aprueba las revalidaciones sin cambios en lote',
       explicacion:
         '«Seleccionar las sin cambios» marca solo las que no cambiaron; la que sí cambió queda deshabilitada y no entra al lote. ' +
@@ -106,7 +106,7 @@ recorrido(
     // 3) Lo que queda: la revalidación con cambios sigue en la lista.
     await expect(fila(a.tercero, RUT)).toHaveCount(0);
     await expect(fila(b.tercero, RUT)).toContainText('Con cambios');
-    await paso(page, {
+    await paso(paginaRevalidaciones, {
       titulo: 'Revisa lo que queda pendiente',
       explicacion:
         'Las revalidaciones aprobadas salen de la lista. La que cambió sigue aquí, para revisarla en su expediente antes de aprobarla.',
