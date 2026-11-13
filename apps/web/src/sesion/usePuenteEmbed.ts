@@ -1,7 +1,7 @@
 import { configuracionCliente, msRestantes } from '@validasoft/api-client';
 import { useEffect, useMemo, useState } from 'react';
 import { usePreferencias } from '../shared/preferencias';
-import { alturaDisponible, useAlturaFija, ventanaDelContenedor } from './alturaFija';
+import { alturaDisponible, useAlturaFija, ventanaDelContenedor, vigiarMarco } from './alturaFija';
 import { anclarOverlays, regionVisibleDelIframe } from './overlaysEmbebidos';
 import {
   cargarOrigenesPermitidos,
@@ -130,9 +130,11 @@ export function usePuenteEmbed(): PuenteEmbed {
     };
   }, [sesion, enviar]);
 
-  // Altura del contenido para que el contenedor ajuste el iframe.
+  // Altura del contenido para que el contenedor ajuste el iframe. De otro origen, además, se vigila si el contenedor le
+  // hace caso o tiene el iframe de un alto suyo (ver `vigiarMarco`).
   useEffect(() => {
     if (!embebida || typeof ResizeObserver === 'undefined') return undefined;
+    const vigia = ventanaDelContenedor() === null ? vigiarMarco(window, (marco) => useAlturaFija.getState().fijarMarco(marco)) : null;
     let ultima = 0;
     const observador = new ResizeObserver(() => {
       // Con altura fija se avisa esa: `scrollHeight` nunca baja del alto actual del iframe y no lo dejaría encoger
@@ -141,28 +143,35 @@ export function usePuenteEmbed(): PuenteEmbed {
       if (altura !== ultima) {
         ultima = altura;
         enviar({ tipo: 'validasoft:resize', height: altura });
+        vigia?.pedido(altura);
       }
     });
     observador.observe(document.body);
-    return () => observador.disconnect();
+    return () => {
+      observador.disconnect();
+      vigia?.detener();
+    };
   }, [embebida, enviar]);
 
   // Páginas de edición con encabezado fijo: altura fija con scroll propio y el iframe a la vista (ver `alturaFija.ts`).
   const hayPaginaFija = useAlturaFija((s) => s.paginas > 0);
+  const marco = useAlturaFija((s) => s.marco);
   useEffect(() => {
     if (!embebida || !hayPaginaFija) {
       useAlturaFija.getState().fijarAltura(null);
       return undefined;
     }
-    const altura = alturaDisponible();
+    const altura = alturaDisponible(window, marco);
     useAlturaFija.getState().fijarAltura(altura);
     enviar({ tipo: 'validasoft:visible', top: 0, height: altura });
-    // Del mismo origen se sigue el tamaño de la ventana del contenedor; de otro, no hay cómo enterarse.
+    // Del mismo origen se sigue el tamaño de la ventana del contenedor; de otro, solo el del propio iframe cuando el
+    // contenedor lo tiene de un alto suyo (si no, no hay cómo enterarse de qué tanto se ve del contenedor).
     const contenedor = ventanaDelContenedor();
-    const remedir = () => useAlturaFija.getState().fijarAltura(alturaDisponible());
-    contenedor?.addEventListener('resize', remedir);
-    return () => contenedor?.removeEventListener('resize', remedir);
-  }, [embebida, hayPaginaFija, enviar]);
+    const seguida = contenedor ?? (marco === 'alto-propio' ? window : null);
+    const remedir = () => useAlturaFija.getState().fijarAltura(alturaDisponible(window, marco));
+    seguida?.addEventListener('resize', remedir);
+    return () => seguida?.removeEventListener('resize', remedir);
+  }, [embebida, hayPaginaFija, marco, enviar]);
 
   // Diálogos y paneles centrados en la parte del iframe que se ve (o junto a lo que la persona tocó, si no se puede
   // medir), y aviso al contenedor de la región que debe verse. Con altura fija el iframe entero queda a la vista.
