@@ -50,6 +50,8 @@ export * from './generado/endpoints/terceros/terceros';
 export * from './generado/endpoints/textos-legales/textos-legales';
 export * from './generado/endpoints/solicitudes-habeas-de-la-empresa/solicitudes-habeas-de-la-empresa';
 export * from './generado/endpoints/solicitudes-habeas-de-la-plataforma/solicitudes-habeas-de-la-plataforma';
+export * from './generado/endpoints/solicitudes-de-acceso-de-la-plataforma/solicitudes-de-acceso-de-la-plataforma';
+export * from './generado/endpoints/migracion-de-acceso-aislado/migracion-de-acceso-aislado';
 export * from './generado/endpoints/plazos-de-habeas/plazos-de-habeas';
 export * from './generado/endpoints/plan-del-grupo/plan-del-grupo';
 export * from './generado/endpoints/dominio-de-correo/dominio-de-correo';

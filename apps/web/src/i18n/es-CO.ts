@@ -179,7 +179,7 @@ export const esCO = {
         titulo: 'El acceso de {{correo}} espera la aprobación del tercero',
         texto:
           '{{correo}} no es un contacto conocido de este tercero. Mientras un contacto del tercero no lo apruebe, esa persona solo ve y sube lo de su relación con tu empresa: ' +
-          'no se comparte con tu empresa nada de la bóveda ni de la información del tercero y lo que suba queda solo en este vínculo. Ya avisamos a los contactos del tercero (desde el {{fecha}}).',
+          'no se comparte con tu empresa nada de la bóveda ni de la información del tercero y lo que suba queda solo en este vínculo. Ya avisamos a quien decide en ese tercero (desde el {{fecha}}): sus contactos verificados o, si no tiene ninguno, la plataforma.',
       },
       Aprobado: {
         titulo: 'El tercero aprobó el acceso de {{correo}}',
@@ -190,6 +190,29 @@ export const esCO = {
         texto:
           'El {{fecha}} los contactos del tercero rechazaron ese correo: su sesión se cerró y no vuelve a entrar. Invita a otro correo con «Reenviar invitación» para que la persona correcta acepte y entre.',
       },
+      Desplazado: {
+        titulo: 'El acceso de {{correo}} pasó a acceso aislado',
+        texto:
+          'Ese correo estaba como contacto del tercero sin verificar y, desde el {{fecha}}, otro contacto del tercero quedó verificado: el verificado prevalece. Mientras un contacto verificado no lo apruebe de nuevo, ' +
+          'no se comparte con tu empresa nada más de la bóveda ni de la información del tercero (lo que ya recibió se conserva) y su sesión se cerró.',
+      },
+    },
+    verificacionDelCorreo: {
+      conMedio: '{{estado}} · {{medio}}',
+      medios: {
+        CorreoDelRut: 'correo del RUT',
+        CorreoDeLaCamara: 'correo de la Cámara de comercio',
+        Corroborado: 'invitado por dos empresas distintas',
+        Plataforma: 'verificado por la plataforma',
+        Importacion: 'traído del sistema de origen',
+        AprobadoPorContacto: 'aprobado por un contacto verificado',
+      },
+      Verificado: { etiqueta: 'Verificado', ayuda: 'Hay con qué probar que este correo es del tercero: puede aprobar o rechazar el acceso de otros correos a su información.' },
+      SinVerificar: {
+        etiqueta: 'Sin verificar',
+        ayuda: 'Es contacto del tercero, pero nada prueba aún que el correo sea suyo (lo registró una empresa). Entra a lo suyo, pero no decide los accesos de otros correos y, si otro contacto se verifica, pasa a acceso aislado.',
+      },
+      NoEsContacto: { etiqueta: 'Aún no es contacto', ayuda: 'El correo todavía no es contacto del tercero: entra con acceso aislado hasta que un contacto verificado, o la plataforma, lo apruebe.' },
     },
     actualizacionNoAprobada: {
       ver: 'Ver el expediente',

@@ -15738,6 +15738,224 @@
           }
         }
       }
+    },
+    "/public/v1/contactos-del-tercero": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.AccesosSolicitadosEndpoints"
+        ],
+        "summary": "GET_public_v1_contactos_del_tercero",
+        "description": "GET_public_v1_contactos_del_tercero",
+        "operationId": "GET_public_v1_contactos_del_tercero",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactosDelTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-de-acceso": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "description": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "operationId": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": [
+                "null",
+                "string"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-de-acceso/{id}/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-de-acceso/{id}/rechazar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RechazarAccesoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/terceros/{terceroId}/contactos/verificar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "description": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "operationId": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarContactoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactoDelTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/acceso-aislado/migrar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.MigracionDeAccesoAisladoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "description": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "operationId": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeMigracionDeAccesoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -15779,6 +15997,12 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15830,6 +16054,21 @@
               "null",
               "string"
             ]
+          },
+          "puedesDecidir": {
+            "type": "boolean"
+          },
+          "decideLaPlataforma": {
+            "type": "boolean"
+          },
+          "decididoVia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contactoDesplazado": {
+            "type": "boolean"
           }
         }
       },
@@ -19807,6 +20046,52 @@
           }
         }
       },
+      "ContactoDelTerceroDto": {
+        "required": [
+          "nombre",
+          "correo",
+          "rol",
+          "verificacion",
+          "medio",
+          "verificadoEn",
+          "esTuCorreo",
+          "desplazado"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "rol": {
+            "type": "string"
+          },
+          "verificacion": {
+            "type": "string"
+          },
+          "medio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "verificadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "esTuCorreo": {
+            "type": "boolean"
+          },
+          "desplazado": {
+            "type": "boolean"
+          }
+        }
+      },
       "ContactoDePagosDto": {
         "required": [
           "nombre",
@@ -19852,6 +20137,35 @@
           },
           "rol": {
             "type": "string"
+          }
+        }
+      },
+      "ContactosDelTerceroDto": {
+        "required": [
+          "contactos",
+          "historial",
+          "puedesDecidir",
+          "decideLaPlataforma"
+        ],
+        "type": "object",
+        "properties": {
+          "contactos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactoDelTerceroDto"
+            }
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntradaDeHistorialDeContactoDto"
+            }
+          },
+          "puedesDecidir": {
+            "type": "boolean"
+          },
+          "decideLaPlataforma": {
+            "type": "boolean"
           }
         }
       },
@@ -20475,6 +20789,26 @@
           "recibidoEn": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CorreoOficialDto": {
+        "required": [
+          "correo",
+          "documento",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string"
+          },
+          "documento": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -23408,6 +23742,31 @@
           }
         }
       },
+      "EmpresaQueInvitoPlataformaDto": {
+        "required": [
+          "empresa",
+          "grupo",
+          "tenantId",
+          "fecha"
+        ],
+        "type": "object",
+        "properties": {
+          "empresa": {
+            "type": "string"
+          },
+          "grupo": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "EmpresaResumenDto": {
         "required": [
           "id",
@@ -23516,6 +23875,33 @@
             "default": true
           },
           "swift": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "EntradaDeHistorialDeContactoDto": {
+        "required": [
+          "fecha",
+          "tipo",
+          "correo",
+          "detalle"
+        ],
+        "type": "object",
+        "properties": {
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "detalle": {
             "type": [
               "null",
               "string"
@@ -32290,6 +32676,38 @@
           }
         }
       },
+      "ResultadoDeMigracionDeAccesoDto": {
+        "required": [
+          "tercerosRevisados",
+          "contactosVerificados",
+          "primerosContactos",
+          "vinculosAislados",
+          "tercerosSincronizados"
+        ],
+        "type": "object",
+        "properties": {
+          "tercerosRevisados": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "contactosVerificados": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "primerosContactos": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "vinculosAislados": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tercerosSincronizados": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "ResultadoDeRevisionDeHabeasDto": {
         "required": [
           "revisadas",
@@ -34977,6 +35395,102 @@
           }
         }
       },
+      "SolicitudDeAccesoDePlataformaDto": {
+        "required": [
+          "id",
+          "terceroId",
+          "tercero",
+          "identificacion",
+          "correo",
+          "estado",
+          "desde",
+          "empresas",
+          "contactos",
+          "correosOficiales",
+          "enCola",
+          "contactoDesplazado",
+          "decididoPor",
+          "decididoVia",
+          "decididoEn",
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tercero": {
+            "type": "string"
+          },
+          "identificacion": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "empresas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EmpresaQueInvitoPlataformaDto"
+            }
+          },
+          "contactos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactoDelTerceroDto"
+            }
+          },
+          "correosOficiales": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CorreoOficialDto"
+            }
+          },
+          "enCola": {
+            "type": "boolean"
+          },
+          "contactoDesplazado": {
+            "type": "boolean"
+          },
+          "decididoPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decididoVia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decididoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SolicitudHabeasDto": {
         "required": [
           "id",
@@ -37075,6 +37589,24 @@
           }
         }
       },
+      "VerificacionDelCorreoDto": {
+        "required": [
+          "estado",
+          "medio"
+        ],
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string"
+          },
+          "medio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "VerificacionDto": {
         "required": [
           "tipo",
@@ -37285,6 +37817,23 @@
           },
           "codigo": {
             "type": "string"
+          }
+        }
+      },
+      "VerificarContactoDto": {
+        "required": [
+          "correo"
+        ],
+        "type": "object",
+        "properties": {
+          "correo": {
+            "type": "string"
+          },
+          "nota": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -37815,6 +38364,16 @@
               },
               {
                 "$ref": "#/components/schemas/AccesoDelCorreoDto"
+              }
+            ]
+          },
+          "verificacionDelCorreo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VerificacionDelCorreoDto"
               }
             ]
           }

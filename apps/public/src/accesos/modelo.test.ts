@@ -1,6 +1,6 @@
-import type { AccesoSolicitadoDto, SesionActivaDto } from '@validasoft/api-client';
+import type { AccesoSolicitadoDto, ContactoDelTerceroDto, SesionActivaDto } from '@validasoft/api-client';
 import { describe, expect, it } from 'vitest';
-import { decididas, listaDeEmpresas, nombreDelTercero, ordenarSesiones, porDecidir, reconocerDispositivo } from './modelo';
+import { decididas, estadoDelContacto, listaDeEmpresas, nombreDelTercero, ordenarContactos, ordenarSesiones, porDecidir, porDecidirPorMi, puedoDecidir, reconocerDispositivo } from './modelo';
 
 function solicitud(cambios: Partial<AccesoSolicitadoDto> = {}): AccesoSolicitadoDto {
   return {
@@ -79,5 +79,51 @@ describe('sesiones del tercero', () => {
       'nueva',
       'vieja',
     ]);
+  });
+});
+
+describe('verificación de los contactos', () => {
+  const contacto = (cambios: Partial<ContactoDelTerceroDto>): ContactoDelTerceroDto => ({
+    nombre: 'Contacto',
+    correo: 'a@norte.co',
+    rol: 'Principal',
+    verificacion: 'SinVerificar',
+    medio: null,
+    verificadoEn: null,
+    esTuCorreo: false,
+    desplazado: false,
+    ...cambios,
+  });
+
+  it('un contacto verificado lo está aunque tenga otra marca; sin verificar, desplazado pesa más que sin verificar', () => {
+    expect(estadoDelContacto(contacto({ verificacion: 'Verificado', desplazado: true }))).toBe('Verificado');
+    expect(estadoDelContacto(contacto({ desplazado: true }))).toBe('Desplazado');
+    expect(estadoDelContacto(contacto({}))).toBe('SinVerificar');
+  });
+
+  it('ordena tu correo primero y luego verificados, sin verificar y desplazados, cada grupo por correo', () => {
+    const lista = [
+      contacto({ correo: 'd@norte.co', desplazado: true }),
+      contacto({ correo: 'b@norte.co', verificacion: 'Verificado' }),
+      contacto({ correo: 'c@norte.co' }),
+      contacto({ correo: 'z@norte.co', esTuCorreo: true }),
+      contacto({ correo: 'a@norte.co', verificacion: 'Verificado' }),
+    ];
+
+    expect(ordenarContactos(lista).map((c) => c.correo)).toEqual(['z@norte.co', 'a@norte.co', 'b@norte.co', 'c@norte.co', 'd@norte.co']);
+  });
+
+  it('solo cuenta como por decidir lo que esta sesión puede decidir; sin el dato, la API manda', () => {
+    const lista = [
+      solicitud({ id: 'si', puedesDecidir: true }),
+      solicitud({ id: 'no', puedesDecidir: false }),
+      solicitud({ id: 'sin-dato' }),
+      solicitud({ id: 'hecha', estado: 'Aprobada', puedesDecidir: true }),
+    ];
+
+    expect(porDecidirPorMi(lista).map((s) => s.id)).toEqual(['si', 'sin-dato']);
+    expect(porDecidir(lista).map((s) => s.id)).toEqual(['si', 'no', 'sin-dato']);
+    expect(puedoDecidir(solicitud({ puedesDecidir: false }))).toBe(false);
+    expect(puedoDecidir(solicitud({}))).toBe(true);
   });
 });

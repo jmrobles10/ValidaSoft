@@ -317,6 +317,8 @@ const NOMBRES: Record<string, string> = {
   'GET /public/v1/accesos-solicitados': 'listarAccesosSolicitados',
   'POST /public/v1/accesos-solicitados/{id}/aprobar': 'aprobarAccesoSolicitado',
   'POST /public/v1/accesos-solicitados/{id}/rechazar': 'rechazarAccesoSolicitado',
+  // Verificación de los contactos (AV): quién es contacto del tercero, con qué se verificó y quién decide los accesos.
+  'GET /public/v1/contactos-del-tercero': 'obtenerContactosDelTercero',
   'GET /public/v1/sesiones': 'listarSesionesDelTercero',
   'POST /public/v1/sesiones/{id}/cerrar': 'cerrarSesionDelTercero',
   'GET /public/v1/expedientes/{id}': 'obtenerExpedientePublico',
@@ -460,6 +462,12 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/plataforma/solicitudes-habeas/{id}/plan': 'obtenerPlanDeSupresion',
   'POST /api/v1/plataforma/solicitudes-habeas/{id}/resolver': 'resolverSolicitudHabeasDePlataforma',
   'POST /api/v1/plataforma/habeas/revisar-plazos': 'revisarPlazosDeHabeas',
+  // Solicitudes de acceso a terceros sin contactos verificados (AV): la cola de la consola, la verificación de un contacto y la migración de datos.
+  'GET /api/v1/plataforma/solicitudes-de-acceso': 'listarSolicitudesDeAccesoDePlataforma',
+  'POST /api/v1/plataforma/solicitudes-de-acceso/{id}/aprobar': 'aprobarSolicitudDeAccesoDePlataforma',
+  'POST /api/v1/plataforma/solicitudes-de-acceso/{id}/rechazar': 'rechazarSolicitudDeAccesoDePlataforma',
+  'POST /api/v1/plataforma/terceros/{terceroId}/contactos/verificar': 'verificarContactoDelTercero',
+  'POST /api/v1/plataforma/acceso-aislado/migrar': 'migrarAccesoAislado',
   // Exportación firmada de la bóveda del tercero (OD-9, OD-10).
   'POST /public/v1/boveda/exportar': 'exportarBoveda',
   'GET /public/v1/exportaciones': 'listarExportacionesBoveda',

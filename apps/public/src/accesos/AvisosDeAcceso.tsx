@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { useAccesosSolicitados } from './api';
-import { nombreDelTercero, porDecidir } from './modelo';
+import { nombreDelTercero, porDecidirPorMi } from './modelo';
 
 /**
  * Lo que ve quien entra con un correo que aún no es contacto del tercero (acceso aislado), en todas las pantallas: su acceso espera la aprobación de un contacto y
@@ -23,13 +23,13 @@ export function AvisoDeAccesoAislado() {
   );
 }
 
-/** Para quien ya es contacto: hay correos que una empresa invitó y esperan su decisión. Se oculta en la propia pantalla de decisión. */
+/** Para un contacto verificado: hay correos que una empresa invitó y esperan su decisión (a un contacto sin verificar no le toca decidir). Se oculta en la propia pantalla de decisión. */
 export function AvisoDeAccesosPorAprobar() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const completa = useSesionTercero((s) => s.estado === 'activa' && s.sesion?.aislada !== true);
   const consulta = useAccesosSolicitados(completa);
-  const pendientes = consulta.data ? porDecidir(consulta.data).length : 0;
+  const pendientes = consulta.data ? porDecidirPorMi(consulta.data).length : 0;
   if (!completa || pendientes === 0 || pathname.startsWith('/accesos')) return null;
   return (
     <Alert

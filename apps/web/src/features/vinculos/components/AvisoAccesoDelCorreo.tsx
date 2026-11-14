@@ -22,10 +22,12 @@ export function AvisoAccesoDelCorreo({ vinculo }: { vinculo: Pick<VinculoDto, 'a
   const estado = acceso.estado === 'Aprobado' ? 'Aprobado' : acceso.estado === 'Rechazado' ? 'Rechazado' : 'Pendiente';
   const { severidad, icono: Icono } = POR_ESTADO[estado];
   const fecha = formatearFecha(estado === 'Pendiente' ? acceso.desde : (acceso.resueltoEn ?? acceso.desde));
+  // Un correo que sí era contacto, pero sin verificar, y perdió el acceso completo porque otro contacto del tercero se verificó (decisión AV).
+  const clave = estado === 'Pendiente' && acceso.motivo === 'ContactoDesplazado' ? 'Desplazado' : estado;
   return (
     <Alert severity={severidad} icon={<Icono size={18} strokeWidth={1.75} />} sx={{ mb: 2 }}>
-      <AlertTitle>{t(`vinculos.accesoDelCorreo.${estado}.titulo`, { correo: acceso.correo })}</AlertTitle>
-      {t(`vinculos.accesoDelCorreo.${estado}.texto`, { correo: acceso.correo, fecha })}
+      <AlertTitle>{t(`vinculos.accesoDelCorreo.${clave}.titulo`, { correo: acceso.correo })}</AlertTitle>
+      {t(`vinculos.accesoDelCorreo.${clave}.texto`, { correo: acceso.correo, fecha })}
     </Alert>
   );
 }
