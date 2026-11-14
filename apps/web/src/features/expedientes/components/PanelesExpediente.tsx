@@ -9,6 +9,7 @@ import { identificacionResumida } from '../../vinculos/tercero';
 import { useHistorialExpediente } from '../api';
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { eventoExpedienteATimeline, nombresDeAreas, nombresDeRequisitos } from '../historial';
+import { OrigenDelFlujo } from './OrigenDelFlujo';
 
 const Mono = ({ children }: { children: string }) => (
   <Typography component="span" variant="mono">
@@ -35,6 +36,7 @@ export function DatosExpediente({ expediente }: { expediente: ExpedienteDto }) {
               <Typography component="span" sx={{ color: 'text.secondary', fontSize: 12 }}>
                 ({t(`expedientes.datos.origenFlujo.${flujo.origen}`)})
               </Typography>
+              <OrigenDelFlujo flujo={flujo} />
             </>
           ) : (
             '—'

@@ -424,7 +424,7 @@ export const expedientes = {
     titulo: 'Abrir expediente',
     ayuda: 'Abre la validación sin esperar a que el tercero acepte la invitación. El vínculo pasa a En validación.',
     flujo: 'Flujo',
-    porDefecto: 'Flujo por defecto de {{tipo}}',
+    porDefecto: 'El que corresponda al tercero (por regla o, si ninguna aplica, el por defecto de {{tipo}})',
     sinFlujos: 'No hay flujos publicados para {{tipo}}. Publica uno en Configuración › Flujos aprobatorios.',
     confirmar: 'Abrir expediente',
     exito: 'Expediente {{folio}} abierto.',
@@ -435,6 +435,7 @@ export const expedientes = {
     ver: 'Ver expediente',
     pendiente: 'El tercero aceptó la invitación, pero no había un flujo publicado para su tipo de vínculo. Abre el expediente a mano o publica un flujo.',
     sinExpediente: 'Sin expediente abierto.',
+    flujo: 'Flujo: {{nombre}} · v{{version}}',
     rechazado: 'El último expediente se rechazó. Abre uno nuevo para que el tercero vuelva a validarse; si el flujo lo permite, también puede postularse él desde su portal.',
   },
 } as const;
@@ -575,6 +576,10 @@ export const flujos = {
       'vigencia-seccion-invalida': 'Entre 1 y 3650 días, o vacío si no vence.',
       'dias-revalidacion-invalidos': 'Entre 1 y 365 días, o vacío para 15.',
       'recordatorio-invalido': 'Escribe un número entero de 1 a 60.',
+      'prioridad-requerida': 'Escribe la prioridad: sin ella no se sabe en qué orden se evalúa.',
+      'prioridad-invalida': 'Un número entero de 1 a 999.',
+      'prioridad-duplicada': 'Otro flujo de este tipo de vínculo ya usa esa prioridad: elige otra.',
+      'condicion-invalida': 'La condición de selección no es válida para este tipo de vínculo.',
     },
     verificaciones: {
       titulo: 'Verificaciones de cumplimiento',
