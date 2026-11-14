@@ -150,8 +150,9 @@ public static class SincronizacionDeAccesoDelTercero
         List<InvitacionDeAcceso> invitaciones;
         await using (var consulta = sesiones.ConsultaGlobal())
         {
+            // Una invitación retenida a la espera de aprobación (decisión AI) no se refleja ni se avisa: al aprobarla se decide el acceso del correo con lo que valga entonces.
             var vinculos = (await consulta.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId).ToListAsync(ct))
-                .Where(v => string.Equals(SolicitudDeAcceso.Normalizar(v.CorreoTercero), correo, StringComparison.Ordinal))
+                .Where(v => !v.InvitacionPorAprobar && string.Equals(SolicitudDeAcceso.Normalizar(v.CorreoTercero), correo, StringComparison.Ordinal))
                 .ToList();
             var empresas = vinculos.Count == 0
                 ? []

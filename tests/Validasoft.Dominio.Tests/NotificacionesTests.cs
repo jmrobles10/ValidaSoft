@@ -48,6 +48,11 @@ public class NotificacionesTests
         {
             { new VinculoCreado(VinculoId, EmpresaId, TerceroId, TipoVinculoId, null, [], OrigenVinculo.Api, new ReferenciaExterna("SRM", "ADP-1"), CorreoTercero, Ahora), "vinculo.creado", VinculoId },
             { new InvitacionEnviada("correo", CorreoTercero, Ahora.AddDays(7), null, Ahora), "vinculo.invitacion_enviada", VinculoId },
+            { new InvitacionPorAprobarSolicitada(CorreoTercero, 72, new ActorDeInvitacion(ActorTipo.Usuario, Revisor), Ahora), "vinculo.invitacion_por_aprobar", VinculoId },
+            { new InvitacionAprobada(new ActorDeInvitacion(ActorTipo.Usuario, Revisor), new ActorDeInvitacion(ActorTipo.Usuario, Revisor), CorreoTercero, Ahora),
+                "vinculo.invitacion_aprobada", VinculoId },
+            { new InvitacionRechazada(new ActorDeInvitacion(ActorTipo.Usuario, Revisor), new ActorDeInvitacion(ActorTipo.Usuario, Revisor), "No procede", Ahora),
+                "vinculo.invitacion_rechazada", VinculoId },
             { new InvitacionAceptada(CorreoTercero, Ahora), "vinculo.invitacion_aceptada", VinculoId },
             { new VinculoActivado(ExpedienteId, Ahora), "vinculo.activado", VinculoId },
             { new VinculoBloqueado(EstadoVinculo.Activo, "Sanción", null, Ahora), "vinculo.bloqueado", VinculoId },
