@@ -89,8 +89,9 @@ public static class ConfiguracionMarten
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
                     .Index(x => x.DocumentoId);
                 // Avisos de vencimiento programados (TD-6): uno por tercero y fecha, en el tenant técnico "boveda" para
-                // guardarse en la misma transacción que el evento de vigencia y el mensaje programado (outbox).
-                opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted()
+                // guardarse en la misma transacción que el evento de vigencia y el mensaje programado (outbox). Concurrencia optimista
+                // (OC-1): varios mensajes del mismo tercero y fecha no envían dos veces el correo ni el evento documento.por_vencer.
+                opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted().UseOptimisticConcurrency(true)
                     .Index(x => x.TerceroId);
 
                 // Ficha maestra (ADR-0013, FM-18): secciones como streams SeccionDeFicha-{id determinista} en el tenant técnico
