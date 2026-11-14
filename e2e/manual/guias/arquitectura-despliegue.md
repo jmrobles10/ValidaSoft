@@ -27,7 +27,7 @@ Las apps se activan con `Validasoft__Apps__Web` y `Validasoft__Apps__Publica` (l
 | `docker compose -f infra/compose/compose.yaml --profile app up -d --build` | Lo anterior más la API en un contenedor (puerto 5080 del anfitrión), con claves de desarrollo en el compose. |
 | Perfil `e2e` | Un segundo Mailpit (SMTP 1026 y web 8026) para que los correos de las pruebas de punta a punta no lleguen al de desarrollo; lo levanta el propio arranque de la prueba. |
 
-Las claves, contraseñas y llaves que trae el compose y `appsettings.Development.json` son **solo locales** y están marcadas así. En desarrollo la API crea el esquema al arrancar (`CrearEsquemaAlIniciar`), crea el bucket de la bóveda (`CrearBucketsAlIniciar`) y siembra los catálogos de la ficha; hay documentación interactiva en `/docs`.
+Las claves, contraseñas y llaves que trae el compose y `appsettings.Development.json` son **solo locales** y están marcadas así: el compose corre la API en `Development` y no sirve para desplegar, y **fuera de `Development` la API no arranca con esas claves**. En desarrollo la API crea el esquema al arrancar (`CrearEsquemaAlIniciar`), crea el bucket de la bóveda (`CrearBucketsAlIniciar`) y siembra los catálogos de la ficha; hay documentación interactiva en `/docs`.
 
 Día a día, desde la raíz del repositorio:
 
@@ -41,7 +41,7 @@ pnpm dev:public                              # portal del tercero (apps/public)
 ## Producción
 
 - **Base de datos.** El esquema no se crea al arrancar (`CrearEsquemaAlIniciar` es `false` por omisión): se aplica antes con el comando de JasperFx, `dotnet Validasoft.Api.dll db-apply`. Así el arranque de la API no paga una migración ni compite con otras réplicas.
-- **Claves obligatorias.** La API **no arranca** sin `Validasoft__Secretos__ClaveMaestra` y sin `Validasoft__Certificados__ClavePrivada`; sin `Validasoft__Sesiones__ClaveFirma` falla el inicio de sesión por token. Se guardan en un gestor de secretos, nunca en la imagen ni en el repositorio.
+- **Claves obligatorias y propias.** Con `ASPNETCORE_ENVIRONMENT` distinto de `Development` la API **no arranca** si falta `Validasoft__Secretos__ClaveMaestra`, `Validasoft__Certificados__ClavePrivada` o `Validasoft__Sesiones__ClaveFirma`, ni si alguna (o `Validasoft__Plataforma__ClaveBootstrap`, si la pones) conserva el valor de desarrollo publicado en el repositorio. Cada entorno genera las suyas ([Claves propias del entorno](guia:variables-de-entorno#claves-propias-del-entorno)) y las guarda en un gestor de secretos, nunca en la imagen ni en el repositorio.
 - **Primer grupo.** Con `Validasoft__Plataforma__ClaveBootstrap` se da de alta al primer operador de Plataforma; luego se puede desactivar la clave desde la consola. El primer grupo se crea desde `/plataforma/grupos/nuevo`.
 - **Correo.** Un SMTP real (`Correo__Host`, puerto, seguridad, usuario y clave), con el remitente de la plataforma y la `UrlPublica` que se escribirá en los enlaces. Cada empresa puede registrar un dominio propio ([Dominio de correo](guia:configuracion-de-la-empresa#dominio-de-correo)).
 - **Almacén.** Un S3 compatible con `Endpoint` y, si el navegador lo ve con otra dirección, `EndpointPublico`. La API crea el bucket `boveda` y, con la primera carga de un documento propio, el de cada grupo.
@@ -70,7 +70,7 @@ El proceso admite más de una réplica del mismo servicio:
 
 - **PostgreSQL** completo: es el event store, la configuración, el outbox y las sesiones.
 - **El almacén S3**: la bóveda y los PDF de los certificados. El nombre de cada objeto es su SHA-256, así que un respaldo se puede verificar.
-- **Las claves**: perder la clave maestra deja ilegibles los secretos cifrados (llaves de OpenAI, secretos de webhook, números de cuenta); perder la semilla del sello impide emitir y deja sin verificar los certificados nuevos (las claves públicas anteriores se publican con `Certificados__ClavesAnteriores`). Se rotan sin cortar el servicio: [Secretos](guia:configuracion-de-plataforma#secretos-y-clave-de-arranque).
+- **Las claves**: perder la clave maestra deja ilegibles los secretos cifrados (llaves de OpenAI, secretos de webhook, números de cuenta); perder la semilla del sello impide emitir y deja sin verificar los certificados nuevos (las claves públicas anteriores se publican con `Certificados__ClavesAnteriores`, cada una con su fecha de retiro y un plazo de verificación). Se rotan sin cortar el servicio: [Secretos](guia:configuracion-de-plataforma#secretos-y-clave-de-arranque).
 
 ## Qué verifica el CI
 
