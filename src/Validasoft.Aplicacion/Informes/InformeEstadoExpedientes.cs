@@ -224,8 +224,7 @@ public static class InformeEstadoExpedientesEndpoints
         return new FilaEstadoExpedienteDto(e.Id, e.Folio, e.Tipo.ToString(), e.Estado.ToString(), e.VinculoId,
             new TerceroResumenDto(e.TerceroId, e.TerceroNombre, e.TerceroIdentificacion),
             new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre),
-            e.Flujo is null ? null : new FlujoDeExpedienteDto(e.Flujo.FlujoId, e.Flujo.FlujoVersionId, e.Flujo.Codigo, e.Flujo.Nombre, e.Flujo.Version,
-                e.Flujo.Origen.ToString()),
+            e.Flujo?.ADto(),
             e.AbiertoEn, e.CerradoEn, requisitos.Count, requisitos.Count(r => r.Estado is EstadoRequisito.Aprobado or EstadoRequisito.Eximido),
             t.Devoluciones, Dias(t.HorasTotales), Dias(t.HorasEnCarga), Dias(t.HorasConTercero), Dias(t.HorasEnRevision),
             t.HorasHastaAprobacion is { } aprobacion ? Dias(aprobacion) : null, areas.Any(a => a.SlaIncumplido), areas);

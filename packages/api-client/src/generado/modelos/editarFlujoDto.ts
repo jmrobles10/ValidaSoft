@@ -9,6 +9,7 @@ import type { PlazoCargueDto } from './plazoCargueDto';
 import type { RecordatorioDeFlujoDto } from './recordatorioDeFlujoDto';
 import type { ReintentoDto } from './reintentoDto';
 import type { RequisitoDelFlujoDto } from './requisitoDelFlujoDto';
+import type { SeleccionDeFlujoDto } from './seleccionDeFlujoDto';
 import type { VerificacionRequeridaDto } from './verificacionRequeridaDto';
 import type { VigenciaVinculoDto } from './vigenciaVinculoDto';
 
@@ -29,4 +30,5 @@ export interface EditarFlujoDto {
   reintento?: null | ReintentoDto;
   vigenciaVinculo?: null | VigenciaVinculoDto;
   recordatorioObservaciones?: null | RecordatorioDeFlujoDto;
+  seleccion?: null | SeleccionDeFlujoDto;
 }

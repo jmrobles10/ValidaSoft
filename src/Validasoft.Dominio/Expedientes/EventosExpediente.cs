@@ -77,7 +77,10 @@ public enum EstadoRequisito
     Desactualizado
 }
 
-/// <summary>Cómo se eligió el flujo (docs/03 §12.1). <c>Regla</c> llega con las reglas de selección.</summary>
+/// <summary>
+/// Cómo se eligió el flujo (docs/03 §12.1): <c>Explicito</c> (lo indicó quien abre o el vínculo lo traía), <c>Regla</c> (la condición de
+/// selección de un flujo publicado se cumplió, FR-1) o <c>PorDefecto</c> (ninguna regla aplicó).
+/// </summary>
 public enum OrigenFlujo
 {
     Explicito,
@@ -126,7 +129,17 @@ public sealed record ExpedienteAbierto(
     IReadOnlyList<string> InvitadoPor,
     DateTimeOffset Fecha);
 
-/// <summary>Versión de flujo elegida, copiada entera: cambiar el flujo después no altera este expediente.</summary>
+/// <summary>
+/// La regla de selección que decidió el flujo de un expediente (FR-1), tal como estaba en la versión publicada: su prioridad, su
+/// condición y cuántas reglas se evaluaron hasta ella (la primera que cumple gana). El flujo y la versión que la trajeron son los del
+/// propio <see cref="FlujoSeleccionado"/>.
+/// </summary>
+public sealed record SeleccionPorRegla(int Prioridad, CondicionDeExigencia Condicion, int ReglasEvaluadas);
+
+/// <summary>
+/// Versión de flujo elegida, copiada entera: cambiar el flujo después no altera este expediente. Con <see cref="OrigenFlujo.Regla"/>,
+/// <see cref="Regla"/> dice qué condición coincidió.
+/// </summary>
 public sealed record FlujoSeleccionado(
     Guid FlujoId,
     Guid FlujoVersionId,
@@ -139,7 +152,8 @@ public sealed record FlujoSeleccionado(
     bool SeparacionDeFunciones,
     DateTimeOffset Fecha,
     PlazoDeCargue? PlazoCargue = null,
-    int? RecordatorioObservacionesDias = null);
+    int? RecordatorioObservacionesDias = null,
+    SeleccionPorRegla? Regla = null);
 
 /// <summary>
 /// Fin de la fase de carga: sin requisitos al abrirse (FL-1); con requisitos, cuando todos los obligatorios están

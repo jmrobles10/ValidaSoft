@@ -11,6 +11,7 @@ import type {
 } from '@validasoft/api-client';
 import { recordatorioADto, recordatorioDesdeVersion, validarRecordatorio, type ModoRecordatorio } from './recordatorio';
 import { requisitoDeSeccionADto, validarRequisitoDeSeccion } from './requisitosDeSeccion';
+import { seleccionADto, seleccionDesdeVersion, validarSeleccion } from './seleccion';
 import { VIGENCIA_POR_DEFECTO, validarVigenciaDelVinculo, vigenciaADto } from './vigencia';
 
 /**
@@ -105,6 +106,13 @@ export interface BorradorFlujo {
   recordatorioModo: ModoRecordatorio;
   recordatorioDias: string;
   /**
+   * Selección automática del flujo (FR-1): la condición con la que el sistema lo escoge solo al abrir un expediente sin flujo explícito
+   * (`null` = no se escoge solo; se conserva tal cual aunque el editor no sepa armarla) y su prioridad (la menor primero), como la escribe
+   * la persona.
+   */
+  seleccionCondicion: CondicionDto | null;
+  seleccionPrioridad: string;
+  /**
    * Vigencia periódica del vínculo (VV-1), como la escribe la persona: días desde la última aprobación (0 = sin vencimiento
    * periódico), avisos «30, 15, 5» (días antes de vencer) y días de gracia.
    */
@@ -147,13 +155,17 @@ export type CodigoErrorFlujo =
   | 'vigencia-sin-secciones'
   | 'vigencia-seccion-invalida'
   | 'dias-revalidacion-invalidos'
-  | 'recordatorio-invalido';
+  | 'recordatorio-invalido'
+  | 'prioridad-requerida'
+  | 'prioridad-invalida'
+  | 'prioridad-duplicada'
+  | 'condicion-invalida';
 
 export interface ErrorFlujo {
   codigo: CodigoErrorFlujo;
   /**
    * `codigo`, `nombre`, `tipoVinculo`, `etapas`, `etapa.<i>`, `area.<i>.<j>`, `requisito.<k>`, `requisito.<k>.periodos`,
-   * `requisito.<k>.vigencia`, `requisito.<k>.revalidacion`, `vigencia.dias`, `vigencia.avisos`, `vigencia.gracia` o `recordatorio.dias`.
+   * `requisito.<k>.vigencia`, `requisito.<k>.revalidacion`, `vigencia.dias`, `vigencia.avisos`, `vigencia.gracia`, `recordatorio.dias`, `seleccion.condicion` o `seleccion.prioridad`.
    */
   campo: string;
   /** Es aviso: no impide guardar (la API lo acepta) pero el flujo no avanzaría. */
@@ -205,6 +217,7 @@ export function borradorVacio(): BorradorFlujo {
     reintentoPermitido: false,
     reintentoDias: '0',
     ...recordatorioDesdeVersion(null),
+    ...seleccionDesdeVersion(null),
     vigenciaDias: String(VIGENCIA_POR_DEFECTO.dias),
     vigenciaAvisos: VIGENCIA_POR_DEFECTO.avisos.join(', '),
     vigenciaGracia: String(VIGENCIA_POR_DEFECTO.gracia),
@@ -225,6 +238,7 @@ export function borradorDesdeVersion(base: { codigo: string; nombre: string; tip
     reintentoPermitido: version.reintento?.permitido ?? false,
     reintentoDias: String(version.reintento?.diasEspera ?? 0),
     ...recordatorioDesdeVersion(version.recordatorioObservaciones),
+    ...seleccionDesdeVersion(version.seleccion),
     vigenciaDias: String(version.vigenciaVinculo?.dias ?? VIGENCIA_POR_DEFECTO.dias),
     vigenciaAvisos: (version.vigenciaVinculo?.diasAviso ?? VIGENCIA_POR_DEFECTO.avisos).join(', '),
     vigenciaGracia: String(version.vigenciaVinculo?.diasGracia ?? VIGENCIA_POR_DEFECTO.gracia),
@@ -318,6 +332,7 @@ export function validarFlujo(
   errores.push(...validarVerificaciones(borrador.verificaciones));
   errores.push(...validarVigenciaDelVinculo(borrador));
   errores.push(...validarRecordatorio(borrador));
+  errores.push(...validarSeleccion(borrador));
   return errores;
 }
 
@@ -467,6 +482,7 @@ export function firmaBorrador(borrador: BorradorFlujo): string {
     plazo: plazoADto(borrador),
     reintento: reintentoADto(borrador),
     recordatorio: recordatorioADto(borrador),
+    seleccion: seleccionADto(borrador),
     vigencia: vigenciaADto(borrador),
     etapas: etapasADto(borrador.etapas),
     requisitos: requisitosADto(borrador.requisitos).map((r) => ({ ...r, id: null })),

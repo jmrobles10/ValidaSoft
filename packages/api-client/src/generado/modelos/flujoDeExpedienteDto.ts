@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { OrigenFlujo } from './origenFlujo';
+import type { SeleccionPorReglaDto } from './seleccionPorReglaDto';
 
 export interface FlujoDeExpedienteDto {
   id: string;
@@ -13,4 +14,5 @@ export interface FlujoDeExpedienteDto {
   nombre: string;
   version: number;
   origen: OrigenFlujo;
+  regla?: null | SeleccionPorReglaDto;
 }

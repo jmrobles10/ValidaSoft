@@ -7,6 +7,7 @@ import { limpiarAreasDeRequisitos, type BorradorFlujo, type ErrorFlujo } from '.
 import { EditorEtapas } from './EditorEtapas';
 import { EditorRecordatorioFlujo } from './EditorRecordatorioFlujo';
 import { EditorRequisitos } from './EditorRequisitos';
+import { EditorSeleccionFlujo } from './EditorSeleccionFlujo';
 import { EditorVerificaciones } from './EditorVerificaciones';
 import { EditorVigenciaVinculo } from './EditorVigenciaVinculo';
 
@@ -173,6 +174,10 @@ export function FormularioFlujo({ borrador, onCambiar, areas, tipos, tiposDocume
           </Box>
           <EditorVigenciaVinculo borrador={borrador} onCambiar={onCambiar} errores={errores} soloLectura={soloLectura} />
         </Stack>
+      </Tarjeta>
+
+      <Tarjeta titulo={t('flujoSeleccion.titulo')}>
+        <EditorSeleccionFlujo borrador={borrador} onCambiar={onCambiar} errores={errores} soloLectura={soloLectura} />
       </Tarjeta>
 
       <Tarjeta titulo={t('flujos.editor.etapas')}>

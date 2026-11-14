@@ -10620,6 +10620,41 @@
         }
       }
     },
+    "/api/v1/flujos/seleccion/vista-previa": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Flujos.FlujosEndpoints"
+        ],
+        "summary": "POST_api_v1_flujos_seleccion_vista_previa",
+        "description": "POST_api_v1_flujos_seleccion_vista_previa",
+        "operationId": "POST_api_v1_flujos_seleccion_vista_previa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VistaPreviaDeSeleccionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeleccionPrevistaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/plataforma/catalogos/{catalogo}/importar": {
       "post": {
         "tags": [
@@ -21408,6 +21443,16 @@
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
               }
             ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
+              }
+            ]
           }
         }
       },
@@ -23565,6 +23610,16 @@
               },
               {
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
+              }
+            ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
               }
             ]
           }
@@ -27204,6 +27259,16 @@
           },
           "origen": {
             "type": "string"
+          },
+          "regla": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionPorReglaDto"
+              }
+            ]
           }
         }
       },
@@ -27434,6 +27499,16 @@
               },
               {
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
+              }
+            ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
               }
             ]
           }
@@ -32323,6 +32398,57 @@
           }
         }
       },
+      "ReglaDeSeleccionDto": {
+        "required": [
+          "flujoId",
+          "versionId",
+          "codigo",
+          "nombre",
+          "version",
+          "prioridad",
+          "condicion",
+          "cumple"
+        ],
+        "type": "object",
+        "properties": {
+          "flujoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "condicion": {
+            "$ref": "#/components/schemas/CondicionDto"
+          },
+          "cumple": {
+            "type": "boolean"
+          }
+        }
+      },
       "ReglaFrescuraDto": {
         "required": [
           "tipo"
@@ -35396,6 +35522,84 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "SeleccionDeFlujoDto": {
+        "type": "object",
+        "properties": {
+          "condicion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CondicionDto"
+              }
+            ]
+          },
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeleccionPorReglaDto": {
+        "required": [
+          "prioridad",
+          "condicion",
+          "reglasEvaluadas"
+        ],
+        "type": "object",
+        "properties": {
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "condicion": {
+            "$ref": "#/components/schemas/CondicionDto"
+          },
+          "reglasEvaluadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeleccionPrevistaDto": {
+        "required": [
+          "flujo",
+          "reglas"
+        ],
+        "type": "object",
+        "properties": {
+          "flujo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FlujoDeExpedienteDto"
+              }
+            ]
+          },
+          "reglas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReglaDeSeleccionDto"
+            }
           }
         }
       },
@@ -39086,6 +39290,54 @@
           },
           "html": {
             "type": "string"
+          }
+        }
+      },
+      "VistaPreviaDeSeleccionDto": {
+        "required": [
+          "tipoVinculo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoVinculo": {
+            "type": "string"
+          },
+          "terceroId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tipoPersona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "esExtranjero": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "atributos": {
+            "type": [
+              "null",
+              "object"
+            ]
           }
         }
       },

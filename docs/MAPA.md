@@ -233,7 +233,7 @@ flowchart LR
 | Cuándo la IA aprueba sola | 02 §9, 04 §IA |
 | Estados y eventos exactos | 03 §3 |
 | Quién aprueba, en qué orden, con cuántos aprobadores | 03 §etapas/áreas, registro R-2 |
-| Cómo se elige el flujo de un expediente | 03 §ReglaDeSeleccionDeFlujo, 11 H3 |
+| Cómo se elige el flujo de un expediente | 03 §12.1 (selección por reglas, FR), 05 §2.4.4, registro 5-quatersexagies |
 | Un endpoint, un DTO, un webhook, una alerta | 05 (catálogos), 11 (por hito) |
 | Qué ve el tercero / el revisor / el verificador | 06 |
 | Quién puede ver qué, retención, consentimiento IA | 07 |

@@ -2,12 +2,14 @@ using Marten;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Vinculos;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Flujos;
+using Validasoft.Dominio.Terceros;
 using Wolverine.Http;
 
 namespace Validasoft.Aplicacion.Flujos;
@@ -15,7 +17,8 @@ namespace Validasoft.Aplicacion.Flujos;
 /// <summary>
 /// Flujos aprobatorios versionados de la empresa activa (<c>X-Empresa</c>): etapas en secuencia, áreas en paralelo,
 /// aprobadores por área, áreas automáticas, política de devolución y los documentos que pide (requisitos, RQ-1: se
-/// editan en el borrador y se congelan al publicar). Todo cambio deja registro de auditoría (R-1).
+/// editan en el borrador y se congelan al publicar) y, opcionalmente, la regla con la que se escoge solo (condición y prioridad, FR-1).
+/// Todo cambio deja registro de auditoría (R-1).
 /// </summary>
 public static class FlujosEndpoints
 {
@@ -42,13 +45,15 @@ public static class FlujosEndpoints
             PlazoCargue = dto.PlazoCargue?.ADominio(),
             Reintento = dto.Reintento?.ADominio(),
             VigenciaVinculo = dto.VigenciaVinculo?.ADominio(),
-            RecordatorioObservacionesDias = dto.RecordatorioObservaciones?.ADominio()
+            RecordatorioObservacionesDias = dto.RecordatorioObservaciones?.ADominio(),
+            Seleccion = dto.Seleccion?.ADominio()
         };
         var flujo = Flujo.Crear(empresa.EmpresaId, dto.Codigo, dto.Nombre, tipo.Id, definicion, areas, ahora, tipos, tipo);
 
         var codigo = flujo.Codigo;
         if (await empresa.Flujos().AnyAsync(f => f.Codigo == codigo, ct))
             throw ReglaDeNegocioException.Conflicto("flujo-duplicado", $"La empresa ya tiene el flujo {codigo}.");
+        await ValidarPrioridadAsync(empresa, flujo, flujo.Ultima.Seleccion, ct);
 
         empresa.Sesion.Store(flujo);
         var resultado = flujo.ADto(tipo, false);
@@ -133,10 +138,12 @@ public static class FlujosEndpoints
             dto.PlazoCargue?.ADominio() ?? ultima.PlazoEfectivo(),
             dto.Reintento?.ADominio() ?? ultima.ReintentoEfectivo(),
             dto.VigenciaVinculo?.ADominio() ?? ultima.VigenciaEfectiva(),
-            dto.RecordatorioObservaciones is { } recordatorio ? recordatorio.ADominio() : ultima.RecordatorioObservacionesDias);
+            dto.RecordatorioObservaciones is { } recordatorio ? recordatorio.ADominio() : ultima.RecordatorioObservacionesDias,
+            dto.Seleccion is { } seleccion ? seleccion.ADominio() : ultima.Seleccion);
 
         var borrador = flujo.EditarBorrador(dto.Nombre, definicion, await empresa.Areas().ToListAsync(ct), ahora, tipos,
             await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));
+        await ValidarPrioridadAsync(empresa, flujo, borrador.Seleccion, ct);
         return await GuardarAsync(empresa, contexto, flujo, "FlujoVersion", $"{flujo.Id}/v{borrador.Version}", AccionConfiguracion.Modificado, antes, ahora, ct);
     }
 
@@ -151,6 +158,7 @@ public static class FlujosEndpoints
         var antes = await DtoAsync(empresa, flujo, ct);
         var publicada = flujo.Publicar(await empresa.Areas().ToListAsync(ct), ahora, await TiposAsync(empresa, ct),
             await empresa.Sesion.LoadAsync<TipoVinculo>(flujo.TipoVinculoId, ct));
+        await ValidarPrioridadAsync(empresa, flujo, publicada.Seleccion, ct);
 
         var clave = FlujoPorDefecto.Clave(flujo.EmpresaId, flujo.TipoVinculoId);
         if (await empresa.Sesion.LoadAsync<FlujoPorDefecto>(clave, ct) is null)
@@ -175,6 +183,56 @@ public static class FlujosEndpoints
     public static async Task<FlujoVersionDto> Version(Guid id, int n, SesionDeEmpresa empresa, CancellationToken ct) =>
         (await empresa.CargarFlujoAsync(id, ct)).Versiones.FirstOrDefault(v => v.Version == n)?.ADto()
         ?? throw ReglaDeNegocioException.NoEncontrado("version-no-encontrada", $"El flujo no tiene la versión {n}.");
+
+    /// <summary>
+    /// «¿Qué flujo le tocaría a este tercero?» (FR-1): evalúa, sin abrir nada, las reglas de selección de los flujos publicados del tipo
+    /// de vínculo con los datos del tercero (<c>terceroId</c>, visible para el tenant) y/o los indicados, y responde el flujo que
+    /// escogería el sistema con su origen (<c>Regla</c> o <c>PorDefecto</c>) y todas las reglas con su resultado, en orden de evaluación.
+    /// Es lo que usa el editor para probar una condición y lo que puede consultar el sistema integrado antes de crear el vínculo.
+    /// </summary>
+    [WolverinePost("/api/v1/flujos/seleccion/vista-previa")]
+    [Authorize(Policy = Permisos.FlujosLeer)]
+    public static async Task<SeleccionPrevistaDto> VistaPrevia(VistaPreviaDeSeleccionDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto,
+        CancellationToken ct)
+    {
+        var codigoTipo = (dto.TipoVinculo ?? string.Empty).Trim().ToUpperInvariant();
+        var tipo = await empresa.Sesion.Query<TipoVinculo>().FirstOrDefaultAsync(t => t.Codigo == codigoTipo, ct)
+                   ?? throw ReglaDeNegocioException.Validacion("tipo-vinculo-invalido", $"El tipo de vínculo '{dto.TipoVinculo}' no existe.");
+
+        var tercero = dto.TerceroId is { } terceroId ? await TercerosEndpoints.CargarVisibleAsync(empresa.Sesion, terceroId, contexto, ct) : null;
+        TipoPersona? persona = string.IsNullOrWhiteSpace(dto.TipoPersona) ? null
+            : Enum.TryParse<TipoPersona>(dto.TipoPersona, true, out var indicada) && Enum.IsDefined(indicada) ? indicada
+            : throw ReglaDeNegocioException.Validacion("tipo-persona-invalido",
+                $"'{dto.TipoPersona}' no es un tipo de persona ({string.Join(", ", Enum.GetNames<TipoPersona>())}).");
+        var pais = Texto(dto.Pais) ?? tercero?.Identificacion.Pais ?? "CO";
+        var evaluado = new ContextoDeExigencia(persona ?? tercero?.TipoPersona ?? TipoPersona.Juridica, pais,
+            Texto(dto.TipoIdentificacion) ?? tercero?.Identificacion.Tipo ?? "NIT",
+            dto.EsExtranjero ?? (dto.Pais is null && tercero is not null ? tercero.EsExtranjero : pais != "CO"), tipo.Codigo,
+            dto.Atributos ?? new Dictionary<string, System.Text.Json.JsonElement>());
+
+        var tipoId = tipo.Id;
+        var flujos = await empresa.Flujos().Where(f => f.TipoVinculoId == tipoId).ToListAsync(ct);
+        var defecto = await empresa.Sesion.LoadAsync<FlujoPorDefecto>(FlujoPorDefecto.Clave(empresa.EmpresaId, tipo.Id), ct);
+        var seleccion = EvaluadorDeSeleccion.Seleccionar(flujos, defecto is null ? null : flujos.FirstOrDefault(f => f.Id == defecto.FlujoId), evaluado);
+
+        return new SeleccionPrevistaDto(
+            seleccion is { Flujo: { } flujo, Version: { } version }
+                ? new FlujoDeExpedienteDto(flujo.Id, version.Id, flujo.Codigo, flujo.Nombre, version.Version, seleccion.Origen.ToString(), seleccion.Regla?.ADto())
+                : null,
+            [.. seleccion.Reglas.Select(r => new ReglaDeSeleccionDto(r.Flujo.Id, r.Version.Id, r.Flujo.Codigo, r.Flujo.Nombre, r.Version.Version, r.Prioridad,
+                r.Condicion.ADto(), r.Cumple))]);
+    }
+
+    private static string? Texto(string? valor) => string.IsNullOrWhiteSpace(valor) ? null : valor.Trim().ToUpperInvariant();
+
+    /// <summary>Una prioridad de selección no se repite entre los flujos publicados del mismo tipo de vínculo (422 <c>prioridad-duplicada</c>).</summary>
+    private static async Task ValidarPrioridadAsync(SesionDeEmpresa empresa, Flujo flujo, SeleccionDeFlujo? seleccion, CancellationToken ct)
+    {
+        if (seleccion is not { Participa: true })
+            return;
+        var tipoId = flujo.TipoVinculoId;
+        EvaluadorDeSeleccion.ValidarPrioridadUnica(flujo, seleccion, await empresa.Flujos().Where(f => f.TipoVinculoId == tipoId).ToListAsync(ct));
+    }
 
     private static async Task<FlujoDto> GuardarAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, Flujo flujo, string entidad, string entidadId,
         AccionConfiguracion accion, FlujoDto antes, DateTimeOffset ahora, CancellationToken ct)

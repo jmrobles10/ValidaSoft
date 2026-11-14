@@ -29,7 +29,9 @@ import type {
   FlujoDto,
   FlujoPorDefectoDto,
   FlujoVersionDto,
-  ListarFlujosParams
+  ListarFlujosParams,
+  SeleccionPrevistaDto,
+  VistaPreviaDeSeleccionDto
 } from '../../modelos';
 
 import { clienteValidasoft } from '../../../fetcher';
@@ -735,3 +737,64 @@ export function useObtenerVersionFlujo<TData = Awaited<ReturnType<typeof obtener
 
 
 
+export const vistaPreviaSeleccionFlujo = (
+    vistaPreviaDeSeleccionDto: BodyType<VistaPreviaDeSeleccionDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SeleccionPrevistaDto>(
+      {url: `/api/v1/flujos/seleccion/vista-previa`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: vistaPreviaDeSeleccionDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getVistaPreviaSeleccionFlujoMutationKey = () => ['vistaPreviaSeleccionFlujo'] as const;
+
+export const getVistaPreviaSeleccionFlujoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>, TError,VistaPreviaSeleccionFlujoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>, TError,VistaPreviaSeleccionFlujoMutationVariables, TContext> => {
+
+const mutationKey = getVistaPreviaSeleccionFlujoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>, VistaPreviaSeleccionFlujoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  vistaPreviaSeleccionFlujo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VistaPreviaSeleccionFlujoMutationResult = NonNullable<Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>>
+    export type VistaPreviaSeleccionFlujoMutationBody = BodyType<VistaPreviaDeSeleccionDto>
+    export type VistaPreviaSeleccionFlujoMutationError = ErrorType<void>
+    export type VistaPreviaSeleccionFlujoMutationVariables = {data: BodyType<VistaPreviaDeSeleccionDto>}
+
+    export const useVistaPreviaSeleccionFlujo = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>, TError,VistaPreviaSeleccionFlujoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof vistaPreviaSeleccionFlujo>>,
+        TError,
+        VistaPreviaSeleccionFlujoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVistaPreviaSeleccionFlujoMutationOptions(options), queryClient);
+    }
