@@ -27,3 +27,4 @@ export * from './AvisoCambiosNuevos';
 export * from './EditorDeContactos';
 export * from './descargas';
 export * from './archivos';
+export * from './notificaciones';

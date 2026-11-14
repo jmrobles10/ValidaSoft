@@ -5,13 +5,15 @@ import {
   getListarNotificacionesTerceroQueryOptions,
   getObtenerPreferenciasNotificacionTerceroQueryKey,
   getObtenerPreferenciasNotificacionTerceroQueryOptions,
+  marcarLeidaEnBandeja,
   marcarNotificacionesTerceroLeidas,
   marcarNotificacionTerceroLeida,
+  marcarTodasEnBandeja,
+  useCambioOptimistaDeBandeja,
   type BandejaNotificacionesTerceroDto,
   type ListarNotificacionesTerceroParams,
   type PreferenciasNotificacionDto,
 } from '@validasoft/api-client';
-import { marcarLeidaEnBandeja, marcarTodasEnBandeja } from './bandeja';
 
 /** Página de la campana: las 30 más recientes (el total de no leídas, de todas las empresas, viene aparte en `noLeidas`). */
 export const PARAMETROS_BANDEJA: ListarNotificacionesTerceroParams = { limite: 30 };
@@ -31,25 +33,8 @@ export function useBandejaDelTercero(respaldo: boolean) {
   });
 }
 
-/** Aplica un cambio optimista a la bandeja y devuelve con qué deshacerlo si la API lo rechaza. */
-function useCambioOptimista() {
-  const cliente = useQueryClient();
-  return {
-    aplicar: async (cambio: (bandeja: BandejaNotificacionesTerceroDto) => BandejaNotificacionesTerceroDto) => {
-      await cliente.cancelQueries({ queryKey: claveBandeja });
-      const previa = cliente.getQueryData<BandejaNotificacionesTerceroDto>(claveBandeja);
-      if (previa) cliente.setQueryData<BandejaNotificacionesTerceroDto>(claveBandeja, cambio(previa));
-      return previa;
-    },
-    deshacer: (previa: BandejaNotificacionesTerceroDto | undefined) => {
-      if (previa) cliente.setQueryData(claveBandeja, previa);
-      void cliente.invalidateQueries({ queryKey: claveBandeja });
-    },
-  };
-}
-
 export function useMarcarLeida() {
-  const optimista = useCambioOptimista();
+  const optimista = useCambioOptimistaDeBandeja<BandejaNotificacionesTerceroDto>(claveBandeja);
   return useMutation({
     mutationFn: (id: string) => marcarNotificacionTerceroLeida(id),
     onMutate: (id) => optimista.aplicar((b) => marcarLeidaEnBandeja(b, id, new Date().toISOString())),
@@ -58,7 +43,7 @@ export function useMarcarLeida() {
 }
 
 export function useMarcarTodas() {
-  const optimista = useCambioOptimista();
+  const optimista = useCambioOptimistaDeBandeja<BandejaNotificacionesTerceroDto>(claveBandeja);
   return useMutation({
     mutationFn: () => marcarNotificacionesTerceroLeidas(),
     onMutate: () => optimista.aplicar((b) => marcarTodasEnBandeja(b, new Date().toISOString())),
