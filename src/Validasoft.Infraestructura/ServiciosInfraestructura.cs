@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Validasoft.Aplicacion.Certificados;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Consentimientos;
@@ -112,6 +113,20 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<ICacheDeCredenciales>(proveedor => proveedor.GetRequiredService<CacheDeCredenciales>());
         servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeCredenciales>());
         servicios.AddHostedService<EscuchaDeInvalidaciones>();
+        // Nodo líder de los procesos periódicos (OC-4): con varias réplicas, los barridos, las limpiezas y los procesadores de pendientes corren en
+        // una sola. Se registra antes que ellos; sin elección (Validasoft:Lider:Habilitado = false) el nodo es siempre el líder.
+        if (configuracion.GetValue("Validasoft:Lider:Habilitado", true))
+        {
+            servicios.AddSingleton(proveedor => LiderDeProcesosPostgres.Crear(configuracion, proveedor.GetRequiredService<ILogger<LiderDeProcesosPostgres>>()));
+            servicios.AddSingleton<ILiderDeProcesos>(proveedor => proveedor.GetRequiredService<LiderDeProcesosPostgres>());
+            servicios.AddHostedService(proveedor => proveedor.GetRequiredService<LiderDeProcesosPostgres>());
+        }
+        else
+        {
+            servicios.AddSingleton<ILiderDeProcesos, LiderUnico>();
+        }
+
+        servicios.AddSingleton<ReclamosDeTrabajo>(); // idempotencia por clave de los trabajos que se facturan (OC-4)
         servicios.AddSingleton<CacheDeClaveDeArranque>();
         servicios.AddSingleton<ICacheDeClaveDeArranque>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
         servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
@@ -146,13 +161,13 @@ public static class ServiciosInfraestructura
         // la bóveda, y el barrido de plazos con sus alertas (OD-1…OD-12).
         servicios.AddScoped<Aplicacion.Habeas.IProtectorDeDatosDelTercero, Aplicacion.Habeas.ProtectorDeDatosDelTercero>();
         servicios.AddScoped<Aplicacion.Habeas.RetencionDelTercero>();
-        servicios.AddHostedService<Aplicacion.Habeas.ProgramadorDeHabeas>();
+        servicios.AgregarProcesoDelLider<Aplicacion.Habeas.ProgramadorDeHabeas>();
         // Plan y límites por grupo (OD-14…OD-17): medición de uso, bloqueo suave, avisos al 80 % y al 100 %.
         servicios.AddSingleton<Aplicacion.Plataforma.MedidorDeLlamadasApi>();
         servicios.AddHostedService(proveedor => proveedor.GetRequiredService<Aplicacion.Plataforma.MedidorDeLlamadasApi>());
         servicios.AddSingleton<Aplicacion.Plataforma.ControlDePlan>();
         servicios.AddScoped<Aplicacion.Plataforma.EvaluadorDePlan>();
-        servicios.AddHostedService<Aplicacion.Plataforma.ProgramadorDePlanes>();
+        servicios.AgregarProcesoDelLider<Aplicacion.Plataforma.ProgramadorDePlanes>();
         servicios.AddSingleton<RedactorDeCorreos>();
         servicios.AddScoped<PlantillasDeCorreo>(); // plantillas de la empresa al enviar (PL-1)
         servicios.AddSingleton<CookieDeSesionTercero>();
@@ -177,12 +192,12 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<RegistroDeIngresos>();
         servicios.AddSingleton<CuentasDeIngreso>();
         servicios.AddScoped<ServicioDeIngreso>();
-        servicios.AddHostedService<LimpiezaDeIngresos>();
+        servicios.AgregarProcesoDelLider<LimpiezaDeIngresos>();
         servicios.AddScoped<RegistroDeUsuariosDelegados>();
         servicios.AddScoped<VerificadorDeIdentidadDelegada>();
         servicios.AddScoped<IVerificadorDeOperadores, VerificadorDeOperadores>(); // operadores de Plataforma (PT-4)
         servicios.AddSingleton<RegistroDeAsercionesUsadas>();
-        servicios.AddHostedService<LimpiezaDeAsercionesUsadas>();
+        servicios.AgregarProcesoDelLider<LimpiezaDeAsercionesUsadas>();
         // Embebido desde otros dominios (SE-1…SE-3): orígenes de los sistemas, apps estáticas, CORS opcional y proxies.
         servicios.AddSingleton<OrigenesDeEmbebido>();
         servicios.AddHostedService<SembradoDeTextosLegales>();
@@ -202,9 +217,9 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<PlanificadorDeNotificaciones>();
         servicios.AddScoped<PreferenciasDeCorreoDelTercero>(); // el tercero puede apagar cada correo (NT-1)
         // Recordatorio automático de observaciones pendientes (NT-3): barrido periódico (Validasoft:RecordatoriosDeObservaciones:Intervalo).
-        servicios.AddHostedService<ProgramadorDeRecordatoriosDeObservaciones>();
+        servicios.AgregarProcesoDelLider<ProgramadorDeRecordatoriosDeObservaciones>();
         // Alertas del SLA de revisión (OP-12): barrido periódico (Validasoft:SlaDeRevision:Intervalo).
-        servicios.AddHostedService<ProgramadorDeSlaDeRevision>();
+        servicios.AgregarProcesoDelLider<ProgramadorDeSlaDeRevision>();
         servicios.AddSingleton<ProcesadorDeEventos>();
         servicios.AddSingleton<OpcionesDeWebhooks>();
         servicios.AddSingleton<IEnviadorDeWebhooks, EnviadorDeWebhooksHttp>();
@@ -219,7 +234,7 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IGeneradorDePdfDeCertificados, GeneradorPdfDeCertificados>();
         servicios.AddSingleton<Validasoft.Aplicacion.Informes.IGeneradorDePdfDeInformes, GeneradorPdfDeInformes>();
         servicios.AddSingleton<ArchivoDeCertificados>();
-        servicios.AddHostedService<ProcesadorDeCertificados>();
+        servicios.AgregarProcesoDelLider<ProcesadorDeCertificados>();
         // Verificaciones externas (H7, VE-5…VE-16): listas restrictivas con Infolaft como principal entre los reales (apagados
         // por omisión; credenciales por empresa), simulado solo con PermitirSimulado, PDF de evidencia y procesador periódico.
         servicios.AddSingleton<OpcionesDeVerificaciones>();
@@ -234,20 +249,20 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<IGeneradorDePdfDeDeclaracionPep, Ficha.GeneradorPdfDeDeclaracionPep>();
         servicios.AddSingleton<ConsultaDeListas>();
         servicios.AddSingleton<TareasDeVerificaciones>();
-        servicios.AddHostedService<Verificaciones.ProcesadorDeVerificaciones>();
+        servicios.AgregarProcesoDelLider<Verificaciones.ProcesadorDeVerificaciones>();
         servicios.AddHttpClient(Verificaciones.VerificadorInfolaft.Cliente);
         servicios.AddHttpClient(Verificaciones.VerificadorStradata.Cliente);
         servicios.AddHttpClient(Verificaciones.VerificadorCompliance.Cliente);
         // Plazos de cargue del expediente inicial (P-4-2, LT-4): barrido periódico (Validasoft:PlazosDeCargue:Intervalo).
-        servicios.AddHostedService<ProgramadorDePlazosDeCargue>();
+        servicios.AgregarProcesoDelLider<ProgramadorDePlazosDeCargue>();
         // Vigencia periódica del vínculo y fin de los bloqueos con fecha (VV-1…VV-5): barrido periódico (Validasoft:VigenciasDeVinculos:Intervalo).
-        servicios.AddHostedService<Aplicacion.Vinculos.ProgramadorDeVigenciasDeVinculos>();
+        servicios.AgregarProcesoDelLider<Aplicacion.Vinculos.ProgramadorDeVigenciasDeVinculos>();
         // Análisis de documentos con OpenAI y cupo por empresa (ADR-0012): cada empresa trae su llave; aquí no hay secretos.
         servicios.AddSingleton<OpcionesDeIa>();
         // Revisión automática con IA (ADR-0012): Manual / Asistido / Automático por empresa, procesador periódico (SegundosProceso, 0 lo apaga).
         servicios.AddSingleton<Aplicacion.Revision.OpcionesDeRevisionAutomatica>();
         servicios.AddSingleton<Aplicacion.Revision.TareasDeRevisionAutomatica>();
-        servicios.AddHostedService<Revision.ProcesadorDeRevisionAutomatica>();
+        servicios.AgregarProcesoDelLider<Revision.ProcesadorDeRevisionAutomatica>();
         servicios.AddScoped<CupoDeIa>();
         servicios.AddHttpClient(AnalizadorOpenAi.Cliente, (proveedor, cliente) =>
             cliente.Timeout = proveedor.GetRequiredService<OpcionesDeIa>().Timeout + TimeSpan.FromSeconds(5));
