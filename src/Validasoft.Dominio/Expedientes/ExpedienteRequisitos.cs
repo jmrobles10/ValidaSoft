@@ -110,6 +110,9 @@ public sealed class RequisitoDeExpediente
 
     public DateTimeOffset? EximidoEn { get; set; }
 
+    /// <summary>La exención del vínculo que lo eximió (EX-3), al abrirse el expediente o con él abierto; nula si lo eximió una persona o no está eximido.</summary>
+    public Guid? ExencionDeVinculoId { get; set; }
+
     /// <summary>
     /// ¿Cuenta para el alcance de sus áreas? Un opcional sin versión no frena a nadie; si el tercero lo carga, se revisa.
     /// </summary>
@@ -205,7 +208,7 @@ public sealed partial class Expediente
     /// que faltaba cargar, el expediente pasa a revisión, y si era la última observación vigente de un expediente
     /// devuelto, la revisión se reanuda (RQ-6).
     /// </summary>
-    public IReadOnlyList<object> EximirRequisito(Guid requisitoId, string por, string? justificacion, DateTimeOffset ahora)
+    public IReadOnlyList<object> EximirRequisito(Guid requisitoId, string por, string? justificacion, DateTimeOffset ahora, Guid? exencionDeVinculoId = null)
     {
         if (!EstaAbierto)
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se eximen requisitos de un expediente {Estado}.");
@@ -219,7 +222,7 @@ public sealed partial class Expediente
         var texto = Requerido(justificacion, "justificacion-requerida", "Eximir un requisito necesita una justificación.");
         return Simular(s =>
         {
-            s.Emitir(new RequisitoEximido(requisitoId, por, texto, ahora));
+            s.Emitir(new RequisitoEximido(requisitoId, por, texto, ahora, exencionDeVinculoId));
             if (s.Estado is { Estado: EstadoExpediente.Observado, EtapaActiva: { } etapa } &&
                 etapa.Areas.All(a => a.Estado != EstadoAreaExpediente.Observada))
                 s.Emitir(new RevisionReanudada(Guid.Empty, ahora, requisitoId));
@@ -388,7 +391,13 @@ public sealed partial class Expediente
         AprobadoresRequeridos = r.AprobadoresRequeridos,
         VersionActual = r.Version,
         AprobacionPrevia = r.Previa,
-        Retiro = r.Retiro
+        Retiro = r.Retiro,
+        // Un requisito que el vínculo tiene eximido (EX-3) nace Eximido citando la exención: no lo cubre una versión ni lo revisa nadie.
+        Eximido = r.Exencion is not null,
+        EximidoPor = r.Exencion?.Por,
+        JustificacionExencion = r.Exencion?.Justificacion,
+        EximidoEn = r.Exencion?.Fecha,
+        ExencionDeVinculoId = r.Exencion?.ExencionId
     };
 
     /// <summary>
@@ -495,6 +504,7 @@ public sealed partial class Expediente
         requisito.EximidoPor = e.Por;
         requisito.JustificacionExencion = e.Justificacion;
         requisito.EximidoEn = e.Fecha;
+        requisito.ExencionDeVinculoId = e.ExencionDeVinculoId;
         foreach (var veredicto in requisito.Veredictos.Where(v => v.Vigente))
         {
             veredicto.Vigente = false;

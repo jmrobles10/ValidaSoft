@@ -175,6 +175,18 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
     }
     case 'vinculo_vencido':
       return { ...base, despues: 'Vencido', motivo: texto(campo(datos, 'documento')) };
+    // Exención del vínculo (EX-1): de qué se eximió, hasta cuándo y por qué (la revocación y el vencimiento caen al caso general).
+    case 'exencion_de_vinculo_registrada': {
+      const objetivos = campo(datos, 'objetivos');
+      const nombres = Array.isArray(objetivos)
+        ? objetivos.map((o) => (o && typeof o === 'object' ? texto(campo(o as Record<string, unknown>, 'nombre')) : null)).filter((n): n is string => n !== null)
+        : [];
+      const alcance = campo(datos, 'todos') === true ? t('exenciones.alcanceTodo') : nombres.join(', ');
+      const hasta = texto(campo(datos, 'hasta'));
+      return { ...base, motivo: justificacion, detalle: hasta ? `${alcance} · ${t('exenciones.hasta', { fecha: formatearFechaDeclarada(hasta) })}` : alcance };
+    }
+    case 'vinculo_restablecido_por_exencion':
+      return { ...base, antes: estadoDe(campo(datos, 'estadoPrevio')), despues: 'Activo' };
     case 'expediente_cerrado': {
       const resultado = texto(campo(datos, 'resultado'));
       // La enumeración llega en texto o en número (ver `estadoDe`): Aprobado, Rechazado, Anulado, Caducado.

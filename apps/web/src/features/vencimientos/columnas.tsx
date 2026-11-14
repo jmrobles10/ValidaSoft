@@ -1,13 +1,14 @@
-import { Box, Checkbox, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Checkbox, Tooltip, Typography } from '@mui/material';
 import type { VencimientoDto } from '@validasoft/api-client';
 import { ChipEstado, formatearFecha, type ColumnaTabla } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ShieldOff, Undo2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatearFechaDeclarada } from '../documentos/formatoDatos';
 import { CHIP_VIGENCIA } from '../documentos/vigencia';
 import { TerceroEnLinea } from '../expedientes/componentes';
+import { ChipExentoDeFila } from '../vinculos/exenciones/ChipExento';
 import { baseVencimiento, claveVencimiento, COLOR_TONO, estadoVencimiento, textoDias, tonoVencimiento } from './modelo';
 
 interface Opciones {
@@ -15,6 +16,10 @@ interface Opciones {
   conSeleccion: boolean;
   seleccion: ReadonlySet<string>;
   alternar: (fila: VencimientoDto) => void;
+  /** Con `vinculos:eximir`, la columna de exención ofrece eximir (o revocar) desde la fila. */
+  puedeEximir?: boolean;
+  eximir?: (fila: VencimientoDto) => void;
+  revocar?: (fila: VencimientoDto) => void;
 }
 
 /** Celda del estado: el chip canónico de la vigencia; en gracia, el tooltip dice hasta cuándo se acepta. */
@@ -33,7 +38,7 @@ function celdaEstado(fila: VencimientoDto, t: TFunction) {
 }
 
 /** Columnas de la tabla de vencimientos (densas: una línea por fila). */
-export function useColumnasVencimientos({ conSeleccion, seleccion, alternar }: Opciones): ColumnaTabla<VencimientoDto>[] {
+export function useColumnasVencimientos({ conSeleccion, seleccion, alternar, puedeEximir = false, eximir, revocar }: Opciones): ColumnaTabla<VencimientoDto>[] {
   const { t } = useTranslation();
   return useMemo<ColumnaTabla<VencimientoDto>[]>(
     () => [
@@ -78,6 +83,38 @@ export function useColumnasVencimientos({ conSeleccion, seleccion, alternar }: O
         celda: (f) => <Typography variant="monoTabla">{formatearFechaDeclarada(f.vigenteHasta)}</Typography>,
       },
       { id: 'estado', encabezado: t('vencimientos.columnas.estado'), ancho: 130, celda: (f) => celdaEstado(f, t) },
+      {
+        id: 'exencion',
+        encabezado: t('vencimientos.columnas.exencion'),
+        ancho: 190,
+        celda: (f) => (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }} onClick={(e) => e.stopPropagation()}>
+            <ChipExentoDeFila exencion={f.exencion} documento={f.documento} />
+            {puedeEximir && f.exencion && revocar && (
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<Undo2 size={14} aria-hidden />}
+                aria-label={t('exenciones.revocarFila', { alcance: f.documento })}
+                onClick={() => revocar(f)}
+              >
+                {t('exenciones.revocar')}
+              </Button>
+            )}
+            {puedeEximir && !f.exencion && eximir && (
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<ShieldOff size={14} aria-hidden />}
+                aria-label={t('exenciones.eximirFila', { documento: f.documento, tercero: f.tercero.nombre })}
+                onClick={() => eximir(f)}
+              >
+                {t('exenciones.eximir')}
+              </Button>
+            )}
+          </Box>
+        ),
+      },
       {
         id: 'dias',
         encabezado: t('vencimientos.columnas.dias'),
@@ -124,6 +161,6 @@ export function useColumnasVencimientos({ conSeleccion, seleccion, alternar }: O
         celda: (f) => <Typography variant="monoTabla">{f.ultimoRecordatorio ? formatearFecha(f.ultimoRecordatorio) : t('vencimientos.nunca')}</Typography>,
       },
     ],
-    [t, conSeleccion, seleccion, alternar],
+    [t, conSeleccion, seleccion, alternar, puedeEximir, eximir, revocar],
   );
 }

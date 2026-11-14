@@ -371,7 +371,11 @@ public sealed partial class Vinculo
     /// <c>PorVencer</c>; si ya está vencido, bloqueado o terminado, nada.
     /// </summary>
     public VinculoVencido? Vencer(string documento, DateTimeOffset ahora) =>
-        TuvoAprobacion && Estado is EstadoVinculo.Activo or EstadoVinculo.PorVencer ? new VinculoVencido(documento, ahora) : null;
+        TuvoAprobacion && Estado is (EstadoVinculo.Activo or EstadoVinculo.PorVencer) &&
+        // Eximido de todo (EX-1): un documento vencido no lo vence mientras la exención rija (la de un tipo concreto la filtra quien llama).
+        ExencionTotal(Validasoft.Dominio.Documentos.CalculadoraDeVigencia.Fecha(ahora)) is null
+            ? new VinculoVencido(documento, ahora)
+            : null;
 
     /// <summary>Terminal; desde cualquier estado no terminal, incluido Bloqueado.</summary>
     public VinculoAnulado Anular(string motivo, DateTimeOffset ahora)

@@ -124,8 +124,10 @@ public static class Revalidacion
             var pedidos = await RequisitosDeExpediente.DelFlujoAsync(sesion, version, contexto, ct);
             var terceroId = vinculo.TerceroId;
             var delTercero = await sesion.ForTenant(TenantsTecnicos.Boveda).Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
+            var hoy = CalculadoraDeVigencia.Fecha(ahora);
             documentos = pedidos
-                .Where(p => yaIncluidos?.Contains(p.Requisito.Id) != true &&
+                // Lo que el vínculo tiene eximido (EX-3) no abre revalidación: la empresa dijo que no lo persigue, como un requisito eximido en el último expediente.
+                .Where(p => yaIncluidos?.Contains(p.Requisito.Id) != true && vinculo.ExencionDeDocumento(p.Tipo.Id, hoy) is null &&
                             RequisitosDeExpediente.Cubre(p.Tipo.Id, p.Tipo.TipoCanonico, p.Tipo.Ambito, delTercero, vinculoId) is { } actual &&
                             AprobadoAntes(aprobado, p) is { } previa &&
                             (previa.DocumentoId != actual.DocumentoId || previa.Numero != actual.Numero))
@@ -161,8 +163,9 @@ public static class Revalidacion
     private static async Task<IReadOnlyList<RequisitoDeSeccionPedido>> SeccionesCambiadasAsync(IDocumentSession sesion, Vinculo vinculo,
         FlujoVersion version, ContextoDeExigencia contexto, DateTimeOffset ahora, CancellationToken ct, IReadOnlySet<Guid>? yaIncluidos)
     {
-        var pedidas = RequisitosDeExpediente.SeccionesDelFlujo(version, contexto, CalculadoraDeVigencia.Fecha(ahora))
-            .Where(p => yaIncluidos?.Contains(p.RequisitoId) != true)
+        var hoy = CalculadoraDeVigencia.Fecha(ahora);
+        var pedidas = RequisitosDeExpediente.SeccionesDelFlujo(version, contexto, hoy)
+            .Where(p => yaIncluidos?.Contains(p.RequisitoId) != true && vinculo.ExencionDeSeccion(p.Requisito.Seccion, hoy) is null) // EX-3
             .ToList();
         if (pedidas.Count == 0)
             return [];

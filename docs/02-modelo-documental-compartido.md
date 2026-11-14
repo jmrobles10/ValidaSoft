@@ -278,6 +278,8 @@ Es correcto que A vea vencida la misma versión que B ve vigente: **el hecho es 
 4. Al aprobarse **cualquier** expediente (Renovación o Actualización) que deje sin críticos vencidos, el vínculo vuelve a `Activo` (I-15).
 5. B no se afecta.
 
+**Exención del vínculo (EX-1…EX-12).** La empresa puede eximir al vínculo de un tipo de documento (o de una sección de la ficha, o de todo): es una decisión **privada de la empresa**, por vínculo, con justificación obligatoria y fecha final opcional. Mientras rige, los pasos 1–3 no ocurren **para ese vínculo**: la bóveda no marca la versión vencida para él (el hecho de la versión no cambia para las demás empresas), no hay aviso, campana ni evento, el vínculo no pasa a `PorVencer`/`Vencido`, no se abre `Renovacion` y los expedientes nuevos traen ese requisito ya `Eximido`. Al terminar (revocada o vencida su fecha) vence lo que ya pasó su fecha y se abre la renovación. La regla y sus límites están en [03 §5.5](03-dominio-y-eventos.md) y en el [registro](decisiones/registro.md) (sección `5-sexiessexagies`).
+
 ### 8.3 Flujo orgánico para el tercero: frescura consolidada
 La proyección `FrescuraDocumentoTercero` mantiene, por documento global del tercero: `vigente_hasta` por empresa, el **próximo vencimiento** (el mínimo) y las empresas afectadas en cada fecha. Con ella:
 - El tercero recibe **una** secuencia de avisos por documento ("Tu Cámara de comercio vence para A el 31/10 y para B el 30/12; renuévala antes del 31/10 y quedas al día con las dos").

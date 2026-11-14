@@ -64,7 +64,7 @@ public static class InicioEndpoints
             : 0;
 
         var vencimientos = contexto.Scopes.Contains(Permisos.DocumentosLeer)
-            ? await VencimientosEndpoints.Listar(empresa, reloj, 30, null, ct)
+            ? await VencimientosEndpoints.Listar(empresa, reloj, 30, null, false, ct)
             : [];
         return new MisPendientesDto(porArea, revalidaciones.Count, revalidaciones.Count(r => r.Bloqueante), cuentas, aperturas,
             vencimientos.Count(v => v.Estado is nameof(EstadoVigencia.PorVencer) or nameof(EstadoVigencia.EnGracia)),

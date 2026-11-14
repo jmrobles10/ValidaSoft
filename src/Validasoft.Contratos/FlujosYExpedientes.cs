@@ -215,7 +215,11 @@ public sealed record VersionRequisitoDto(
 public sealed record AreaDeRequisitoDto(
     Guid AreaId, string Codigo, string Estado, int AprobadoresRequeridos, int Aprobaciones, IReadOnlyList<VeredictoEmitidoDto> Veredictos);
 
-public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffset Fecha);
+/// <summary>
+/// Cómo quedó eximido el requisito. <see cref="ExencionDeVinculoId"/> (EX-3): lo eximió la exención del vínculo (privada de la empresa), no una persona
+/// sobre este expediente; <see cref="Justificacion"/> es la de esa exención.
+/// </summary>
+public sealed record ExencionDto(string Por, string Justificacion, DateTimeOffset Fecha, Guid? ExencionDeVinculoId = null);
 
 /// <summary>
 /// El tercero retiró la versión <see cref="Numero"/> de un documento que la empresa había aprobado o revisaba (RT-3): su

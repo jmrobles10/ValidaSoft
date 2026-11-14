@@ -11,9 +11,11 @@ import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
 import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
+import { DialogoEximir } from '../vinculos/exenciones/DialogoEximir';
+import { DialogoRevocarExencion } from '../vinculos/exenciones/DialogoRevocarExencion';
 import { guardarArchivo, useDescargarExcelVencimientos, useRecordarVencimientos, useVencimientos } from './api';
 import { useColumnasVencimientos } from './columnas';
-import { claveVencimiento, ESTADOS_VENCIMIENTO, HORIZONTE_POR_DEFECTO, HORIZONTES, leerFiltros, lote, MAXIMO_POR_RECORDATORIO, mensajeRecordatorio, tercerosDelLote } from './modelo';
+import { claveVencimiento, ESTADOS_VENCIMIENTO, exentoParaApi, HORIZONTE_POR_DEFECTO, HORIZONTES, leerFiltros, lote, MAXIMO_POR_RECORDATORIO, mensajeRecordatorio, tercerosDelLote } from './modelo';
 
 /** Los códigos de lote son compartidos con otras acciones en lote: aquí se explican en términos de recordatorios. */
 function errorAlRecordar(error: unknown, t: TFunction): string {
@@ -34,18 +36,22 @@ export function PaginaVencimientos() {
   const puede = permisos.puede(SCOPES.documentosLeer);
   const puedeRecordar = permisos.puede(SCOPES.vinculosEscribir);
   const puedeVerCampanias = permisos.puede(SCOPES.expedientesLeer);
+  const puedeEximir = permisos.puede(SCOPES.vinculosEximir);
   const mostrar = useAvisos((s) => s.mostrar);
   const [parametros, setParametros] = useSearchParams();
-  const { dias, estado } = leerFiltros(parametros);
+  const { dias, estado, exento } = leerFiltros(parametros);
   const paginacion = usePaginacionCursor();
   const [seleccion, setSeleccion] = useState<ReadonlySet<string>>(new Set());
   const [confirmando, setConfirmando] = useState(false);
+  // Eximir (o revocar) desde una fila: el diálogo abre sobre el vínculo y el documento de esa fila.
+  const [eximiendo, setEximiendo] = useState<VencimientoDto | null>(null);
+  const [revocando, setRevocando] = useState<VencimientoDto | null>(null);
 
   useEffect(() => {
     setSeleccion(new Set());
-  }, [dias, estado, empresa.id]);
+  }, [dias, estado, exento, empresa.id]);
 
-  const filtrosApi = { dias, estado: estado || undefined };
+  const filtrosApi = { dias, estado: estado || undefined, exento: exentoParaApi(exento) };
   const consulta = useVencimientos(empresa.id, filtrosApi, puede);
   const recordar = useRecordarVencimientos(empresa.id);
   const excel = useDescargarExcelVencimientos(empresa.id);
@@ -64,11 +70,11 @@ export function PaginaVencimientos() {
       }),
     [],
   );
-  const columnas = useColumnasVencimientos({ conSeleccion: puedeRecordar && filas.length > 0, seleccion, alternar });
+  const columnas = useColumnasVencimientos({ conSeleccion: puedeRecordar && filas.length > 0, seleccion, alternar, puedeEximir, eximir: setEximiendo, revocar: setRevocando });
 
   if (!puede) return <SinPermiso seccion={t('nav.vencimientos')} />;
 
-  const cambiarFiltro = (clave: 'dias' | 'estado', valor: string) =>
+  const cambiarFiltro = (clave: 'dias' | 'estado' | 'exento', valor: string) =>
     setParametros(
       (previos) => {
         const nuevos = new URLSearchParams(previos);
@@ -80,7 +86,7 @@ export function PaginaVencimientos() {
     );
   // En el filtro de horizonte «Todos» es `dias=0`; el horizonte por defecto no se escribe en la URL.
   const cambiarHorizonte = (valor: string) => cambiarFiltro('dias', valor === '' ? '0' : valor === String(HORIZONTE_POR_DEFECTO) ? '' : valor);
-  const hayFiltros = dias !== HORIZONTE_POR_DEFECTO || estado !== '';
+  const hayFiltros = dias !== HORIZONTE_POR_DEFECTO || estado !== '' || exento !== '';
 
   const descargar = () =>
     excel.mutate(filtrosApi, {
@@ -101,7 +107,7 @@ export function PaginaVencimientos() {
       },
     );
 
-  const vacio = estado ? t('vencimientos.vacioFiltros') : dias === 0 ? t('vencimientos.vacioTodos') : t('vencimientos.vacio', { count: dias });
+  const vacio = estado || exento ? t('vencimientos.vacioFiltros') : dias === 0 ? t('vencimientos.vacioTodos') : t('vencimientos.vacio', { count: dias });
 
   return (
     <>
@@ -153,6 +159,16 @@ export function PaginaVencimientos() {
           onCambiar={(valor) => cambiarFiltro('estado', valor)}
           opciones={ESTADOS_VENCIMIENTO.map((e) => ({ valor: e, etiqueta: t(`vencimientos.estados.${e}`) }))}
         />
+        <FiltroMenu
+          etiqueta={t('exenciones.filtro.etiqueta')}
+          textoTodos={t('comun.todos')}
+          valor={exento}
+          onCambiar={(valor) => cambiarFiltro('exento', valor)}
+          opciones={[
+            { valor: 'true', etiqueta: t('exenciones.filtro.exentos') },
+            { valor: 'false', etiqueta: t('exenciones.filtro.noExentos') },
+          ]}
+        />
         {hayFiltros && (
           <Button variant="text" onClick={() => setParametros(new URLSearchParams(), { replace: true })}>
             {t('vencimientos.filtros.limpiar')}
@@ -175,6 +191,23 @@ export function PaginaVencimientos() {
         vacio={<EstadoVacio compacto titulo={vacio} />}
       />
 
+      {eximiendo && (
+        <DialogoEximir
+          empresaId={empresa.id}
+          vinculoId={eximiendo.vinculoId}
+          tercero={eximiendo.tercero.nombre}
+          documentoInicial={eximiendo.tipoDocumentoTenantId}
+          onCerrar={() => setEximiendo(null)}
+        />
+      )}
+      {revocando?.exencion && (
+        <DialogoRevocarExencion
+          empresaId={empresa.id}
+          vinculoId={revocando.vinculoId}
+          exencion={{ id: revocando.exencion.id, todos: revocando.exencion.todos, objetivos: [{ tipo: 'Documento', nombre: revocando.documento }] }}
+          onCerrar={() => setRevocando(null)}
+        />
+      )}
       {confirmando && (
         <DialogoConfirmacion
           tono="primary"

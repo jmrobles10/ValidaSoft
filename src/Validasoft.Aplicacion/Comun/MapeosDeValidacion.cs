@@ -178,7 +178,7 @@ public static class MapeosDeValidacion
     /// <summary>Requisito con la decisión de cada área que lo revisa (estado, aprobaciones y veredictos de esa área).</summary>
     private static RequisitoExpedienteDto ADto(this RequisitoDeExpediente r, Expediente e, DocumentacionDelExpediente? documentacion) =>
         new(r.Id, r.Tipo(documentacion), r.Obligatorio, r.Estado.ToString(), r.Version(e, documentacion), r.Reenvios,
-            r.Eximido ? new ExencionDto(r.EximidoPor ?? string.Empty, r.JustificacionExencion ?? string.Empty, r.EximidoEn ?? e.ActualizadoEn) : null,
+            r.Eximido ? new ExencionDto(r.EximidoPor ?? string.Empty, r.JustificacionExencion ?? string.Empty, r.EximidoEn ?? e.ActualizadoEn, r.ExencionDeVinculoId) : null,
             [
                 .. r.AreasQueRevisan.Select(id => (Id: id, Area: e.BuscarArea(id))).Where(x => x.Area is not null).Select(x =>
                     new AreaDeRequisitoDto(x.Id, x.Area!.Codigo, EstadoEnArea(r, x.Area, e), r.AprobadoresPara(x.Area), r.AprobacionesDe(x.Area),

@@ -78,6 +78,10 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/vinculos/{id}/reintegro': 'obtenerViabilidadDeReintegro',
   'POST /api/v1/vinculos/{id}/anular': 'anularVinculo',
   'GET /api/v1/vinculos/{id}/historial': 'obtenerHistorialVinculo',
+  // Exención del vínculo (EX-5): privada de la empresa; eximir y revocar piden vinculos:eximir.
+  'GET /api/v1/vinculos/{id}/exenciones': 'listarExencionesVinculo',
+  'POST /api/v1/vinculos/{id}/exenciones': 'eximirVinculo',
+  'POST /api/v1/vinculos/{id}/exenciones/{exencionId}/revocar': 'revocarExencionVinculo',
   'POST /api/v1/plataforma/tenants': 'crearTenant',
   'GET /api/v1/plataforma/tenants': 'listarTenants',
   'GET /api/v1/plataforma/tenants/{id}': 'obtenerTenant',
@@ -504,6 +508,7 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearVinculo: { '200': 'VinculoDto', '201': 'VinculoDto' },
   // 201 con el enlace cuando salió; 202 cuando el tipo exige aprobación y la invitación quedó retenida (AI).
   invitarVinculo: { '201': 'EnlaceInvitacionDto', '202': 'InvitacionPorAprobarDto' },
+  eximirVinculo: { '201': 'ExencionDeVinculoDto' },
   crearTenant: { '201': 'TenantCreadoDto' },
   crearSistema: { '201': 'SistemaIntegradoDto' },
   crearWebhook: { '201': 'WebhookDto' },
@@ -602,6 +607,8 @@ const ENUMS: Record<string, string[]> = {
   ConceptoCumplimiento: ['Favorable', 'Desfavorable'],
   ModoBusquedaListas: ['PorNombre', 'PorDocumento'],
   OrigenFilaCumplimiento: ['Expediente', 'Monitoreo'],
+  // Exención del vínculo (EX-1): cómo está a hoy.
+  EstadoDeExencion: ['Vigente', 'Revocada', 'Vencida'],
 };
 
 /** `Esquema.propiedad` → enum. */
@@ -626,6 +633,8 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'IniciarAdjuntoDeCumplimientoDto.proposito': 'PropositoDeAdjunto',
   'ConfirmarAdjuntoDeCumplimientoDto.proposito': 'PropositoDeAdjunto',
   'VinculoDto.origen': 'OrigenVinculo',
+  'ExencionDeVinculoDto.estado': 'EstadoDeExencion',
+  'ObjetivoDeExencionDto.tipo': 'TipoRequisito',
   'FilaEstadoExpedienteDto.estado': 'EstadoExpediente',
   'FilaEstadoExpedienteDto.tipo': 'TipoExpediente',
   'TiempoDeAreaDto.estado': 'EstadoAreaExpediente',

@@ -134,7 +134,7 @@ public static class InformeVinculosEndpoints
         // Las vigencias son documentos: sin documentos:leer el informe no las trae (la Plataforma de soporte no los ve, B-6).
         var veDocumentos = contexto.Scopes.Contains(Permisos.DocumentosLeer);
         var vencimientos = veDocumentos
-            ? (await VencimientosEndpoints.Listar(empresa, reloj, 0, null, ct)).ToLookup(v => v.VinculoId)
+            ? (await VencimientosEndpoints.Listar(empresa, reloj, 0, null, false, ct)).ToLookup(v => v.VinculoId) // lo eximido (EX-6) no cuenta como por vencer ni vencido
             : null;
 
         return [.. vinculos.Select(v =>

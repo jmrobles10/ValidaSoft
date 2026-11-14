@@ -131,8 +131,17 @@ public enum ResultadoDeVigencia
     Avisado,
     Vencido,
     Renovado,
-    Desbloqueado
+    Desbloqueado,
+
+    /// <summary>Terminó una exención del vínculo (EX-4) y no hubo otra transición: el estado se recalculó con las vigencias de siempre.</summary>
+    ExencionVencida
 }
+
+/// <summary>
+/// Lo que entra a una renovación (VV-3): <see cref="Ids"/> son todos los requisitos que le tocan —también los que el vínculo tiene eximidos (EX-3), que nacen
+/// <c>Eximido</c>— y <see cref="Pendientes"/>, los que de verdad hay que pedirle al tercero (los demás no cuentan: sin pendientes no hay renovación que abrir).
+/// </summary>
+public sealed record RequisitosPorRenovar(IReadOnlySet<Guid> Ids, int Pendientes);
 
 public static class VigenciasDeVinculos
 {
@@ -193,10 +202,12 @@ public static class VigenciasDeVinculos
             ? flujo.Versiones.FirstOrDefault(v => v.Id == delExpediente.FlujoVersionId)
             : null;
         var vigencia = version?.VigenciaEfectiva() ?? VigenciaDelVinculo.Sin;
-        var aceptadas = version is not null && version.Requisitos.Any(r => r is { EsSeccion: true, VigenciaDias: > 0 })
+        // Una sección eximida (EX-4) no aporta su vigencia propia: no puede llevar al vínculo a vencer mientras la exención rija.
+        var requisitos = ExencionesDeVinculos.SinSeccionesEximidas(vinculo, version?.Requisitos ?? [], CalculadoraDeVigencia.Fecha(ahora)).ToList();
+        var aceptadas = requisitos.Any(r => r is { EsSeccion: true, VigenciaDias: > 0 })
             ? await AceptadasAsync(sesion, vinculo.Id, aprobado, ct)
             : [];
-        var hasta = VigenciaDeAprobacion.VigenteHasta(vigencia, version?.Requisitos ?? [], aceptadas, ahora);
+        var hasta = VigenciaDeAprobacion.VigenteHasta(vigencia, requisitos, aceptadas, ahora);
         if (vinculo.FijarVigencia(hasta, vigencia.DiasAviso, vigencia.DiasGracia, ahora) is { } fijada)
         {
             stream.AppendOne(fijada);
@@ -252,11 +263,27 @@ public static class VigenciasDeVinculos
             resultado = ResultadoDeVigencia.Desbloqueado;
         }
 
+        // Una exención cuya fecha pasó termina aquí (EX-4): se registra y el estado se recalcula en esta misma pasada, con la regla de siempre (sin la
+        // exención, el vínculo puede vencer o avisar de inmediato) y los documentos que vencieron mientras rigió se vencen ahora.
+        var vencidas = vinculo.VencerExenciones(ahora);
+        if (vencidas.Count > 0)
+        {
+            foreach (var exencion in vencidas)
+            {
+                stream.AppendOne(exencion);
+                vinculo.Apply(exencion); // idempotente: el agregado queda con la exención ya vencida para lo que sigue
+            }
+
+            await ExencionesDeVinculos.ReevaluarAlTerminarAsync(sesion, mensajes, vinculo, mensaje.TenantId, ahora, ct);
+            resultado = ResultadoDeVigencia.ExencionVencida;
+        }
+
         if (vinculo.VencerPorVigencia(ahora, DescripcionDelVencimiento) is { } vencido)
             resultado = await VencerAsync(sesion, stream, vinculo, vencido, certificados, mensajes, protector, ahora, ct);
         else if (vinculo.AvisarVigencia(ahora) is { } aviso)
             resultado = await AvisarAsync(sesion, stream, vinculo, aviso, certificados, mensajes, protector, ahora, ct);
-        else if (vinculo is { Estado: EstadoVinculo.Vencido, RenovacionPorVigenciaPendiente: true, ExpedienteAbiertoId: null })
+        else if (vinculo is { Estado: EstadoVinculo.Vencido, RenovacionPorVigenciaPendiente: true, ExpedienteAbiertoId: null } &&
+                 vinculo.ExencionTotal(CalculadoraDeVigencia.Fecha(ahora)) is null)
         {
             // Venció por su vigencia y no se pudo abrir la renovación (un expediente ocupaba el lugar, o no había flujo): se reintenta.
             if (await RenovarAsync(sesion, stream, vinculo, certificados, mensajes, protector, ahora, ct) is { } renovado)
@@ -278,11 +305,11 @@ public static class VigenciasDeVinculos
         EmisorDeCertificados certificados, IMessageBus mensajes, IProtectorDeSecretos protector, DateTimeOffset ahora, CancellationToken ct)
     {
         var flujo = vinculo.ExpedienteAbiertoId is null ? await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct) : null;
-        IReadOnlySet<Guid>? porRatificar = null;
+        RequisitosPorRenovar? porRatificar = null;
         if (flujo is not null)
         {
             porRatificar = await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct);
-            if (porRatificar.Count == 0)
+            if (porRatificar.Pendientes == 0)
             {
                 await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
                 return ResultadoDeVigencia.Renovado;
@@ -292,7 +319,7 @@ public static class VigenciasDeVinculos
         stream.AppendOne(aviso);
         vinculo.Apply(aviso);
         if (flujo is not null && porRatificar is not null &&
-            !(await AbrirRenovacionAsync(sesion, stream, flujo, porRatificar, certificados, ahora, ct)).EstaAbierto)
+            !(await AbrirRenovacionAsync(sesion, stream, flujo, porRatificar.Ids, certificados, ahora, ct)).EstaAbierto)
             return ResultadoDeVigencia.Renovado; // Todo se aprobó solo: el vínculo quedó al día, no hay nada que avisar.
 
         await AvisarAlTerceroAsync(sesion, mensajes, protector, vinculo, AvisoDeVigencia.PorVencer, aviso.VigenteHasta, aviso.DiasRestantes, ahora, ct);
@@ -311,7 +338,7 @@ public static class VigenciasDeVinculos
         if (!conRenovacion)
         {
             var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
-            if (flujo is not null && (await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct)).Count == 0)
+            if (flujo is not null && (await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct)).Pendientes == 0)
             {
                 await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
                 return ResultadoDeVigencia.Renovado;
@@ -347,13 +374,13 @@ public static class VigenciasDeVinculos
             return null;
 
         var ids = await RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct);
-        if (ids.Count == 0)
+        if (ids.Pendientes == 0)
         {
             await RenovarSinPedirNadaAsync(sesion, stream, vinculo, flujo.Version, ahora, ct);
             return ResultadoDeVigencia.Renovado;
         }
 
-        var expediente = await AbrirRenovacionAsync(sesion, stream, flujo, ids, certificados, ahora, ct);
+        var expediente = await AbrirRenovacionAsync(sesion, stream, flujo, ids.Ids, certificados, ahora, ct);
         if (expediente.EstaAbierto && vinculo.VigenteHasta is { } hasta)
             await AvisarAlTerceroAsync(sesion, mensajes, protector, vinculo, AvisoDeVigencia.Vencido, hasta, 0, ahora, ct);
 
@@ -377,7 +404,8 @@ public static class VigenciasDeVinculos
         DateTimeOffset ahora, CancellationToken ct)
     {
         var vigencia = version.VigenciaEfectiva();
-        var hasta = VigenciaDeAprobacion.VigenteHasta(vigencia, version.Requisitos, await AceptadasAsync(sesion, vinculo.Id, null, ct), ahora);
+        var requisitos = ExencionesDeVinculos.SinSeccionesEximidas(vinculo, version.Requisitos, CalculadoraDeVigencia.Fecha(ahora));
+        var hasta = VigenciaDeAprobacion.VigenteHasta(vigencia, requisitos, await AceptadasAsync(sesion, vinculo.Id, null, ct), ahora);
         // La vigencia desde ahora: si la fecha no cambia (sin vigencia periódica ni de secciones) el vínculo queda como estaba.
         if (vinculo.FijarVigencia(hasta, vigencia.DiasAviso, vigencia.DiasGracia, ahora) is { } fijada)
         {
@@ -392,7 +420,7 @@ public static class VigenciasDeVinculos
     /// vigente; si lo que vence es la vigencia propia de una sección, solo esa sección. En el pre-vencimiento (antes de la fecha) se
     /// mira lo que habrá vencido el día siguiente al fin de la vigencia: es lo que el tercero debe ratificar o actualizar a tiempo.
     /// </summary>
-    internal static async Task<IReadOnlySet<Guid>> RequisitosDeRenovacionAsync(IDocumentSession sesion, Vinculo vinculo, FlujoVersion version,
+    internal static async Task<RequisitosPorRenovar> RequisitosDeRenovacionAsync(IDocumentSession sesion, Vinculo vinculo, FlujoVersion version,
         DateTimeOffset ahora, CancellationToken ct)
     {
         var contexto = await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct);
@@ -406,11 +434,15 @@ public static class VigenciasDeVinculos
                 .Select(r => r.Id)];
 
         var ids = new HashSet<Guid>();
+        var eximidos = new HashSet<Guid>();
         foreach (var seccion in RequisitosDeExpediente.SeccionesDelFlujo(version, contexto, hoy))
         {
             var aceptada = RequisitosDeExpediente.Aceptada(aceptadas, vinculo.Id, seccion) is not null;
-            if (periodica ? aceptada || seccion.Requisito.Obligatorio : aceptada && vencidas.Contains(seccion.Requisito.Id))
-                ids.Add(seccion.RequisitoId);
+            if (!(periodica ? aceptada || seccion.Requisito.Obligatorio : aceptada && vencidas.Contains(seccion.Requisito.Id)))
+                continue;
+            ids.Add(seccion.RequisitoId);
+            if (vinculo.ExencionDeSeccion(seccion.Requisito.Seccion, hoy) is not null)
+                eximidos.Add(seccion.RequisitoId); // entra a la renovación ya Eximido (EX-3) y no cuenta como algo por pedir
         }
 
         if (periodica)
@@ -421,11 +453,15 @@ public static class VigenciasDeVinculos
             {
                 if (pedido.Requisito.Obligatorio &&
                     RequisitosDeExpediente.Cubre(pedido.Tipo.Id, pedido.Tipo.TipoCanonico, pedido.Tipo.Ambito, delTercero, vinculo.Id) is null)
+                {
                     ids.Add(pedido.Requisito.Id);
+                    if (vinculo.ExencionDeDocumento(pedido.Tipo.Id, hoy) is not null)
+                        eximidos.Add(pedido.Requisito.Id);
+                }
             }
         }
 
-        return ids;
+        return new RequisitosPorRenovar(ids, ids.Count - eximidos.Count);
     }
 
     /// <summary>

@@ -260,7 +260,7 @@ public static class VinculosEndpoints
 
         var pagina = await consulta.OrderBy(v => v.CreadoEn).Take(tamano + 1).ToListAsync(ct);
         var siguiente = pagina.Count > tamano ? Cursor.Escribir(pagina[tamano - 1].CreadoEn) : null;
-        return new PaginaDto<VinculoDto>([.. pagina.Take(tamano).Select(v => v.ADto(tipos.FirstOrDefault(t => t.Id == v.TipoVinculoId)))], siguiente);
+        return new PaginaDto<VinculoDto>([.. pagina.Take(tamano).Select(v => v.ADto(tipos.FirstOrDefault(t => t.Id == v.TipoVinculoId), empresa.Hoy))], siguiente);
     }
 
     /// <summary>
@@ -288,7 +288,7 @@ public static class VinculosEndpoints
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
         var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
         // El detalle dice quién pidió y quién decidió la invitación retenida (decisión AI) y si quien consulta puede decidirla.
-        var dto = await InvitacionesPorAprobarEndpoints.ConAprobacionAsync(empresa, contexto, vinculo.ADto(tipo), vinculo, tipo, ct);
+        var dto = await InvitacionesPorAprobarEndpoints.ConAprobacionAsync(empresa, contexto, vinculo.ADto(tipo, empresa.Hoy), vinculo, tipo, ct);
         // El detalle dice si el correo que invitó la empresa está probado como del tercero (decisión AV): verificado (y con qué), sin verificar o aún no es contacto.
         var tercero = await empresa.Sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct);
         var contacto = tercero?.BuscarContacto(vinculo.CorreoTercero);
@@ -586,7 +586,7 @@ public static class VinculosEndpoints
         stream.AppendOne(evento);
         await empresa.Sesion.SaveChangesAsync(ct);
         var vinculo = await empresa.CargarVinculoAsync(stream.Id, ct);
-        return vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct));
+        return vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct), empresa.Hoy);
     }
 
     /// <summary><c>If-Match: "7"</c> o <c>If-Match: 7</c> ⇒ concurrencia optimista sobre la versión del stream.</summary>

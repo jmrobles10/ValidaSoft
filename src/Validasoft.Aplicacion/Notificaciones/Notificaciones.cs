@@ -135,6 +135,11 @@ public static class TiposNotificacion
     public const string VersionEnRevision = "documento.version_en_revision";
 
     /// <summary>
+    /// Terminó la fecha de una exención del vínculo (EX-4): a los administradores de la empresa, campana y correo; el vínculo vuelve a regirse por las vigencias.
+    /// </summary>
+    public const string ExencionVencida = "vinculo.exencion_vencida";
+
+    /// <summary>
     /// Una invitación (o un lote) quedó retenida a la espera de aprobación (decisión AI): a las personas que el tipo de vínculo designó para aprobarla, sin quien la pidió; solo
     /// campana.
     /// </summary>
@@ -146,12 +151,12 @@ public static class TiposNotificacion
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
             CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada, HabeasSolicitud, HabeasPlazo,
-            PlanLimite, AccesoEnRevision, VersionEnRevision, InvitacionPorAprobar, InvitacionDecidida];
+            PlanLimite, AccesoEnRevision, VersionEnRevision, ExencionVencida, InvitacionPorAprobar, InvitacionDecidida];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, WebhookDeshabilitado, CupoIa, LoteTerminado, CoincidenciaListas, EstudioPendiente, SlaPorVencer,
-            CampaniaTerminada, SlaIncumplido, HabeasSolicitud, HabeasPlazo, PlanLimite];
+            CampaniaTerminada, SlaIncumplido, HabeasSolicitud, HabeasPlazo, PlanLimite, ExencionVencida];
 
     public static bool QuiereCorreo(PreferenciasNotificacion? preferencias, string tipo) =>
         ConCorreo.Contains(tipo) && (preferencias is null || !preferencias.Correo.TryGetValue(tipo, out var valor) || valor);
@@ -263,6 +268,8 @@ public sealed partial class PlanificadorDeNotificaciones
                 return await AccesoEnRevisionAsync(evento, desplazado, contexto, orden, ct);
             case VersionMarcadaParaRevision marcada:
                 return await VersionEnRevisionAsync(evento, marcada, contexto, orden, ct);
+            case ExencionDeVinculoVencida exencionVencida:
+                return await ExencionVencidaAsync(evento, exencionVencida, contexto, orden, ct);
             case SlaPorVencer porVencer:
                 return await SlaAsync(evento, contexto, porVencer.AreaId, porVencer.Vence, vencido: false, orden, ct);
             case SlaIncumplido incumplido:

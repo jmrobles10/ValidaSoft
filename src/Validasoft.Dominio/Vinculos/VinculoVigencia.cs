@@ -74,6 +74,9 @@ public sealed partial class Vinculo
     {
         if (!TuvoAprobacion || Estado is not (EstadoVinculo.Activo or EstadoVinculo.PorVencer) || VigenteHasta is not { } hasta)
             return null;
+        // Eximido de todo (EX-1): no se avisa ni se recuerda la renovación mientras la exención rija; al terminar, el job vuelve a mirar.
+        if (ExencionTotal(CalculadoraDeVigencia.Fecha(ahora)) is not null)
+            return null;
         if (VencimientoDeVigencia is { } vence && ahora >= vence)
             return null;
 
@@ -93,7 +96,8 @@ public sealed partial class Vinculo
     /// terminado).
     /// </summary>
     public VinculoVencido? VencerPorVigencia(DateTimeOffset ahora, string descripcion) =>
-        TuvoAprobacion && Estado is (EstadoVinculo.Activo or EstadoVinculo.PorVencer) && VencimientoDeVigencia is { } vence && ahora >= vence
+        TuvoAprobacion && Estado is (EstadoVinculo.Activo or EstadoVinculo.PorVencer) && VencimientoDeVigencia is { } vence && ahora >= vence &&
+        ExencionTotal(CalculadoraDeVigencia.Fecha(ahora)) is null // eximido de todo (EX-1): la vigencia no lo vence mientras la exención rija
             ? new VinculoVencido(descripcion, ahora, CausaDeVencimiento.Vigencia)
             : null;
 
@@ -148,12 +152,30 @@ public sealed partial class Vinculo
         ProximaRevisionDeVigencia = ProximoMomentoDeVigencia();
     }
 
+    /// <summary>
+    /// Lo primero que hay que mirar: lo de la vigencia del vínculo o, si llega antes, el fin de una exención (EX-4: al terminar se recalcula el
+    /// estado). Un vínculo terminado no tiene nada pendiente.
+    /// </summary>
     private DateTimeOffset? ProximoMomentoDeVigencia()
     {
         if (Estado is EstadoVinculo.Desvinculado or EstadoVinculo.Anulado)
             return null;
+
+        var vigencia = MomentoDeLaVigenciaDelVinculo();
+        var exencion = Exenciones
+            .Where(e => e is { Estado: EstadoDeExencion.Vigente, Hasta: not null })
+            .Select(e => (DateTimeOffset?)CalculadoraDeVigencia.MomentoDeVencimiento(e.Hasta!.Value))
+            .Min();
+        return vigencia is null ? exencion : exencion is null ? vigencia : vigencia < exencion ? vigencia : exencion;
+    }
+
+    private DateTimeOffset? MomentoDeLaVigenciaDelVinculo()
+    {
         if (Estado == EstadoVinculo.Bloqueado)
             return Bloqueo?.Hasta;
+        // Con una exención total registrada (EX-1) no hay aviso, vencimiento ni reintento que esperar: el que cuenta es el fin de la exención.
+        if (Exenciones.Any(e => e is { Todos: true, Estado: EstadoDeExencion.Vigente }))
+            return null;
         if (VigenteHasta is not { } hasta || VencimientoDeVigencia is not { } vence)
             return null;
 

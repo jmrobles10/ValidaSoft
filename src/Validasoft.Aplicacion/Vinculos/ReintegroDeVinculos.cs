@@ -55,7 +55,9 @@ public static class ReintegroDeVinculos
         await using var boveda = empresa.ConsultaBoveda();
         var documentacion = await DocumentacionDelExpediente.CargarAsync(sesion, boveda, aprobado, empresa.Reglas, CalculadoraDeVigencia.Fecha(ahora), ct);
         var vencidos = aprobado.Requisitos
-            .Where(r => !r.EsSeccion && !r.Eximido && r.VersionActual is not null)
+            // Lo que el vínculo tiene eximido (EX-3) no cuenta: su vencimiento no impide restituir lo aprobado.
+            .Where(r => !r.EsSeccion && !r.Eximido && r.VersionActual is not null &&
+                        vinculo.ExencionDeDocumento(r.TipoDocumentoTenantId, CalculadoraDeVigencia.Fecha(ahora)) is null)
             .Where(r => documentacion.Version(r.VersionActual!, r, vinculo.Id).Vigencia?.Estado is nameof(EstadoVigencia.Vencida) or nameof(EstadoVigencia.EnGracia))
             .Select(r => r.Nombre)
             .ToList();

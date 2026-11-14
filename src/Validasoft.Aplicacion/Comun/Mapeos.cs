@@ -107,7 +107,8 @@ public static class Mapeos
         new(t.Id, t.Identificacion.ADto(), t.TipoPersona.ToString(), t.Nombre, t.NombreComercial,
             [.. t.Contactos.Select(c => new ContactoDto(c.Nombre, c.Correo, c.Telefono, c.Rol))], t.EsExtranjero, t.CreadoEn);
 
-    public static VinculoDto ADto(this Vinculo v, TipoVinculo? tipo) =>
+    /// <param name="hoy">El día de negocio con el que se dice si una exención sigue vigente (EX-1); por omisión, el de hoy según el reloj del sistema.</param>
+    public static VinculoDto ADto(this Vinculo v, TipoVinculo? tipo, DateOnly? hoy = null) =>
         new(v.Id, v.EmpresaId, v.TerceroId,
             new TipoVinculoResumenDto(v.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
             v.FlujoId, v.Estado.ToString(), v.Atributos, v.CorreoTercero,
@@ -123,7 +124,8 @@ public static class Mapeos
             v.AccesoAislado is { } acceso
                 ? new AccesoDelCorreoDto(acceso.ToString(), v.CorreoTercero, v.AccesoAisladoDesde ?? v.CreadoEn, v.AccesoAisladoResueltoEn, v.AccesoAisladoMotivo)
                 : null,
-            InvitacionPorAprobar: v.ADtoDeAprobacion());
+            InvitacionPorAprobar: v.ADtoDeAprobacion(),
+            Exenciones: v.Exenciones.Count == 0 ? null : Vinculos.ExencionesDeVinculos.ADtos(v, hoy ?? Dominio.Documentos.CalculadoraDeVigencia.Fecha(DateTimeOffset.UtcNow)));
 
     /// <summary>Los contactos del tercero con la empresa como los ve la API (rol en texto).</summary>
     public static IReadOnlyList<ContactoDeEmpresaDto> ADto(this IEnumerable<ContactoDeEmpresa> contactos) =>
