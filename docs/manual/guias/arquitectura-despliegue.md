@@ -30,7 +30,7 @@ Las apps se activan con `Validasoft__Apps__Web` y `Validasoft__Apps__Publica` (l
 | `docker compose -f infra/compose/compose.yaml --profile app up -d --build` | Lo anterior más la API en un contenedor (puerto 5080 del anfitrión), con claves de desarrollo en el compose. |
 | Perfil `e2e` | Un segundo Mailpit (SMTP 1026 y web 8026) para que los correos de las pruebas de punta a punta no lleguen al de desarrollo; lo levanta el propio arranque de la prueba. |
 
-Las claves, contraseñas y llaves que trae el compose y `appsettings.Development.json` son **solo locales** y están marcadas así. En desarrollo la API crea el esquema al arrancar (`CrearEsquemaAlIniciar`), crea el bucket de la bóveda (`CrearBucketsAlIniciar`) y siembra los catálogos de la ficha; hay documentación interactiva en `/docs`.
+Las claves, contraseñas y llaves que trae el compose y `appsettings.Development.json` son **solo locales** y están marcadas así: el compose corre la API en `Development` y no sirve para desplegar, y **fuera de `Development` la API no arranca con esas claves**. En desarrollo la API crea el esquema al arrancar (`CrearEsquemaAlIniciar`), crea el bucket de la bóveda (`CrearBucketsAlIniciar`) y siembra los catálogos de la ficha; hay documentación interactiva en `/docs`.
 
 Día a día, desde la raíz del repositorio:
 
@@ -44,7 +44,7 @@ pnpm dev:public                              # portal del tercero (apps/public)
 ## Producción
 
 - **Base de datos.** El esquema no se crea al arrancar (`CrearEsquemaAlIniciar` es `false` por omisión): se aplica antes con el comando de JasperFx, `dotnet Validasoft.Api.dll db-apply`. Así el arranque de la API no paga una migración ni compite con otras réplicas.
-- **Claves obligatorias.** La API **no arranca** sin `Validasoft__Secretos__ClaveMaestra` y sin `Validasoft__Certificados__ClavePrivada`; sin `Validasoft__Sesiones__ClaveFirma` falla el inicio de sesión por token. Se guardan en un gestor de secretos, nunca en la imagen ni en el repositorio.
+- **Claves obligatorias y propias.** Con `ASPNETCORE_ENVIRONMENT` distinto de `Development` la API **no arranca** si falta `Validasoft__Secretos__ClaveMaestra`, `Validasoft__Certificados__ClavePrivada` o `Validasoft__Sesiones__ClaveFirma`, ni si alguna (o `Validasoft__Plataforma__ClaveBootstrap`, si la pones) conserva el valor de desarrollo publicado en el repositorio. Cada entorno genera las suyas ([Claves propias del entorno](variables-de-entorno.md#claves-propias-del-entorno)) y las guarda en un gestor de secretos, nunca en la imagen ni en el repositorio.
 - **Primer grupo.** Con `Validasoft__Plataforma__ClaveBootstrap` se da de alta al primer operador de Plataforma; luego se puede desactivar la clave desde la consola. El primer grupo se crea desde `/plataforma/grupos/nuevo`.
 - **Correo.** Un SMTP real (`Correo__Host`, puerto, seguridad, usuario y clave), con el remitente de la plataforma y la `UrlPublica` que se escribirá en los enlaces. Cada empresa puede registrar un dominio propio ([Dominio de correo](configuracion-de-la-empresa.md#dominio-de-correo)).
 - **Almacén.** Un S3 compatible con `Endpoint` y, si el navegador lo ve con otra dirección, `EndpointPublico`. La API crea el bucket `boveda` y, con la primera carga de un documento propio, el de cada grupo.
@@ -66,14 +66,15 @@ El proceso admite más de una réplica del mismo servicio:
 
 - El **daemon de eventos** corre en modo *hot/cold*: solo el nodo que gana el bloqueo consultivo de PostgreSQL procesa la suscripción de eventos públicos; si cae, otro toma el relevo.
 - Las **cachés** de llaves, sistemas, políticas de ingreso, SSO y empresas se invalidan entre servidores con `LISTEN/NOTIFY` de PostgreSQL (`Validasoft__Invalidaciones__Activo`, activo por omisión); sin ese aviso, el límite es el de la propia caché (por ejemplo, 5 minutos para una llave revocada).
-- Las **colas** son locales y durables: sus mensajes pendientes sobreviven a un reinicio y los procesa el nodo que los reclama.
+- Los **procesos periódicos** (barridos de plazos, SLA, recordatorios, vigencias, habeas data y planes; procesadores de certificados, verificaciones y revisión automática; limpiezas) corren solo en el **nodo líder**, elegido con otro bloqueo consultivo de PostgreSQL (`Validasoft__Lider__Habilitado`, activo por omisión; `__SegundosEspera`, cada cuánto reintenta una réplica que no es líder, 10). Si el líder cae, otra réplica lo releva en segundos. Las consultas de listas restrictivas que se facturan se reclaman con una clave por consulta programada, así que una verificación no se pide dos veces aunque dos pasadas se crucen.
+- Las **colas** son locales y durables: sus mensajes pendientes sobreviven a un reinicio y los procesa el nodo que los reclama. Las de **webhooks** y de **IA** se particionan por tenant: dentro de un tenant van de a una y en orden, y un receptor caído o una carga masiva de un tenant no frena a los demás.
 - El **límite por IP** se mantiene en la memoria de cada nodo; el conteo de llamadas a la API se acumula en memoria y se vuelca a la base cada 5 segundos.
 
 ### Qué respaldar
 
 - **PostgreSQL** completo: es el event store, la configuración, el outbox y las sesiones.
 - **El almacén S3**: la bóveda y los PDF de los certificados. El nombre de cada objeto es su SHA-256, así que un respaldo se puede verificar.
-- **Las claves**: perder la clave maestra deja ilegibles los secretos cifrados (llaves de OpenAI, secretos de webhook, números de cuenta); perder la semilla del sello impide emitir y deja sin verificar los certificados nuevos (las claves públicas anteriores se publican con `Certificados__ClavesAnteriores`). Se rotan sin cortar el servicio: [Secretos](configuracion-de-plataforma.md#secretos-y-clave-de-arranque).
+- **Las claves**: perder la clave maestra deja ilegibles los secretos cifrados (llaves de OpenAI, secretos de webhook, números de cuenta); perder la semilla del sello impide emitir y deja sin verificar los certificados nuevos (las claves públicas anteriores se publican con `Certificados__ClavesAnteriores`, cada una con su fecha de retiro y un plazo de verificación). Se rotan sin cortar el servicio: [Secretos](configuracion-de-plataforma.md#secretos-y-clave-de-arranque).
 
 ## Qué verifica el CI
 

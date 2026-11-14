@@ -10,7 +10,7 @@ import {
   type SesionTerceroDto,
 } from '@validasoft/api-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { crearFetchSse } from '../pruebas/sse';
+import { crearFetchSse } from '@validasoft/api-client/pruebas/sse';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { claveBandeja } from './api';
 import { ALCANCES_PUBLICO, MAPA_PUBLICO, useStreamDelTercero } from './tiempoReal';

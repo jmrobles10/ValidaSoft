@@ -7,6 +7,7 @@ import {
   type InstruccionCargaDto,
   type VersionDocumentoDto,
 } from '@validasoft/api-client';
+import { sha256Hex } from '@validasoft/ui';
 
 /** Límites de la bóveda (docs/05 §2.9.2, `Validasoft:Boveda`). El servidor los vuelve a validar al confirmar. */
 export const TAMANO_MAXIMO_BYTES = 20 * 1024 * 1024;
@@ -44,12 +45,6 @@ export function validarArchivo(archivo: Pick<File, 'size' | 'type'>, reglas: Reg
   return null;
 }
 
-/** SHA-256 en hexadecimal: detecta el duplicado antes de subir y el servidor lo verifica al confirmar. */
-export async function sha256Hex(archivo: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await archivo.arrayBuffer());
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export type ResultadoSubida =
   | { tipo: 'lista'; version: VersionDocumentoDto; compartidos: CompartidoDto[] }
   | { tipo: 'duplicado'; numero: number }
@@ -60,18 +55,37 @@ export type FaseSubida = 'preparando' | 'subiendo' | 'confirmando';
 /** PUT del archivo a la URL prefirmada (directo al almacenamiento: los bytes nunca pasan por la API). */
 export type EnviarArchivo = (carga: InstruccionCargaDto, archivo: Blob, alProgreso: (fraccion: number) => void, senal?: AbortSignal) => Promise<void>;
 
+const subidaCancelada = () => new DOMException('Subida cancelada', 'AbortError');
+
 export const enviarConXhr: EnviarArchivo = (carga, archivo, alProgreso, senal) =>
   new Promise((resolver, rechazar) => {
+    // Un `abort` que ya ocurrió no vuelve a avisar: sin esta revisión el PUT saldría igual y pisaría al que lo reemplazó.
+    if (senal?.aborted) {
+      rechazar(subidaCancelada());
+      return;
+    }
     const xhr = new XMLHttpRequest();
+    const cancelar = () => xhr.abort();
+    const terminar = () => senal?.removeEventListener('abort', cancelar);
     xhr.open(carga.metodo, carga.url);
     for (const [nombre, valor] of Object.entries(carga.cabeceras)) xhr.setRequestHeader(nombre, valor);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) alProgreso(e.loaded / e.total);
     };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolver() : rechazar(new ErrorSubida(xhr.status)));
-    xhr.onerror = () => rechazar(new ErrorSubida(0));
-    xhr.onabort = () => rechazar(new DOMException('Subida cancelada', 'AbortError'));
-    senal?.addEventListener('abort', () => xhr.abort());
+    xhr.onload = () => {
+      terminar();
+      if (xhr.status >= 200 && xhr.status < 300) resolver();
+      else rechazar(new ErrorSubida(xhr.status));
+    };
+    xhr.onerror = () => {
+      terminar();
+      rechazar(new ErrorSubida(0));
+    };
+    xhr.onabort = () => {
+      terminar();
+      rechazar(subidaCancelada());
+    };
+    senal?.addEventListener('abort', cancelar, { once: true });
     xhr.send(archivo);
   });
 
@@ -96,8 +110,11 @@ export interface OpcionesSubida {
 
 /** Los dos pasos de la carga (docs/05 §2.9.2): iniciar → PUT prefirmado → confirmar, con el estado final de la versión. */
 export async function subirDocumento({ archivo, destino, datos, alFase, alProgreso, enviar = enviarConXhr, senal }: OpcionesSubida): Promise<ResultadoSubida> {
+  senal?.throwIfAborted();
   alFase?.('preparando');
   const sha256 = await sha256Hex(archivo);
+  // El hash no se puede cancelar: si mientras tanto la subida se reemplazó o se canceló, no se le pide nada a la API.
+  senal?.throwIfAborted();
   const inicio = await iniciarCargaDocumento(
     { nombreArchivo: archivo.name, tamanoBytes: archivo.size, tipoMime: archivo.type, sha256, ...destino, ...(datos ? { datos } : {}) },
     undefined,
@@ -105,6 +122,7 @@ export async function subirDocumento({ archivo, destino, datos, alFase, alProgre
   );
   if (inicio.duplicado || !inicio.carga) return { tipo: 'duplicado', numero: inicio.version };
 
+  senal?.throwIfAborted();
   alFase?.('subiendo');
   await enviar(inicio.carga, archivo, (f) => alProgreso?.(f), senal);
 

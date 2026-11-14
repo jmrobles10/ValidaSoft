@@ -92,8 +92,9 @@ public static class ConfiguracionMarten
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
                     .Index(x => x.DocumentoId);
                 // Avisos de vencimiento programados (TD-6): uno por tercero y fecha, en el tenant técnico "boveda" para
-                // guardarse en la misma transacción que el evento de vigencia y el mensaje programado (outbox).
-                opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted()
+                // guardarse en la misma transacción que el evento de vigencia y el mensaje programado (outbox). Concurrencia optimista
+                // (OC-1): varios mensajes del mismo tercero y fecha no envían dos veces el correo ni el evento documento.por_vencer.
+                opts.Schema.For<Aplicacion.Documentos.AvisoDeVencimiento>().DatabaseSchemaName("boveda").MultiTenanted().UseOptimisticConcurrency(true)
                     .Index(x => x.TerceroId);
 
                 // Ficha maestra (ADR-0013, FM-18): secciones como streams SeccionDeFicha-{id determinista} en el tenant técnico
@@ -214,6 +215,8 @@ public static class ConfiguracionMarten
                 // concurrencia optimista y monitoreo de listas por vínculo activo (id = vínculo).
                 opts.Schema.For<ListasRestrictivasEmpresa>().MultiTenanted();
                 opts.Schema.For<UsoMensualListas>().MultiTenanted().UseOptimisticConcurrency(true).Index(x => x.EmpresaId);
+                // Reclamo (arrendamiento) de un trabajo que se factura, por trabajo y tenant (OC-4): solo una réplica pide cada consulta de listas.
+                opts.Schema.For<ReclamoDeTrabajo>().MultiTenanted().UseOptimisticConcurrency(true);
                 opts.Schema.For<MonitoreoDeListas>().MultiTenanted().Index(x => x.EmpresaId).Index(x => x.ProximaConsulta);
                 // Lo aceptado de cada sección de la ficha por vínculo (F2, FM-29): privado de la empresa, en su tenant.
                 opts.Schema.For<Validasoft.Dominio.Ficha.SeccionAceptada>().MultiTenanted()

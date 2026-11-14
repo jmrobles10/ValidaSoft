@@ -2,60 +2,79 @@
 
 Sistema de validación documental para cualquier vínculo comercial (proveedor, cliente, empleado, arrendatario, paciente…), multi-tenant, independiente del ERP y consumible por API. Reemplaza la validación documental repartida hoy entre el SRM y el Portal de Proveedores.
 
-> **Estado del repositorio: Hito 0 — documentación.** Aún no hay código. Los documentos de `docs/` definen alcance, modelo, arquitectura y plan por hitos; el código llega en los hitos siguientes (ver `docs/09-plan-de-hitos-y-responsabilidades.md`).
->
-> El nombre "Validasoft" es provisional. Si cambia, se reemplaza en todos los documentos (buscar `Validasoft`).
+> **Estado:** en desarrollo activo, con código en `main`: API .NET, app de la empresa (embebible), portal del tercero, consola de Plataforma, SDK .NET y TypeScript, certificados verificables, IA de revisión, listas restrictivas y manual. Qué está hecho, qué falta y cómo continuar: [docs/16](docs/16-estado-y-pendientes.md). El nombre «Validasoft» es provisional (se reemplaza buscando `Validasoft`).
 
-## Documentos
+## Qué hay aquí
 
-> Empieza por [docs/MAPA.md](docs/MAPA.md): orden de lectura por rol y mapa del desarrollo hito a hito.
+| Ruta | Qué es |
+|---|---|
+| `src/Validasoft.Api` | Host de la API (.NET 10, Wolverine HTTP). Sirve las dos apps estáticas (`/app/` y `/`) y corre los procesos de fondo. |
+| `src/Validasoft.Dominio`, `Aplicacion`, `Infraestructura`, `Contratos` | Dominio (agregados event-sourced con Marten), casos de uso y endpoints, adaptadores (PostgreSQL, S3/MinIO, correo, IA, verificadores) y DTO públicos. |
+| `src/Validasoft.Sdk`, `src/Validasoft.Adaptadores.Portal` | SDK .NET para integradores y adaptador de origen del importador (Portal de Proveedores). |
+| `apps/web`, `apps/public` | App de la empresa (React 19, se embebe en el sistema integrado) y portal del tercero (móvil primero). |
+| `packages/api-client`, `packages/ui`, `packages/sdk` | Cliente generado desde OpenAPI, design system (marca «Anillo») y SDK TypeScript. |
+| `tests/` | Pruebas de dominio, de integración (Testcontainers), del SDK y del adaptador; `tests/carga` (k6). |
+| `e2e/` | Pruebas de punta a punta con Playwright y los recorridos que generan el manual (`e2e/manual`). |
+| `infra/` | `compose/` (PostgreSQL, Mailpit, MinIO y la API en contenedor), `ci-local/` (réplica local del CI) y `sdk/`. |
+| `docs/` | Diseño, decisiones y manual (abajo). `marca/` genera los recursos del logo. |
 
-| # | Documento | Qué responde |
-|---|---|---|
-| 00 | [Visión y alcance](docs/00-vision-y-alcance.md) | Por qué, para quién, qué entra y qué no, métricas de éxito |
-| 01 | [Análisis del legado SRM ↔ Portal](docs/01-analisis-legado-srm-portal.md) | Cómo funciona hoy, qué falla, qué hay que cubrir como mínimo |
-| 02 | [Modelo documental compartido](docs/02-modelo-documental-compartido.md) | **El dolor principal**: documentos de muchos terceros con muchas empresas; versión única, decisiones por empresa, vigencias en dos capas, revisión automática, almacenamiento |
-| 03 | [Dominio y eventos](docs/03-dominio-y-eventos.md) | Agregados, estados, comandos, eventos, reglas, proyecciones |
-| 04 | [Arquitectura de plataforma](docs/04-arquitectura-plataforma.md) | Solución .NET 10, Marten/Wolverine, MinIO, IA, Docker, CI, testing |
-| 05 | [API, contratos y webhooks](docs/05-api-contratos-y-webhooks.md) | REST v1, idempotencia, errores, eventos públicos, firma de webhooks |
-| 06 | [Frontend y UX](docs/06-frontend-y-ux.md) | Apps del revisor y del tercero, design system, pantallas, flujos |
-| 07 | [Seguridad, identidad y tenancy](docs/07-seguridad-identidad-y-tenancy.md) | OpenIddict, roles, API keys, magic links, aislamiento, retención |
-| 08 | [Integración y migración](docs/08-integracion-y-migracion.md) | Integración abierta (cualquier sistema: guía en 5 pasos, embebido genérico, contrato del interruptor), SDKs, SRM/Portal/Marco como primeros sistemas, importador con adaptadores de origen, corte por empresa, rollback |
-| — | [Guía de integración](docs/integracion.md) | **Para un integrador externo**: alta del sistema, llaves y sandbox, identidad delegada, embebido, webhooks, pull, consulta de certificación, errores, límites y versionado, con ejemplos en .NET, TS y curl |
-| 09 | [Plan de hitos y responsabilidades](docs/09-plan-de-hitos-y-responsabilidades.md) | Hitos H0–H11 con entregables, responsables y criterios de aceptación |
-| 10 | [Glosario](docs/10-glosario.md) | Lenguaje ubicuo y equivalencias con el legado |
-| 11 | [Trazabilidad por hito](docs/11-trazabilidad-por-hito.md) | Qué endpoints, DTOs, eventos, alertas y pantallas entrega cada hito |
-| 12 | [Plan de ejecución con Claude](docs/12-plan-de-ejecucion-con-claude.md) | Tareas por hito con modelo, esfuerzo de razonamiento y días-persona |
-| 13 | [Flujo de trabajo con Claude Code](docs/13-flujo-de-trabajo-con-claude-code.md) | Qué sesión abrir, con qué modelo, qué prompt dar, en qué orden y cómo se pasan trabajo |
-| — | [Marca](docs/marca.md) | El logo «Anillo»: construcción, colores, usos, animaciones y cómo se regeneran los recursos (`marca/`) |
-| ADR | [Decisiones de arquitectura](docs/adr/) | Por qué se decidió cada cosa estructural |
-| — | [Cuestionario](docs/decisiones/cuestionario.md) y [Registro de decisiones](docs/decisiones/registro.md) | Las 97 preguntas del experto y lo que Producto decidió |
+Stack: PostgreSQL 17, Marten + Wolverine, MinIO (S3), Docker; React 19, TypeScript estricto, Vite, MUI, TanStack Query. Detalle en [docs/04](docs/04-arquitectura-plataforma.md).
 
-## Frontend
+## Levantarlo en local
 
-Workspace pnpm (`apps/web`, `apps/public`, `packages/ui`, `packages/api-client`): ver [apps/web/README.md](apps/web/README.md) para comandos, la demo embebida y lo pendiente, y [apps/public/README.md](apps/public/README.md) para la app del tercero.
+Requisitos: .NET SDK 10, Node ≥ 22, pnpm 10 y Docker.
+
+```bash
+pnpm install
+docker compose -f infra/compose/compose.yaml up -d      # PostgreSQL (:5432), Mailpit (:8025) y MinIO (:9000, consola :9001)
+ASPNETCORE_ENVIRONMENT=Development Validasoft__Correo__UrlPublica=http://localhost:5181 dotnet run --project src/Validasoft.Api   # API en :5080
+pnpm semilla:dev                                         # datos de ejemplo: grupo, empresas, sistema DEMO, usuarios y flujo
+pnpm dev                                                 # app de la empresa en :5173 (demo embebida en /embed-demo.html)
+pnpm dev:public                                          # portal del tercero en :5181
+```
+
+Para correr la API en un contenedor en vez de con `dotnet run`: `docker compose -f infra/compose/compose.yaml --profile app up -d --build` (API en :5080). Los comandos de cada app y la demo embebida están en [apps/web/README.md](apps/web/README.md) y [apps/public/README.md](apps/public/README.md).
+
+> **Claves:** las de `appsettings.Development.json` y del compose son solo para desarrollo local. Fuera de `Development` la API **se niega a arrancar** con ellas o sin las obligatorias; cada entorno genera las suyas ([cómo](docs/manual/guias/variables-de-entorno.md#claves-propias-del-entorno)).
+
+## Pruebas
+
+```bash
+dotnet build Validasoft.slnx                    # TreatWarningsAsErrors: 0 advertencias
+dotnet test Validasoft.slnx                     # dominio + integración (necesita Docker: levanta PostgreSQL y MinIO con Testcontainers)
+dotnet test tests/Validasoft.Dominio.Tests --filter "FullyQualifiedName~CertificadoTests"   # solo lo que tocaste
+pnpm lint && pnpm typecheck && pnpm test        # frontend: ESLint estricto, tsc y Vitest
+pnpm e2e                                        # Playwright contra la API real; bajo demanda, no corre en cada push (decisión E2E-1, e2e/README.md)
+infra/ci-local/ci-local.sh                      # réplica local del CI (backend y frontend en contenedores Linux; infra/ci-local/README.md)
+```
+
+El CI de GitHub (`.github/workflows/ci.yml`) corre backend, frontend y la imagen Docker en cada push; la e2e es el flujo manual `e2e.yml`.
+
+## Documentación
+
+Empieza por [docs/MAPA.md](docs/MAPA.md): orden de lectura por rol y mapa del desarrollo hito a hito.
+
+- **Diseño** (`docs/00`–`docs/16`): [visión y alcance](docs/00-vision-y-alcance.md), [análisis del legado](docs/01-analisis-legado-srm-portal.md), [modelo documental compartido](docs/02-modelo-documental-compartido.md) (el corazón), [dominio y eventos](docs/03-dominio-y-eventos.md), [arquitectura](docs/04-arquitectura-plataforma.md), [API y webhooks](docs/05-api-contratos-y-webhooks.md), [frontend y UX](docs/06-frontend-y-ux.md), [seguridad y tenancy](docs/07-seguridad-identidad-y-tenancy.md), [integración y migración](docs/08-integracion-y-migracion.md), [plan de hitos](docs/09-plan-de-hitos-y-responsabilidades.md), [glosario](docs/10-glosario.md), [trazabilidad](docs/11-trazabilidad-por-hito.md), [plan de ejecución](docs/12-plan-de-ejecucion-con-claude.md), [flujo de trabajo con Claude Code](docs/13-flujo-de-trabajo-con-claude-code.md), [ficha maestra](docs/14-ficha-maestra-del-tercero.md), [Infolaft](docs/15-infolaft.md) y [estado y pendientes](docs/16-estado-y-pendientes.md).
+- **Para integradores:** [guía de integración](docs/integracion.md) (alta del sistema, llaves, identidad delegada, embebido, webhooks, consulta de certificación, SDK) y el ejemplo `docs/ejemplos/IntegradorSrm`.
+- **ADR:** [decisiones de arquitectura](docs/adr/) (monolito modular, Marten/Wolverine, bóveda global, versión única, consentimiento antes de compartir…).
+- **Decisiones:** [registro de decisiones](docs/decisiones/registro.md) (la verdad sobre cada decisión, por sección e id) y [cuestionario](docs/decisiones/cuestionario.md) con las 97 preguntas del experto.
+- **Manual:** [docs/manual](docs/manual/README.md), generado de recorridos reales y del contrato OpenAPI (`pnpm manual`); las guías (arquitectura, configuración, [variables de entorno](docs/manual/guias/variables-de-entorno.md)) se escriben en `e2e/manual/guias/`.
+- **Marca:** [docs/marca.md](docs/marca.md).
 
 ## Reglas de oro del producto (resumen)
 
-1. **Un documento global tiene una sola versión vigente por tercero.** Las empresas no eligen versión: validan la actual. Si el tercero sube una versión nueva válida, todas las empresas vinculadas reciben alerta y deben revalidar (15 días y luego el certificado bloquea).
-2. **Una empresa ve la bóveda solo cuando el tercero acepta su invitación** y autoriza el tratamiento; antes solo sabe cuántos requisitos podrían quedar cubiertos (ADR-0009). El tercero no puede excluir empresas ya aceptadas.
-3. **Las decisiones son privadas por empresa**, también entre razones sociales del mismo grupo (ADR-0008). Lo que A aprobó u observó no lo ve B.
-4. **Los hechos sobre el archivo se calculan una vez, a costo de la plataforma** (legibilidad, tipo, fechas, comparación con la versión anterior) y se comparten; el **juicio** es de cada empresa con sus reglas y es lo único que paga por decisión.
-5. **Sobre una versión solo se aprueba u observa** (con "no admitir esta versión"); **rechazar es del expediente** y solo lo hace un área con permiso.
-6. **Las personas también son terceros**: representante legal, socios, beneficiario final y miembros tienen su propia bóveda y se validan una vez (ADR-0010).
-7. **La vigencia tiene dos capas**: la del documento (fecha propia, expedición, periodo) y la exigencia de frescura de cada empresa (tenant → empresa → regla del flujo).
-8. **Nada depende de un llamador externo**: vencimientos, avisos y reintentos los ejecuta el propio sistema.
-9. **Sin contraseñas para el tercero, sin secretos en el navegador, sin estados mágicos; el soporte de plataforma no ve datos salvo acceso temporal concedido por el tenant.**
+1. Un documento global tiene **una sola versión vigente por tercero**; las empresas la validan, no eligen versión.
+2. Una empresa ve la bóveda solo cuando el tercero acepta su invitación (ADR-0009).
+3. Las decisiones son **privadas por empresa**, también dentro de un mismo grupo (ADR-0008).
+4. Los hechos sobre el archivo se calculan una vez y se comparten; el juicio es de cada empresa.
+5. Sobre una versión solo se aprueba u observa; rechazar es del expediente.
+6. Las personas también son terceros, con su propia bóveda (ADR-0010).
+7. La vigencia tiene dos capas: la del documento y la exigencia de frescura de cada empresa.
+8. Nada depende de un llamador externo: vencimientos, avisos y reintentos los ejecuta el propio sistema.
+9. Sin contraseñas para el tercero, sin secretos en el navegador; el soporte de plataforma no ve datos salvo acceso temporal del tenant.
 
-## Convenciones de los documentos
+## Convenciones
 
-- Español, incluido el lenguaje del dominio (`Expediente`, `Vínculo`, `Veredicto`).
-- Cada documento abre con `Estado` (borrador / en revisión / aprobado), fecha y responsable, y cierra con **Decisiones abiertas** y **Fuentes verificadas** (archivo:línea en `C:\Fuentes_Git\SRM` o `C:\Fuentes_Git\PortalProveedores` cuando se afirma algo del legado).
-- Los diagramas van en Mermaid dentro del Markdown.
-- Un cambio de decisión se registra como ADR nuevo; no se reescribe la historia.
+Todo en español, incluido el lenguaje del dominio (`Expediente`, `Vínculo`, `Veredicto`). Los documentos de `docs/` abren con estado, fecha y responsable; los diagramas van en Mermaid; un cambio de decisión se registra como fila o ADR nuevo, no se reescribe la historia. El frontend usa **pnpm**, nunca npm.
 
-## Referencias del legado
-
-- SRM: `C:\Fuentes_Git\SRM` (rama `Develop`)
-- Portal de Proveedores: `C:\Fuentes_Git\PortalProveedores`
-- Marca: presentación "Validasoft — Presentación de marca 2026"
+Referencias del legado: SRM en `C:\Fuentes_Git\SRM` (rama `Develop`) y Portal de Proveedores en `C:\Fuentes_Git\PortalProveedores`.

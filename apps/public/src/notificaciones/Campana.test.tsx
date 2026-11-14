@@ -6,7 +6,7 @@ import { configurarCliente, reiniciarCliente, type BandejaNotificacionesTerceroD
 import { createValidasoftTheme } from '@validasoft/ui';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { crearCuerpoSse } from '../pruebas/sse';
+import { crearCuerpoSse } from '@validasoft/api-client/pruebas/sse';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { useAvisos } from '../shared/useAvisos';
 import { Campana } from './Campana';

@@ -1,6 +1,7 @@
 import { configurarCliente, ErrorApi, ErrorDeRed, reiniciarCliente, type VersionDocumentoDto } from '@validasoft/api-client';
+import { sha256Hex } from '@validasoft/ui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ErrorSubida, falloDeSubida, formatearTamano, sha256Hex, subirDocumento, TAMANO_MAXIMO_BYTES, TIPOS_PERMITIDOS, validarArchivo, type EnviarArchivo } from './subida';
+import { enviarConXhr, ErrorSubida, falloDeSubida, formatearTamano, subirDocumento, TAMANO_MAXIMO_BYTES, TIPOS_PERMITIDOS, validarArchivo, type EnviarArchivo } from './subida';
 
 const json = (estado: number, cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
 
@@ -65,6 +66,56 @@ describe('validación en el navegador', () => {
   });
 });
 
+describe('PUT con XMLHttpRequest', () => {
+  /** Un XHR de mentira: cuenta los envíos y deja abortar a mano. */
+  function simularXhr() {
+    const envios: string[] = [];
+    class XhrSimulado {
+      upload: { onprogress: ((e: ProgressEvent) => void) | null } = { onprogress: null };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      onabort: (() => void) | null = null;
+      status = 0;
+      open() {
+        return undefined;
+      }
+      setRequestHeader() {
+        return undefined;
+      }
+      send() {
+        envios.push('send');
+      }
+      abort() {
+        this.onabort?.();
+      }
+    }
+    vi.stubGlobal('XMLHttpRequest', XhrSimulado);
+    return envios;
+  }
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('con la señal ya abortada rechaza como cancelada y no envía el archivo', async () => {
+    const envios = simularXhr();
+    const control = new AbortController();
+    control.abort();
+
+    await expect(enviarConXhr(CARGA, new Blob(['abc']), () => undefined, control.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(envios).toEqual([]);
+  });
+
+  it('si se aborta durante el envío, cancela el PUT y rechaza como cancelada', async () => {
+    const envios = simularXhr();
+    const control = new AbortController();
+
+    const envio = enviarConXhr(CARGA, new Blob(['abc']), () => undefined, control.signal);
+    expect(envios).toEqual(['send']);
+    control.abort();
+
+    await expect(envio).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
 describe('subida en dos pasos', () => {
   it('inicia con nombre, tamaño, tipo y hash; sube a la URL prefirmada y confirma: queda lista y compartida', async () => {
     const compartidos = [{ documentoId: 'd1', tipo: 'RUT', version: 2, vinculoId: 'v1', empresaId: 'e1' }];
@@ -114,6 +165,30 @@ describe('subida en dos pasos', () => {
     const devuelta = version({ estado: 'Devuelta', motivoDevolucion: 'pdf-con-contenido-activo' });
     api(() => json(201, { documentoId: 'd1', version: 2, duplicado: false, carga: CARGA }), () => json(200, { duplicado: false, version: devuelta, compartidos: [] }));
     await expect(subirDocumento({ archivo: archivo(), destino: { tipoCanonico: 'RUT' }, enviar: () => Promise.resolve() })).resolves.toEqual({ tipo: 'devuelta', version: devuelta });
+  });
+
+  it('con la señal ya abortada no se le pide nada a la API', async () => {
+    const cuerpos = api(() => json(201, { documentoId: 'd1', version: 2, duplicado: false, carga: CARGA }));
+    const enviar = vi.fn<EnviarArchivo>();
+    const control = new AbortController();
+    control.abort();
+
+    await expect(subirDocumento({ archivo: archivo(), destino: { tipoCanonico: 'RUT' }, enviar, senal: control.signal })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(cuerpos).toHaveLength(0);
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
+  it('si se aborta mientras se calcula el hash (no cancelable), al terminar no se inicia la carga', async () => {
+    const cuerpos = api(() => json(201, { documentoId: 'd1', version: 2, duplicado: false, carga: CARGA }));
+    const enviar = vi.fn<EnviarArchivo>();
+    const control = new AbortController();
+
+    const subida = subirDocumento({ archivo: archivo(), destino: { tipoCanonico: 'RUT' }, enviar, senal: control.signal });
+    control.abort();
+
+    await expect(subida).rejects.toMatchObject({ name: 'AbortError' });
+    expect(cuerpos).toHaveLength(0);
+    expect(enviar).not.toHaveBeenCalled();
   });
 
   it('clasifica 413, 415, sin red y la URL vencida', async () => {

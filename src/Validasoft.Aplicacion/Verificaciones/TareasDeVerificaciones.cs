@@ -1,3 +1,4 @@
+using System.Globalization;
 using Marten;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,9 +25,15 @@ public sealed record ResultadoDeProcesamientoDeVerificaciones(int Consultas, int
 /// de escribir; la llamada al proveedor se hace antes, sin bloquear el expediente.
 /// </summary>
 public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeListas consulta, EmisorDeCertificados certificados, TimeProvider reloj,
-    IProtectorDeSecretos protector, IServiceScopeFactory alcances, ILogger<TareasDeVerificaciones> registro)
+    IProtectorDeSecretos protector, IServiceScopeFactory alcances, ReclamosDeTrabajo reclamos, ILogger<TareasDeVerificaciones> registro)
 {
     public const string ConsultadoPorElSistema = "Sistema (consulta automática)";
+
+    /// <summary>
+    /// Cuánto vale el reclamo de una consulta de listas: más que lo que tarda en responder el proveedor (varias personas, cada una con su tiempo
+    /// de espera) y en guardar la evidencia. Si el nodo que la reclamó cae a medias, otro la retoma al vencer.
+    /// </summary>
+    public static readonly TimeSpan ArrendamientoDeConsulta = TimeSpan.FromMinutes(15);
 
     /// <summary>
     /// Procesa lo pendiente a la hora del reloj: de todos los tenants (el procesador periódico) o de uno solo
@@ -65,7 +72,7 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
     }
 
     /// <summary>Las mismas tareas con otro reloj (el barrido inmediato de Plataforma simula «ahora» solo en Development).</summary>
-    public TareasDeVerificaciones ConReloj(TimeProvider otro) => new(store, consulta, certificados, otro, protector, alcances, registro);
+    public TareasDeVerificaciones ConReloj(TimeProvider otro) => new(store, consulta, certificados, otro, protector, alcances, reclamos, registro);
 
     /// <summary>Consulta automática de las listas de un expediente (pendientes o vencidas); si el proveedor falla, se reintenta luego.</summary>
     public async Task ConsultarExpedienteAsync(Guid tenantId, Guid expedienteId, CancellationToken ct)
@@ -77,6 +84,11 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
             return;
 
         var listas = expediente.BuscarVerificacion(TipoVerificacion.ListasRestrictivas)!;
+        // Cada consulta se factura: con varias réplicas (o dos pasadas a la vez) solo una la pide por cada ocurrencia programada (OC-4).
+        if (!await reclamos.TomarAsync(tenantId, $"consulta-listas:{expedienteId:N}", cuando.UtcTicks.ToString(CultureInfo.InvariantCulture), ahora,
+                ArrendamientoDeConsulta, ct))
+            return;
+
         ResultadoDeListas resultado;
         try
         {
@@ -195,6 +207,11 @@ public sealed class TareasDeVerificaciones(IDocumentStore store, ConsultaDeLista
             await sesion.SaveChangesAsync(ct);
             return;
         }
+
+        // Cada consulta se factura: solo una réplica la pide por cada ocurrencia programada (OC-4).
+        if (!await reclamos.TomarAsync(tenantId, $"monitoreo-listas:{vinculoId:N}", cuando.UtcTicks.ToString(CultureInfo.InvariantCulture), ahora,
+                ArrendamientoDeConsulta, ct))
+            return;
 
         IReadOnlyList<CoincidenciaDeVerificacion> nuevas;
         try

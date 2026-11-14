@@ -51,6 +51,9 @@ services:
     volumes:
       - minio-datos:/data
 
+  # SOLO DESARROLLO LOCAL: corre la API en Development con las claves publicadas del repositorio («solo local»). No sirve para
+  # desplegar: la API se niega a arrancar con esas claves en cualquier otro entorno (docs/07 §6.4). Un despliegue real genera
+  # claves propias (docs/manual/guias/variables-de-entorno.md, «Claves propias del entorno»).
   api:
     profiles: ["app"]
     build:

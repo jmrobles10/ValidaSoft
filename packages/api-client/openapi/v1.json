@@ -18471,6 +18471,20 @@
           },
           "vigente": {
             "type": "boolean"
+          },
+          "retiradaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "verificableHasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },

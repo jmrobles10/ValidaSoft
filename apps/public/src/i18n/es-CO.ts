@@ -627,6 +627,7 @@ export const esCO = {
           titulo: 'Clave de la plataforma',
           ok: 'Lo selló la clave vigente de Validasoft ({{kid}}).',
           anterior: 'Lo selló una clave anterior de Validasoft ({{kid}}), que se sigue publicando para verificar emisiones previas.',
+          'fuera-de-plazo': 'La clave {{kid}} ya fue retirada y no vale para este certificado: se emitió después de su retiro o venció su plazo de verificación.',
           desconocida: 'La clave {{kid}} no está entre las que publica Validasoft.',
           'no-disponible': 'No pudimos obtener las claves públicas de Validasoft.',
         },

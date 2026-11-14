@@ -106,17 +106,24 @@ public sealed record OpcionesDeProveedor(string Nombre, bool Habilitado, string?
 
 /// <summary>
 /// Protege a los proveedores reales y a Validasoft (VE-8): a lo sumo N consultas a la vez por proveedor, tiempo de espera y
-/// un cortacircuito que, tras varios fallos seguidos, deja de llamar al proveedor durante un rato (503 inmediato).
+/// un cortacircuito que, tras varios fallos seguidos, deja de llamar al proveedor durante un rato (503 inmediato). El
+/// cortacircuito es <b>por empresa y proveedor</b> (OC-3): si una empresa tiene su clave vencida, solo sus consultas se cortan; las demás
+/// siguen llamando al mismo proveedor. El contador es atómico (<see cref="Interlocked"/>): ningún fallo se pierde aunque varias
+/// consultas de la misma empresa terminen a la vez. El estado vive en memoria de cada réplica (cada una se protege por su cuenta).
 /// </summary>
 public sealed class ControlDeProveedores(TimeProvider reloj)
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _semaforos = new();
-    private readonly ConcurrentDictionary<string, (int Fallos, DateTimeOffset? AbiertoHasta)> _estado = new();
+    private readonly ConcurrentDictionary<(Guid EmpresaId, string Proveedor), CircuitoDeProveedor> _circuitos = new();
 
-    public async Task<T> EjecutarAsync<T>(OpcionesDeProveedor opciones, Func<CancellationToken, Task<T>> accion, CancellationToken ct)
+    /// <summary>Fallos seguidos y hasta cuándo está abierto el cortacircuito de la empresa con el proveedor (sin fallos y cerrado si nunca falló).</summary>
+    public (int Fallos, DateTimeOffset? AbiertoHasta) Estado(Guid empresaId, string proveedor) =>
+        _circuitos.TryGetValue((empresaId, proveedor), out var circuito) ? (circuito.Fallos, circuito.AbiertoHasta) : (0, null);
+
+    public async Task<T> EjecutarAsync<T>(Guid empresaId, OpcionesDeProveedor opciones, Func<CancellationToken, Task<T>> accion, CancellationToken ct)
     {
-        var estado = _estado.GetValueOrDefault(opciones.Nombre);
-        if (estado.AbiertoHasta is { } hasta && reloj.GetUtcNow() < hasta)
+        var circuito = _circuitos.GetOrAdd((empresaId, opciones.Nombre), _ => new CircuitoDeProveedor());
+        if (circuito.AbiertoHasta is { } hasta && reloj.GetUtcNow() < hasta)
             throw new ProveedorDeListasNoDisponibleException($"{opciones.Nombre} falló varias veces seguidas; se reintentará después de {hasta:HH:mm} UTC.");
 
         var semaforo = _semaforos.GetOrAdd(opciones.Nombre, _ => new SemaphoreSlim(opciones.MaximoConcurrencia, opciones.MaximoConcurrencia));
@@ -126,18 +133,41 @@ public sealed class ControlDeProveedores(TimeProvider reloj)
             using var limite = CancellationTokenSource.CreateLinkedTokenSource(ct);
             limite.CancelAfter(opciones.Timeout);
             var resultado = await accion(limite.Token);
-            _estado[opciones.Nombre] = (0, null);
+            circuito.RegistrarExito();
             return resultado;
         }
         catch (Exception e) when (e is not ReglaDeNegocioException && !ct.IsCancellationRequested)
         {
-            var fallos = _estado.GetValueOrDefault(opciones.Nombre).Fallos + 1;
-            _estado[opciones.Nombre] = (fallos, fallos >= opciones.FallosParaAbrir ? reloj.GetUtcNow() + opciones.TiempoAbierto : null);
+            circuito.RegistrarFallo(opciones.FallosParaAbrir, reloj.GetUtcNow() + opciones.TiempoAbierto);
             throw e is ProveedorDeListasNoDisponibleException ? e : new ProveedorDeListasNoDisponibleException($"{opciones.Nombre} no respondió: {e.Message}", e);
         }
         finally
         {
             semaforo.Release();
+        }
+    }
+
+    /// <summary>Estado de un cortacircuito, actualizado con operaciones atómicas (sin bloqueos ni pérdida de fallos).</summary>
+    private sealed class CircuitoDeProveedor
+    {
+        private int _fallos;
+        private long _abiertoHastaTicks; // 0 = cerrado
+
+        public int Fallos => Volatile.Read(ref _fallos);
+
+        public DateTimeOffset? AbiertoHasta => Interlocked.Read(ref _abiertoHastaTicks) is var ticks and > 0 ? new DateTimeOffset(ticks, TimeSpan.Zero) : null;
+
+        public void RegistrarExito()
+        {
+            Interlocked.Exchange(ref _fallos, 0);
+            Interlocked.Exchange(ref _abiertoHastaTicks, 0);
+        }
+
+        /// <summary>Suma un fallo; al llegar al umbral abre el cortacircuito hasta <paramref name="abiertoHasta"/> (con el umbral superado sigue abriéndolo, como media apertura).</summary>
+        public void RegistrarFallo(int umbral, DateTimeOffset abiertoHasta)
+        {
+            if (Interlocked.Increment(ref _fallos) >= umbral)
+                Interlocked.Exchange(ref _abiertoHastaTicks, abiertoHasta.UtcTicks);
         }
     }
 }
@@ -278,7 +308,7 @@ public sealed class ConsultaDeListas(
         RespuestaDeListas respuesta;
         try
         {
-            respuesta = await control.EjecutarAsync(proveedor.Opciones,
+            respuesta = await control.EjecutarAsync(empresaId, proveedor.Opciones,
                 t => proveedor.Verificador.ConsultarAsync(new SolicitudDeListas(empresaId, personas, credenciales), t), ct);
         }
         catch (ProveedorDeListasNoDisponibleException e)

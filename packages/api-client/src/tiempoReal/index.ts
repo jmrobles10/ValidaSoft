@@ -1,3 +1,4 @@
+export * from './bandeja';
 export * from './cambios';
 export * from './conexionSse';
 export * from './edicion';

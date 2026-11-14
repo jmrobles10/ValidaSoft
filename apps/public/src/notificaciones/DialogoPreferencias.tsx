@@ -1,11 +1,12 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Skeleton, Stack, Switch, Typography } from '@mui/material';
+import { cambiosDePreferencias } from '@validasoft/api-client';
 import { ErrorEnLinea } from '@validasoft/ui';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../shared/errores';
 import { useAvisos } from '../shared/useAvisos';
 import { useGuardarPreferencias, usePreferenciasDelTercero } from './api';
-import { cambiosDePreferencias, tiposConCorreo } from './bandeja';
+import { tiposConCorreo } from './bandeja';
 
 /**
  * Preferencias de correo del tercero (`GET/PUT /public/v1/preferencias-notificacion`): un interruptor por cada tipo que puede ir
