@@ -47,7 +47,10 @@ describe('Solicitudes de acceso a terceros (consola de Plataforma, decisión AV)
     montar({
       'GET /api/v1/plataforma/solicitudes-de-acceso': [
         solicitud({
-          correosOficiales: [{ correo: 'gerente@norte.co', documento: 'RUT', version: 2 }],
+          correosOficiales: [
+            { correo: 'gerente@norte.co', documento: 'RUT', version: 2, cargadoPor: 'tesoreria@norte.co', respalda: true },
+            { correo: 'creador@a.co', documento: 'CAMARA_COMERCIO', version: 1, cargadoPor: 'creador@a.co', respalda: false },
+          ],
           contactos: [
             { nombre: 'Creador', correo: 'creador@a.co', rol: 'Principal', verificacion: 'SinVerificar', medio: null, verificadoEn: null, esTuCorreo: false, desplazado: false },
             { nombre: 'Tesorería', correo: 'tesoreria@norte.co', rol: 'Contacto', verificacion: 'Verificado', medio: 'Importacion', verificadoEn: '2026-11-01T10:00:00Z', esTuCorreo: false, desplazado: false },
@@ -65,7 +68,9 @@ describe('Solicitudes de acceso a terceros (consola de Plataforma, decisión AV)
     expect(within(contactos).getByText('Sin verificar')).toBeInTheDocument();
     expect(within(contactos).getByText('Verificado')).toBeInTheDocument();
     expect(within(contactos).getByText('traído del sistema de origen')).toBeInTheDocument();
-    expect(within(tarjeta).getByText('Correo del RUT (versión 2): gerente@norte.co')).toBeInTheDocument();
+    // El correo que subió alguien sin verificar y nadie respalda se muestra, pero dicho claramente: no verifica a nadie.
+    expect(within(tarjeta).getByText(/Correo del RUT \(versión 2\): gerente@norte\.co/)).toBeInTheDocument();
+    expect(within(tarjeta).getByText(/Correo del CAMARA_COMERCIO \(versión 1\): creador@a\.co\. No verifica a nadie: lo subió creador@a\.co/)).toBeInTheDocument();
     expect(within(tarjeta).getByRole('button', { name: 'Aprobar el acceso de gerente@norte.co' })).toBeInTheDocument();
     expect(within(tarjeta).getByRole('button', { name: 'Rechazar el acceso de gerente@norte.co' })).toBeInTheDocument();
   });

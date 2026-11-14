@@ -78,7 +78,7 @@ public static class AccesoAislado
         {
             var oficiales = await ContactosDelTercero.CorreosOficialesAsync(sesion.ForTenant(TenantsTecnicos.Boveda), terceroId, ct);
             var grupos = (await ContactosDelTercero.GruposQueInvitaronAsync(sesion, terceroId, invitado, vinculo.Id, ct)).Append(tenantId);
-            if (VerificacionDeContactos.Medio(invitado, oficiales, grupos, tercero.TieneContactoVerificado) is { } medio)
+            if (VerificacionDeContactos.Medio(invitado, oficiales, grupos, tercero.EsContactoVerificado, tercero.TieneContactoVerificado) is { } medio)
             {
                 if (contacto is null)
                     ContactosDelTercero.Agregar(sesion, tercero, invitado, tercero.Nombre, "Principal", ContactosDelTercero.OrigenEmpresa, nombreEmpresa, medio, null, ahora);

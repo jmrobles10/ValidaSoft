@@ -33,7 +33,8 @@ public sealed record ResultadoDeSincronizacion(int Verificados, int Aprobadas, i
 /// <summary>
 /// Pone al día el acceso de un tercero en tres pasos, cada uno idempotente:
 /// <list type="number">
-/// <item><b>Verifica</b> los contactos que ya tienen con qué: su correo es el del RUT o el de la Cámara de comercio (versión actual del documento, analizada con IA), o dos
+/// <item><b>Verifica</b> los contactos que ya tienen con qué: su correo es el del RUT o el de la Cámara de comercio (versión actual del documento, analizada con IA) <b>y esa
+/// versión la respalda alguien más que el candidato</b> (la subió un contacto verificado o la aceptó una empresa de otro grupo; ver <see cref="CorreoOficial.Respalda"/>), o dos
 /// grupos distintos lo invitaron por su cuenta y el tercero aún no tenía un contacto verificado.</item>
 /// <item><b>Aprueba solas</b> las solicitudes pendientes cuyo correo se verificó así (la persona ya es del tercero: no hace falta que nadie la apruebe).</item>
 /// <item><b>Desplaza</b> a los contactos sin verificar mientras el tercero tenga uno verificado: el verificado prevalece. El desplazado pasa a acceso aislado (su solicitud
@@ -73,9 +74,10 @@ public static class SincronizacionDeAccesoDelTercero
         var cambiaron = 0;
         foreach (var contacto in sinVerificar)
         {
-            var medio = VerificacionDeContactos.PorDocumento(contacto.Correo, oficiales);
-            if (medio is null && nadieVerificado &&
-                VerificacionDeContactos.Corroborado(await ContactosDelTercero.GruposQueInvitaronAsync(sesion, terceroId, contacto.Correo, null, ct)))
+            // El correo de un RUT o una Cámara solo verifica si alguien más lo respalda (lo subió un contacto verificado o lo aceptó otro grupo, no el que invitó a este correo).
+            var grupos = await ContactosDelTercero.GruposQueInvitaronAsync(sesion, terceroId, contacto.Correo, null, ct);
+            var medio = VerificacionDeContactos.PorDocumento(contacto.Correo, oficiales, tercero.EsContactoVerificado, grupos);
+            if (medio is null && nadieVerificado && VerificacionDeContactos.Corroborado(grupos))
                 medio = MedioDeVerificacion.Corroborado;
             if (medio is { } verificado && ContactosDelTercero.Verificar(sesion, tercero, contacto.Correo, verificado, null, ahora))
                 cambiaron++;
@@ -109,7 +111,7 @@ public static class SincronizacionDeAccesoDelTercero
                 var medio = tercero.BuscarContacto(solicitud.Correo) is { EstaVerificado: true } contacto
                     ? contacto.Medio ?? MedioDeVerificacion.AprobadoPorContacto
                     : VerificacionDeContactos.Medio(solicitud.Correo, oficiales, await ContactosDelTercero.GruposQueInvitaronAsync(consulta, terceroId, solicitud.Correo, null, ct),
-                        tercero.TieneContactoVerificado);
+                        tercero.EsContactoVerificado, tercero.TieneContactoVerificado);
                 if (medio is { } aprobable)
                     porAprobar.Add((solicitud.Id, aprobable));
             }

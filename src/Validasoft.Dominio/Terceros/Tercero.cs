@@ -108,6 +108,9 @@ public sealed class Tercero
     [System.Text.Json.Serialization.JsonIgnore]
     public bool TieneContactoVerificado => Contactos.Any(c => c.EstaVerificado);
 
+    /// <summary>¿Ese correo es el de un contacto <b>verificado</b>? Un correo que no es contacto, o que es contacto sin verificar, no respalda a nadie.</summary>
+    public bool EsContactoVerificado(string? correo) => BuscarContacto(correo)?.EstaVerificado == true;
+
     /// <summary>
     /// Agrega el correo como contacto si aún no lo es (comparación sin mayúsculas ni espacios); <c>true</c> si lo agregó. El nombre es
     /// el de la persona cuando se conoce; si no, el correo mismo. Con <paramref name="verificadoPor"/> nace verificado por ese medio (el correo del RUT, la

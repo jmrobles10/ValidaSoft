@@ -164,7 +164,8 @@ public static class SolicitudesDeAccesoDeLaPlataformaEndpoints
             [.. s.Invitaciones.OrderBy(i => i.Fecha).Select(i => new EmpresaQueInvitoPlataformaDto(i.Empresa, grupos.GetValueOrDefault(i.TenantId) ?? "—", i.TenantId, i.Fecha))],
             [.. tercero.Contactos.Select(c => new ContactoDelTerceroDto(c.Nombre, c.Correo, c.Rol, c.Verificacion.ToString(), c.Medio?.ToString(), c.VerificadoEn, false,
                 AccesoDelTercero.EstaDesplazado(tercero, c.Correo)))],
-            [.. oficiales.Select(o => new CorreoOficialDto(o.Correo, o.Documento, o.Version))],
+            [.. oficiales.Select(o => new CorreoOficialDto(o.Correo, o.Documento, o.Version, o.CargadaPorCorreo,
+                o.Respalda(tercero.EsContactoVerificado, [.. s.Invitaciones.Select(i => i.TenantId).Distinct()])))],
             s.EstaPendiente && AccesoDelTercero.DecideLaPlataforma(tercero), s.Origen == SolicitudDeAcceso.OrigenContactoDesplazado, s.DecididoPor, s.DecididoVia?.ToString(),
             s.DecididoEn, s.MotivoDelRechazo);
 }

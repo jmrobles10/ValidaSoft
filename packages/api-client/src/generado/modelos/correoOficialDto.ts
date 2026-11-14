@@ -9,4 +9,7 @@ export interface CorreoOficialDto {
   correo: string;
   documento: string;
   version: number;
+  /** @nullable */
+  cargadoPor?: string | null;
+  respalda?: boolean;
 }

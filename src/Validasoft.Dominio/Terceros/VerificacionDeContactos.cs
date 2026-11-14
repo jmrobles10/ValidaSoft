@@ -38,8 +38,26 @@ public enum MedioDeVerificacion
     AprobadoPorContacto
 }
 
-/// <summary>Un correo electrónico oficial del tercero: el del RUT o el de la Cámara de comercio, con su documento de origen.</summary>
-public sealed record CorreoOficial(string Correo, MedioDeVerificacion Medio, string Documento, int Version);
+/// <summary>
+/// Un correo electrónico oficial del tercero: el del RUT o el de la Cámara de comercio, con su documento de origen y de dónde viene la versión: el correo de la sesión que la
+/// subió (<see cref="CargadaPorCorreo"/>; nulo en las versiones anteriores a la decisión AV) y los grupos (tenants) cuyas empresas la aceptaron en un expediente
+/// (<see cref="AceptadaPorGrupos"/>). Un documento que sube quien aún no está probado como del tercero no prueba nada (ver <see cref="Respalda"/>).
+/// </summary>
+public sealed record CorreoOficial(string Correo, MedioDeVerificacion Medio, string Documento, int Version, string? CargadaPorCorreo = null,
+    IReadOnlyList<Guid>? AceptadaPorGrupos = null)
+{
+    /// <summary>
+    /// ¿Alguien distinto del candidato respalda esta versión? Solo cuenta si la subió un contacto <b>verificado</b> del tercero, o si la aceptó una empresa de un grupo que no es
+    /// ninguno de los que invitaron o registraron al candidato. Si la subió un contacto sin verificar (el propio candidato, o un cómplice), alguien con acceso aislado o alguien
+    /// que no se sabe quién fue, o solo la aceptaron los mismos grupos que respaldan al candidato, el documento es una afirmación del propio candidato: la confianza sería circular.
+    /// </summary>
+    public bool Respalda(Func<string, bool> esContactoVerificado, IReadOnlyCollection<Guid> gruposDelCandidato)
+    {
+        if (!string.IsNullOrWhiteSpace(CargadaPorCorreo) && esContactoVerificado(SolicitudDeAcceso.Normalizar(CargadaPorCorreo)))
+            return true;
+        return AceptadaPorGrupos is { Count: > 0 } aceptada && aceptada.Any(g => !gruposDelCandidato.Contains(g));
+    }
+}
 
 /// <summary>
 /// Reglas puras de verificación de los contactos del tercero: qué correos oficiales trae un documento y cuándo un contacto se verifica por ellos o por corroboración.
@@ -54,7 +72,8 @@ public static class VerificacionDeContactos
     /// El correo que trae un documento oficial analizado con IA: el <c>correo</c> del RUT o el de la Cámara de comercio. Solo cuenta un análisis legible y sin alertas
     /// de manipulación (un documento alterado no verifica a nadie); un correo con forma inválida tampoco.
     /// </summary>
-    public static CorreoOficial? DeDocumento(string? tipoCanonico, int version, bool legible, IReadOnlyCollection<string> alertas, IReadOnlyDictionary<string, JsonElement> campos)
+    public static CorreoOficial? DeDocumento(string? tipoCanonico, int version, bool legible, IReadOnlyCollection<string> alertas, IReadOnlyDictionary<string, JsonElement> campos,
+        string? cargadaPorCorreo = null, IReadOnlyList<Guid>? aceptadaPorGrupos = null)
     {
         var medio = tipoCanonico?.ToUpperInvariant() switch
         {
@@ -66,17 +85,26 @@ public static class VerificacionDeContactos
             return null;
 
         var correo = SolicitudDeAcceso.Normalizar(LecturaDeHechos.Texto(campos, "correo"));
-        return EsCorreo(correo) ? new CorreoOficial(correo, medio.Value, tipoCanonico!.ToUpperInvariant(), version) : null;
+        return EsCorreo(correo)
+            ? new CorreoOficial(correo, medio.Value, tipoCanonico!.ToUpperInvariant(), version, string.IsNullOrWhiteSpace(cargadaPorCorreo) ? null : SolicitudDeAcceso.Normalizar(cargadaPorCorreo),
+                aceptadaPorGrupos)
+            : null;
     }
 
-    /// <summary>El medio por el que <paramref name="correo"/> coincide con un correo oficial del tercero; nulo si no coincide con ninguno.</summary>
-    public static MedioDeVerificacion? PorDocumento(string? correo, IEnumerable<CorreoOficial> oficiales)
+    /// <summary>
+    /// El medio por el que <paramref name="correo"/> coincide con un correo oficial del tercero <b>que alguien más respalda</b>; nulo si no coincide con ninguno. Un documento
+    /// que subió el propio candidato (o cualquier contacto sin verificar) no lo verifica: ver <see cref="CorreoOficial.Respalda"/>. <paramref name="gruposDelCandidato"/> son los
+    /// grupos que invitaron o registraron ese correo.
+    /// </summary>
+    public static MedioDeVerificacion? PorDocumento(string? correo, IEnumerable<CorreoOficial> oficiales, Func<string, bool> esContactoVerificado, IEnumerable<Guid> gruposDelCandidato)
     {
         var normalizado = SolicitudDeAcceso.Normalizar(correo);
         if (normalizado.Length == 0)
             return null;
+        var grupos = gruposDelCandidato.Distinct().ToArray();
         // El RUT va primero: es el dato más fuerte cuando los dos traen el mismo correo.
-        return oficiales.Where(o => string.Equals(o.Correo, normalizado, StringComparison.Ordinal)).OrderBy(o => o.Medio).Select(o => (MedioDeVerificacion?)o.Medio).FirstOrDefault();
+        return oficiales.Where(o => string.Equals(o.Correo, normalizado, StringComparison.Ordinal) && o.Respalda(esContactoVerificado, grupos))
+            .OrderBy(o => o.Medio).Select(o => (MedioDeVerificacion?)o.Medio).FirstOrDefault();
     }
 
     /// <summary>
@@ -89,8 +117,12 @@ public static class VerificacionDeContactos
     /// El medio por el que un contacto que aún no lo está se verifica ahora: el correo oficial (RUT o Cámara) y, si el tercero no tiene ya un contacto verificado, la
     /// corroboración (con un contacto verificado presente manda él: dos grupos que se ponen de acuerdo no lo desplazan).
     /// </summary>
-    public static MedioDeVerificacion? Medio(string? correo, IEnumerable<CorreoOficial> oficiales, IEnumerable<Guid> tenantsQueInvitaron, bool terceroTieneVerificado) =>
-        PorDocumento(correo, oficiales) ?? (!terceroTieneVerificado && Corroborado(tenantsQueInvitaron) ? MedioDeVerificacion.Corroborado : null);
+    public static MedioDeVerificacion? Medio(string? correo, IEnumerable<CorreoOficial> oficiales, IEnumerable<Guid> tenantsQueInvitaron, Func<string, bool> esContactoVerificado,
+        bool terceroTieneVerificado)
+    {
+        var grupos = tenantsQueInvitaron.Distinct().ToArray();
+        return PorDocumento(correo, oficiales, esContactoVerificado, grupos) ?? (!terceroTieneVerificado && Corroborado(grupos) ? MedioDeVerificacion.Corroborado : null);
+    }
 
     private static bool EsCorreo(string correo)
     {

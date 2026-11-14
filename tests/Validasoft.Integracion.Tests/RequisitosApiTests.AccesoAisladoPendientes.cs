@@ -238,51 +238,99 @@ public sealed partial class RequisitosApiTests
 
     // ---------- 4. correo del RUT ----------
 
+    /// <summary>
+    /// Un tercero nuevo de <paramref name="empresa"/> cuyo contacto (sin verificar) sube un RUT con <paramref name="correoDelRut"/> como correo, ya analizado por la IA, y acepta el
+    /// vínculo. Con <paramref name="aprobar"/>, el administrador de la empresa aprueba el expediente (la empresa acepta esa versión del RUT).
+    /// </summary>
+    private async Task<(VinculoDto Vinculo, SesionTerceroDto Sesion, Guid DocumentoId)> TerceroConRutAsync(Empresa empresa, string contacto, string nit, string correoDelRut, bool aprobar)
+    {
+        var vinculo = await CrearVinculoAsync(empresa, "CLIENTE", contacto, nit);
+        var sesion = await SesionAsync(contacto, empresa.Datos.Nombre.Split(' ')[0]);
+        var rut = await SubirAsync(sesion, "RUT", Pdf($"RUT [[correo={correoDelRut}]]"));
+        await AceptarAsync(sesion, vinculo.Id);
+        await EsperarVersionAsync(empresa, vinculo.Id, "RUT", 1, v => v.Hechos!.ConIa);
+        await AsentarIaAsync(rut.Version.DocumentoId, 1);
+        if (aprobar)
+        {
+            Guid expedienteId = default;
+            await EsperarAsync(async () => (expedienteId = (await ApiAsync<VinculoDto>("GET", $"/api/v1/vinculos/{vinculo.Id}", Admin(empresa), null, 200)).ExpedienteAbiertoId ?? default) != default,
+                "el expediente abierto");
+            await EsperarAsync(empresa, expedienteId, e => e.Estado == "EnRevision");
+            (await AprobarComoAdministradorAsync(empresa, expedienteId)).Estado.ShouldBe("Aprobado");
+        }
+
+        return (vinculo, sesion, rut.Version.DocumentoId);
+    }
+
     [Fact]
-    public async Task AV_El_correo_del_RUT_verifica_al_contacto_que_lo_trae_y_a_quien_lo_invita_y_el_verificado_prevalece()
+    public async Task AV_El_RUT_que_sube_un_contacto_sin_verificar_no_verifica_a_nadie_ni_al_que_lo_sube_ni_al_correo_que_trae()
     {
         var a = await EmpresaConFlujoAsync("Secuestradora S.A.S.", "SECU");
         var b = await EmpresaConFlujoAsync("Norte S.A.S.", "NORTE");
         await PlanIaAsync(a, new ActualizarPlanIaEmpresaDto(10, false, ApiKeyOpenAi: LlaveIa()));
         var (secuestrador, legitimo, nit) = (CorreoNuevo(), CorreoNuevo(), Nit());
 
-        // A sube a la bóveda un RUT cuyo correo (el que lee la IA) es el del dueño del NIT; el suyo, que lo registró, sigue sin verificar.
-        var vinculoA = await CrearVinculoAsync(a, "CLIENTE", secuestrador, nit);
-        var sesionA = await SesionAsync(secuestrador, "Secuestradora");
-        var rut = await SubirAsync(sesionA, "RUT", Pdf($"RUT [[correo={legitimo}]]"));
-        await AceptarAsync(sesionA, vinculoA.Id);
-        await EsperarVersionAsync(a, vinculoA.Id, "RUT", 1, v => v.Hechos!.ConIa);
-        await AsentarIaAsync(rut.Version.DocumentoId, 1);
-        (await ContactosAsync(sesionA)).Contactos.Single().Verificacion.ShouldBe("SinVerificar");
+        // El atacante registra el NIT con su correo y sube un RUT fabricado con su propio correo: la IA lo lee bien, pero nadie más lo respalda y no se verifica.
+        var (vinculoA, sesionA, documentoId) = await TerceroConRutAsync(a, secuestrador, nit, secuestrador, aprobar: false);
+        await SincronizarAsync(vinculoA.TerceroId);
+        var propio = (await ContactosAsync(sesionA)).Contactos.ShouldHaveSingleItem();
+        (propio.Verificacion, propio.Medio, propio.Desplazado).ShouldBe(("SinVerificar", null, false));
+        (await TerceroDeBovedaAsync(vinculoA.TerceroId)).TieneContactoVerificado.ShouldBeFalse();
 
-        // B invita al correo del RUT: coincide con el documento, queda verificado (correo del RUT) y entra completo, sin esperar a nadie.
+        // Tampoco el RUT con el correo de otra persona verifica a quien lo trae: sube una versión nueva con el correo del dueño del NIT y B lo invita.
+        var v2 = await SubirAsync(sesionA, "RUT", Pdf($"RUT v2 [[correo={legitimo}]]"));
+        await EsperarVersionAsync(a, vinculoA.Id, "RUT", 2, v => v.Hechos!.ConIa);
+        await AsentarIaAsync(v2.Version.DocumentoId, 2);
+        v2.Version.DocumentoId.ShouldBe(documentoId);
+        var vinculoB = await CrearVinculoAsync(b, "CLIENTE", legitimo, nit);
+        vinculoB.AccesoDelCorreo!.Estado.ShouldBe("Pendiente");
+        (await VinculoDelAislamientoAsync(b, vinculoB.Id)).VerificacionDelCorreo!.Estado.ShouldBe("NoEsContacto");
+        await SincronizarAsync(vinculoA.TerceroId);
+
+        // El correo sigue sin ser contacto, el del atacante sigue entrando completo (nadie lo desplazó) y la solicitud espera a la plataforma, que ve de dónde vino el correo del RUT.
+        var tercero = await TerceroDeBovedaAsync(vinculoA.TerceroId);
+        tercero.BuscarContacto(legitimo).ShouldBeNull();
+        (tercero.BuscarContacto(secuestrador)!.Verificacion, AccesoDelTercero.EstaDesplazado(tercero, secuestrador)).ShouldBe((EstadoDeVerificacion.SinVerificar, false));
+        var enCola = (await SolicitudesDePlataformaAsync()).Single(s => s.TerceroId == vinculoA.TerceroId && s.Correo == legitimo);
+        enCola.CorreosOficiales.ShouldHaveSingleItem().ShouldBe(new CorreoOficialDto(legitimo, "RUT", 2, secuestrador, false));
+    }
+
+    [Fact]
+    public async Task AV_El_RUT_que_sube_un_contacto_verificado_o_acepta_otro_grupo_si_verifica_pero_el_propio_grupo_del_candidato_no()
+    {
+        var a = await EmpresaConFlujoAsync("Primera S.A.S.", "PRIM");
+        var b = await EmpresaConFlujoAsync("Norte S.A.S.", "NORTE");
+        await PlanIaAsync(a, new ActualizarPlanIaEmpresaDto(10, false, ApiKeyOpenAi: LlaveIa()));
+
+        // 1. Lo sube un contacto verificado (la plataforma verificó al primero): el correo del RUT verifica a quien B invita y entra completo, sin esperar a nadie.
+        var (primero, legitimo, nit) = (CorreoNuevo(), CorreoNuevo(), Nit());
+        var (vinculoA, _, _) = await TerceroConRutAsync(a, primero, nit, legitimo, aprobar: false);
+        var terceroId = vinculoA.TerceroId;
+        await VerificarContactoDePlataformaAsync(terceroId, primero);
         var vinculoB = await CrearVinculoAsync(b, "CLIENTE", legitimo, nit);
         vinculoB.AccesoDelCorreo.ShouldBeNull();
         (await VinculoDelAislamientoAsync(b, vinculoB.Id)).VerificacionDelCorreo!.ShouldBe(new VerificacionDelCorreoDto("Verificado", "CorreoDelRut"));
         var sesionB = await SesionAsync(legitimo, "Norte");
         sesionB.Aislada.ShouldBeFalse();
-        await SincronizarAsync(vinculoA.TerceroId);
+        (await ContactosAsync(sesionB)).Contactos.Single(c => c.Correo == legitimo).Medio.ShouldBe("CorreoDelRut");
 
-        // El verificado prevalece: el correo de A pasó a aislado y no puede decidir.
-        var contactos = await ContactosAsync(sesionB);
-        contactos.Contactos.Single(c => c.Correo == legitimo).Medio.ShouldBe("CorreoDelRut");
-        contactos.Contactos.Single(c => c.Correo == secuestrador).Desplazado.ShouldBeTrue();
-        (await VinculoDelAislamientoAsync(a, vinculoA.Id)).AccesoDelCorreo!.Estado.ShouldBe("Pendiente");
-        (await SolicitudesDePlataformaAsync("pendientes")).Single(s => s.TerceroId == vinculoA.TerceroId).CorreosOficiales
-            .ShouldHaveSingleItem().ShouldBe(new CorreoOficialDto(legitimo, "RUT", 1));
+        // 2. Lo sube un contacto sin verificar de A y lo acepta la propia A (un grupo que no invitó al candidato): el RUT con el correo de otra persona verifica a quien B invita.
+        var (sinVerificar, dueno, nit2) = (CorreoNuevo(), CorreoNuevo(), Nit());
+        var (vinculoA2, _, _) = await TerceroConRutAsync(a, sinVerificar, nit2, dueno, aprobar: true);
+        await SincronizarAsync(vinculoA2.TerceroId);
+        (await TerceroDeBovedaAsync(vinculoA2.TerceroId)).TieneContactoVerificado.ShouldBeFalse(); // el contacto que registró A sigue sin verificar: el RUT trae otro correo
+        var vinculoB2 = await CrearVinculoAsync(b, "CLIENTE", dueno, nit2);
+        vinculoB2.AccesoDelCorreo.ShouldBeNull();
+        (await VinculoDelAislamientoAsync(b, vinculoB2.Id)).VerificacionDelCorreo!.ShouldBe(new VerificacionDelCorreoDto("Verificado", "CorreoDelRut"));
+        var sincronizado = await TerceroDeBovedaAsync(vinculoA2.TerceroId);
+        AccesoDelTercero.EstaDesplazado(sincronizado, sinVerificar).ShouldBeTrue();
 
-        // El hecho nuevo del análisis también verifica a un contacto que ya estaba: el que sube su RUT con su propio correo se verifica solo (la IA avisa a la sincronización).
-        var propio = CorreoNuevo();
-        var nit2 = Nit();
-        var vinculo2 = await CrearVinculoAsync(a, "CLIENTE", propio, nit2);
-        var sesion2 = await SesionAsync(propio, "Secuestradora");
-        var rut2 = await SubirAsync(sesion2, "RUT", Pdf($"RUT [[correo={propio}]]"));
-        await AceptarAsync(sesion2, vinculo2.Id);
-        await EsperarVersionAsync(a, vinculo2.Id, "RUT", 1, v => v.Hechos!.ConIa);
-        await AsentarIaAsync(rut2.Version.DocumentoId, 1);
-        await EsperarAsync(async () => (await ContactosAsync(sesion2)).Contactos.Single().Verificacion == "Verificado", "la verificación por el correo del RUT");
-        (await ContactosAsync(sesion2)).Contactos.Single().Medio.ShouldBe("CorreoDelRut");
-        (await ContactosAsync(sesion2)).PuedesDecidir.ShouldBeTrue();
+        // 3. La aceptación del mismo grupo que registró al candidato no vale: A registra y aprueba su propio RUT con su propio correo, y el contacto sigue sin verificar.
+        var (propio, nit3) = (CorreoNuevo(), Nit());
+        var (vinculoA3, sesionA3, _) = await TerceroConRutAsync(a, propio, nit3, propio, aprobar: true);
+        await SincronizarAsync(vinculoA3.TerceroId);
+        var contacto = (await ContactosAsync(sesionA3)).Contactos.ShouldHaveSingleItem();
+        (contacto.Verificacion, contacto.Medio).ShouldBe(("SinVerificar", null));
     }
 
     // ---------- 2 (importación). contactos del Portal ----------

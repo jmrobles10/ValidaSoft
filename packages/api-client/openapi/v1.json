@@ -20809,6 +20809,15 @@
           "version": {
             "type": "integer",
             "format": "int32"
+          },
+          "cargadoPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "respalda": {
+            "type": "boolean"
           }
         }
       },

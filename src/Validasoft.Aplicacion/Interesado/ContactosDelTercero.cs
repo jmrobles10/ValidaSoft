@@ -1,6 +1,7 @@
 using Marten;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Dominio.Documentos;
+using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Plataforma;
 using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
@@ -70,22 +71,62 @@ public static class ContactosDelTercero
     /// Los correos electrónicos oficiales del tercero: el del RUT y el de la Cámara de comercio, tomados de la versión <b>actual</b> de cada documento global cuando se
     /// analizó con IA (legible y sin alertas de manipulación). Sin análisis (o sin documento) no hay correo oficial y el contacto solo se verifica por corroboración o por la
     /// plataforma.
+    /// <para>
+    /// Cada correo trae de dónde viene la versión (quién la subió y qué empresas la aceptaron): <b>el correo de un documento solo verifica si alguien más lo respalda</b>
+    /// (<see cref="CorreoOficial.Respalda"/>). Quien sube un RUT con su propio correo no se verifica con él: la IA no distingue un documento bien fabricado y la prueba sería circular.
+    /// </para>
     /// </summary>
     public static async Task<IReadOnlyList<CorreoOficial>> CorreosOficialesAsync(IQuerySession boveda, Guid terceroId, CancellationToken ct)
     {
         var documentos = await boveda.Query<Documento>()
             .Where(d => d.TerceroId == terceroId && d.Ambito == AmbitoDocumento.Global && (d.TipoCanonico == "RUT" || d.TipoCanonico == "CAMARA_COMERCIO"))
             .ToListAsync(ct);
-        var oficiales = new List<CorreoOficial>();
+        var versiones = new List<(Documento Documento, VersionDocumento Version, AnalisisDeIaDeVersion Ia)>();
         foreach (var documento in documentos)
-        {
-            if (documento.VersionActual is not { } actual || documento.VersionRequerida(actual) is not { Ia: { } ia, Suprimida: false } version)
-                continue;
-            if (VerificacionDeContactos.DeDocumento(documento.TipoCanonico, version.Numero, ia.Legible, ia.Alertas, ia.Campos) is { } oficial)
+            if (documento.VersionActual is { } actual && documento.VersionRequerida(actual) is { Ia: { } ia, Suprimida: false } version)
+                versiones.Add((documento, version, ia));
+        if (versiones.Count == 0)
+            return [];
+
+        var aceptadas = await GruposQueAceptaronAsync(boveda, terceroId, versiones.Select(v => (v.Documento.Id, v.Version.Numero)).ToList(), ct);
+        var oficiales = new List<CorreoOficial>();
+        foreach (var (documento, version, ia) in versiones)
+            if (VerificacionDeContactos.DeDocumento(documento.TipoCanonico, version.Numero, ia.Legible, ia.Alertas, ia.Campos, version.CargadaPorCorreo,
+                    aceptadas.GetValueOrDefault((documento.Id, version.Numero))) is { } oficial)
                 oficiales.Add(oficial);
-        }
 
         return oficiales;
+    }
+
+    /// <summary>
+    /// Los grupos (tenants) cuyas empresas aceptaron cada versión: tienen un requisito del documento sobre esa versión con un veredicto de aprobación vigente de una persona
+    /// o del administrador (la aprobación automática del sistema no es una revisión) en un expediente que no se anuló, rechazó ni caducó. Una consulta entre tenants.
+    /// </summary>
+    private static async Task<IReadOnlyDictionary<(Guid DocumentoId, int Numero), IReadOnlyList<Guid>>> GruposQueAceptaronAsync(IQuerySession consulta, Guid terceroId,
+        IReadOnlyCollection<(Guid DocumentoId, int Numero)> versiones, CancellationToken ct)
+    {
+        var expedientes = (await consulta.Query<Expediente>().Where(e => e.AnyTenant() && e.TerceroId == terceroId).ToListAsync(ct))
+            .Where(e => e.Estado is not (EstadoExpediente.Anulado or EstadoExpediente.Rechazado or EstadoExpediente.Caducado))
+            .ToList();
+        var empresasPorVersion = new Dictionary<(Guid DocumentoId, int Numero), HashSet<Guid>>();
+        foreach (var expediente in expedientes)
+            foreach (var requisito in expediente.Requisitos.Where(r => !r.EsSeccion && r.VersionActual is not null))
+            {
+                var clave = (requisito.VersionActual!.DocumentoId, requisito.VersionActual.Numero);
+                var aceptada = requisito.Veredictos.Any(v => v is { Vigente: true, Veredicto: Veredicto.Aprobado } && v.Origen != OrigenVeredicto.Sistema && v.SobreVersion == clave.Numero);
+                if (aceptada && versiones.Contains(clave))
+                {
+                    if (!empresasPorVersion.TryGetValue(clave, out var empresas))
+                        empresasPorVersion[clave] = empresas = [];
+                    empresas.Add(expediente.EmpresaId);
+                }
+            }
+
+        if (empresasPorVersion.Count == 0)
+            return new Dictionary<(Guid, int), IReadOnlyList<Guid>>();
+
+        var tenants = (await consulta.LoadManyAsync<Empresa>(ct, empresasPorVersion.Values.SelectMany(e => e).Distinct().ToArray())).ToDictionary(e => e.Id, e => e.TenantId);
+        return empresasPorVersion.ToDictionary(p => p.Key, p => (IReadOnlyList<Guid>)[.. p.Value.Where(tenants.ContainsKey).Select(id => tenants[id]).Distinct()]);
     }
 
     /// <summary>

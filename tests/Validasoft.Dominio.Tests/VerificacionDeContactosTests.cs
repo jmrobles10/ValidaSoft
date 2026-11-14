@@ -140,22 +140,75 @@ public class VerificacionDeContactosTests
         VerificacionDeContactos.DeDocumento("CEDULA", 1, true, [], Campos(new { correo = "a@norte.co" })).ShouldBeNull();
     }
 
+    private const string Verificado = "verificado@norte.co";
+
+    private static bool SoloElVerificado(string correo) => correo == Verificado;
+
     [Fact]
-    public void Un_contacto_se_verifica_si_su_correo_es_el_oficial_y_el_RUT_pesa_mas_que_la_Camara()
+    public void Un_contacto_se_verifica_si_su_correo_es_el_oficial_de_un_documento_respaldado_y_el_RUT_pesa_mas_que_la_Camara()
     {
+        // Todos subidos por el contacto verificado: respaldados.
         CorreoOficial[] oficiales =
         [
-            new("juridico@norte.co", MedioDeVerificacion.CorreoDeLaCamara, "CAMARA_COMERCIO", 1),
-            new("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1),
-            new("ambos@norte.co", MedioDeVerificacion.CorreoDeLaCamara, "CAMARA_COMERCIO", 1),
-            new("ambos@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1)
+            new("juridico@norte.co", MedioDeVerificacion.CorreoDeLaCamara, "CAMARA_COMERCIO", 1, Verificado),
+            new("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, Verificado),
+            new("ambos@norte.co", MedioDeVerificacion.CorreoDeLaCamara, "CAMARA_COMERCIO", 1, Verificado),
+            new("ambos@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, Verificado)
         ];
 
-        VerificacionDeContactos.PorDocumento(" Gerente@Norte.co", oficiales).ShouldBe(MedioDeVerificacion.CorreoDelRut);
-        VerificacionDeContactos.PorDocumento("juridico@norte.co", oficiales).ShouldBe(MedioDeVerificacion.CorreoDeLaCamara);
-        VerificacionDeContactos.PorDocumento("ambos@norte.co", oficiales).ShouldBe(MedioDeVerificacion.CorreoDelRut);
-        VerificacionDeContactos.PorDocumento("creador@a.co", oficiales).ShouldBeNull();
-        VerificacionDeContactos.PorDocumento(null, oficiales).ShouldBeNull();
+        VerificacionDeContactos.PorDocumento(" Gerente@Norte.co", oficiales, SoloElVerificado, [TenantA]).ShouldBe(MedioDeVerificacion.CorreoDelRut);
+        VerificacionDeContactos.PorDocumento("juridico@norte.co", oficiales, SoloElVerificado, [TenantA]).ShouldBe(MedioDeVerificacion.CorreoDeLaCamara);
+        VerificacionDeContactos.PorDocumento("ambos@norte.co", oficiales, SoloElVerificado, [TenantA]).ShouldBe(MedioDeVerificacion.CorreoDelRut);
+        VerificacionDeContactos.PorDocumento("creador@a.co", oficiales, SoloElVerificado, [TenantA]).ShouldBeNull();
+        VerificacionDeContactos.PorDocumento(null, oficiales, SoloElVerificado, [TenantA]).ShouldBeNull();
+    }
+
+    [Fact]
+    public void El_correo_de_un_documento_que_subio_alguien_sin_verificar_no_verifica_ni_a_quien_lo_subio_ni_a_otro()
+    {
+        // El atacante registra el NIT con su correo, sube un RUT con su propio correo y otro con el de un cómplice: la IA no detecta un PDF bien fabricado.
+        const string atacante = "atacante@a.co";
+        CorreoOficial[] oficiales =
+        [
+            new(atacante, MedioDeVerificacion.CorreoDelRut, "RUT", 1, atacante),
+            new("complice@a.co", MedioDeVerificacion.CorreoDeLaCamara, "CAMARA_COMERCIO", 1, atacante),
+            new("sin-autor@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 2) // anterior a la decisión: no se sabe quién la subió
+        ];
+
+        VerificacionDeContactos.PorDocumento(atacante, oficiales, SoloElVerificado, [TenantA]).ShouldBeNull();
+        VerificacionDeContactos.PorDocumento("complice@a.co", oficiales, SoloElVerificado, [TenantB]).ShouldBeNull();
+        VerificacionDeContactos.PorDocumento("sin-autor@norte.co", oficiales, SoloElVerificado, [TenantB]).ShouldBeNull();
+        VerificacionDeContactos.Medio(atacante, oficiales, [TenantA], SoloElVerificado, terceroTieneVerificado: false).ShouldBeNull();
+    }
+
+    [Fact]
+    public void El_correo_de_un_documento_lo_respalda_un_contacto_verificado_o_una_empresa_de_un_grupo_que_no_invito_al_candidato()
+    {
+        // Lo subió el contacto verificado (el correo se normaliza).
+        var delVerificado = new CorreoOficial("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, " Verificado@Norte.co ");
+        delVerificado.Respalda(SoloElVerificado, [TenantA]).ShouldBeTrue();
+
+        // Lo subió alguien sin verificar, pero otro grupo lo aceptó: cuenta si ese grupo no es el que invitó al candidato.
+        var aceptado = new CorreoOficial("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, "atacante@a.co", [TenantB]);
+        aceptado.Respalda(SoloElVerificado, [TenantA]).ShouldBeTrue();
+        aceptado.Respalda(SoloElVerificado, [TenantB]).ShouldBeFalse(); // lo aceptó el mismo grupo que invitó al candidato
+        aceptado.Respalda(SoloElVerificado, [TenantA, TenantB]).ShouldBeFalse();
+        VerificacionDeContactos.PorDocumento("gerente@norte.co", [aceptado], SoloElVerificado, [TenantA]).ShouldBe(MedioDeVerificacion.CorreoDelRut);
+        VerificacionDeContactos.PorDocumento("gerente@norte.co", [aceptado], SoloElVerificado, [TenantB]).ShouldBeNull();
+
+        // Sin quien la suba verificado ni quien la acepte: no respalda nadie.
+        new CorreoOficial("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, "atacante@a.co", []).Respalda(SoloElVerificado, [TenantA]).ShouldBeFalse();
+        new CorreoOficial("gerente@norte.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1).Respalda(SoloElVerificado, []).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void DeDocumento_conserva_quien_subio_la_version_y_quien_la_acepto()
+    {
+        var oficial = VerificacionDeContactos.DeDocumento("RUT", 3, true, [], Campos(new { correo = "gerente@norte.co" }), "  Verificado@Norte.co", [TenantB]);
+
+        oficial.ShouldNotBeNull();
+        oficial.CargadaPorCorreo.ShouldBe(Verificado);
+        oficial.AceptadaPorGrupos.ShouldBe([TenantB]);
     }
 
     [Fact]
@@ -171,13 +224,14 @@ public class VerificacionDeContactosTests
     public void La_corroboracion_no_desplaza_a_un_contacto_ya_verificado_pero_el_correo_oficial_si_vale()
     {
         // Sin nadie verificado, dos grupos que se ponen de acuerdo verifican el correo.
-        VerificacionDeContactos.Medio("b@b.co", [], [TenantA, TenantB], terceroTieneVerificado: false).ShouldBe(MedioDeVerificacion.Corroborado);
+        VerificacionDeContactos.Medio("b@b.co", [], [TenantA, TenantB], SoloElVerificado, terceroTieneVerificado: false).ShouldBe(MedioDeVerificacion.Corroborado);
         // Con un contacto verificado manda él: la corroboración sola no basta (dos grupos no vencen el veto de quien ya es del tercero).
-        VerificacionDeContactos.Medio("b@b.co", [], [TenantA, TenantB, TenantC], terceroTieneVerificado: true).ShouldBeNull();
-        // El correo oficial sí verifica siempre.
-        VerificacionDeContactos.Medio("b@b.co", [new CorreoOficial("b@b.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1)], [TenantA], terceroTieneVerificado: true)
+        VerificacionDeContactos.Medio("b@b.co", [], [TenantA, TenantB, TenantC], SoloElVerificado, terceroTieneVerificado: true).ShouldBeNull();
+        // El correo oficial respaldado (aquí lo subió el contacto verificado) sí verifica siempre.
+        VerificacionDeContactos.Medio("b@b.co", [new CorreoOficial("b@b.co", MedioDeVerificacion.CorreoDelRut, "RUT", 1, Verificado)], [TenantA], SoloElVerificado,
+                terceroTieneVerificado: true)
             .ShouldBe(MedioDeVerificacion.CorreoDelRut);
-        VerificacionDeContactos.Medio("b@b.co", [], [TenantA], terceroTieneVerificado: false).ShouldBeNull();
+        VerificacionDeContactos.Medio("b@b.co", [], [TenantA], SoloElVerificado, terceroTieneVerificado: false).ShouldBeNull();
     }
 
     // ---------- la solicitud: quién decide ----------

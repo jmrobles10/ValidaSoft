@@ -67,7 +67,18 @@ export function TarjetaSolicitudDeAcceso({
           <Typography sx={{ fontSize: 14 }}>
             {solicitud.correosOficiales.length === 0
               ? t('plataforma.accesos.sinCorreoOficial')
-              : solicitud.correosOficiales.map((o) => t('plataforma.accesos.correoOficial', { correo: o.correo, documento: o.documento, version: String(o.version) })).join(' · ')}
+              : solicitud.correosOficiales
+                  .map((o) =>
+                    o.respalda
+                      ? t('plataforma.accesos.correoOficial', { correo: o.correo, documento: o.documento, version: String(o.version) })
+                      : t('plataforma.accesos.correoOficialSinRespaldo', {
+                          correo: o.correo,
+                          documento: o.documento,
+                          version: String(o.version),
+                          quien: o.cargadoPor ?? t('plataforma.accesos.cargadorDesconocido'),
+                        }),
+                  )
+                  .join(' · ')}
           </Typography>
 
           {!pendiente && solicitud.decididoPor && solicitud.decididoEn && (

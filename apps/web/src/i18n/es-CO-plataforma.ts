@@ -51,6 +51,9 @@ export const plataforma = {
     },
     sinCorreoOficial: 'El tercero no tiene un RUT ni una Cámara de comercio con correo leído: no hay un correo oficial con qué compararlo.',
     correoOficial: 'Correo del {{documento}} (versión {{version}}): {{correo}}',
+    correoOficialSinRespaldo:
+      'Correo del {{documento}} (versión {{version}}): {{correo}}. No verifica a nadie: lo subió {{quien}}, que no está verificado, y ninguna otra empresa lo aceptó.',
+    cargadorDesconocido: 'alguien que no se sabe quién fue',
     decididoPor: 'Lo decidió {{quien}} ({{via}}) el {{fecha}}',
     vias: { Contacto: 'un contacto del tercero', Plataforma: 'la plataforma', Verificacion: 'el correo se verificó solo' },
     motivo: 'Motivo: {{motivo}}',

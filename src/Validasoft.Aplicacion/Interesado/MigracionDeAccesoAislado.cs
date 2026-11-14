@@ -140,7 +140,7 @@ public static class MigracionDeAccesoAislado
                 foreach (var correo in sinContacto.Select(v => SolicitudDeAcceso.Normalizar(v.CorreoTercero)).Distinct(StringComparer.Ordinal).ToList())
                 {
                     var grupos = await ContactosDelTercero.GruposQueInvitaronAsync(sesion, terceroId, correo, null, ct);
-                    if (VerificacionDeContactos.Medio(correo, oficiales, grupos, tercero.TieneContactoVerificado) is { } medio &&
+                    if (VerificacionDeContactos.Medio(correo, oficiales, grupos, tercero.EsContactoVerificado, tercero.TieneContactoVerificado) is { } medio &&
                         ContactosDelTercero.Agregar(sesion, tercero, correo, tercero.Nombre, "Principal", ContactosDelTercero.OrigenEmpresa, "Migración de vínculos aceptados", medio, null, ahora))
                         verificados++;
                 }

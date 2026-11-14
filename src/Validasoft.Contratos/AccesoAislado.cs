@@ -42,8 +42,12 @@ public sealed record ContactosDelTerceroDto(
 /// <summary>Una empresa que invitó al correo de una solicitud, con su grupo (tenant), para la evidencia de la consola.</summary>
 public sealed record EmpresaQueInvitoPlataformaDto(string Empresa, string Grupo, Guid TenantId, DateTimeOffset Fecha);
 
-/// <summary>Un correo electrónico oficial del tercero (el del RUT o el de la Cámara de comercio), con el documento y la versión de donde se leyó.</summary>
-public sealed record CorreoOficialDto(string Correo, string Documento, int Version);
+/// <summary>
+/// Un correo electrónico oficial del tercero (el del RUT o el de la Cámara de comercio), con el documento y la versión de donde se leyó y quién subió esa versión
+/// (<see cref="CargadoPor"/>; nulo si no se sabe). <see cref="Respalda"/>: la versión la subió un contacto verificado o la aceptó una empresa de un grupo que no invitó a
+/// la solicitud; si no, el correo es solo una afirmación de quien lo subió y <b>no verifica</b> a nadie.
+/// </summary>
+public sealed record CorreoOficialDto(string Correo, string Documento, int Version, string? CargadoPor = null, bool Respalda = false);
 
 /// <summary>
 /// Una solicitud de acceso a un tercero como la ve la consola de Plataforma (<c>GET /api/v1/plataforma/solicitudes-de-acceso</c>), con la evidencia para decidir: las empresas que
