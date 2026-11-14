@@ -72,7 +72,8 @@ public sealed record DefinicionDeFlujo(
     PlazoDeCargue? PlazoCargue = null,
     ReintentoTrasRechazo? Reintento = null,
     VigenciaDelVinculo? VigenciaVinculo = null,
-    int? RecordatorioObservacionesDias = null)
+    int? RecordatorioObservacionesDias = null,
+    SeleccionDeFlujo? Seleccion = null)
 {
     public const int MaximoAprobadores = 10;
 
@@ -160,7 +161,9 @@ public sealed record DefinicionDeFlujo(
             PlazoCargue = (PlazoCargue ?? PlazoDeCargue.PorDefecto).Validar(),
             Reintento = (Reintento ?? ReintentoTrasRechazo.PorDefecto).Validar(),
             VigenciaVinculo = vigencia,
-            RecordatorioObservacionesDias = ValidarRecordatorio(RecordatorioObservacionesDias)
+            RecordatorioObservacionesDias = ValidarRecordatorio(RecordatorioObservacionesDias),
+            // La condición de selección se valida con los atributos del tipo de vínculo del flujo, como las de sus requisitos (FR-1).
+            Seleccion = SeleccionDeFlujo.Validar(Seleccion, tipoVinculo)
         };
     }
 
@@ -388,6 +391,12 @@ public sealed class FlujoVersion
     /// <summary>Recordatorio automático de observaciones de este flujo (OP-19): nulo = el de la empresa; 0 = apagado; 1 a 60 = cada tantos días.</summary>
     public int? RecordatorioObservacionesDias { get; set; }
 
+    /// <summary>
+    /// Cuándo se escoge este flujo solo al abrir un expediente sin flujo explícito (FR-1): condición y prioridad, congeladas con la
+    /// versión publicada. Nulo en las versiones guardadas antes y en los flujos que solo se usan de forma explícita o por defecto.
+    /// </summary>
+    public SeleccionDeFlujo? Seleccion { get; set; }
+
     public DateTimeOffset CreadaEn { get; set; }
 
     public DateTimeOffset? PublicadaEn { get; set; }
@@ -395,7 +404,8 @@ public sealed class FlujoVersion
     public DateTimeOffset? RetiradaEn { get; set; }
 
     public DefinicionDeFlujo Definicion() =>
-        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo(), VigenciaEfectiva(), RecordatorioObservacionesDias);
+        new(Etapas, PoliticaDevolucion, SeparacionDeFunciones, Requisitos, Verificaciones, PlazoEfectivo(), ReintentoEfectivo(), VigenciaEfectiva(), RecordatorioObservacionesDias,
+            Seleccion);
 }
 
 /// <summary>
@@ -483,6 +493,7 @@ public sealed class Flujo
             borrador.Reintento = validada.Reintento;
             borrador.VigenciaVinculo = validada.VigenciaVinculo;
             borrador.RecordatorioObservacionesDias = validada.RecordatorioObservacionesDias;
+            borrador.Seleccion = validada.Seleccion;
         }
 
         ActualizadoEn = ahora;
@@ -513,6 +524,7 @@ public sealed class Flujo
         borrador.Reintento = validada.Reintento;
         borrador.VigenciaVinculo = validada.VigenciaVinculo;
         borrador.RecordatorioObservacionesDias = validada.RecordatorioObservacionesDias;
+        borrador.Seleccion = validada.Seleccion;
         borrador.Estado = EstadoFlujoVersion.Publicada;
         borrador.PublicadaEn = ahora;
         ActualizadoEn = ahora;
@@ -533,6 +545,7 @@ public sealed class Flujo
         Reintento = definicion.Reintento,
         VigenciaVinculo = definicion.VigenciaVinculo,
         RecordatorioObservacionesDias = definicion.RecordatorioObservacionesDias,
+        Seleccion = definicion.Seleccion,
         CreadaEn = ahora
     };
 

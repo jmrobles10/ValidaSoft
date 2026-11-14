@@ -11,6 +11,7 @@ import { useTercero } from '../../vinculos/api';
 import { useExpediente } from '../api';
 import { DialogoAbrirExpediente } from '../DialogoAbrirExpediente';
 import { puedeAbrirExpediente } from '../reglas';
+import { OrigenDelFlujo } from './OrigenDelFlujo';
 
 /**
  * El expediente del vínculo: el abierto con su estado y enlace, el aviso de apertura pendiente (FL-6) y, para el
@@ -50,6 +51,12 @@ export function TarjetaExpedienteVinculo({ vinculo }: { vinculo: VinculoDto }) {
               </Button>
             )}
           </Stack>
+        )}
+        {expediente.data?.flujo && (
+          <div>
+            <Typography>{t('expedientes.enVinculo.flujo', { nombre: expediente.data.flujo.nombre, version: String(expediente.data.flujo.version) })}</Typography>
+            <OrigenDelFlujo flujo={expediente.data.flujo} />
+          </div>
         )}
         {!abiertoId && vinculo.aperturaDeExpedientePendiente && <Alert severity="warning">{t('expedientes.enVinculo.pendiente')}</Alert>}
         {!abiertoId && !vinculo.aperturaDeExpedientePendiente && (

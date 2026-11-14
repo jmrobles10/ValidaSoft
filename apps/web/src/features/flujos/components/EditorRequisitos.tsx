@@ -6,11 +6,12 @@ import { useTranslation } from 'react-i18next';
 import { fichaEmpresa } from '../../../i18n/es-CO-ficha-empresa';
 import { resumenTipo } from '../../configuracion/tiposDocumento/resumen';
 import { nombreSeccion, seccionFicha } from '../../terceros/ficha/secciones';
-import { atajoDe, condicionDe, describirCondicion, type AtajoCondicion } from '../condiciones';
+import { atajoDe, describirCondicion } from '../condiciones';
 import { requisitoDeSeccionNuevo, requisitoNuevo, sePuedePedir, type ErrorFlujo, type EtapaEnEditor, type RequisitoEnEditor } from '../editor';
 import { seccionesQueRespalda } from '../requisitosDeSeccion';
 import { OpcionesSeccion, SelectorSeccion } from './CamposRequisitoSeccion';
 import { SelectorAreasRequisito } from './SelectorAreasRequisito';
+import { SelectorDeCondicion } from './SelectorDeCondicion';
 
 export interface EditorRequisitosProps {
   requisitos: RequisitoEnEditor[];
@@ -104,21 +105,13 @@ export function EditorRequisitos({ requisitos, etapas, areas, tiposDocumento, on
                 onCambiar={(areasQueRevisan) => cambiar(k, { areasQueRevisan })}
                 deshabilitado={soloLectura}
               />
-              <TextField
-                select
-                size="small"
-                label={t('flujos.editor.requisitos.sePideA')}
-                value={atajoDe(r.condicion)}
-                onChange={(ev) => cambiar(k, { condicion: condicionDe(ev.target.value as AtajoCondicion, r.condicion) })}
-                disabled={soloLectura}
-              >
-                {(['siempre', 'juridica', 'natural'] as const).map((a) => (
-                  <MenuItem key={a} value={a}>
-                    {t(`flujos.editor.requisitos.atajos.${a}`)}
-                  </MenuItem>
-                ))}
-                {atajoDe(r.condicion) === 'personalizada' && <MenuItem value="personalizada">{t('flujos.editor.requisitos.atajos.personalizada')}</MenuItem>}
-              </TextField>
+              <SelectorDeCondicion
+                etiqueta={t('flujos.editor.requisitos.sePideA')}
+                condicion={r.condicion}
+                onCambiar={(condicion) => cambiar(k, { condicion })}
+                deshabilitado={soloLectura}
+                textoDe={(a) => t(`flujos.editor.requisitos.atajos.${a}`)}
+              />
               <CampoNumero
                 etiqueta={t('flujos.editor.requisitos.aprobadores')}
                 valor={r.aprobadoresRequeridos}

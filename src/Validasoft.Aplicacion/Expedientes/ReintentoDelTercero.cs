@@ -11,6 +11,7 @@ using Validasoft.Dominio.Documentos;
 using Validasoft.Dominio.Expedientes;
 using Validasoft.Dominio.Flujos;
 using Validasoft.Dominio.Plataforma;
+using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
 using Wolverine.Http;
@@ -51,15 +52,21 @@ public static class ReintentoDelTercero
 
         var claves = rechazados.Select(v => FlujoPorDefecto.Clave(v.EmpresaId, v.TipoVinculoId)).Distinct().ToArray();
         var porDefecto = await consulta.Query<FlujoPorDefecto>().Where(p => p.AnyTenant() && p.Id.IsOneOf(claves)).ToListAsync(ct);
-        var flujoIds = rechazados.Where(v => v.FlujoId is not null).Select(v => v.FlujoId!.Value).Concat(porDefecto.Select(p => p.FlujoId)).Distinct().ToArray();
-        IReadOnlyList<Flujo> flujos = flujoIds.Length == 0 ? [] : await consulta.Query<Flujo>().Where(f => f.AnyTenant() && f.Id.IsOneOf(flujoIds)).ToListAsync(ct);
+        // La política de reintento es la del flujo que el vínculo tendría hoy: el suyo, el que escoja una regla de selección (FR-1) o el por defecto.
+        var flujos = await ProcesoDeValidacion.CargarFlujosDeLosVinculosAsync(consulta, rechazados, ct);
+        var terceros = (await consulta.LoadManyAsync<Tercero>(ct, rechazados.Select(v => v.TerceroId).Distinct().ToArray())).ToDictionary(t => t.Id);
+        var tipoIds = rechazados.Select(v => v.TipoVinculoId).Distinct().ToArray();
+        var tiposVinculo = (await consulta.Query<TipoVinculo>().Where(t => t.AnyTenant() && t.Id.IsOneOf(tipoIds)).ToListAsync(ct)).ToDictionary(t => t.Id);
 
         var resultado = new Dictionary<Guid, ReintentoPublicoDto>();
         foreach (var vinculo in rechazados)
         {
             if (!expedientes.TryGetValue(vinculo.UltimoExpedienteId!.Value, out var expediente) || expediente is not { Estado: EstadoExpediente.Rechazado, Rechazo: { } rechazo })
                 continue;
-            var politica = ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto)?.ReintentoEfectivo() ?? ReintentoTrasRechazo.PorDefecto;
+            var contexto = terceros.TryGetValue(vinculo.TerceroId, out var tercero)
+                ? ContextoDeExigencia.De(tercero, tiposVinculo.GetValueOrDefault(vinculo.TipoVinculoId)?.Codigo ?? string.Empty, vinculo.Atributos)
+                : null;
+            var politica = ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto, contexto)?.ReintentoEfectivo() ?? ReintentoTrasRechazo.PorDefecto;
             var desde = politica.PuedeDesde(rechazo.Fecha);
             resultado[vinculo.Id] = new ReintentoPublicoDto(rechazo.Fecha, [.. rechazo.Motivos.Select(m => new MotivoPublicoDto(m.Codigo, m.TextoAlTercero))],
                 politica.Permitido, desde is { } d && d <= ahora, desde);

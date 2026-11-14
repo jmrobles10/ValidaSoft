@@ -237,12 +237,11 @@ public static class RequisitosDeExpediente
 
         var claves = vinculos.Select(v => FlujoPorDefecto.Clave(v.EmpresaId, v.TipoVinculoId)).Distinct().ToArray();
         var porDefecto = await consulta.Query<FlujoPorDefecto>().Where(p => p.AnyTenant() && p.Id.IsOneOf(claves)).ToListAsync(ct);
-        var flujoIds = vinculos.Where(v => v.FlujoId is not null).Select(v => v.FlujoId!.Value).Concat(porDefecto.Select(p => p.FlujoId))
-            .Distinct().ToArray();
-        if (flujoIds.Length == 0)
+        // Los flujos de cada (empresa, tipo): el del vínculo, el por defecto y los que se escogen por regla de selección (FR-1).
+        var flujos = await ProcesoDeValidacion.CargarFlujosDeLosVinculosAsync(consulta, vinculos, ct);
+        if (flujos.Count == 0)
             return piden;
 
-        var flujos = await consulta.Query<Flujo>().Where(f => f.AnyTenant() && f.Id.IsOneOf(flujoIds)).ToListAsync(ct);
         var tipoIds = flujos.SelectMany(f => f.VersionPublicada?.Requisitos ?? []).Select(r => r.TipoDocumentoTenantId).Distinct().ToArray();
         if (tipoIds.Length == 0)
             return piden;
@@ -259,9 +258,11 @@ public static class RequisitosDeExpediente
             .ToDictionary(t => t.Id);
         foreach (var vinculo in vinculos)
         {
-            if (ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto) is not { } version || !terceros.TryGetValue(vinculo.TerceroId, out var tercero))
+            if (!terceros.TryGetValue(vinculo.TerceroId, out var tercero))
                 continue;
             var contexto = ContextoDeExigencia.De(tercero, tiposVinculo.GetValueOrDefault(vinculo.TipoVinculoId)?.Codigo ?? string.Empty, vinculo.Atributos);
+            if (ProcesoDeValidacion.FlujoVigente(vinculo, flujos, porDefecto, contexto) is not { } version)
+                continue;
             if (EvaluadorDeExigencia.Filtrar(version.Requisitos.Where(r => delCodigo.Contains(r.TipoDocumentoTenantId)), contexto).Count > 0)
                 piden.Add(vinculo.Id);
         }

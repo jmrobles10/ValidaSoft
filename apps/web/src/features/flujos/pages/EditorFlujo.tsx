@@ -17,6 +17,7 @@ import { FormularioFlujo } from '../components/FormularioFlujo';
 import { VersionesFlujo } from '../components/VersionesFlujo';
 import { recordatorioADto } from '../recordatorio';
 import { errorDeApiEnRequisitos } from '../requisitosDeSeccion';
+import { errorDeApiEnSeleccion, seleccionADto } from '../seleccion';
 import {
   borradorDesdeVersion,
   borradorVacio,
@@ -30,6 +31,7 @@ import {
   validarFlujo,
   verificacionesADto,
   type BorradorFlujo,
+  type ErrorFlujo,
 } from '../editor';
 import { vigenciaADto } from '../vigencia';
 
@@ -102,7 +104,9 @@ export function EditorFlujo() {
   const bloqueantes = erroresBloqueantes(errores);
   const errorMutacion = crear.error ?? editar.error ?? publicar.error;
   const errorEnRequisito = borrador ? errorDeApiEnRequisitos(errorMutacion, borrador.requisitos) : null;
-  const errorEnCampo = errorEnRequisito && borrador && firmaEnviada === firmaBorrador(borrador) ? [errorEnRequisito] : [];
+  // Un 422 de la selección (prioridad repetida en el tipo, condición inválida) se muestra en su campo mientras el borrador siga igual.
+  const errorEnSeleccion = errorDeApiEnSeleccion(errorMutacion);
+  const errorEnCampo = borrador && firmaEnviada === firmaBorrador(borrador) ? [errorEnRequisito, errorEnSeleccion].filter((e): e is ErrorFlujo => e !== null) : [];
   const visibles = editando ? [...(intentado ? errores : errores.filter((e) => e.aviso)), ...errorEnCampo] : [];
   const sinGuardar = Boolean(borrador && (nuevo || !datos?.borrador || firmaBorrador(borrador) !== firmaBorrador(borradorDesdeVersion(base(datos), datos.borrador))));
   const ocupado = crear.isPending || editar.isPending || publicar.isPending;
@@ -119,6 +123,7 @@ export function EditorFlujo() {
       plazoCargue: plazoADto(borrador),
       reintento: reintentoADto(borrador),
       recordatorioObservaciones: recordatorioADto(borrador),
+      seleccion: seleccionADto(borrador),
       vigenciaVinculo: vigenciaADto(borrador),
       requisitos: requisitosADto(borrador.requisitos),
       verificaciones: verificacionesADto(borrador.verificaciones),
@@ -204,7 +209,7 @@ export function EditorFlujo() {
         }
       />
 
-      {errorMutacion && !errorEnRequisito && <Alert severity="error" sx={{ mb: 2 }}>{mensajeDeError(errorMutacion, t)}</Alert>}
+      {errorMutacion && !errorEnRequisito && !errorEnSeleccion && <Alert severity="error" sx={{ mb: 2 }}>{mensajeDeError(errorMutacion, t)}</Alert>}
       {intentado && bloqueantes.length > 0 && <Alert severity="warning" sx={{ mb: 2 }}>{t('flujos.editor.revisa')}</Alert>}
       {areas.isSuccess && listaAreas.every((a) => !a.activa) && <Alert severity="warning" sx={{ mb: 2 }}>{t('flujos.editor.sinAreas')}</Alert>}
       {!borrador && datos?.publicada && !versionVista && puedeEscribir && (

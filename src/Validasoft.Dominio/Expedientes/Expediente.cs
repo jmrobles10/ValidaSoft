@@ -38,10 +38,12 @@ public sealed record FlujoParaExpediente(
     bool SeparacionDeFunciones,
     IReadOnlyList<VerificacionRequeridaDelFlujo>? Verificaciones = null,
     PlazoDeCargue? PlazoCargue = null,
-    int? RecordatorioObservacionesDias = null);
+    int? RecordatorioObservacionesDias = null,
+    SeleccionPorRegla? Regla = null);
 
-/// <summary>Copia del flujo que gobierna el expediente.</summary>
-public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen);
+/// <summary>Copia del flujo que gobierna el expediente; con origen <c>Regla</c>, la condición de selección que coincidió (FR-1).</summary>
+public sealed record FlujoDelExpediente(Guid FlujoId, Guid FlujoVersionId, string Codigo, string Nombre, int Version, OrigenFlujo Origen,
+    SeleccionPorRegla? Regla = null);
 
 public sealed record RechazoDelExpediente(Guid AreaId, string RevisorId, IReadOnlyList<MotivoAplicado> Motivos, string Justificacion,
     DateTimeOffset Fecha, string? Origen = null);
@@ -333,7 +335,8 @@ public sealed partial class Expediente
         // El plazo de cargue solo corre en el expediente inicial (LT-1): renovaciones y actualizaciones tienen los suyos.
         var plazo = datos.Tipo == TipoExpediente.Inicial && flujo.PlazoCargue is { Activo: true } activo ? activo : null;
         simulacion.Emitir(new FlujoSeleccionado(flujo.FlujoId, flujo.FlujoVersionId, flujo.Codigo, flujo.Nombre, flujo.Version, flujo.Origen,
-            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo, flujo.RecordatorioObservacionesDias));
+            [.. flujo.Etapas.OrderBy(e => e.Orden)], flujo.PoliticaDevolucion, flujo.SeparacionDeFunciones, ahora, plazo, flujo.RecordatorioObservacionesDias,
+            flujo.Origen == OrigenFlujo.Regla ? flujo.Regla : null));
         if (requisitos is { Count: > 0 })
             simulacion.Emitir(new RequisitosCalculados(ResolverAlcance(requisitos, flujo), ahora));
         if (flujo.Verificaciones is { Count: > 0 } verificaciones)
@@ -509,7 +512,7 @@ public sealed partial class Expediente
 
     public void Apply(FlujoSeleccionado e)
     {
-        Flujo = new FlujoDelExpediente(e.FlujoId, e.FlujoVersionId, e.Codigo, e.Nombre, e.Version, e.Origen);
+        Flujo = new FlujoDelExpediente(e.FlujoId, e.FlujoVersionId, e.Codigo, e.Nombre, e.Version, e.Origen, e.Regla);
         PoliticaDevolucion = e.PoliticaDevolucion;
         SeparacionDeFunciones = e.SeparacionDeFunciones;
         Etapas = [.. e.Etapas.OrderBy(x => x.Orden).Select(x => new EtapaDeExpediente
