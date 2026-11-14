@@ -42,7 +42,8 @@ export interface PanelDeNotificacionesProps<N extends NotificacionVisible> {
   onReintentar: () => void;
   onAbrir: (notificacion: N) => void;
   onMarcarTodas: () => void;
-  onPreferencias: () => void;
+  /** Sin él no se ofrece el botón de preferencias (una sesión del portal con acceso aislado no las alcanza). */
+  onPreferencias?: () => void;
 }
 
 /** Contenido del panel de la campana: cabecera con acciones, lista (o carga, error o vacío) y avisos al pie. */
@@ -68,11 +69,13 @@ export function PanelDeNotificaciones<N extends NotificacionVisible>(props: Pane
         >
           {textos.marcarTodas}
         </Button>
-        <Tooltip title={textos.preferencias}>
-          <IconButton size="small" aria-label={textos.preferencias} onClick={onPreferencias}>
-            <Settings size={18} strokeWidth={1.75} />
-          </IconButton>
-        </Tooltip>
+        {onPreferencias && (
+          <Tooltip title={textos.preferencias}>
+            <IconButton size="small" aria-label={textos.preferencias} onClick={onPreferencias}>
+              <Settings size={18} strokeWidth={1.75} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {respaldo && textos.sinConexion && (

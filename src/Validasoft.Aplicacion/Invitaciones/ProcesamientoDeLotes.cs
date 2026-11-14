@@ -231,7 +231,11 @@ public static class ProcesarTandaDeLoteHandler
             var vinculo = Vinculo.Create(creado);
             var invitacion = vinculo.EnviarInvitacion(null, vigencia, lote.Id, ahora);
             await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, tenantId, vinculo, tipo, invitacion, ct);
-            sesion.Events.StartStream<Vinculo>(creado.VinculoId, creado, invitacion);
+            // El correo de la fila: contacto conocido, primer contacto del tercero o desconocido (acceso aislado hasta que lo apruebe un contacto).
+            List<object> eventos = [creado, invitacion];
+            await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, tenantId, tercero, terceroCreado, vinculo, creado.CorreoInvitacion, eventos.Add,
+                ahora, ct);
+            sesion.Events.StartStream<Vinculo>(creado.VinculoId, eventos);
             return new ResultadoDeFila(AccionFilaLote.Invitado, terceroId, creado.VinculoId, terceroCreado, null);
         }
 
@@ -245,6 +249,9 @@ public static class ProcesarTandaDeLoteHandler
             var invitacion = actual.EnviarInvitacion(datos.Correo, vigencia, lote.Id, ahora);
             await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, tenantId, actual, tipo, invitacion, ct);
             stream.AppendOne(invitacion);
+            // Reinvitar a otro correo vuelve a decidir su acceso (aislado si no es contacto conocido del tercero).
+            await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, tenantId, tercero, terceroCreado, actual, invitacion.CorreoDestino, stream.AppendOne,
+                ahora, ct);
             return new ResultadoDeFila(AccionFilaLote.Reinvitado, terceroId, actual.Id, terceroCreado, null);
         }
 

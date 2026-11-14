@@ -140,11 +140,13 @@ public sealed partial class RequisitosApiTests
         var vinculoB = await CrearVinculoAsync(sur, "CLIENTE", correoB, nit);
         var sesionB = await SesionAsync(correoB);
 
-        var bandejaA = await EsperarBandejaAsync(a.Sesion, b => b.Datos.Any(n => n.Tipo == "tercero.observado"));
-        bandejaA.Datos.ShouldAllBe(n => n.VinculoId == a.Vinculo.Id);
+        // Un correo que no es contacto del tercero (el de Sur) entra aislado: el aviso para decidirlo es del tercero entero, lo ve quien ya es contacto (A) y no el aislado (B).
+        var bandejaA = await EsperarBandejaAsync(a.Sesion, b => b.Datos.Any(n => n.Tipo == "tercero.observado") && b.Datos.Any(n => n.Tipo == "tercero.acceso_solicitado"));
+        bandejaA.Datos.Where(n => n.Tipo != "tercero.acceso_solicitado").ShouldAllBe(n => n.VinculoId == a.Vinculo.Id);
+        bandejaA.Datos.Single(n => n.Tipo == "tercero.acceso_solicitado").VinculoId.ShouldBeNull();
         var bandejaB = await EsperarBandejaAsync(sesionB, b => b.Datos.Any(n => n.Tipo == "tercero.invitacion"));
         bandejaB.Datos.ShouldAllBe(n => n.VinculoId == vinculoB.Id && n.Empresa!.Id == sur.Datos.Id);
-        bandejaB.Datos.ShouldNotContain(n => n.Tipo == "tercero.observado");
+        bandejaB.Datos.ShouldNotContain(n => n.Tipo == "tercero.observado" || n.Tipo == "tercero.acceso_solicitado");
         // Tampoco puede marcar como leída una notificación del otro vínculo.
         await TerceroAsync("POST", $"{RutaCampanaTercero}/{bandejaA.Datos[0].Id}/leida", sesionB.AccessToken, null, 404);
     }

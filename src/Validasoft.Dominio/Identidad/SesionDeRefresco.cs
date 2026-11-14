@@ -21,6 +21,14 @@ public sealed class SesionDeRefresco
     public const string MotivoReuso = "reuso";
     public const string MotivoCierre = "cierre";
 
+    /// <summary>Otra sesión de la misma persona (o de un contacto del tercero) la cerró desde «Mis sesiones».</summary>
+    public const string MotivoCierreIndividual = "cierre-individual";
+
+    /// <summary>Los contactos del tercero rechazaron el acceso del correo de la sesión: se cortan todas las suyas (acceso aislado).</summary>
+    public const string MotivoAccesoRechazado = "acceso-rechazado";
+
+    public const int LongitudMaximaDelDispositivo = 200;
+
     /// <summary>Identificador de la familia (viaja dentro del token).</summary>
     public Guid Id { get; set; }
 
@@ -46,13 +54,26 @@ public sealed class SesionDeRefresco
 
     public DateTimeOffset? RevocadaEn { get; set; }
 
-    /// <summary><see cref="MotivoReuso"/> o <see cref="MotivoCierre"/>.</summary>
+    /// <summary><see cref="MotivoReuso"/>, <see cref="MotivoCierre"/>, <see cref="MotivoCierreIndividual"/> o <see cref="MotivoAccesoRechazado"/>.</summary>
     public string? MotivoRevocacion { get; set; }
+
+    /// <summary>Navegador (<c>User-Agent</c>, recortado) con el que se abrió la sesión: para reconocerla en «Mis sesiones».</summary>
+    public string? Dispositivo { get; set; }
+
+    /// <summary>Dirección IP desde la que se abrió la sesión.</summary>
+    public string? Ip { get; set; }
+
+    /// <summary>Se usó por última vez (la apertura y cada renovación): lo que muestra «Mis sesiones».</summary>
+    public DateTimeOffset? UltimoUsoEn { get; set; }
+
+    /// <summary>¿Sirve en <paramref name="ahora"/>? No está revocada ni vencida (lo comprueba cada petición con su token de acceso).</summary>
+    public bool VigenteEn(DateTimeOffset ahora) => !Revocada && ExpiraEn > ahora;
 
     public bool Revocada => RevocadaEn is not null;
 
     /// <summary>Abre la familia al canjear el enlace y devuelve el primer token (va solo en la cookie).</summary>
-    public static (SesionDeRefresco Sesion, string Token) Abrir(Guid terceroId, string correo, bool otpVerificado, DateTimeOffset ahora)
+    public static (SesionDeRefresco Sesion, string Token) Abrir(Guid terceroId, string correo, bool otpVerificado, DateTimeOffset ahora,
+        string? dispositivo = null, string? ip = null)
     {
         if (string.IsNullOrWhiteSpace(correo))
             throw ReglaDeNegocioException.Validacion("correo-invalido", "La sesión necesita el correo con el que se abrió.");
@@ -64,7 +85,10 @@ public sealed class SesionDeRefresco
             Correo = correo.Trim().ToLowerInvariant(),
             OtpVerificado = otpVerificado,
             CreadaEn = ahora,
-            ExpiraEn = ahora + VidaMaxima
+            ExpiraEn = ahora + VidaMaxima,
+            Dispositivo = Recortar(dispositivo, LongitudMaximaDelDispositivo),
+            Ip = Recortar(ip, 64),
+            UltimoUsoEn = ahora
         };
         return (sesion, sesion.NuevoToken());
     }
@@ -104,6 +128,7 @@ public sealed class SesionDeRefresco
         }
 
         RotadaEn = ahora;
+        UltimoUsoEn = ahora;
         Rotaciones++;
         return new ResultadoRenovacion(true, NuevoToken());
     }
@@ -116,6 +141,12 @@ public sealed class SesionDeRefresco
 
         RevocadaEn = ahora;
         MotivoRevocacion = motivo;
+    }
+
+    private static string? Recortar(string? texto, int maximo)
+    {
+        var limpio = texto?.Trim();
+        return string.IsNullOrEmpty(limpio) ? null : limpio.Length > maximo ? limpio[..maximo] : limpio;
     }
 
     private string NuevoToken()

@@ -1,3 +1,4 @@
+import { accesoAislado, sesiones } from './es-CO-acceso';
 import { ficha } from './es-CO-ficha';
 import { camposFicha, fichaObservada, ratificarSeccion, seccionEnExpediente } from './es-CO-ficha-empresas';
 import { declaracionPep } from './es-CO-ficha-pep';
@@ -33,6 +34,7 @@ export const esCO = {
     ficha: 'Mi información',
     privacidad: 'Privacidad',
     salir: 'Salir',
+    accesos: 'Accesos por aprobar',
   },
   embebido: {
     esperando: 'Conectando con tu sistema…',
@@ -539,6 +541,8 @@ export const esCO = {
   ficha: { ...ficha, observada: fichaObservada, campos: camposFicha, pep: declaracionPep },
   privacidad,
   notificaciones,
+  accesoAislado,
+  sesiones,
   dev: {
     titulo: 'Correos de desarrollo (Mailpit)',
     sub: 'Solo en desarrollo: lee las invitaciones y los códigos sin salir de la app.',
@@ -671,6 +675,14 @@ export const esCO = {
     'no-autenticado': 'Tu sesión terminó. Abre de nuevo el enlace de tu correo.',
     'demasiadas-peticiones': 'Hicimos demasiadas solicitudes seguidas. Espera un minuto e inténtalo de nuevo.',
     'estado-invalido': 'Esto ya no se puede hacer: el estado cambió. Recarga la página.',
+    // Acceso aislado y alcance de la sesión.
+    'acceso-aislado': 'Tu acceso está pendiente de que un contacto del tercero lo apruebe: esto aún no está a tu alcance.',
+    'acceso-rechazado': 'Los contactos del tercero rechazaron el acceso de este correo. Pide a la empresa que te invite con otro correo.',
+    'acceso-propio': 'Nadie decide sobre su propio acceso: lo decide otro contacto del tercero.',
+    'alcance-de-sesion': 'Esta sesión se abrió para una parte de Validasoft y no alcanza lo que pides.',
+    'solicitud-no-encontrada': 'Esa solicitud de acceso ya no existe. Recarga la página.',
+    'solicitud-ya-aprobada': 'Ese correo ya es contacto de tu empresa: no se puede rechazar.',
+    'sesion-no-encontrada': 'Esa sesión ya se cerró o venció. Recarga la página.',
     'expediente-no-observado': 'La empresa ya no espera tu respuesta: el estado cambió.',
     'version-ya-confirmada': 'Esta versión ya quedó registrada.',
     'carga-desactualizada': 'Empezaste otra subida de este documento. Usa la más reciente.',

@@ -3,6 +3,7 @@ import { EsqueletoTarjetas, EstadoVacio } from '@validasoft/ui';
 import { Plus, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SeccionSesiones } from '../accesos/SeccionSesiones';
 import { useVinculosPublicos } from '../shared/api';
 import { CabeceraPagina, ErrorRecuperable } from '../shared/componentes';
 import { useSolicitudesHabeas } from './api';
@@ -26,6 +27,7 @@ export function PaginaPrivacidad() {
     <>
       <CabeceraPagina titulo={t('privacidad.titulo')} sub={t('privacidad.sub')} />
       <Stack spacing={3}>
+        <SeccionSesiones />
         <SeccionExportacion />
 
         <Box component="section" aria-labelledby="privacidad-solicitudes">

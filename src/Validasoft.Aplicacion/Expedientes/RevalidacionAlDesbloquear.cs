@@ -49,7 +49,7 @@ public static class RevalidarVinculoDesbloqueadoHandler
         sesion.SetHeader("actorId", mensaje.ActorId);
 
         var vinculo = await sesion.LoadAsync<Vinculo>(mensaje.VinculoId, ct);
-        if (vinculo is not { InvitacionAceptada: true } || vinculo.Estado is EstadoVinculo.Bloqueado or EstadoVinculo.Desvinculado or EstadoVinculo.Anulado)
+        if (vinculo is not { InvitacionAceptada: true, BovedaDisponible: true } || vinculo.Estado is EstadoVinculo.Bloqueado or EstadoVinculo.Desvinculado or EstadoVinculo.Anulado)
             return;
 
         var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);

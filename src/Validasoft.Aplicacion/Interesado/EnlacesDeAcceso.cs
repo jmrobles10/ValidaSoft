@@ -63,10 +63,10 @@ public static class EnlacesDeAcceso
     /// Sesión del tercero: incluye los vínculos de ese tercero cuyo correo de invitación coincide con el del enlace, en
     /// todos los tenants (consulta entre tenants de Marten). Canjear solo abre sesión: no comparte nada (B-1).
     /// </summary>
-    public static async Task<SesionTerceroDto> AbrirSesionAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
-        bool otpVerificado, DateTimeOffset ahora, CancellationToken ct)
+    public static async Task<SesionTerceroDto> AbrirSesionAsync(ISesiones sesiones, IQuerySession consulta, IEmisorDeSesionesTercero emisor, EnlaceDeAcceso enlace,
+        bool otpVerificado, DateTimeOffset ahora, Guid sesionId, CancellationToken ct)
     {
-        var sesion = await EmitirAccesoAsync(consulta, emisor, enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora, ct);
+        var sesion = await EmitirAccesoAsync(sesiones, consulta, emisor, enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora, sesionId, ct);
         // El enlace sabe de qué vínculo es: la app entra directo a esa invitación (o al expediente observado), aunque el
         // tercero tenga otras pendientes. Antes, con varias, llevaba a «Mis empresas».
         if (enlace.VinculoId is not { } vinculoId || sesion.Vinculos.All(v => v.Id != vinculoId))
@@ -80,11 +80,15 @@ public static class EnlacesDeAcceso
 
     /// <summary>
     /// Access token del tercero con la lista de vínculos <b>calculada ahora</b> (al canjear y en cada renovación, RE-3):
-    /// un vínculo creado después del canje entra en la siguiente renovación.
+    /// un vínculo creado después del canje entra en la siguiente renovación. Con el nivel de acceso también calculado ahora: un correo que no es contacto
+    /// conocido del tercero entra aislado (<see cref="AccesoAislado"/>), y lo que aprueben los contactos llega en la siguiente renovación.
+    /// <paramref name="sesionId"/> es la sesión de refresco de la que sale el token (cerrarla lo corta).
     /// </summary>
-    public static async Task<SesionTerceroDto> EmitirAccesoAsync(IQuerySession consulta, IEmisorDeSesionesTercero emisor, Guid terceroId,
-        string correo, bool otpVerificado, DateTimeOffset ahora, CancellationToken ct)
+    public static async Task<SesionTerceroDto> EmitirAccesoAsync(ISesiones sesiones, IQuerySession consulta, IEmisorDeSesionesTercero emisor, Guid terceroId,
+        string correo, bool otpVerificado, DateTimeOffset ahora, Guid sesionId, CancellationToken ct)
     {
+        var (nivel, tercero) = await AccesoAislado.NivelAsync(sesiones, consulta, terceroId, correo, ct);
+        var aislada = nivel == NivelDeAcceso.Aislado;
         var vinculos = await consulta.Query<Vinculo>()
             .Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.CorreoTercero == correo)
             .OrderBy(v => v.CreadoEn)
@@ -97,10 +101,11 @@ public static class EnlacesDeAcceso
             .ToList();
 
         var (token, expira) = emisor.Emitir(terceroId, correo, otpVerificado,
-            [.. enSesion.Select(x => new VinculoEnSesion(x.Vinculo.Id, x.Empresa.TenantId, x.Empresa.Id))], ahora);
+            [.. enSesion.Select(x => new VinculoEnSesion(x.Vinculo.Id, x.Empresa.TenantId, x.Empresa.Id))], ahora, aislada: aislada, sesionId: sesionId);
 
         return new SesionTerceroDto(token, expira, terceroId, otpVerificado,
-            [.. enSesion.Select(x => new VinculoDeSesionDto(x.Vinculo.Id, x.Empresa.APublica(x.Empresa.Id), x.Vinculo.Estado.ToString()))]);
+            [.. enSesion.Select(x => new VinculoDeSesionDto(x.Vinculo.Id, x.Empresa.APublica(x.Empresa.Id), x.Vinculo.Estado.ToString()))],
+            Aislada: aislada, TerceroEnmascarado: aislada ? AccesoDelTercero.EnmascararNombre(tercero.Nombre) : null);
     }
 
     private static async Task<Dictionary<Guid, Empresa>> CargarEmpresasAsync(IQuerySession consulta, IReadOnlyList<Vinculo> vinculos,

@@ -182,14 +182,15 @@ public static class PlanificadorDeCambios
 }
 
 /// <summary>Lo que el stream de un tercero necesita saber de su sesión: quién es, a qué vínculos tiene acceso y cuándo vence el token.</summary>
-public sealed record AlcanceDelStream(Guid TerceroId, IReadOnlyList<Guid> Vinculos, DateTimeOffset? Vence)
+public sealed record AlcanceDelStream(Guid TerceroId, IReadOnlyList<Guid> Vinculos, DateTimeOffset? Vence, bool SoloVinculos = false)
 {
+    /// <summary>Una sesión aislada solo se entera de lo de sus vínculos: lo que no es de ninguno (la bóveda, la ficha) es del tercero entero.</summary>
     public static AlcanceDelStream De(ClaimsPrincipal usuario)
     {
-        var sesion = SesionDeTercero.De(usuario);
+        var sesion = SesionDeTercero.De(usuario, GrupoDeAcceso.Relacion);
         var exp = usuario.FindFirstValue("exp");
         return new AlcanceDelStream(sesion.TerceroId, [.. sesion.Vinculos.Select(v => v.VinculoId)],
-            long.TryParse(exp, out var segundos) ? DateTimeOffset.FromUnixTimeSeconds(segundos) : null);
+            long.TryParse(exp, out var segundos) ? DateTimeOffset.FromUnixTimeSeconds(segundos) : null, sesion.Aislada);
     }
 }
 
@@ -248,9 +249,11 @@ public static class CambiosEnVivo
     {
         var terceroId = alcance.TerceroId;
         Guid?[] vinculos = [.. alcance.Vinculos.Select(v => (Guid?)v)];
-        return await consulta.Query<AvisoDeCambio>()
-            .Where(a => a.Destino == DestinoDeCambio.Tercero && a.TerceroId == terceroId && a.Orden > desde && (a.VinculoId == null || a.VinculoId.IsOneOf(vinculos)))
-            .OrderBy(a => a.Orden).Take(200).ToListAsync(ct);
+        var avisos = consulta.Query<AvisoDeCambio>().Where(a => a.Destino == DestinoDeCambio.Tercero && a.TerceroId == terceroId && a.Orden > desde);
+        avisos = alcance.SoloVinculos
+            ? avisos.Where(a => a.VinculoId.IsOneOf(vinculos))
+            : avisos.Where(a => a.VinculoId == null || a.VinculoId.IsOneOf(vinculos));
+        return await avisos.OrderBy(a => a.Orden).Take(200).ToListAsync(ct);
     }
 
     /// <summary>Escribe los avisos como eventos <c>cambio</c> (sin <c>id</c>: reanudar no los repite, el cliente refresca todo al reconectar).</summary>

@@ -105,6 +105,16 @@ describe('acciones del vínculo', () => {
     expect(nombres('Anulado')).toEqual([]);
   });
 
+  it('con el acceso del correo rechazado por los contactos del tercero ofrece reinvitar a otro correo aunque ya hubiera aceptado', () => {
+    const rechazado = { estado: 'EnValidacion', invitacionAceptadaEn: '2026-11-01T00:00:00Z', accesoDelCorreo: { estado: 'Rechazado', correo: 'a@b.co', desde: '2026-11-01T00:00:00Z', resueltoEn: null } } as const;
+    expect(accionesDisponibles(rechazado, todos).map((a) => a.accion)).toEqual(['invitar', 'bloquear', 'desvincular', 'anular']);
+    // Pendiente o aprobado, y ya aceptado: no se reinvita; bloqueado o terminal tampoco aunque esté rechazado.
+    expect(accionPermitidaPorEstado('invitar', { ...rechazado, accesoDelCorreo: { ...rechazado.accesoDelCorreo, estado: 'Pendiente' } })).toBe(false);
+    expect(accionPermitidaPorEstado('invitar', { ...rechazado, accesoDelCorreo: { ...rechazado.accesoDelCorreo, estado: 'Aprobado' } })).toBe(false);
+    expect(accionPermitidaPorEstado('invitar', { ...rechazado, estado: 'Bloqueado' })).toBe(false);
+    expect(accionPermitidaPorEstado('invitar', { ...rechazado, estado: 'Anulado' })).toBe(false);
+  });
+
   it('filtra por scopes', () => {
     const soloEscribir = accionesDisponibles({ estado: 'Activo', invitacionAceptadaEn: null }, new Set(['vinculos:escribir']));
     expect(soloEscribir.map((a) => a.accion)).toEqual(['desvincular', 'anular']);

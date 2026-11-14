@@ -173,17 +173,22 @@ public sealed partial class Vinculo
     /// <summary>Solo en <c>Invitado</c> y mientras el tercero no haya aceptado (docs/03 §5.3).</summary>
     public InvitacionEnviada EnviarInvitacion(string? correoDestino, TimeSpan vigencia, Guid? loteId, DateTimeOffset ahora)
     {
-        if (Estado != EstadoVinculo.Invitado)
+        var correo = string.IsNullOrWhiteSpace(correoDestino) ? CorreoTercero : correoDestino.Trim().ToLowerInvariant();
+        // Un correo rechazado por los contactos del tercero se reemplaza invitando a otro, aunque la persona ya hubiera aceptado.
+        var reemplazaAlRechazado = AccesoRechazado && !string.IsNullOrWhiteSpace(correo) &&
+                                   !string.Equals(correo, CorreoTercero, StringComparison.OrdinalIgnoreCase);
+
+        if (Estado is EstadoVinculo.Bloqueado or EstadoVinculo.Desvinculado or EstadoVinculo.Anulado ||
+            (Estado != EstadoVinculo.Invitado && !reemplazaAlRechazado))
             throw ReglaDeNegocioException.Conflicto("estado-invalido",
                 $"Solo se invita un vínculo en estado Invitado; este está {Estado}.");
 
-        if (InvitacionAceptada)
+        if (InvitacionAceptada && !reemplazaAlRechazado)
             throw ReglaDeNegocioException.Conflicto("invitacion-ya-aceptada", "El tercero ya aceptó la invitación de esta empresa.");
 
         if (vigencia <= TimeSpan.Zero || vigencia > TimeSpan.FromDays(30))
             throw ReglaDeNegocioException.Validacion("vigencia-invalida", "La vigencia del enlace debe estar entre 1 hora y 30 días.");
 
-        var correo = string.IsNullOrWhiteSpace(correoDestino) ? CorreoTercero : correoDestino.Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(correo) || !correo.Contains('@'))
             throw ReglaDeNegocioException.Validacion("correo-invitacion-requerido", "Falta un correo válido para la invitación.");
 
@@ -442,6 +447,8 @@ public sealed partial class Vinculo
     public void Apply(InvitacionEnviada e)
     {
         Invitacion = new InvitacionVigente(e.CorreoDestino, e.Expira, (Invitacion?.Envios ?? 0) + 1);
+        if (!string.Equals(CorreoTercero, e.CorreoDestino, StringComparison.OrdinalIgnoreCase))
+            ReiniciarAccesoPorCorreoNuevo();
         CorreoTercero = e.CorreoDestino;
         ActualizadoEn = e.Fecha;
     }

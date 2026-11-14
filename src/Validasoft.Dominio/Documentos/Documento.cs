@@ -154,7 +154,8 @@ public sealed record Comparticion(int Numero, Guid TenantId, Guid EmpresaId, Gui
 /// (<see cref="ExigeElTipo"/>; RQ-3, antes las exigencias por tipo de BO-3).
 /// </summary>
 public sealed record VinculoCandidato(
-    Guid VinculoId, Guid TenantId, Guid EmpresaId, Guid TerceroId, bool InvitacionAceptada, EstadoVinculo Estado, bool ExigeElTipo)
+    Guid VinculoId, Guid TenantId, Guid EmpresaId, Guid TerceroId, bool InvitacionAceptada, EstadoVinculo Estado, bool ExigeElTipo,
+    bool BovedaDisponible = true)
 {
     /// <summary>Desvinculado, bloqueado o anulado: la compartición hacia adelante está congelada (docs/02 §6.1, B-5).</summary>
     public bool Congelado => Estado is EstadoVinculo.Bloqueado or EstadoVinculo.Desvinculado or EstadoVinculo.Anulado;
@@ -203,6 +204,19 @@ public sealed class Documento
     public Guid? TipoDocumentoTenantId { get; set; }
 
     public string NombreTipo { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Documento en cuarentena: lo subió una persona con acceso aislado (su correo no es contacto conocido del tercero) para <b>una</b> empresa. Es
+    /// un <c>PorVinculo</c> con tipo canónico: se comparte solo con su vínculo y nunca es la versión actual de la bóveda global ni se comparte con
+    /// otras empresas, hasta que los contactos del tercero aprueben el acceso y se promueva (<see cref="CuarentenaDeDocumentoResuelta"/>).
+    /// </summary>
+    public bool EnCuarentena { get; set; }
+
+    /// <summary>Cuándo se resolvió la cuarentena (promovido a la bóveda global o dejado solo en el vínculo); nulo mientras siga pendiente.</summary>
+    public DateTimeOffset? CuarentenaResueltaEn { get; set; }
+
+    /// <summary>Documento global al que se promovió la versión en cuarentena; nulo si no se promovió.</summary>
+    public Guid? PromovidoAGlobalId { get; set; }
 
     /// <summary>Solo en <c>PorVinculo</c>: tenant, empresa y vínculo dueños.</summary>
     public Guid? TenantId { get; set; }
@@ -272,6 +286,23 @@ public sealed class Documento
 
         return new DocumentoCreado(Guid.CreateVersion7(), terceroId, AmbitoDocumento.PorVinculo, tipo.Clase, tipo.TipoCanonico, tipo.Id,
             tipo.Nombre, tenantId, empresaId, vinculoId, ahora);
+    }
+
+    /// <summary>
+    /// Documento en cuarentena de un vínculo con acceso aislado: el tipo de la empresa para un canónico <b>global</b> (el que pide su flujo) se guarda
+    /// como un <c>PorVinculo</c> de ese vínculo, no en la bóveda global del tercero. Solo existe para esa empresa (docs/02 §6.1, B-1).
+    /// </summary>
+    public static DocumentoCreado CrearEnCuarentena(Guid terceroId, TipoDocumentoTenant tipo, Guid tenantId, Guid empresaId, Guid vinculoId,
+        DateTimeOffset ahora)
+    {
+        if (tipo.Ambito != AmbitoDocumento.Global || tipo.TipoCanonico is null)
+            throw new InvalidOperationException("Solo un tipo global con canónico pasa por la cuarentena; uno por vínculo se guarda como siempre.");
+        if (tipo.TenantId != tenantId)
+            throw new InvalidOperationException("El tipo de documento es de otro tenant.");
+        AsegurarClaseSoportada(tipo.Clase, tipo.TipoCanonico);
+
+        return new DocumentoCreado(Guid.CreateVersion7(), terceroId, AmbitoDocumento.PorVinculo, tipo.Clase, tipo.TipoCanonico, tipo.Id, tipo.Nombre,
+            tenantId, empresaId, vinculoId, ahora, EnCuarentena: true);
     }
 
     /// <summary>Un canónico global de clase <c>Formulario</c> aún no tiene esquema: 422 <c>clase-no-soportada</c>.</summary>
@@ -500,6 +531,11 @@ public sealed class Documento
         if (Buscar(actual) is { RetenidaPorLey: true })
             return null;
 
+        // Un vínculo con acceso aislado pendiente o rechazado no recibe nada de la bóveda global (el correo invitado no es contacto del tercero);
+        // sí lo suyo: un PorVinculo (también el que está en cuarentena) es solo de ese vínculo.
+        if (Ambito == AmbitoDocumento.Global && !vinculo.BovedaDisponible)
+            return null;
+
         var corresponde = Ambito == AmbitoDocumento.Global ? vinculo.ExigeElTipo : vinculo.VinculoId == VinculoId;
         if (!corresponde || EstaCompartida(actual, vinculo.VinculoId))
             return null;
@@ -509,6 +545,17 @@ public sealed class Documento
 
     public IReadOnlyList<VersionCompartida> CompartirActual(IEnumerable<VinculoCandidato> vinculos, OrigenComparticion origen, DateTimeOffset ahora) =>
         [.. vinculos.Select(v => Compartir(v, origen, ahora)).OfType<VersionCompartida>()];
+
+    /// <summary>
+    /// Cierra la cuarentena de un documento: con la aprobación del acceso se promovió a la bóveda global (o se omitió porque ya había algo igual o
+    /// más reciente); con el rechazo queda solo en el vínculo. Una sola vez: repetir ⇒ nulo. Solo un documento en cuarentena.
+    /// </summary>
+    public CuarentenaDeDocumentoResuelta? ResolverCuarentena(bool promovida, Guid? documentoGlobalId, int? numeroGlobal, string motivo, DateTimeOffset ahora)
+    {
+        if (!EnCuarentena)
+            throw new InvalidOperationException("El documento no está en cuarentena.");
+        return CuarentenaResueltaEn is not null ? null : new CuarentenaDeDocumentoResuelta(promovida, documentoGlobalId, numeroGlobal, motivo, ahora);
+    }
 
     /// <summary>
     /// Se emite una URL de descarga. Una empresa solo descarga versiones compartidas con su vínculo; si no, 404 (T-4).
@@ -579,6 +626,7 @@ public sealed class Documento
             case VersionRatificada e: Apply(e); break;
             case AnalisisDeIaRegistrado e: Apply(e); break;
             case AnalisisDeIaFallido e: Apply(e); break;
+            case CuarentenaDeDocumentoResuelta e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento no aplicable a Documento: {evento.GetType().Name}.");
         }
     }
@@ -594,6 +642,7 @@ public sealed class Documento
         TipoCanonico = e.TipoCanonico,
         TipoDocumentoTenantId = e.TipoDocumentoTenantId,
         NombreTipo = e.NombreTipo,
+        EnCuarentena = e.EnCuarentena,
         TenantId = e.TenantId,
         EmpresaId = e.EmpresaId,
         VinculoId = e.VinculoId,
@@ -798,6 +847,13 @@ public sealed class Documento
                 PendienteRevisionHumana = e.PendienteRevisionHumana,
                 Comparacion = e.ComparacionConAnterior ?? hechos.Comparacion
             };
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(CuarentenaDeDocumentoResuelta e)
+    {
+        CuarentenaResueltaEn = e.Fecha;
+        PromovidoAGlobalId = e.Promovida ? e.DocumentoGlobalId : null;
         ActualizadoEn = e.Fecha;
     }
 

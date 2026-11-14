@@ -87,6 +87,22 @@ public sealed class Tercero
         return normalizado.Length > 0 && Contactos.Any(c => string.Equals(c.Correo.Trim(), normalizado, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>
+    /// Agrega el correo como contacto si aún no lo es (comparación sin mayúsculas ni espacios); <c>true</c> si lo agregó. El nombre es
+    /// el de la persona cuando se conoce; si no, el correo mismo. Lo usa la regla de primer contacto y la aprobación de un acceso.
+    /// </summary>
+    public bool AgregarContacto(string correo, string? nombre, string rol)
+    {
+        var normalizado = (correo ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalizado.Length == 0 || !normalizado.Contains('@'))
+            throw ReglaDeNegocioException.Validacion("correo-invalido", $"El correo '{correo}' del contacto no es válido.");
+        if (TieneContacto(normalizado))
+            return false;
+
+        Contactos.Add(new Contacto(string.IsNullOrWhiteSpace(nombre) ? normalizado : nombre.Trim(), normalizado, null, rol));
+        return true;
+    }
+
     public static Tercero Crear(Identificacion identificacion, TipoPersona tipoPersona, string nombre,
         string? nombreComercial, IEnumerable<Contacto>? contactos, DateTimeOffset ahora)
     {

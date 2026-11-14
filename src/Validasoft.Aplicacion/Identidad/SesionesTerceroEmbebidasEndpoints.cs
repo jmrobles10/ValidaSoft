@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Identidad;
+using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine.Http;
 
@@ -29,13 +30,14 @@ public static class SesionesTerceroEmbebidasEndpoints
     /// <summary>
     /// Abre la sesión (201). 403 <c>sistema-requerido</c> (la llave no es de un sistema integrador), <c>sistema-inactivo</c>,
     /// <c>origen-no-permitido</c> (el origen no está entre los del sistema) y <c>vinculo-ajeno</c> (el vínculo no lleva la referencia del
-    /// sistema); 404 si el vínculo no es de la empresa; 409 <c>invitacion-no-aceptada</c> y <c>vinculo-anulado</c>; 422
-    /// <c>componente-invalido</c>, <c>vigencia-invalida</c> y <c>origen-invalido</c>.
+    /// sistema); 404 si el vínculo no es de la empresa; 409 <c>invitacion-no-aceptada</c>, <c>vinculo-anulado</c> y <c>acceso-rechazado</c>; 422
+    /// <c>componente-invalido</c>, <c>vigencia-invalida</c> y <c>origen-invalido</c>. Si el correo del vínculo no es contacto conocido del tercero (acceso
+    /// aislado) la sesión nace aislada: ve y sube solo lo de ese vínculo, nada de la bóveda global, hasta que un contacto del tercero lo apruebe.
     /// </summary>
     [WolverinePost("/api/v1/sesiones-tercero")]
     [Authorize(Policy = Permisos.SesionesTerceroCrear)]
     public static async Task<IResult> Crear(CrearSesionEmbebidaDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto, IEmisorDeSesionesTercero emisor,
-        OrigenesDeEmbebido origenes, IConfiguration configuracion, TimeProvider reloj, CancellationToken ct)
+        OrigenesDeEmbebido origenes, ISesiones sesiones, IConfiguration configuracion, TimeProvider reloj, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(contexto.Sistema))
             throw ReglaDeNegocioException.Prohibido("sistema-requerido", "Solo la API key de un sistema integrador abre sesiones del tercero.");
@@ -64,10 +66,18 @@ public static class SesionesTerceroEmbebidasEndpoints
         if (!vinculo.InvitacionAceptada)
             throw ReglaDeNegocioException.Conflicto("invitacion-no-aceptada", "El tercero aún no aceptó la invitación de la empresa.");
 
+        if (vinculo.AccesoRechazado)
+            throw ReglaDeNegocioException.Conflicto("acceso-rechazado",
+                "Los contactos del tercero rechazaron el acceso de este correo: invita a otro correo antes de abrir su sesión.");
+
+        // El sistema autentica a la persona, pero eso no la hace contacto del tercero: si su correo no lo es, la sesión nace aislada (solo lo de este vínculo).
+        var (nivel, _) = await AccesoAislado.NivelAsync(sesiones, empresa.Sesion, vinculo.TerceroId, vinculo.CorreoTercero, ct);
+        var aislada = nivel == NivelDeAcceso.Aislado || !vinculo.BovedaDisponible;
+
         // Quien abre la sesión es el sistema que ya autenticó a la persona: equivale a la verificación de identidad (OTP) del enlace.
         var (token, expira) = emisor.Emitir(vinculo.TerceroId, vinculo.CorreoTercero, otpVerificado: true,
             [new VinculoEnSesion(vinculo.Id, contexto.TenantRequerido(), vinculo.EmpresaId)], reloj.GetUtcNow(),
-            new EmbebidoDeSesion(sistema.Codigo, origen, componente, vigencia, sistema.Generacion));
+            new EmbebidoDeSesion(sistema.Codigo, origen, componente, vigencia, sistema.Generacion), aislada);
 
         var url = $"{(configuracion["Validasoft:Correo:UrlPublica"] ?? string.Empty).TrimEnd('/')}/embed/{componente}";
         return Results.Created(url, new SesionEmbebidaDto(token, expira, url, origen, componente, vinculo.Id, vinculo.TerceroId));
@@ -82,7 +92,7 @@ public static class SesionActualDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<SesionTerceroDto> Actual(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.SinAlcance(http.User);
         var autorizacion = http.Request.Headers.Authorization.ToString();
         var token = autorizacion.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? autorizacion["Bearer ".Length..].Trim() : string.Empty;
         var expira = long.TryParse(http.User.FindFirstValue("exp"), NumberStyles.None, CultureInfo.InvariantCulture, out var segundos)
@@ -91,7 +101,9 @@ public static class SesionActualDelTerceroEndpoints
 
         await using var consulta = sesiones.ConsultaGlobal();
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
+        var delTercero = tercero.Aislada ? await consulta.LoadAsync<Tercero>(tercero.TerceroId, ct) : null;
         return new SesionTerceroDto(token, expira, tercero.TerceroId, tercero.OtpVerificado,
-            [.. vistos.Select(v => new VinculoDeSesionDto(v.Vinculo.Id, v.Empresa.APublica(v.Vinculo.EmpresaId), v.Vinculo.Estado.ToString()))]);
+            [.. vistos.Select(v => new VinculoDeSesionDto(v.Vinculo.Id, v.Empresa.APublica(v.Vinculo.EmpresaId), v.Vinculo.Estado.ToString()))],
+            Aislada: tercero.Aislada, TerceroEnmascarado: delTercero is null ? null : AccesoDelTercero.EnmascararNombre(delTercero.Nombre));
     }
 }

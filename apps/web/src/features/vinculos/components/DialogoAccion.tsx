@@ -35,7 +35,9 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
   const mutacion = useAccionVinculo(empresaId);
   const tercero = useTercero(vinculo.terceroId);
   const { accion, requiere, destructiva } = definicion;
-  const [texto, setTexto] = useState(requiere === 'correo' ? (vinculo.invitacion?.correoDestino ?? vinculo.correoTercero) : '');
+  // Con el correo rechazado por los contactos del tercero hay que invitar a otro: no se propone el mismo.
+  const correoRechazado = vinculo.accesoDelCorreo?.estado === 'Rechazado';
+  const [texto, setTexto] = useState(requiere === 'correo' && !correoRechazado ? (vinculo.invitacion?.correoDestino ?? vinculo.correoTercero) : '');
   const [hasta, setHasta] = useState('');
   const [vigencia, setVigencia] = useState(72);
   const [confirmacion, setConfirmacion] = useState('');

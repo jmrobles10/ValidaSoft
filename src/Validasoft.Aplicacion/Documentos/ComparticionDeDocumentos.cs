@@ -50,7 +50,7 @@ public static class ComparticionDeDocumentos
                 continue;
 
             var destino = new VinculoCandidato(vinculo.Id, tenantId, vinculo.EmpresaId, terceroId, InvitacionAceptada: true, vinculo.Estado,
-                ExigeElTipo: pedido);
+                ExigeElTipo: pedido, vinculo.BovedaDisponible);
             if (candidato.Compartir(destino, origen, ahora) is null)
             {
                 resultado.Add(candidato);
@@ -127,7 +127,7 @@ public static class ComparticionDeDocumentos
             return propio is null
                 ? []
                 : [new VinculoCandidato(propio.Id, documento.TenantId!.Value, propio.EmpresaId, propio.TerceroId, propio.InvitacionAceptada,
-                    propio.Estado, ExigeElTipo: false)];
+                    propio.Estado, ExigeElTipo: false, propio.BovedaDisponible)];
         }
 
         var vinculos = await consulta.Query<Vinculo>()
@@ -145,7 +145,7 @@ public static class ComparticionDeDocumentos
             .. vinculos
                 .Where(v => empresas.ContainsKey(v.EmpresaId))
                 .Select(v => new VinculoCandidato(v.Id, empresas[v.EmpresaId].TenantId, v.EmpresaId, v.TerceroId, v.InvitacionAceptada, v.Estado,
-                    piden.Contains(v.Id)))
+                    piden.Contains(v.Id), v.BovedaDisponible))
         ];
     }
 }

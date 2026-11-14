@@ -76,7 +76,7 @@ public static class Revalidacion
     public static async Task<Ampliacion?> AmpliarAsync(IDocumentSession sesion, Expediente expediente, DateTimeOffset ahora, CancellationToken ct)
     {
         if (expediente is not { Tipo: TipoExpediente.Actualizacion, EstaAbierto: true, Flujo: { } delExpediente } ||
-            await sesion.LoadAsync<Vinculo>(expediente.VinculoId, ct) is not { InvitacionAceptada: true } vinculo ||
+            await sesion.LoadAsync<Vinculo>(expediente.VinculoId, ct) is not { InvitacionAceptada: true, BovedaDisponible: true } vinculo ||
             await sesion.LoadAsync<Flujo>(delExpediente.FlujoId, ct) is not { } flujo ||
             flujo.Versiones.FirstOrDefault(v => v.Id == delExpediente.FlujoVersionId) is not { } version ||
             await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct) is not { } tercero ||

@@ -250,6 +250,8 @@ public sealed record ActualizarContactosDto(IReadOnlyList<ContactoDeEmpresaDto> 
 /// <c>Actualizacion</c> sigue abierto (abierto, en revisión u observado). <b>No cambia <see cref="Estado"/></b> (sigue <c>Activo</c>,
 /// <c>PorVencer</c> o <c>Vencido</c>, igual que el certificado y la vigencia): es lo que la pantalla muestra como «En revisión» y
 /// lo que filtra <c>GET /vinculos?enRevision=</c>. <see cref="ExpedienteAbiertoId"/> es ese expediente.
+/// <see cref="AccesoDelCorreo"/>: si el correo invitado no es contacto conocido de un tercero que ya existía, en qué va la decisión de sus contactos
+/// (acceso aislado); nulo si el correo es de confianza.
 /// </summary>
 public sealed record VinculoDto(
     Guid Id,
@@ -275,7 +277,8 @@ public sealed record VinculoDto(
     IReadOnlyList<ContactoDeEmpresaDto>? Contactos = null,
     DateOnly? VigenteHasta = null,
     bool EnRevision = false,
-    ActualizacionNoAprobadaDto? ActualizacionNoAprobada = null);
+    ActualizacionNoAprobadaDto? ActualizacionNoAprobada = null,
+    AccesoDelCorreoDto? AccesoDelCorreo = null);
 
 /// <summary>
 /// La última actualización del vínculo no se aprobó (VR-13): <see cref="Resultado"/> es <c>Rechazado</c> o <c>Anulado</c>, <see cref="Fecha"/> cuándo se
@@ -336,10 +339,13 @@ public sealed record VinculoDeSesionDto(Guid Id, EmpresaPublicaDto Empresa, stri
 /// <see cref="VinculoOrigen"/>: el vínculo del enlace canjeado (la invitación de esa empresa) y
 /// <see cref="ExpedienteOrigen"/>: su expediente abierto si el enlace vino en un correo de observación. La app del tercero
 /// entra directo ahí aunque tenga otras invitaciones.
+/// <see cref="Aislada"/>: el correo no es contacto conocido de un tercero que ya existía; la sesión ve y sube solo lo de la relación con la empresa que lo
+/// invitó, hasta que un contacto del tercero apruebe el acceso. <see cref="TerceroEnmascarado"/> es el nombre del tercero con sus letras tapadas (es lo
+/// único que se le dice a quien aún no está aprobado).
 /// </summary>
 public sealed record SesionTerceroDto(
     string AccessToken, DateTimeOffset Expira, Guid TerceroId, bool OtpVerificado, IReadOnlyList<VinculoDeSesionDto> Vinculos,
-    Guid? ExpedienteOrigen = null, Guid? VinculoOrigen = null);
+    Guid? ExpedienteOrigen = null, Guid? VinculoOrigen = null, bool Aislada = false, string? TerceroEnmascarado = null);
 
 /// <summary>Respuesta 202 del canje cuando el enlace exige OTP: el código llegó al correo y vence en <see cref="Expira"/>.</summary>
 public sealed record OtpRequeridoDto(bool RequiereOtp, DateTimeOffset Expira);

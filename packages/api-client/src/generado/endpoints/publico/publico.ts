@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccesoSolicitadoDto,
   AceptarInvitacionDto,
   ActualizarContactosDto,
   ActualizarPreferenciasNotificacionDto,
@@ -66,12 +67,14 @@ import type {
   PaginaDtoOfEntradaCatalogoDto,
   PreferenciasNotificacionDto,
   PropuestaDeSeccionDto,
+  RechazarAccesoDto,
   ReenviarExpedienteDto,
   RegistrarCuentaBancariaDto,
   RetirarVersionDto,
   RetiroDto,
   SeccionFichaDto,
   SeccionGuardadaDto,
+  SesionActivaDto,
   SesionTerceroDto,
   SolicitarAccesoDto,
   SolicitudHabeasDto,
@@ -872,7 +875,213 @@ export function useStreamNotificacionesTercero<TData = Awaited<ReturnType<typeof
 
 
 
-export const canjearEnlace = (
+export const listarAccesosSolicitados = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<AccesoSolicitadoDto[]>(
+      {url: `/public/v1/accesos-solicitados`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListarAccesosSolicitadosQueryKey = () => {
+    return [
+    `/public/v1/accesos-solicitados`
+    ] as const;
+    }
+
+
+export const getListarAccesosSolicitadosQueryOptions = <TData = Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarAccesosSolicitadosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarAccesosSolicitados>>> = ({ signal }) => listarAccesosSolicitados(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarAccesosSolicitadosQueryResult = NonNullable<Awaited<ReturnType<typeof listarAccesosSolicitados>>>
+export type ListarAccesosSolicitadosQueryError = ErrorType<void>
+
+
+export function useListarAccesosSolicitados<TData = Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarAccesosSolicitados>>,
+          TError,
+          Awaited<ReturnType<typeof listarAccesosSolicitados>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarAccesosSolicitados<TData = Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarAccesosSolicitados>>,
+          TError,
+          Awaited<ReturnType<typeof listarAccesosSolicitados>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarAccesosSolicitados<TData = Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarAccesosSolicitados<TData = Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarAccesosSolicitados>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarAccesosSolicitadosQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const aprobarAccesoSolicitado = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<AccesoSolicitadoDto>(
+      {url: `/public/v1/accesos-solicitados/${id}/aprobar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getAprobarAccesoSolicitadoMutationKey = () => ['aprobarAccesoSolicitado'] as const;
+
+export const getAprobarAccesoSolicitadoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aprobarAccesoSolicitado>>, TError,AprobarAccesoSolicitadoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof aprobarAccesoSolicitado>>, TError,AprobarAccesoSolicitadoMutationVariables, TContext> => {
+
+const mutationKey = getAprobarAccesoSolicitadoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aprobarAccesoSolicitado>>, AprobarAccesoSolicitadoMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  aprobarAccesoSolicitado(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AprobarAccesoSolicitadoMutationResult = NonNullable<Awaited<ReturnType<typeof aprobarAccesoSolicitado>>>
+
+    export type AprobarAccesoSolicitadoMutationError = ErrorType<void>
+    export type AprobarAccesoSolicitadoMutationVariables = {id: string}
+
+    export const useAprobarAccesoSolicitado = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aprobarAccesoSolicitado>>, TError,AprobarAccesoSolicitadoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof aprobarAccesoSolicitado>>,
+        TError,
+        AprobarAccesoSolicitadoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAprobarAccesoSolicitadoMutationOptions(options), queryClient);
+    }
+    export const rechazarAccesoSolicitado = (
+    id: string,
+    rechazarAccesoDto: BodyType<RechazarAccesoDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<AccesoSolicitadoDto>(
+      {url: `/public/v1/accesos-solicitados/${id}/rechazar`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: rechazarAccesoDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getRechazarAccesoSolicitadoMutationKey = () => ['rechazarAccesoSolicitado'] as const;
+
+export const getRechazarAccesoSolicitadoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rechazarAccesoSolicitado>>, TError,RechazarAccesoSolicitadoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof rechazarAccesoSolicitado>>, TError,RechazarAccesoSolicitadoMutationVariables, TContext> => {
+
+const mutationKey = getRechazarAccesoSolicitadoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rechazarAccesoSolicitado>>, RechazarAccesoSolicitadoMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rechazarAccesoSolicitado(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RechazarAccesoSolicitadoMutationResult = NonNullable<Awaited<ReturnType<typeof rechazarAccesoSolicitado>>>
+    export type RechazarAccesoSolicitadoMutationBody = BodyType<RechazarAccesoDto>
+    export type RechazarAccesoSolicitadoMutationError = ErrorType<void>
+    export type RechazarAccesoSolicitadoMutationVariables = {id: string;data: BodyType<RechazarAccesoDto>}
+
+    export const useRechazarAccesoSolicitado = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rechazarAccesoSolicitado>>, TError,RechazarAccesoSolicitadoMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rechazarAccesoSolicitado>>,
+        TError,
+        RechazarAccesoSolicitadoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRechazarAccesoSolicitadoMutationOptions(options), queryClient);
+    }
+    export const canjearEnlace = (
     token: string,
  options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
 ) => {
@@ -1285,6 +1494,150 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAutorregistrarTerceroMutationOptions(options), queryClient);
+    }
+    export const listarSesionesDelTercero = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<SesionActivaDto[]>(
+      {url: `/public/v1/sesiones`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListarSesionesDelTerceroQueryKey = () => {
+    return [
+    `/public/v1/sesiones`
+    ] as const;
+    }
+
+
+export const getListarSesionesDelTerceroQueryOptions = <TData = Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListarSesionesDelTerceroQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listarSesionesDelTercero>>> = ({ signal }) => listarSesionesDelTercero(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListarSesionesDelTerceroQueryResult = NonNullable<Awaited<ReturnType<typeof listarSesionesDelTercero>>>
+export type ListarSesionesDelTerceroQueryError = ErrorType<void>
+
+
+export function useListarSesionesDelTercero<TData = Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarSesionesDelTercero>>,
+          TError,
+          Awaited<ReturnType<typeof listarSesionesDelTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSesionesDelTercero<TData = Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listarSesionesDelTercero>>,
+          TError,
+          Awaited<ReturnType<typeof listarSesionesDelTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSesionesDelTercero<TData = Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListarSesionesDelTercero<TData = Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listarSesionesDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListarSesionesDelTerceroQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const cerrarSesionDelTercero = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<void>(
+      {url: `/public/v1/sesiones/${id}/cerrar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getCerrarSesionDelTerceroMutationKey = () => ['cerrarSesionDelTercero'] as const;
+
+export const getCerrarSesionDelTerceroMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cerrarSesionDelTercero>>, TError,CerrarSesionDelTerceroMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof cerrarSesionDelTercero>>, TError,CerrarSesionDelTerceroMutationVariables, TContext> => {
+
+const mutationKey = getCerrarSesionDelTerceroMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cerrarSesionDelTercero>>, CerrarSesionDelTerceroMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  cerrarSesionDelTercero(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CerrarSesionDelTerceroMutationResult = NonNullable<Awaited<ReturnType<typeof cerrarSesionDelTercero>>>
+
+    export type CerrarSesionDelTerceroMutationError = ErrorType<unknown>
+    export type CerrarSesionDelTerceroMutationVariables = {id: string}
+
+    export const useCerrarSesionDelTercero = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cerrarSesionDelTercero>>, TError,CerrarSesionDelTerceroMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cerrarSesionDelTercero>>,
+        TError,
+        CerrarSesionDelTerceroMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCerrarSesionDelTerceroMutationOptions(options), queryClient);
     }
     export const renovarSesionTercero = (
 

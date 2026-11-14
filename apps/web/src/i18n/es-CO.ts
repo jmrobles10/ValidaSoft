@@ -174,6 +174,23 @@ export const esCO = {
     errorLista: 'No pudimos cargar los vínculos.',
     abrir: 'Abrir vínculo de {{tercero}}',
     terceroDesconocido: 'Tercero sin acceso',
+    accesoDelCorreo: {
+      Pendiente: {
+        titulo: 'El acceso de {{correo}} espera la aprobación del tercero',
+        texto:
+          '{{correo}} no es un contacto conocido de este tercero. Mientras un contacto del tercero no lo apruebe, esa persona solo ve y sube lo de su relación con tu empresa: ' +
+          'no se comparte con tu empresa nada de la bóveda ni de la información del tercero y lo que suba queda solo en este vínculo. Ya avisamos a los contactos del tercero (desde el {{fecha}}).',
+      },
+      Aprobado: {
+        titulo: 'El tercero aprobó el acceso de {{correo}}',
+        texto: 'El {{fecha}} un contacto del tercero aprobó a {{correo}}: desde entonces el vínculo recibe lo que el tercero ya comparte con tu empresa, como cualquier otro.',
+      },
+      Rechazado: {
+        titulo: 'El tercero rechazó el acceso de {{correo}}',
+        texto:
+          'El {{fecha}} los contactos del tercero rechazaron ese correo: su sesión se cerró y no vuelve a entrar. Invita a otro correo con «Reenviar invitación» para que la persona correcta acepte y entre.',
+      },
+    },
     actualizacionNoAprobada: {
       ver: 'Ver el expediente',
       rechazada: {
@@ -378,6 +395,9 @@ export const esCO = {
     invitacion_enviada: 'Invitación enviada',
     invitacion_aceptada: 'Invitación aceptada',
     consentimientos_registrados: 'Consentimientos registrados',
+    acceso_aislado_solicitado: 'Acceso del correo pendiente de aprobación',
+    acceso_aislado_aprobado: 'Acceso del correo aprobado por el tercero',
+    acceso_aislado_rechazado: 'Acceso del correo rechazado por el tercero',
     atributos_de_vinculo_actualizados: 'Atributos actualizados',
     vinculo_bloqueado: 'Vínculo bloqueado',
     vinculo_desbloqueado: 'Vínculo desbloqueado',

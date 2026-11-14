@@ -42,11 +42,18 @@ public static class FichaTerceroEndpoints
         if (tercero is null || propios.Count == 0)
             throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero en la empresa.");
 
-        // Secciones vigentes de la ficha maestra (FM-20): con terceros:leer y vínculo con la empresa activa (ya comprobado).
-        IReadOnlyList<SeccionFichaDto> secciones;
-        await using (var boveda = sesiones.ConsultaBoveda())
+        // Secciones vigentes de la ficha maestra (FM-20): con terceros:leer y vínculo con la empresa activa (ya comprobado). Si todos sus vínculos tienen el acceso
+        // aislado pendiente o rechazado (el correo invitado no es contacto del tercero), la ficha global del tercero no se le comparte: ni sus secciones ni sus contactos.
+        var sinAccesoALaBoveda = propios.All(v => !v.BovedaDisponible);
+        IReadOnlyList<SeccionFichaDto> secciones = [];
+        if (!sinAccesoALaBoveda)
+        {
+            await using var boveda = sesiones.ConsultaBoveda();
             secciones = await Ficha.FichaMaestraEndpoints.VigentesAsync(boveda, id, ct);
-        secciones = await ConAceptacionesAsync(empresa, propios, secciones, ct);
+            secciones = await ConAceptacionesAsync(empresa, propios, secciones, ct);
+        }
+
+        var terceroDto = sinAccesoALaBoveda && tercero.CreadoPorTenant != contexto.TenantId ? tercero.ADto() with { Contactos = [] } : tercero.ADto();
 
         var veVinculos = contexto.Scopes.Contains(Permisos.VinculosLeer);
         var otras = veVinculos
@@ -56,7 +63,7 @@ public static class FichaTerceroEndpoints
                 .ToList()
             : [];
         if (!veVinculos)
-            return new FichaTerceroDto(tercero.ADto(), [], otras, secciones);
+            return new FichaTerceroDto(terceroDto, [], otras, secciones);
 
         var tipos = (await empresa.Sesion.LoadManyAsync<TipoVinculo>(ct, propios.Select(v => v.TipoVinculoId).Distinct().ToArray()))
             .ToDictionary(t => t.Id);
@@ -90,7 +97,7 @@ public static class FichaTerceroEndpoints
                 await CuentaDesignadaEndpoints.DtoAsync(empresa, vinculo, contexto, campos, ct), compartidos));
         }
 
-        return new FichaTerceroDto(tercero.ADto(), vinculos, otras, secciones);
+        return new FichaTerceroDto(terceroDto, vinculos, otras, secciones);
     }
 
     /// <summary>

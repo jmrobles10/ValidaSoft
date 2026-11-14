@@ -160,7 +160,7 @@ public static class SolicitudesHabeasDelTerceroEndpoints
     public static async Task<IResult> Crear(CrearSolicitudHabeasDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
         IProtectorDeDatosDelTercero protector, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad);
         if (!Enum.TryParse<TipoDeSolicitudHabeas>(dto.Tipo, true, out var tipo) || !Enum.IsDefined(tipo))
             throw ReglaDeNegocioException.Validacion("tipo-invalido", "El derecho solicitado es Consulta, Correccion o Supresion.");
         AlcanceDeSupresion? alcance = null;
@@ -251,7 +251,7 @@ public static class SolicitudesHabeasDelTerceroEndpoints
     public static async Task<IReadOnlyList<SolicitudHabeasDto>> Listar(HttpContext http, ISesiones sesiones, IProtectorDeDatosDelTercero protector, TimeProvider reloj,
         CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad);
         await using var consulta = sesiones.ConsultaBoveda();
         var propias = await consulta.Query<SolicitudHabeas>().Where(s => s.TerceroId == tercero.TerceroId).OrderByDescending(s => s.RecibidaEn).ToListAsync(ct);
         var nombres = await ServicioDeSolicitudesHabeas.NombresDeEmpresasAsync(sesiones, propias.Where(s => s.EmpresaId is not null).Select(s => s.EmpresaId!.Value), ct);
@@ -267,7 +267,7 @@ public static class SolicitudesHabeasDelTerceroEndpoints
     public static async Task<SolicitudHabeasDto> Obtener(Guid id, HttpContext http, ISesiones sesiones, IProtectorDeDatosDelTercero protector, TimeProvider reloj,
         CancellationToken ct)
     {
-        var solicitud = await CargarAsync(id, SesionDeTercero.De(http.User), sesiones, ct);
+        var solicitud = await CargarAsync(id, SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad), sesiones, ct);
         var nombres = await ServicioDeSolicitudesHabeas.NombresDeEmpresasAsync(sesiones, solicitud.EmpresaId is { } e ? [e] : [], ct);
         return await ServicioDeSolicitudesHabeas.ADtoAsync(solicitud, protector, NombreDelDestino(solicitud, nombres), CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()), false, ct);
     }
@@ -280,7 +280,7 @@ public static class SolicitudesHabeasDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ConstanciaHabeasDto> Constancia(Guid id, HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var solicitud = await CargarAsync(id, SesionDeTercero.De(http.User), sesiones, ct);
+        var solicitud = await CargarAsync(id, SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad), sesiones, ct);
         return solicitud is { ConstanciaJson: { } json, ConstanciaHash: { } hash }
             ? ServicioDeSolicitudesHabeas.ADto(ConstanciaDeSolicitud.Leer(json), hash)
             : throw ReglaDeNegocioException.Conflicto("solicitud-sin-resolver", "La solicitud todavía no tiene respuesta.");

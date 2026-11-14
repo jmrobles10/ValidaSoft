@@ -3,6 +3,7 @@ import { CampanaDeNotificaciones } from '@validasoft/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
+import { useSesionTercero } from '../sesion/sesionTercero';
 import { mensajeDeError } from '../shared/errores';
 import { useAvisos } from '../shared/useAvisos';
 import { useBandejaDelTercero, useMarcarLeida, useMarcarTodas } from './api';
@@ -24,6 +25,7 @@ export function Campana() {
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
   const [preferencias, setPreferencias] = useState(false);
   const estado = useStreamDelTercero();
+  const aislada = useSesionTercero((s) => s.sesion?.aislada === true);
   const consulta = useBandejaDelTercero(estado === 'respaldo');
   const marcarLeida = useMarcarLeida();
   const marcarTodas = useMarcarTodas();
@@ -63,10 +65,14 @@ export function Campana() {
               onError: (error) => mostrar(mensajeDeError(error, t), 'error'),
             })
           }
-          onPreferencias={() => {
-            setAncla(null);
-            setPreferencias(true);
-          }}
+          onPreferencias={
+            aislada
+              ? undefined
+              : () => {
+                  setAncla(null);
+                  setPreferencias(true);
+                }
+          }
         />
       </CampanaDeNotificaciones>
       {preferencias && <DialogoPreferencias onCerrar={() => setPreferencias(false)} />}

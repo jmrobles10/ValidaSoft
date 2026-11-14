@@ -28,7 +28,7 @@ public static class CuentasPublicasEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IReadOnlyList<CuentaBancariaPublicaDto>> Listar(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
         await using var boveda = sesiones.ConsultaBoveda();
         var terceroId = tercero.TerceroId;
         var cuentas = await boveda.Query<CuentaBancaria>().Where(c => c.TerceroId == terceroId).OrderBy(c => c.RegistradaEn).ToListAsync(ct);
@@ -42,7 +42,7 @@ public static class CuentasPublicasEndpoints
     public static async Task<Created<CuentaBancariaPublicaDto>> Registrar(RegistrarCuentaBancariaDto dto, HttpContext http, ISesiones sesiones, IProtectorDeSecretos protector,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
         var datos = new DatosDeCuentaBancaria(dto.Pais, dto.Banco, dto.TipoCuenta, dto.Numero, dto.Titular, dto.IdentificacionTitular, dto.Moneda,
             dto.BancoCodigo, dto.BancoSwift, dto.ContactoPagos is null ? null : new ContactoDePagos(dto.ContactoPagos.Nombre, dto.ContactoPagos.Correo, dto.ContactoPagos.Telefono));
         // El banco se toma del catálogo de plataforma (IO-4): su nombre, su código de compensación y, si el tercero no lo dio, su SWIFT.
@@ -69,7 +69,7 @@ public static class CuentasPublicasEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<CuentaBancariaPublicaDto> Retirar(Guid id, HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
         await using var consulta = sesiones.ConsultaGlobal();
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
         if (vistos.Any(v => v.Vinculo.CuentaDesignada?.Cuenta.CuentaId == id || v.Vinculo.CuentaPropuesta?.Cuenta.CuentaId == id))
@@ -94,7 +94,7 @@ public static class CuentasPublicasEndpoints
     public static async Task<CuentaBancariaPublicaDto> Designar(Guid id, DesignarCuentaDto dto, HttpContext http, ISesiones sesiones, IProtectorDeSecretos protector,
         IProtectorDeCamposDelGrupo campos, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.CuentaDesignada);
         var enSesion = tercero.VinculoRequerido(id);
         CuentaBancaria cuenta;
         await using (var boveda = sesiones.ConsultaBoveda())

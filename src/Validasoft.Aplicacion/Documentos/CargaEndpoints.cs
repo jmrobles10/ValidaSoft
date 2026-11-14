@@ -20,7 +20,7 @@ namespace Validasoft.Aplicacion.Documentos;
 /// </summary>
 internal sealed record DestinoDeCarga(
     string ClaveNatural, Func<DateTimeOffset, DocumentoCreado> Crear, string Bucket, Guid? ContextoVinculoId, ReglasDeArchivo Reglas,
-    TipoDocumentoTenant? Tipo);
+    TipoDocumentoTenant? Tipo, bool EnCuarentena = false);
 
 /// <summary>
 /// Carga en dos pasos por el tercero (docs/05 §2.9, docs/07 §6.1). El API nunca recibe los bytes: el paso 1 reserva la
@@ -42,7 +42,9 @@ public static class CargaEndpoints
     public static async Task<IResult> Iniciar(IniciarCargaDto dto, HttpContext http, ISesiones sesiones, IAlmacenDeArchivos almacen,
         ReglasDeCarga reglas, Validasoft.Aplicacion.Plataforma.ControlDePlan plan, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Subida);
+        // Un token embebido de un expediente solo sube para el vínculo con el que se emitió.
+        tercero.ExigirVinculoDelToken(dto.VinculoId);
         var nombre = CargaDeDocumento.NormalizarNombre(dto.NombreArchivo);
         var sha256 = CargaDeDocumento.NormalizarSha256(dto.Sha256);
         var mime = (dto.TipoMime ?? string.Empty).Trim().ToLowerInvariant();
@@ -52,8 +54,9 @@ public static class CargaEndpoints
 
         var destino = await ResolverDestinoAsync(dto.TipoCanonico, dto.TipoDocumentoTenantId, dto.VinculoId, tercero, sesiones, reglas, ct);
         destino.Reglas.ValidarDeclarado(mime, dto.TamanoBytes);
-        // Un documento propio de una empresa cuenta para el almacenamiento de su grupo: con el bloqueo suave y el límite alcanzado no se cargan más (OD-17).
-        if (destino.Tipo is { Ambito: AmbitoDocumento.PorVinculo } && tercero.Vinculos.FirstOrDefault(v => v.VinculoId == destino.ContextoVinculoId) is { } propio)
+        // Un documento propio de una empresa (o el que está en su cuarentena) cuenta para el almacenamiento de su grupo: con el bloqueo suave y el límite alcanzado no se cargan más (OD-17).
+        if ((destino.Tipo is { Ambito: AmbitoDocumento.PorVinculo } || destino.EnCuarentena) &&
+            tercero.Vinculos.FirstOrDefault(v => v.VinculoId == destino.ContextoVinculoId) is { } propio)
             await plan.ExigirAsync(propio.TenantId, Validasoft.Dominio.Plataforma.MetricaDePlan.Almacenamiento, dto.TamanoBytes, ct);
         var datos = DatosDelArchivo(destino.Tipo, dto, reloj);
 
@@ -126,17 +129,19 @@ public static class CargaEndpoints
     public static async Task<ConfirmacionCargaDto> Confirmar(Guid documentoId, int numero, HttpContext http, ISesiones sesiones,
         IContextoSolicitud contexto, IMessageBus mensajes, IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Subida);
         var ahora = reloj.GetUtcNow();
 
         await using var sesion = sesiones.Boveda(mensajes);
         var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
-        var documento = BovedaEndpoints.DelTercero(stream.Aggregate, tercero);
+        var documento = BovedaEndpoints.DelTercero(stream.Aggregate, tercero, paraSubida: true);
 
         var carga = await sesion.Query<CargaDeDocumento>()
             .Where(c => c.DocumentoId == documentoId && c.Numero == numero && c.Estado == EstadoCarga.Pendiente)
             .OrderByDescending(c => c.CreadaEn)
             .FirstOrDefaultAsync(ct);
+        if (carga is not null)
+            tercero.ExigirVinculoDelToken(carga.ContextoVinculoId);
         if (carga is null || carga.TerceroId != tercero.TerceroId)
             throw documento.Buscar(numero) is not null
                 ? ReglaDeNegocioException.Conflicto("version-ya-confirmada", $"La versión {numero} ya se confirmó.")
@@ -328,6 +333,9 @@ public static class CargaEndpoints
         }
 
         var terceroId = tercero.TerceroId;
+        if (tercero.Aislada && (tipoTenant is null || tipoTenant.Ambito == AmbitoDocumento.Global))
+            return await DestinoEnCuarentenaAsync(consulta, tercero, enSesion, tipoTenant, terceroId, reglas, ct);
+
         if (tipoTenant is null || tipoTenant.Ambito == AmbitoDocumento.Global)
         {
             var canonico = CatalogoCanonico.Requerido(tipoTenant?.TipoCanonico ?? tipoCanonico);
@@ -354,6 +362,34 @@ public static class CargaEndpoints
             ClavesDeAlmacen.BucketDeTenant(propio.TenantId), vinculo.Id,
             tipo.ReglasEfectivas(reglas.TamanoMaximoBytes, reglas.MaximoPaginas), tipo);
     }
+
+    /// <summary>
+    /// Lo que sube una sesión aislada para un documento global no va a la bóveda del tercero: va a la <b>cuarentena</b> del vínculo, un documento
+    /// <c>PorVinculo</c> con el tipo que la empresa pide (docs/02 §6.1). Se comparte solo con esa empresa, nunca es la versión actual global ni llega a otras
+    /// empresas, hasta que un contacto del tercero apruebe el acceso. Necesita el vínculo y que la empresa pida ese tipo.
+    /// </summary>
+    private static async Task<DestinoDeCarga> DestinoEnCuarentenaAsync(IQuerySession consulta, SesionDeTercero tercero, VinculoEnSesion? enSesion,
+        TipoDocumentoTenant? tipoDeLaEmpresa, Guid terceroId, ReglasDeCarga reglas, CancellationToken ct)
+    {
+        if (enSesion is null)
+            throw ReglaDeNegocioException.Validacion("vinculo-requerido",
+                "Tu acceso está pendiente de aprobación: indica el vínculo (empresa) al que subes el documento.");
+        var tipo = tipoDeLaEmpresa ?? throw ReglaDeNegocioException.Validacion("tipo-documento-invalido",
+            "La empresa no pide ese documento: mientras tu acceso esté pendiente solo subes lo que ella te pidió.");
+        Documento.AsegurarClaseSoportada(tipo.Clase, tipo.TipoCanonico ?? tipo.Codigo);
+
+        var vinculoPropio = enSesion.VinculoId;
+        var vinculo = await consulta.Query<Vinculo>().Where(v => v.AnyTenant() && v.Id == vinculoPropio).FirstOrDefaultAsync(ct);
+        if (vinculo is null || vinculo.TerceroId != terceroId)
+            throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo.");
+        if (vinculo.Estado is EstadoVinculo.Anulado or EstadoVinculo.Desvinculado)
+            throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se cargan documentos a un vínculo {vinculo.Estado}.");
+
+        return new DestinoDeCarga(Documento.ClavePorVinculo(vinculo.Id, tipo.Id),
+            ahora => Documento.CrearEnCuarentena(terceroId, tipo, enSesion.TenantId, enSesion.EmpresaId, vinculo.Id, ahora),
+            ClavesDeAlmacen.BucketDeTenant(enSesion.TenantId), vinculo.Id,
+            tipo.ReglasEfectivas(reglas.TamanoMaximoBytes, reglas.MaximoPaginas), tipo, EnCuarentena: true);
+    }
 }
 
 /// <summary>
@@ -375,7 +411,8 @@ public static class FormulariosEndpoints
     public static async Task<ConfirmacionCargaDto> Enviar(EnviarFormularioDto dto, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
         IMessageBus mensajes, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Subida);
+        tercero.ExigirVinculoDelToken(dto.VinculoId);
         if (dto.TipoDocumentoTenantId is null && string.IsNullOrWhiteSpace(dto.TipoCanonico))
             throw ReglaDeNegocioException.Validacion("tipo-documento-requerido", "Indica el tipo de documento de la empresa.");
 
@@ -401,7 +438,7 @@ public static class FormulariosEndpoints
 
             await using var sesion = sesiones.Boveda(mensajes);
             var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
-            var documento = BovedaEndpoints.DelTercero(stream.Aggregate, tercero);
+            var documento = BovedaEndpoints.DelTercero(stream.Aggregate, tercero, paraSubida: true);
 
             if (documento.DetectarDuplicado(datos.Hash, ahora, datos.Hash) is { } duplicado)
             {

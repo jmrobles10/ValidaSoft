@@ -79,6 +79,7 @@ function montar(solicitudes: SolicitudHabeasDto[], exportaciones: ExportacionBov
       if (metodo === 'GET') {
         if (url.pathname.includes('/solicitudes-habeas')) return Promise.resolve(json(200, solicitudes));
         if (url.pathname.includes('/exportaciones')) return Promise.resolve(json(200, exportaciones));
+        if (url.pathname.includes('/sesiones')) return Promise.resolve(json(200, []));
         return Promise.resolve(json(200, [VINCULO]));
       }
       const peticion: Peticion = { metodo, url, cuerpo: typeof init?.body === 'string' ? (JSON.parse(init.body) as unknown) : null };

@@ -10,7 +10,8 @@ export interface PanelNotificacionesProps {
   onReintentar: () => void;
   onAbrir: (notificacion: NotificacionTerceroDto) => void;
   onMarcarTodas: () => void;
-  onPreferencias: () => void;
+  /** Sin él no se ofrecen las preferencias (son del tercero entero: una sesión aislada no las alcanza). */
+  onPreferencias?: () => void;
 }
 
 /**
