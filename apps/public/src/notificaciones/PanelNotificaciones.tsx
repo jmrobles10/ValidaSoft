@@ -13,7 +13,8 @@ export interface PanelNotificacionesProps {
   onReintentar: () => void;
   onAbrir: (notificacion: NotificacionTerceroDto) => void;
   onMarcarTodas: () => void;
-  onPreferencias: () => void;
+  /** Sin él no se ofrecen las preferencias (son del tercero entero: una sesión aislada no las alcanza). */
+  onPreferencias?: () => void;
 }
 
 /** Contenido del panel de la campana: cabecera con acciones, lista (o esqueleto, error o vacío) y aviso al pie. */
@@ -31,11 +32,13 @@ export function PanelNotificaciones({ bandeja, cargando, error, onReintentar, on
         <Button size="small" variant="text" onClick={onMarcarTodas} disabled={noLeidas === 0} sx={{ whiteSpace: 'nowrap', minHeight: 32 }}>
           {t('notificaciones.marcarTodas')}
         </Button>
-        <Tooltip title={t('notificaciones.preferencias.abrir')}>
-          <IconButton size="small" aria-label={t('notificaciones.preferencias.abrir')} onClick={onPreferencias}>
-            <Settings size={18} strokeWidth={1.75} />
-          </IconButton>
-        </Tooltip>
+        {onPreferencias && (
+          <Tooltip title={t('notificaciones.preferencias.abrir')}>
+            <IconButton size="small" aria-label={t('notificaciones.preferencias.abrir')} onClick={onPreferencias}>
+              <Settings size={18} strokeWidth={1.75} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         {cargando && !bandeja ? (

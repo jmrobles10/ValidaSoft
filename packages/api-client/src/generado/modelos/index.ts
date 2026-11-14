@@ -6,6 +6,8 @@
  */
 
 export * from './abrirExpedienteDto';
+export * from './accesoDelCorreoDto';
+export * from './accesoSolicitadoDto';
 export * from './accesoSoporteConcedidoDto';
 export * from './accesoSoporteDto';
 export * from './aceptacionDeSeccionDto';
@@ -206,6 +208,7 @@ export * from './empresaDelCertificadoDto';
 export * from './empresaDeSandboxDto';
 export * from './empresaDto';
 export * from './empresaPublicaDto';
+export * from './empresaQueInvitoDto';
 export * from './empresaResumenDto';
 export * from './enlaceInvitacionDto';
 export * from './entidadAuditadaDto';
@@ -450,6 +453,7 @@ export * from './publicarTextoLegalDto';
 export * from './reabrirExpedienteDto';
 export * from './reautenticacionDto';
 export * from './recalculoFichasDto';
+export * from './rechazarAccesoDto';
 export * from './rechazarExpedienteDto';
 export * from './rechazarPorCumplimientoDto';
 export * from './rechazoDto';
@@ -544,6 +548,7 @@ export * from './seccionGuardadaDto';
 export * from './seccionRespaldadaDto';
 export * from './seccionSincronizadaDto';
 export * from './secretosPorTipoDto';
+export * from './sesionActivaDto';
 export * from './sesionDeUsuarioDto';
 export * from './sesionDirectaDto';
 export * from './sesionTerceroDto';

@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
-import { PaginaEntrar, PaginaNoEncontrada, RequiereSesion } from '../sesion/PaginasSesion';
+import { PaginaEntrar, PaginaNoEncontrada, RequiereAccesoCompleto, RequiereSesion } from '../sesion/PaginasSesion';
 import { Shell } from './Shell';
 
 /**
@@ -22,13 +22,21 @@ const rutas: RouteObject[] = [
         children: [
           { path: 'empresas', lazy: () => import('../vinculos/PaginaEmpresas').then((m) => ({ Component: m.PaginaEmpresas })) },
           { path: 'empresas/:vinculoId', lazy: () => import('../invitacion/PaginaInvitacion').then((m) => ({ Component: m.PaginaInvitacion })) },
-          { path: 'boveda', lazy: () => import('../boveda/PaginaBoveda').then((m) => ({ Component: m.PaginaBoveda })) },
+          // Subir lo que pide una empresa es de la relación con ella: también lo alcanza una sesión aislada.
           { path: 'boveda/subir', lazy: () => import('../boveda/PaginaSubir').then((m) => ({ Component: m.PaginaSubir })) },
-          { path: 'ficha', lazy: () => import('../ficha/PaginaFicha').then((m) => ({ Component: m.PaginaFicha })) },
-          { path: 'ficha/:seccion', lazy: () => import('../ficha/PaginaSeccion').then((m) => ({ Component: m.PaginaSeccion })) },
-          { path: 'cuentas', lazy: () => import('../cuentas/PaginaCuentas').then((m) => ({ Component: m.PaginaCuentas })) },
-          // Habeas data y exportación firmada de la bóveda (OD-1, OD-9).
-          { path: 'privacidad', lazy: () => import('../privacidad/PaginaPrivacidad').then((m) => ({ Component: m.PaginaPrivacidad })) },
+          {
+            // Lo del tercero entero: una sesión aislada (su correo aún no es contacto) vuelve a «Mis empresas».
+            element: <RequiereAccesoCompleto />,
+            children: [
+              { path: 'accesos', lazy: () => import('../accesos/PaginaAccesos').then((m) => ({ Component: m.PaginaAccesos })) },
+              { path: 'boveda', lazy: () => import('../boveda/PaginaBoveda').then((m) => ({ Component: m.PaginaBoveda })) },
+              { path: 'ficha', lazy: () => import('../ficha/PaginaFicha').then((m) => ({ Component: m.PaginaFicha })) },
+              { path: 'ficha/:seccion', lazy: () => import('../ficha/PaginaSeccion').then((m) => ({ Component: m.PaginaSeccion })) },
+              { path: 'cuentas', lazy: () => import('../cuentas/PaginaCuentas').then((m) => ({ Component: m.PaginaCuentas })) },
+              // Habeas data y exportación firmada de la bóveda (OD-1, OD-9), y sus sesiones abiertas.
+              { path: 'privacidad', lazy: () => import('../privacidad/PaginaPrivacidad').then((m) => ({ Component: m.PaginaPrivacidad })) },
+            ],
+          },
           { path: 'expediente/:id', lazy: () => import('../expediente/PaginaExpediente').then((m) => ({ Component: m.PaginaExpediente })) },
         ],
       },

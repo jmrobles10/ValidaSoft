@@ -7,6 +7,8 @@ import { useSesionTercero } from '../sesion/sesionTercero';
 import { Shell } from './Shell';
 
 vi.mock('../notificaciones/Campana', () => ({ Campana: () => null }));
+// El aviso de «accesos por aprobar» pregunta a la API (se prueba aparte, con su propio cliente).
+vi.mock('../accesos/AvisosDeAcceso', async (original) => ({ ...(await original<typeof import('../accesos/AvisosDeAcceso')>()), AvisoDeAccesosPorAprobar: () => null }));
 vi.mock('../embebido/usePuenteEmbebido', () => ({ usePuenteEmbebido: () => undefined }));
 
 function montar(ruta: string) {
@@ -58,6 +60,30 @@ describe('Shell del tercero: la marca', () => {
     expect(pie.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // El nombre «Validasoft» del logotipo es solo el de la barra: el ícono del pie no lo repite a los lectores de pantalla.
     expect(within(pie).queryByRole('img', { name: 'Validasoft' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Shell del tercero con acceso aislado', () => {
+  const aislada = { accessToken: 't', expira: '2099-01-01T00:00:00Z', terceroId: 'ter', otpVerificado: false, vinculos: [], aislada: true, terceroEnmascarado: 'P••••• N•••' };
+
+  it('la barra solo ofrece «Mis empresas» (la bóveda, la información, las cuentas y la privacidad son del tercero entero) y avisa que el acceso espera aprobación', () => {
+    useSesionTercero.setState({ estado: 'activa', sesion: aislada });
+    montar('/empresas');
+
+    const barra = screen.getByRole('banner');
+    expect(within(barra).getByRole('link', { name: 'Mis empresas' })).toBeInTheDocument();
+    for (const oculta of ['Mi bóveda', 'Mi información', 'Mis cuentas', 'Privacidad']) expect(within(barra).queryByRole('link', { name: oculta })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Tu acceso está pendiente de que un contacto de P••••• N••• lo apruebe.');
+    const inferior = document.querySelector('.MuiBottomNavigation-root');
+    expect([...(inferior?.querySelectorAll('.MuiBottomNavigationAction-label') ?? [])].map((r) => r.textContent)).toEqual(['Mis empresas']);
+  });
+
+  it('con acceso completo la barra trae las cinco secciones y ningún aviso', () => {
+    useSesionTercero.setState({ estado: 'activa', sesion: { ...aislada, aislada: false, terceroEnmascarado: null } });
+    montar('/empresas');
+
+    expect(within(screen.getByRole('banner')).getAllByRole('link').map((l) => l.textContent)).toEqual(['Mi bóveda', 'Mis empresas', 'Mi información', 'Mis cuentas', 'Privacidad']);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 

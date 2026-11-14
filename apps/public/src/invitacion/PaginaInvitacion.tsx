@@ -5,6 +5,7 @@ import { CircleCheck, CirclePause, CircleSlash, FileClock, SearchX } from 'lucid
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Link as RouterLink, useParams } from 'react-router';
+import { useSesionTercero } from '../sesion/sesionTercero';
 import { useAceptarInvitacion, useInvitacion } from '../shared/api';
 import { useAvisos } from '../shared/useAvisos';
 import { CabeceraPagina, ErrorRecuperable, EsqueletoTarjetas } from '../shared/componentes';
@@ -22,6 +23,7 @@ export function PaginaInvitacion() {
   const consulta = useInvitacion(vinculoId);
   const aceptacion = useAceptarInvitacion(vinculoId);
   const mostrar = useAvisos((s) => s.mostrar);
+  const aislada = useSesionTercero((s) => s.sesion?.aislada === true);
   const [marcados, setMarcados] = useState<Set<string>>(new Set());
   const [intentado, setIntentado] = useState(false);
 
@@ -158,6 +160,7 @@ export function PaginaInvitacion() {
         <Typography sx={{ color: 'text.secondary', fontSize: 14 }}>
           {t('invitacion.ayudaAceptar', { empresa })}
         </Typography>
+        {aislada && <Alert severity="info">{t('accesoAislado.aviso.enInvitacion', { empresa })}</Alert>}
         <Button type="submit" variant="contained" size="large" fullWidth disabled={aceptacion.isPending}>
           {t('invitacion.aceptar')}
         </Button>

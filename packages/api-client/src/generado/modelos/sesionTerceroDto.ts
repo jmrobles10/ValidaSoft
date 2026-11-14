@@ -16,4 +16,7 @@ export interface SesionTerceroDto {
   expedienteOrigen?: string | null;
   /** @nullable */
   vinculoOrigen?: string | null;
+  aislada?: boolean;
+  /** @nullable */
+  terceroEnmascarado?: string | null;
 }

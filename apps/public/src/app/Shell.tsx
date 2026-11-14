@@ -3,6 +3,7 @@ import { Logo } from '@validasoft/ui';
 import { Building2, FolderCheck, IdCard, Landmark, LogOut, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, Link as RouterLink, useLocation } from 'react-router';
+import { AvisoDeAccesoAislado, AvisoDeAccesosPorAprobar } from '../accesos/AvisosDeAcceso';
 import { Campana } from '../notificaciones/Campana';
 import { MODO_EMBEBIDO } from '../embebido/modo';
 import { usePuenteEmbebido } from '../embebido/usePuenteEmbebido';
@@ -49,6 +50,7 @@ export function Shell() {
 function ShellEmbebido() {
   return (
     <Box component="main" sx={{ bgcolor: 'background.default', px: { xs: 1.5, sm: 2 }, py: { xs: 1.5, sm: 2 }, maxWidth: 960, mx: 'auto' }}>
+      <AvisoDeAccesoAislado />
       <Outlet />
     </Box>
   );
@@ -58,8 +60,11 @@ function ShellNormal() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const activa = useSesionTercero((s) => s.estado === 'activa');
+  // Con acceso aislado solo existe lo de la relación con la empresa: la bóveda, la información, las cuentas y la privacidad son del tercero entero.
+  const aislada = useSesionTercero((s) => s.sesion?.aislada === true);
   const salir = useSesionTercero((s) => s.salir);
-  const actual = SECCIONES.find((s) => pathname.startsWith(s.ruta))?.ruta ?? (pathname.startsWith('/expediente') ? '/empresas' : false);
+  const secciones = aislada ? SECCIONES.filter((s) => s.ruta === '/empresas') : SECCIONES;
+  const actual = secciones.find((s) => pathname.startsWith(s.ruta))?.ruta ?? (pathname.startsWith('/expediente') ? '/empresas' : false);
   // La verificación del certificado es pública: quien escanea el QR no es el tercero.
   const verificando = pathname.startsWith('/verificar/');
   // Una sección de Mi información lleva el panel de secciones a la izquierda: la página se ensancha.
@@ -80,7 +85,7 @@ function ShellNormal() {
           <Box sx={{ flex: 1 }} />
           {activa && (
             <Stack component="nav" aria-label={t('nav.secciones')} direction="row" spacing={0.5} sx={{ display: { xs: 'none', md: 'flex' } }}>
-              {SECCIONES.map((s) => (
+              {secciones.map((s) => (
                 <Button
                   key={s.ruta}
                   component={RouterLink}
@@ -104,6 +109,8 @@ function ShellNormal() {
       </Box>
 
       <Box component="main" sx={{ flex: 1, width: '100%', maxWidth: ancha ? 1160 : 880, mx: 'auto', px: { xs: 1.5, sm: 3 }, pt: { xs: 1.5, sm: 2.5 }, pb: activa ? { xs: 12, md: 4 } : 4 }}>
+        {activa && <AvisoDeAccesoAislado />}
+        {activa && <AvisoDeAccesosPorAprobar />}
         <Outlet />
       </Box>
 
@@ -124,7 +131,7 @@ function ShellNormal() {
           sx={{ display: { xs: 'block', md: 'none' }, position: 'fixed', insetInline: 0, bottom: 0, borderTop: 1, borderColor: 'divider', zIndex: 10, pb: 'env(safe-area-inset-bottom)', bgcolor: 'background.paper' }}
         >
           <BottomNavigation showLabels value={actual} sx={{ height: 64, bgcolor: 'transparent' }}>
-            {SECCIONES.map((s) => (
+            {secciones.map((s) => (
               <BottomNavigationAction
                 key={s.ruta}
                 component={RouterLink}

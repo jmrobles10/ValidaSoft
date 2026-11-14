@@ -1,10 +1,11 @@
-import { Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { FaltaParaEnviar } from '@validasoft/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CamposFormulario } from '../formulario/CamposFormulario';
 import { camposDe, valoresIniciales } from '../formulario/formulario';
 import { useFormulario } from '../formulario/useFormulario';
+import { useSesionTercero } from '../sesion/sesionTercero';
 import { useBoveda, type RequisitoEnContexto } from '../shared/api';
 import { CabeceraPagina, EsqueletoTarjetas } from '../shared/componentes';
 import { modoDe, reglasDe } from '../tipoDocumento/reglas';
@@ -25,8 +26,10 @@ export function SubirArchivo({ parametros, delRequisito }: { parametros: URLSear
   const documentoId = parametros.get('documento');
   const fijo = destinoFijo(parametros);
   const volver = rutaSegura(parametros.get('volver'));
-  const boveda = useBoveda();
+  // Solo se lee la bóveda para resubir sobre un documento suyo: subir lo que pide una empresa no la necesita (y una sesión aislada no la alcanza).
+  const boveda = useBoveda(Boolean(documentoId));
   const [tipoElegido, setTipoElegido] = useState(parametros.get('tipo') ?? '');
+  const aislada = useSesionTercero((s) => s.sesion?.aislada === true);
   const { estado, subir, cancelar, reiniciar } = useSubida();
   const tipoRequisito = delRequisito?.requisito.tipoDocumento ?? null;
   const campos = modoDe(tipoRequisito) === 'ArchivoYFormulario' ? camposDe(tipoRequisito) : [];
@@ -60,6 +63,7 @@ export function SubirArchivo({ parametros, delRequisito }: { parametros: URLSear
         sub={tipoRequisito?.textoAyuda ?? undefined}
       />
       <Stack spacing={2}>
+        {aislada && empresa !== '' && <Alert severity="info">{t('accesoAislado.aviso.enSubida', { empresa })}</Alert>}
         {!existente && !fijo && (
           <TextField
             select

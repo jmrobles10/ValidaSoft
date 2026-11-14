@@ -120,6 +120,10 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
         detalle: t('historial.invitacion', { correo: texto(campo(datos, 'correoDestino')) ?? '', expira: expira ? formatearFecha(expira) : '—' }),
       };
     }
+    case 'acceso_aislado_solicitado':
+    case 'acceso_aislado_aprobado':
+    case 'acceso_aislado_rechazado':
+      return { ...base, detalle: texto(campo(datos, 'correo')) };
     case 'vinculo_bloqueado': {
       const hasta = texto(campo(datos, 'hasta'));
       return {

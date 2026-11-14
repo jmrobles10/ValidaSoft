@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AccesoDelCorreoDto } from './accesoDelCorreoDto';
 import type { ActualizacionNoAprobadaDto } from './actualizacionNoAprobadaDto';
 import type { BloqueoDto } from './bloqueoDto';
 import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
@@ -46,4 +47,5 @@ export interface VinculoDto {
   vigenteHasta?: string | null;
   enRevision?: boolean;
   actualizacionNoAprobada?: null | ActualizacionNoAprobadaDto;
+  accesoDelCorreo?: null | AccesoDelCorreoDto;
 }

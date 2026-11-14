@@ -24,6 +24,15 @@ export function RequiereSesion() {
   return <PaginaAcceso motivo={estado} />;
 }
 
+/**
+ * Rutas del tercero entero (su bóveda, su información, sus cuentas, su privacidad y sus accesos): una sesión aislada —su correo aún no es contacto del tercero— no
+ * las alcanza y vuelve a «Mis empresas», donde está lo de su relación con la empresa que la invitó. La API las rechaza igual (403).
+ */
+export function RequiereAccesoCompleto() {
+  const aislada = useSesionTercero((s) => s.sesion?.aislada === true);
+  return aislada ? <Navigate to="/empresas" replace /> : <Outlet />;
+}
+
 /** `/entrar`: la entrada con correo; con sesión, directo a Mis empresas. */
 export function PaginaEntrar() {
   const estado = useSesionTercero((s) => s.estado);

@@ -64,7 +64,8 @@ export function useAceptarInvitacion(vinculoId: string) {
   });
 }
 
-export const useBoveda = () => useQuery(getObtenerBovedaQueryOptions());
+/** La bóveda del tercero. Con `habilitado` falso no se pide (una sesión aislada o un token embebido de un expediente no la alcanzan: responde 403). */
+export const useBoveda = (habilitado = true) => useQuery({ ...getObtenerBovedaQueryOptions(), enabled: habilitado });
 
 export const useDocumentoBoveda = (documentoId: string, habilitado: boolean) =>
   useQuery({ ...getObtenerDocumentoBovedaQueryOptions(documentoId), enabled: habilitado });
