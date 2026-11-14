@@ -58,7 +58,7 @@ public sealed class AvisoDeVencimiento
     public static string Clave(Guid terceroId, DateOnly fecha) => $"{terceroId:N}|{fecha:yyyy-MM-dd}";
 }
 
-/// <summary>Cuándo se dispara cada mensaje: avisos a las 13:00 UTC (8:00 en Colombia); vencimientos a las 05:00 UTC del día siguiente a la gracia.</summary>
+/// <summary>Cuándo se dispara cada mensaje: avisos a las 8:00 y vencimientos a las 00:00 del día siguiente a la gracia, ambos en la zona de negocio configurada (Bogotá: 13:00 y 05:00 UTC).</summary>
 public static class CalendarioDeVigencias
 {
     public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => CalculadoraDeVigencia.MomentoDeAviso(fecha);
