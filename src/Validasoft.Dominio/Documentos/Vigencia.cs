@@ -73,7 +73,7 @@ public sealed class VigenciaDeVersion
 }
 
 /// <summary>
-/// Cálculo de vigencias en dos capas (docs/02 §8.1, TD-6), en fechas UTC:
+/// Cálculo de vigencias en dos capas (docs/02 §8.1, TD-6), en fechas del calendario del negocio (<see cref="ZonaDeNegocio"/>):
 /// <list type="bullet">
 /// <item>capa 1: <c>fecha_vencimiento</c> declarada (si el tipo la pide y el tercero la llenó);</item>
 /// <item>capa 2: la regla de frescura del tipo — <c>MaxDiasDesdeExpedicion(n)</c> desde <c>fecha_expedicion</c> declarada o, si
@@ -132,11 +132,39 @@ public static class CalculadoraDeVigencia
 
     public static DateOnly? FinDeGracia(DateOnly? vigenteHasta, int diasGracia) => vigenteHasta?.AddDays(Math.Max(0, diasGracia));
 
-    /// <summary>Cuándo se dispara el aviso de una fecha: 13:00 UTC (8:00 en Colombia). Lo usan los documentos y la vigencia del vínculo.</summary>
-    public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => new(fecha.ToDateTime(new TimeOnly(13, 0)), TimeSpan.Zero);
+    /// <summary>Hora local (en la zona de negocio) a la que sale el aviso de una fecha: las 8:00.</summary>
+    public static readonly TimeOnly HoraDeAviso = new(8, 0);
 
-    /// <summary>Cuándo vence lo que terminó su gracia el día <paramref name="finDeGracia"/>: 05:00 UTC del día siguiente.</summary>
-    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia) => new(finDeGracia.AddDays(1).ToDateTime(new TimeOnly(5, 0)), TimeSpan.Zero);
+    /// <summary>
+    /// Cuándo se dispara el aviso de una fecha: las 8:00 de esa fecha en la zona de negocio configurada
+    /// (<c>Validasoft:ZonaHoraria</c>; en Bogotá, 13:00 UTC). Lo usan los documentos y la vigencia del vínculo.
+    /// </summary>
+    public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => MomentoDeAviso(fecha, ZonaDeNegocio);
+
+    /// <summary>El aviso de <paramref name="fecha"/> a las 8:00 de <paramref name="zona"/>.</summary>
+    public static DateTimeOffset MomentoDeAviso(DateOnly fecha, TimeZoneInfo zona) => Instante(fecha, HoraDeAviso, zona);
+
+    /// <summary>
+    /// Cuándo vence lo que terminó su gracia el día <paramref name="finDeGracia"/>: la medianoche (00:00) del día siguiente en la zona de
+    /// negocio configurada (en Bogotá, 05:00 UTC).
+    /// </summary>
+    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia) => MomentoDeVencimiento(finDeGracia, ZonaDeNegocio);
+
+    /// <summary>El vencimiento tras el fin de gracia <paramref name="finDeGracia"/>: las 00:00 del día siguiente en <paramref name="zona"/>.</summary>
+    public static DateTimeOffset MomentoDeVencimiento(DateOnly finDeGracia, TimeZoneInfo zona) => Instante(finDeGracia.AddDays(1), TimeOnly.MinValue, zona);
+
+    /// <summary>
+    /// El instante de una hora de pared en la zona. Una hora que no existe (el salto de la hora de verano) se corre una hora adelante; una
+    /// que se repite (el fin de la hora de verano) toma su primera ocurrencia.
+    /// </summary>
+    private static DateTimeOffset Instante(DateOnly fecha, TimeOnly hora, TimeZoneInfo zona)
+    {
+        var pared = DateTime.SpecifyKind(fecha.ToDateTime(hora), DateTimeKind.Unspecified);
+        if (zona.IsInvalidTime(pared))
+            pared = pared.AddHours(1);
+        var desfase = zona.IsAmbiguousTime(pared) ? zona.GetAmbiguousTimeOffsets(pared).Max() : zona.GetUtcOffset(pared);
+        return new DateTimeOffset(pared, desfase);
+    }
 
     /// <summary>Días de aviso convertidos en fechas (sin repetir, de la más próxima a la más lejana del vencimiento).</summary>
     public static IReadOnlyList<DateOnly> FechasDeAviso(DateOnly vigenteHasta, IEnumerable<int> diasAviso) =>

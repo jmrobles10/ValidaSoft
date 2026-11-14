@@ -40,9 +40,16 @@ public sealed record ResultadoDeAnalisis(string Modelo, HechosExtraidos Hechos, 
 /// fuera del esquema, archivo demasiado grande. <see cref="Motivo"/> es un código estable en kebab-case que va al evento
 /// <c>AnalisisDeIaFallido</c>; el mensaje no lleva contenido del documento ni la llave.
 /// </summary>
-public sealed class AnalisisDeIaException(string motivo, string mensaje, Exception? interna = null) : Exception(mensaje, interna)
+/// <param name="uso">
+/// Tokens que OpenAI reportó en una respuesta que llegó pero no sirvió (incompleta, rechazada, sin texto o fuera del esquema): igual se
+/// factura y el consumo se registra aunque no haya análisis (OC-6). Nulo si la falla ocurrió sin respuesta (HTTP, tiempo agotado, archivo).
+/// </param>
+public sealed class AnalisisDeIaException(string motivo, string mensaje, Exception? interna = null, UsoDeTokens? uso = null) : Exception(mensaje, interna)
 {
     public string Motivo { get; } = motivo;
+
+    /// <summary>Tokens facturados por la respuesta fallida, si la hubo.</summary>
+    public UsoDeTokens? Uso { get; } = uso;
 }
 
 /// <summary>

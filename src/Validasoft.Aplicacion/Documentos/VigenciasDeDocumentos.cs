@@ -36,7 +36,8 @@ public enum EstadoAviso
 
 /// <summary>
 /// Aviso de vencimiento programado para un tercero y una fecha (tenant técnico <c>boveda</c>). Su id es la clave
-/// <c>{tercero}|{fecha}</c>: varias vigencias que avisan el mismo día comparten un solo mensaje y un solo correo.
+/// <c>{tercero}|{fecha}</c>: varias vigencias que avisan el mismo día comparten un solo mensaje y un solo correo. Lleva concurrencia
+/// optimista: aunque la cola procese en paralelo varios mensajes del mismo aviso, solo uno lo marca y envía (OC-1).
 /// </summary>
 public sealed class AvisoDeVencimiento
 {
@@ -57,7 +58,7 @@ public sealed class AvisoDeVencimiento
     public static string Clave(Guid terceroId, DateOnly fecha) => $"{terceroId:N}|{fecha:yyyy-MM-dd}";
 }
 
-/// <summary>Cuándo se dispara cada mensaje: avisos a las 13:00 UTC (8:00 en Colombia); vencimientos a las 05:00 UTC del día siguiente a la gracia.</summary>
+/// <summary>Cuándo se dispara cada mensaje: avisos a las 8:00 y vencimientos a las 00:00 del día siguiente a la gracia, ambos en la zona de negocio configurada (Bogotá: 13:00 y 05:00 UTC).</summary>
 public static class CalendarioDeVigencias
 {
     public static DateTimeOffset MomentoDeAviso(DateOnly fecha) => CalculadoraDeVigencia.MomentoDeAviso(fecha);
@@ -119,7 +120,9 @@ public static class CalcularVigenciasDelDocumentoHandler
                 var clave = AvisoDeVencimiento.Clave(documento.TerceroId, fecha);
                 if (await sesion.LoadAsync<AvisoDeVencimiento>(clave, ct) is not null)
                     continue;
-                sesion.Store(new AvisoDeVencimiento { Id = clave, TerceroId = documento.TerceroId, Fecha = fecha, ProgramadoEn = ahora });
+                // Insert (no Store): si otro cálculo del mismo tercero programó ese día a la vez, este guardado falla completo (incluido el
+                // mensaje programado del outbox) y Wolverine lo reintenta; al volver ya ve el aviso y no programa un segundo mensaje.
+                sesion.Insert(new AvisoDeVencimiento { Id = clave, TerceroId = documento.TerceroId, Fecha = fecha, ProgramadoEn = ahora });
                 await CalendarioDeVigencias.ProgramarAsync(mensajes, new EnviarAvisosDeVencimiento(documento.TerceroId, fecha),
                     CalendarioDeVigencias.MomentoDeAviso(fecha), ahora);
             }
@@ -230,8 +233,8 @@ public static class EnviarAvisosDeVencimientoHandler
 
         await using var sesion = CalendarioDeVigencias.SesionDeBoveda(sesiones, mensajes);
         var clave = AvisoDeVencimiento.Clave(mensaje.TerceroId, mensaje.Fecha);
-        var aviso = await sesion.LoadAsync<AvisoDeVencimiento>(clave, ct)
-                    ?? new AvisoDeVencimiento { Id = clave, TerceroId = mensaje.TerceroId, Fecha = mensaje.Fecha, ProgramadoEn = ahora };
+        var existente = await sesion.LoadAsync<AvisoDeVencimiento>(clave, ct);
+        var aviso = existente ?? new AvisoDeVencimiento { Id = clave, TerceroId = mensaje.TerceroId, Fecha = mensaje.Fecha, ProgramadoEn = ahora };
         if (aviso.Estado != EstadoAviso.Programado)
             return;
 
@@ -285,7 +288,13 @@ public static class EnviarAvisosDeVencimientoHandler
         aviso.Estado = porAvisar.Count > 0 ? EstadoAviso.Enviado : EstadoAviso.SinDocumentos;
         aviso.Documentos = porAvisar.Count;
         aviso.EnviadoEn = ahora;
-        sesion.Store(aviso);
+        // Un solo ganador (OC-1): el aviso tiene concurrencia optimista y el correo, los eventos y el aviso viajan en esta misma transacción
+        // (outbox). Si otro manejador lo marcó mientras este armaba el correo, este guardado falla completo (nada sale) y Wolverine
+        // reintenta el mensaje, que ya encuentra el aviso enviado y no hace nada. Si el aviso no existía se inserta: una clave duplicada también pierde.
+        if (existente is null)
+            sesion.Insert(aviso);
+        else
+            sesion.Store(aviso);
         await sesion.SaveChangesAsync(ct);
     }
 }

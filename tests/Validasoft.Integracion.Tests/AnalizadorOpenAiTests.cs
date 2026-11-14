@@ -143,6 +143,37 @@ public sealed class AnalizadorOpenAiTests
         Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(fueraDeEsquema.ToJsonString(), rut)).Motivo.ShouldBe("fuera-de-esquema");
     }
 
+    [Fact]
+    public void Una_respuesta_que_llega_pero_no_sirve_trae_el_uso_de_tokens_que_OpenAI_facturo()
+    {
+        var rut = EsquemasDeAnalisis.Para("RUT")!;
+        var facturado = new UsoDeTokens(1834, 1024, 412); // el de Respuesta()
+
+        var incompleta = JsonNode.Parse(Respuesta())!;
+        incompleta["status"] = "incomplete";
+        incompleta["incomplete_details"] = new JsonObject { ["reason"] = "max_output_tokens" };
+        Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(incompleta.ToJsonString(), rut)).Uso.ShouldBe(facturado);
+
+        var rechazada = JsonNode.Parse(Respuesta())!;
+        rechazada["output"]![1]!["content"] = new JsonArray(new JsonObject { ["type"] = "refusal", ["refusal"] = "No puedo." });
+        Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(rechazada.ToJsonString(), rut)).Uso.ShouldBe(facturado);
+
+        var sinTexto = JsonNode.Parse(Respuesta())!;
+        sinTexto["output"] = new JsonArray();
+        Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(sinTexto.ToJsonString(), rut)).Uso.ShouldBe(facturado);
+
+        var fueraDeEsquema = JsonNode.Parse(Respuesta())!;
+        fueraDeEsquema["output"]![1]!["content"]![0]!["text"] = "{\"tipoDetectado\":\"RUT\"}";
+        var fuera = Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(fueraDeEsquema.ToJsonString(), rut));
+        (fuera.Motivo, fuera.Uso).ShouldBe(("fuera-de-esquema", facturado));
+
+        // Sin respuesta (no es JSON) o sin tokens reportados no hay nada que registrar.
+        Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar("<html>", rut)).Uso.ShouldBeNull();
+        var sinUso = JsonNode.Parse(incompleta.ToJsonString())!;
+        sinUso.AsObject().Remove("usage");
+        Should.Throw<AnalisisDeIaException>(() => RespuestaDeOpenAi.Interpretar(sinUso.ToJsonString(), rut)).Uso.ShouldBeNull();
+    }
+
     // ---------- cliente HTTP ----------
 
     [Fact]

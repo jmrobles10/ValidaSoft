@@ -215,7 +215,9 @@ public static class SolicitudOpenAi
 /// <summary>
 /// Lee la respuesta de la API Responses: estado <c>completed</c> (si no ⇒ <c>respuesta-incompleta</c>), el texto de
 /// <c>output[].content[]</c> con <c>type: output_text</c> (una negativa ⇒ <c>respuesta-rechazada</c>; sin texto ⇒
-/// <c>respuesta-sin-texto</c>), los hechos según el esquema y el uso de tokens (<c>usage</c>).
+/// <c>respuesta-sin-texto</c>), los hechos según el esquema y el uso de tokens (<c>usage</c>). Una respuesta que llega pero no sirve
+/// (incompleta, rechazada, sin texto o fuera del esquema) igual se factura: su <c>usage</c> viaja en la excepción
+/// (<see cref="AnalisisDeIaException.Uso"/>) para que el consumo se registre (OC-6).
 /// </summary>
 public static class RespuestaDeOpenAi
 {
@@ -235,12 +237,20 @@ public static class RespuestaDeOpenAi
         if (raiz.ValueKind != JsonValueKind.Object)
             throw new AnalisisDeIaException("respuesta-invalida", "La respuesta de OpenAI no tiene la forma esperada.");
 
+        var uso = raiz.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object
+            ? new UsoDeTokens(Numero(usage, "input_tokens"),
+                usage.TryGetProperty("input_tokens_details", out var entrada) && entrada.ValueKind == JsonValueKind.Object ? Numero(entrada, "cached_tokens") : 0,
+                Numero(usage, "output_tokens"))
+            : new UsoDeTokens(0, 0, 0);
+        // Sin tokens reportados no hay nada que registrar: el uso solo viaja en la excepción cuando hubo consumo.
+        var facturado = uso.Entrada > 0 || uso.Salida > 0 ? uso : null;
+
         var estado = Texto(raiz, "status");
         if (estado != "completed")
         {
             var razon = raiz.TryGetProperty("incomplete_details", out var detalle) && detalle.ValueKind == JsonValueKind.Object ? Texto(detalle, "reason") : null;
             throw new AnalisisDeIaException("respuesta-incompleta",
-                $"OpenAI no completó la respuesta (estado {estado ?? "desconocido"}{(razon is null ? string.Empty : $", {razon}")}).");
+                $"OpenAI no completó la respuesta (estado {estado ?? "desconocido"}{(razon is null ? string.Empty : $", {razon}")}).", uso: facturado);
         }
 
         var textos = new List<string>();
@@ -255,7 +265,7 @@ public static class RespuestaDeOpenAi
                     switch (Texto(contenido, "type"))
                     {
                         case "refusal":
-                            throw new AnalisisDeIaException("respuesta-rechazada", "El modelo se negó a analizar el documento.");
+                            throw new AnalisisDeIaException("respuesta-rechazada", "El modelo se negó a analizar el documento.", uso: facturado);
                         case "output_text" when Texto(contenido, "text") is { } texto:
                             textos.Add(texto);
                             break;
@@ -265,14 +275,18 @@ public static class RespuestaDeOpenAi
         }
 
         if (textos.Count == 0)
-            throw new AnalisisDeIaException("respuesta-sin-texto", "La respuesta de OpenAI no trae texto de salida.");
+            throw new AnalisisDeIaException("respuesta-sin-texto", "La respuesta de OpenAI no trae texto de salida.", uso: facturado);
 
-        var hechos = esquema.Interpretar(string.Concat(textos));
-        var uso = raiz.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object
-            ? new UsoDeTokens(Numero(usage, "input_tokens"),
-                usage.TryGetProperty("input_tokens_details", out var entrada) && entrada.ValueKind == JsonValueKind.Object ? Numero(entrada, "cached_tokens") : 0,
-                Numero(usage, "output_tokens"))
-            : new UsoDeTokens(0, 0, 0);
+        HechosExtraidos hechos;
+        try
+        {
+            hechos = esquema.Interpretar(string.Concat(textos));
+        }
+        catch (AnalisisDeIaException e) when (e.Uso is null)
+        {
+            throw new AnalisisDeIaException(e.Motivo, e.Message, e.InnerException, facturado);
+        }
+
         return (hechos, uso, Texto(raiz, "model"));
     }
 

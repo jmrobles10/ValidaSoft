@@ -24,19 +24,27 @@ public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
 
     public IReadOnlyList<SolicitudDeAnalisis> LlamadasCon(string llave) => [.. _llamadas.Where(l => l.Llave == llave).Select(l => l.Solicitud)];
 
-    public Task<ResultadoDeAnalisis> AnalizarAsync(SolicitudDeAnalisis solicitud, string apiKey, CancellationToken ct)
+    /// <summary>Con una llave <c>-lenta-</c> el análisis espera a que se complete (un OpenAI que tarda); las demás llaves responden de una vez.</summary>
+    public TaskCompletionSource? Retencion { get; set; }
+
+    public async Task<ResultadoDeAnalisis> AnalizarAsync(SolicitudDeAnalisis solicitud, string apiKey, CancellationToken ct)
     {
         _llamadas.Enqueue((apiKey, solicitud));
+        if (apiKey.Contains("-lenta-", StringComparison.Ordinal) && Retencion is { } retencion)
+            await retencion.Task.WaitAsync(ct);
         if (apiKey.Contains("-falla-", StringComparison.Ordinal))
             throw new AnalisisDeIaException("http-500", "OpenAI respondió 500.");
+        // La respuesta llegó incompleta: no sirve, pero OpenAI la facturó con sus tokens (OC-6).
+        if (apiKey.Contains("-incompleta-", StringComparison.Ordinal))
+            throw new AnalisisDeIaException("respuesta-incompleta", "OpenAI no completó la respuesta.", uso: new UsoDeTokens(1000, 200, 300));
 
         var confianza = apiKey.Contains("-baja-", StringComparison.Ordinal) && solicitud.Modelo == PlanDeIaEmpresa.ModeloPorDefectoInicial ? 0.5m : 0.97m;
         // F5: un archivo con marcas [[clave=valor]] responde lo que dicen (el mismo lector del analizador simulado).
         if (Validasoft.Infraestructura.IA.AnalizadorSimulado.Marcas(solicitud.Contenido).Count > 0)
         {
             var simulados = Validasoft.Infraestructura.IA.AnalizadorSimulado.Hechos(EsquemasDeAnalisis.Para(solicitud.TipoCanonico)!, solicitud.Contenido);
-            return Task.FromResult(new ResultadoDeAnalisis(solicitud.Modelo, simulados with { Confianza = confianza }, new UsoDeTokens(1000, 200, 300),
-                solicitud.Paginas, 0));
+            return new ResultadoDeAnalisis(solicitud.Modelo, simulados with { Confianza = confianza }, new UsoDeTokens(1000, 200, 300),
+                solicitud.Paginas, 0);
         }
 
         var campos = new Dictionary<string, JsonElement>
@@ -44,8 +52,8 @@ public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
             ["nit"] = JsonSerializer.SerializeToElement(NitExtraido),
             ["razonSocial"] = JsonSerializer.SerializeToElement("Aceros del Norte S.A.S.")
         };
-        return Task.FromResult(new ResultadoDeAnalisis(solicitud.Modelo, new HechosExtraidos(solicitud.TipoCanonico, true, confianza, [], null, campos),
-            new UsoDeTokens(1000, 200, 300), solicitud.Paginas, 0));
+        return new ResultadoDeAnalisis(solicitud.Modelo, new HechosExtraidos(solicitud.TipoCanonico, true, confianza, [], null, campos),
+            new UsoDeTokens(1000, 200, 300), solicitud.Paginas, 0);
     }
 
     /// <summary>«Probar llave» sin red (PT-6): con <c>-rechazada-</c> es inválida; si no, válida. Cuenta las pruebas por llave.</summary>
@@ -246,6 +254,83 @@ public sealed partial class RequisitosApiTests
         await AsentarIaAsync(documentoId, 1);
         fixture.Analizador.LlamadasCon(llave).Count.ShouldBe(1);
         (await UsoIaAsync(norte)).IncluidasConsumidas.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Si_la_respuesta_sale_incompleta_se_registra_su_consumo_aunque_no_haya_analisis_y_no_se_cobra_la_validacion()
+    {
+        var norte = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        var llave = LlaveIa("incompleta");
+        await PlanIaAsync(norte, new ActualizarPlanIaEmpresaDto(10, false, ApiKeyOpenAi: llave));
+        await FlujoConAsync(norte, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(norte, "CLIENTE", correo);
+        var sesion = await SesionAsync(correo);
+        await AceptarAsync(sesion, vinculo.Id);
+
+        var rut = await SubirAsync(sesion, "RUT", Pdf("RUT"));
+        var documentoId = rut.Version.DocumentoId;
+        await EsperarAsync(async () => (await DocumentoDeBovedaAsync(documentoId))?.VersionRequerida(1).FalloIa is not null, "el fallo de IA");
+        await EsperarAsync(async () => (await UsoIaAsync(norte)).TokensEntrada > 0, "el consumo de la respuesta incompleta");
+
+        (await EventosDeBovedaAsync(documentoId)).OfType<AnalisisDeIaFallido>().ShouldHaveSingleItem().Motivo.ShouldBe("respuesta-incompleta");
+        // La llamada se facturó: tokens y costo quedan en el uso de la empresa; el análisis no existe y la validación se devolvió.
+        var uso = await UsoIaAsync(norte);
+        (uso.AnalisisPagados, uso.IncluidasConsumidas, uso.TokensEntrada, uso.CostoUsd).ShouldBe((0, 0, 1000L, CostoLuna));
+        fixture.Analizador.LlamadasCon(llave).Count.ShouldBe(1);
+    }
+
+    /// <summary>
+    /// El análisis de una empresa se queda esperando a OpenAI: su carril de la cola de IA queda ocupado, pero los demás tenants se analizan sin
+    /// esperarla (con la cola secuencial de antes, todos esperaban). Cuatro tenants «sanos»: con 5 carriles, que los cuatro compartan el del lento
+    /// es 1 de cada 625.
+    /// </summary>
+    [Fact]
+    public async Task El_analisis_lento_de_un_tenant_no_frena_el_de_otros_tenants()
+    {
+        var retencion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Analizador.Retencion = retencion;
+        try
+        {
+            var lenta = await EmpresaConIaAsync("lenta");
+            await SubirAsync(lenta.Sesion, "RUT", Pdf("RUT lento"));
+            await EsperarAsync(() => Task.FromResult(fixture.Analizador.LlamadasCon(lenta.Llave).Count == 1), "la llamada lenta a OpenAI");
+
+            var sanas = new List<EmpresaConIa>();
+            for (var n = 0; n < 4; n++)
+            {
+                var sana = await EmpresaConIaAsync("ok");
+                await SubirAsync(sana.Sesion, "RUT", Pdf($"RUT sano {n}"));
+                sanas.Add(sana);
+            }
+
+            // Al menos uno de los otros tenants termina su análisis mientras el lento sigue esperando (nunca lo liberamos antes).
+            var terminadas = sanas.Select(s => EsperarVersionAsync(s.Empresa, s.Vinculo.Id, "RUT", 1, v => v.Hechos!.ConIa)).ToList();
+            var primera = await Task.WhenAny(terminadas).WaitAsync(TimeSpan.FromSeconds(30));
+            (await primera).Hechos!.ConIa.ShouldBeTrue();
+            retencion.Task.IsCompleted.ShouldBeFalse();
+        }
+        finally
+        {
+            retencion.TrySetResult();
+            fixture.Analizador.Retencion = null;
+        }
+    }
+
+    private sealed record EmpresaConIa(Empresa Empresa, VinculoDto Vinculo, SesionTerceroDto Sesion, string Llave);
+
+    /// <summary>Una empresa en su propio tenant con plan de IA y llave (el marcador decide cómo responde el analizador falso), con un tercero que ya aceptó.</summary>
+    private async Task<EmpresaConIa> EmpresaConIaAsync(string marcador)
+    {
+        var empresa = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        var llave = LlaveIa(marcador);
+        await PlanIaAsync(empresa, new ActualizarPlanIaEmpresaDto(10, false, ApiKeyOpenAi: llave));
+        await FlujoConAsync(empresa, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(empresa, "CLIENTE", correo);
+        var sesion = await SesionAsync(correo);
+        await AceptarAsync(sesion, vinculo.Id);
+        return new EmpresaConIa(empresa, vinculo, sesion, llave);
     }
 
     [Fact]

@@ -25,7 +25,7 @@ Los estados son de una **versión**; un documento tiene una versión **Actual** 
 | Actual | Vencida | Pasó `vigenteHasta` más los días de gracia **para todos** los vínculos con vigencia. | Sigue siendo la actual; renovar o ratificar la devuelve a Actual. |
 | Actual, Superada o Vencida | Retirada | El tercero la retira con un motivo. | Si era la actual, la superada más reciente la sustituye; cada empresa que la había aprobado debe revalidar. |
 
-La **vigencia** se calcula por empresa y vínculo: Vigente, Por vencer (llegó un día de aviso), En gracia (pasó la fecha) y Vencida (terminó la gracia); un documento sin fecha ni regla está Sin vencimiento. Los avisos salen a las 13:00 UTC (08:00 en Colombia) y generan los eventos `documento.por_vencer` y `documento.vencido`.
+La **vigencia** se calcula por empresa y vínculo: Vigente, Por vencer (llegó un día de aviso), En gracia (pasó la fecha) y Vencida (terminó la gracia); un documento sin fecha ni regla está Sin vencimiento. Los avisos salen a las 08:00 de la zona horaria configurada (13:00 UTC en Colombia) y generan los eventos `documento.por_vencer` y `documento.vencido`.
 
 ## Vínculo
 
