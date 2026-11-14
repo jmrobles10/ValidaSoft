@@ -9,6 +9,7 @@ import { mensajeDeError } from '../../../shared/errores';
 import { useAvisos } from '../../../shared/useAvisos';
 import { useGuardarTipoVinculo } from './api';
 import { EditorAtributos } from './EditorAtributos';
+import { SelectorDeAprobadores } from './SelectorDeAprobadores';
 import { borradorDeTipo, borradorTipoNuevo, validarTipoVinculo, type BorradorTipoVinculo, type ErrorTipoVinculo } from './modelo';
 
 /**
@@ -102,6 +103,18 @@ export function DrawerTipoVinculo({ tipo, claveIdempotencia, onCerrar }: { tipo:
               control={<Switch checked={b.exigeOtpEnEnlace} onChange={(e) => cambiar({ exigeOtpEnEnlace: e.target.checked })} />}
               label={<TextoInterruptor titulo={t('tiposVinculo.campos.exigeOtp')} ayuda={t('tiposVinculo.campos.exigeOtpAyuda')} />}
             />
+            <FormControlLabel
+              sx={{ alignItems: 'flex-start', mx: 0, '& .MuiSwitch-root': { mt: -0.75 } }}
+              control={<Switch checked={b.requiereAprobacionParaInvitar} onChange={(e) => cambiar({ requiereAprobacionParaInvitar: e.target.checked })} />}
+              label={<TextoInterruptor titulo={t('invitaciones.config.exigeAprobacion')} ayuda={t('invitaciones.config.exigeAprobacionAyuda')} />}
+            />
+            {b.requiereAprobacionParaInvitar && (
+              <SelectorDeAprobadores
+                valor={b.aprobadores}
+                onCambiar={(aprobadores) => cambiar({ aprobadores })}
+                error={tocados.has('aprobadores') && errores.some((e) => e.campo === 'aprobadores') ? t('tiposVinculo.errores.aprobadores-requeridos') : null}
+              />
+            )}
           </Stack>
           <EditorAtributos atributos={b.atributos} onCambiar={(atributos) => cambiar({ atributos })} errorDe={errorAtributo} editando={!creando} />
         </Stack>

@@ -115,6 +115,15 @@ describe('acciones del vínculo', () => {
     expect(accionPermitidaPorEstado('invitar', { ...rechazado, estado: 'Anulado' })).toBe(false);
   });
 
+  it('con la invitación retenida a la espera de aprobación no se envía ni se reenvía; aprobada o rechazada, las reglas de siempre', () => {
+    const retenida = (estado: 'Pendiente' | 'Aprobada' | 'Rechazada') =>
+      ({ estado: 'Invitado', invitacionAceptadaEn: null, invitacionPorAprobar: { estado, correoDestino: 'a@b.co', vigenciaHoras: 72, solicitadaEn: '2026-11-14T00:00:00Z', solicitadaPor: 'Usuario:u1' } }) as const;
+    expect(accionPermitidaPorEstado('invitar', retenida('Pendiente'))).toBe(false);
+    expect(accionesDisponibles(retenida('Pendiente'), todos).map((a) => a.accion)).toEqual(['bloquear', 'desvincular', 'anular']);
+    expect(accionPermitidaPorEstado('invitar', retenida('Aprobada'))).toBe(true);
+    expect(accionPermitidaPorEstado('invitar', { ...retenida('Aprobada'), invitacionAceptadaEn: '2026-11-15T00:00:00Z' })).toBe(false);
+  });
+
   it('filtra por scopes', () => {
     const soloEscribir = accionesDisponibles({ estado: 'Activo', invitacionAceptadaEn: null }, new Set(['vinculos:escribir']));
     expect(soloEscribir.map((a) => a.accion)).toEqual(['desvincular', 'anular']);

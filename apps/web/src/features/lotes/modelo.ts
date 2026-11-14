@@ -7,6 +7,8 @@ export const TONO_LOTE: Readonly<Record<EstadoLote, 'info' | 'warning' | 'succes
   Completado: 'success',
   CompletadoConErrores: 'error',
   Cancelado: 'default',
+  // Espera la aprobación de otra persona antes de procesar nada (decisión AI).
+  PorAprobar: 'warning',
 };
 
 /** El lote todavía avanza: se refresca solo. */
@@ -25,9 +27,12 @@ export function porcentaje(t: TotalesLoteDto): number {
   return total <= 0 ? 100 : Math.round((Math.min(t.procesadas, total) / total) * 100);
 }
 
-/** Lo que el usuario puede hacer con el lote en su estado. */
+/** Lo que el usuario puede hacer con el lote en su estado (aprobar o rechazar es otra decisión: `puedesDecidir`). */
 export function accionesDeLote(lote: Pick<LoteDto, 'estado' | 'totales'>): ('pausar' | 'reanudar' | 'cancelar' | 'reintentar')[] {
   switch (lote.estado) {
+    case 'PorAprobar':
+      // Quien lo creó puede retirarlo mientras espera.
+      return ['cancelar'];
     case 'Procesando':
       return ['pausar', 'cancelar'];
     case 'Pausado':

@@ -16,6 +16,7 @@ import { fichaAceptada } from './es-CO-ficha-aceptada';
 import { informes } from './es-CO-informes';
 import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
+import { erroresInvitaciones, invitaciones } from './es-CO-invitaciones';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
 import { exenciones } from './es-CO-exenciones';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
@@ -169,6 +170,7 @@ export const esCO = {
       limpiar: 'Limpiar búsqueda',
     },
     columnas: { tercero: 'Tercero', tipo: 'Tipo', estado: 'Estado', referencias: 'Referencias externas', creado: 'Creado' },
+    invitacionPorAprobar: 'Invitación por aprobar',
     sinReferencias: 'Sin referencias',
     vacio: '{{empresa}} aún no tiene vínculos.',
     vacioAyuda: 'Los vínculos llegan desde los sistemas integrados (ERP, portales…) o por invitación.',
@@ -260,6 +262,7 @@ export const esCO = {
       invitacionDetalle: 'Envíos: {{envios}} · vence el {{expira}}',
       invitacionAceptada: 'Aceptada el {{fecha}}',
       sinInvitacion: 'Sin invitación enviada',
+      invitacionPorAprobar: 'Retenida: espera la aprobación de otra persona',
       bloqueo: 'Vínculo bloqueado',
       bloqueoDetalle: 'Desde el {{desde}}{{hasta}}. Los sistemas integrados ya recibieron el cambio.',
       bloqueoHasta: ' hasta el {{hasta}}',
@@ -289,6 +292,7 @@ export const esCO = {
       resumen: 'Envía de nuevo el enlace al tercero',
       confirmar: 'Reenviar invitación',
       exito: 'Invitación enviada a {{correo}}.',
+      retenida: 'La invitación a {{correo}} espera la aprobación de otra persona: el correo sale cuando la apruebe.',
     },
     bloquear: {
       boton: 'Bloquear',
@@ -367,6 +371,7 @@ export const esCO = {
   cumplimiento,
   matrizRiesgo,
   lotes,
+  invitaciones,
   campanias,
   plazoCargue,
   flujoPlazo,
@@ -421,6 +426,9 @@ export const esCO = {
     vinculo_creado: 'Vínculo creado',
     referencia_externa_agregada: 'Referencia externa agregada',
     invitacion_enviada: 'Invitación enviada',
+    invitacion_por_aprobar_solicitada: 'Invitación por aprobar',
+    invitacion_aprobada: 'Invitación aprobada',
+    invitacion_rechazada: 'Invitación rechazada',
     invitacion_aceptada: 'Invitación aceptada',
     consentimientos_registrados: 'Consentimientos registrados',
     acceso_aislado_solicitado: 'Acceso del correo pendiente de aprobación',
@@ -767,6 +775,7 @@ export const esCO = {
     ...erroresCumplimiento,
     ...erroresFichaEmpresa,
     ...erroresLotes,
+    ...erroresInvitaciones,
     ...erroresCampanias,
     ...erroresVigencias,
     ...erroresCruce,

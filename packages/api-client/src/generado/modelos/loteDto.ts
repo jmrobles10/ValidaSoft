@@ -22,4 +22,14 @@ export interface LoteDto {
   terminadoEn: string | null;
   reintentos: number;
   version: number;
+  /** @nullable */
+  tiposPorAprobar?: string[] | null;
+  /** @nullable */
+  aprobadoPor?: string | null;
+  /** @nullable */
+  aprobadoEn?: string | null;
+  /** @nullable */
+  motivoDeRechazo?: string | null;
+  /** @nullable */
+  puedesDecidir?: boolean | null;
 }

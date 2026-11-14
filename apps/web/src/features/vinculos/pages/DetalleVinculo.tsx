@@ -17,6 +17,7 @@ import { TarjetaFichaAceptadaEnVinculo } from '../../terceros/fichaAceptada/Tarj
 import { DocumentosVinculo } from '../../documentos/DocumentosVinculo';
 import { formatearFechaDeclarada } from '../../documentos/formatoDatos';
 import { TarjetaExpedienteVinculo } from '../../expedientes/components/TarjetaExpedienteVinculo';
+import { AvisoInvitacionPorAprobar } from '../../invitaciones/AvisoInvitacionPorAprobar';
 import { actoresDeHistorial, useNombresUsuarios } from '../../configuracion/usuarios/api';
 import { ICONO_ACCION } from '../acciones';
 import { useHistorialVinculo, useTercero, useVinculo } from '../api';
@@ -96,6 +97,7 @@ export function DetalleVinculo() {
         </Alert>
       )}
       <AvisoDeVigencia vinculo={vinculo} />
+      <AvisoInvitacionPorAprobar vinculo={vinculo} empresaId={empresa.id} />
       <AvisoAccesoDelCorreo vinculo={vinculo} />
       <AvisoActualizacionNoAprobada vinculo={vinculo} empresaId={empresa.id} />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0,1fr)', lg: 'minmax(0,1.7fr) minmax(0,1fr)' }, gap: 2, alignItems: 'start' }}>
@@ -214,7 +216,9 @@ function DatosVinculo({ vinculo, empresaNombre, conFicha }: { vinculo: VinculoDt
     ? t('vinculos.detalle.invitacionAceptada', { fecha: formatearFecha(vinculo.invitacionAceptadaEn) })
     : vinculo.invitacion
       ? t('vinculos.detalle.invitacionDetalle', { envios: String(vinculo.invitacion.envios), expira: formatearFecha(vinculo.invitacion.expira) })
-      : t('vinculos.detalle.sinInvitacion');
+      : vinculo.invitacionPorAprobar?.estado === 'Pendiente'
+        ? t('vinculos.detalle.invitacionPorAprobar')
+        : t('vinculos.detalle.sinInvitacion');
 
   return (
     <Tarjeta titulo={t('vinculos.detalle.datos')}>

@@ -181,7 +181,7 @@ export const tiposVinculo = {
   vacioAyuda: 'Crea el primero (Proveedor, Cliente…) para poder armar sus flujos.',
   columnas: { tipo: 'Tipo', atributos: 'Atributos', exige: 'Exige', estado: 'Estado' },
   sinAtributos: 'Sin atributos',
-  exige: { cuenta: 'Cuenta designada', otp: 'Código en el enlace' },
+  exige: { cuenta: 'Cuenta designada', otp: 'Código en el enlace', aprobacion: 'Aprobar antes de invitar' },
   campos: {
     codigo: 'Código',
     codigoAyuda: 'Empieza con letra; mayúsculas, números y guion bajo. No se puede cambiar después.',
@@ -211,6 +211,7 @@ export const tiposVinculo = {
     'clave-requerida': 'Escribe la clave del atributo.',
     'atributo-duplicado': 'La clave «{{clave}}» está repetida.',
     'opciones-requeridas': 'Escribe al menos una opción.',
+    'aprobadores-requeridos': 'Elige quién aprueba las invitaciones: un rol o un área.',
     enAtributo: 'Atributo «{{clave}}»: {{error}}',
   },
   desactivar: 'Desactivar tipo',

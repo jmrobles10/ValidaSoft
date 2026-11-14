@@ -139,10 +139,19 @@ public static class TiposNotificacion
     /// </summary>
     public const string ExencionVencida = "vinculo.exencion_vencida";
 
+    /// <summary>
+    /// Una invitación (o un lote) quedó retenida a la espera de aprobación (decisión AI): a las personas que el tipo de vínculo designó para aprobarla, sin quien la pidió; solo
+    /// campana.
+    /// </summary>
+    public const string InvitacionPorAprobar = "invitaciones.por_aprobar";
+
+    /// <summary>Se aprobó o se rechazó la invitación (o el lote) que pidió la persona (decisión AI): se le avisa en la campana, con el motivo si se rechazó.</summary>
+    public const string InvitacionDecidida = "invitaciones.decidida";
+
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
             CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada, HabeasSolicitud, HabeasPlazo,
-            PlanLimite, AccesoEnRevision, VersionEnRevision, ExencionVencida];
+            PlanLimite, AccesoEnRevision, VersionEnRevision, ExencionVencida, InvitacionPorAprobar, InvitacionDecidida];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
@@ -224,6 +233,18 @@ public sealed partial class PlanificadorDeNotificaciones
                 return await CampaniaTerminadaAsync(evento, campaniaTerminada, contexto, orden, ct);
             case Dominio.Invitaciones.LoteTerminado terminado:
                 return await LoteTerminadoAsync(evento, terminado, contexto, orden, ct);
+            case InvitacionPorAprobarSolicitada solicitada:
+                return await InvitacionPorAprobarAsync(evento, solicitada, contexto, orden, ct);
+            case InvitacionAprobada aprobada:
+                return await InvitacionDecididaAsync(evento, aprobada.SolicitadaPor, null, contexto, orden, ct);
+            case InvitacionRechazada rechazada:
+                return await InvitacionDecididaAsync(evento, rechazada.SolicitadaPor, rechazada.Motivo, contexto, orden, ct);
+            case Dominio.Invitaciones.LoteDeInvitacionCreado { PorAprobar: true } loteCreado:
+                return await LotePorAprobarAsync(evento, loteCreado, contexto, orden, ct);
+            case Dominio.Invitaciones.LoteAprobado:
+                return await LoteDecididoAsync(evento, null, contexto, orden, ct);
+            case Dominio.Invitaciones.LoteRechazado loteRechazado:
+                return await LoteDecididoAsync(evento, loteRechazado.Motivo, contexto, orden, ct);
             case VencimientoAvisado aviso:
                 return await PorVencerAsync(evento, aviso, contexto, orden, ct);
             case VersionVencida vencida:

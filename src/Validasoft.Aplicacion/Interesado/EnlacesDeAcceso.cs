@@ -89,10 +89,11 @@ public static class EnlacesDeAcceso
     {
         var (nivel, tercero) = await AccesoAislado.NivelAsync(sesiones, consulta, terceroId, correo, ct);
         var aislada = nivel == NivelDeAcceso.Aislado;
-        var vinculos = await consulta.Query<Vinculo>()
+        // Un vínculo con la invitación retenida a la espera de aprobación (decisión AI) todavía no existe para el tercero: no se le muestra ni se le abre acceso.
+        var vinculos = (await consulta.Query<Vinculo>()
             .Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.CorreoTercero == correo)
             .OrderBy(v => v.CreadoEn)
-            .ToListAsync(ct);
+            .ToListAsync(ct)).Where(v => !v.InvitacionPorAprobar).ToList();
 
         var empresas = await CargarEmpresasAsync(consulta, vinculos, ct);
         var enSesion = vinculos

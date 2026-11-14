@@ -41,6 +41,7 @@ export * from './informe-sla/informe-sla';
 export * from './informe-vinculos/informe-vinculos';
 export * from './ingreso/ingreso';
 export * from './inicio/inicio';
+export * from './invitaciones-por-aprobar/invitaciones-por-aprobar';
 export * from './lista-de-certificados/lista-de-certificados';
 export * from './listas-de-plataforma/listas-de-plataforma';
 export * from './listas-restrictivas/listas-restrictivas';

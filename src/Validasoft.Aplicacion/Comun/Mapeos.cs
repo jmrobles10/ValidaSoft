@@ -76,7 +76,32 @@ public static class Mapeos
                 $"'{a.Tipo}' no es un tipo de atributo ({string.Join(", ", Enum.GetNames<TipoAtributo>())}).");
 
     public static TipoVinculoDto ADto(this TipoVinculo t) =>
-        new(t.Id, t.Codigo, t.Nombre, [.. t.AtributosPermitidos.Select(ADto)], t.ExigeCuentaDesignada, t.Activo, t.ExigeOtpEnEnlace);
+        new(t.Id, t.Codigo, t.Nombre, [.. t.AtributosPermitidos.Select(ADto)], t.ExigeCuentaDesignada, t.Activo, t.ExigeOtpEnEnlace,
+            t.RequiereAprobacionParaInvitar, t.AprobadoresDeInvitacion?.ADto());
+
+    public static AprobadoresDeInvitacionDto ADto(this AprobadoresDeInvitacion a) => new(a.Tipo.ToString(), a.Valor);
+
+    /// <summary>Quién aprueba las invitaciones, como llega por la API: el tipo debe ser <c>Rol</c> o <c>Area</c> (422 si no); la validación del valor es del dominio.</summary>
+    public static AprobadoresDeInvitacion? ADominio(this AprobadoresDeInvitacionDto? a) =>
+        a is null
+            ? null
+            : Enum.TryParse<TipoDeAprobadores>(a.Tipo, true, out var tipo) && Enum.IsDefined(tipo)
+                ? new AprobadoresDeInvitacion(tipo, a.Valor)
+                : throw ReglaDeNegocioException.Validacion("aprobadores-invalidos", "Quienes aprueban las invitaciones se indican por un Rol o por un Area.");
+
+    /// <summary>El actor como texto <c>{tipo}:{id}</c> (el mismo formato de <c>LoteDto.CreadoPor</c>).</summary>
+    public static string? ATexto(this ActorDeInvitacion? actor) => actor is null ? null : $"{actor.Tipo}:{actor.Id}";
+
+    /// <summary>
+    /// La aprobación previa a invitar del vínculo (decisión AI); nula si no pasó por ella. Los nombres de las personas y <c>PuedesDecidir</c> los pone quien consulta
+    /// (el detalle y la bandeja) con <c>with</c>: aquí solo va lo que dice el vínculo.
+    /// </summary>
+    public static InvitacionPorAprobarDto? ADtoDeAprobacion(this Vinculo v) =>
+        v.AprobacionDeInvitacion is { } estado
+            ? new InvitacionPorAprobarDto(estado.ToString(), v.InvitacionPendienteCorreo ?? v.CorreoTercero, v.InvitacionPendienteVigenciaHoras,
+                v.InvitacionSolicitadaEn ?? v.CreadoEn, v.InvitacionSolicitadaPor.ATexto() ?? string.Empty, DecididaPor: v.InvitacionDecididaPor.ATexto(),
+                DecididaEn: v.InvitacionDecididaEn, MotivoDeRechazo: v.InvitacionRechazadaMotivo)
+            : null;
 
     public static TerceroDto ADto(this Tercero t) =>
         new(t.Id, t.Identificacion.ADto(), t.TipoPersona.ToString(), t.Nombre, t.NombreComercial,
@@ -99,6 +124,7 @@ public static class Mapeos
             v.AccesoAislado is { } acceso
                 ? new AccesoDelCorreoDto(acceso.ToString(), v.CorreoTercero, v.AccesoAisladoDesde ?? v.CreadoEn, v.AccesoAisladoResueltoEn, v.AccesoAisladoMotivo)
                 : null,
+            InvitacionPorAprobar: v.ADtoDeAprobacion(),
             Exenciones: v.Exenciones.Count == 0 ? null : Vinculos.ExencionesDeVinculos.ADtos(v, hoy ?? Dominio.Documentos.CalculadoraDeVigencia.Fecha(DateTimeOffset.UtcNow)));
 
     /// <summary>Los contactos del tercero con la empresa como los ve la API (rol en texto).</summary>

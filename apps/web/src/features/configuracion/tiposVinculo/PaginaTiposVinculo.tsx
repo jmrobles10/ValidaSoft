@@ -45,7 +45,9 @@ export function PaginaTiposVinculo() {
       },
     );
   const exige = (tipo: TipoVinculoDto) =>
-    [tipo.exigeCuentaDesignada && t('tiposVinculo.exige.cuenta'), tipo.exigeOtpEnEnlace && t('tiposVinculo.exige.otp')].filter(Boolean).join(' · ') || '—';
+    [tipo.exigeCuentaDesignada && t('tiposVinculo.exige.cuenta'), tipo.exigeOtpEnEnlace && t('tiposVinculo.exige.otp'), tipo.requiereAprobacionParaInvitar && t('tiposVinculo.exige.aprobacion')]
+      .filter(Boolean)
+      .join(' · ') || '—';
 
   return (
     <>
@@ -72,7 +74,7 @@ export function PaginaTiposVinculo() {
               <TableRow>
                 <TableCell>{t('tiposVinculo.columnas.tipo')}</TableCell>
                 <TableCell>{t('tiposVinculo.columnas.atributos')}</TableCell>
-                <TableCell sx={{ width: 220 }}>{t('tiposVinculo.columnas.exige')}</TableCell>
+                <TableCell sx={{ width: 280 }}>{t('tiposVinculo.columnas.exige')}</TableCell>
                 <TableCell sx={{ width: 100 }}>{t('tiposVinculo.columnas.estado')}</TableCell>
                 <TableCell sx={{ width: 48 }}>
                   <Box component="span" sx={visualmenteOculto}>

@@ -11,6 +11,7 @@ import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { EnlaceInvitacionDto } from './enlaceInvitacionDto';
 import type { EstadoVinculo } from './estadoVinculo';
 import type { ExencionDeVinculoDto } from './exencionDeVinculoDto';
+import type { InvitacionPorAprobarDto } from './invitacionPorAprobarDto';
 import type { OrigenVinculo } from './origenVinculo';
 import type { ReferenciaExternaDto } from './referenciaExternaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
@@ -51,6 +52,7 @@ export interface VinculoDto {
   actualizacionNoAprobada?: null | ActualizacionNoAprobadaDto;
   accesoDelCorreo?: null | AccesoDelCorreoDto;
   verificacionDelCorreo?: null | VerificacionDelCorreoDto;
+  invitacionPorAprobar?: null | InvitacionPorAprobarDto;
   /** @nullable */
   exenciones?: ExencionDeVinculoDto[] | null;
 }

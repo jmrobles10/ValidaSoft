@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Validasoft.Contratos;
 
 namespace Validasoft.Sdk;
@@ -175,10 +176,32 @@ public sealed class InvitacionesApi
 
     internal InvitacionesApi(Transporte transporte) => _t = transporte;
 
-    /// <summary>Envía (o reenvía) la invitación; el correo sale después de confirmar la transacción.</summary>
-    public Task<EnlaceInvitacionDto> EnviarAsync(Guid vinculoId, InvitacionDto invitacion, CancellationToken ct = default) =>
-        _t.EnviarAsync<EnlaceInvitacionDto>(new Peticion(HttpMethod.Post, $"api/v1/vinculos/{vinculoId}/invitaciones", invitacion), ct);
+    /// <summary>
+    /// Envía (o reenvía) la invitación; el correo sale después de confirmar la transacción. Si el tipo de vínculo exige aprobación antes de invitar y la invitación
+    /// quedó retenida (202), lanza <see cref="InvalidOperationException"/>: quien activa esa regla usa <see cref="SolicitarAsync"/>, que distingue los dos resultados.
+    /// </summary>
+    public async Task<EnlaceInvitacionDto> EnviarAsync(Guid vinculoId, InvitacionDto invitacion, CancellationToken ct = default) =>
+        (await SolicitarAsync(vinculoId, invitacion, ct)).Enviada
+        ?? throw new InvalidOperationException(
+            "La invitación quedó por aprobar: el tipo de vínculo exige que otra persona la apruebe antes de enviarla. Usa Invitaciones.SolicitarAsync para distinguirlo.");
+
+    /// <summary>
+    /// Pide enviar la invitación y devuelve lo que pasó: <see cref="ResultadoDeInvitacion.Enviada"/> (201: salió) o <see cref="ResultadoDeInvitacion.PorAprobar"/> (202: el tipo
+    /// de vínculo exige aprobación antes de invitar y la invitación quedó retenida hasta que otra persona la apruebe; el vínculo y los eventos
+    /// <c>vinculo.invitacion_aprobada</c> o <c>vinculo.invitacion_rechazada</c> dicen cómo termina).
+    /// </summary>
+    public async Task<ResultadoDeInvitacion> SolicitarAsync(Guid vinculoId, InvitacionDto invitacion, CancellationToken ct = default)
+    {
+        var respuesta = await _t.EnviarAsync<JsonElement>(new Peticion(HttpMethod.Post, $"api/v1/vinculos/{vinculoId}/invitaciones", invitacion), ct);
+        // El enlace trae su vencimiento; la invitación retenida no (todavía no hay enlace).
+        return respuesta.TryGetProperty("expira", out _)
+            ? new ResultadoDeInvitacion(respuesta.Deserialize<EnlaceInvitacionDto>(Transporte.Json), null)
+            : new ResultadoDeInvitacion(null, respuesta.Deserialize<InvitacionPorAprobarDto>(Transporte.Json));
+    }
 }
+
+/// <summary>Resultado de pedir una invitación: salió (<see cref="Enviada"/>) o quedó retenida a la espera de aprobación (<see cref="PorAprobar"/>); solo una viene.</summary>
+public sealed record ResultadoDeInvitacion(EnlaceInvitacionDto? Enviada, InvitacionPorAprobarDto? PorAprobar);
 
 /// <summary>Expedientes de validación (docs/05 §2.4).</summary>
 public sealed class ExpedientesApi

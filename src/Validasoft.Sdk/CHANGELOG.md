@@ -7,6 +7,12 @@ versión mayor solo cambia cuando la API v1 rompe compatibilidad (ver «Versiona
 ## [Sin publicar]
 
 ### Agregado
+- Aprobación antes de invitar (opt-in por tipo de vínculo; quien no la activa no ve ningún cambio). Con el tipo en `RequiereAprobacionParaInvitar`, `Vinculos.CrearAsync` y
+  `Invitaciones.EnviarAsync` ya no envían la invitación: queda retenida hasta que otra persona del rol o área que el tipo designó la apruebe o la rechace.
+  `VinculoDto.InvitacionPorAprobar` (`invitacionPorAprobar` en TypeScript) dice en qué va (`Pendiente`, `Aprobada` o `Rechazada`, con su motivo) y no cambia `Estado`; los eventos
+  `vinculo.invitacion_por_aprobar`, `vinculo.invitacion_aprobada` y `vinculo.invitacion_rechazada` (y `invitaciones.lote_*` para lotes) la reflejan. Para distinguir el resultado de
+  pedir la invitación: .NET `Invitaciones.SolicitarAsync` devuelve `ResultadoDeInvitacion` (`Enviada` o `PorAprobar`; `EnviarAsync` lanza `InvalidOperationException` si quedó retenida)
+  y TypeScript `invitaciones.enviar` devuelve `EnlaceInvitacionDto | InvitacionPorAprobarDto` con la guarda `invitacionRetenida`.
 - `ConsultaCertificacionDto.EnRevision` (`enRevision` en TypeScript): solo informativo. Es `true` mientras el tercero tiene una actualización abierta
   con la empresa (actualizó información que ya había aprobado y la empresa la está revisando). No cambia nada de lo demás: `estadoVinculo` sigue
   siendo `Activo`, `PorVencer` o `Vencido` y el certificado, la vigencia, `bloqueado` y `revalidacionPendiente` se calculan como siempre. Quien no lo conoce lo ignora.

@@ -274,6 +274,12 @@ los **eventos** (`vinculo.invitacion_aceptada`, `expediente.en_revision`, `exped
 (`{ justificacion }`), desvincular, anular y consultar por referencia. Cada vínculo guarda **las referencias de todos los sistemas** que lo
 comparten, y todo evento las trae en `datos.referencias`.
 
+**Aprobación antes de invitar.** Si la empresa configuró su tipo de vínculo para exigirla, `POST /vinculos` (y `POST /vinculos/{id}/invitaciones` la primera vez o a otro correo) **no envía** la invitación:
+responde igual (201 con el vínculo; el reenvío responde **202** con la invitación retenida) y el vínculo trae `invitacionPorAprobar { estado: "Pendiente", … }` y `invitacion: null`; sigue `Invitado`.
+Una persona de la empresa (el rol o el área que el tipo designó, y no quien la pidió) la aprueba —sale la invitación de siempre— o la rechaza con un motivo —el vínculo queda `Anulado`—. Tu sistema se entera por los eventos
+`vinculo.invitacion_por_aprobar`, `vinculo.invitacion_aprobada` (y a continuación `vinculo.invitacion_enviada`) o `vinculo.invitacion_rechazada` (y `vinculo.anulado`), y puede consultar el vínculo por su referencia. Una integración nunca aprueba: decide una persona.
+En el SDK de .NET, `Invitaciones.SolicitarAsync` devuelve `ResultadoDeInvitacion` (`Enviada` o `PorAprobar`) y en el de TypeScript `invitaciones.enviar` devuelve el enlace o `InvitacionPorAprobarDto` (`invitacionRetenida` los distingue). Quien no activa la exigencia no ve ningún cambio.
+
 ## 7. Identidad delegada: actuar en nombre de una persona
 
 Para que tu sistema llame a la API **como una persona suya** (porque va a embeber pantallas, o porque quieres que el permiso dependa de sus

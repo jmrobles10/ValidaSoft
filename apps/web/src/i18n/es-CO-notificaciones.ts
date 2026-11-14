@@ -106,6 +106,14 @@ export const notificaciones = {
       titulo: 'Límite del plan',
       explicacion: 'A los administradores, cuando el grupo llega al 80 % y al 100 % de un límite de su plan: usuarios, empresas, vínculos, almacenamiento o llamadas a la API.',
     },
+    invitacionPorAprobar: {
+      titulo: 'Invitación por aprobar',
+      explicacion: 'A quienes el tipo de vínculo designa para aprobar, cuando una invitación o un lote queda retenido hasta que otra persona lo apruebe. Solo aparece en la campana.',
+    },
+    invitacionDecidida: {
+      titulo: 'Invitación aprobada o rechazada',
+      explicacion: 'A quien pidió la invitación o el lote, cuando otra persona lo aprueba o lo rechaza (con su motivo). Solo aparece en la campana.',
+    },
     cuentaPropuesta: {
       titulo: 'Cuenta bancaria por aprobar',
       explicacion: 'A quienes pueden aprobar cuentas, cuando el tercero propone la cuenta con la que le cobra a la empresa. Solo aparece en la campana.',

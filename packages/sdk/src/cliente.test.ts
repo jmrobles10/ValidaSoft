@@ -1,7 +1,7 @@
 import { createPublicKey, generateKeyPairSync, verify } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { crearFirmanteDeAserciones } from './asercion';
-import { ClienteValidasoft, ErrorValidasoft } from './cliente';
+import { ClienteValidasoft, ErrorValidasoft, invitacionRetenida } from './cliente';
 
 const LLAVE = `vsk_test_acme_${'0123456789abcdef'.repeat(4)}`;
 const EMPRESA = '0195f1c2-7d3e-7a00-8000-0000000000e1';
@@ -69,6 +69,18 @@ describe('cliente de la API', () => {
     expect(post?.cuerpo).toEqual({ correoDestino: 'proveedor@aceros.co' });
     expect(get?.url).toBe('https://valida.acme.co/api/v1/consultas/certificacion?pais=CO&tipoIdentificacion=NIT&numero=900.123.456-7&tipoVinculo=PROVEEDOR');
     expect(get?.cabeceras['Idempotency-Key']).toBeUndefined();
+  });
+
+  it('distingue la invitación que salió de la que quedó retenida por la aprobación previa', async () => {
+    const { cliente: c } = cliente([
+      json({ estado: 'Pendiente', correoDestino: 'p@a.co', vigenciaHoras: 72, solicitadaEn: '2026-11-14T00:00:00Z', solicitadaPor: 'Integracion:llave' }, 202),
+      json({ correoDestino: 'p@a.co', expira: '2026-11-17T00:00:00Z', envios: 1 }, 201),
+    ]);
+    const retenida = await c.invitaciones.enviar('v1');
+    expect(invitacionRetenida(retenida)).toBe(true);
+    expect(invitacionRetenida(retenida) && retenida.estado).toBe('Pendiente');
+    const enviada = await c.invitaciones.enviar('v1');
+    expect(invitacionRetenida(enviada)).toBe(false);
   });
 
   it('la consulta condicional devuelve noModificado con 304 y manda If-None-Match', async () => {

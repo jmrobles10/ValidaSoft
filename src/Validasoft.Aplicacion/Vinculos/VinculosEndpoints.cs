@@ -7,6 +7,7 @@ using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Expedientes;
 using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
+using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Configuracion;
 using Validasoft.Dominio.Expedientes;
@@ -184,21 +185,35 @@ public static class VinculosEndpoints
 
         var eventos = new List<object> { creado };
         var nuevo = Vinculo.Create(creado);
-        if (dto.EnviarInvitacion)
+        if (dto.EnviarInvitacion && tipo.RequiereAprobacionParaInvitar)
         {
-            var invitacion = nuevo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora);
-            eventos.Add(invitacion);
-            await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, contexto.TenantRequerido(), nuevo, tipo, invitacion, ct);
+            // Aprobación antes de invitar (decisión AI): la invitación queda retenida. No sale correo ni enlace, ni se le avisa a los contactos del tercero, hasta que otra persona
+            // la apruebe; el acceso del correo invitado se decide entonces (AprobadoresDeInvitaciones/InvitacionesPorAprobarEndpoints.Aprobar).
+            await AprobadoresDeInvitaciones.ExigirAprobadoresAsync(empresa, [tipo], contexto, ct);
+            var retenida = nuevo.SolicitarAprobacionDeInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), AprobadoresDeInvitaciones.Solicitante(contexto), ahora);
+            eventos.Add(retenida);
+            AprobadoresDeInvitaciones.Auditar(empresa, contexto, "InvitacionDeVinculo", creado.VinculoId, AccionConfiguracion.Creado, null,
+                new { Estado = nameof(EstadoAprobacionDeInvitacion.Pendiente), retenida.SolicitadaPor, Correo = retenida.CorreoDestino }, ahora);
+        }
+        else
+        {
+            if (dto.EnviarInvitacion)
+            {
+                var invitacion = nuevo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora);
+                eventos.Add(invitacion);
+                await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, contexto.TenantRequerido(), nuevo, tipo, invitacion, ct);
+            }
+
+            // El correo invitado: contacto conocido, primer contacto del tercero (pasa a ser su contacto) o desconocido (acceso aislado hasta que lo apruebe un contacto).
+            await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, contexto.TenantRequerido(), tercero, terceroNuevo, nuevo,
+                creado.CorreoInvitacion, eventos.Add, ahora, ct);
         }
 
-        // El correo invitado: contacto conocido, primer contacto del tercero (pasa a ser su contacto) o desconocido (acceso aislado hasta que lo apruebe un contacto).
-        await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, contexto.TenantRequerido(), tercero, terceroNuevo, nuevo,
-            creado.CorreoInvitacion, eventos.Add, ahora, ct);
         sesion.Events.StartStream<Vinculo>(creado.VinculoId, eventos);
         await sesion.SaveChangesAsync(ct);
 
         var resultado = await empresa.CargarVinculoAsync(creado.VinculoId, ct);
-        return Results.Created($"/api/v1/vinculos/{resultado.Id}", resultado.ADto(tipo));
+        return Results.Created($"/api/v1/vinculos/{resultado.Id}", await InvitacionesPorAprobarEndpoints.ConAprobacionAsync(empresa, contexto, resultado.ADto(tipo), resultado, tipo, ct));
     }
 
     /// <summary>
@@ -268,10 +283,12 @@ public static class VinculosEndpoints
 
     [WolverineGet("/api/v1/vinculos/{id}")]
     [Authorize(Policy = Permisos.VinculosLeer)]
-    public static async Task<VinculoDto> Obtener(Guid id, SesionDeEmpresa empresa, CancellationToken ct)
+    public static async Task<VinculoDto> Obtener(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct)
     {
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
-        var dto = vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct), empresa.Hoy);
+        var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
+        // El detalle dice quién pidió y quién decidió la invitación retenida (decisión AI) y si quien consulta puede decidirla.
+        var dto = await InvitacionesPorAprobarEndpoints.ConAprobacionAsync(empresa, contexto, vinculo.ADto(tipo, empresa.Hoy), vinculo, tipo, ct);
         // El detalle dice si el correo que invitó la empresa está probado como del tercero (decisión AV): verificado (y con qué), sin verificar o aún no es contacto.
         var tercero = await empresa.Sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct);
         var contacto = tercero?.BuscarContacto(vinculo.CorreoTercero);
@@ -306,9 +323,25 @@ public static class VinculosEndpoints
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
         var ahora = reloj.GetUtcNow();
-        var evento = stream.Aggregate!.EnviarInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras), null, ahora);
-        var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(stream.Aggregate.TipoVinculoId, ct)
+        var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(stream.Aggregate!.TipoVinculoId, ct)
                    ?? throw ReglaDeNegocioException.NoEncontrado("tipo-vinculo-no-encontrado", "El tipo del vínculo ya no existe.");
+
+        // Aprobación antes de invitar (decisión AI): la primera invitación, o una a otro correo, queda retenida (202) hasta que otra persona la apruebe; reenviarla al correo ya
+        // aprobado sale como siempre.
+        if (stream.Aggregate.NecesitaAprobacionParaInvitar(tipo.RequiereAprobacionParaInvitar, dto.CorreoDestino))
+        {
+            var retenida = stream.Aggregate.SolicitarAprobacionDeInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras),
+                AprobadoresDeInvitaciones.Solicitante(contexto), ahora);
+            await AprobadoresDeInvitaciones.ExigirAprobadoresAsync(empresa, [tipo], contexto, ct);
+            stream.AppendOne(retenida);
+            AprobadoresDeInvitaciones.Auditar(empresa, contexto, "InvitacionDeVinculo", id, AccionConfiguracion.Creado, null,
+                new { Estado = nameof(EstadoAprobacionDeInvitacion.Pendiente), retenida.SolicitadaPor, Correo = retenida.CorreoDestino }, ahora);
+            await empresa.Sesion.SaveChangesAsync(ct);
+            var pendiente = await InvitacionesPorAprobarEndpoints.DtoAsync(empresa, contexto, id, ct);
+            return Results.Accepted($"/api/v1/vinculos/{id}", pendiente.InvitacionPorAprobar);
+        }
+
+        var evento = stream.Aggregate.EnviarInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras), null, ahora);
         await EnlacesDeAcceso.InvitarAsync(empresa.Sesion, mensajes, protector, contexto.TenantRequerido(), stream.Aggregate, tipo, evento, ct);
         // Invitar a otro correo vuelve a decidir su acceso: si no es contacto conocido del tercero, queda aislado hasta que lo apruebe un contacto.
         var terceroDelVinculo = await empresa.Sesion.LoadAsync<Tercero>(stream.Aggregate.TerceroId, ct)
@@ -559,7 +592,7 @@ public static class VinculosEndpoints
     /// <summary><c>If-Match: "7"</c> o <c>If-Match: 7</c> ⇒ concurrencia optimista sobre la versión del stream.</summary>
     private static long? VersionEsperada(HttpContext http) => Peticiones.VersionEsperada(http);
 
-    private static class Cursor
+    internal static class Cursor
     {
         public static string Escribir(DateTimeOffset fecha) =>
             Convert.ToBase64String(BitConverter.GetBytes(fecha.UtcTicks));

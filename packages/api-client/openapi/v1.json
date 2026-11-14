@@ -10,6 +10,141 @@
     }
   ],
   "paths": {
+    "/api/v1/invitaciones/por-aprobar": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.InvitacionesPorAprobarEndpoints"
+        ],
+        "summary": "GET_api_v1_invitaciones_por_aprobar",
+        "description": "GET_api_v1_invitaciones_por_aprobar",
+        "operationId": "GET_api_v1_invitaciones_por_aprobar",
+        "parameters": [
+          {
+            "name": "soloLasMias",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaDtoOfInvitacionPorAprobarItemDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/invitacion/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.InvitacionesPorAprobarEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_invitacion_aprobar",
+        "description": "POST_api_v1_vinculos_id_invitacion_aprobar",
+        "operationId": "POST_api_v1_vinculos_id_invitacion_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/invitacion/rechazar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.InvitacionesPorAprobarEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_invitacion_rechazar",
+        "description": "POST_api_v1_vinculos_id_invitacion_rechazar",
+        "operationId": "POST_api_v1_vinculos_id_invitacion_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/vinculos/{id}/contactos": {
       "put": {
         "tags": [
@@ -5513,6 +5648,13 @@
         "operationId": "GET_api_v1_invitaciones_lotes",
         "parameters": [
           {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "limite",
             "in": "query",
             "schema": {
@@ -5774,6 +5916,88 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_aprobar",
+        "description": "POST_api_v1_invitaciones_lotes_id_aprobar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/invitaciones/lotes/{id}/rechazar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Invitaciones.LotesEndpoints"
+        ],
+        "summary": "POST_api_v1_invitaciones_lotes_id_rechazar",
+        "description": "POST_api_v1_invitaciones_lotes_id_rechazar",
+        "operationId": "POST_api_v1_invitaciones_lotes_id_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MotivoDto"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK",
@@ -17374,6 +17598,21 @@
           }
         }
       },
+      "AprobadoresDeInvitacionDto": {
+        "required": [
+          "tipo",
+          "valor"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "valor": {
+            "type": "string"
+          }
+        }
+      },
       "AprobarRevalidacionesDto": {
         "required": [
           "revalidaciones"
@@ -21814,6 +22053,20 @@
           "exigeOtpEnEnlace": {
             "type": "boolean",
             "default": false
+          },
+          "requiereAprobacionParaInvitar": {
+            "type": "boolean",
+            "default": false
+          },
+          "aprobadoresDeInvitacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AprobadoresDeInvitacionDto"
+              }
+            ]
           }
         }
       },
@@ -28697,6 +28950,129 @@
           }
         }
       },
+      "InvitacionPorAprobarDto": {
+        "required": [
+          "estado",
+          "correoDestino",
+          "vigenciaHoras",
+          "solicitadaEn",
+          "solicitadaPor"
+        ],
+        "type": "object",
+        "properties": {
+          "estado": {
+            "type": "string"
+          },
+          "correoDestino": {
+            "type": "string"
+          },
+          "vigenciaHoras": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "solicitadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "solicitadaPor": {
+            "type": "string"
+          },
+          "solicitadaPorNombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decididaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decididaPorNombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decididaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivoDeRechazo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "puedesDecidir": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "InvitacionPorAprobarItemDto": {
+        "required": [
+          "vinculoId",
+          "terceroId",
+          "terceroNombre",
+          "terceroIdentificacion",
+          "tipoVinculo",
+          "correoDestino",
+          "solicitadaEn",
+          "solicitadaPor",
+          "solicitadaPorNombre",
+          "puedesDecidir"
+        ],
+        "type": "object",
+        "properties": {
+          "vinculoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terceroNombre": {
+            "type": "string"
+          },
+          "terceroIdentificacion": {
+            "$ref": "#/components/schemas/IdentificacionDto"
+          },
+          "tipoVinculo": {
+            "$ref": "#/components/schemas/TipoVinculoResumenDto"
+          },
+          "correoDestino": {
+            "type": "string"
+          },
+          "solicitadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "solicitadaPor": {
+            "type": "string"
+          },
+          "solicitadaPorNombre": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "puedesDecidir": {
+            "type": "boolean"
+          }
+        }
+      },
       "InvitacionPublicaDto": {
         "required": [
           "vinculo",
@@ -29058,6 +29434,40 @@
               "string"
             ],
             "format": "int64"
+          },
+          "tiposPorAprobar": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "aprobadoPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "aprobadoEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "motivoDeRechazo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "puedesDecidir": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -30188,6 +30598,27 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/IngresoDeOperadorDto"
+            }
+          },
+          "siguienteCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PaginaDtoOfInvitacionPorAprobarItemDto": {
+        "required": [
+          "datos",
+          "siguienteCursor"
+        ],
+        "type": "object",
+        "properties": {
+          "datos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitacionPorAprobarItemDto"
             }
           },
           "siguienteCursor": {
@@ -37179,6 +37610,20 @@
           "exigeOtpEnEnlace": {
             "type": "boolean",
             "default": false
+          },
+          "requiereAprobacionParaInvitar": {
+            "type": "boolean",
+            "default": false
+          },
+          "aprobadoresDeInvitacion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AprobadoresDeInvitacionDto"
+              }
+            ]
           }
         }
       },
@@ -38973,6 +39418,16 @@
               }
             ]
           },
+          "invitacionPorAprobar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InvitacionPorAprobarDto"
+              }
+            ]
+          },
           "exenciones": {
             "type": [
               "null",
@@ -39493,6 +39948,9 @@
     }
   },
   "tags": [
+    {
+      "name": "Validasoft.Aplicacion.Vinculos.InvitacionesPorAprobarEndpoints"
+    },
     {
       "name": "Validasoft.Aplicacion.Vinculos.ContactosDeVinculoEndpoints"
     },

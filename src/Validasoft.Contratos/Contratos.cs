@@ -165,14 +165,18 @@ public sealed record AreaDto(Guid Id, Guid EmpresaId, string Codigo, string Nomb
 
 public sealed record AtributoPermitidoDto(string Clave, string Tipo, bool Obligatorio, IReadOnlyList<string>? Opciones);
 
-/// <summary><see cref="ExigeOtpEnEnlace"/>: el enlace de acceso de sus invitaciones pide además un código enviado al correo.</summary>
+/// <summary>
+/// <see cref="ExigeOtpEnEnlace"/>: el enlace de acceso de sus invitaciones pide además un código enviado al correo.
+/// <see cref="RequiereAprobacionParaInvitar"/> (decisión AI): invitar necesita la aprobación de otra persona antes de que salga el correo; con ella,
+/// <see cref="AprobadoresDeInvitacion"/> es obligatorio (422 <c>aprobadores-requeridos</c>, <c>aprobadores-invalidos</c>).
+/// </summary>
 public sealed record CrearTipoVinculoDto(
     string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto>? AtributosPermitidos, bool ExigeCuentaDesignada,
-    bool ExigeOtpEnEnlace = false);
+    bool ExigeOtpEnEnlace = false, bool RequiereAprobacionParaInvitar = false, AprobadoresDeInvitacionDto? AprobadoresDeInvitacion = null);
 
 public sealed record TipoVinculoDto(
     Guid Id, string Codigo, string Nombre, IReadOnlyList<AtributoPermitidoDto> AtributosPermitidos, bool ExigeCuentaDesignada, bool Activo,
-    bool ExigeOtpEnEnlace = false);
+    bool ExigeOtpEnEnlace = false, bool RequiereAprobacionParaInvitar = false, AprobadoresDeInvitacionDto? AprobadoresDeInvitacion = null);
 
 public sealed record TipoVinculoResumenDto(Guid Id, string Codigo, string Nombre);
 
@@ -252,6 +256,8 @@ public sealed record ActualizarContactosDto(IReadOnlyList<ContactoDeEmpresaDto> 
 /// lo que filtra <c>GET /vinculos?enRevision=</c>. <see cref="ExpedienteAbiertoId"/> es ese expediente.
 /// <see cref="AccesoDelCorreo"/>: si el correo invitado no es contacto conocido de un tercero que ya existía, en qué va la decisión de sus contactos
 /// (acceso aislado); nulo si el correo es de confianza.
+/// <see cref="InvitacionPorAprobar"/> (decisión AI): si el tipo de vínculo exige aprobación para invitar, en qué va la de este vínculo (<c>Pendiente</c> mientras la
+/// invitación está retenida: <see cref="Invitacion"/> es nulo y el tercero no ve el vínculo); nulo si el vínculo no pasó por aprobación. No cambia <see cref="Estado"/>.
 /// </summary>
 public sealed record VinculoDto(
     Guid Id,
@@ -280,6 +286,7 @@ public sealed record VinculoDto(
     ActualizacionNoAprobadaDto? ActualizacionNoAprobada = null,
     AccesoDelCorreoDto? AccesoDelCorreo = null,
     VerificacionDelCorreoDto? VerificacionDelCorreo = null,
+    InvitacionPorAprobarDto? InvitacionPorAprobar = null,
     IReadOnlyList<ExencionDeVinculoDto>? Exenciones = null);
 
 /// <summary>

@@ -10,7 +10,13 @@ public enum EstadoLote
     Pausado,
     Completado,
     CompletadoConErrores,
-    Cancelado
+    Cancelado,
+
+    /// <summary>
+    /// El lote incluye un tipo de vínculo que exige aprobación antes de invitar (decisión AI): no se procesa ninguna fila hasta que otra persona lo
+    /// apruebe (pasa a <c>Procesando</c>) o lo rechace con un motivo (<c>Cancelado</c>). Va al final del enum: lo guardado antes no lo trae.
+    /// </summary>
+    PorAprobar
 }
 
 /// <summary>
@@ -47,8 +53,18 @@ public sealed record TotalesDeLote(int Filas, int Pendientes, int Exitosas, int 
 // Eventos del stream LoteDeInvitacion-{id} (tenant de la empresa). Las filas son documentos aparte (FilaDeLote): un lote de
 // miles de filas no se vuelve miles de eventos; el avance se registra una vez por tanda.
 
+/// <param name="PorAprobar">
+/// Alguna fila válida es de un tipo de vínculo que exige aprobación para invitar (decisión AI): el lote nace <c>PorAprobar</c> y no se encola ninguna tanda.
+/// <paramref name="TiposPorAprobar"/> son esos tipos (quien decide debe poder aprobar todos). Lo guardado antes de esta decisión no trae ninguno de los dos.
+/// </param>
 public sealed record LoteDeInvitacionCreado(Guid LoteId, Guid EmpresaId, string Nombre, string? Archivo, int VigenciaHoras, TotalesDeLote Totales,
-    ActorDeLote CreadoPor, Guid Ejecucion, DateTimeOffset Fecha);
+    ActorDeLote CreadoPor, Guid Ejecucion, DateTimeOffset Fecha, bool PorAprobar = false, IReadOnlyList<Guid>? TiposPorAprobar = null);
+
+/// <summary>Otra persona aprobó el lote completo: se procesa con una ejecución nueva y sus invitaciones salen sin pedir una aprobación por vínculo.</summary>
+public sealed record LoteAprobado(ActorDeLote AprobadoPor, Guid Ejecucion, DateTimeOffset Fecha);
+
+/// <summary>Otra persona rechazó el lote completo, con su motivo: ninguna fila se procesa y el lote queda <c>Cancelado</c>.</summary>
+public sealed record LoteRechazado(ActorDeLote RechazadoPor, string Motivo, TotalesDeLote Totales, DateTimeOffset Fecha);
 
 /// <summary>Terminó una tanda: los conteos al final de ella.</summary>
 public sealed record AvanceDeLoteRegistrado(TotalesDeLote Totales, DateTimeOffset Fecha);
@@ -114,6 +130,17 @@ public sealed class LoteDeInvitacion
 
     public DateTimeOffset? TerminadoEn { get; set; }
 
+    /// <summary>Tipos de vínculo del lote que exigen aprobación para invitar (decisión AI); vacío si el lote no pasó por aprobación.</summary>
+    public List<Guid> TiposPorAprobar { get; set; } = [];
+
+    /// <summary>Quién aprobó el lote (nulo si no pasó por aprobación o aún espera).</summary>
+    public ActorDeLote? AprobadoPor { get; set; }
+
+    public DateTimeOffset? AprobadoEn { get; set; }
+
+    /// <summary>Por qué se rechazó el lote (queda <c>Cancelado</c>).</summary>
+    public string? MotivoDeRechazo { get; set; }
+
     [JsonIgnore]
     public bool EsTerminal => Terminales.Contains(Estado);
 
@@ -121,10 +148,10 @@ public sealed class LoteDeInvitacion
 
     /// <summary>
     /// Nombre (o el del archivo; hasta 150 caracteres), vigencia del enlace entre 1 hora y 30 días y al menos una fila que se
-    /// pueda procesar (422 <c>lote-sin-filas-validas</c>).
+    /// pueda procesar (422 <c>lote-sin-filas-validas</c>). Con <paramref name="tiposPorAprobar"/> (decisión AI) el lote espera la aprobación de otra persona.
     /// </summary>
     public static LoteDeInvitacionCreado Crear(Guid empresaId, string? nombre, string? archivo, int vigenciaHoras, TotalesDeLote totales,
-        ActorDeLote creadoPor, DateTimeOffset ahora)
+        ActorDeLote creadoPor, DateTimeOffset ahora, IReadOnlyList<Guid>? tiposPorAprobar = null)
     {
         if (vigenciaHoras is < 1 or > VigenciaMaximaHoras)
             throw ReglaDeNegocioException.Validacion("vigencia-invalida", "La vigencia del enlace de invitación debe estar entre 1 hora y 30 días.");
@@ -137,7 +164,43 @@ public sealed class LoteDeInvitacion
         if (texto.Length > LongitudMaximaNombre)
             texto = texto[..LongitudMaximaNombre];
 
-        return new LoteDeInvitacionCreado(Guid.CreateVersion7(), empresaId, texto, archivo?.Trim(), vigenciaHoras, totales, creadoPor, Guid.NewGuid(), ahora);
+        var porAprobar = tiposPorAprobar is { Count: > 0 };
+        return new LoteDeInvitacionCreado(Guid.CreateVersion7(), empresaId, texto, archivo?.Trim(), vigenciaHoras, totales, creadoPor, Guid.NewGuid(), ahora,
+            porAprobar, porAprobar ? [.. tiposPorAprobar!.Distinct()] : null);
+    }
+
+    /// <summary>
+    /// Otra persona aprueba el lote completo (una sola decisión para todas sus filas, decisión AI): pasa a <c>Procesando</c> con una ejecución nueva. Quien aprueba no
+    /// puede ser quien lo creó (403 <c>separacion-de-funciones</c>); 409 <c>sin-lote-por-aprobar</c> si no espera aprobación.
+    /// </summary>
+    public LoteAprobado Aprobar(Guid aprobadorId, DateTimeOffset ahora)
+    {
+        AsegurarPorAprobar();
+        AsegurarDecisorHabilitado(aprobadorId);
+        return new LoteAprobado(new ActorDeLote(ActorTipo.Usuario, aprobadorId.ToString()), Guid.NewGuid(), ahora);
+    }
+
+    /// <summary>Otra persona rechaza el lote completo con un motivo (422 <c>motivo-requerido</c>): queda <c>Cancelado</c> y no se procesa ninguna fila. Las mismas reglas que <see cref="Aprobar"/>.</summary>
+    public LoteRechazado Rechazar(Guid rechazadorId, string motivo, TotalesDeLote totales, DateTimeOffset ahora)
+    {
+        if (string.IsNullOrWhiteSpace(motivo))
+            throw ReglaDeNegocioException.Validacion("motivo-requerido", "Rechazar el lote necesita un motivo.");
+        AsegurarPorAprobar();
+        AsegurarDecisorHabilitado(rechazadorId);
+        return new LoteRechazado(new ActorDeLote(ActorTipo.Usuario, rechazadorId.ToString()), motivo.Trim(), totales, ahora);
+    }
+
+    private void AsegurarPorAprobar()
+    {
+        if (Estado != EstadoLote.PorAprobar)
+            throw ReglaDeNegocioException.Conflicto("sin-lote-por-aprobar", $"El lote no espera aprobación; está {Estado}.");
+    }
+
+    private void AsegurarDecisorHabilitado(Guid decisorId)
+    {
+        if (CreadoPor.Tipo == ActorTipo.Usuario && string.Equals(CreadoPor.Id, decisorId.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw ReglaDeNegocioException.Prohibido("separacion-de-funciones",
+                "Quien creó el lote no puede aprobarlo ni rechazarlo: lo decide otra persona.");
     }
 
     public LotePausado Pausar(DateTimeOffset ahora)
@@ -201,13 +264,34 @@ public sealed class LoteDeInvitacion
         Nombre = e.Nombre,
         Archivo = e.Archivo,
         VigenciaHoras = e.VigenciaHoras,
-        Estado = EstadoLote.Procesando,
+        Estado = e.PorAprobar ? EstadoLote.PorAprobar : EstadoLote.Procesando,
         Totales = e.Totales,
         CreadoPor = e.CreadoPor,
-        Ejecucion = e.Ejecucion,
+        // Un lote por aprobar no tiene ejecución: ninguna tanda corre hasta que alguien lo apruebe.
+        Ejecucion = e.PorAprobar ? null : e.Ejecucion,
+        TiposPorAprobar = [.. e.TiposPorAprobar ?? []],
         CreadoEn = e.Fecha,
         ActualizadoEn = e.Fecha
     };
+
+    public void Apply(LoteAprobado e)
+    {
+        Estado = EstadoLote.Procesando;
+        Ejecucion = e.Ejecucion;
+        AprobadoPor = e.AprobadoPor;
+        AprobadoEn = e.Fecha;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(LoteRechazado e)
+    {
+        Estado = EstadoLote.Cancelado;
+        Totales = e.Totales;
+        Ejecucion = null;
+        MotivoDeRechazo = e.Motivo;
+        TerminadoEn = e.Fecha;
+        ActualizadoEn = e.Fecha;
+    }
 
     public void Apply(AvanceDeLoteRegistrado e)
     {

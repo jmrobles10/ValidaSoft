@@ -170,8 +170,19 @@ public sealed partial class Vinculo
         return new ReferenciaExternaAgregada(referencia.Sistema, referencia.Id, ahora);
     }
 
-    /// <summary>Solo en <c>Invitado</c> y mientras el tercero no haya aceptado (docs/03 §5.3).</summary>
+    /// <summary>
+    /// Solo en <c>Invitado</c> y mientras el tercero no haya aceptado (docs/03 §5.3). Con la invitación retenida a la espera de aprobación (decisión AI), 409
+    /// <c>invitacion-por-aprobar</c>: sale al aprobarla (<see cref="AprobarInvitacion"/>).
+    /// </summary>
     public InvitacionEnviada EnviarInvitacion(string? correoDestino, TimeSpan vigencia, Guid? loteId, DateTimeOffset ahora)
+    {
+        AsegurarSinInvitacionRetenida();
+        var correo = ComprobarInvitable(correoDestino, vigencia);
+        return new InvitacionEnviada("Correo", correo, ahora + vigencia, loteId, ahora);
+    }
+
+    /// <summary>Las reglas comunes de invitar (y de pedir su aprobación): devuelve el correo al que irá.</summary>
+    private string ComprobarInvitable(string? correoDestino, TimeSpan vigencia)
     {
         var correo = string.IsNullOrWhiteSpace(correoDestino) ? CorreoTercero : correoDestino.Trim().ToLowerInvariant();
         // Un correo rechazado por los contactos del tercero se reemplaza invitando a otro, aunque la persona ya hubiera aceptado.
@@ -192,7 +203,7 @@ public sealed partial class Vinculo
         if (string.IsNullOrWhiteSpace(correo) || !correo.Contains('@'))
             throw ReglaDeNegocioException.Validacion("correo-invitacion-requerido", "Falta un correo válido para la invitación.");
 
-        return new InvitacionEnviada("Correo", correo, ahora + vigencia, loteId, ahora);
+        return correo;
     }
 
     /// <summary>
@@ -217,6 +228,7 @@ public sealed partial class Vinculo
         if (Estado is EstadoVinculo.Bloqueado or EstadoVinculo.Anulado or EstadoVinculo.Desvinculado)
             throw ReglaDeNegocioException.Conflicto("estado-invalido", $"No se puede aceptar una invitación de un vínculo {Estado}.");
 
+        AsegurarSinInvitacionRetenida();
         if (Invitacion is null)
             throw ReglaDeNegocioException.Conflicto("sin-invitacion", "Este vínculo no tiene una invitación enviada.");
 
@@ -387,6 +399,9 @@ public sealed partial class Vinculo
 
         if (ExpedienteAbiertoId is { } abierto)
             throw ReglaDeNegocioException.Conflicto("expediente-abierto-existente", $"El vínculo ya tiene el expediente {abierto} abierto.");
+
+        // Con la invitación retenida (decisión AI) todavía no se le escribe al tercero: abrirle un expediente le avisaría antes de que alguien lo apruebe.
+        AsegurarSinInvitacionRetenida();
 
         if (tipo is TipoExpediente.Actualizacion or TipoExpediente.Renovacion)
         {
