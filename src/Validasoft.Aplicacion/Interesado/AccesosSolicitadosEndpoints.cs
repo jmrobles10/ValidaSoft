@@ -56,11 +56,11 @@ public static class AccesosSolicitadosEndpoints
     /// </summary>
     [WolverinePost("/public/v1/accesos-solicitados/{id}/rechazar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
-    public static async Task<AccesoSolicitadoDto> Rechazar(Guid id, RechazarAccesoDto? dto, HttpContext http, ISesiones sesiones, ICacheDeSesionesDeTercero cache,
+    public static async Task<AccesoSolicitadoDto> Rechazar(Guid id, RechazarAccesoDto dto, HttpContext http, ISesiones sesiones, ICacheDeSesionesDeTercero cache,
         TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuenta);
-        return DecisionDeAcceso.ADto(await DecisionDeAcceso.RechazarAsync(id, dto?.Motivo, tercero, sesiones, cache, reloj.GetUtcNow(), ct));
+        return DecisionDeAcceso.ADto(await DecisionDeAcceso.RechazarAsync(id, dto.Motivo, tercero, sesiones, cache, reloj.GetUtcNow(), ct));
     }
 }
 
