@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { ExencionResumenDto } from './exencionResumenDto';
 import type { TerceroResumenDto } from './terceroResumenDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
 
@@ -23,4 +24,7 @@ export interface VencimientoDto {
   permiteRatificar: boolean;
   /** @nullable */
   ultimoRecordatorio: string | null;
+  exencion?: null | ExencionResumenDto;
+  /** @nullable */
+  tipoDocumentoTenantId?: string | null;
 }

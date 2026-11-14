@@ -10,6 +10,7 @@ import type { BloqueoDto } from './bloqueoDto';
 import type { ContactoDeEmpresaDto } from './contactoDeEmpresaDto';
 import type { EnlaceInvitacionDto } from './enlaceInvitacionDto';
 import type { EstadoVinculo } from './estadoVinculo';
+import type { ExencionDeVinculoDto } from './exencionDeVinculoDto';
 import type { OrigenVinculo } from './origenVinculo';
 import type { ReferenciaExternaDto } from './referenciaExternaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
@@ -50,4 +51,6 @@ export interface VinculoDto {
   actualizacionNoAprobada?: null | ActualizacionNoAprobadaDto;
   accesoDelCorreo?: null | AccesoDelCorreoDto;
   verificacionDelCorreo?: null | VerificacionDelCorreoDto;
+  /** @nullable */
+  exenciones?: ExencionDeVinculoDto[] | null;
 }

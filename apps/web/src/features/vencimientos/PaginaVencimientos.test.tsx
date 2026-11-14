@@ -204,3 +204,95 @@ describe('Vencimientos', () => {
     expect((clic.mock.contexts[0] as HTMLAnchorElement).download).toBe('vencimientos-norte.xlsx');
   });
 });
+
+describe('Vencimientos y exención del vínculo (EX-6)', () => {
+  const EXENTA: VencimientoDto = vencimiento({
+    documentoId: 'd5',
+    documento: 'Póliza de cumplimiento',
+    exencion: { id: 'ex1', todos: false, justificacion: 'La renueva el área legal.', hasta: '2026-12-31' },
+    tipoDocumentoTenantId: 'tipo-poliza',
+  });
+  const NORMAL: VencimientoDto = vencimiento({ vinculoId: 'v2', tercero: OTRO, documentoId: 'd6', documento: 'RUT', tipoDocumentoTenantId: 'tipo-rut' });
+
+  it('marca con «Exento» la fila que el vínculo tiene eximida y no marca las demás', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer]);
+    montar([EXENTA, NORMAL]);
+
+    const fila = (await screen.findByText('Póliza de cumplimiento')).closest('tr');
+    const otra = screen.getByText('RUT').closest('tr');
+    if (!fila || !otra) throw new Error('sin fila');
+    expect(within(fila).getByText('Exento')).toBeInTheDocument();
+    expect(within(otra).queryByText('Exento')).not.toBeInTheDocument();
+  });
+
+  it('el filtro de exención viaja en la consulta y se lee de la URL', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer]);
+    const peticiones = montar([EXENTA], undefined, '/e/emp/vencimientos?exento=true');
+
+    await screen.findByText('Póliza de cumplimiento');
+    expect(peticiones[0]?.url).toBe('/api/v1/vencimientos?dias=30&exento=true');
+  });
+
+  it('elegir «No exentos» en el filtro pide solo esos y se puede limpiar', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer]);
+    const usuario = userEvent.setup();
+    const peticiones = montar([NORMAL]);
+
+    await screen.findByText('RUT');
+    await usuario.click(screen.getByRole('button', { name: /Exención/ }));
+    await usuario.click(await screen.findByRole('menuitem', { name: 'No exentos' }));
+
+    await waitFor(() => expect(peticiones.map((p) => p.url)).toContain('/api/v1/vencimientos?dias=30&exento=false'));
+    await usuario.click(await screen.findByRole('button', { name: 'Limpiar filtros' }));
+    await waitFor(() => expect(peticiones.at(-1)?.url).toBe('/api/v1/vencimientos?dias=30'));
+  });
+
+  it('sin vinculos:eximir la fila no ofrece eximir ni revocar', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer]);
+    montar([EXENTA, NORMAL]);
+
+    await screen.findByText('RUT');
+    expect(screen.queryByRole('button', { name: /Eximir/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Revocar/ })).not.toBeInTheDocument();
+  });
+
+  it('con vinculos:eximir eximir desde la fila abre el diálogo del tercero y la acción no navega al vínculo', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer, SCOPES.vinculosEximir]);
+    const usuario = userEvent.setup();
+    const peticiones = montar([EXENTA, NORMAL]);
+
+    await usuario.click(await screen.findByRole('button', { name: 'Eximir RUT de Aceros del Norte' }));
+
+    const dialogo = await screen.findByRole('dialog', { name: /Eximir al vínculo/ });
+    expect(within(dialogo).getByText('Aceros del Norte')).toBeInTheDocument();
+    expect(screen.queryByText(/Ubicación:/)).not.toBeInTheDocument();
+    await usuario.click(within(dialogo).getByRole('radio', { name: /De todo/ }));
+    await usuario.type(within(dialogo).getByLabelText(/Justificación/), 'Cliente estratégico.');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Eximir' }));
+
+    await waitFor(() =>
+      expect(peticiones).toContainEqual({
+        url: '/api/v1/vinculos/v2/exenciones',
+        metodo: 'POST',
+        cuerpo: { todos: true, objetivos: null, justificacion: 'Cliente estratégico.', hasta: null },
+      }),
+    );
+  });
+
+  it('la fila exenta ofrece revocar, con su justificación obligatoria', async () => {
+    permisos.scopes = new Set([SCOPES.documentosLeer, SCOPES.vinculosEximir]);
+    const usuario = userEvent.setup();
+    const peticiones = montar([EXENTA]);
+
+    await usuario.click(await screen.findByRole('button', { name: 'Revocar la exención de Póliza de cumplimiento' }));
+
+    const dialogo = await screen.findByRole('dialog', { name: /Revocar la exención/ });
+    expect(within(dialogo).getByRole('button', { name: 'Revocar exención' })).toBeDisabled();
+    await usuario.type(within(dialogo).getByLabelText(/Justificación/), 'Ya no aplica.');
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Revocar exención' }));
+
+    await waitFor(() =>
+      expect(peticiones).toContainEqual({ url: '/api/v1/vinculos/v1/exenciones/ex1/revocar', metodo: 'POST', cuerpo: { justificacion: 'Ya no aplica.' } }),
+    );
+  });
+});

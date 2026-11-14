@@ -10,6 +10,7 @@ export const vencimientos = {
     version: 'Versión',
     vigenteHasta: 'Vigente hasta',
     estado: 'Estado',
+    exencion: 'Exención',
     dias: 'Días',
     base: 'Base de la vigencia',
     ratificable: 'Ratificable',

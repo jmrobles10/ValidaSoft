@@ -178,6 +178,11 @@ export interface ConsultaCertificacionDto {
    * `ConPendientes`; `bloqueado`, `vigenteHasta` y `revalidacionPendiente` no cambian. Con el plazo de la revalidación vencido o el certificado vencido, es `false`.
    */
   enVerificacion?: boolean;
+  /**
+   * Solo informativo (EX-8): la empresa tiene una exención vigente del vínculo y eso cambió lo que dicen `bloqueado`, `motivoBloqueo` y `documentosVencidos`: un documento exento
+   * que venció no cuenta, así que un certificado que venció solo por él no bloquea. `estado` sigue siendo el del certificado sellado (puede decir `Vencido` con `bloqueado: false`).
+   */
+  exento?: boolean;
 }
 
 /** Sobre común de un evento público: el mismo JSON en el webhook y en `GET /eventos`. */

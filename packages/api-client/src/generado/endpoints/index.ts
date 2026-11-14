@@ -25,6 +25,7 @@ export * from './dominio-de-correo/dominio-de-correo';
 export * from './empresas/empresas';
 export * from './empresas-de-grupo/empresas-de-grupo';
 export * from './eventos/eventos';
+export * from './exenciones/exenciones';
 export * from './expedientes/expedientes';
 export * from './exportacion-de-expediente/exportacion-de-expediente';
 export * from './ficha-aceptada-del-vinculo/ficha-aceptada-del-vinculo';

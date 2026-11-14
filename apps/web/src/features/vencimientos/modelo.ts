@@ -30,12 +30,16 @@ export function baseVencimiento(v: Pick<VencimientoDto, 'base'>): BaseVencimient
   return esUnoDe(BASES_VENCIMIENTO, v.base) ? v.base : null;
 }
 
+/** Exención (EX-6): todos los vencimientos, solo los que el vínculo tiene eximidos (`true`) o solo los que no (`false`). */
+export type FiltroDeExencion = '' | 'true' | 'false';
+
 export interface FiltrosVencimientos {
   dias: Horizonte;
   estado: EstadoVencimiento | '';
+  exento: FiltroDeExencion;
 }
 
-/** Filtros de la URL (`?dias=&estado=`); lo que no sea una opción válida vuelve al valor por defecto. */
+/** Filtros de la URL (`?dias=&estado=&exento=`); lo que no sea una opción válida vuelve al valor por defecto. */
 export function leerFiltros(params: URLSearchParams): FiltrosVencimientos {
   const textoDias = params.get('dias');
   const dias = textoDias === null ? HORIZONTE_POR_DEFECTO : Number(textoDias);
@@ -43,7 +47,13 @@ export function leerFiltros(params: URLSearchParams): FiltrosVencimientos {
   return {
     dias: esUnoDe(HORIZONTES, dias) ? dias : HORIZONTE_POR_DEFECTO,
     estado: esUnoDe(ESTADOS_VENCIMIENTO, estado) ? estado : '',
+    exento: params.get('exento') === 'true' ? 'true' : params.get('exento') === 'false' ? 'false' : '',
   };
+}
+
+/** El filtro de exención como lo pide la API (`exento`); sin filtro, no se manda. */
+export function exentoParaApi(filtro: FiltroDeExencion): boolean | undefined {
+  return filtro === '' ? undefined : filtro === 'true';
 }
 
 /** Un vencimiento es un documento de un vínculo: la clave combina los dos. */

@@ -26,11 +26,11 @@ function vencimiento(parcial: Partial<VencimientoDto> = {}): VencimientoDto {
 
 describe('vencimientos', () => {
   it('lee los filtros de la URL: 30 días por defecto, 0 = todos y lo inválido vuelve al defecto', () => {
-    expect(leerFiltros(new URLSearchParams())).toEqual({ dias: 30, estado: '' });
-    expect(leerFiltros(new URLSearchParams('dias=0&estado=EnGracia'))).toEqual({ dias: 0, estado: 'EnGracia' });
-    expect(leerFiltros(new URLSearchParams('dias=7'))).toEqual({ dias: 7, estado: '' });
-    expect(leerFiltros(new URLSearchParams('dias=45&estado=SinVencimiento'))).toEqual({ dias: 30, estado: '' });
-    expect(leerFiltros(new URLSearchParams('dias=abc'))).toEqual({ dias: 30, estado: '' });
+    expect(leerFiltros(new URLSearchParams())).toEqual({ dias: 30, estado: '', exento: '' });
+    expect(leerFiltros(new URLSearchParams('dias=0&estado=EnGracia'))).toEqual({ dias: 0, estado: 'EnGracia', exento: '' });
+    expect(leerFiltros(new URLSearchParams('dias=7'))).toEqual({ dias: 7, estado: '', exento: '' });
+    expect(leerFiltros(new URLSearchParams('dias=45&estado=SinVencimiento'))).toEqual({ dias: 30, estado: '', exento: '' });
+    expect(leerFiltros(new URLSearchParams('dias=abc'))).toEqual({ dias: 30, estado: '', exento: '' });
   });
 
   it('dice los días en palabras: hoy, en N días o hace N días', () => {

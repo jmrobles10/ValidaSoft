@@ -17,6 +17,7 @@ import { informes } from './es-CO-informes';
 import { accesoUsuario, cuenta, erroresIngreso, ingreso, ingresoGrupo, ingresoPlataforma, operadores, usuariosIngreso } from './es-CO-ingreso';
 import { inicio } from './es-CO-inicio';
 import { erroresLotes, flujoPlazo, flujoReintento, lotes, plazoCargue } from './es-CO-lotes';
+import { exenciones } from './es-CO-exenciones';
 import { erroresVigencias, flujoVigencia, vigenciaVinculo } from './es-CO-vigencias';
 import { matrizRiesgo } from './es-CO-matriz-riesgo';
 import { erroresSla, sla } from './es-CO-sla';
@@ -361,6 +362,7 @@ export const esCO = {
   bandeja,
   revalidaciones,
   vencimientos,
+  exenciones,
   cumplimiento,
   matrizRiesgo,
   lotes,
@@ -432,6 +434,10 @@ export const esCO = {
     vinculo_por_vencer: 'Vínculo en pre-vencimiento',
     vinculo_vencido: 'Vínculo vencido',
     vigencia_del_vinculo_fijada: 'Vigencia fijada',
+    exencion_de_vinculo_registrada: 'Exención registrada',
+    exencion_de_vinculo_revocada: 'Exención revocada',
+    exencion_de_vinculo_vencida: 'Exención vencida',
+    vinculo_restablecido_por_exencion: 'Vínculo restablecido por una exención',
     vinculo_desaprobado: 'Vínculo desaprobado',
     contactos_de_vinculo_actualizados: 'Contactos actualizados',
     cuenta_designada_propuesta: 'Cuenta designada propuesta',

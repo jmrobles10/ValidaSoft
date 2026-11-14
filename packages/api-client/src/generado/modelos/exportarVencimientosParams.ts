@@ -8,4 +8,5 @@
 export type ExportarVencimientosParams = {
   dias?: number;
   estado?: string;
+  exento?: boolean;
 };

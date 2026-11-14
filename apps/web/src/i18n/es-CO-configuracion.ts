@@ -135,6 +135,7 @@ export const apiKeys = {
     vinculosLeer: 'Leer vínculos',
     vinculosEscribir: 'Crear vínculos, invitar y desvincular',
     vinculosBloquear: 'Bloquear y desbloquear vínculos',
+    vinculosEximir: 'Eximir vínculos de requisitos y revocar las exenciones',
     cuentasAprobar: 'Aprobar la cuenta bancaria que designa el tercero',
     expedientesLeer: 'Leer expedientes',
     expedientesRevisar: 'Revisar expedientes (veredictos)',

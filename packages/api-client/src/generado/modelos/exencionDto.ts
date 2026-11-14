@@ -9,4 +9,6 @@ export interface ExencionDto {
   por: string;
   justificacion: string;
   fecha: string;
+  /** @nullable */
+  exencionDeVinculoId?: string | null;
 }

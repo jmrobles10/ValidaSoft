@@ -363,6 +363,151 @@
         }
       }
     },
+    "/api/v1/vinculos/{id}/exenciones": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ExencionesEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_exenciones",
+        "description": "POST_api_v1_vinculos_id_exenciones",
+        "operationId": "POST_api_v1_vinculos_id_exenciones",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EximirVinculoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ExencionesEndpoints"
+        ],
+        "summary": "GET_api_v1_vinculos_id_exenciones",
+        "description": "GET_api_v1_vinculos_id_exenciones",
+        "operationId": "GET_api_v1_vinculos_id_exenciones",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "vigentes",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExencionDeVinculoDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/vinculos/{id}/exenciones/{exencionId}/revocar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Vinculos.ExencionesEndpoints"
+        ],
+        "summary": "POST_api_v1_vinculos_id_exenciones_exencionId_revocar",
+        "description": "POST_api_v1_vinculos_id_exenciones_exencionId_revocar",
+        "operationId": "POST_api_v1_vinculos_id_exenciones_exencionId_revocar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exencionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JustificacionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExencionDeVinculoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/vinculos/{id}/ficha-aceptada": {
       "get": {
         "tags": [
@@ -668,6 +813,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "exento",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -716,6 +868,13 @@
             "in": "query",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "exento",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -19669,6 +19828,10 @@
           "enVerificacion": {
             "type": "boolean",
             "default": false
+          },
+          "exento": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -24709,6 +24872,80 @@
           }
         }
       },
+      "ExencionDeVinculoDto": {
+        "required": [
+          "id",
+          "todos",
+          "objetivos",
+          "justificacion",
+          "hasta",
+          "por",
+          "creadaEn",
+          "estado"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "todos": {
+            "type": "boolean"
+          },
+          "objetivos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ObjetivoDeExencionDto"
+            }
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "por": {
+            "type": "string"
+          },
+          "creadaEn": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estado": {
+            "type": "string"
+          },
+          "revocadaPor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "justificacionDeRevocacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "revocadaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "vencidaEn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "ExencionDto": {
         "required": [
           "por",
@@ -24726,6 +24963,74 @@
           "fecha": {
             "type": "string",
             "format": "date-time"
+          },
+          "exencionDeVinculoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "ExencionResumenDto": {
+        "required": [
+          "id",
+          "todos",
+          "justificacion",
+          "hasta"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "todos": {
+            "type": "boolean"
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "EximirVinculoDto": {
+        "required": [
+          "todos",
+          "objetivos",
+          "justificacion",
+          "hasta"
+        ],
+        "type": "object",
+        "properties": {
+          "todos": {
+            "type": "boolean"
+          },
+          "objetivos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ObjetivoDeExencionDto"
+            }
+          },
+          "justificacion": {
+            "type": "string"
+          },
+          "hasta": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -29296,6 +29601,42 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ObjetivoDeExencionDto": {
+        "required": [
+          "tipo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string"
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "seccion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codigo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nombre": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -37420,6 +37761,23 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "exencion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ExencionResumenDto"
+              }
+            ]
+          },
+          "tipoDocumentoTenantId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -38385,6 +38743,15 @@
                 "$ref": "#/components/schemas/VerificacionDelCorreoDto"
               }
             ]
+          },
+          "exenciones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExencionDeVinculoDto"
+            }
           }
         }
       },
@@ -38862,6 +39229,9 @@
       "name": "Validasoft.Aplicacion.Vinculos.CuentaDesignadaEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Vinculos.ExencionesEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Vinculos.FichaAceptadaDelVinculoEndpoints"
     },
     {
@@ -38952,6 +39322,9 @@
       "name": "Validasoft.Aplicacion.Plataforma.AuditoriaDeOperadoresEndpoints"
     },
     {
+      "name": "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+    },
+    {
       "name": "Validasoft.Aplicacion.Notificaciones.EventosEndpoints"
     },
     {
@@ -38977,6 +39350,9 @@
     },
     {
       "name": "Validasoft.Aplicacion.Interesado.AutorregistroEndpoints"
+    },
+    {
+      "name": "Validasoft.Aplicacion.Interesado.MigracionDeAccesoAisladoEndpoints"
     },
     {
       "name": "Validasoft.Aplicacion.Interesado.SesionesDelTerceroEndpoints"

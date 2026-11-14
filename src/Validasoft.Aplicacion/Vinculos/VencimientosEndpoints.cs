@@ -188,7 +188,7 @@ public static class VencimientosEndpoints
                     new TipoVinculoResumenDto(vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
                     documento.NombreTipo, numero, hasta, hasta.DayNumber - hoy.DayNumber, estadoVigencia.ToString(), vigencia.Base.ToString(),
                     vigencia.FinDeGracia, permite,
-                    recordatorios.GetValueOrDefault(RecordatorioDeVencimiento.Clave(vinculo.Id, documento.Id))?.Fecha, exencion?.Resumen()));
+                    recordatorios.GetValueOrDefault(RecordatorioDeVencimiento.Clave(vinculo.Id, documento.Id))?.Fecha, exencion?.Resumen(), vigencia.TipoDocumentoTenantId));
             }
         }
 

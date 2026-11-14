@@ -498,10 +498,11 @@ public sealed record CuentaDesignadaDelVinculoDto(CuentaDesignadaDto? Actual, Cu
 /// PorVencer, EnGracia o Vencida; <see cref="Base"/>: de dónde sale la fecha (expedición, carga, vencimiento propio,
 /// ratificación). <see cref="UltimoRecordatorio"/>: la última vez que la empresa se lo recordó al tercero. <see cref="Exencion"/> (EX-6): la exención vigente
 /// del vínculo que cubre este documento (la empresa no lo persigue: no se avisa ni vence el vínculo por él); nula si no hay.
+/// <see cref="TipoDocumentoTenantId"/>: el tipo de documento del grupo que define esta vigencia (lo que se exime al eximir el documento).
 /// </summary>
 public sealed record VencimientoDto(Guid VinculoId, Guid DocumentoId, TerceroResumenDto Tercero, TipoVinculoResumenDto TipoVinculo, string Documento,
     int Version, DateOnly VigenteHasta, int DiasRestantes, string Estado, string Base, DateOnly? FinDeGracia, bool PermiteRatificar,
-    DateTimeOffset? UltimoRecordatorio, ExencionResumenDto? Exencion = null);
+    DateTimeOffset? UltimoRecordatorio, ExencionResumenDto? Exencion = null, Guid? TipoDocumentoTenantId = null);
 
 public sealed record VencimientoARecordarDto(Guid VinculoId, Guid DocumentoId);
 

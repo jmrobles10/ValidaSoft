@@ -13,6 +13,9 @@ versión mayor solo cambia cuando la API v1 rompe compatibilidad (ver «Versiona
 - `ConsultaCertificacionDto.EnVerificacion` (`enVerificacion` en TypeScript): solo informativo. Es `true` mientras el certificado sigue vigente y la empresa revisa de nuevo lo
   que el tercero actualizó («En verificación»). `estado` sigue siendo `ConPendientes` y `bloqueado`, `vigenteHasta` y `revalidacionPendiente` no cambian; con el plazo de la
   revalidación vencido, o el certificado vencido, es `false`. Quien no lo conoce lo ignora.
+- `ConsultaCertificacionDto.Exento` (`exento` en TypeScript): solo informativo. Es `true` mientras la empresa tiene una exención vigente del vínculo (decide no perseguir su renovación).
+  Cambia lo que dicen `bloqueado`, `motivoBloqueo` y `documentosVencidos`: un documento exento que venció no cuenta, así que un certificado que venció solo por él no bloquea
+  (`estado` sigue siendo el del certificado sellado y puede decir `Vencido` con `bloqueado` en `false`). Quien no lo conoce lo ignora.
 
 ## [1.0.0]
 

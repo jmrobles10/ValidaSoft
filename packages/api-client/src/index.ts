@@ -98,3 +98,4 @@ export * from './generado/endpoints/empresas-de-grupo/empresas-de-grupo';
 export * from './generado/endpoints/clave-de-arranque/clave-de-arranque';
 export * from './generado/endpoints/auditoria-de-operadores/auditoria-de-operadores';
 export * from './generado/endpoints/consumo-de-ia/consumo-de-ia';
+export * from './generado/endpoints/exenciones/exenciones';
