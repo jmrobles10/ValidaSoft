@@ -424,4 +424,32 @@ public sealed partial class ExpedientesApiTests
         var enEspera = await TerceroAsync("POST", $"/public/v1/vinculos/{vinculo.Id}/reintentar", sesion.AccessToken, null, 409);
         (await CodigoAsync(enEspera)).ShouldBe("reintento-en-espera");
     }
+
+    [Fact]
+    public async Task La_politica_de_reintento_es_la_del_flujo_que_escogeria_la_regla_de_seleccion_y_el_reintento_abre_con_ese_flujo()
+    {
+        // Rechazado con el flujo por defecto, que no permite reintentar.
+        var (e, vinculo, sesion, _) = await RechazadoAsync(new ReintentoDto(false, 0));
+        (await TerceroAsync<List<VinculoPublicoDto>>("GET", "/public/v1/vinculos", sesion.AccessToken, null, 200))
+            .ShouldHaveSingleItem().Reintento!.Permitido.ShouldBeFalse();
+
+        // La empresa publica después un flujo para clientes con regla de selección que sí permite reintentar (FR-1): es el que ahora le toca.
+        var conRegla = await ApiAsync<FlujoDto>("POST", "/api/v1/flujos", Admin(e),
+            new CrearFlujoDto("REINTENTA", "Con reintento", "CLIENTE",
+                [new EtapaDto(1, [new AreaDeEtapaDto(e.Aprobador.Id), new AreaDeEtapaDto(e.Cumplimiento.Id, PuedeRechazarExpediente: true)])],
+                Reintento: new ReintentoDto(true, 0),
+                Seleccion: new SeleccionDeFlujoDto(new CondicionDto("Predicado", Atributo: "vinculo.tipo", Operador: "Igual", Valores: ["CLIENTE"]), 1)), 201);
+        await ApiAsync<FlujoDto>("POST", $"/api/v1/flujos/{conRegla.Id}/publicar", Admin(e), new { }, 200);
+
+        var reintento = (await TerceroAsync<List<VinculoPublicoDto>>("GET", "/public/v1/vinculos", sesion.AccessToken, null, 200))
+            .ShouldHaveSingleItem().Reintento.ShouldNotBeNull();
+        reintento.Permitido.ShouldBeTrue();
+        reintento.Disponible.ShouldBeTrue();
+
+        var nuevo = await TerceroAsync<ExpedientePublicoDto>("POST", $"/public/v1/vinculos/{vinculo.Id}/reintentar", sesion.AccessToken, null, 200);
+        var delReintento = await ApiAsync<ExpedienteDto>("GET", $"/api/v1/expedientes/{nuevo.Id}", Admin(e), null, 200);
+        delReintento.Flujo!.Id.ShouldBe(conRegla.Id);
+        delReintento.Flujo.Origen.ShouldBe("Regla");
+        delReintento.Flujo.Regla!.Prioridad.ShouldBe(1);
+    }
 }

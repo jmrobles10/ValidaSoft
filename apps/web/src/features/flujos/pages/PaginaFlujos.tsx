@@ -1,7 +1,7 @@
 import { Box, Button, Chip, MenuItem, Skeleton, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { SCOPES, type FlujoDto } from '@validasoft/api-client';
 import { EstadoVacio, MarcoTabla } from '@validasoft/ui';
-import { Plus, Star } from 'lucide-react';
+import { ListOrdered, Plus, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { EncabezadoPagina, ErrorRecuperable, SinPermiso, Tarjeta } from '../../../shared/componentes';
@@ -11,6 +11,7 @@ import { useAvisos } from '../../../shared/useAvisos';
 import { useEmpresaActiva } from '../../empresas/useEmpresas';
 import { useTiposVinculo } from '../../vinculos/api';
 import { useDefinirPorDefecto, useFlujos } from '../api';
+import { seSeleccionaSolo } from '../seleccion';
 
 /** Flujos aprobatorios de la empresa activa y el flujo por defecto de cada tipo de vínculo (FL-2, FL-4). */
 export function PaginaFlujos() {
@@ -66,6 +67,7 @@ export function PaginaFlujos() {
                 ))}
               {flujos.map((f) => {
                 const vigente = f.publicada ?? f.borrador;
+                const regla = seSeleccionaSolo(f.publicada?.seleccion) ? f.publicada.seleccion : null;
                 return (
                   <TableRow
                     key={f.id}
@@ -87,6 +89,9 @@ export function PaginaFlujos() {
                           {f.codigo}
                         </Typography>
                         {f.esPorDefecto && <Chip size="small" variant="outlined" icon={<Star size={12} aria-hidden />} label={t('flujos.porDefecto')} />}
+                        {regla && (
+                          <Chip size="small" variant="outlined" icon={<ListOrdered size={12} aria-hidden />} label={t('flujoSeleccion.enLista', { prioridad: String(regla.prioridad ?? '') })} />
+                        )}
                       </Stack>
                     </TableCell>
                     <TableCell>{f.tipoVinculo.nombre}</TableCell>

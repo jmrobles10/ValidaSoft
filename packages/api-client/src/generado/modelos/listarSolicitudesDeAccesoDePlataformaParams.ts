@@ -6,6 +6,5 @@
  */
 
 export type ListarSolicitudesDeAccesoDePlataformaParams = {
-  /** @nullable */
-  estado?: string | null;
+  estado?: string;
 };

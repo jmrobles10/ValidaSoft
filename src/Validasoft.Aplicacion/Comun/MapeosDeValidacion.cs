@@ -32,7 +32,19 @@ public static class MapeosDeValidacion
                 : new RequisitoDelFlujoDto(r.Id, r.TipoDocumentoTenantId, r.CodigoTipo, r.Obligatorio, r.AreasQueRevisan,
                     r.AprobadoresRequeridos, r.Condicion?.ADto(), UsarComoSoporte: r.UsarComoSoporte))],
             [.. v.Verificaciones.Select(x => new VerificacionRequeridaDto(x.Tipo.ToString(), x.Bloqueante, x.VigenciaDias, x.FrecuenciaReconsultaMeses))],
-            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto(), v.VigenciaEfectiva().ADto(), RecordatorioADto(v.RecordatorioObservacionesDias));
+            v.PlazoEfectivo().ADto(), v.ReintentoEfectivo().ADto(), v.VigenciaEfectiva().ADto(), RecordatorioADto(v.RecordatorioObservacionesDias),
+            v.Seleccion?.ADto());
+
+    public static SeleccionDeFlujoDto ADto(this SeleccionDeFlujo s) => new(s.Condicion?.ADto(), s.Prioridad);
+
+    /// <summary>Selección del cuerpo a dominio (la valida el dominio al guardar el flujo: 422 <c>condicion-invalida</c>, <c>prioridad-requerida</c>…).</summary>
+    public static SeleccionDeFlujo ADominio(this SeleccionDeFlujoDto s) => new(s.Condicion?.ADominio(), s.Prioridad);
+
+    public static SeleccionPorReglaDto ADto(this SeleccionPorRegla r) => new(r.Prioridad, r.Condicion.ADto(), r.ReglasEvaluadas);
+
+    /// <summary>El flujo del expediente y cómo se escogió (con la regla que coincidió, si fue por regla).</summary>
+    public static FlujoDeExpedienteDto ADto(this FlujoDelExpediente f) =>
+        new(f.FlujoId, f.FlujoVersionId, f.Codigo, f.Nombre, f.Version, f.Origen.ToString(), f.Regla?.ADto());
 
     /// <summary>Verificación del cuerpo a dominio; un tipo desconocido responde 422 <c>verificacion-invalida</c>.</summary>
     public static VerificacionRequeridaDelFlujo ADominio(this VerificacionRequeridaDto v) =>
@@ -137,8 +149,7 @@ public static class MapeosDeValidacion
             new TerceroResumenDto(e.TerceroId, e.TerceroNombre, e.TerceroIdentificacion),
             new TipoVinculoResumenDto(e.TipoVinculoId, e.TipoVinculoCodigo, e.TipoVinculoNombre),
             e.Tipo.ToString(), e.Estado.ToString(),
-            e.Flujo is null ? null : new FlujoDeExpedienteDto(e.Flujo.FlujoId, e.Flujo.FlujoVersionId, e.Flujo.Codigo, e.Flujo.Nombre, e.Flujo.Version,
-                e.Flujo.Origen.ToString()),
+            e.Flujo?.ADto(),
             e.PoliticaDevolucion.ToString(), e.SeparacionDeFunciones, e.EtapaActiva?.Orden,
             [.. e.Etapas.Select(et => new EtapaExpedienteDto(et.Orden, et.Estado.ToString(), et.ActivadaEn, et.AprobadaEn,
                 [.. et.Areas.Select(a => a.ADto(miembros.TryGetValue(a.AreaId, out var m) ? m : [], PorDecidir(e, et, a, consultante)))]))],

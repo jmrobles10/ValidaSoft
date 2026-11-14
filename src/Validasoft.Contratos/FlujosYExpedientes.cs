@@ -67,23 +67,35 @@ public sealed record CrearFlujoDto(
     string Codigo, string Nombre, string TipoVinculo, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null,
     bool SeparacionDeFunciones = false, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
     IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
-    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
+    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null,
+    SeleccionDeFlujoDto? Seleccion = null);
 
 /// <summary>
 /// Edita el borrador (o crea uno nuevo si solo hay versión publicada). Lo que llega nulo conserva el valor de la última
-/// versión; <c>requisitos: []</c> los quita y <c>verificaciones: []</c> también.
+/// versión; <c>requisitos: []</c> los quita y <c>verificaciones: []</c> también. <see cref="Seleccion"/> nula conserva la de la última
+/// versión; <c>{}</c> (sin condición ni prioridad) la quita.
 /// </summary>
 public sealed record EditarFlujoDto(
     string? Nombre = null, IReadOnlyList<EtapaDto>? Etapas = null, string? PoliticaDevolucion = null, bool? SeparacionDeFunciones = null,
     IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null, IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null,
     PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null, VigenciaVinculoDto? VigenciaVinculo = null,
-    RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
+    RecordatorioDeFlujoDto? RecordatorioObservaciones = null, SeleccionDeFlujoDto? Seleccion = null);
+
+/// <summary>
+/// Cuándo se escoge el flujo solo (FR-1, docs/03 §12.1): al abrir un expediente sin flujo explícito se evalúan los flujos publicados del
+/// tipo de vínculo por <see cref="Prioridad"/> (1 a 999, la menor primero, sin repetir dentro del tipo) y gana el primero cuya
+/// <see cref="Condicion"/> cumplen el tercero y el vínculo; con el mismo motor Y/O/No de los requisitos. Una condición necesita su
+/// prioridad (422 <c>prioridad-requerida</c>, <c>prioridad-invalida</c>, <c>prioridad-duplicada</c>) y una prioridad su condición
+/// (<c>seleccion-sin-condicion</c>). Sin ambas el flujo solo se usa de forma explícita o, si es el por defecto, cuando ninguna regla aplica.
+/// Se congela con la versión publicada.
+/// </summary>
+public sealed record SeleccionDeFlujoDto(CondicionDto? Condicion = null, int? Prioridad = null);
 
 public sealed record FlujoVersionDto(
     Guid Id, int Version, string Estado, IReadOnlyList<EtapaDto> Etapas, string PoliticaDevolucion, bool SeparacionDeFunciones,
     DateTimeOffset CreadaEn, DateTimeOffset? PublicadaEn, DateTimeOffset? RetiradaEn, IReadOnlyList<RequisitoDelFlujoDto>? Requisitos = null,
     IReadOnlyList<VerificacionRequeridaDto>? Verificaciones = null, PlazoCargueDto? PlazoCargue = null, ReintentoDto? Reintento = null,
-    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null);
+    VigenciaVinculoDto? VigenciaVinculo = null, RecordatorioDeFlujoDto? RecordatorioObservaciones = null, SeleccionDeFlujoDto? Seleccion = null);
 
 /// <summary>
 /// Reintento del tercero tras un rechazo (DS-4): con <see cref="Permitido"/> el tercero rechazado ve los motivos en su portal y
@@ -113,7 +125,38 @@ public sealed record FlujoPorDefectoDto(Guid TipoVinculoId, Guid FlujoId, Guid? 
 /// <summary><see cref="FlujoId"/> opcional: sin él, el flujo del vínculo o el por defecto de <c>(empresa, tipo)</c>.</summary>
 public sealed record AbrirExpedienteDto(Guid? FlujoId = null);
 
-public sealed record FlujoDeExpedienteDto(Guid Id, Guid VersionId, string Codigo, string Nombre, int Version, string Origen);
+/// <summary>
+/// El flujo de un expediente y cómo se escogió: <see cref="Origen"/> es <c>Explicito</c>, <c>Regla</c> o <c>PorDefecto</c>. Con <c>Regla</c>,
+/// <see cref="Regla"/> trae la prioridad y la condición que coincidieron (FR-1), tal como estaban en la versión publicada, y cuántas reglas
+/// se evaluaron hasta ella.
+/// </summary>
+public sealed record FlujoDeExpedienteDto(Guid Id, Guid VersionId, string Codigo, string Nombre, int Version, string Origen,
+    SeleccionPorReglaDto? Regla = null);
+
+/// <summary>La regla de selección que decidió el flujo de un expediente: prioridad, condición y reglas evaluadas hasta ella.</summary>
+public sealed record SeleccionPorReglaDto(int Prioridad, CondicionDto Condicion, int ReglasEvaluadas);
+
+/// <summary>
+/// Pregunta «qué flujo le tocaría a este tercero» (<c>POST /flujos/seleccion/vista-previa</c>): el flujo que escogerían las reglas de
+/// selección vigentes para <see cref="TipoVinculo"/> (código) con los datos del tercero y del vínculo. Con <see cref="TerceroId"/> (visible
+/// para el tenant) los datos salen del tercero y los campos que vengan los sustituyen («y si fuera extranjero»); sin él se usan los
+/// indicados y, si faltan, <c>Juridica</c>, <c>CO</c> y <c>NIT</c>. <see cref="EsExtranjero"/> omitido es «el país no es CO».
+/// <see cref="Atributos"/> son los del vínculo (<c>vinculo.atributos.{clave}</c>). No abre nada ni escribe nada.
+/// </summary>
+public sealed record VistaPreviaDeSeleccionDto(
+    string TipoVinculo, Guid? TerceroId = null, string? TipoPersona = null, string? Pais = null, string? TipoIdentificacion = null,
+    bool? EsExtranjero = null, Dictionary<string, JsonElement>? Atributos = null);
+
+/// <summary>Una regla de selección vigente (flujo publicado con condición) y si la cumple el tercero consultado.</summary>
+public sealed record ReglaDeSeleccionDto(
+    Guid FlujoId, Guid VersionId, string Codigo, string Nombre, int Version, int Prioridad, CondicionDto Condicion, bool Cumple);
+
+/// <summary>
+/// Lo que escogería el sistema: <see cref="Flujo"/> con su origen (<c>Regla</c> o <c>PorDefecto</c>; nulo si no hay regla que aplique ni
+/// flujo por defecto publicado) y todas las <see cref="Reglas"/> en el orden en que se evalúan, cada una con su resultado. Un flujo explícito
+/// en el vínculo o al abrir el expediente gana sobre esto.
+/// </summary>
+public sealed record SeleccionPrevistaDto(FlujoDeExpedienteDto? Flujo, IReadOnlyList<ReglaDeSeleccionDto> Reglas);
 
 public sealed record TerceroResumenDto(Guid Id, string Nombre, string Identificacion);
 

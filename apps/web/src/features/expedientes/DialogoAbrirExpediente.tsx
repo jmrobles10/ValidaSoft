@@ -19,7 +19,7 @@ export interface DialogoAbrirExpedienteProps {
   onCerrar: () => void;
 }
 
-/** Apertura manual (`POST /vinculos/{id}/expedientes`): el flujo por defecto del tipo o uno publicado elegido. */
+/** Apertura manual (`POST /vinculos/{id}/expedientes`): el flujo que corresponda (reglas de selección o el por defecto del tipo) o uno publicado elegido. */
 export function DialogoAbrirExpediente({ empresaId, vinculoId, tipoVinculo, tercero, onCerrar }: DialogoAbrirExpedienteProps) {
   const { t } = useTranslation();
   const navegar = useNavigate();
@@ -29,7 +29,6 @@ export function DialogoAbrirExpediente({ empresaId, vinculoId, tipoVinculo, terc
   const [flujoId, setFlujoId] = useState('');
 
   const publicados = (flujos.data ?? []).filter((f) => f.publicada);
-  const flujoPorDefecto = publicados.find((f) => f.esPorDefecto);
   const sinFlujos = flujos.isSuccess && publicados.length === 0;
 
   const enviar = (evento: SubmitEvent) => {
@@ -71,10 +70,7 @@ export function DialogoAbrirExpediente({ empresaId, vinculoId, tipoVinculo, terc
               <Alert severity="warning">{t('expedientes.abrir.sinFlujos', { tipo: tipoVinculo.nombre })}</Alert>
             ) : (
               <TextField select label={t('expedientes.abrir.flujo')} value={flujoId} onChange={(e) => setFlujoId(e.target.value)} disabled={!flujos.isSuccess}>
-                <MenuItem value="">
-                  {t('expedientes.abrir.porDefecto', { tipo: tipoVinculo.nombre })}
-                  {flujoPorDefecto ? ` · ${flujoPorDefecto.nombre}` : ''}
-                </MenuItem>
+                <MenuItem value="">{t('expedientes.abrir.porDefecto', { tipo: tipoVinculo.nombre })}</MenuItem>
                 {publicados.map((f) => (
                   <MenuItem key={f.id} value={f.id}>
                     {f.nombre} · v{f.publicada?.version}

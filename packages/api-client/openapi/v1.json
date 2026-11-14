@@ -4311,6 +4311,171 @@
         }
       }
     },
+    "/api/v1/plataforma/solicitudes-de-acceso": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "description": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "operationId": "GET_api_v1_plataforma_solicitudes_de_acceso",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-de-acceso/{id}/aprobar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/solicitudes-de-acceso/{id}/rechazar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RechazarAccesoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/terceros/{terceroId}/contactos/verificar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "description": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "operationId": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
+        "parameters": [
+          {
+            "name": "terceroId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificarContactoDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactoDelTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/eventos": {
       "get": {
         "tags": [
@@ -5690,6 +5855,31 @@
         }
       }
     },
+    "/public/v1/contactos-del-tercero": {
+      "get": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.AccesosSolicitadosEndpoints"
+        ],
+        "summary": "GET_public_v1_contactos_del_tercero",
+        "description": "GET_public_v1_contactos_del_tercero",
+        "operationId": "GET_public_v1_contactos_del_tercero",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactosDelTerceroDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/public/v1/accesos-solicitados/{id}/aprobar": {
       "post": {
         "tags": [
@@ -5987,6 +6177,31 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/plataforma/acceso-aislado/migrar": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Interesado.MigracionDeAccesoAisladoEndpoints"
+        ],
+        "summary": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "description": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "operationId": "POST_api_v1_plataforma_acceso_aislado_migrar",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResultadoDeMigracionDeAccesoDto"
                 }
               }
             }
@@ -10330,6 +10545,41 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FlujoVersionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
+    "/api/v1/flujos/seleccion/vista-previa": {
+      "post": {
+        "tags": [
+          "Validasoft.Aplicacion.Flujos.FlujosEndpoints"
+        ],
+        "summary": "POST_api_v1_flujos_seleccion_vista_previa",
+        "description": "POST_api_v1_flujos_seleccion_vista_previa",
+        "operationId": "POST_api_v1_flujos_seleccion_vista_previa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VistaPreviaDeSeleccionDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeleccionPrevistaDto"
                 }
               }
             }
@@ -15897,224 +16147,6 @@
           }
         }
       }
-    },
-    "/public/v1/contactos-del-tercero": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Interesado.AccesosSolicitadosEndpoints"
-        ],
-        "summary": "GET_public_v1_contactos_del_tercero",
-        "description": "GET_public_v1_contactos_del_tercero",
-        "operationId": "GET_public_v1_contactos_del_tercero",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContactosDelTerceroDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/solicitudes-de-acceso": {
-      "get": {
-        "tags": [
-          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
-        ],
-        "summary": "GET_api_v1_plataforma_solicitudes_de_acceso",
-        "description": "GET_api_v1_plataforma_solicitudes_de_acceso",
-        "operationId": "GET_api_v1_plataforma_solicitudes_de_acceso",
-        "parameters": [
-          {
-            "name": "estado",
-            "in": "query",
-            "schema": {
-              "type": [
-                "null",
-                "string"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/solicitudes-de-acceso/{id}/aprobar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
-        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
-        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_aprobar",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/solicitudes-de-acceso/{id}/rechazar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
-        "description": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
-        "operationId": "POST_api_v1_plataforma_solicitudes_de_acceso_id_rechazar",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RechazarAccesoDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SolicitudDeAccesoDePlataformaDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/terceros/{terceroId}/contactos/verificar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Plataforma.SolicitudesDeAccesoDeLaPlataformaEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
-        "description": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
-        "operationId": "POST_api_v1_plataforma_terceros_terceroId_contactos_verificar",
-        "parameters": [
-          {
-            "name": "terceroId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerificarContactoDto"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ContactoDelTerceroDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
-    },
-    "/api/v1/plataforma/acceso-aislado/migrar": {
-      "post": {
-        "tags": [
-          "Validasoft.Aplicacion.Interesado.MigracionDeAccesoAisladoEndpoints"
-        ],
-        "summary": "POST_api_v1_plataforma_acceso_aislado_migrar",
-        "description": "POST_api_v1_plataforma_acceso_aislado_migrar",
-        "operationId": "POST_api_v1_plataforma_acceso_aislado_migrar",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ResultadoDeMigracionDeAccesoDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found"
-          }
-        }
-      }
     }
   },
   "components": {
@@ -16215,10 +16247,12 @@
             ]
           },
           "puedesDecidir": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": true
           },
           "decideLaPlataforma": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "decididoVia": {
             "type": [
@@ -16227,7 +16261,8 @@
             ]
           },
           "contactoDesplazado": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20970,7 +21005,11 @@
             "type": "string"
           },
           "version": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           },
           "cargadoPor": {
@@ -20980,7 +21019,8 @@
             ]
           },
           "respalda": {
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -21325,6 +21365,16 @@
               },
               {
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
+              }
+            ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
               }
             ]
           }
@@ -23470,6 +23520,16 @@
               },
               {
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
+              }
+            ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
               }
             ]
           }
@@ -27251,6 +27311,16 @@
           },
           "origen": {
             "type": "string"
+          },
+          "regla": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionPorReglaDto"
+              }
+            ]
           }
         }
       },
@@ -27481,6 +27551,16 @@
               },
               {
                 "$ref": "#/components/schemas/RecordatorioDeFlujoDto"
+              }
+            ]
+          },
+          "seleccion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SeleccionDeFlujoDto"
               }
             ]
           }
@@ -32228,6 +32308,57 @@
           }
         }
       },
+      "ReglaDeSeleccionDto": {
+        "required": [
+          "flujoId",
+          "versionId",
+          "codigo",
+          "nombre",
+          "version",
+          "prioridad",
+          "condicion",
+          "cumple"
+        ],
+        "type": "object",
+        "properties": {
+          "flujoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "condicion": {
+            "$ref": "#/components/schemas/CondicionDto"
+          },
+          "cumple": {
+            "type": "boolean"
+          }
+        }
+      },
       "ReglaFrescuraDto": {
         "required": [
           "tipo"
@@ -33037,23 +33168,43 @@
         "type": "object",
         "properties": {
           "tercerosRevisados": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           },
           "contactosVerificados": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           },
           "primerosContactos": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           },
           "vinculosAislados": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           },
           "tercerosSincronizados": {
-            "type": "integer",
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
             "format": "int32"
           }
         }
@@ -35281,6 +35432,84 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "SeleccionDeFlujoDto": {
+        "type": "object",
+        "properties": {
+          "condicion": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CondicionDto"
+              }
+            ]
+          },
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeleccionPorReglaDto": {
+        "required": [
+          "prioridad",
+          "condicion",
+          "reglasEvaluadas"
+        ],
+        "type": "object",
+        "properties": {
+          "prioridad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "condicion": {
+            "$ref": "#/components/schemas/CondicionDto"
+          },
+          "reglasEvaluadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SeleccionPrevistaDto": {
+        "required": [
+          "flujo",
+          "reglas"
+        ],
+        "type": "object",
+        "properties": {
+          "flujo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FlujoDeExpedienteDto"
+              }
+            ]
+          },
+          "reglas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReglaDeSeleccionDto"
+            }
           }
         }
       },
@@ -38973,6 +39202,54 @@
           },
           "html": {
             "type": "string"
+          }
+        }
+      },
+      "VistaPreviaDeSeleccionDto": {
+        "required": [
+          "tipoVinculo"
+        ],
+        "type": "object",
+        "properties": {
+          "tipoVinculo": {
+            "type": "string"
+          },
+          "terceroId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "tipoPersona": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pais": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tipoIdentificacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "esExtranjero": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "atributos": {
+            "type": [
+              "null",
+              "object"
+            ]
           }
         }
       },

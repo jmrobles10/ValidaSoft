@@ -67,8 +67,11 @@ public sealed class CorreosPendientesDeCierre(IProtectorDeSecretos protector)
     }
 }
 
-/// <summary>Versión de flujo elegida para un expediente y cómo se eligió.</summary>
-public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFlujo Origen);
+/// <summary>
+/// Versión de flujo elegida para un expediente y cómo se eligió; con origen <see cref="OrigenFlujo.Regla"/>, <see cref="Regla"/> es la
+/// condición de selección que coincidió (FR-1).
+/// </summary>
+public sealed record FlujoResuelto(Flujo Flujo, FlujoVersion Version, OrigenFlujo Origen, SeleccionPorRegla? Regla = null);
 
 /// <summary>
 /// Proceso de validación vínculo ↔ expediente (docs/03 §8) resuelto <b>en la misma transacción</b> (FL-5): abrir el
@@ -86,8 +89,11 @@ public static class ProcesoDeValidacion
     public static int DiasMonitoreoDeListas { get; set; } = 30;
 
     /// <summary>
-    /// Flujo explícito (el indicado o el del vínculo) o el por defecto de <c>(empresa, tipo)</c>; nulo si no hay ninguno
-    /// publicado. Un flujo indicado por el llamador que no sirve es un error; el del vínculo sin publicar cae al por defecto.
+    /// El flujo de un vínculo, en este orden (FR-1): el indicado por el llamador o el del vínculo (<see cref="OrigenFlujo.Explicito"/>,
+    /// gana siempre); si no hay, el primer flujo publicado del tipo de vínculo cuya condición de selección cumple el tercero y el
+    /// vínculo, por prioridad (<see cref="OrigenFlujo.Regla"/>); y si ninguno cumple, el por defecto de <c>(empresa, tipo)</c>
+    /// (<see cref="OrigenFlujo.PorDefecto"/>). Nulo si no hay ninguno publicado. Un flujo indicado por el llamador que no sirve es un
+    /// error; el del vínculo sin publicar sigue con las reglas y el por defecto.
     /// </summary>
     public static async Task<FlujoResuelto?> ResolverFlujoAsync(IQuerySession sesion, Vinculo vinculo, Guid? explicito, CancellationToken ct)
     {
@@ -107,17 +113,59 @@ public static class ProcesoDeValidacion
             propio.EmpresaId == vinculo.EmpresaId && propio.VersionPublicada is { } versionPropia)
             return new FlujoResuelto(propio, versionPropia, OrigenFlujo.Explicito);
 
-        var porDefecto = await sesion.LoadAsync<FlujoPorDefecto>(FlujoPorDefecto.Clave(vinculo.EmpresaId, vinculo.TipoVinculoId), ct);
-        if (porDefecto is null || await sesion.LoadAsync<Flujo>(porDefecto.FlujoId, ct) is not { VersionPublicada: { } publicada } elegido)
+        var seleccion = await SeleccionarFlujoAsync(sesion, vinculo, ct);
+        return seleccion is { Flujo: { } elegido, Version: { } publicada }
+            ? new FlujoResuelto(elegido, publicada, seleccion.Origen, seleccion.Regla)
+            : null;
+    }
+
+    /// <summary>
+    /// Elige entre las reglas de selección y el flujo por defecto para un vínculo sin flujo explícito. Solo carga al tercero y el tipo
+    /// del vínculo si algún flujo publicado del tipo tiene una regla; sin reglas es el por defecto, como antes de FR-1.
+    /// </summary>
+    public static async Task<SeleccionResuelta> SeleccionarFlujoAsync(IQuerySession sesion, Vinculo vinculo, CancellationToken ct)
+    {
+        var empresaId = vinculo.EmpresaId;
+        var tipoId = vinculo.TipoVinculoId;
+        var delTipo = await sesion.Query<Flujo>().Where(f => f.EmpresaId == empresaId && f.TipoVinculoId == tipoId).ToListAsync(ct);
+        var porDefecto = await sesion.LoadAsync<FlujoPorDefecto>(FlujoPorDefecto.Clave(empresaId, tipoId), ct);
+        var flujoPorDefecto = porDefecto is null ? null : delTipo.FirstOrDefault(f => f.Id == porDefecto.FlujoId);
+
+        if (EvaluadorDeSeleccion.Reglas(delTipo).Count > 0 && await ContextoDeSeleccionAsync(sesion, vinculo, ct) is { } contexto)
+            return EvaluadorDeSeleccion.Seleccionar(delTipo, flujoPorDefecto, contexto);
+        return EvaluadorDeSeleccion.SoloPorDefecto(flujoPorDefecto);
+    }
+
+    /// <summary>Lo que se sabe del tercero y del vínculo para evaluar las reglas de selección; nulo si el tercero ya no existe.</summary>
+    private static async Task<ContextoDeExigencia?> ContextoDeSeleccionAsync(IQuerySession sesion, Vinculo vinculo, CancellationToken ct)
+    {
+        if (await sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct) is not { } tercero)
             return null;
-        return new FlujoResuelto(elegido, publicada, OrigenFlujo.PorDefecto);
+        var tipo = await sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct);
+        return ContextoDeExigencia.De(tercero, tipo?.Codigo ?? string.Empty, vinculo.Atributos);
+    }
+
+    /// <summary>
+    /// Los flujos que pueden regir a estos vínculos en una consulta entre tenants: todos los de cada <c>(empresa, tipo)</c> (el del
+    /// vínculo, el por defecto y los que tienen regla de selección son siempre de ese par). Para <see cref="FlujoVigente"/>.
+    /// </summary>
+    public static async Task<IReadOnlyList<Flujo>> CargarFlujosDeLosVinculosAsync(IQuerySession consulta, IReadOnlyCollection<Vinculo> vinculos,
+        CancellationToken ct)
+    {
+        if (vinculos.Count == 0)
+            return [];
+        var empresas = vinculos.Select(v => v.EmpresaId).Distinct().ToArray();
+        var tipos = vinculos.Select(v => v.TipoVinculoId).Distinct().ToArray();
+        return await consulta.Query<Flujo>().Where(f => f.AnyTenant() && f.EmpresaId.IsOneOf(empresas) && f.TipoVinculoId.IsOneOf(tipos)).ToListAsync(ct);
     }
 
     /// <summary>
     /// La misma resolución que <see cref="ResolverFlujoAsync"/> sin flujo indicado, sobre flujos ya cargados (consultas
-    /// entre tenants): la versión publicada del flujo del vínculo o, si no, la del por defecto de <c>(empresa, tipo)</c>.
+    /// entre tenants): la versión publicada del flujo del vínculo o, si no, la que escogen las reglas de selección con el
+    /// <paramref name="contexto"/> del tercero y el vínculo (FR-1; sin contexto no se evalúan) o la del por defecto de <c>(empresa, tipo)</c>.
     /// </summary>
-    public static FlujoVersion? FlujoVigente(Vinculo vinculo, IEnumerable<Flujo> flujos, IEnumerable<FlujoPorDefecto> porDefecto)
+    public static FlujoVersion? FlujoVigente(Vinculo vinculo, IEnumerable<Flujo> flujos, IEnumerable<FlujoPorDefecto> porDefecto,
+        ContextoDeExigencia? contexto = null)
     {
         var lista = flujos as IReadOnlyCollection<Flujo> ?? [.. flujos];
         if (vinculo.FlujoId is { } propio && lista.FirstOrDefault(f => f.Id == propio) is { } delVinculo &&
@@ -125,9 +173,12 @@ public static class ProcesoDeValidacion
             return version;
 
         var clave = FlujoPorDefecto.Clave(vinculo.EmpresaId, vinculo.TipoVinculoId);
-        return porDefecto.FirstOrDefault(p => p.Id == clave) is { } elegido
-            ? lista.FirstOrDefault(f => f.Id == elegido.FlujoId)?.VersionPublicada
-            : null;
+        var elegido = porDefecto.FirstOrDefault(p => p.Id == clave) is { } defecto ? lista.FirstOrDefault(f => f.Id == defecto.FlujoId) : null;
+        if (contexto is null)
+            return elegido?.VersionPublicada;
+
+        var delTipo = lista.Where(f => f.EmpresaId == vinculo.EmpresaId && f.TipoVinculoId == vinculo.TipoVinculoId);
+        return EvaluadorDeSeleccion.Seleccionar(delTipo, elegido, contexto).Version;
     }
 
     /// <summary>
@@ -178,7 +229,8 @@ public static class ProcesoDeValidacion
         var eventos = Expediente.Abrir(datos, new FlujoParaExpediente(flujo.Flujo.Id, flujo.Version.Id, flujo.Flujo.Codigo, flujo.Flujo.Nombre,
             flujo.Version.Version, flujo.Origen, etapas, flujo.Version.PoliticaDevolucion, flujo.Version.SeparacionDeFunciones,
             // Una actualización (un documento cambió) no repite las listas ni el estudio (VE-6).
-            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo(), flujo.Version.RecordatorioObservacionesDias), ahora, requisitos);
+            tipoExpediente == TipoExpediente.Actualizacion ? [] : flujo.Version.Verificaciones, flujo.Version.PlazoEfectivo(), flujo.Version.RecordatorioObservacionesDias,
+            flujo.Regla), ahora, requisitos);
 
         var expedienteId = ((ExpedienteAbierto)eventos[0]).ExpedienteId;
         var vinculado = vinculo.VincularExpediente(expedienteId, tipoExpediente, folio, ahora);
