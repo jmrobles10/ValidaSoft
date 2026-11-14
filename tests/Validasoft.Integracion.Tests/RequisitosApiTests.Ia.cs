@@ -29,6 +29,9 @@ public sealed class AnalizadorFalso : IAnalizadorDeDocumentos
         _llamadas.Enqueue((apiKey, solicitud));
         if (apiKey.Contains("-falla-", StringComparison.Ordinal))
             throw new AnalisisDeIaException("http-500", "OpenAI respondió 500.");
+        // La respuesta llegó incompleta: no sirve, pero OpenAI la facturó con sus tokens (OC-6).
+        if (apiKey.Contains("-incompleta-", StringComparison.Ordinal))
+            throw new AnalisisDeIaException("respuesta-incompleta", "OpenAI no completó la respuesta.", uso: new UsoDeTokens(1000, 200, 300));
 
         var confianza = apiKey.Contains("-baja-", StringComparison.Ordinal) && solicitud.Modelo == PlanDeIaEmpresa.ModeloPorDefectoInicial ? 0.5m : 0.97m;
         // F5: un archivo con marcas [[clave=valor]] responde lo que dicen (el mismo lector del analizador simulado).
@@ -246,6 +249,30 @@ public sealed partial class RequisitosApiTests
         await AsentarIaAsync(documentoId, 1);
         fixture.Analizador.LlamadasCon(llave).Count.ShouldBe(1);
         (await UsoIaAsync(norte)).IncluidasConsumidas.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Si_la_respuesta_sale_incompleta_se_registra_su_consumo_aunque_no_haya_analisis_y_no_se_cobra_la_validacion()
+    {
+        var norte = await EmpresaNuevaAsync("Norte S.A.S.", "NORTE");
+        var llave = LlaveIa("incompleta");
+        await PlanIaAsync(norte, new ActualizarPlanIaEmpresaDto(10, false, ApiKeyOpenAi: llave));
+        await FlujoConAsync(norte, "CLIENTE", [new RequisitoDelFlujoDto(TipoDocumento: "RUT")]);
+        var correo = CorreoNuevo();
+        var vinculo = await CrearVinculoAsync(norte, "CLIENTE", correo);
+        var sesion = await SesionAsync(correo);
+        await AceptarAsync(sesion, vinculo.Id);
+
+        var rut = await SubirAsync(sesion, "RUT", Pdf("RUT"));
+        var documentoId = rut.Version.DocumentoId;
+        await EsperarAsync(async () => (await DocumentoDeBovedaAsync(documentoId))?.VersionRequerida(1).FalloIa is not null, "el fallo de IA");
+        await EsperarAsync(async () => (await UsoIaAsync(norte)).TokensEntrada > 0, "el consumo de la respuesta incompleta");
+
+        (await EventosDeBovedaAsync(documentoId)).OfType<AnalisisDeIaFallido>().ShouldHaveSingleItem().Motivo.ShouldBe("respuesta-incompleta");
+        // La llamada se facturó: tokens y costo quedan en el uso de la empresa; el análisis no existe y la validación se devolvió.
+        var uso = await UsoIaAsync(norte);
+        (uso.AnalisisPagados, uso.IncluidasConsumidas, uso.TokensEntrada, uso.CostoUsd).ShouldBe((0, 0, 1000L, CostoLuna));
+        fixture.Analizador.LlamadasCon(llave).Count.ShouldBe(1);
     }
 
     [Fact]

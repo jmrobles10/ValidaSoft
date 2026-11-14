@@ -148,6 +148,7 @@ public static class AnalizarVersionConIaHandler
         var llamadas = new List<LlamadaDeIa>();
         AnalisisDeIaRegistrado? analisis = null;
         string? motivo = null;
+        var modeloEnCurso = planPagador.ModeloPorDefecto;
         try
         {
             var contenido = await LeerAsync(almacen, version, ct);
@@ -166,6 +167,7 @@ public static class AnalizarVersionConIaHandler
                     comparacion?.CamposCriticosCambiados.Count ?? 0) &&
                 !string.Equals(planPagador.ModeloEscalamiento, planPagador.ModeloPorDefecto, StringComparison.OrdinalIgnoreCase))
             {
+                modeloEnCurso = planPagador.ModeloEscalamiento;
                 resultado = await analizador.AnalizarAsync(Solicitud(planPagador.ModeloEscalamiento), llave, ct);
                 llamadas.Add(Llamada(opciones, planPagador.ModeloEscalamiento, resultado));
                 escalado = true;
@@ -184,6 +186,10 @@ public static class AnalizarVersionConIaHandler
         catch (AnalisisDeIaException e)
         {
             motivo = e.Motivo;
+            // Una respuesta incompleta, rechazada o fuera del esquema no sirve, pero OpenAI la factura con la llave de la empresa: su consumo se
+            // registra igual (OC-6). La validación sí se devuelve más abajo: la empresa no recibe un análisis fallido.
+            if (e.Uso is { } consumido)
+                llamadas.Add(Llamada(opciones, modeloEnCurso, consumido, confianza: 0m));
         }
         catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -210,12 +216,11 @@ public static class AnalizarVersionConIaHandler
         return pagadora;
     }
 
-    private static LlamadaDeIa Llamada(OpcionesDeIa opciones, string modelo, ResultadoDeAnalisis resultado)
-    {
-        var uso = resultado.Uso;
-        return new LlamadaDeIa(modelo, resultado.Hechos.Confianza, uso.Entrada, uso.EntradaEnCache, uso.Salida,
-            opciones.Tarifa(modelo).Costo(uso.Entrada, uso.EntradaEnCache, uso.Salida));
-    }
+    private static LlamadaDeIa Llamada(OpcionesDeIa opciones, string modelo, ResultadoDeAnalisis resultado) =>
+        Llamada(opciones, modelo, resultado.Uso, resultado.Hechos.Confianza);
+
+    private static LlamadaDeIa Llamada(OpcionesDeIa opciones, string modelo, UsoDeTokens uso, decimal confianza) =>
+        new(modelo, confianza, uso.Entrada, uso.EntradaEnCache, uso.Salida, opciones.Tarifa(modelo).Costo(uso.Entrada, uso.EntradaEnCache, uso.Salida));
 
     /// <summary>Lee el binario de la versión (el que verificó la carga); nunca se registra ni se guarda en otra parte.</summary>
     private static async Task<byte[]> LeerAsync(IAlmacenDeArchivos almacen, VersionDocumento version, CancellationToken ct)
