@@ -1,6 +1,6 @@
 import { Alert, Box, Button, Dialog, IconButton, Skeleton, Stack, Typography } from '@mui/material';
 import type { DatoDeclaradoDto, HechosDto, VigenciaDto } from '@validasoft/api-client';
-import { formatearFecha } from '@validasoft/ui';
+import { abrirDescarga, formatearFecha } from '@validasoft/ui';
 import { Download, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { mensajeDeError } from '../../shared/errores';
@@ -8,7 +8,7 @@ import { tipoDeVisor } from './api';
 import { estadoRevision } from './revisionIa';
 import type { TipoEsperado } from './RevisionAutomatica';
 import { ResumenVersion } from './ResumenVersion';
-import { ofrecerDescarga, useArchivoDelVisor, type ContenidoDelVisor } from './useArchivoDelVisor';
+import { useArchivoDelVisor, type ContenidoDelVisor } from './useArchivoDelVisor';
 
 /** Lo que el visor necesita de una versión: sirve desde la lista de documentos del vínculo y desde un requisito. */
 export interface DocumentoEnVisor {
@@ -70,7 +70,7 @@ export function VisorDocumento({ empresaId, vinculoId, documento, onCerrar }: { 
         </Box>
         {conArchivo && (
           // Siempre un botón (con `disabled` mientras llega la URL): como enlace cambiaba de rol al cargar el archivo.
-          <Button disabled={!descarga} onClick={() => descarga && ofrecerDescarga(descarga)} variant="outlined" startIcon={<Download size={16} aria-hidden />}>
+          <Button disabled={!descarga} onClick={() => descarga && abrirDescarga(descarga)} variant="outlined" startIcon={<Download size={16} aria-hidden />}>
             {t('documentos.descargar')}
           </Button>
         )}

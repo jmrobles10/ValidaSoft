@@ -25,6 +25,7 @@ import {
   type ActualizarListasRestrictivasDto,
   type ArchivoDescargado,
   type DecisionCoincidencia,
+  type DescargaEvidenciaDto,
   type ExpedienteDto,
   type AdjuntoDeCumplimientoDto,
   type ObtenerInformeCumplimientoParams,
@@ -35,6 +36,7 @@ import {
   type RegistrarEstudioCumplimientoDto,
   type RespuestaDeMatrizDto,
 } from '@validasoft/api-client';
+import { abrirDescarga } from '@validasoft/ui';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
 import { invalidarExpedientes } from '../expedientes/api';
 
@@ -92,26 +94,27 @@ export function useAccionVerificacion(empresaId: string, expedienteId: string) {
   });
 }
 
-/** Descarga auditada de la evidencia (URL prefirmada de 5 minutos) en otra pestaña; `referencia` = una consulta anterior. */
+/** La evidencia y los archivos del oficial llaman `nombreArchivo` a lo que las demás descargas llaman `nombre`. */
+function abrirEvidencia(descarga: DescargaEvidenciaDto): DescargaEvidenciaDto {
+  abrirDescarga({ url: descarga.url, nombre: descarga.nombreArchivo });
+  return descarga;
+}
+
+/** Descarga auditada de la evidencia (URL prefirmada de 5 minutos); `referencia` = una consulta anterior. */
 export function useDescargarEvidencia(empresaId: string) {
   return useMutation({
-    mutationFn: async ({ expedienteId, referencia }: { expedienteId: string; referencia?: string }) => {
-      const descarga = await descargarEvidenciaVerificacion(expedienteId, 'ListasRestrictivas', referencia ? { referencia } : undefined, {
-        empresa: empresaId,
-      });
-      window.open(descarga.url, '_blank', 'noopener');
-      return descarga;
-    },
+    mutationFn: async ({ expedienteId, referencia }: { expedienteId: string; referencia?: string }) =>
+      abrirEvidencia(
+        await descargarEvidenciaVerificacion(expedienteId, 'ListasRestrictivas', referencia ? { referencia } : undefined, {
+          empresa: empresaId,
+        }),
+      ),
   });
 }
 
 export function useDescargarEvidenciaMonitoreo(empresaId: string) {
   return useMutation({
-    mutationFn: async (vinculoId: string) => {
-      const descarga = await descargarEvidenciaMonitoreo(vinculoId, { empresa: empresaId });
-      window.open(descarga.url, '_blank', 'noopener');
-      return descarga;
-    },
+    mutationFn: async (vinculoId: string) => abrirEvidencia(await descargarEvidenciaMonitoreo(vinculoId, { empresa: empresaId })),
   });
 }
 
@@ -193,14 +196,10 @@ export function useSubirAdjunto(empresaId: string, expedienteId: string) {
   });
 }
 
-/** Descarga auditada (URL prefirmada de 5 minutos) de un archivo del oficial, en otra pestaña. */
+/** Descarga auditada (URL prefirmada de 5 minutos) de un archivo del oficial. */
 export function useDescargarAdjunto(empresaId: string, expedienteId: string) {
   return useMutation({
-    mutationFn: async (adjuntoId: string) => {
-      const descarga = await descargarAdjuntoDeCumplimiento(expedienteId, adjuntoId, { empresa: empresaId });
-      window.open(descarga.url, '_blank', 'noopener');
-      return descarga;
-    },
+    mutationFn: async (adjuntoId: string) => abrirEvidencia(await descargarAdjuntoDeCumplimiento(expedienteId, adjuntoId, { empresa: empresaId })),
   });
 }
 

@@ -10,6 +10,7 @@ import {
   retirarPlantillaTipoDocumento,
   type TipoDocumentoTenantDto,
 } from '@validasoft/api-client';
+import { abrirDescarga, sha256Hex } from '@validasoft/ui';
 import { invalidarRuta } from '../../../shared/consultas';
 import { cuerpoActualizar, cuerpoCrear, type BorradorTipo } from './modelo';
 
@@ -43,11 +44,6 @@ export function useGuardarTipo(tipo: TipoDocumentoTenantDto | null, claveIdempot
   });
 }
 
-async function sha256Hex(archivo: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', await archivo.arrayBuffer());
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 /** Paso 1 (`PUT …/plantilla`), carga directa al almacenamiento con la URL prefirmada y paso 2 (`…/confirmar`). */
 export async function subirPlantilla(tipoId: string, archivo: File, fetchFn: typeof fetch = (...a) => globalThis.fetch(...a)) {
   const sha256 = await sha256Hex(archivo);
@@ -63,11 +59,7 @@ export function useAccionesPlantilla(tipoId: string) {
   const subir = useMutation({ mutationFn: (archivo: File) => subirPlantilla(tipoId, archivo), onSuccess: refrescar });
   const retirar = useMutation({ mutationFn: () => retirarPlantillaTipoDocumento(tipoId, SIN_EMPRESA), onSuccess: refrescar });
   const descargar = useMutation({
-    mutationFn: async (version: number) => {
-      const descarga = await descargarPlantillaTipoDocumento(tipoId, { version }, SIN_EMPRESA);
-      window.open(descarga.url, '_blank', 'noopener');
-      return descarga;
-    },
+    mutationFn: async (version: number) => abrirDescarga(await descargarPlantillaTipoDocumento(tipoId, { version }, SIN_EMPRESA)),
   });
   return { subir, retirar, descargar };
 }

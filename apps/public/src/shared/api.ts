@@ -22,12 +22,12 @@ import {
   retirarCuentaBancaria,
   retirarVersionDocumento,
   type ConsentimientoDto,
-  type DescargaDto,
   type EnviarFormularioDto,
   type ExpedientePublicoDto,
   type RegistrarCuentaBancariaDto,
   type RequisitoPublicoDto,
 } from '@validasoft/api-client';
+import { abrirDescarga } from '@validasoft/ui';
 
 /** No se reintenta lo que el servidor ya rechazó (4xx): solo fallas de red o 5xx, hasta dos veces. */
 export function debeReintentar(intentos: number, error: unknown): boolean {
@@ -79,18 +79,6 @@ export const useImpactoDeRetiro = (documentoId: string, numero: number) =>
 export function useRetirarVersion(documentoId: string, numero: number) {
   const refrescar = useRefrescarTodo();
   return useMutation({ mutationFn: (motivo: string) => retirarVersionDocumento(documentoId, numero, { motivo }), onSettled: refrescar });
-}
-
-/** La URL prefirmada (5 min, `Content-Disposition: attachment`) se abre en el momento: el navegador descarga el archivo. */
-export function abrirDescarga(descarga: DescargaDto): DescargaDto {
-  const enlace = document.createElement('a');
-  enlace.href = descarga.url;
-  enlace.rel = 'noopener';
-  enlace.download = descarga.nombre;
-  document.body.append(enlace);
-  enlace.click();
-  enlace.remove();
-  return descarga;
 }
 
 export function useDescargarVersion() {
