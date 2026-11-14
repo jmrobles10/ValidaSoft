@@ -10,9 +10,14 @@ namespace Validasoft.Aplicacion.Ia;
 /// <summary>
 /// Analiza con IA la versión de un documento y reparte la validación entre las empresas que la reciben (ADR-0012). Lo
 /// publica el outbox de la bóveda cuando una versión de archivo queda actual y se comparte, y cuando un vínculo recibe
-/// documentos al aceptar o al abrir su expediente. Cola local durable y secuencial <c>ia</c>; el manejador es idempotente.
+/// documentos al aceptar o al abrir su expediente. Cola local durable <c>ia</c>, particionada por <see cref="TenantId"/> (un análisis a la vez
+/// por tenant, los tenants en paralelo); el manejador es idempotente.
 /// </summary>
-public sealed record AnalizarVersionConIa(Guid DocumentoId, int Numero);
+/// <param name="TenantId">
+/// Tenant al que le toca el turno: el de la empresa que paga (la del vínculo de contexto de la versión o, si no, la primera con la que se
+/// compartió). Sale siempre de <see cref="AnalisisConIa.PedirAsync"/>; sin él el turno es el del documento.
+/// </param>
+public sealed record AnalizarVersionConIa(Guid DocumentoId, int Numero, Guid? TenantId = null);
 
 /// <summary>El vínculo recibió documentos fuera del outbox de la bóveda (al aceptar o al abrir su expediente): analiza o consume los suyos.</summary>
 public sealed record AnalizarIaDelVinculo(Guid TerceroId, Guid VinculoId);
@@ -31,8 +36,25 @@ public static class AnalisisConIa
     public static async Task PedirAsync(IMessageBus mensajes, Documento documento)
     {
         if (documento.VersionActual is { } actual && Analizable(documento, actual))
-            await mensajes.PublishAsync(new AnalizarVersionConIa(documento.Id, actual));
+            await mensajes.PublishAsync(new AnalizarVersionConIa(documento.Id, actual, TenantDelTurno(documento, actual)));
     }
+
+    /// <summary>
+    /// El tenant al que le toca el turno de la versión: el de su primera destinataria (la del vínculo de contexto y, si no la hay, la primera
+    /// compartición), que es quien intenta pagar. Es estable: depende solo del contexto de la versión y de su primera compartición.
+    /// </summary>
+    public static Guid? TenantDelTurno(Documento documento, int numero)
+    {
+        var comparticiones = documento.Comparticiones.Where(c => c.Numero == numero).OrderBy(c => c.Fecha).ToList();
+        var contextoId = documento.Buscar(numero)?.ContextoVinculoId;
+        return (comparticiones.FirstOrDefault(c => c.VinculoId == contextoId) ?? comparticiones.FirstOrDefault())?.TenantId;
+    }
+
+    /// <summary>
+    /// Grupo de la cola de IA: el tenant del turno o, si el mensaje no lo trae, el documento (sus mensajes siguen en orden y de a uno). Todo
+    /// mensaje de un mismo documento y versión lleva el mismo grupo, así que nunca se analiza dos veces a la vez.
+    /// </summary>
+    public static string GrupoDe(AnalizarVersionConIa mensaje) => (mensaje.TenantId ?? mensaje.DocumentoId).ToString("N");
 }
 
 public static class AnalizarIaDelVinculoHandler

@@ -23,6 +23,7 @@ using Validasoft.Infraestructura.Notificaciones;
 using Validasoft.Infraestructura.Persistencia;
 using Validasoft.Infraestructura.Seguridad;
 using Wolverine;
+using Wolverine.Configuration;
 using Wolverine.ErrorHandling;
 
 namespace Validasoft.Infraestructura;
@@ -47,16 +48,25 @@ public static class ServiciosInfraestructura
     public const string ColaVigencias = "vigencias";
 
     /// <summary>
-    /// Cola local durable y <b>secuencial</b> de las entregas de webhooks (NW-5): un intento a la vez, en el orden en que se
-    /// encolaron, así un receptor sano recibe los eventos en orden. Los reintentos van programados y no bloquean la cola.
+    /// Cola local durable de las entregas de webhooks (NW-5), <b>particionada por tenant</b> (OC-5): las entregas de un mismo tenant van de
+    /// a una, en el orden en que se encolaron (así un receptor sano recibe los eventos en orden), y las de tenants distintos corren en
+    /// paralelo en carriles separados. Un endpoint caído o lento de un tenant solo frena a ese tenant. Los reintentos van programados y no
+    /// bloquean la cola.
     /// </summary>
     public const string ColaWebhooks = "webhooks";
 
+    /// <summary>Carriles paralelos de la cola de webhooks: tenants distintos comparten carril solo si su clave cae en el mismo (1 de cada 9).</summary>
+    public const PartitionSlots CarrilesDeWebhooks = PartitionSlots.Nine;
+
     /// <summary>
-    /// Cola local durable y <b>secuencial</b> del análisis con IA (ADR-0012): una versión a la vez, así dos mensajes de la
-    /// misma versión (carga y aceptación) no llaman dos veces a OpenAI; el segundo encuentra el análisis y solo consume.
+    /// Cola local durable del análisis con IA (ADR-0012), <b>particionada por el tenant que paga</b> (OC-5): una versión a la vez dentro de
+    /// cada tenant (dos mensajes de la misma versión —carga y aceptación— caen en el mismo carril, no llaman dos veces a OpenAI y el
+    /// segundo encuentra el análisis y solo consume), y los tenants no se esperan entre sí: una carga masiva de una empresa no frena a las demás.
     /// </summary>
     public const string ColaIa = "ia";
+
+    /// <summary>Carriles paralelos de la cola de IA (cada análisis lee un archivo completo: se acota la memoria y las llamadas simultáneas).</summary>
+    public const PartitionSlots CarrilesDeIa = PartitionSlots.Five;
 
     /// <summary>
     /// Cola local durable y <b>secuencial</b> del importador genérico (F4): una corrida a la vez, que se reanuda desde su cursor si
@@ -375,11 +385,16 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeCertificadoPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeDesaprobacionPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Notificaciones.CorreoDeReintegroPendiente>().ToLocalQueue(ColaCorreo).UseDurableInbox();
+        // Colas por tenant (OC-5): el grupo de un mensaje decide su carril; mensajes del mismo grupo van en orden y de a uno.
+        opciones.MessagePartitioning.ByMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>(m => m.TenantId.ToString("N"));
+        opciones.MessagePartitioning.ByMessage<Aplicacion.Ia.AnalizarVersionConIa>(m => Aplicacion.Ia.AnalisisConIa.GrupoDe(m));
+        // Solo reparte trabajo (pide el análisis de cada documento del vínculo): no espera detrás del análisis lento de nadie.
+        opciones.MessagePartitioning.ExemptFromPartitionedProcessing<Aplicacion.Ia.AnalizarIaDelVinculo>();
         opciones.PublishMessage<Aplicacion.Notificaciones.EnviarEntregaWebhook>().ToLocalQueue(ColaWebhooks);
-        opciones.LocalQueue(ColaWebhooks).Sequential().UseDurableInbox();
+        opciones.LocalQueue(ColaWebhooks).PartitionProcessingByGroupId(CarrilesDeWebhooks).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Ia.AnalizarVersionConIa>().ToLocalQueue(ColaIa);
         opciones.PublishMessage<Aplicacion.Ia.AnalizarIaDelVinculo>().ToLocalQueue(ColaIa);
-        opciones.LocalQueue(ColaIa).Sequential().UseDurableInbox();
+        opciones.LocalQueue(ColaIa).PartitionProcessingByGroupId(CarrilesDeIa).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Invitaciones.ProcesarTandaDeLote>().ToLocalQueue(ColaLotes);
         opciones.LocalQueue(ColaLotes).Sequential().UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Campanias.ProcesarTandaDeCampania>().ToLocalQueue(ColaCampanias);

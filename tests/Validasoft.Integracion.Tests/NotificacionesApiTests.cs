@@ -530,7 +530,8 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
         return opciones;
     }
 
-    internal sealed record Recibido(string Cuerpo, string EventId, string TipoCabecera, string Delivery, string Timestamp, string Firma)
+    internal sealed record Recibido(string Cuerpo, string EventId, string TipoCabecera, string Delivery, string Timestamp, string Firma,
+        DateTime RecibidoEn = default)
     {
         private JsonElement Json => JsonDocument.Parse(Cuerpo).RootElement;
 
@@ -557,6 +558,9 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
 
         public int Codigo { get; set; } = 200;
 
+        /// <summary>Si se fija, el receptor anota lo que llega pero no responde hasta que se complete (un endpoint que no contesta).</summary>
+        public Task? Bloqueo { get; set; }
+
         public string Url { get; private set; } = string.Empty;
 
         public IReadOnlyList<Recibido> Recibidos => [.. _recibidos];
@@ -574,7 +578,9 @@ public sealed partial class NotificacionesApiTests(ApiFixture fixture)
                 var cuerpo = await lector.ReadToEndAsync();
                 string Cabecera(string nombre) => http.Request.Headers[nombre].ToString();
                 receptor._recibidos.Enqueue(new Recibido(cuerpo, Cabecera("Validasoft-Event-Id"), Cabecera("Validasoft-Event-Type"),
-                    Cabecera("Validasoft-Delivery"), Cabecera("Validasoft-Timestamp"), Cabecera("Validasoft-Signature")));
+                    Cabecera("Validasoft-Delivery"), Cabecera("Validasoft-Timestamp"), Cabecera("Validasoft-Signature"), DateTime.UtcNow));
+                if (receptor.Bloqueo is { } bloqueo)
+                    await bloqueo.WaitAsync(http.RequestAborted);
                 http.Response.StatusCode = receptor.Codigo;
             });
             await app.StartAsync();
