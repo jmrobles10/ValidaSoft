@@ -136,6 +136,22 @@ Decisiones en el [registro](decisiones/registro.md#5-unquinquagies-plataforma-e-
 
 **Ajustes (`appsettings`):** `Validasoft:Ingreso:Sso:PermitirHttpLocal` (solo desarrollo y pruebas: admite un proveedor en `http://localhost`), `Validasoft:Ingreso:Sso:UrlDeRetorno` (la URI de redirección que se registra en el proveedor; por omisión `{UrlPublica}/api/v1/ingreso/sso/callback`) y `Validasoft:Ingreso:Sso:WorkOs:{ApiKey, ClientId, UrlBase}` (vacíos = WorkOS no disponible).
 
+### 2.9 Acceso aislado, alcance de los tokens y sesiones del tercero (2026-11-14, AA-1…AA-10)
+
+**El riesgo cerrado.** Una empresa podía crear un vínculo con el NIT de un tercero ajeno, poner su propio correo y entrar a la bóveda de ese tercero (la sesión se autorizaba solo por el `TerceroId`). Ahora el nivel de acceso depende de **quién es el correo**:
+
+| Sesión | Cuándo | Qué alcanza |
+|---|---|---|
+| **Completa** | El correo es un contacto conocido del tercero (`Tercero.Contactos` o el de un vínculo que ya aceptó sin acceso aislado) | Todo lo del tercero |
+| **Aislada** (reclamo `aislado`) | El correo no es contacto conocido de un tercero que ya existía | Solo la relación con la empresa que la invitó: invitación, expediente, subir (en cuarentena), descargar lo propio, novedades de sus vínculos |
+| **Bloqueada** | Los contactos del tercero rechazaron ese correo | Nada: 403 `acceso-rechazado` al abrir sesión y los tokens vigentes dejan de valer en segundos |
+
+- **Default-deny.** Cada endpoint de `/public/v1` entra por `SesionDeTercero.De(usuario, GrupoDeAcceso)` con su grupo (`Relacion`, `Subida`, `Descarga`, `Boveda`, `Cuentas`, `CuentaDesignada`, `Ficha`, `Privacidad`, `Cuenta`); la sesión aislada solo cubre los tres primeros. Fuera del alcance, 403 `acceso-aislado`. `SesionDeTercero.SinAlcance` solo la usan quienes ya acotan por otra vía (la autenticación y el stream de novedades).
+- **Aislado no es solo ocultar pantallas.** El vínculo guarda `AccesoAislado` y la compartición lo respeta en el dominio (`Documento.Compartir` y `RequisitosDeExpediente`), de modo que una versión nueva de la bóveda tampoco llega a la empresa por un vínculo aislado. Una sesión aislada **no es** un contacto: no puede aprobar su propio acceso (`acceso-propio`) ni ve las solicitudes.
+- **Quién decide.** Los contactos reciben un correo y un aviso (AA-5) y deciden en `/accesos` (`GET/POST /public/v1/accesos-solicitados…`, [docs/05](05-api-contratos-y-webhooks.md)). Aprobar agrega el correo a `Tercero.Contactos`, comparte con las empresas lo que les corresponde y promueve a la bóveda lo subido en cuarentena; rechazar revoca las sesiones de ese correo y deja el vínculo en «Rechazado».
+- **Token embebido (IO-5) limitado a su componente.** `boveda`: bóveda y cuentas; `expediente`: lo de su vínculo (subir solo para él, descargar lo compartido con él, elegir su cuenta, las secciones de la ficha que su expediente pide); `ficha`: sus secciones. Ninguno alcanza los derechos de datos, las preferencias ni las sesiones. Fuera de su alcance: 403 `alcance-de-sesion`. El token de un correo que no es contacto nace aislado.
+- **Sesiones del tercero.** El token de acceso lleva el id de su sesión de refresco (`sesion`) y, si es aislado, `aislado`. `OnTokenValidated` del esquema `Tercero` comprueba en cada petición que la sesión siga vigente y que el acceso del correo no se haya rechazado (`ICacheDeSesionesDeTercero`, caché de 15 s invalidada en todos los servidores por el bus de PI-8): cerrar una sesión desde «Tus sesiones abiertas» o rechazar un correo corta sus tokens en segundos, sin esperar los 30 minutos.
+
 ---
 
 ## 3. Autorización: roles, alcance y permisos
