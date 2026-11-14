@@ -161,19 +161,23 @@ public static class VerificacionPublicaEndpoints
         return await CertificadosEndpoints.UrlAsync(almacen, reglas, pdf, emision.Folio, ct);
     }
 
-    /// <summary>Claves públicas Ed25519 del sello (la vigente y las anteriores) en bruto y como JWK (RFC 8037).</summary>
+    /// <summary>
+    /// Claves públicas Ed25519 del sello (la vigente y las retiradas que aún no vencen) en bruto y como JWK (RFC 8037). Una retirada
+    /// trae <c>retiradaEn</c> (solo valida emisiones anteriores) y <c>verificableHasta</c> (después ya no se publica), CL-2.
+    /// </summary>
     [WolverineGet(RutaClaves)]
     [AllowAnonymous]
-    public static ClavesDeCertificadosDto Claves(EmisorDeCertificados emisor, HttpContext http)
+    public static ClavesDeCertificadosDto Claves(EmisorDeCertificados emisor, HttpContext http, TimeProvider reloj)
     {
         http.Response.Headers.CacheControl = "public, max-age=3600";
         return new ClavesDeCertificadosDto("Validasoft", SelloEd25519.Algoritmo,
             "Ed25519 sobre los 32 bytes del SHA-256 (hashContenido en hexadecimal) del contenidoCanonico canonicalizado con RFC 8785 (JCS).",
             [ContenidoDeCertificado.EsquemaV1],
             [
-                .. emisor.Claves.Publicadas().Select(c => new ClavePublicaDeCertificadosDto(c.Kid, SelloEd25519.Algoritmo,
+                .. emisor.Claves.Publicadas(reloj.GetUtcNow()).Select(c => new ClavePublicaDeCertificadosDto(c.Kid, SelloEd25519.Algoritmo,
                     Convert.ToBase64String(c.ClavePublica),
-                    new JwkDto("OKP", SelloEd25519.Algoritmo, Base64Url(c.ClavePublica), c.Kid, "EdDSA", "sig"), c.Vigente))
+                    new JwkDto("OKP", SelloEd25519.Algoritmo, Base64Url(c.ClavePublica), c.Kid, "EdDSA", "sig"), c.Vigente, c.RetiradaEn,
+                    c.VerificableHasta))
             ]);
     }
 

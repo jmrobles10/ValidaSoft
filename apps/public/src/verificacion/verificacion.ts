@@ -1,4 +1,4 @@
-import type { CertificadoPublicoDto, ClavesDeCertificadosDto } from '@validasoft/api-client';
+import type { CertificadoPublicoDto, ClavePublicaDeCertificadosDto, ClavesDeCertificadosDto } from '@validasoft/api-client';
 import { aHex, desdeBase64, desdeHex, importarClaveEd25519, sha256, SinSoporteCriptografico, verificarEd25519 } from './cripto';
 import { bytesCanonicos } from './jcs';
 
@@ -6,12 +6,14 @@ import { bytesCanonicos } from './jcs';
  * Verificación del certificado en el navegador (docs/05 §2.6.1, «Cómo verifica un cliente»), paso a paso:
  * 1. contenido: RFC 8785 + SHA-256 de `contenidoCanonico` = `hashContenido`, y los datos mostrados son los sellados;
  * 2. huella: la del enlace (QR) es el inicio de ese hash;
- * 3. clave: `firma.kid` es una clave publicada por la plataforma en `/.well-known/validasoft-certificados.json`;
+ * 3. clave: `firma.kid` es una clave publicada por la plataforma en `/.well-known/validasoft-certificados.json`; una clave retirada
+ *    (`vigente: false`) solo vale si el certificado se emitió hasta su `retiradaEn` y, cuando la clave trae `verificableHasta`, si esa
+ *    fecha no ha pasado (CL-2, docs/07 §6.4);
  * 4. sello: Ed25519 de `firma.valor` (base64) sobre los 32 bytes de `hashContenido`.
  */
 export type MotivoContenido = 'ok' | 'hash-distinto' | 'datos-distintos' | 'no-canonicalizable' | 'no-soportado';
 export type MotivoHuella = 'ok' | 'distinta' | 'sin-huella';
-export type MotivoClave = 'ok' | 'anterior' | 'desconocida' | 'no-disponible';
+export type MotivoClave = 'ok' | 'anterior' | 'fuera-de-plazo' | 'desconocida' | 'no-disponible';
 export type MotivoSello = 'ok' | 'invalido' | 'clave-invalida' | 'sin-clave' | 'no-soportado';
 
 export type EstadoPaso = 'ok' | 'falla' | 'aviso' | 'no-soportado';
@@ -84,10 +86,38 @@ function verificarHuella(huellaUrl: string | null, hash: string): MotivoHuella {
   return prefijo !== null && hash.toLowerCase().startsWith(prefijo) ? 'ok' : 'distinta';
 }
 
-async function verificarSello(c: CertificadoPublicoDto, claves: ClavesDeCertificadosDto | null): Promise<Pick<ResultadoVerificacion, 'clave' | 'sello'>> {
+/** Milisegundos de una fecha ISO; `null` si no es una fecha. */
+function instante(fecha: string | null | undefined): number | null {
+  if (typeof fecha !== 'string') return null;
+  const ms = Date.parse(fecha);
+  return Number.isNaN(ms) ? null : ms;
+}
+
+/**
+ * Una clave retirada solo da por válido un sello si el certificado se emitió hasta su `retiradaEn` (la clave ya no sellaba después) y, si
+ * trae `verificableHasta`, esa fecha no ha pasado. La emisión es la del contenido sellado (la firma la cubre), no la del DTO. Sin
+ * `retiradaEn` no hay forma de saber hasta cuándo valió: no vale. La clave vigente no tiene fecha límite.
+ */
+export function claveRetiradaVale(clave: ClavePublicaDeCertificadosDto, c: CertificadoPublicoDto, ahora: Date): boolean {
+  if (clave.vigente) return true;
+  const emitido = segundos(campo(c.contenidoCanonico, 'emitidoEn'));
+  const retirada = instante(clave.retiradaEn);
+  if (emitido === null || retirada === null || emitido * 1000 > retirada) return false;
+  if (clave.verificableHasta == null) return true;
+  const limite = instante(clave.verificableHasta);
+  return limite !== null && ahora.getTime() <= limite;
+}
+
+async function verificarSello(
+  c: CertificadoPublicoDto,
+  claves: ClavesDeCertificadosDto | null,
+  ahora: Date,
+): Promise<Pick<ResultadoVerificacion, 'clave' | 'sello'>> {
   if (!claves) return { clave: 'no-disponible', sello: 'sin-clave' };
   const publicada = claves.claves.find((k) => k.kid === c.firma.kid);
   if (!publicada) return { clave: 'desconocida', sello: 'sin-clave' };
+  // Una clave retirada que no vale para este certificado no se usa para comprobar la firma: el paso falla.
+  if (!claveRetiradaVale(publicada, c, ahora)) return { clave: 'fuera-de-plazo', sello: 'sin-clave' };
   const clave: MotivoClave = publicada.vigente ? 'ok' : 'anterior';
 
   let llave: CryptoKey;
@@ -107,20 +137,21 @@ async function verificarSello(c: CertificadoPublicoDto, claves: ClavesDeCertific
   }
 }
 
-/** `claves = null`: no se pudieron obtener (el contenido y la huella se verifican igual). */
+/** `claves = null`: no se pudieron obtener (el contenido y la huella se verifican igual). `ahora` solo se inyecta en las pruebas. */
 export async function verificarCertificado(
   c: CertificadoPublicoDto,
   claves: ClavesDeCertificadosDto | null,
   huellaUrl: string | null,
+  ahora: Date = new Date(),
 ): Promise<ResultadoVerificacion> {
-  const [contenido, sello] = await Promise.all([verificarContenido(c), verificarSello(c, claves)]);
+  const [contenido, sello] = await Promise.all([verificarContenido(c), verificarSello(c, claves, ahora)]);
   return { ...contenido, ...sello, huella: verificarHuella(huellaUrl, contenido.hashCalculado ?? c.hashContenido) };
 }
 
 export const ESTADO_DEL_PASO = {
   contenido: { ok: 'ok', 'hash-distinto': 'falla', 'datos-distintos': 'falla', 'no-canonicalizable': 'falla', 'no-soportado': 'no-soportado' },
   huella: { ok: 'ok', distinta: 'falla', 'sin-huella': 'aviso' },
-  clave: { ok: 'ok', anterior: 'ok', desconocida: 'falla', 'no-disponible': 'aviso' },
+  clave: { ok: 'ok', anterior: 'ok', 'fuera-de-plazo': 'falla', desconocida: 'falla', 'no-disponible': 'aviso' },
   sello: { ok: 'ok', invalido: 'falla', 'clave-invalida': 'falla', 'sin-clave': 'aviso', 'no-soportado': 'no-soportado' },
 } as const satisfies {
   contenido: Record<MotivoContenido, EstadoPaso>;

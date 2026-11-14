@@ -174,6 +174,8 @@ public sealed class CertificadosApiTests(ApiFixture fixture)
         claves.Algoritmo.ShouldBe("Ed25519");
         var clave = claves.Claves.Single(c => c.Kid == publico.Firma.Kid);
         clave.Vigente.ShouldBeTrue();
+        clave.RetiradaEn.ShouldBeNull(); // la vigente no tiene fecha límite (CL-2)
+        clave.VerificableHasta.ShouldBeNull();
         publico.Firma.ClavePublicaUrl.ShouldBe($"{ApiFixture.UrlPublica}/.well-known/validasoft-certificados.json");
         var publica = Convert.FromBase64String(clave.ClavePublica);
         Convert.FromBase64String(clave.Jwk.X.Replace('-', '+').Replace('_', '/') + "=").ShouldBe(publica);
