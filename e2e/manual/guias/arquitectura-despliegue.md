@@ -63,7 +63,8 @@ El proceso admite más de una réplica del mismo servicio:
 
 - El **daemon de eventos** corre en modo *hot/cold*: solo el nodo que gana el bloqueo consultivo de PostgreSQL procesa la suscripción de eventos públicos; si cae, otro toma el relevo.
 - Las **cachés** de llaves, sistemas, políticas de ingreso, SSO y empresas se invalidan entre servidores con `LISTEN/NOTIFY` de PostgreSQL (`Validasoft__Invalidaciones__Activo`, activo por omisión); sin ese aviso, el límite es el de la propia caché (por ejemplo, 5 minutos para una llave revocada).
-- Las **colas** son locales y durables: sus mensajes pendientes sobreviven a un reinicio y los procesa el nodo que los reclama.
+- Los **procesos periódicos** (barridos de plazos, SLA, recordatorios, vigencias, habeas data y planes; procesadores de certificados, verificaciones y revisión automática; limpiezas) corren solo en el **nodo líder**, elegido con otro bloqueo consultivo de PostgreSQL (`Validasoft__Lider__Habilitado`, activo por omisión; `__SegundosEspera`, cada cuánto reintenta una réplica que no es líder, 10). Si el líder cae, otra réplica lo releva en segundos. Las consultas de listas restrictivas que se facturan se reclaman con una clave por consulta programada, así que una verificación no se pide dos veces aunque dos pasadas se crucen.
+- Las **colas** son locales y durables: sus mensajes pendientes sobreviven a un reinicio y los procesa el nodo que los reclama. Las de **webhooks** y de **IA** se particionan por tenant: dentro de un tenant van de a una y en orden, y un receptor caído o una carga masiva de un tenant no frena a los demás.
 - El **límite por IP** se mantiene en la memoria de cada nodo; el conteo de llamadas a la API se acumula en memoria y se vuelca a la base cada 5 segundos.
 
 ### Qué respaldar

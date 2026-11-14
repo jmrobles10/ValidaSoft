@@ -37,6 +37,7 @@ Sin estas la API no arranca o parte de ella no funciona.
 | `Validasoft__Persistencia__CrearEsquemaAlIniciar` | `true` crea y actualiza el esquema de la base al arrancar (solo desarrollo); en producción se aplica antes con `dotnet Validasoft.Api.dll db-apply`. | `false` |
 | `Validasoft__Apps__Web` y `Validasoft__Apps__Publica` | Carpetas de las apps estáticas que sirve la API (`/app/` y `/`). La imagen las fija en `frontend/web` y `frontend/public`. | Vacío: la API no las sirve |
 | `Validasoft__ZonaHoraria` | Zona IANA del calendario del negocio (vencimientos y «hoy»). | `America/Bogota` |
+| `Validasoft__Lider__Habilitado` | Elección del nodo líder de los procesos periódicos con un bloqueo consultivo de PostgreSQL. `false` hace que cada nodo corra todos los procesos (una sola réplica). Con `__SegundosEspera` (10) cada cuánto reintenta una réplica que no es líder. | `true` |
 | `Validasoft__Invalidaciones__Activo` | Aviso entre servidores por `LISTEN/NOTIFY` de PostgreSQL (cachés de llaves, sistemas, ingreso y SSO). | `true` |
 
 ## Sesiones, ingreso y SSO
