@@ -101,6 +101,12 @@ describe('PanelDeNotificaciones', () => {
     expect(onPreferencias).toHaveBeenCalledTimes(1);
   });
 
+  it('sin la acción de preferencias no ofrece el botón (la sesión aislada del portal no las alcanza)', () => {
+    panel({ onPreferencias: undefined });
+    expect(screen.getByRole('button', { name: 'Marcar todas' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preferencias de notificación' })).not.toBeInTheDocument();
+  });
+
   it('con todas leídas deshabilita «Marcar todas»', () => {
     panel({ bandeja: { datos: [aviso('a', { leidaEn: '2026-11-08T11:00:00Z' })], noLeidas: 0, siguienteCursor: null } });
     expect(screen.getByRole('button', { name: 'Marcar todas' })).toBeDisabled();
