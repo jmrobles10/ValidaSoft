@@ -42,8 +42,8 @@ public static class EnlacesPublicosEndpoints
 
         if (resultado.SesionAbierta)
         {
-            var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesion, emisor, enlace, otpVerificado: false, ahora, ct);
-            var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: false, ahora);
+            var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: false, ahora, http);
+            var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesiones, sesion, emisor, enlace, otpVerificado: false, ahora, refresco.Id, ct);
             await sesion.SaveChangesAsync(ct);
             cookie.Poner(http.Response, refresco.Token, refresco.Expira);
             return Results.Ok(abierta);
@@ -81,8 +81,8 @@ public static class EnlacesPublicosEndpoints
             };
         }
 
-        var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesion, emisor, enlace, otpVerificado: true, ahora, ct);
-        var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: true, ahora);
+        var refresco = SesionesDeRefresco.Abrir(sesion, enlace, otpVerificado: true, ahora, http);
+        var abierta = await EnlacesDeAcceso.AbrirSesionAsync(sesiones, sesion, emisor, enlace, otpVerificado: true, ahora, refresco.Id, ct);
         await sesion.SaveChangesAsync(ct);
         cookie.Poner(http.Response, refresco.Token, refresco.Expira);
         return abierta;
@@ -96,7 +96,7 @@ public static class InvitacionesPublicasEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IReadOnlyList<VinculoPublicoDto>> ListarVinculos(HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
         // Un vínculo cuyo expediente se rechazó trae el rechazo con sus motivos y si puede volver a postularse (DS-4).
@@ -116,7 +116,7 @@ public static class InvitacionesPublicasEndpoints
     public static async Task<InvitacionPublicaDto> ObtenerInvitacion(Guid vinculoId, HttpContext http, ISesiones sesiones, TimeProvider reloj,
         CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var visto = await VistaDelTercero.CargarUnoAsync(consulta, tercero, vinculoId, ct);
         var textos = await VistaDelTercero.TextosAsync(consulta, tercero.TerceroId, visto.Vinculo.EmpresaId, ct);
@@ -134,15 +134,21 @@ public static class InvitacionesPublicasEndpoints
     /// <c>compartidos</c>. Idempotente por su propia regla: repetir ⇒ 409 <c>invitacion-ya-aceptada</c>. En la misma
     /// transacción abre el expediente inicial con ese flujo (FL-5), con los requisitos cubiertos ya <c>Cargado</c>; si no
     /// hay flujo publicado no se comparte ningún global, la aceptación se registra igual y el vínculo queda con apertura
-    /// pendiente (FL-6): nunca falla por configuración de la empresa.
+    /// pendiente (FL-6): nunca falla por configuración de la empresa. Con acceso aislado (el correo no es contacto conocido
+    /// del tercero) se acepta igual, pero <b>no se comparte nada de la bóveda global</b> ni se acepta el aviso de la plataforma por
+    /// el tercero: la empresa solo recibe lo que esa persona suba para ella (cuarentena) hasta que un contacto lo apruebe.
     /// </summary>
     [WolverinePost("/public/v1/invitaciones/{vinculoId}/aceptar")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<InvitacionAceptadaDto> Aceptar(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http, ISesiones sesiones,
-        IContextoSolicitud contexto, IMessageBus mensajes, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
+        IContextoSolicitud contexto, IMessageBus mensajes, IProtectorDeSecretos protector, Certificados.EmisorDeCertificados certificados, TimeProvider reloj,
+        CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         var enSesion = tercero.VinculoRequerido(vinculoId);
+        // Una sesión aislada deja el vínculo con acceso aislado ANTES de aceptar (si no lo estaba): así lo que se comparte al aceptar ya lo respeta.
+        if (tercero.Aislada)
+            await AsegurarAccesoAisladoAsync(vinculoId, tercero, enSesion, sesiones, mensajes, protector, reloj, ct);
         // Si pierde una carrera (folio del expediente o el propio vínculo), se repite completa con una sesión nueva.
         var aceptada = await Peticiones.ConReintentosAsync(() => AceptarUnaVezAsync(vinculoId, dto, http, sesiones, contexto, tercero, enSesion, certificados, reloj, ct));
         // Lo compartido al aceptar (sin outbox de la bóveda) calcula sus vigencias por mensaje (TD-6).
@@ -154,6 +160,32 @@ public static class InvitacionesPublicasEndpoints
         }
 
         return aceptada;
+    }
+
+    /// <summary>
+    /// El vínculo de una sesión aislada queda con el acceso aislado registrado (solicitud a los contactos incluida); idempotente. Si al evaluarlo ahora el
+    /// correo resulta de confianza (un contacto lo aprobó o es el primer contacto del tercero), no deja nada pendiente.
+    /// </summary>
+    private static async Task AsegurarAccesoAisladoAsync(Guid vinculoId, SesionDeTercero tercero, VinculoEnSesion enSesion, ISesiones sesiones,
+        IMessageBus mensajes, IProtectorDeSecretos protector, TimeProvider reloj, CancellationToken ct)
+    {
+        await Peticiones.ConReintentosAsync(async () =>
+        {
+            await using var sesion = sesiones.ParaTenant(enSesion.TenantId, mensajes);
+            var stream = await sesion.Events.FetchForWriting<Vinculo>(vinculoId, ct);
+            var vinculo = stream.Aggregate;
+            if (vinculo is null || vinculo.TerceroId != tercero.TerceroId || vinculo.EmpresaId != enSesion.EmpresaId)
+                throw ReglaDeNegocioException.NoEncontrado("vinculo-no-encontrado", "No existe ese vínculo.");
+            if (vinculo.AccesoAislado is not null)
+                return true;
+
+            var terceroDeBoveda = await sesion.LoadAsync<Tercero>(tercero.TerceroId, ct)
+                                  ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "El tercero del vínculo no existe.");
+            await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, enSesion.TenantId, terceroDeBoveda, terceroNuevo: false, vinculo,
+                vinculo.CorreoTercero, stream.AppendOne, reloj.GetUtcNow(), ct);
+            await sesion.SaveChangesAsync(ct);
+            return true;
+        });
     }
 
     private static async Task<InvitacionAceptadaDto> AceptarUnaVezAsync(Guid vinculoId, AceptarInvitacionDto dto, HttpContext http,
@@ -191,21 +223,24 @@ public static class InvitacionesPublicasEndpoints
         var aceptada = vinculo.AceptarInvitacion(tercero.Correo, ahora);
         stream.AppendMany(consentimientos, aceptada);
 
-        if (textos.AvisoRequerido is not null && textos.Tercero is not null)
+        // Con acceso aislado quien acepta no es (aún) un contacto del tercero: su aceptación vale para la relación con la empresa, no para el tercero entero.
+        var aislado = !vinculo.BovedaDisponible;
+        if (textos.AvisoRequerido is not null && textos.Tercero is not null && !aislado)
         {
             textos.Tercero.AceptarAvisoPlataforma(textos.AvisoRequerido, ahora);
             sesion.Store(textos.Tercero);
         }
 
-        // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que pide su flujo: misma transacción.
+        // Desde este momento (y no antes, B-1) la empresa recibe la versión actual de lo que pide su flujo: misma transacción. Con acceso aislado, nada global.
         var flujo = await ProcesoDeValidacion.ResolverFlujoAsync(sesion, vinculo, null, ct);
         var pedidos = flujo is null
             ? []
             : await RequisitosDeExpediente.DelFlujoAsync(sesion, flujo.Version, await RequisitosDeExpediente.ContextoAsync(sesion, vinculo, ct), ct);
         var documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, enSesion.TenantId,
-            RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.AlAceptarInvitacion, ahora, ct);
+            aislado ? new HashSet<string>() : RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.AlAceptarInvitacion, ahora, ct);
 
-        if (flujo is not null)
+        // Un vínculo cuyo acceso se rechazó y se reinvitó a otro correo ya tiene su expediente abierto: la persona nueva solo acepta.
+        if (flujo is not null && vinculo.ExpedienteAbiertoId is null)
             await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, contexto, certificados, ahora, ct, documentos);
 
         await sesion.SaveChangesAsync(ct);

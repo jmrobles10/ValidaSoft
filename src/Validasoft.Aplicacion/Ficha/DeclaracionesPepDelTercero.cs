@@ -66,7 +66,9 @@ public static class DeclaracionesPepDelTerceroEndpoints
     public static async Task<IResult> Pdf(string seccion, int? persona, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, TimeProvider reloj,
         IGeneradorDePdfDeDeclaracionPep generador, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var sesionDelTercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        await AlcanceDeEmbebido.ExigirSeccionAsync(sesionDelTercero, seccion, sesiones, ct);
+        var terceroId = sesionDelTercero.TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         if (definicion.Codigo is not (CodigosDeSeccion.General or CodigosDeSeccion.Legal))
             throw ReglaDeNegocioException.Validacion("seccion-sin-declaracion-pep", "Solo la información general y la legal llevan declaración PEP.");

@@ -13,6 +13,9 @@ public enum MotivoEnlace
     /// <summary>El tercero lo pidió con su correo en <c>POST /public/v1/acceso</c> (RE-1).</summary>
     AccesoPorCorreo,
 
+    /// <summary>Viaja en el correo que avisa a un contacto del tercero que una empresa invitó a otro correo (acceso aislado): el contacto lo aprueba o lo rechaza.</summary>
+    SolicitudDeAcceso,
+
     /// <summary>Viaja en el correo de observación del expediente (RE-4).</summary>
     Observacion
 }

@@ -49,12 +49,13 @@ public sealed class CookieDeSesionTercero(IConfiguration configuracion)
 /// <summary>Apertura de la sesión de refresco al canjear (misma transacción que marca el enlace usado).</summary>
 public static class SesionesDeRefresco
 {
-    public static (string Token, DateTimeOffset Expira) Abrir(IDocumentSession sesion, EnlaceDeAcceso enlace, bool otpVerificado,
-        DateTimeOffset ahora)
+    public static (string Token, DateTimeOffset Expira, Guid Id) Abrir(IDocumentSession sesion, EnlaceDeAcceso enlace, bool otpVerificado,
+        DateTimeOffset ahora, HttpContext? http = null)
     {
-        var (refresco, token) = SesionDeRefresco.Abrir(enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora);
+        var (refresco, token) = SesionDeRefresco.Abrir(enlace.TerceroId, enlace.CorreoDestino, otpVerificado, ahora,
+            http?.Request.Headers.UserAgent.ToString(), http?.Connection.RemoteIpAddress?.ToString());
         sesion.Insert(refresco);
-        return (token, refresco.ExpiraEn);
+        return (token, refresco.ExpiraEn, refresco.Id);
     }
 }
 
@@ -106,7 +107,7 @@ public static class SesionPublicaEndpoints
                 "Detectamos un uso repetido de tu sesión y la cerramos por seguridad. Pide un enlace nuevo para entrar.");
         }
 
-        var acceso = await EnlacesDeAcceso.EmitirAccesoAsync(sesion, emisor, refresco.TerceroId, refresco.Correo, refresco.OtpVerificado, ahora, ct);
+        var acceso = await EnlacesDeAcceso.EmitirAccesoAsync(sesiones, sesion, emisor, refresco.TerceroId, refresco.Correo, refresco.OtpVerificado, ahora, refresco.Id, ct);
         try
         {
             await sesion.SaveChangesAsync(ct);
@@ -221,7 +222,7 @@ public static class AccesoPorCorreoEndpoints
         var vinculos = (await sesion.Query<Vinculo>()
                 .Where(v => v.AnyTenant() && v.CorreoTercero == correo)
                 .ToListAsync(ct))
-            .Where(v => !Terminales.Contains(v.Estado))
+            .Where(v => !Terminales.Contains(v.Estado) && !v.AccesoRechazado)
             .ToList();
 
         // Un tercero de pruebas (SB-4) no entra por aquí: el correo de un sandbox nunca sale a su destinatario, y el enlace de su

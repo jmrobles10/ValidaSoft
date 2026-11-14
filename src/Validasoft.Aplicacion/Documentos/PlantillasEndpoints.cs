@@ -142,7 +142,7 @@ public static class PlantillasEndpoints
     public static async Task<DescargaDto> DescargarDelTercero(Guid id, Guid requisitoId, HttpContext http, ISesiones sesiones,
         IAlmacenDeArchivos almacen, ReglasDeCarga reglas, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var expediente = await consulta.Query<Expediente>().Where(e => e.AnyTenant() && e.Id == id).SingleOrDefaultAsync(ct);
         var enSesion = expediente is null || expediente.TerceroId != tercero.TerceroId

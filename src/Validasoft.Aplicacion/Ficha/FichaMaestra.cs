@@ -195,7 +195,9 @@ public static class GuardadoDeSecciones
     private static async Task PedirSincronizacionAsync(IDocumentSession sesion, Guid terceroId, IMessageBus mensajes, string actorTipo, string actorId,
         CancellationToken ct)
     {
-        var vinculos = await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.InvitacionAceptada).ToListAsync(ct);
+        var vinculos = (await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId && v.InvitacionAceptada).ToListAsync(ct))
+            .Where(v => v.BovedaDisponible)
+            .ToList();
         if (vinculos.Count == 0)
             return;
         var empresas = (await sesion.LoadManyAsync<Empresa>(ct, vinculos.Select(v => v.EmpresaId).Distinct().ToArray())).ToDictionary(e => e.Id);
@@ -287,11 +289,11 @@ public static class FichaMaestraEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<EstadoFichaDto> Obtener(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var terceroId = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha).TerceroId;
         var tercero = await GuardadoDeSecciones.TerceroAsync(sesiones, terceroId, ct);
         await using var boveda = sesiones.ConsultaBoveda();
         var estado = await boveda.LoadAsync<EstadoDeFicha>(terceroId, ct) ?? EstadoDeFicha.Nuevo(terceroId);
-        var dto = estado.ADto(tercero.TipoPersona) with { Observaciones = await ObservacionesDeEmpresasAsync(sesiones, SesionDeTercero.De(http.User), ct) };
+        var dto = estado.ADto(tercero.TipoPersona) with { Observaciones = await ObservacionesDeEmpresasAsync(sesiones, SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha), ct) };
 
         // Una sección cuyo soporte el tercero retiró lo ve como advertencia en su fila (RT-4): se lee de la bóveda, no se recalcula.
         var secciones = await boveda.Query<SeccionDeFicha>().Where(s => s.TerceroId == terceroId).ToListAsync(ct);
@@ -342,7 +344,9 @@ public static class FichaMaestraEndpoints
     public static async Task<SeccionFichaDto> ObtenerSeccion(string seccion, int? periodo, HttpContext http, ISesiones sesiones, TimeProvider reloj,
         CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var sesionDelTercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        await AlcanceDeEmbebido.ExigirSeccionAsync(sesionDelTercero, seccion, sesiones, ct);
+        var terceroId = sesionDelTercero.TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, reloj.Hoy());
         await using var boveda = sesiones.ConsultaBoveda();
@@ -353,7 +357,7 @@ public static class FichaMaestraEndpoints
         {
             var tercero = await GuardadoDeSecciones.TerceroAsync(sesiones, terceroId, ct);
             var contexto = new ContextoDeSeccion(tercero.TipoPersona, tercero.Identificacion, null, reloj.Hoy());
-            dto = dto with { Prellenado = PrellenadoDeGeneral.Armar(tercero, SesionDeTercero.De(http.User).Correo, contexto) };
+            dto = dto with { Prellenado = PrellenadoDeGeneral.Armar(tercero, SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha).Correo, contexto) };
         }
 
         return dto;
@@ -370,7 +374,9 @@ public static class FichaMaestraEndpoints
     public static async Task<SeccionGuardadaDto> Guardar(string seccion, int? periodo, GuardarSeccionDto dto, HttpContext http, ISesiones sesiones,
         IMessageBus mensajes, IContextoSolicitud contexto, TimeProvider reloj, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var sesionDelTercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        await AlcanceDeEmbebido.ExigirSeccionAsync(sesionDelTercero, seccion, sesiones, ct);
+        var terceroId = sesionDelTercero.TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         var resultado = await GuardadoDeSecciones.GuardarAsync(sesiones, terceroId, definicion, periodo, dto, OrigenDeSeccion.Tercero, terceroId.ToString(),
             reloj, ct, mensajes, contexto, BovedaEndpoints.Ip(http));
@@ -391,7 +397,9 @@ public static class FichaMaestraEndpoints
     public static async Task<CompletitudSeccionDto> Evaluar(string seccion, int? periodo, GuardarSeccionDto dto, HttpContext http, ISesiones sesiones,
         TimeProvider reloj, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var sesionDelTercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        await AlcanceDeEmbebido.ExigirSeccionAsync(sesionDelTercero, seccion, sesiones, ct);
+        var terceroId = sesionDelTercero.TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         return (await GuardadoDeSecciones.EvaluarAsync(sesiones, terceroId, definicion, periodo, dto, reloj, ct)).ADto();
     }

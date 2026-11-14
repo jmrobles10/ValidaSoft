@@ -23,6 +23,27 @@ public static class TiposDeInvalidacion
 
     /// <summary>La configuración de SSO de un grupo o de sus dominios: el id del tenant (más sus dominios, separados por coma).</summary>
     public const string Sso = "sso";
+
+    /// <summary>Una sesión del tercero cerrada o un correo cuyo acceso aislado se rechazó: <c>s|{sesión}</c> o <c>a|{tercero}|{correo}</c>.</summary>
+    public const string SesionTercero = "sesion-tercero";
+}
+
+/// <summary>
+/// Validación de las sesiones del tercero en cada petición con su token (esquema <c>Tercero</c>): cerrar una sesión desde «Mis sesiones», o que los
+/// contactos del tercero rechacen el acceso de un correo, corta sus tokens de acceso en segundos y en todos los servidores, sin esperar a que venzan
+/// (30 minutos). La verificación se guarda unos segundos en memoria; al cerrar o rechazar se olvida y se avisa a los demás.
+/// </summary>
+public interface ICacheDeSesionesDeTercero
+{
+    /// <summary>La sesión de refresco de la que salió el token sigue vigente (no se cerró, no se revocó ni venció).</summary>
+    Task<bool> VigenteAsync(Guid sesionId, CancellationToken ct);
+
+    /// <summary>El acceso aislado del correo no se rechazó (nunca se solicitó, está pendiente o se aprobó).</summary>
+    Task<bool> AccesoVigenteAsync(Guid terceroId, string correo, CancellationToken ct);
+
+    void OlvidarSesion(Guid sesionId);
+
+    void OlvidarAcceso(Guid terceroId, string correo);
 }
 
 /// <summary>

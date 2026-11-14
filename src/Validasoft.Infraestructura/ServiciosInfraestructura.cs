@@ -105,6 +105,9 @@ public static class ServiciosInfraestructura
         servicios.AddSingleton<CacheDeClaveDeArranque>();
         servicios.AddSingleton<ICacheDeClaveDeArranque>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
         servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<CacheDeClaveDeArranque>());
+        servicios.AddSingleton<VerificadorDeSesionesDeTercero>();
+        servicios.AddSingleton<ICacheDeSesionesDeTercero>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDeTercero>());
+        servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<VerificadorDeSesionesDeTercero>());
         servicios.AddSingleton<VerificadorDeSistemas>();
         servicios.AddSingleton<ICacheDeSistemas>(proveedor => proveedor.GetRequiredService<VerificadorDeSistemas>());
         servicios.AddSingleton<IReceptorDeInvalidaciones>(proveedor => proveedor.GetRequiredService<VerificadorDeSistemas>());
@@ -299,18 +302,33 @@ public static class ServiciosInfraestructura
             {
                 opciones.MapInboundClaims = false;
                 opciones.TokenValidationParameters = EmisorDeSesionesTercero.ParametrosDeValidacion(configuracion);
-                // La sesión embebida que abrió un sistema integrador deja de valer cuando ese sistema se desactiva (PI-7).
+                // La sesión embebida que abrió un sistema integrador deja de valer cuando ese sistema se desactiva (PI-7). Una sesión del tercero cerrada
+                // desde «Mis sesiones», o de un correo cuyo acceso aislado rechazaron los contactos del tercero, deja de valer en segundos (AA-8).
                 opciones.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = async contexto =>
                     {
-                        if (contexto.Principal is not { } principal ||
-                            !string.Equals(principal.FindFirst(ReclamosTercero.Embebido)?.Value, "true", StringComparison.OrdinalIgnoreCase))
+                        if (contexto.Principal is not { } principal)
                             return;
-                        var sesion = SesionDeTercero.De(principal);
+                        var servicios = contexto.HttpContext.RequestServices;
+                        var ct = contexto.HttpContext.RequestAborted;
+                        var sesion = SesionDeTercero.SinAlcance(principal);
+                        var sesiones = servicios.GetRequiredService<ICacheDeSesionesDeTercero>();
+                        if (sesion.SesionId is { } sesionId && !await sesiones.VigenteAsync(sesionId, ct))
+                        {
+                            contexto.Fail("La sesión se cerró.");
+                            return;
+                        }
+
+                        if (sesion.Aislada && !await sesiones.AccesoVigenteAsync(sesion.TerceroId, sesion.Correo, ct))
+                        {
+                            contexto.Fail("El acceso de este correo fue rechazado.");
+                            return;
+                        }
+
                         if (sesion.Embebida is { Sistema.Length: > 0 } embebida && sesion.Vinculos.Count > 0 &&
-                            !await contexto.HttpContext.RequestServices.GetRequiredService<ICacheDeSistemas>()
-                                .IntegradorActivoAsync(sesion.Vinculos[0].TenantId, embebida.Sistema, embebida.Generacion, contexto.HttpContext.RequestAborted))
+                            !await servicios.GetRequiredService<ICacheDeSistemas>()
+                                .IntegradorActivoAsync(sesion.Vinculos[0].TenantId, embebida.Sistema, embebida.Generacion, ct))
                             contexto.Fail("El sistema integrador se desactivó.");
                     }
                 };

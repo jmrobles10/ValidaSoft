@@ -133,22 +133,38 @@ public static class RequisitosDeExpediente
     /// <summary>
     /// Versión que cubre un requisito: la actual del documento global del canónico (o del <c>PorVinculo</c> del vínculo y
     /// ese tipo), siempre que ya esté compartida con el vínculo y no esté vencida para él (RN-1: lo vencido se renueva con
-    /// una versión nueva o se ratifica); si no, nula.
+    /// una versión nueva o se ratifica); si no, nula. Si el vínculo tiene lo que subió una persona con acceso aislado (el documento en cuarentena del
+    /// canónico), lo cubre mientras la bóveda no tenga otra cosa compartida con el vínculo: con el acceso aprobado lo subido se promueve a la bóveda y,
+    /// si su contenido es el mismo, el requisito no cambia de versión (no se revisa dos veces el mismo archivo); una versión distinta de la bóveda manda.
     /// </summary>
     public static VersionDeRequisito? Cubre(Guid tipoDocumentoTenantId, string? tipoCanonico, AmbitoDocumento ambito, IEnumerable<Documento> documentos,
         Guid vinculoId)
     {
-        var documento = ambito == AmbitoDocumento.Global
-            ? documentos.FirstOrDefault(d => d.Ambito == AmbitoDocumento.Global && tipoCanonico is not null && d.TipoCanonico == tipoCanonico)
-            : documentos.FirstOrDefault(d => d.Ambito == AmbitoDocumento.PorVinculo && d.VinculoId == vinculoId &&
-                                             d.TipoDocumentoTenantId == tipoDocumentoTenantId);
+        if (ambito != AmbitoDocumento.Global)
+            return Vigente(documentos.FirstOrDefault(d => d.Ambito == AmbitoDocumento.PorVinculo && !d.EnCuarentena && d.VinculoId == vinculoId &&
+                                                          d.TipoDocumentoTenantId == tipoDocumentoTenantId), vinculoId);
+
+        var global = tipoCanonico is null
+            ? null
+            : Vigente(documentos.FirstOrDefault(d => d.Ambito == AmbitoDocumento.Global && d.TipoCanonico == tipoCanonico), vinculoId);
+        var cuarentena = tipoCanonico is null
+            ? null
+            : Vigente(documentos.FirstOrDefault(d => d.EnCuarentena && d.VinculoId == vinculoId && d.TipoCanonico == tipoCanonico), vinculoId);
+        return cuarentena is not null && (global is null || string.Equals(global.Sha256, cuarentena.Sha256, StringComparison.OrdinalIgnoreCase))
+            ? cuarentena
+            : global;
+    }
+
+    /// <summary>La versión actual del documento si ya está compartida con el vínculo y no venció para él.</summary>
+    private static VersionDeRequisito? Vigente(Documento? documento, Guid vinculoId)
+    {
         if (documento?.VersionActual is not { } numero || !documento.EstaCompartida(numero, vinculoId))
             return null;
 
         var version = documento.VersionRequerida(numero);
-        if (version.VigenciaPara(vinculoId)?.VencidaEn is not null)
-            return null;
-        return new VersionDeRequisito(documento.Id, numero, version.Sha256, version.CargadaEn);
+        return version.VigenciaPara(vinculoId)?.VencidaEn is not null
+            ? null
+            : new VersionDeRequisito(documento.Id, numero, version.Sha256, version.CargadaEn);
     }
 
     /// <summary>
@@ -183,7 +199,7 @@ public static class RequisitosDeExpediente
         Expediente expediente, CancellationToken ct)
     {
         var secciones = expediente.Requisitos.Where(r => r.EsSeccion && !r.Eximido).ToList();
-        if (secciones.Count == 0 || await sesionDelTenant.LoadAsync<Vinculo>(expediente.VinculoId, ct) is not { InvitacionAceptada: true })
+        if (secciones.Count == 0 || await sesionDelTenant.LoadAsync<Vinculo>(expediente.VinculoId, ct) is not { InvitacionAceptada: true, BovedaDisponible: true })
             return new Dictionary<Guid, EvaluacionDeSeccion>();
 
         var ficha = await FichaAsync(sesionDelTenant, expediente.TerceroId, ct);

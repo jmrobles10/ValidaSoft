@@ -48,7 +48,7 @@ public static class ExportacionDeBovedaEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IResult> Solicitar(HttpContext http, ISesiones sesiones, IConfiguration configuracion, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad);
         var ahora = reloj.GetUtcNow();
         var tope = Math.Max(1, configuracion.GetValue("Validasoft:Habeas:ExportacionesPorDia", MaximoPorDiaPorOmision));
 
@@ -71,7 +71,7 @@ public static class ExportacionDeBovedaEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IReadOnlyList<ExportacionBovedaDto>> Listar(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad);
         await using var consulta = sesiones.ConsultaGlobal();
         var propias = await consulta.Query<ExportacionDeBoveda>().Where(e => e.TerceroId == tercero.TerceroId).OrderByDescending(e => e.SolicitadaEn).Take(20).ToListAsync(ct);
         return [.. propias.Select(ADto)];
@@ -80,7 +80,7 @@ public static class ExportacionDeBovedaEndpoints
     [WolverineGet("/public/v1/exportaciones/{id}")]
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ExportacionBovedaDto> Obtener(Guid id, HttpContext http, ISesiones sesiones, CancellationToken ct) =>
-        ADto(await CargarAsync(id, SesionDeTercero.De(http.User), sesiones, ct));
+        ADto(await CargarAsync(id, SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad), sesiones, ct));
 
     /// <summary>
     /// URL prefirmada (5 minutos) para bajar el ZIP; queda anotada la descarga (quién, cuándo, desde dónde). 409
@@ -92,7 +92,7 @@ public static class ExportacionDeBovedaEndpoints
         CancellationToken ct)
     {
         var ahora = reloj.GetUtcNow();
-        var exportacion = await CargarAsync(id, SesionDeTercero.De(http.User), sesiones, ct);
+        var exportacion = await CargarAsync(id, SesionDeTercero.De(http.User, GrupoDeAcceso.Privacidad), sesiones, ct);
         exportacion.AsegurarDescargable(ahora);
         exportacion.RegistrarDescarga(BovedaEndpoints.Ip(http), BovedaEndpoints.UserAgent(http), ahora);
         await using (var sesion = sesiones.Global())

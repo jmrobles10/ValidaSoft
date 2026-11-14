@@ -507,7 +507,7 @@ public static class ExpedientesPublicosEndpoints
     public static async Task<ExpedientePublicoDto> Obtener(Guid id, HttpContext http, ISesiones sesiones, ReglasDeCarga reglas, TimeProvider reloj,
         CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var expediente = await consulta.Query<Expediente>().Where(e => e.AnyTenant() && e.Id == id).SingleOrDefaultAsync(ct);
         if (expediente is null || expediente.TerceroId != tercero.TerceroId || tercero.Vinculos.All(v => v.VinculoId != expediente.VinculoId))
@@ -527,7 +527,7 @@ public static class ExpedientesPublicosEndpoints
     public static async Task<ExpedientePublicoDto> Reenviar(Guid id, ReenviarExpedienteDto dto, HttpContext http, ISesiones sesiones,
         ReglasDeCarga reglas, Certificados.EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         Expediente? ubicado;
         await using (var consulta = sesiones.ConsultaGlobal())
             ubicado = await consulta.Query<Expediente>().Where(e => e.AnyTenant() && e.Id == id).SingleOrDefaultAsync(ct);

@@ -89,7 +89,7 @@ public static class RatificacionEndpoints
     public static async Task<ExpedientePublicoDto> Ratificar(Guid id, Guid requisitoId, HttpContext http, ISesiones sesiones, IMessageBus mensajes,
         ReglasDeCarga reglas, EmisorDeCertificados certificados, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         Expediente? ubicado;
         await using (var consulta = sesiones.ConsultaGlobal())
             ubicado = await consulta.Query<Expediente>().Where(e => e.AnyTenant() && e.Id == id).SingleOrDefaultAsync(ct);

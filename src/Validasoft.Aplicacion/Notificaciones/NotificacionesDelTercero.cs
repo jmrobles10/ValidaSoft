@@ -70,12 +70,18 @@ public static class TiposNotificacionTercero
     /// <summary>La empresa devolvió a revisión una validación que ya estaba aprobada (desaprobar, DS-2).</summary>
     public const string Desaprobado = "tercero.desaprobado";
 
+    /// <summary>
+    /// Una empresa invitó a un correo que no es contacto conocido del tercero (acceso aislado): un contacto debe aprobarlo o rechazarlo. Solo campana (el
+    /// correo, con el enlace para decidir, sale al invitar) y solo para quienes ya son contacto: la sesión aislada no la ve.
+    /// </summary>
+    public const string AccesoSolicitado = "tercero.acceso_solicitado";
+
     /// <summary>La empresa reintegró su vínculo, con o sin validar de nuevo (DS-5).</summary>
     public const string Reintegrado = "tercero.reintegrado";
 
     public static readonly IReadOnlyList<string> Todos =
         [Observado, Recordatorio, Actualizacion, Resultado, DocumentoPorVencer, DocumentoVencido, Certificado, PlazoDeCargue, Propuesta, Invitacion, Cuenta,
-            Desaprobado, Reintegrado, Vigencia];
+            Desaprobado, Reintegrado, Vigencia, AccesoSolicitado];
 
     /// <summary>Los que además de la campana van por correo (si el tercero no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
@@ -208,6 +214,8 @@ public static class PlanificadorDeNotificacionesDelTercero
                     (empresa, vinculo) => $"La validación con {empresa} venció. Ratifica o actualiza tu información para volver a estar al día.");
             case InvitacionEnviada:
                 return await DeInvitacionAsync(evento, contexto, orden, ct);
+            case AccesoAisladoSolicitado solicitado:
+                return await DeAccesoSolicitadoAsync(evento, solicitado, contexto, orden, ct);
             case CuentaDesignadaAprobada aprobada:
                 return await DeLaCuentaAsync(evento, contexto, orden, ct, "Cuenta aprobada",
                     empresa => $"{empresa} aprobó la cuenta {Descripcion(aprobada.Cuenta)} con la que le cobras.");
@@ -327,6 +335,24 @@ public static class PlanificadorDeNotificacionesDelTercero
         var expediente = vinculo.ExpedienteAbiertoId is { } id ? await contexto.ExpedienteAsync(tenantId, id, ct) : null;
         return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, vinculo.Id, expediente?.Id, expediente?.Folio, TiposNotificacionTercero.Vigencia,
             titulo, mensaje(empresa, vinculo), expediente is null ? $"/empresas/{vinculo.Id}" : $"/expediente/{expediente.Id}", orden), tenantId);
+    }
+
+    /// <summary>
+    /// Una empresa invitó a un correo que no es contacto conocido del tercero (acceso aislado): los contactos ven el aviso en su campana y deciden desde su cuenta
+    /// (<c>/accesos</c>). Va <b>sin vínculo</b> —el vínculo es de la persona aislada— para que lo vea el tercero entero y no la sesión aislada. Si ya se decidió
+    /// (un correo que se había rechazado nace rechazado) no avisa.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> DeAccesoSolicitadoAsync(IEvent evento, AccesoAisladoSolicitado solicitado, IContextoDeEventos contexto, long orden,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo ||
+            vinculo.TerceroId == Guid.Empty || vinculo.AccesoAislado is not EstadoAccesoAislado.Pendiente)
+            return PlanDeNotificaciones.Vacio;
+
+        var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "Una empresa";
+        return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, null, null, null, TiposNotificacionTercero.AccesoSolicitado,
+            "Un correo nuevo pidió acceso",
+            $"{empresa} invitó a {solicitado.Correo}, que no está entre los contactos de tu empresa. Apruébalo o recházalo.", "/accesos", orden), tenantId);
     }
 
     private static async Task<PlanDeNotificaciones> DeInvitacionAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)
@@ -456,7 +482,7 @@ public static class NotificacionesDelTerceroEndpoints
     public static async Task<BandejaNotificacionesTerceroDto> Listar(bool? soloNoLeidas, int? limite, string? cursor, HttpContext http, ISesiones sesiones,
         CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var propias = Visibles(consulta, tercero);
         var noLeidas = await propias.Where(n => !n.Leida).CountAsync(ct);
@@ -482,7 +508,7 @@ public static class NotificacionesDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<NotificacionTerceroDto> MarcarLeida(Guid id, HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var notificacion = await Visibles(consulta, tercero).Where(n => n.Id == id).FirstOrDefaultAsync(ct);
         if (notificacion?.TenantId is not { } tenantId)
@@ -504,7 +530,7 @@ public static class NotificacionesDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<NotificacionesMarcadasDto> MarcarTodas(HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         await using var consulta = sesiones.ConsultaGlobal();
         var pendientes = await Visibles(consulta, tercero).Where(n => !n.Leida && n.TenantId != null).ToListAsync(ct);
         var ahora = reloj.GetUtcNow();
@@ -527,7 +553,7 @@ public static class NotificacionesDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<PreferenciasNotificacionDto> Preferencias(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuenta);
         await using var consulta = sesiones.ConsultaGlobal();
         return ADto(await consulta.LoadAsync<PreferenciasDelTercero>(tercero.TerceroId, ct));
     }
@@ -538,7 +564,7 @@ public static class NotificacionesDelTerceroEndpoints
     public static async Task<PreferenciasNotificacionDto> ActualizarPreferencias(ActualizarPreferenciasNotificacionDto dto, HttpContext http, ISesiones sesiones,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuenta);
         var cambios = dto.Correo ?? new Dictionary<string, bool>();
         var invalidos = cambios.Keys.Where(k => !TiposNotificacionTercero.ConCorreo.Contains(k)).ToList();
         if (invalidos.Count > 0)
@@ -566,7 +592,7 @@ public static class NotificacionesDelTerceroEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IResult> Stream(HttpContext http, ISesiones sesiones, TimeProvider reloj)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         var alcance = AlcanceDelStream.De(http.User);
         var ct = http.RequestAborted;
         var ultimo = http.Request.Headers["Last-Event-ID"].ToString() is { Length: > 0 } reanudar ? EventosEndpoints.LeerCursor(reanudar) : reloj.GetUtcNow().UtcTicks;
@@ -615,7 +641,11 @@ public static class NotificacionesDelTerceroEndpoints
     {
         var terceroId = tercero.TerceroId;
         Guid?[] vinculos = [.. tercero.Vinculos.Select(v => (Guid?)v.VinculoId)];
-        return consulta.Query<Notificacion>().Where(n => n.AnyTenant() && n.UsuarioId == terceroId && (n.VinculoId == null || n.VinculoId.IsOneOf(vinculos)));
+        var propias = consulta.Query<Notificacion>().Where(n => n.AnyTenant() && n.UsuarioId == terceroId);
+        // Una sesión aislada solo se entera de lo de sus vínculos: lo que no es de ninguno (propuestas de su ficha, solicitudes de acceso) es del tercero entero.
+        return tercero.Aislada
+            ? propias.Where(n => n.VinculoId.IsOneOf(vinculos))
+            : propias.Where(n => n.VinculoId == null || n.VinculoId.IsOneOf(vinculos));
     }
 
     private static NotificacionTerceroDto ADto(Notificacion n, IReadOnlyDictionary<Guid, Empresa> empresas) =>

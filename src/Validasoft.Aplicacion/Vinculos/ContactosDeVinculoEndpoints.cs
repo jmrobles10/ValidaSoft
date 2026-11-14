@@ -52,7 +52,7 @@ public static class ContactosPublicosEndpoints
     public static async Task<IReadOnlyList<ContactoDeEmpresaDto>> Actualizar(Guid id, ActualizarContactosDto dto, HttpContext http, ISesiones sesiones,
         TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         var enSesion = tercero.VinculoRequerido(id);
         var nuevos = dto.Contactos.ADominio();
 

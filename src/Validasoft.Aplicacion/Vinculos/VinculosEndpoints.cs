@@ -64,7 +64,7 @@ public static class TercerosEndpoints
         await using var sesion = sesiones.DelTenant();
         var tercero = await sesion.LoadAsync<Tercero>(id, ct);
         return tercero is not null && await EsVisibleAsync(sesion, tercero, contexto, ct)
-            ? tercero.ADto()
+            ? await DtoParaLaEmpresaAsync(sesion, tercero, contexto, ct)
             : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
     }
 
@@ -78,8 +78,21 @@ public static class TercerosEndpoints
         await using var sesion = sesiones.DelTenant();
         var tercero = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == clave, ct);
         return tercero is not null && await EsVisibleAsync(sesion, tercero, contexto, ct)
-            ? tercero.ADto()
+            ? await DtoParaLaEmpresaAsync(sesion, tercero, contexto, ct)
             : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
+    }
+
+    /// <summary>
+    /// El tercero como lo ve una empresa. Si no lo creó ella y solo lo conoce por vínculos con acceso aislado (invitó a un correo que no es contacto conocido y
+    /// ningún contacto lo aprobó), no se le dicen los contactos del tercero: conocer un NIT no basta para saber con quién se habla en esa empresa.
+    /// </summary>
+    internal static async Task<TerceroDto> DtoParaLaEmpresaAsync(IQuerySession sesion, Tercero tercero, IContextoSolicitud contexto, CancellationToken ct)
+    {
+        var dto = tercero.ADto();
+        if (tercero.CreadoPorTenant == contexto.TenantId)
+            return dto;
+        var propios = await sesion.Query<Vinculo>().Where(v => v.TerceroId == tercero.Id).ToListAsync(ct);
+        return propios.Count > 0 && propios.All(v => !v.BovedaDisponible) ? dto with { Contactos = [] } : dto;
     }
 
     /// <summary>
@@ -140,7 +153,7 @@ public static class VinculosEndpoints
 
         var atributos = ValidadorDeAtributos.Validar(tipo, dto.Atributos);
         var referencia = ReferenciaDeLaCredencial(dto.ReferenciaExterna, contexto);
-        var tercero = await ResolverTerceroAsync(dto, sesion, contexto, ahora, ct);
+        var (tercero, terceroNuevo) = await ResolverTerceroAsync(dto, sesion, contexto, ahora, ct);
 
         var terceroId = tercero.Id;
         var tipoId = tipo.Id;
@@ -169,14 +182,17 @@ public static class VinculosEndpoints
             OrigenVinculo.Api, referencia, dto.CorreoInvitacion, ahora);
 
         var eventos = new List<object> { creado };
+        var nuevo = Vinculo.Create(creado);
         if (dto.EnviarInvitacion)
         {
-            var vinculo = Vinculo.Create(creado);
-            var invitacion = vinculo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora);
+            var invitacion = nuevo.EnviarInvitacion(null, TimeSpan.FromHours(dto.VigenciaInvitacionHoras), null, ahora);
             eventos.Add(invitacion);
-            await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, contexto.TenantRequerido(), vinculo, tipo, invitacion, ct);
+            await EnlacesDeAcceso.InvitarAsync(sesion, mensajes, protector, contexto.TenantRequerido(), nuevo, tipo, invitacion, ct);
         }
 
+        // El correo invitado: contacto conocido, primer contacto del tercero (pasa a ser su contacto) o desconocido (acceso aislado hasta que lo apruebe un contacto).
+        await AccesoAislado.RegistrarInvitacionAsync(sesion, mensajes, protector, contexto.TenantRequerido(), tercero, terceroNuevo, nuevo,
+            creado.CorreoInvitacion, eventos.Add, ahora, ct);
         sesion.Events.StartStream<Vinculo>(creado.VinculoId, eventos);
         await sesion.SaveChangesAsync(ct);
 
@@ -279,12 +295,21 @@ public static class VinculosEndpoints
     {
         empresa.UsarMensajeria(mensajes);
         var stream = await empresa.VinculoParaEscribirAsync(id, VersionEsperada(http), ct);
-        var evento = stream.Aggregate!.EnviarInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras), null, reloj.GetUtcNow());
+        var ahora = reloj.GetUtcNow();
+        var evento = stream.Aggregate!.EnviarInvitacion(dto.CorreoDestino, TimeSpan.FromHours(dto.VigenciaHoras), null, ahora);
         var tipo = await empresa.Sesion.LoadAsync<TipoVinculo>(stream.Aggregate.TipoVinculoId, ct)
                    ?? throw ReglaDeNegocioException.NoEncontrado("tipo-vinculo-no-encontrado", "El tipo del vínculo ya no existe.");
         await EnlacesDeAcceso.InvitarAsync(empresa.Sesion, mensajes, protector, contexto.TenantRequerido(), stream.Aggregate, tipo, evento, ct);
+        // Invitar a otro correo vuelve a decidir su acceso: si no es contacto conocido del tercero, queda aislado hasta que lo apruebe un contacto.
+        var terceroDelVinculo = await empresa.Sesion.LoadAsync<Tercero>(stream.Aggregate.TerceroId, ct)
+                                ?? throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "El tercero del vínculo ya no existe.");
+        stream.AppendOne(evento);
+        await AccesoAislado.RegistrarInvitacionAsync(empresa.Sesion, mensajes, protector, contexto.TenantRequerido(), terceroDelVinculo, terceroNuevo: false,
+            stream.Aggregate, evento.CorreoDestino, stream.AppendOne, ahora, ct);
+        await empresa.Sesion.SaveChangesAsync(ct);
         // El conteo sale del vínculo recargado tras guardar (el agregado del stream ya aplicó el evento al anexarlo).
-        var guardado = await GuardarAsync(empresa, stream, evento, ct);
+        var vinculoGuardado = await empresa.CargarVinculoAsync(stream.Id, ct);
+        var guardado = vinculoGuardado.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculoGuardado.TipoVinculoId, ct));
         return Results.Created($"/api/v1/vinculos/{id}",
             guardado.Invitacion ?? new EnlaceInvitacionDto(evento.CorreoDestino, evento.Expira, 1));
     }
@@ -488,7 +513,8 @@ public static class VinculosEndpoints
                 $"La referencia {referencia.Id} de {referencia.Sistema} ya identifica otro vínculo ({otro.Id}).");
     }
 
-    private static async Task<Tercero> ResolverTerceroAsync(CrearVinculoDto dto, IDocumentSession sesion, IContextoSolicitud contexto,
+    /// <summary>El tercero del vínculo y si lo creó esta misma petición (el primer correo invitado pasa a ser su contacto).</summary>
+    private static async Task<(Tercero Tercero, bool Nuevo)> ResolverTerceroAsync(CrearVinculoDto dto, IDocumentSession sesion, IContextoSolicitud contexto,
         DateTimeOffset ahora, CancellationToken ct)
     {
         if (dto.TerceroId is not null)
@@ -496,7 +522,7 @@ public static class VinculosEndpoints
             var porId = await sesion.LoadAsync<Tercero>(dto.TerceroId.Value, ct);
             var visible = porId is not null &&
                           (porId.CreadoPorTenant == contexto.TenantId || await sesion.Query<Vinculo>().AnyAsync(v => v.TerceroId == porId.Id, ct));
-            return visible ? porId! : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
+            return visible ? (porId!, false) : throw ReglaDeNegocioException.NoEncontrado("tercero-no-encontrado", "No existe ese tercero.");
         }
 
         if (dto.Tercero is null)
@@ -505,10 +531,10 @@ public static class VinculosEndpoints
         var nuevo = TercerosEndpoints.ConstruirTercero(dto.Tercero, contexto.TenantRequerido(), contexto.EsSandbox, ahora);
         var existente = await sesion.Query<Tercero>().FirstOrDefaultAsync(t => t.ClaveIdentificacion == nuevo.ClaveIdentificacion, ct);
         if (existente is not null)
-            return existente; // Ya existe en la plataforma: se reutiliza sin tocar sus datos maestros (P-1-7).
+            return (existente, false); // Ya existe en la plataforma: se reutiliza sin tocar sus datos maestros (P-1-7).
 
         sesion.Store(nuevo);
-        return nuevo;
+        return (nuevo, true);
     }
 
     internal static async Task<VinculoDto> GuardarAsync(SesionDeEmpresa empresa, IEventStream<Vinculo> stream, object evento, CancellationToken ct)

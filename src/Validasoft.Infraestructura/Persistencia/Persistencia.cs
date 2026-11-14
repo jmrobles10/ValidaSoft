@@ -84,6 +84,9 @@ public static class ConfiguracionMarten
                 opts.Schema.For<Documento>().DatabaseSchemaName("boveda").MultiTenanted()
                     .UniqueIndex(UniqueIndexType.Computed, "ux_documento_clave", TenancyScope.PerTenant, x => x.ClaveNatural)
                     .Index(x => x.TerceroId);
+                // Solicitudes de acceso de un correo que no es contacto conocido del tercero (acceso aislado): un stream por (tercero, correo) en el
+                // tenant técnico «boveda» (snapshot inline), como la ficha y el habeas data. Las lee el tercero entre tenants desde su sesión.
+                opts.Schema.For<SolicitudDeAcceso>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
                 // Cuentas bancarias del tercero (CB-1): en la bóveda, como sus documentos globales.
                 opts.Schema.For<Validasoft.Dominio.Terceros.CuentaBancaria>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
@@ -302,6 +305,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Vinculo>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<SolicitudDeAcceso>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Validasoft.Dominio.Ficha.SeccionDeFicha>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);

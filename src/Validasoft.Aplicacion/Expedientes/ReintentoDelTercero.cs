@@ -83,7 +83,7 @@ public static class ReintentoPublicoEndpoints
     public static async Task<ExpedientePublicoDto> Reintentar(Guid id, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto, IMessageBus mensajes,
         EmisorDeCertificados certificados, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Relacion);
         var enSesion = tercero.VinculoRequerido(id);
         // Si pierde una carrera (el folio del expediente o el propio vínculo), se repite completa con una sesión nueva.
         var abierto = await Peticiones.ConReintentosAsync(async () =>

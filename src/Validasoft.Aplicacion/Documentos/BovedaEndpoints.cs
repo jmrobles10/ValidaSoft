@@ -14,7 +14,8 @@ namespace Validasoft.Aplicacion.Documentos;
 
 /// <summary>
 /// La bóveda vista por su dueño (sesión <c>Tercero</c>): sus documentos, la versión actual y, por cada empresa de su sesión,
-/// si se le compartió. Un documento de otro tercero responde 404.
+/// si se le compartió. Un documento de otro tercero responde 404. Una sesión aislada (su correo no es contacto conocido del tercero) no
+/// entra a la bóveda: solo ve y descarga lo que subió para su vínculo, que está en cuarentena.
 /// </summary>
 public static class BovedaEndpoints
 {
@@ -22,7 +23,7 @@ public static class BovedaEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<BovedaDto> Obtener(HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Boveda);
         var terceroId = tercero.TerceroId;
         var hoy = reloj.Hoy();
         await using var consulta = sesiones.ConsultaBoveda();
@@ -32,7 +33,7 @@ public static class BovedaEndpoints
 
         return new BovedaDto(terceroId,
         [
-            .. documentos.Where(d => d.Ambito == AmbitoDocumento.Global || tercero.Vinculos.Any(v => v.VinculoId == d.VinculoId)).Select(d => new DocumentoBovedaDto(d.Id, d.Resumen(), d.Ambito.ToString(), d.Clase.ToString(), d.VinculoId,
+            .. documentos.Where(d => !d.EnCuarentena && (d.Ambito == AmbitoDocumento.Global || tercero.Vinculos.Any(v => v.VinculoId == d.VinculoId))).Select(d => new DocumentoBovedaDto(d.Id, d.Resumen(), d.Ambito.ToString(), d.Clase.ToString(), d.VinculoId,
                 d.VersionActual is { } actual ? d.VersionRequerida(actual).ADto(d.Id, null, hoy) : null, d.Versiones.Count, d.PorEmpresa(vinculos, expedientes, hoy)))
         ]);
     }
@@ -42,7 +43,7 @@ public static class BovedaEndpoints
     public static async Task<DocumentoDto> ObtenerDocumento(Guid documentoId, HttpContext http, ISesiones sesiones, TimeProvider reloj,
         CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Boveda);
         await using var consulta = sesiones.ConsultaBoveda();
         var documento = DelTercero(await consulta.LoadAsync<Documento>(documentoId, ct), tercero);
         var vinculos = await VinculosAsync(sesiones, tercero, ct);
@@ -59,7 +60,7 @@ public static class BovedaEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<ImpactoDeRetiroDto> ImpactoDelRetiro(Guid documentoId, int numero, HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Boveda);
         await using var boveda = sesiones.ConsultaBoveda();
         var documento = DelTercero(await boveda.LoadAsync<Documento>(documentoId, ct), tercero);
         await using var global = sesiones.ConsultaGlobal();
@@ -73,7 +74,7 @@ public static class BovedaEndpoints
     public static async Task<DescargaDto> Descargar(Guid documentoId, int numero, HttpContext http, ISesiones sesiones, IContextoSolicitud contexto,
         IAlmacenDeArchivos almacen, ReglasDeCarga reglas, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Descarga);
         // El acceso se anota en el stream del documento, donde también escriben las vigencias y la compartición en segundo
         // plano: si una de ellas gana la carrera, se reintenta en lugar de responder 412 a quien solo quería descargar.
         var documento = await Peticiones.ConReintentosAsync(async () =>
@@ -99,7 +100,7 @@ public static class BovedaEndpoints
     public static async Task<RetiroDto> Retirar(Guid documentoId, int numero, RetirarVersionDto dto, HttpContext http, ISesiones sesiones,
         IContextoSolicitud contexto, IMessageBus mensajes, IAlmacenDeArchivos almacen, TimeProvider reloj, CancellationToken ct)
     {
-        var tercero = SesionDeTercero.De(http.User);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Boveda);
         var ahora = reloj.GetUtcNow();
         await using var sesion = sesiones.Boveda(mensajes);
         var stream = await sesion.Events.FetchForExclusiveWriting<Documento>(documentoId, ct);
@@ -139,12 +140,26 @@ public static class BovedaEndpoints
         return new RetiroDto(proyectado.ADto(vinculos, await ExpedientesAsync(sesiones, vinculos, ct)), eliminar, compartidos);
     }
 
-    /// <summary>El documento existe y es del tercero de la sesión (un <c>PorVinculo</c>, además, de un vínculo de su sesión); si no, 404.</summary>
-    internal static Documento DelTercero(Documento? documento, SesionDeTercero tercero) =>
-        documento is not null && documento.TerceroId == tercero.TerceroId &&
-        (documento.Ambito == AmbitoDocumento.Global || tercero.Vinculos.Any(v => v.VinculoId == documento.VinculoId))
+    /// <summary>
+    /// El documento existe y es del tercero de la sesión (un <c>PorVinculo</c>, además, de un vínculo de su sesión); si no, 404. Una sesión aislada solo ve
+    /// lo de sus vínculos —su cuarentena y sus documentos por vínculo—, nunca un documento global. Un token embebido de un expediente ve lo de su vínculo y
+    /// lo global ya compartido con él (<paramref name="paraSubida"/>: al confirmar una subida el global aún no se comparte, y el alcance del vínculo
+    /// ya lo comprobó el paso 1).
+    /// </summary>
+    internal static Documento DelTercero(Documento? documento, SesionDeTercero tercero, bool paraSubida = false) =>
+        documento is not null && documento.TerceroId == tercero.TerceroId && Visible(documento, tercero, paraSubida)
             ? documento
             : throw ReglaDeNegocioException.NoEncontrado("documento-no-encontrado", "No existe ese documento en tu bóveda.");
+
+    private static bool Visible(Documento documento, SesionDeTercero tercero, bool paraSubida)
+    {
+        if (documento.Ambito == AmbitoDocumento.PorVinculo)
+            return tercero.Vinculos.Any(v => v.VinculoId == documento.VinculoId);
+        if (tercero.Aislada)
+            return false;
+        return paraSubida || !tercero.EsDeUnExpediente ||
+               tercero.Vinculos.Any(v => documento.Comparticiones.Any(c => c.VinculoId == v.VinculoId));
+    }
 
     internal static async Task<DescargaDto> UrlDeDescargaAsync(IAlmacenDeArchivos almacen, ReglasDeCarga reglas, VersionDocumento version,
         CancellationToken ct)

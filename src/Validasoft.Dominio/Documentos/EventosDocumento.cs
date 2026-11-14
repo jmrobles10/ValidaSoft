@@ -78,7 +78,8 @@ public sealed record DocumentoCreado(
     Guid? TenantId,
     Guid? EmpresaId,
     Guid? VinculoId,
-    DateTimeOffset Fecha);
+    DateTimeOffset Fecha,
+    bool EnCuarentena = false);
 
 /// <summary>
 /// El binario ya está en su clave definitiva (confirmado por hash); la versión nace <c>Recibida</c>. Con datos declarados
@@ -171,6 +172,13 @@ public sealed record RetencionLegalMarcada(int Numero, string BaseLegal, DateOnl
 
 /// <summary>Se retiró la actual y la superada más reciente vuelve a serlo (I-11).</summary>
 public sealed record VersionActualRestituida(int Numero, int NumeroRetirado, DateTimeOffset Fecha);
+
+/// <summary>
+/// Lo que una persona con acceso aislado subió para una empresa (documento en cuarentena) tuvo su desenlace cuando los contactos del tercero decidieron
+/// el acceso: con la aprobación se <b>promovió</b> a la bóveda global (<see cref="DocumentoGlobalId"/>, <see cref="NumeroGlobal"/>) o se dejó sin promover
+/// porque la bóveda ya tenía algo igual o más reciente (<see cref="Motivo"/>); con el rechazo queda solo en el vínculo.
+/// </summary>
+public sealed record CuarentenaDeDocumentoResuelta(bool Promovida, Guid? DocumentoGlobalId, int? NumeroGlobal, string Motivo, DateTimeOffset Fecha);
 
 /// <summary>Una versión queda visible para una empresa a través de su vínculo (solo tras <c>InvitacionAceptada</c>, B-1).</summary>
 public sealed record VersionCompartida(int Numero, Guid TenantId, Guid EmpresaId, Guid VinculoId, OrigenComparticion Origen, DateTimeOffset Fecha);

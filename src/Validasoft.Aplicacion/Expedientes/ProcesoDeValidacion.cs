@@ -212,7 +212,8 @@ public static class ProcesoDeValidacion
             .Where(s => soloRequisitos is null || soloRequisitos.Contains(s.RequisitoId))
             .ToList();
         // La ficha queda disponible para la empresa desde la aceptación (la de esta transacción trae los documentos ya compartidos).
-        var aceptado = documentos is not null || vinculo.InvitacionAceptada;
+        // (Con acceso aislado pendiente o rechazado, la ficha del tercero no está disponible para la empresa: nada global se le comparte.)
+        var aceptado = (documentos is not null || vinculo.InvitacionAceptada) && vinculo.BovedaDisponible;
         if (pedidos.Count > 0 && documentos is null && vinculo.InvitacionAceptada)
             documentos = await ComparticionDeDocumentos.CompartirConVinculoAsync(sesion, vinculo, tenantId,
                 RequisitosDeExpediente.CodigosGlobales(pedidos), OrigenComparticion.Automatica, ahora, ct);

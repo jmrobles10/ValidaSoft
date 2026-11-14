@@ -31,8 +31,9 @@ public static class PropuestasDeFichaEndpoints
     [Authorize(Policy = ReclamosTercero.Politica)]
     public static async Task<IReadOnlyList<PropuestaDeSeccionDto>> Listar(HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
-        return await PropuestasAsync(sesiones, terceroId, null, null, false, reloj, ct);
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        AlcanceDeEmbebido.ExigirSesionDelTercero(tercero);
+        return await PropuestasAsync(sesiones, tercero.TerceroId, null, null, false, reloj, ct);
     }
 
     /// <summary>Las propuestas para una sección (y periodo, en la financiera), con los datos de la sección ya cambiados para prellenar el formulario.</summary>
@@ -41,7 +42,9 @@ public static class PropuestasDeFichaEndpoints
     public static async Task<IReadOnlyList<PropuestaDeSeccionDto>> DeSeccion(string seccion, int? periodo, HttpContext http, ISesiones sesiones,
         TimeProvider reloj, CancellationToken ct)
     {
-        var terceroId = SesionDeTercero.De(http.User).TerceroId;
+        var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Ficha);
+        await AlcanceDeEmbebido.ExigirSeccionAsync(tercero, seccion, sesiones, ct);
+        var terceroId = tercero.TerceroId;
         var definicion = CatalogoDeSecciones.Requerida(seccion);
         var periodoValido = CatalogoDeSecciones.PeriodoValido(definicion, periodo, reloj.Hoy());
         return await PropuestasAsync(sesiones, terceroId, definicion, periodoValido, true, reloj, ct);

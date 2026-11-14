@@ -50,7 +50,13 @@ public enum PlantillaCorreo
     CodigoDeIngreso,
 
     /// <summary>Invitación a entrar directo a Validasoft con el correo (ING-5): sin enlace ni secreto, remite a la app.</summary>
-    InvitacionDeUsuario
+    InvitacionDeUsuario,
+
+    /// <summary>
+    /// Aviso a un contacto del tercero de que una empresa invitó a otro correo (acceso aislado): con el enlace entra a su cuenta y lo aprueba o lo
+    /// rechaza. <c>Empresa</c> es quien invitó y <c>CorreoInvitado</c>, a quién.
+    /// </summary>
+    SolicitudDeAcceso
 }
 
 /// <summary>
@@ -62,7 +68,7 @@ public enum PlantillaCorreo
 /// </summary>
 public sealed record CorreoDeAccesoPendiente(
     PlantillaCorreo Plantilla, string Para, string SecretoProtegido, DateTimeOffset Expira, string? Empresa, string? TipoVinculo,
-    Guid? TenantId = null, Guid? EmpresaId = null);
+    Guid? TenantId = null, Guid? EmpresaId = null, string? CorreoInvitado = null);
 
 /// <summary>Arma el correo a partir de la plantilla; la URL pública sale de <c>Validasoft:Correo:UrlPublica</c>.</summary>
 public sealed class RedactorDeCorreos(IConfiguration configuracion)
@@ -129,6 +135,14 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
             PlantillaCorreo.AccesoPorCorreo => ConEnlace(correo.Para,
                 "Tu enlace para entrar a Validasoft",
                 "Pediste entrar a Validasoft. Con este enlace ves las empresas con las que tienes un vínculo y respondes lo que te pidan.",
+                $"{UrlPublica}/e/{secreto}", vence),
+            PlantillaCorreo.SolicitudDeAcceso => ConEnlace(correo.Para,
+                $"{correo.Empresa} invitó a {correo.CorreoInvitado} a tu información en Validasoft",
+                $"{correo.Empresa} invitó al correo {correo.CorreoInvitado} a validar la información que Validasoft guarda de tu empresa" +
+                (string.IsNullOrWhiteSpace(correo.TipoVinculo) ? string.Empty : $" como {Minuscula(correo.TipoVinculo)}") +
+                ", y ese correo no figura entre los contactos de tu empresa. Mientras nadie lo apruebe, esa persona entra con acceso aislado: " +
+                "solo ve y sube lo de su relación con esa empresa y no ve tu bóveda de documentos ni tu información. " +
+                "Entra para aprobarlo o rechazarlo; si no lo reconoces, recházalo.",
                 $"{UrlPublica}/e/{secreto}", vence),
             PlantillaCorreo.CodigoDeIngreso => new MensajeDeCorreo(correo.Para,
                 "Tu código para ingresar a Validasoft",
