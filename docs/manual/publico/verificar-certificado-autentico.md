@@ -28,7 +28,7 @@ Cualquier persona con el enlace del código QR o el folio de un certificado vige
 
 La página abre con el estado: «Este certificado está vigente» y la empresa que validó al proveedor. Debajo están los datos del certificado: la empresa que lo emite, el titular, el folio, la fecha de emisión y hasta cuándo vale. El NIT aparece enmascarado y el correo del titular no se muestra; la consulta no te da datos que no necesitas para confirmar el estado.
 
-> **Pantalla:** `/verificar/SF09A9-C-2026-000001-1`
+> **Pantalla:** `/verificar/SU7920-C-2026-000001-1`
 
 ![Paso 1: Lee el estado del certificado (escritorio)](../../../salida/manual/img/publico/verificar-certificado-autentico/01-lee-el-estado-del-certificado-claro.webp)
 
@@ -41,7 +41,7 @@ La página abre con el estado: «Este certificado está vigente» y la empresa q
 
 La sección «Autenticidad» la comprueba tu propio navegador: recalcula el contenido sellado, compara su huella con la del enlace y valida la firma con la clave pública de Validasoft. Si las cuatro comprobaciones salen en «Correcto», el mensaje dice «Auténtico»; si alguna falla, el certificado no debe aceptarse.
 
-> **Pantalla:** `/verificar/SF09A9-C-2026-000001-1`
+> **Pantalla:** `/verificar/SU7920-C-2026-000001-1`
 
 ![Paso 2: Comprueba la autenticidad (escritorio)](../../../salida/manual/img/publico/verificar-certificado-autentico/02-comprueba-la-autenticidad-claro.webp)
 
@@ -56,7 +56,7 @@ La sección «Autenticidad» la comprueba tu propio navegador: recalcula el cont
 
 El botón «Descargar PDF» entrega el certificado tal como se emitió. Solo se entrega mientras el certificado está vigente: si está suspendido o revocado, el botón no baja el archivo y la página lo explica.
 
-> **Pantalla:** `/verificar/SF09A9-C-2026-000001-1`
+> **Pantalla:** `/verificar/SU7920-C-2026-000001-1`
 
 ![Paso 3: Descarga el PDF del certificado (escritorio)](../../../salida/manual/img/publico/verificar-certificado-autentico/03-descarga-el-pdf-del-certificado-claro.webp)
 

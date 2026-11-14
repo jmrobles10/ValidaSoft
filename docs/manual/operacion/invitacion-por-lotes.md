@@ -82,7 +82,7 @@ El detalle del lote muestra el avance («2 de 2»), el estado final y una fila p
 
 Desde la fila, el enlace «Invitado» lleva al vínculo del tercero, que queda en estado Invitado hasta que acepte. Desde ahí se sigue el proceso igual que con una invitación individual.
 
-> **Pantalla:** `/e/{empresa}/vinculos/{id}`
+> **Pantalla:** `/e/{empresa}/invitaciones/lotes/{id}`
 
 ![Paso 6: Abre el vínculo de un tercero del lote (escritorio)](../../../salida/manual/img/operacion/invitacion-por-lotes/06-abre-el-vinculo-de-un-tercero-del-lote-claro.webp)
 
