@@ -29,6 +29,18 @@ public sealed class VersionDocumento
 
     public string CargadaPor { get; set; } = string.Empty;
 
+    /// <summary>
+    /// El correo de la sesión del tercero que la subió; nulo en las versiones anteriores a la decisión AV y en las que no sube una persona. Con él, si ese contacto estaba sin
+    /// verificar y lo desplaza uno verificado, sus versiones globales se marcan para revisión.
+    /// </summary>
+    public string? CargadaPorCorreo { get; set; }
+
+    /// <summary>
+    /// La versión la subió un contacto sin verificar que otro verificado desplazó: está marcada para que un contacto verificado o la plataforma la revise (la confirma
+    /// al aprobar de nuevo a ese correo o la retira como cualquier versión). Nula si no hay revisión pendiente.
+    /// </summary>
+    public DateTimeOffset? EnRevisionDesde { get; set; }
+
     public DateTimeOffset CargadaEn { get; set; }
 
     public HechosBasicos? Hechos { get; set; }
@@ -173,7 +185,8 @@ public sealed record ArchivoVerificado(
     string NombreOriginal,
     int? Paginas,
     Guid? ContextoVinculoId,
-    string CargadaPor);
+    string CargadaPor,
+    string? CargadaPorCorreo = null);
 
 /// <summary>Motivo por el que una versión vuelve al tercero (código estable y texto para él).</summary>
 public sealed record MotivoDeDevolucion(string Codigo, string Detalle);
@@ -349,7 +362,7 @@ public sealed class Documento
         var eventos = new List<object>
         {
             new VersionCargada(archivo.Numero, ClaseDocumento.Archivo, archivo.Sha256, archivo.Bucket, archivo.ClaveObjeto, archivo.MimeDeclarado,
-                archivo.Tamano, archivo.NombreOriginal, archivo.ContextoVinculoId, archivo.CargadaPor, ahora, datos?.Hash, datos?.Datos),
+                archivo.Tamano, archivo.NombreOriginal, archivo.ContextoVinculoId, archivo.CargadaPor, ahora, datos?.Hash, datos?.Datos, archivo.CargadaPorCorreo),
             new AnalisisDeVersionIniciado(archivo.Numero, ConIa: false, ahora),
             new HechosDeVersionRegistrados(archivo.Numero, hechos, ahora)
         };
@@ -596,6 +609,34 @@ public sealed class Documento
     public AnalisisDeIaFallido? RegistrarFalloDeIa(int numero, string motivo, Guid? empresaQuePago, DateTimeOffset ahora) =>
         VersionRequerida(numero).IaResuelta ? null : new AnalisisDeIaFallido(numero, motivo, ahora, empresaQuePago);
 
+    /// <summary>
+    /// Las versiones globales de este documento que subió <paramref name="correo"/> (un contacto sin verificar desplazado por otro verificado) y siguen sin retirar ni
+    /// marcar: las que hay que poner en revisión. Un documento <c>PorVinculo</c> no entra (es de una empresa, no de la bóveda del tercero).
+    /// </summary>
+    public IReadOnlyList<VersionMarcadaParaRevision> MarcarParaRevision(string correo, string motivo, DateTimeOffset ahora)
+    {
+        if (Ambito != AmbitoDocumento.Global)
+            return [];
+        var normalizado = (correo ?? string.Empty).Trim().ToLowerInvariant();
+        return
+        [
+            .. Versiones.Where(v => v.EnRevisionDesde is null && v.Estado is not (EstadoVersion.Retirada or EstadoVersion.Devuelta) && !v.Suprimida &&
+                                    string.Equals(v.CargadaPorCorreo, normalizado, StringComparison.Ordinal))
+                .Select(v => new VersionMarcadaParaRevision(v.Numero, normalizado, motivo, ahora))
+        ];
+    }
+
+    /// <summary>Quita la marca de revisión de las versiones que subió <paramref name="correo"/> (se le aprobó el acceso de nuevo).</summary>
+    public IReadOnlyList<RevisionDeVersionResuelta> ResolverRevision(string correo, string por, DateTimeOffset ahora)
+    {
+        var normalizado = (correo ?? string.Empty).Trim().ToLowerInvariant();
+        return
+        [
+            .. Versiones.Where(v => v.EnRevisionDesde is not null && string.Equals(v.CargadaPorCorreo, normalizado, StringComparison.Ordinal))
+                .Select(v => new RevisionDeVersionResuelta(v.Numero, por, ahora))
+        ];
+    }
+
     /// <summary>Copia del documento con los eventos aplicados (para decidir sin tocar el agregado que Marten proyecta).</summary>
     public Documento Proyectar(IEnumerable<object> eventos)
     {
@@ -627,6 +668,8 @@ public sealed class Documento
             case AnalisisDeIaRegistrado e: Apply(e); break;
             case AnalisisDeIaFallido e: Apply(e); break;
             case CuarentenaDeDocumentoResuelta e: Apply(e); break;
+            case VersionMarcadaParaRevision e: Apply(e); break;
+            case RevisionDeVersionResuelta e: Apply(e); break;
             default: throw new InvalidOperationException($"Evento no aplicable a Documento: {evento.GetType().Name}.");
         }
     }
@@ -668,6 +711,7 @@ public sealed class Documento
             NombreOriginal = e.NombreOriginal,
             ContextoVinculoId = e.ContextoVinculoId,
             CargadaPor = e.CargadaPor,
+            CargadaPorCorreo = e.CargadaPorCorreo,
             CargadaEn = e.Fecha,
             HashDatos = e.HashDatos,
             Datos = e.Datos is null ? null : [.. e.Datos]
@@ -860,6 +904,18 @@ public sealed class Documento
     public void Apply(AnalisisDeIaFallido e)
     {
         VersionRequerida(e.Numero).FalloIa = e.Motivo;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(VersionMarcadaParaRevision e)
+    {
+        VersionRequerida(e.Numero).EnRevisionDesde = e.Fecha;
+        ActualizadoEn = e.Fecha;
+    }
+
+    public void Apply(RevisionDeVersionResuelta e)
+    {
+        VersionRequerida(e.Numero).EnRevisionDesde = null;
         ActualizadoEn = e.Fecha;
     }
 }

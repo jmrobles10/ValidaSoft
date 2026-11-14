@@ -14,7 +14,8 @@ public sealed partial class RequisitosApiTests
 
     private const string RutaImportacion = "/api/v1/plataforma/importacion/portal";
 
-    private sealed record FixturePortal(int TeridJ, int TeridN, int TeridE, string NitJ, string CcN, string NitE)
+    /// <summary><c>CorreoJ</c> es el correo que el Portal tiene del jurídico: propio de cada fixture, para que los avisos que le lleguen no se crucen con los de otra prueba.</summary>
+    private sealed record FixturePortal(int TeridJ, int TeridN, int TeridE, string NitJ, string CcN, string NitE, string CorreoJ = "compras@aceros.co")
     {
         public string Json(string telefono = "6015551234", string direccion = "Calle 45 # 12-08") =>
             File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "portal-terceros.json"))
@@ -24,6 +25,7 @@ public sealed partial class RequisitosApiTests
                 .Replace("{{NIT_J}}", NitJ, StringComparison.Ordinal)
                 .Replace("{{CC_N}}", CcN, StringComparison.Ordinal)
                 .Replace("{{NIT_E}}", NitE, StringComparison.Ordinal)
+                .Replace("compras@aceros.co", CorreoJ, StringComparison.Ordinal)
                 .Replace("{{TELEFONO_J}}", telefono, StringComparison.Ordinal)
                 .Replace("{{DIRECCION_J}}", direccion, StringComparison.Ordinal);
     }
@@ -36,7 +38,7 @@ public sealed partial class RequisitosApiTests
         while (Validasoft.Dominio.Identificaciones.DigitoVerificacion.NitColombia(nitJ) == "0")
             nitJ = Nit();
         return new FixturePortal(baseId, baseId + 1, baseId + 2, nitJ, Random.Shared.Next(10_000_000, 99_999_999).ToString(System.Globalization.CultureInfo.InvariantCulture),
-            Nit());
+            Nit(), CorreoNuevo());
     }
 
     /// <summary>Encola una corrida con el JSON del fixture y espera (hasta 60 s) a que termine.</summary>
@@ -86,7 +88,9 @@ public sealed partial class RequisitosApiTests
         var f = NuevoFixturePortal();
 
         // La empresa ya tenía al jurídico como vínculo (sin aceptar): el importador lo encuentra por su NIT y no lo duplica.
-        var correo = CorreoNuevo();
+        // Con el correo que el Portal ya tiene del jurídico: el correo que trae la importación queda como contacto verificado (decisión AV) y, si la empresa hubiera invitado a otro
+        // sin verificar, ese pasaría a acceso aislado y la empresa dejaría de ver la ficha (eso lo prueban las pruebas de la verificación de contactos).
+        var correo = f.CorreoJ;
         var vinculo = await CrearVinculoAsync(norte, "CLIENTE", correo, f.NitJ);
         var constructoras = new[] { new UnidadEmpresaDto("7", norte.Datos.Id) };
 

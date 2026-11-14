@@ -87,6 +87,11 @@ public static class ConfiguracionMarten
                 // Solicitudes de acceso de un correo que no es contacto conocido del tercero (acceso aislado): un stream por (tercero, correo) en el
                 // tenant técnico «boveda» (snapshot inline), como la ficha y el habeas data. Las lee el tercero entre tenants desde su sesión.
                 opts.Schema.For<SolicitudDeAcceso>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
+                // Historial de los contactos de un tercero (decisión AV): quién entró como contacto, cómo se verificó y quién pasó a acceso aislado. Un stream por tercero
+                // en el tenant técnico «boveda» (snapshot inline); el estado vigente de cada contacto vive en el documento del tercero.
+                opts.Schema.For<HistorialDeContactos>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
+                // Migraciones de datos ya corridas (una fila por migración): la de los vínculos aceptados antes del acceso aislado corre una sola vez.
+                opts.Schema.For<Validasoft.Aplicacion.Interesado.MigracionDeDatosEjecutada>().DatabaseSchemaName("plataforma");
                 // Cuentas bancarias del tercero (CB-1): en la bóveda, como sus documentos globales.
                 opts.Schema.For<Validasoft.Dominio.Terceros.CuentaBancaria>().DatabaseSchemaName("boveda").MultiTenanted().Index(x => x.TerceroId);
                 opts.Schema.For<CargaDeDocumento>().DatabaseSchemaName("boveda")
@@ -309,6 +314,7 @@ public static class ConfiguracionMarten
                 opts.Projections.Snapshot<Expediente>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Documento>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SolicitudDeAcceso>(SnapshotLifecycle.Inline);
+                opts.Projections.Snapshot<HistorialDeContactos>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Validasoft.Dominio.Ficha.SeccionDeFicha>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<Certificado>(SnapshotLifecycle.Inline);
                 opts.Projections.Snapshot<SecuenciaDeFolios>(SnapshotLifecycle.Inline);

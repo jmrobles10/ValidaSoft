@@ -56,7 +56,13 @@ public enum PlantillaCorreo
     /// Aviso a un contacto del tercero de que una empresa invitó a otro correo (acceso aislado): con el enlace entra a su cuenta y lo aprueba o lo
     /// rechaza. <c>Empresa</c> es quien invitó y <c>CorreoInvitado</c>, a quién.
     /// </summary>
-    SolicitudDeAcceso
+    SolicitudDeAcceso,
+
+    /// <summary>
+    /// Aviso a un contacto <b>verificado</b> del tercero de que otro contacto, sin verificar, pasó a acceso aislado porque este se verificó (el verificado prevalece): con el
+    /// enlace entra a su cuenta y aprueba o rechaza a ese correo (<c>CorreoInvitado</c>). Sus versiones globales quedaron marcadas para revisión.
+    /// </summary>
+    ContactoEnRevision
 }
 
 /// <summary>
@@ -140,9 +146,16 @@ public sealed class RedactorDeCorreos(IConfiguration configuracion)
                 $"{correo.Empresa} invitó a {correo.CorreoInvitado} a tu información en Validasoft",
                 $"{correo.Empresa} invitó al correo {correo.CorreoInvitado} a validar la información que Validasoft guarda de tu empresa" +
                 (string.IsNullOrWhiteSpace(correo.TipoVinculo) ? string.Empty : $" como {Minuscula(correo.TipoVinculo)}") +
-                ", y ese correo no figura entre los contactos de tu empresa. Mientras nadie lo apruebe, esa persona entra con acceso aislado: " +
+                ", y ese correo no figura entre los contactos verificados de tu empresa. Mientras nadie lo apruebe, esa persona entra con acceso aislado: " +
                 "solo ve y sube lo de su relación con esa empresa y no ve tu bóveda de documentos ni tu información. " +
                 "Entra para aprobarlo o rechazarlo; si no lo reconoces, recházalo.",
+                $"{UrlPublica}/e/{secreto}", vence),
+            PlantillaCorreo.ContactoEnRevision => ConEnlace(correo.Para,
+                $"{correo.CorreoInvitado} pasó a acceso aislado en tu información de Validasoft",
+                $"El correo {correo.CorreoInvitado} figuraba como contacto de tu empresa, pero no estaba verificado, y otro contacto se verificó: el verificado prevalece. " +
+                "Mientras tanto esa persona entra con acceso aislado: no ve tu bóveda de documentos ni tu información, y los documentos que subió a tu bóveda quedaron marcados " +
+                "para revisión (las empresas con las que están compartidos también se enteran). Entra para aprobarla de nuevo o rechazarla; si no la reconoces, recházala " +
+                "y retira esas versiones.",
                 $"{UrlPublica}/e/{secreto}", vence),
             PlantillaCorreo.CodigoDeIngreso => new MensajeDeCorreo(correo.Para,
                 "Tu código para ingresar a Validasoft",

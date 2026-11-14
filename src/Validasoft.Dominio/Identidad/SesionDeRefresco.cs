@@ -27,6 +27,9 @@ public sealed class SesionDeRefresco
     /// <summary>Los contactos del tercero rechazaron el acceso del correo de la sesión: se cortan todas las suyas (acceso aislado).</summary>
     public const string MotivoAccesoRechazado = "acceso-rechazado";
 
+    /// <summary>Otro contacto del tercero se verificó y el correo de la sesión, sin verificar, pasó a acceso aislado: se cortan las suyas para que vuelva a entrar aislado.</summary>
+    public const string MotivoContactoDesplazado = "contacto-desplazado";
+
     public const int LongitudMaximaDelDispositivo = 200;
 
     /// <summary>Identificador de la familia (viaja dentro del token).</summary>

@@ -51,6 +51,7 @@ public static class TercerosEndpoints
                 "Ese tercero ya existe en la plataforma; vincúlalo con POST /vinculos indicando su identificación.");
 
         sesion.Store(tercero);
+        ContactosDelTercero.RegistrarIniciales(sesion, tercero, ahora);
         if (referencia is not null)
             await ReferenciasDeTerceroEndpoints.RegistrarAsync(sesion, tercero.Id, referencia.Sistema, referencia.Id, ahora, ct);
         await sesion.SaveChangesAsync(ct);
@@ -270,7 +271,16 @@ public static class VinculosEndpoints
     public static async Task<VinculoDto> Obtener(Guid id, SesionDeEmpresa empresa, CancellationToken ct)
     {
         var vinculo = await empresa.CargarVinculoAsync(id, ct);
-        return vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct));
+        var dto = vinculo.ADto(await empresa.Sesion.LoadAsync<TipoVinculo>(vinculo.TipoVinculoId, ct));
+        // El detalle dice si el correo que invitó la empresa está probado como del tercero (decisión AV): verificado (y con qué), sin verificar o aún no es contacto.
+        var tercero = await empresa.Sesion.LoadAsync<Tercero>(vinculo.TerceroId, ct);
+        var contacto = tercero?.BuscarContacto(vinculo.CorreoTercero);
+        return dto with
+        {
+            VerificacionDelCorreo = contacto is null
+                ? new VerificacionDelCorreoDto("NoEsContacto", null)
+                : new VerificacionDelCorreoDto(contacto.Verificacion.ToString(), contacto.Medio?.ToString())
+        };
     }
 
     [WolverinePatch("/api/v1/vinculos/{id}/atributos")]
@@ -534,6 +544,7 @@ public static class VinculosEndpoints
             return (existente, false); // Ya existe en la plataforma: se reutiliza sin tocar sus datos maestros (P-1-7).
 
         sesion.Store(nuevo);
+        ContactosDelTercero.RegistrarIniciales(sesion, nuevo, ahora);
         return (nuevo, true);
     }
 

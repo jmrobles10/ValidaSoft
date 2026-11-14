@@ -8,6 +8,7 @@ using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Documentos;
+using Validasoft.Dominio.Terceros;
 using Validasoft.Dominio.Vinculos;
 using Wolverine;
 using Wolverine.Http;
@@ -195,7 +196,7 @@ public static class CargaEndpoints
             }, ct);
 
         var archivo = new ArchivoVerificado(numero, sha256, carga.Bucket, claveDefinitiva, carga.MimeDeclarado, inspeccion.MimeReal!,
-            contenido.LongLength, carga.NombreOriginal, inspeccion.Paginas, carga.ContextoVinculoId, tercero.TerceroId.ToString());
+            contenido.LongLength, carga.NombreOriginal, inspeccion.Paginas, carga.ContextoVinculoId, tercero.TerceroId.ToString(), SolicitudDeAcceso.Normalizar(tercero.Correo));
         var eventos = documento.RegistrarVersionArchivo(archivo, devolucion, Antivirus.NoDisponible, reglas.ExigirAntivirus, ahora, datos);
         foreach (var evento in eventos)
             stream.AppendOne(evento);

@@ -128,6 +128,8 @@ public sealed class ApiFixture : IAsyncLifetime
             b.UseSetting("Validasoft:Plan:MinutosMedicionAlmacenamiento", "0");
             b.UseSetting("Validasoft:Plan:Intervalo", "00:00:00");
             b.UseSetting("Validasoft:Habeas:Intervalo", "00:00:00");
+            // La migración de los vínculos aceptados antes del acceso aislado no corre sola al arrancar: las pruebas de la migración la ejecutan a mano sobre sus datos.
+            b.UseSetting("Validasoft:Migraciones:AccesoAislado:Habilitada", "false");
             b.ConfigureTestServices(s =>
             {
                 // El transporte SMTP se reemplaza, no el enviador: el aislamiento del sandbox (SB-4) sigue activo en las pruebas y lo que

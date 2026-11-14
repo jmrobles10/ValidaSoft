@@ -277,6 +277,7 @@ public static class EsquemasDeAnalisis
             Texto("matricula", "Número de matrícula mercantil."),
             Texto("estadoMatricula", "Estado de la matrícula (activa, cancelada, en liquidación…)."),
             Texto("domicilio", "Domicilio principal."),
+            Texto("correo", "Correo electrónico comercial o de notificación judicial de la sociedad que figura en el certificado (el de la sociedad, no el de una persona)."),
             Fecha("fechaExpedicion", "Fecha de expedición del certificado."),
             new("representantesLegales", TipoDeCampoIa.Personas, "Representantes legales principales y suplentes que figuran en el certificado.")
         ], ["razonSocial", "nit", "matricula", "estadoMatricula", "domicilio", "representantesLegales"],

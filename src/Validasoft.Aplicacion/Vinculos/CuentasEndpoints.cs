@@ -29,12 +29,14 @@ public static class CuentasPublicasEndpoints
     public static async Task<IReadOnlyList<CuentaBancariaPublicaDto>> Listar(HttpContext http, ISesiones sesiones, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
+        // Un token embebido de un expediente solo ve la cuenta de su vínculo (y solo si el expediente la exige o ya la tiene): nunca las demás del tercero.
+        var alcance = tercero.EsDeUnExpediente ? await AlcanceDeEmbebido.CuentasDelExpedienteAsync(tercero, sesiones, ct) : null;
         await using var boveda = sesiones.ConsultaBoveda();
         var terceroId = tercero.TerceroId;
         var cuentas = await boveda.Query<CuentaBancaria>().Where(c => c.TerceroId == terceroId).OrderBy(c => c.RegistradaEn).ToListAsync(ct);
         await using var consulta = sesiones.ConsultaGlobal();
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
-        return [.. cuentas.Select(c => APublica(c, vistos))];
+        return [.. cuentas.Where(c => alcance is null || alcance.EsDelAlcance(c)).Select(c => APublica(c, vistos))];
     }
 
     [WolverinePost("/public/v1/boveda/cuentas-bancarias")]
@@ -43,6 +45,16 @@ public static class CuentasPublicasEndpoints
         TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
+        // Un token embebido de un expediente solo registra una cuenta si el expediente la exige, y queda ligada a su vínculo (es la única que después puede designar).
+        Guid? vinculoDeOrigen = null;
+        if (tercero.EsDeUnExpediente)
+        {
+            var alcance = await AlcanceDeEmbebido.CuentasDelExpedienteAsync(tercero, sesiones, ct);
+            if (!alcance.Exige)
+                throw ReglaDeNegocioException.Prohibido("alcance-de-sesion", "El expediente de esta sesión no pide cuenta bancaria: no se registran cuentas desde él.");
+            vinculoDeOrigen = alcance.Vinculo.Id;
+        }
+
         var datos = new DatosDeCuentaBancaria(dto.Pais, dto.Banco, dto.TipoCuenta, dto.Numero, dto.Titular, dto.IdentificacionTitular, dto.Moneda,
             dto.BancoCodigo, dto.BancoSwift, dto.ContactoPagos is null ? null : new ContactoDePagos(dto.ContactoPagos.Nombre, dto.ContactoPagos.Correo, dto.ContactoPagos.Telefono));
         // El banco se toma del catálogo de plataforma (IO-4): su nombre, su código de compensación y, si el tercero no lo dio, su SWIFT.
@@ -58,6 +70,7 @@ public static class CuentasPublicasEndpoints
         }
 
         var cuenta = CuentaBancaria.Registrar(tercero.TerceroId, datos, protector.Proteger, reloj.GetUtcNow());
+        cuenta.VinculoDeOrigenId = vinculoDeOrigen;
         await using var boveda = sesiones.Boveda();
         boveda.Store(cuenta);
         await boveda.SaveChangesAsync(ct);
@@ -70,6 +83,9 @@ public static class CuentasPublicasEndpoints
     public static async Task<CuentaBancariaPublicaDto> Retirar(Guid id, HttpContext http, ISesiones sesiones, TimeProvider reloj, CancellationToken ct)
     {
         var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.Cuentas);
+        // Retirar una cuenta es de la cuenta del tercero, no de un expediente: el token de un expediente solo ve y designa la de su vínculo.
+        if (tercero.EsDeUnExpediente)
+            throw ReglaDeNegocioException.Prohibido("alcance-de-sesion", "Esta sesión se abrió para un expediente y no retira cuentas bancarias: eso se hace desde la cuenta del tercero.");
         await using var consulta = sesiones.ConsultaGlobal();
         var vistos = await VistaDelTercero.CargarAsync(consulta, tercero, [.. tercero.Vinculos.Select(v => v.VinculoId)], ct);
         if (vistos.Any(v => v.Vinculo.CuentaDesignada?.Cuenta.CuentaId == id || v.Vinculo.CuentaPropuesta?.Cuenta.CuentaId == id))
@@ -96,12 +112,17 @@ public static class CuentasPublicasEndpoints
     {
         var tercero = SesionDeTercero.De(http.User, GrupoDeAcceso.CuentaDesignada);
         var enSesion = tercero.VinculoRequerido(id);
+        // El token de un expediente solo designa la cuenta de su vínculo (la que registró desde ahí o la que ya está ligada), y solo si el expediente la exige o ya la tiene.
+        var alcance = tercero.EsDeUnExpediente ? await AlcanceDeEmbebido.CuentasDelExpedienteAsync(tercero, sesiones, ct) : null;
         CuentaBancaria cuenta;
         await using (var boveda = sesiones.ConsultaBoveda())
         {
             cuenta = await boveda.LoadAsync<CuentaBancaria>(dto.CuentaId, ct) is { } propia && propia.TerceroId == tercero.TerceroId
                 ? propia
                 : throw ReglaDeNegocioException.NoEncontrado("cuenta-no-encontrada", "No existe esa cuenta.");
+            if (alcance is not null && !alcance.EsDelAlcance(cuenta))
+                throw ReglaDeNegocioException.Prohibido("alcance-de-sesion",
+                    "Esta sesión se abrió para un expediente y solo designa la cuenta que registró para él: las demás cuentas del tercero no están a su alcance.");
             if (cuenta.Estado != EstadoCuentaBancaria.Activa)
                 throw ReglaDeNegocioException.Conflicto("cuenta-retirada", "Esa cuenta está retirada.");
             var terceroId = tercero.TerceroId;

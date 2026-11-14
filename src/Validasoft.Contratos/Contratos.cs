@@ -278,7 +278,8 @@ public sealed record VinculoDto(
     DateOnly? VigenteHasta = null,
     bool EnRevision = false,
     ActualizacionNoAprobadaDto? ActualizacionNoAprobada = null,
-    AccesoDelCorreoDto? AccesoDelCorreo = null);
+    AccesoDelCorreoDto? AccesoDelCorreo = null,
+    VerificacionDelCorreoDto? VerificacionDelCorreo = null);
 
 /// <summary>
 /// La última actualización del vínculo no se aprobó (VR-13): <see cref="Resultado"/> es <c>Rechazado</c> o <c>Anulado</c>, <see cref="Fecha"/> cuándo se

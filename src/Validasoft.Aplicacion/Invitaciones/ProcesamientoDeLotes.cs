@@ -214,6 +214,7 @@ public static class ProcesarTandaDeLoteHandler
                 identificacion.Numero, identificacion.DigitoVerificacion), tipoPersona.ToString(), datos.Nombre ?? string.Empty, datos.NombreComercial, contactos),
                 tenantId, sandbox is not null, ahora);
             sesion.Store(tercero);
+            ContactosDelTercero.RegistrarIniciales(sesion, tercero, ahora);
         }
 
         var terceroId = tercero.Id;
