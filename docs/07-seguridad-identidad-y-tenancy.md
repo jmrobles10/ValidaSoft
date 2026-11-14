@@ -185,6 +185,7 @@ Mapeo rol → scopes vigente (H1, `Permisos.DeRol`): `Administrador` = todos los
 | `terceros:leer` / `escribir` (campos privados) | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | propio (maestros) |
 | `vinculos:leer` / `escribir` | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | propios |
 | `vinculos:bloquear` | — | ✓ | — | ✓ | — | — | — |
+| `vinculos:eximir` (eximir un vínculo de requisitos y revocar la exención, EX-5) | — | ✓ | — | — | — | scope (una llave a la que se le marque) | — |
 | `expedientes:leer` / `escribir` (crear, invitar, reabrir, anular) | — | ✓ / ✓ | ✓ / — | ✓ / — | ✓ / — | scope | propios / — |
 | `veredictos:emitir:area:{X}` | — | ✓ (todas, con justificación como Administrador) | ✓ (X) | ✓ (Cumplimiento) | — | — | — |
 | `requisitos:eximir` | — | ✓ | si `PuedeEximir` | si `PuedeEximir` | — | — | — |
