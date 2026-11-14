@@ -154,6 +154,7 @@ recorrido(
     await expect(cierre.getByRole('alert').filter({ hasText: 'Falta la cuenta bancaria designada' })).toHaveCount(0);
     const historial = cierre.getByText('Cuenta bancaria designada aprobada', { exact: true });
     await expect(historial.first()).toBeVisible();
+    await expect(cierre.getByText('Exige cuenta bancaria designada', { exact: true }).first()).toBeVisible();
     await paso(paginaFinal, {
       titulo: 'El expediente se aprueba solo',
       explicacion:
