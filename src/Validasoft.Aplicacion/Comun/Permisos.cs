@@ -18,6 +18,12 @@ public static class Permisos
     public const string VinculosEscribir = "vinculos:escribir";
     public const string VinculosBloquear = "vinculos:bloquear";
 
+    /// <summary>
+    /// Eximir a un vínculo de requisitos (y revocarlo): la empresa decide no perseguir su renovación (EX-5). Lo tiene el administrador (de todo el grupo o de la
+    /// empresa) y cualquier llave de API a la que se le marque; ningún otro rol, porque es una decisión que deja sin vigilancia a un tercero.
+    /// </summary>
+    public const string VinculosEximir = "vinculos:eximir";
+
     /// <summary>Aprobar o rechazar la cuenta bancaria que designa el tercero (cuatro ojos, CB-2).</summary>
     public const string CuentasAprobar = "cuentas:aprobar";
     public const string AuditoriaLeer = "auditoria:leer";
@@ -89,7 +95,7 @@ public static class Permisos
     public static readonly IReadOnlyList<string> DelTenant =
     [
         EmpresasAdministrar, ApiKeysAdministrar, SistemasAdministrar, UsuariosAdministrar, ConfiguracionLeer, ConfiguracionEscribir,
-        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
+        TercerosLeer, TercerosEscribir, VinculosLeer, VinculosEscribir, VinculosBloquear, VinculosEximir, CuentasAprobar, AuditoriaLeer, AuditoriaExportar,
         FlujosLeer, FlujosEscribir, ExpedientesLeer, ExpedientesRevisar, ExpedientesAdministrar, ExpedientesExportar, DocumentosLeer, DocumentosDescargar,
         CertificadosLeer, EventosLeer, WebhooksAdministrar, ConsultasLeer, SesionesTerceroCrear, VerificacionesEscribir, CumplimientoDecidir, SandboxAdministrar,
         SupresionesResolver

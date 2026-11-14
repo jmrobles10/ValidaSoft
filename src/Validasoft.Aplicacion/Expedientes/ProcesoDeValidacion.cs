@@ -230,9 +230,11 @@ public static class ProcesoDeValidacion
         var ordenados = await RequisitosDeExpediente.ConAprobacionesPreviasAsync(sesion, vinculo,
             [.. calculados.OrderBy(c => orden.IndexOf(c.Id)).Select(c => c.Calculado)], ct);
         // Lo que la empresa había aprobado y el tercero retiró (RT-3): el requisito nace con el motivo del retiro.
-        return retiros is null || retiros.Count == 0
+        var conRetiros = retiros is null || retiros.Count == 0
             ? ordenados
             : [.. ordenados.Select(r => retiros.TryGetValue(r.RequisitoId, out var retiro) ? r with { Retiro = retiro } : r)];
+        // Lo que la empresa tiene eximido para este vínculo (EX-3) nace Eximido citando la exención, sea cual sea el tipo de expediente.
+        return ExencionesDeVinculos.Aplicar(vinculo, conRetiros, ahora);
     }
 
     /// <summary>Renovación periódica: la sección cuya versión completa es la ya aceptada no queda cubierta; hace falta ratificarla (VV-1).</summary>

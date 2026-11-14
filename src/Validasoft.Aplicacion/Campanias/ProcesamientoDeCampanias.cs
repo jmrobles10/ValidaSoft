@@ -42,8 +42,10 @@ public static class SeleccionDeCampania
 
         // El primer vencimiento de cada vínculo: la vigencia del propio vínculo o la de un documento compartido con él.
         var porVinculo = new Dictionary<Guid, DateOnly>();
-        foreach (var v in vinculos.Where(v => v.VigenteHasta is not null))
+        // Lo que el vínculo tiene eximido (EX-4) no es un vencimiento que perseguir: ni la vigencia periódica (exención total) ni los documentos eximidos.
+        foreach (var v in vinculos.Where(v => v.VigenteHasta is not null && v.ExencionTotal(hoy) is null))
             porVinculo[v.Id] = v.VigenteHasta!.Value;
+        var porId = vinculos.ToDictionary(v => v.Id);
         var terceroIds = vinculos.Select(v => v.TerceroId).Distinct().ToArray();
         var ids = vinculos.Select(v => v.Id).ToHashSet();
         foreach (var lote in terceroIds.Chunk(500))
@@ -52,7 +54,8 @@ public static class SeleccionDeCampania
             {
                 if (documento.VersionActual is not { } numero)
                     continue;
-                foreach (var vigencia in documento.VersionRequerida(numero).Vigencias.Where(g => g.VigenteHasta is not null && ids.Contains(g.VinculoId)))
+                foreach (var vigencia in documento.VersionRequerida(numero).Vigencias.Where(g => g.VigenteHasta is not null && ids.Contains(g.VinculoId) &&
+                                                                                    porId[g.VinculoId].ExencionDeDocumento(g.TipoDocumentoTenantId, hoy) is null))
                     if (!porVinculo.TryGetValue(vigencia.VinculoId, out var actual) || vigencia.VigenteHasta!.Value < actual)
                         porVinculo[vigencia.VinculoId] = vigencia.VigenteHasta!.Value;
             }
@@ -257,14 +260,16 @@ public static class ProcesarTandaDeCampaniaHandler
         }
 
         var requisitos = await VigenciasDeVinculos.RequisitosDeRenovacionAsync(sesion, vinculo, flujo.Version, ahora, ct);
-        if (requisitos.Count == 0)
+        if (requisitos.Pendientes == 0)
         {
-            fila.MarcarOmitida("Nada por renovar: sus secciones y documentos obligatorios están al día.", ahora);
+            fila.MarcarOmitida(requisitos.Ids.Count > 0
+                ? "Nada por renovar: lo que vence está eximido por la empresa."
+                : "Nada por renovar: sus secciones y documentos obligatorios están al día.", ahora);
             return;
         }
 
         var expediente = await ProcesoDeValidacion.AbrirAsync(sesion, stream, flujo, null, certificados, ahora, ct, tipoExpediente: TipoExpediente.Renovacion,
-            soloRequisitos: requisitos, actor: new ActorDeExpediente(campania.CreadaPor.Tipo, campania.CreadaPor.Id), exigirRatificacion: true);
+            soloRequisitos: requisitos.Ids, actor: new ActorDeExpediente(campania.CreadaPor.Tipo, campania.CreadaPor.Id), exigirRatificacion: true);
         if (!expediente.EstaAbierto)
         {
             fila.MarcarExitosa(AccionFilaCampania.RenovacionAbierta, expediente.Id, expediente.Folio, "Se aprobó sola: no había nada que el tercero tuviera que hacer.", ahora);

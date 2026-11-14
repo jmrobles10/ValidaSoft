@@ -41,6 +41,10 @@ public sealed record LegadoDto(int EstadoTercero);
 /// actualizó (es lo que la empresa y el tercero ven como «En verificación»). <see cref="Estado"/> sigue siendo <c>ConPendientes</c>, y
 /// <see cref="Bloqueado"/>, <see cref="VigenteHasta"/> y <see cref="RevalidacionPendiente"/> se calculan como siempre; con el plazo de la
 /// revalidación vencido, o vencido el certificado, deja de ser <c>true</c>.</param>
+/// <param name="Exento">Campo nuevo (EX-8), solo informativo: la empresa tiene una exención vigente del vínculo y <b>eso cambió lo que dicen</b>
+/// <see cref="Bloqueado"/>, <see cref="MotivoBloqueo"/> y <see cref="DocumentosVencidos"/>: un documento exento que venció no cuenta (ni vence el
+/// vínculo por él), así que un certificado que venció solo por él no bloquea. <see cref="Estado"/> sigue siendo el del certificado sellado
+/// (puede decir <c>Vencido</c> con <see cref="Bloqueado"/> en <c>false</c>). Quien no lo conoce lo ignora.</param>
 public sealed record ConsultaCertificacionDto(
     bool Certificado,
     string? Folio,
@@ -59,4 +63,5 @@ public sealed record ConsultaCertificacionDto(
     bool FuenteRespaldo = false,
     int? AntiguedadSegundos = null,
     bool EnRevision = false,
-    bool EnVerificacion = false);
+    bool EnVerificacion = false,
+    bool Exento = false);

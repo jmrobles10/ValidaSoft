@@ -53,8 +53,15 @@ public static class RenovarPorVencimientoHandler
         if (vencidos.Count == 0)
             return;
 
+        // Lo que el vínculo tiene eximido (EX-4) no lo vence ni abre su renovación: la regla única de las exenciones. Si todo lo vencido está eximido, no pasa nada;
+        // si hay otra cosa, el vínculo vence por ella y lo eximido va en la renovación ya Eximido (EX-3), sin pedírselo al tercero.
         var ahora = reloj.GetUtcNow();
-        if (vinculo.Vencer(vencidos[0].Tipo.Nombre, ahora) is { } vencido)
+        var hoy = CalculadoraDeVigencia.Fecha(ahora);
+        var pendientes = vencidos.Where(p => vinculo.ExencionDeDocumento(p.Tipo.Id, hoy) is null).ToList();
+        if (pendientes.Count == 0)
+            return;
+
+        if (vinculo.Vencer(pendientes[0].Tipo.Nombre, ahora) is { } vencido)
         {
             vinculoStream.AppendOne(vencido);
             vinculo.Apply(vencido);

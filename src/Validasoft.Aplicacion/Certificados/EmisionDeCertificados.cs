@@ -24,6 +24,9 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
 {
     public const string TipoFolio = "C";
 
+    /// <summary>Lo que dice el certificado de un requisito eximido por la exención del vínculo (EX-3): sin la justificación interna de la empresa.</summary>
+    public const string JustificacionPublicaDeExencion = "Eximido por decisión de la empresa.";
+
     /// <summary>Base de la URL pública de verificación (<c>Validasoft:Correo:UrlPublica</c>, la misma de los enlaces al tercero).</summary>
     public string UrlPublica => configuracion["Validasoft:Correo:UrlPublica"] ?? string.Empty;
 
@@ -75,7 +78,9 @@ public sealed class EmisorDeCertificados(ClavesDeCertificados claves, ReglasDeCa
         var requisitos = expediente.Requisitos
             .Where(r => r.Eximido || r.VersionActual is not null)
             .Select(r => r.Eximido
-                ? new RequisitoCertificado(r.Codigo, r.Nombre, null, null, null, true, r.JustificacionExencion)
+                // La justificación de una exención del vínculo (EX-3) es de la empresa: el certificado, que ve el tercero y cualquiera que lo verifique, solo dice que se eximió.
+                ? new RequisitoCertificado(r.Codigo, r.Nombre, null, null, null, true,
+                    r.ExencionDeVinculoId is null ? r.JustificacionExencion : JustificacionPublicaDeExencion)
                 : new RequisitoCertificado(r.Codigo, r.Nombre, r.VersionActual!.Numero, r.VersionActual.Sha256,
                     documentacion.Version(r.VersionActual, r, vinculo.Id).Vigencia?.VigenteHasta, false, null))
             .ToList();

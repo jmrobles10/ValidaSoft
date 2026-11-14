@@ -136,7 +136,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
                 or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or ContactosDeVinculoActualizados or CuentaDesignadaPropuesta
-                or CuentaDesignadaAprobada or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido => await DeVinculoAsync(evento, contexto, ct),
+                or CuentaDesignadaAprobada or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido or VinculoRestablecidoPorExencion
+                => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
                 or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta or SlaPorVencer or SlaIncumplido
                 => await DeExpedienteAsync(evento, contexto, ct),
@@ -170,6 +171,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             InvitacionAceptada a => new DatosInvitacionAceptadaDto(id, referencias, a.Fecha,
                 [.. (vinculo?.Consentimientos ?? []).Select(x => new ConsentimientoEnEventoDto(x.Tipo.ToString(), x.Version))]),
             VinculoActivado a => Estado(id, referencias, EstadoVinculo.Activo, null, null, null, a.ExpedienteId),
+            // La exención es privada de la empresa (EX-1): el evento solo dice que el vínculo volvió a Activo, sin su justificación.
+            VinculoRestablecidoPorExencion r => Estado(id, referencias, EstadoVinculo.Activo, r.EstadoPrevio, null, null, null),
             VinculoBloqueado b => Estado(id, referencias, EstadoVinculo.Bloqueado, b.EstadoPrevio, b.Motivo, b.Hasta, null),
             VinculoDesbloqueado d => Estado(id, referencias, d.EstadoRestituido, EstadoVinculo.Bloqueado, d.Justificacion, null, null),
             VinculoPorVencer p => Estado(id, referencias, EstadoVinculo.PorVencer, EstadoVinculo.Activo, null,
@@ -195,7 +198,7 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
             VinculoCreado => "vinculo.creado",
             InvitacionEnviada => "vinculo.invitacion_enviada",
             InvitacionAceptada => "vinculo.invitacion_aceptada",
-            VinculoActivado => "vinculo.activado",
+            VinculoActivado or VinculoRestablecidoPorExencion => "vinculo.activado",
             VinculoBloqueado => "vinculo.bloqueado",
             VinculoDesbloqueado => "vinculo.desbloqueado",
             VinculoPorVencer => "vinculo.por_vencer",

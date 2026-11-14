@@ -168,7 +168,7 @@ public static class ConsultaCertificacionEndpoints
         var revalidacion = expediente is { Tipo: TipoExpediente.Actualizacion, EstaAbierto: true }
             ? Revalidaciones(expediente, certificado?.PendientesBloqueantes == true)
             : [];
-        var motivo = MotivoDeBloqueo(vinculo, certificado);
+        var motivo = MotivoDeBloqueo(vinculo, certificado, hoy);
         var cuenta = vinculo.CuentaDesignada is { Estado: EstadoCuentaDesignada.Aprobada } designada
             ? new CuentaDesignadaResumenDto("****" + designada.Cuenta.Ultimos4, designada.Cuenta.Banco, designada.Cuenta.BancoCodigo, designada.Cuenta.BancoSwift)
             : null;
@@ -182,14 +182,16 @@ public static class ConsultaCertificacionEndpoints
             TerceroId: vinculo.TerceroId,
             VigenteHasta: actual?.VigenteHasta,
             RevalidacionPendiente: revalidacion,
-            DocumentosVencidos: actual is null ? [] : DocumentosVencidos(actual.ContenidoCanonico, hoy),
+            // Lo que el vínculo tiene eximido (EX-8) no cuenta como vencido: la empresa decidió no perseguirlo.
+            DocumentosVencidos: actual is null ? [] : [.. DocumentosVencidos(actual.ContenidoCanonico, hoy).Where(c => vinculo.ExencionDeCodigo(c, hoy) is null)],
             Bloqueado: motivo is not null,
             MotivoBloqueo: motivo,
             CuentaDesignada: cuenta,
             UrlVerificacion: actual?.UrlVerificacion,
             Legacy: null,
             EnRevision: vinculo.EnRevisionPorActualizacion,
-            EnVerificacion: certificado?.EnVerificacion == true);
+            EnVerificacion: certificado?.EnVerificacion == true,
+            Exento: vinculo.ExencionesVigentes(hoy).Any());
     }
 
     /// <summary>
@@ -197,17 +199,33 @@ public static class ConsultaCertificacionEndpoints
     /// último los pendientes de revalidación cuyo plazo venció (A-2, RV-4). Nulo = se puede pagar o contratar si hay
     /// certificado.
     /// </summary>
-    public static string? MotivoDeBloqueo(Vinculo vinculo, Certificado? certificado)
+    public static string? MotivoDeBloqueo(Vinculo vinculo, Certificado? certificado, DateOnly? hoy = null)
     {
         if (vinculo.Estado == EstadoVinculo.Bloqueado || certificado?.Estado == EstadoCertificado.Suspendido)
             return "Bloqueo";
         if (certificado?.Estado == EstadoCertificado.Revocado || vinculo.Estado is EstadoVinculo.Anulado or EstadoVinculo.Desvinculado)
             return "Revocado";
-        if (vinculo.Estado == EstadoVinculo.Vencido || certificado?.Estado == EstadoCertificado.Vencido)
+        if (vinculo.Estado == EstadoVinculo.Vencido || (certificado?.Estado == EstadoCertificado.Vencido && !VencioSoloPorLoEximido(vinculo, certificado, hoy)))
             return "Vencido";
         if (certificado is { Estado: EstadoCertificado.ConPendientes, PendientesBloqueantes: true })
             return "PlazoRevalidacion";
         return null;
+    }
+
+    /// <summary>
+    /// EX-8: el certificado sellado venció (su fecha no se toca), pero solo por lo que el vínculo tiene eximido: los documentos que pasaron su fecha están todos
+    /// cubiertos por una exención vigente, o la fecha que pasó es la de la vigencia del vínculo y hay una exención total. No bloquea; si venció también por algo
+    /// que no está eximido, sí.
+    /// </summary>
+    private static bool VencioSoloPorLoEximido(Vinculo vinculo, Certificado certificado, DateOnly? hoy)
+    {
+        if (hoy is not { } fecha || vinculo.ExencionesVigentes(fecha).FirstOrDefault() is null || certificado.Actual is not { } actual)
+            return false;
+
+        var vencidos = DocumentosVencidos(actual.ContenidoCanonico, fecha);
+        return vencidos.Count > 0
+            ? vencidos.All(c => vinculo.ExencionDeCodigo(c, fecha) is not null)
+            : vinculo.ExencionTotal(fecha) is not null;
     }
 
     private static List<RevalidacionPendienteDto> Revalidaciones(Expediente actualizacion, bool bloqueante)

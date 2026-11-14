@@ -240,23 +240,30 @@ public static class EnviarAvisosDeVencimientoHandler
 
         var terceroId = mensaje.TerceroId;
         var documentos = await sesion.Query<Documento>().Where(d => d.TerceroId == terceroId).ToListAsync(ct);
-        var porAvisar = documentos
+        var conAviso = documentos
             .Select(d => (Documento: d, Version: d.VersionActual is { } n ? d.VersionRequerida(n) : null))
             .Where(x => x.Version is not null && x.Version.Vigencias.Any(v =>
                 v is { VigenteHasta: { } hasta, VencidaEn: null } && CalculadoraDeVigencia.FechasDeAviso(hasta, v.DiasAviso).Contains(mensaje.Fecha)))
             .ToList();
 
-        if (porAvisar.Count > 0)
+        var porAvisar = conAviso;
+        if (conAviso.Count > 0)
         {
-            var vinculoIds = porAvisar.SelectMany(x => x.Version!.Vigencias.Select(v => v.VinculoId)).Distinct().ToArray();
+            var vinculoIds = conAviso.SelectMany(x => x.Version!.Vigencias.Select(v => v.VinculoId)).Distinct().ToArray();
             var vinculos = (await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.Id.IsOneOf(vinculoIds)).ToListAsync(ct)).ToDictionary(v => v.Id);
             var empresaIds = vinculos.Values.Select(v => v.EmpresaId).Distinct().ToArray();
             var empresas = (await sesion.LoadManyAsync<Empresa>(ct, empresaIds)).ToDictionary(e => e.Id);
 
+            // Lo que el vínculo tiene eximido (EX-2) no se avisa: ni el correo al tercero ni el evento documento.por_vencer ni la campana de la empresa.
+            var hoy = CalculadoraDeVigencia.Fecha(ahora);
+            bool Eximido(VigenciaDeVersion v) => vinculos.TryGetValue(v.VinculoId, out var vinculo) && vinculo.ExencionDeDocumento(v.TipoDocumentoTenantId, hoy) is not null;
+            porAvisar = [.. conAviso.Where(x => x.Version!.Vigencias.Any(v =>
+                v is { VigenteHasta: { } hasta, VencidaEn: null } && CalculadoraDeVigencia.FechasDeAviso(hasta, v.DiasAviso).Contains(mensaje.Fecha) && !Eximido(v)))];
+
             // Un correo por destinatario: cada uno con los documentos de sus vínculos.
             var porCorreo = porAvisar
                 .SelectMany(x => x.Version!.Vigencias
-                    .Where(v => v.VigenteHasta is not null && v.VencidaEn is null && vinculos.ContainsKey(v.VinculoId))
+                    .Where(v => v.VigenteHasta is not null && v.VencidaEn is null && vinculos.ContainsKey(v.VinculoId) && !Eximido(v))
                     .Select(v => (Correo: vinculos[v.VinculoId].CorreoTercero, x.Documento, Vigencia: v)))
                 .Where(x => !string.IsNullOrWhiteSpace(x.Correo))
                 .GroupBy(x => x.Correo.Trim().ToLowerInvariant());
@@ -279,7 +286,7 @@ public static class EnviarAvisosDeVencimientoHandler
             // Constancia por documento y vínculo para el evento público documento.por_vencer y las notificaciones (NW-1).
             foreach (var (documento, version) in porAvisar)
                 foreach (var vigencia in version!.Vigencias.Where(v => v.VigenteHasta is not null && v.VencidaEn is null &&
-                                                                       vinculos.ContainsKey(v.VinculoId) &&
+                                                                       vinculos.ContainsKey(v.VinculoId) && !Eximido(v) &&
                                                                        CalculadoraDeVigencia.FechasDeAviso(v.VigenteHasta!.Value, v.DiasAviso).Contains(mensaje.Fecha)))
                     sesion.Events.Append(documento.Id, new VencimientoAvisado(version.Numero, vigencia.VinculoId, vigencia.VigenteHasta!.Value,
                         vigencia.VigenteHasta!.Value.DayNumber - mensaje.Fecha.DayNumber, ahora));
@@ -312,6 +319,12 @@ public static class VencerVersionDeDocumentoHandler
         var stream = await sesion.Events.FetchForWriting<Documento>(mensaje.DocumentoId, ct);
         var vigencia = stream.Aggregate?.Buscar(mensaje.Numero)?.VigenciaPara(mensaje.VinculoId);
         if (vigencia is null || vigencia.VigenteHasta != mensaje.VigenteHasta || vigencia.DiasGracia != mensaje.DiasGracia)
+            return;
+
+        // Lo que el vínculo tiene eximido (EX-4) no se vence para él: sin la marca no hay aviso de vencido, no se abre su renovación ni vence el vínculo. Al terminar la
+        // exención se vuelve a pedir este mismo mensaje (ExencionesDeVinculos.ReevaluarAlTerminarAsync) y entonces sí.
+        var vinculo = await sesion.Query<Vinculo>().Where(v => v.AnyTenant() && v.Id == mensaje.VinculoId).FirstOrDefaultAsync(ct);
+        if (vinculo?.ExencionDeDocumento(vigencia.TipoDocumentoTenantId, CalculadoraDeVigencia.Fecha(reloj.GetUtcNow())) is not null)
             return;
 
         if (stream.Aggregate!.Vencer(mensaje.Numero, mensaje.VinculoId, reloj.GetUtcNow()) is not { } vencida)

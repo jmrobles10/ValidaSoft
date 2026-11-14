@@ -188,7 +188,14 @@ public sealed record RequisitoCalculado(
     CompletitudParaEmpresa? Completitud = null,
     RetiroDeVersion? Retiro = null,
     bool ExigeRatificacion = false,
-    int? DiasRevalidacion = null);
+    int? DiasRevalidacion = null,
+    ExencionAplicada? Exencion = null);
+
+/// <summary>
+/// El vínculo tenía una exención vigente que cubre este requisito (EX-3): nace <c>Eximido</c> citándola. <see cref="Justificacion"/> es la de la exención
+/// (privada de la empresa: no sale en el certificado ni al tercero) y <see cref="Por"/> quien la hizo.
+/// </summary>
+public sealed record ExencionAplicada(Guid ExencionId, string Justificacion, string Por, DateTimeOffset Fecha);
 
 /// <summary>
 /// La misma empresa ya aprobó esa misma versión del documento en otro expediente del mismo tercero (otro tipo de vínculo,
@@ -253,8 +260,11 @@ public sealed record CompletitudDeSeccionEvaluada(Guid RequisitoId, CompletitudP
 public sealed record SeccionAceptadaPorEmpresa(Guid RequisitoId, string Seccion, int? Periodo, Guid SeccionId, int Version, string Huella,
     DateTimeOffset Fecha);
 
-/// <summary>Un administrador exime el requisito con justificación (visible en el certificado, P-5-4); sus veredictos dejan de contar.</summary>
-public sealed record RequisitoEximido(Guid RequisitoId, string Por, string Justificacion, DateTimeOffset Fecha);
+/// <summary>
+/// Un administrador exime el requisito con justificación (visible en el certificado, P-5-4); sus veredictos dejan de contar. Con
+/// <see cref="ExencionDeVinculoId"/> lo eximió la exención del vínculo (EX-3) al registrarse con el expediente ya abierto.
+/// </summary>
+public sealed record RequisitoEximido(Guid RequisitoId, string Por, string Justificacion, DateTimeOffset Fecha, Guid? ExencionDeVinculoId = null);
 
 /// <summary>
 /// El tercero ratificó en una renovación que el documento no cambió (RN-2, I-14): el requisito queda cubierto con la

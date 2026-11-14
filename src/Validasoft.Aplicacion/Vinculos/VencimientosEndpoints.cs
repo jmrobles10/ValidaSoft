@@ -46,27 +46,29 @@ public static class VencimientosEndpoints
 
     /// <summary>
     /// <paramref name="dias"/>: los que vencen en los próximos N días más los que ya están en gracia o vencidos (30 por
-    /// defecto; 0 = todos los que tienen fecha). <paramref name="estado"/>: Vigente, PorVencer, EnGracia o Vencida.
+    /// defecto; 0 = todos los que tienen fecha). <paramref name="estado"/>: Vigente, PorVencer, EnGracia o Vencida. <paramref name="exento"/> (EX-6):
+    /// <c>true</c> solo los que el vínculo tiene eximidos, <c>false</c> solo los que no; sin él, todos (cada fila trae su exención).
     /// </summary>
     [WolverineGet("/api/v1/vencimientos")]
     [Authorize(Policy = Permisos.DocumentosLeer)]
-    public static Task<IReadOnlyList<VencimientoDto>> Listar(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado, CancellationToken ct) =>
-        CalcularAsync(empresa, reloj, dias, estado, ct);
+    public static Task<IReadOnlyList<VencimientoDto>> Listar(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado, bool? exento, CancellationToken ct) =>
+        CalcularAsync(empresa, reloj, dias, estado, exento, ct);
 
     [WolverineGet("/api/v1/vencimientos/excel")]
     [Authorize(Policy = Permisos.DocumentosLeer)]
-    public static async Task<IResult> Excel(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado, CancellationToken ct)
+    public static async Task<IResult> Excel(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado, bool? exento, CancellationToken ct)
     {
-        var filas = await CalcularAsync(empresa, reloj, dias, estado, ct);
+        var filas = await CalcularAsync(empresa, reloj, dias, estado, exento, ct);
         var nombreEmpresa = (await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct))?.Nombre ?? "Empresa";
         var bytes = HojaDeCalculo.Crear("Vencimientos",
             ["Tercero", "Identificación", "Tipo de vínculo", "Documento", "Versión", "Vigente hasta", "Días", "Estado", "Fin de la gracia", "Base de la vigencia",
-                "Ratificable", "Último recordatorio"],
+                "Ratificable", "Último recordatorio", "Exento", "Exento hasta"],
             filas.Select(f => (IReadOnlyList<object?>)
             [
                 f.Tercero.Nombre, f.Tercero.Identificacion, f.TipoVinculo.Nombre, f.Documento, f.Version, f.VigenteHasta, f.DiasRestantes,
                 TextoEstado(f.Estado), f.FinDeGracia, TextoBase(f.Base), f.PermiteRatificar ? "Sí" : "No",
-                f.UltimoRecordatorio is { } r ? CalculadoraDeVigencia.Fecha(r) : null
+                f.UltimoRecordatorio is { } r ? CalculadoraDeVigencia.Fecha(r) : null,
+                f.Exencion is null ? "No" : "Sí", f.Exencion?.Hasta
             ]));
         var archivo = $"vencimientos-{Slug(nombreEmpresa)}-{CalculadoraDeVigencia.Fecha(reloj.GetUtcNow()):yyyy-MM-dd}.xlsx";
         return Results.File(bytes, HojaDeCalculo.TipoContenido, archivo);
@@ -90,7 +92,7 @@ public static class VencimientosEndpoints
         empresa.UsarMensajeria(mensajes);
         var ahora = reloj.GetUtcNow();
         var hoy = CalculadoraDeVigencia.Fecha(ahora);
-        var todos = (await CalcularAsync(empresa, reloj, 0, null, ct)).ToDictionary(v => (v.VinculoId, v.DocumentoId));
+        var todos = (await CalcularAsync(empresa, reloj, 0, null, null, ct)).ToDictionary(v => (v.VinculoId, v.DocumentoId));
         var vinculoIds = pedidos.Select(p => p.VinculoId).Distinct().ToArray();
         var vinculos = (await empresa.Vinculos().Where(v => v.Id.IsOneOf(vinculoIds)).ToListAsync(ct)).ToDictionary(v => v.Id);
         var nombreEmpresa = (await empresa.Sesion.LoadAsync<Empresa>(empresa.EmpresaId, ct))?.Nombre ?? "La empresa";
@@ -99,7 +101,8 @@ public static class VencimientosEndpoints
         var omitidos = 0;
         foreach (var pedido in pedidos)
         {
-            if (!todos.TryGetValue((pedido.VinculoId, pedido.DocumentoId), out var vencimiento) ||
+            // Lo que el vínculo tiene eximido (EX-2) no se recuerda: la empresa decidió no perseguirlo.
+            if (!todos.TryGetValue((pedido.VinculoId, pedido.DocumentoId), out var vencimiento) || vencimiento.Exencion is not null ||
                 vinculos.GetValueOrDefault(pedido.VinculoId) is not { CorreoTercero: { Length: > 0 } correo } ||
                 (vencimiento.UltimoRecordatorio is { } ultimo && CalculadoraDeVigencia.Fecha(ultimo) == hoy))
             {
@@ -134,7 +137,7 @@ public static class VencimientosEndpoints
         return new RecordatorioEnviadoDto(enviar.Select(x => x.Correo).Distinct().Count(), enviar.Count, omitidos);
     }
 
-    private static async Task<IReadOnlyList<VencimientoDto>> CalcularAsync(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado,
+    private static async Task<IReadOnlyList<VencimientoDto>> CalcularAsync(SesionDeEmpresa empresa, TimeProvider reloj, int? dias, string? estado, bool? exento,
         CancellationToken ct)
     {
         EstadoVigencia? filtro = null;
@@ -174,6 +177,10 @@ public static class VencimientosEndpoints
                 if (horizonte > 0 && estadoVigencia == EstadoVigencia.Vigente && hasta.DayNumber - hoy.DayNumber > horizonte)
                     continue;
 
+                var exencion = vinculo.ExencionDeDocumento(vigencia.TipoDocumentoTenantId, hoy);
+                if (exento is { } soloExentos && soloExentos != (exencion is not null))
+                    continue;
+
                 var tercero = terceros.GetValueOrDefault(vinculo.TerceroId);
                 var tipo = tipos.GetValueOrDefault(vinculo.TipoVinculoId);
                 filas.Add(new VencimientoDto(vinculo.Id, documento.Id,
@@ -181,7 +188,7 @@ public static class VencimientosEndpoints
                     new TipoVinculoResumenDto(vinculo.TipoVinculoId, tipo?.Codigo ?? string.Empty, tipo?.Nombre ?? string.Empty),
                     documento.NombreTipo, numero, hasta, hasta.DayNumber - hoy.DayNumber, estadoVigencia.ToString(), vigencia.Base.ToString(),
                     vigencia.FinDeGracia, permite,
-                    recordatorios.GetValueOrDefault(RecordatorioDeVencimiento.Clave(vinculo.Id, documento.Id))?.Fecha));
+                    recordatorios.GetValueOrDefault(RecordatorioDeVencimiento.Clave(vinculo.Id, documento.Id))?.Fecha, exencion?.Resumen()));
             }
         }
 
