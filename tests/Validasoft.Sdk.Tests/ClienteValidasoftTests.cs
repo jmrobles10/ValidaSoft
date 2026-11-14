@@ -62,6 +62,31 @@ public sealed class ClienteValidasoftTests
             bloqueado ? "Bloqueo" : null, new CuentaDesignadaResumenDto("****6578", "Bancolombia"), "https://valida.acme.co/verificar/N1", null);
 
     [Fact]
+    public async Task Una_invitacion_retenida_por_la_aprobacion_previa_se_distingue_de_la_que_salio()
+    {
+        var (cliente, servidor) = Crear();
+        var vinculo = Guid.NewGuid();
+        servidor.Responder(HttpStatusCode.Accepted, new
+        {
+            estado = "Pendiente", correoDestino = "a@b.co", vigenciaHoras = 72, solicitadaEn = DateTimeOffset.UtcNow, solicitadaPor = "Integracion:llave"
+        });
+        servidor.Responder(HttpStatusCode.Created, new { correoDestino = "a@b.co", expira = DateTimeOffset.UtcNow.AddDays(3), envios = 1 });
+        servidor.Responder(HttpStatusCode.Accepted, new { estado = "Pendiente", correoDestino = "a@b.co", vigenciaHoras = 72, solicitadaEn = DateTimeOffset.UtcNow, solicitadaPor = "x:y" });
+
+        var retenida = await cliente.Invitaciones.SolicitarAsync(vinculo, new InvitacionDto(null));
+        retenida.Enviada.ShouldBeNull();
+        var pendiente = retenida.PorAprobar.ShouldNotBeNull();
+        (pendiente.Estado, pendiente.CorreoDestino, pendiente.VigenciaHoras).ShouldBe(("Pendiente", "a@b.co", 72));
+
+        var enviada = await cliente.Invitaciones.SolicitarAsync(vinculo, new InvitacionDto(null));
+        enviada.PorAprobar.ShouldBeNull();
+        enviada.Enviada.ShouldNotBeNull().Envios.ShouldBe(1);
+
+        // EnviarAsync sigue devolviendo el enlace; con la invitación retenida avisa que usen SolicitarAsync en lugar de devolver un enlace vacío.
+        (await Should.ThrowAsync<InvalidOperationException>(() => cliente.Invitaciones.EnviarAsync(vinculo, new InvitacionDto(null)))).Message.ShouldContain("SolicitarAsync");
+    }
+
+    [Fact]
     public async Task Envia_la_api_key_la_empresa_y_una_clave_de_idempotencia_en_cada_post()
     {
         var (cliente, servidor) = Crear();

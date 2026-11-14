@@ -6,6 +6,7 @@
  */
 
 export type ListarLotesParams = {
+  estado?: string;
   limite?: number;
   cursor?: string;
 };

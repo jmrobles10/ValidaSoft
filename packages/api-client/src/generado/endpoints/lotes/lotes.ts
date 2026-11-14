@@ -30,6 +30,7 @@ import type {
   ListarFilasLoteParams,
   ListarLotesParams,
   LoteDto,
+  MotivoDto,
   PaginaDtoOfFilaLoteDto,
   PaginaDtoOfLoteDto,
   VistaPreviaLoteDto
@@ -769,6 +770,127 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getReintentarLoteMutationOptions(options), queryClient);
+    }
+    export const aprobarLote = (
+    id: string,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<LoteDto>(
+      {url: `/api/v1/invitaciones/lotes/${id}/aprobar`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getAprobarLoteMutationKey = () => ['aprobarLote'] as const;
+
+export const getAprobarLoteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aprobarLote>>, TError,AprobarLoteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof aprobarLote>>, TError,AprobarLoteMutationVariables, TContext> => {
+
+const mutationKey = getAprobarLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aprobarLote>>, AprobarLoteMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  aprobarLote(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AprobarLoteMutationResult = NonNullable<Awaited<ReturnType<typeof aprobarLote>>>
+
+    export type AprobarLoteMutationError = ErrorType<void>
+    export type AprobarLoteMutationVariables = {id: string}
+
+    export const useAprobarLote = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aprobarLote>>, TError,AprobarLoteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof aprobarLote>>,
+        TError,
+        AprobarLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAprobarLoteMutationOptions(options), queryClient);
+    }
+    export const rechazarLote = (
+    id: string,
+    motivoDto: BodyType<MotivoDto>,
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<LoteDto>(
+      {url: `/api/v1/invitaciones/lotes/${id}/rechazar`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: motivoDto, signal
+    },
+      options);
+    }
+
+
+
+
+export const getRechazarLoteMutationKey = () => ['rechazarLote'] as const;
+
+export const getRechazarLoteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rechazarLote>>, TError,RechazarLoteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+): UseMutationOptions<Awaited<ReturnType<typeof rechazarLote>>, TError,RechazarLoteMutationVariables, TContext> => {
+
+const mutationKey = getRechazarLoteMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rechazarLote>>, RechazarLoteMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  rechazarLote(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RechazarLoteMutationResult = NonNullable<Awaited<ReturnType<typeof rechazarLote>>>
+    export type RechazarLoteMutationBody = BodyType<MotivoDto>
+    export type RechazarLoteMutationError = ErrorType<void>
+    export type RechazarLoteMutationVariables = {id: string;data: BodyType<MotivoDto>}
+
+    export const useRechazarLote = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rechazarLote>>, TError,RechazarLoteMutationVariables, TContext>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rechazarLote>>,
+        TError,
+        RechazarLoteMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRechazarLoteMutationOptions(options), queryClient);
     }
     export const descargarInformeLote = (
     id: string,

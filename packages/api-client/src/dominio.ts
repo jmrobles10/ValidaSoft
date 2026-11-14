@@ -68,11 +68,13 @@ export const ACCIONES_VINCULO: readonly DefinicionAccion[] = [
  */
 export function accionPermitidaPorEstado(
   accion: AccionVinculo,
-  vinculo: Pick<VinculoDto, 'estado' | 'invitacionAceptadaEn'> & Partial<Pick<VinculoDto, 'accesoDelCorreo'>>,
+  vinculo: Pick<VinculoDto, 'estado' | 'invitacionAceptadaEn'> & Partial<Pick<VinculoDto, 'accesoDelCorreo' | 'invitacionPorAprobar'>>,
 ): boolean {
   const terminal = ESTADOS_TERMINALES.includes(vinculo.estado);
   switch (accion) {
     case 'invitar':
+      // La invitación retenida a la espera de aprobación (decisión AI) no se envía ni se reenvía: sale cuando otra persona la aprueba.
+      if (vinculo.invitacionPorAprobar?.estado === 'Pendiente') return false;
       // Un correo que los contactos del tercero rechazaron se reemplaza invitando a otro, aunque ya hubiera aceptado (acceso aislado).
       if (vinculo.accesoDelCorreo?.estado === 'Rechazado') return !terminal && vinculo.estado !== 'Bloqueado';
       return vinculo.estado === 'Invitado' && !vinculo.invitacionAceptadaEn;
@@ -90,7 +92,7 @@ export function accionPermitidaPorEstado(
 
 /** Acciones que la persona puede ejecutar: las que el estado admite y sus scopes cubren. */
 export function accionesDisponibles(
-  vinculo: Pick<VinculoDto, 'estado' | 'invitacionAceptadaEn'> & Partial<Pick<VinculoDto, 'accesoDelCorreo'>>,
+  vinculo: Pick<VinculoDto, 'estado' | 'invitacionAceptadaEn'> & Partial<Pick<VinculoDto, 'accesoDelCorreo' | 'invitacionPorAprobar'>>,
   scopes: ReadonlySet<string>,
 ): DefinicionAccion[] {
   return ACCIONES_VINCULO.filter((d) => scopes.has(d.scope) && accionPermitidaPorEstado(d.accion, vinculo));

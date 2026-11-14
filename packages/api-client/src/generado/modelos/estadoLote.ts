@@ -14,4 +14,5 @@ export const EstadoLote = {
   Completado: 'Completado',
   CompletadoConErrores: 'CompletadoConErrores',
   Cancelado: 'Cancelado',
+  PorAprobar: 'PorAprobar',
 } as const;

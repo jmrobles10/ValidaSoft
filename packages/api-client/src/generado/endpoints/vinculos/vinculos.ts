@@ -30,6 +30,7 @@ import type {
   EnlaceInvitacionDto,
   EventoHistorialDto,
   InvitacionDto,
+  InvitacionPorAprobarDto,
   JustificacionDto,
   ListarVinculosParams,
   MotivoDto,
@@ -454,7 +455,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
 
 
-      return clienteValidasoft<EnlaceInvitacionDto>(
+      return clienteValidasoft<EnlaceInvitacionDto | InvitacionPorAprobarDto>(
       {url: `/api/v1/vinculos/${id}/invitaciones`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: invitacionDto, signal
