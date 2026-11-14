@@ -10,7 +10,7 @@ import {
   getObtenerConstanciaHabeasQueryOptions,
   type CrearSolicitudHabeasDto,
 } from '@validasoft/api-client';
-import { abrirDescarga } from '../shared/api';
+import { abrirDescarga } from '@validasoft/ui';
 import { intervaloDeRefresco } from './modelo';
 
 /** Las exportaciones del tercero, la más reciente primero: se refrescan solas mientras una se prepara. */

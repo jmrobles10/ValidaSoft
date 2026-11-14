@@ -3,14 +3,16 @@ import {
   actualizarPreferenciasNotificacion,
   getListarNotificacionesQueryOptions,
   getObtenerPreferenciasNotificacionQueryOptions,
+  marcarLeidaEnBandeja,
   marcarNotificacionesLeidas,
   marcarNotificacionLeida,
+  marcarTodasEnBandeja,
+  useCambioOptimistaDeBandeja,
   type BandejaNotificacionesDto,
   type ListarNotificacionesParams,
   type PreferenciasNotificacionDto,
 } from '@validasoft/api-client';
 import { conEmpresa } from '../../shared/consultas';
-import { marcarLeidaEnBandeja, marcarTodasEnBandeja } from './bandeja';
 
 /** Página de la campana: las 30 más recientes (el total de no leídas viene aparte en `noLeidas`). */
 export const PARAMETROS_BANDEJA: ListarNotificacionesParams = { limite: 30 };
@@ -32,26 +34,8 @@ export function useBandejaNotificaciones(empresaId: string, respaldo: boolean) {
   return useQuery({ ...opciones, queryKey: claveBandeja(empresaId), refetchInterval: respaldo ? INTERVALO_RESPALDO : false });
 }
 
-/** Aplica un cambio optimista a la bandeja y devuelve con qué deshacerlo si la API lo rechaza. */
-function useCambioOptimista(empresaId: string) {
-  const cliente = useQueryClient();
-  const clave = claveBandeja(empresaId);
-  return {
-    aplicar: async (cambio: (bandeja: BandejaNotificacionesDto) => BandejaNotificacionesDto) => {
-      await cliente.cancelQueries({ queryKey: clave });
-      const previa = cliente.getQueryData<BandejaNotificacionesDto>(clave);
-      if (previa) cliente.setQueryData<BandejaNotificacionesDto>(clave, cambio(previa));
-      return previa;
-    },
-    deshacer: (previa: BandejaNotificacionesDto | undefined) => {
-      if (previa) cliente.setQueryData(clave, previa);
-      void cliente.invalidateQueries({ queryKey: clave });
-    },
-  };
-}
-
 export function useMarcarLeida(empresaId: string) {
-  const optimista = useCambioOptimista(empresaId);
+  const optimista = useCambioOptimistaDeBandeja<BandejaNotificacionesDto>(claveBandeja(empresaId));
   return useMutation({
     mutationFn: (id: string) => marcarNotificacionLeida(id, { empresa: empresaId }),
     onMutate: (id) => optimista.aplicar((b) => marcarLeidaEnBandeja(b, id, new Date().toISOString())),
@@ -60,7 +44,7 @@ export function useMarcarLeida(empresaId: string) {
 }
 
 export function useMarcarTodas(empresaId: string) {
-  const optimista = useCambioOptimista(empresaId);
+  const optimista = useCambioOptimistaDeBandeja<BandejaNotificacionesDto>(claveBandeja(empresaId));
   return useMutation({
     mutationFn: () => marcarNotificacionesLeidas({ empresa: empresaId }),
     onMutate: () => optimista.aplicar((b) => marcarTodasEnBandeja(b, new Date().toISOString())),

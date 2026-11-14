@@ -7,7 +7,7 @@ import { createElement, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { vi } from 'vitest';
 import { useSesion } from '../../../sesion/sesionStore';
-import { crearCuerpoSse, type CuerpoSse } from './fetchSse';
+import { crearCuerpoSse, type CuerpoSse } from '@validasoft/api-client/pruebas/sse';
 
 export const json = (estado: number, cuerpo: unknown) => new Response(JSON.stringify(cuerpo), { status: estado, headers: { 'Content-Type': 'application/json' } });
 

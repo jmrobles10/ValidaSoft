@@ -1,8 +1,15 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useTiempoReal, type BandejaNotificacionesTerceroDto, type EsperasConexion, type EstadoConexion, type MapaDeInvalidacion } from '@validasoft/api-client';
+import {
+  aplicarEventoDeBandeja,
+  useTiempoReal,
+  type BandejaNotificacionesTerceroDto,
+  type EsperasConexion,
+  type EstadoConexion,
+  type MapaDeInvalidacion,
+} from '@validasoft/api-client';
 import { useSesionTercero } from '../sesion/sesionTercero';
 import { claveBandeja } from './api';
-import { agregarNotificacion, interpretarEvento } from './bandeja';
+import { interpretarEvento } from './bandeja';
 
 export const RUTA_STREAM = '/public/v1/notificaciones/stream';
 
@@ -55,14 +62,7 @@ export function useStreamDelTercero(esperas?: Partial<EsperasConexion>): EstadoC
       }),
     alEvento: (crudo) => {
       const evento = interpretarEvento(crudo);
-      if (!evento) return;
-      const actual = cliente.getQueryData<BandejaNotificacionesTerceroDto>(claveBandeja);
-      if (evento.tipo === 'notificacion') {
-        if (actual) cliente.setQueryData<BandejaNotificacionesTerceroDto>(claveBandeja, agregarNotificacion(actual, evento.notificacion));
-        else void cliente.invalidateQueries({ queryKey: claveBandeja });
-        return;
-      }
-      if (actual?.noLeidas !== evento.total) void cliente.invalidateQueries({ queryKey: claveBandeja });
+      if (evento) aplicarEventoDeBandeja<BandejaNotificacionesTerceroDto>(cliente, claveBandeja, evento);
     },
   });
 }

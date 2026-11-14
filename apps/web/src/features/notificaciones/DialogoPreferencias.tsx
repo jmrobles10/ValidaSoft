@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Skeleton, Stack, Switch, Typography } from '@mui/material';
+import { cambiosDePreferencias } from '@validasoft/api-client';
 import { ErrorEnLinea, FaltaParaEnviar, FormularioDeDialogo } from '@validasoft/ui';
 import { useState, type SubmitEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,6 @@ import { IconoCarga } from '../../shared/componentes';
 import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
 import { useGuardarPreferencias, usePreferenciasNotificacion } from './api';
-import { cambiosDePreferencias } from './preferencias';
 import { claveDeTipo } from './tipos';
 
 /**
