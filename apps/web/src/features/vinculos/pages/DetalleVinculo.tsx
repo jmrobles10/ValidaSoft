@@ -23,6 +23,7 @@ import { useHistorialVinculo, useTercero, useVinculo } from '../api';
 import { AvisoAccesoDelCorreo } from '../components/AvisoAccesoDelCorreo';
 import { AvisoActualizacionNoAprobada } from '../components/AvisoActualizacionNoAprobada';
 import { AvisoDeVigencia } from '../components/AvisoDeVigencia';
+import { ChipVerificacionDelCorreo } from '../components/ChipVerificacionDelCorreo';
 import { DialogoAccion } from '../components/DialogoAccion';
 import { estadoVisibleDelVinculo } from '../estadoVisible';
 import { TarjetaContactos } from '../contactos/TarjetaContactos';
@@ -228,6 +229,7 @@ function DatosVinculo({ vinculo, empresaNombre, conFicha }: { vinculo: VinculoDt
         <Dato etiqueta={t('vinculos.detalle.empresa')}>{empresaNombre}</Dato>
         <Dato etiqueta={t('vinculos.detalle.correo')}>
           <ValorLargo valor={vinculo.invitacion?.correoDestino ?? vinculo.correoTercero} partirEn="@" />
+          <ChipVerificacionDelCorreo verificacion={vinculo.verificacionDelCorreo} />
         </Dato>
         <Dato etiqueta={t('vinculos.detalle.invitacion')}>{invitacion}</Dato>
         {vinculo.vigenteHasta && (

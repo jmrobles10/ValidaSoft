@@ -70,6 +70,12 @@ public sealed partial class CuentaBancaria
 
     public DateTimeOffset? RetiradaEn { get; set; }
 
+    /// <summary>
+    /// El vínculo (de un expediente embebido) desde el que se registró: un token embebido de expediente solo ve y designa las cuentas que registró para su vínculo o que ya
+    /// designó con él; nunca las demás cuentas del tercero. Nulo si la registró el tercero desde su cuenta o una sesión que no es de un expediente.
+    /// </summary>
+    public Guid? VinculoDeOrigenId { get; set; }
+
     public string NumeroEnmascarado => Enmascarar(Ultimos4);
 
     public static string Enmascarar(string ultimos4) => $"****{ultimos4}";

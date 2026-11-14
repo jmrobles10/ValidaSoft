@@ -38,6 +38,7 @@ import type {
   ConfirmacionCargaDto,
   ConstanciaHabeasDto,
   ContactoDeEmpresaDto,
+  ContactosDelTerceroDto,
   CrearSolicitudHabeasDto,
   CuentaBancariaPublicaDto,
   DescargaDto,
@@ -4341,3 +4342,88 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDescargarCertificadoVerificadoMutationOptions(options), queryClient);
     }
+    export const obtenerContactosDelTercero = (
+
+ options?: SecondParameter<typeof clienteValidasoft>,signal?: AbortSignal
+) => {
+
+
+      return clienteValidasoft<ContactosDelTerceroDto>(
+      {url: `/public/v1/contactos-del-tercero`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getObtenerContactosDelTerceroQueryKey = () => {
+    return [
+    `/public/v1/contactos-del-tercero`
+    ] as const;
+    }
+
+
+export const getObtenerContactosDelTerceroQueryOptions = <TData = Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getObtenerContactosDelTerceroQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof obtenerContactosDelTercero>>> = ({ signal }) => obtenerContactosDelTercero(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ObtenerContactosDelTerceroQueryResult = NonNullable<Awaited<ReturnType<typeof obtenerContactosDelTercero>>>
+export type ObtenerContactosDelTerceroQueryError = ErrorType<void>
+
+
+export function useObtenerContactosDelTercero<TData = Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError = ErrorType<void>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerContactosDelTercero>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerContactosDelTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerContactosDelTercero<TData = Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof obtenerContactosDelTercero>>,
+          TError,
+          Awaited<ReturnType<typeof obtenerContactosDelTercero>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerContactosDelTercero<TData = Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useObtenerContactosDelTercero<TData = Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError = ErrorType<void>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof obtenerContactosDelTercero>>, TError, TData>>, request?: SecondParameter<typeof clienteValidasoft>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getObtenerContactosDelTerceroQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

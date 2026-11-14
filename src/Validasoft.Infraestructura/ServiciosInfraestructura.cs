@@ -167,6 +167,8 @@ public static class ServiciosInfraestructura
         servicios.AddScoped<Aplicacion.Habeas.IProtectorDeDatosDelTercero, Aplicacion.Habeas.ProtectorDeDatosDelTercero>();
         servicios.AddScoped<Aplicacion.Habeas.RetencionDelTercero>();
         servicios.AgregarProcesoDelLider<Aplicacion.Habeas.ProgramadorDeHabeas>();
+        // Migración de datos de los vínculos aceptados antes del acceso aislado (decisión AV): corre una sola vez al arrancar, en el nodo líder.
+        servicios.AgregarProcesoDelLider<Aplicacion.Interesado.MigracionDeAccesoAisladoAlArrancar>();
         // Plan y límites por grupo (OD-14…OD-17): medición de uso, bloqueo suave, avisos al 80 % y al 100 %.
         servicios.AddSingleton<Aplicacion.Plataforma.MedidorDeLlamadasApi>();
         servicios.AddHostedService(proveedor => proveedor.GetRequiredService<Aplicacion.Plataforma.MedidorDeLlamadasApi>());
@@ -405,6 +407,7 @@ public static class ServiciosInfraestructura
         opciones.PublishMessage<SincronizarRequisitosDelVinculo>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<RevalidarVinculoDesbloqueado>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Ficha.CruzarFichaConDocumentos>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
+        opciones.PublishMessage<Aplicacion.Interesado.SincronizarAccesoDelTercero>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<Aplicacion.Verificaciones.PersonasDeFichaCambiaron>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<VencerPlazoDeRevalidacion>().ToLocalQueue(ColaRequisitos).UseDurableInbox();
         opciones.PublishMessage<RenovarPorVencimiento>().ToLocalQueue(ColaRequisitos).UseDurableInbox();

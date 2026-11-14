@@ -13,6 +13,7 @@ import type { EstadoVinculo } from './estadoVinculo';
 import type { OrigenVinculo } from './origenVinculo';
 import type { ReferenciaExternaDto } from './referenciaExternaDto';
 import type { TipoVinculoResumenDto } from './tipoVinculoResumenDto';
+import type { VerificacionDelCorreoDto } from './verificacionDelCorreoDto';
 import type { VinculoDtoAtributos } from './vinculoDtoAtributos';
 
 export interface VinculoDto {
@@ -48,4 +49,5 @@ export interface VinculoDto {
   enRevision?: boolean;
   actualizacionNoAprobada?: null | ActualizacionNoAprobadaDto;
   accesoDelCorreo?: null | AccesoDelCorreoDto;
+  verificacionDelCorreo?: null | VerificacionDelCorreoDto;
 }

@@ -40,6 +40,10 @@ export function crearRouter() {
           lazy: () => import('../features/plataforma/PaginaHabeasPlataforma').then((m) => ({ Component: m.PaginaHabeasPlataforma })),
         },
         {
+          path: 'accesos-a-terceros',
+          lazy: () => import('../features/plataforma/PaginaSolicitudesDeAcceso').then((m) => ({ Component: m.PaginaSolicitudesDeAcceso })),
+        },
+        {
           path: 'uso-ia',
           lazy: () => import('../features/plataforma/PaginaConsumoIa').then((m) => ({ Component: m.PaginaConsumoIa })),
         },

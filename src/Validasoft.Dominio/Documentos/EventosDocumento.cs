@@ -99,7 +99,8 @@ public sealed record VersionCargada(
     string CargadaPor,
     DateTimeOffset Fecha,
     string? HashDatos = null,
-    IReadOnlyList<DatoDeclarado>? Datos = null);
+    IReadOnlyList<DatoDeclarado>? Datos = null,
+    string? CargadaPorCorreo = null);
 
 /// <summary>
 /// Vigencia de la versión actual para un vínculo, con la regla del tipo del tenant de ese vínculo (TD-6). Se recalcula si
@@ -179,6 +180,15 @@ public sealed record VersionActualRestituida(int Numero, int NumeroRetirado, Dat
 /// porque la bóveda ya tenía algo igual o más reciente (<see cref="Motivo"/>); con el rechazo queda solo en el vínculo.
 /// </summary>
 public sealed record CuarentenaDeDocumentoResuelta(bool Promovida, Guid? DocumentoGlobalId, int? NumeroGlobal, string Motivo, DateTimeOffset Fecha);
+
+/// <summary>
+/// La versión la subió un contacto sin verificar que otro contacto verificado desplazó (decisión AV del registro): queda marcada para revisión. Los contactos verificados y las
+/// empresas con las que está compartida se enteran; se confirma (<see cref="RevisionDeVersionResuelta"/>) cuando ese correo vuelve a aprobarse, o se retira.
+/// </summary>
+public sealed record VersionMarcadaParaRevision(int Numero, string Correo, string Motivo, DateTimeOffset Fecha);
+
+/// <summary>La revisión de una versión marcada terminó (el correo que la subió se aprobó de nuevo): la marca se quita y la versión sigue como estaba.</summary>
+public sealed record RevisionDeVersionResuelta(int Numero, string Por, DateTimeOffset Fecha);
 
 /// <summary>Una versión queda visible para una empresa a través de su vínculo (solo tras <c>InvitacionAceptada</c>, B-1).</summary>
 public sealed record VersionCompartida(int Numero, Guid TenantId, Guid EmpresaId, Guid VinculoId, OrigenComparticion Origen, DateTimeOffset Fecha);

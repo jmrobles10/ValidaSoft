@@ -132,7 +132,7 @@ public static class Peticiones
 
     /// <summary>La escritura perdió una carrera (concurrencia optimista, stream o clave única).</summary>
     public static bool EsCarrera(Exception e) =>
-        e is ConcurrencyException or EventStreamUnexpectedMaxEventIdException or DocumentAlreadyExistsException ||
+        e is ConcurrencyException or EventStreamUnexpectedMaxEventIdException or DocumentAlreadyExistsException or Marten.Exceptions.ExistingStreamIdCollisionException or JasperFx.Events.ExistingStreamIdCollisionException ||
         e is MartenCommandException { InnerException: Npgsql.PostgresException { SqlState: Npgsql.PostgresErrorCodes.UniqueViolation } };
 
     internal static string? Cabecera(IEvent evento, string nombre) =>

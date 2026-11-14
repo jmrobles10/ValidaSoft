@@ -1,7 +1,25 @@
-import type { AccesoSolicitadoDto, EmpresaQueInvitoDto, SesionActivaDto } from '@validasoft/api-client';
+import type { AccesoSolicitadoDto, ContactoDelTerceroDto, EmpresaQueInvitoDto, SesionActivaDto } from '@validasoft/api-client';
 
 /** Lo que falta decidir a los contactos del tercero. */
 export const porDecidir = (solicitudes: readonly AccesoSolicitadoDto[]): AccesoSolicitadoDto[] => solicitudes.filter((s) => s.estado === 'Pendiente');
+
+/** Lo que falta decidir y esta sesión puede decidir: solo un contacto verificado aprueba o rechaza (la API no lo dice con `puedesDecidir: false`). */
+export const porDecidirPorMi = (solicitudes: readonly AccesoSolicitadoDto[]): AccesoSolicitadoDto[] => porDecidir(solicitudes).filter((s) => s.puedesDecidir !== false);
+
+/** ¿Esta sesión decide esta solicitud? Sin el dato (respuestas antiguas) se supone que sí; la API es la que impone la regla. */
+export const puedoDecidir = (solicitud: AccesoSolicitadoDto): boolean => solicitud.puedesDecidir !== false;
+
+/** Cómo se llama en pantalla lo que dice la API del estado de un contacto: desplazado pesa más que sin verificar. */
+export function estadoDelContacto(contacto: Pick<ContactoDelTerceroDto, 'verificacion' | 'desplazado'>): 'Verificado' | 'Desplazado' | 'SinVerificar' {
+  if (contacto.verificacion === 'Verificado') return 'Verificado';
+  return contacto.desplazado ? 'Desplazado' : 'SinVerificar';
+}
+
+/** Los contactos con la sesión actual primero y luego verificados, sin verificar y desplazados, por correo. */
+export const ordenarContactos = (contactos: readonly ContactoDelTerceroDto[]): ContactoDelTerceroDto[] => {
+  const peso = (c: ContactoDelTerceroDto) => ({ Verificado: 0, SinVerificar: 1, Desplazado: 2 })[estadoDelContacto(c)];
+  return [...contactos].sort((a, b) => Number(b.esTuCorreo) - Number(a.esTuCorreo) || peso(a) - peso(b) || a.correo.localeCompare(b.correo));
+};
 
 /** Lo ya decidido (aprobado o rechazado), lo más reciente primero. */
 export const decididas = (solicitudes: readonly AccesoSolicitadoDto[]): AccesoSolicitadoDto[] =>

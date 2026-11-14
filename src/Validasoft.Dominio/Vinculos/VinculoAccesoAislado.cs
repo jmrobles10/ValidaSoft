@@ -19,8 +19,12 @@ public enum EstadoAccesoAislado
     Rechazado
 }
 
-/// <summary>La invitación fue a un correo que no es contacto conocido del tercero: el vínculo queda con acceso aislado hasta que un contacto lo decida.</summary>
-public sealed record AccesoAisladoSolicitado(Guid SolicitudId, string Correo, DateTimeOffset Fecha);
+/// <summary>
+/// La invitación fue a un correo que no es contacto conocido del tercero: el vínculo queda con acceso aislado hasta que un contacto verificado (o la plataforma) lo
+/// decida. <paramref name="Motivo"/> es <c>ContactoDesplazado</c> cuando el correo sí era contacto, pero sin verificar, y otro contacto se verificó (el verificado prevalece);
+/// nulo en una invitación a un correo desconocido.
+/// </summary>
+public sealed record AccesoAisladoSolicitado(Guid SolicitudId, string Correo, DateTimeOffset Fecha, string? Motivo = null);
 
 /// <summary>Un contacto del tercero aprobó el correo del vínculo: desde aquí tiene acceso completo.</summary>
 public sealed record AccesoAisladoAprobado(Guid SolicitudId, string Correo, DateTimeOffset Fecha);
@@ -43,6 +47,9 @@ public sealed partial class Vinculo
 
     public DateTimeOffset? AccesoAisladoDesde { get; set; }
 
+    /// <summary><c>ContactoDesplazado</c> si el acceso quedó pendiente porque otro contacto del tercero se verificó y este correo, sin verificar, perdió el acceso completo.</summary>
+    public string? AccesoAisladoMotivo { get; set; }
+
     public DateTimeOffset? AccesoAisladoResueltoEn { get; set; }
 
     /// <summary>
@@ -61,13 +68,13 @@ public sealed partial class Vinculo
     /// que se está enviando, que puede no ser aún el de <see cref="CorreoTercero"/>. Si el vínculo ya espera la misma solicitud, nulo (idempotente:
     /// reenviar la invitación al mismo correo no repite el evento); otra solicitud (otro correo) empieza de cero.
     /// </summary>
-    public AccesoAisladoSolicitado? SolicitarAccesoAislado(Guid solicitudId, string correo, DateTimeOffset ahora)
+    public AccesoAisladoSolicitado? SolicitarAccesoAislado(Guid solicitudId, string correo, DateTimeOffset ahora, string? motivo = null)
     {
         if (AccesoAislado is not null && SolicitudDeAccesoId == solicitudId)
             return null;
         if (string.IsNullOrWhiteSpace(correo))
             throw ReglaDeNegocioException.Validacion("correo-invitacion-requerido", "El vínculo necesita el correo invitado para decidir su acceso.");
-        return new AccesoAisladoSolicitado(solicitudId, correo.Trim().ToLowerInvariant(), ahora);
+        return new AccesoAisladoSolicitado(solicitudId, correo.Trim().ToLowerInvariant(), ahora, motivo);
     }
 
     /// <summary>La decisión de los contactos llegó al vínculo: aprobada. Sin acceso aislado, ya aprobada o de otra solicitud ⇒ nulo.</summary>
@@ -87,6 +94,7 @@ public sealed partial class Vinculo
         AccesoAislado = EstadoAccesoAislado.Pendiente;
         SolicitudDeAccesoId = e.SolicitudId;
         AccesoAisladoDesde = e.Fecha;
+        AccesoAisladoMotivo = e.Motivo;
         AccesoAisladoResueltoEn = null;
         ActualizadoEn = e.Fecha;
     }
@@ -120,6 +128,7 @@ public sealed partial class Vinculo
         AccesoAislado = null;
         SolicitudDeAccesoId = null;
         AccesoAisladoDesde = null;
+        AccesoAisladoMotivo = null;
         AccesoAisladoResueltoEn = null;
     }
 }

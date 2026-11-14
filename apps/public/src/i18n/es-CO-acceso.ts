@@ -42,11 +42,45 @@ export const accesoAislado = {
     aprobarEste: 'Aprobar el acceso de {{correo}}',
     rechazarEste: 'Rechazar el acceso de {{correo}}',
     reconsiderar: 'Aprobarlo de todos modos',
+    desplazado: 'Estaba como contacto sin verificar y otro contacto de tu empresa se verificó: el verificado prevalece.',
+    laPlataformaDecide: 'La plataforma revisa esta solicitud porque ningún contacto de tu empresa está verificado.',
+    soloVerificados: 'Solo un contacto verificado puede decidir esta solicitud.',
+    decididoPorLaPlataforma: 'Lo decidió la plataforma el {{fecha}}',
+    decididoPorVerificacion: 'Se aprobó sola el {{fecha}}: el correo quedó verificado',
+  },
+  /** Contactos del tercero y su verificación (decisión AV): quién puede decidir los accesos de otros correos. */
+  contactos: {
+    titulo: 'Contactos de tu empresa',
+    texto:
+      'Estos correos tienen acceso completo a la información de tu empresa. Solo un contacto verificado aprueba o rechaza los accesos de otros correos: un correo se verifica ' +
+      'cuando es el del RUT o el de la Cámara de comercio, cuando dos empresas distintas lo invitaron por su cuenta, cuando lo aprueba un contacto ya verificado o cuando lo verifica la plataforma.',
+    tuCorreo: 'Tu correo',
+    verificado: 'Verificado',
+    sinVerificar: 'Sin verificar',
+    desplazado: 'En acceso aislado',
+    medios: {
+      CorreoDelRut: 'Correo del RUT',
+      CorreoDeLaCamara: 'Correo de la Cámara de comercio',
+      Corroborado: 'Invitado por dos empresas distintas',
+      Plataforma: 'Verificado por la plataforma',
+      Importacion: 'Traído del sistema de origen',
+      AprobadoPorContacto: 'Aprobado por un contacto verificado',
+    },
+    avisoSinVerificar: 'Tu correo aún no está verificado: ves las solicitudes, pero solo un contacto verificado las aprueba o rechaza.',
+    avisoLaPlataforma: 'Mientras ningún contacto esté verificado, la plataforma decide los accesos de otros correos.',
+    avisoDesplazado: 'Tu correo quedó en acceso aislado porque otro contacto de tu empresa se verificó: un contacto verificado debe aprobarlo de nuevo.',
+    errorCarga: 'No pudimos cargar los contactos de tu empresa.',
+    historial: 'Historial de los contactos',
+    entradas: {
+      registrado: '{{correo}} entró como contacto ({{detalle}})',
+      verificado: '{{correo}} quedó verificado ({{detalle}})',
+      paso_a_aislado: '{{correo}} pasó a acceso aislado: {{detalle}}',
+    },
   },
   dialogo: {
     aprobarTitulo: 'Aprobar el acceso de {{correo}}',
     aprobarTexto:
-      'Ese correo pasará a ser contacto de tu empresa: verá tu bóveda y tu información, podrá subir y retirar documentos y aprobar a otros correos. ' +
+      'Ese correo pasará a ser contacto verificado de tu empresa: verá tu bóveda y tu información, podrá subir y retirar documentos y aprobar a otros correos. ' +
       'Lo que subió para {{empresas}} pasará a tu bóveda. Apruébalo solo si conoces a esa persona.',
     aprobarConfirmar: 'Sí, aprobar',
     rechazarTitulo: 'Rechazar el acceso de {{correo}}',

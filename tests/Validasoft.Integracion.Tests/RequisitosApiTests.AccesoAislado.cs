@@ -37,6 +37,8 @@ public sealed partial class RequisitosApiTests
         vinculoNorte.AccesoDelCorreo.ShouldBeNull();
         var sesionContacto = await SesionAsync(contacto, "Norte");
         sesionContacto.Aislada.ShouldBeFalse();
+        // El correo con el que Norte registró al tercero nace sin verificar (decisión AV): para que decida los accesos de otros correos, la plataforma lo verifica.
+        await VerificarContactoDePlataformaAsync(vinculoNorte.TerceroId, contacto);
 
         var rut = Pdf("RUT del tercero");
         var subido = await SubirAsync(sesionContacto, "RUT", rut);
@@ -379,6 +381,7 @@ public sealed partial class RequisitosApiTests
         var (contacto, otro, nit) = (CorreoNuevo(), CorreoNuevo(), Nit());
         var primero = await CrearVinculoAsync(norte, "CLIENTE", contacto, nit);
         await AceptarAsync(await SesionAsync(contacto, "Norte"), primero.Id); // el contacto queda probado
+        await VerificarContactoDePlataformaAsync(primero.TerceroId, contacto); // y verificado: solo un contacto verificado decide los accesos
 
         // La misma empresa vincula al tercero con otro tipo de vínculo y otro correo: no es contacto conocido.
         var segundo = await CrearVinculoAsync(norte, "PROVEEDOR", otro, nit);

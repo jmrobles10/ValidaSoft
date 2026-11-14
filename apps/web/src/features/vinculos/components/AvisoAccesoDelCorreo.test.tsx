@@ -37,6 +37,16 @@ describe('aviso del acceso del correo invitado (acceso aislado)', () => {
     expect(screen.getByText(/El 13\/11\/2026 un contacto del tercero aprobó a compras@empresa-a\.co/)).toBeInTheDocument();
   });
 
+  it('pendiente por desplazamiento: dice que otro contacto del tercero se verificó y que el verificado prevalece', () => {
+    montar({
+      accesoDelCorreo: { estado: 'Pendiente', correo: 'creador@empresa-a.co', desde: '2026-11-14T15:00:00Z', resueltoEn: null, motivo: 'ContactoDesplazado' },
+    });
+
+    expect(screen.getByText('El acceso de creador@empresa-a.co pasó a acceso aislado')).toBeInTheDocument();
+    expect(screen.getByText(/estaba como contacto del tercero sin verificar y, desde el 14\/11\/2026, otro contacto del tercero quedó verificado: el verificado prevalece/)).toBeInTheDocument();
+    expect(screen.getByText(/lo que ya recibió se conserva/)).toBeInTheDocument();
+  });
+
   it('un vínculo con correo de confianza no lleva aviso', () => {
     const { container } = montar({ accesoDelCorreo: null });
     expect(container).toBeEmptyDOMElement();

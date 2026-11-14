@@ -88,6 +88,13 @@ describe('aviso de accesos por aprobar', () => {
     expect(await screen.findByText('Tienes 2 accesos por aprobar')).toBeInTheDocument();
   });
 
+  it('a un contacto sin verificar no le avisa de accesos por aprobar: no es quien los decide', async () => {
+    useSesionTercero.setState({ estado: 'activa', sesion: sesion() });
+    const pedidas = montar(<AvisoDeAccesosPorAprobar />, '/empresas', [{ ...SOLICITUD, puedesDecidir: false, decideLaPlataforma: true }]);
+    await vi.waitFor(() => expect(pedidas).toContain('/public/v1/accesos-solicitados'));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('no se muestra con las solicitudes ya decididas', async () => {
     useSesionTercero.setState({ estado: 'activa', sesion: sesion() });
     const pedidas = montar(<AvisoDeAccesosPorAprobar />, '/empresas', [{ ...SOLICITUD, estado: 'Aprobada' }]);

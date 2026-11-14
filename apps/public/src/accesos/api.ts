@@ -5,12 +5,16 @@ import {
   getListarAccesosSolicitadosQueryKey,
   getListarAccesosSolicitadosQueryOptions,
   getListarSesionesDelTerceroQueryKey,
+  getObtenerContactosDelTerceroQueryOptions,
   getListarSesionesDelTerceroQueryOptions,
   rechazarAccesoSolicitado,
 } from '@validasoft/api-client';
 
 /** Las solicitudes de acceso de otros correos al tercero; solo las puede pedir quien ya es contacto (una sesión aislada recibe 403). */
 export const useAccesosSolicitados = (habilitado = true) => useQuery({ ...getListarAccesosSolicitadosQueryOptions(), enabled: habilitado, retry: false });
+
+/** Los contactos del tercero con su verificación y el historial de cómo llegaron (decisión AV); solo para quien tiene acceso completo. */
+export const useContactosDelTercero = () => useQuery({ ...getObtenerContactosDelTerceroQueryOptions(), retry: false });
 
 export function useDecidirAcceso() {
   const cliente = useQueryClient();

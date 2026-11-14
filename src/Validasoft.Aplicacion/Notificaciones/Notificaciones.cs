@@ -122,10 +122,22 @@ public static class TiposNotificacion
     /// <summary>El grupo llegó al 80 % o al 100 % de un límite de su plan (usuarios, empresas, vínculos, almacenamiento o llamadas a la API; OD-16).</summary>
     public const string PlanLimite = "plan.limite";
 
+    /// <summary>
+    /// El correo de un vínculo de la empresa pasó a acceso aislado porque otro contacto del tercero se verificó y el verificado prevalece (decisión AV): a los administradores
+    /// de la empresa, solo campana.
+    /// </summary>
+    public const string AccesoEnRevision = "vinculo.acceso_en_revision";
+
+    /// <summary>
+    /// Una versión de la bóveda compartida con la empresa quedó marcada para revisión: la subió un contacto sin verificar que otro verificado desplazó (decisión AV).
+    /// A los administradores de la empresa, solo campana.
+    /// </summary>
+    public const string VersionEnRevision = "documento.version_en_revision";
+
     public static readonly IReadOnlyList<string> Todos =
         [NuevoEnArea, TerceroRespondio, VersionNueva, VersionRetirada, Aprobado, Rechazado, Caducado, PorVencer, Vencido, WebhookDeshabilitado, CupoIa, LoteTerminado,
             CoincidenciaListas, EstudioPendiente, VerificacionExpirada, CuentaPropuesta, SlaPorVencer, SlaIncumplido, CampaniaTerminada, HabeasSolicitud, HabeasPlazo,
-            PlanLimite];
+            PlanLimite, AccesoEnRevision, VersionEnRevision];
 
     /// <summary>Los que además de la campana van por correo (si la persona no lo apagó).</summary>
     public static readonly IReadOnlyList<string> ConCorreo =
@@ -226,6 +238,10 @@ public sealed partial class PlanificadorDeNotificaciones
                 return await EstudioPendienteAsync(evento, contexto, orden, ct);
             case CuentaDesignadaPropuesta propuesta:
                 return await CuentaPropuestaAsync(evento, propuesta, contexto, orden, ct);
+            case AccesoAisladoSolicitado { Motivo: Dominio.Terceros.SolicitudDeAcceso.OrigenContactoDesplazado } desplazado:
+                return await AccesoEnRevisionAsync(evento, desplazado, contexto, orden, ct);
+            case VersionMarcadaParaRevision marcada:
+                return await VersionEnRevisionAsync(evento, marcada, contexto, orden, ct);
             case SlaPorVencer porVencer:
                 return await SlaAsync(evento, contexto, porVencer.AreaId, porVencer.Vence, vencido: false, orden, ct);
             case SlaIncumplido incumplido:
@@ -271,6 +287,69 @@ public sealed partial class PlanificadorDeNotificaciones
             Titulo = "Cuenta bancaria por aprobar",
             Mensaje = mensaje,
             VinculoId = vinculo.Id,
+            Enlace = ruta,
+            CreadaEn = evento.Timestamp,
+            Orden = orden
+        }))], []);
+    }
+
+    /// <summary>
+    /// El correo de un vínculo de la empresa pasó a acceso aislado porque otro contacto del tercero se verificó (decisión AV): campana a los administradores de la empresa,
+    /// que no ven nada más de la bóveda del tercero por ese vínculo hasta que un contacto verificado lo apruebe de nuevo.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> AccesoEnRevisionAsync(IEvent evento, AccesoAisladoSolicitado desplazado, IContextoDeEventos contexto, long orden,
+        CancellationToken ct)
+    {
+        if (!Guid.TryParse(evento.TenantId, out var tenantId) || await contexto.VinculoAsync(tenantId, evento.StreamId, ct) is not { } vinculo)
+            return PlanDeNotificaciones.Vacio;
+
+        var tercero = (await contexto.TerceroAsync(vinculo.TerceroId, ct))?.Nombre ?? "el tercero";
+        var mensaje = $"El correo {desplazado.Correo} de tu vínculo con {tercero} estaba sin verificar y otro contacto del tercero se verificó, que prevalece: el acceso de ese correo pasó a " +
+                      "acceso aislado y no se comparte nada de la bóveda del tercero con tu empresa hasta que un contacto verificado lo apruebe de nuevo.";
+        return await AAdministradoresAsync(evento, contexto, tenantId, vinculo.EmpresaId, TiposNotificacion.AccesoEnRevision, "Un correo pasó a acceso aislado", mensaje, vinculo.Id,
+            $"/e/{vinculo.EmpresaId}/vinculos/{vinculo.Id}", orden, ct);
+    }
+
+    /// <summary>
+    /// Una versión global del tercero quedó marcada para revisión (la subió un contacto sin verificar que otro verificado desplazó): campana a los administradores de cada empresa
+    /// con la que está compartida (una vez por vínculo), para que lo sepan antes de apoyarse en ese documento.
+    /// </summary>
+    private static async Task<PlanDeNotificaciones> VersionEnRevisionAsync(IEvent evento, VersionMarcadaParaRevision marcada, IContextoDeEventos contexto, long orden, CancellationToken ct)
+    {
+        if (await contexto.DocumentoAsync(evento.StreamId, ct) is not { } documento)
+            return PlanDeNotificaciones.Vacio;
+
+        var tercero = (await contexto.TerceroAsync(documento.TerceroId, ct))?.Nombre ?? "El tercero";
+        var campana = new List<(Guid TenantId, Notificacion Notificacion)>();
+        foreach (var destino in documento.Comparticiones.Where(c => c.Numero == marcada.Numero).DistinctBy(c => c.VinculoId))
+        {
+            var mensaje = $"La versión {marcada.Numero} de {documento.NombreTipo} de {tercero}, compartida con tu empresa, quedó en revisión: la subió {marcada.Correo}, un contacto sin " +
+                          "verificar que otro contacto verificado del tercero desplazó. Tenla presente antes de apoyarte en ese documento.";
+            var plan = await AAdministradoresAsync(evento, contexto, destino.TenantId, destino.EmpresaId, TiposNotificacion.VersionEnRevision, "Un documento compartido quedó en revisión",
+                mensaje, destino.VinculoId, $"/e/{destino.EmpresaId}/vinculos/{destino.VinculoId}", orden, ct);
+            campana.AddRange(plan.Campana);
+        }
+
+        return new PlanDeNotificaciones(campana, []);
+    }
+
+    /// <summary>Campana a los administradores de la empresa (rol de todo el tenant o de esa empresa); solo campana, una por persona y evento.</summary>
+    private static async Task<PlanDeNotificaciones> AAdministradoresAsync(IEvent evento, IContextoDeEventos contexto, Guid tenantId, Guid empresaId, string tipo, string titulo,
+        string mensaje, Guid vinculoId, string ruta, long orden, CancellationToken ct)
+    {
+        var administradores = (await contexto.UsuariosDelTenantAsync(tenantId, ct))
+            .Where(u => u.Activo && u.Roles.Any(r => r.Rol == Rol.Administrador && (r.EmpresaId is null || r.EmpresaId == empresaId)))
+            .OrderBy(u => u.Id)
+            .ToList();
+        return new PlanDeNotificaciones([.. administradores.Select(u => (tenantId, new Notificacion
+        {
+            Id = Deterministas.Guid($"notificacion:{evento.Id:N}:{vinculoId:N}:{u.Id:N}:{tipo}"),
+            UsuarioId = u.Id,
+            EmpresaId = empresaId,
+            Tipo = tipo,
+            Titulo = titulo,
+            Mensaje = mensaje,
+            VinculoId = vinculoId,
             Enlace = ruta,
             CreadaEn = evento.Timestamp,
             Orden = orden

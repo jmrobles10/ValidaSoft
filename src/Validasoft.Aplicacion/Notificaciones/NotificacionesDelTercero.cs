@@ -350,9 +350,18 @@ public static class PlanificadorDeNotificacionesDelTercero
             return PlanDeNotificaciones.Vacio;
 
         var empresa = (await contexto.EmpresaAsync(vinculo.EmpresaId, ct))?.Nombre ?? "Una empresa";
+        // Un contacto sin verificar desplazado por uno verificado, o una solicitud que decide la plataforma porque ningún contacto está verificado, dicen otra cosa.
+        if (solicitado.Motivo == Dominio.Terceros.SolicitudDeAcceso.OrigenContactoDesplazado)
+            return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, null, null, null, TiposNotificacionTercero.AccesoSolicitado,
+                "Un contacto pasó a acceso aislado",
+                $"{solicitado.Correo} estaba sin verificar y otro contacto de tu empresa se verificó: el verificado prevalece. Apruébalo de nuevo o recházalo.", "/accesos", orden), tenantId);
+
+        var tercero = await contexto.TerceroAsync(vinculo.TerceroId, ct);
+        var mensaje = tercero is not null && Dominio.Terceros.AccesoDelTercero.DecideLaPlataforma(tercero)
+            ? $"{empresa} invitó a {solicitado.Correo}, que no está entre los contactos de tu empresa. Ningún contacto está verificado todavía, así que la plataforma revisará el acceso."
+            : $"{empresa} invitó a {solicitado.Correo}, que no está entre los contactos de tu empresa. Apruébalo o recházalo.";
         return Plan(Nueva(evento, tenantId, vinculo.TerceroId, vinculo.EmpresaId, null, null, null, TiposNotificacionTercero.AccesoSolicitado,
-            "Un correo nuevo pidió acceso",
-            $"{empresa} invitó a {solicitado.Correo}, que no está entre los contactos de tu empresa. Apruébalo o recházalo.", "/accesos", orden), tenantId);
+            "Un correo nuevo pidió acceso", mensaje, "/accesos", orden), tenantId);
     }
 
     private static async Task<PlanDeNotificaciones> DeInvitacionAsync(IEvent evento, IContextoDeEventos contexto, long orden, CancellationToken ct)

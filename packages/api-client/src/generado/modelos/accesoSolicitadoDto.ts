@@ -18,4 +18,9 @@ export interface AccesoSolicitadoDto {
   decididoEn?: string | null;
   /** @nullable */
   motivo?: string | null;
+  puedesDecidir?: boolean;
+  decideLaPlataforma?: boolean;
+  /** @nullable */
+  decididoVia?: string | null;
+  contactoDesplazado?: boolean;
 }

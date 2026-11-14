@@ -11,4 +11,6 @@ export interface AccesoDelCorreoDto {
   desde: string;
   /** @nullable */
   resueltoEn: string | null;
+  /** @nullable */
+  motivo?: string | null;
 }

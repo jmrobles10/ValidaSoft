@@ -314,6 +314,9 @@ public static class AutorregistroEndpoints
             if (await TextosLegales.VigenteAsync(sesion, TipoTextoLegal.AvisoPlataforma, null, ct) is { } aviso)
                 tercero.AceptarAvisoPlataforma(aviso, ahora);
             sesion.Insert(tercero);
+            // Decisión AV: recibir el enlace prueba que la persona controla ese correo, no que sea el del dueño del NIT (cualquiera puede autorregistrar un NIT ajeno). El contacto
+            // nace SIN VERIFICAR; se verifica con el correo de su RUT o su Cámara, por corroboración o por la plataforma.
+            ContactosDelTercero.Historial(sesion, tercero.Id, new ContactoRegistrado(tercero.Id, correo, ContactosDelTercero.OrigenAutorregistro, null, ahora));
         }
 
         if (tercero.TieneContacto(correo))

@@ -278,7 +278,7 @@ public class IaTests
         Campos("RUT").ShouldBe(["nit", "dv", "razonSocial", "tipoContribuyente", "representanteLegalNombre", "representanteLegalIdentificacion",
             "direccion", "municipio", "codigoMunicipio", "correo", "telefono", "fechaExpedicion", "actividadEconomicaPrincipal", "actividadesSecundarias",
             "responsabilidades"]);
-        Campos("CAMARA_COMERCIO").ShouldBe(["razonSocial", "nit", "matricula", "estadoMatricula", "domicilio", "fechaExpedicion", "representantesLegales"]);
+        Campos("CAMARA_COMERCIO").ShouldBe(["razonSocial", "nit", "matricula", "estadoMatricula", "domicilio", "correo", "fechaExpedicion", "representantesLegales"]);
         Campos("CEDULA").ShouldBe(["numero", "nombres", "apellidos", "fechaNacimiento", "fechaExpedicion"]);
         Campos("CERTIFICACION_BANCARIA").ShouldBe(["banco", "tipoCuenta", "numeroCuenta", "titular", "identificacionTitular", "estadoCuenta", "fechaExpedicion"]);
         Campos("ESTADOS_FINANCIEROS").ShouldBe(["razonSocial", "nit", "periodo", "fechaCorte", "activoTotal", "pasivoTotal", "patrimonio", "ingresos",

@@ -2,6 +2,7 @@ using Marten;
 using Validasoft.Aplicacion.Comun;
 using Validasoft.Aplicacion.Documentos;
 using Validasoft.Aplicacion.Ficha;
+using Validasoft.Aplicacion.Interesado;
 using Validasoft.Contratos;
 using Validasoft.Dominio.Comun;
 using Validasoft.Dominio.Ficha;
@@ -117,6 +118,10 @@ public static class ImportadorDeTerceros
         if (!opciones.Simular && referencias.All(r => !string.Equals(r.Clave, traduccion.Clave, StringComparison.Ordinal)))
             await GuardarReferenciaAsync(sesiones, tercero, traduccion, opciones, reloj, ct);
 
+        // El correo que trae el origen es un contacto del tercero, verificado por la importación (la corre la plataforma, no una empresa).
+        if (!opciones.Simular)
+            await RegistrarContactoImportadoAsync(sesiones, tercero, traduccion, opciones, reloj, ct);
+
         var secciones = new List<SeccionImportada>();
         foreach (var seccion in traduccion.Secciones)
         {
@@ -161,6 +166,36 @@ public static class ImportadorDeTerceros
     {
         await using var sesion = ConActor(sesiones.Global(), opciones);
         sesion.Store(tercero);
+        await sesion.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// El correo de la información general que trae el sistema de origen pasa a ser contacto <b>verificado</b> del tercero (medio <c>Importacion</c>): lo importa la
+    /// plataforma desde el sistema donde el tercero se registró, no una empresa que podría poner el suyo. Si ya era contacto sin verificar, se verifica. Si por eso otro
+    /// contacto sin verificar queda desplazado, se pide poner al día el acceso (decisión AV). Idempotente: repetir la importación no cambia nada.
+    /// </summary>
+    private static async Task RegistrarContactoImportadoAsync(ISesiones sesiones, Tercero tercero, ResultadoDeTraduccion traduccion, OpcionesDeImportacion opciones,
+        TimeProvider reloj, CancellationToken ct)
+    {
+        var correo = SolicitudDeAcceso.Normalizar((traduccion.Secciones.FirstOrDefault(s => s.Definicion.Codigo == CodigosDeSeccion.General)?.Datos as DatosGenerales)?.Correo);
+        if (correo.Length == 0 || !correo.Contains('@'))
+            return;
+
+        await using var sesion = ConActor(sesiones.Global(opciones.Mensajes), opciones);
+        var actual = await sesion.LoadAsync<Tercero>(tercero.Id, ct);
+        if (actual is null)
+            return;
+
+        var ahora = reloj.GetUtcNow();
+        var por = $"importador:{traduccion.Sistema}";
+        var cambio = ContactosDelTercero.Agregar(sesion, actual, correo, actual.Nombre, "Principal", ContactosDelTercero.OrigenImportacion, traduccion.ClaveLegado,
+                         MedioDeVerificacion.Importacion, por, ahora) ||
+                     ContactosDelTercero.Verificar(sesion, actual, correo, MedioDeVerificacion.Importacion, por, ahora);
+        if (!cambio)
+            return;
+
+        if (opciones.Mensajes is { } mensajes)
+            await mensajes.PublishAsync(new SincronizarAccesoDelTercero(actual.Id));
         await sesion.SaveChangesAsync(ct);
     }
 

@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Card, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { esErrorApi, type AccesoSolicitadoDto } from '@validasoft/api-client';
 import { ChipEstado, EsqueletoTarjetas, EstadoVacio, formatearFecha } from '@validasoft/ui';
+import type { TFunction } from 'i18next';
 import { MailCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +9,8 @@ import { CabeceraPagina, ErrorRecuperable } from '../shared/componentes';
 import { mensajeDeError } from '../shared/errores';
 import { useAvisos } from '../shared/useAvisos';
 import { useAccesosSolicitados, useDecidirAcceso } from './api';
-import { decididas, listaDeEmpresas, porDecidir } from './modelo';
+import { SeccionContactos } from './SeccionContactos';
+import { decididas, listaDeEmpresas, porDecidir, puedoDecidir } from './modelo';
 
 interface Decision {
   solicitud: AccesoSolicitadoDto;
@@ -66,6 +68,9 @@ export function PaginaAccesos() {
           )}
         </Stack>
       )}
+      <Box sx={{ mt: 4 }}>
+        <SeccionContactos />
+      </Box>
       {decision && <DialogoDeDecision decision={decision} onCerrar={() => setDecision(null)} />}
     </>
   );
@@ -92,13 +97,21 @@ function TarjetaAcceso({ solicitud, onDecidir }: { solicitud: AccesoSolicitadoDt
         </Box>
         <ChipEstado estado={estado} etiqueta={t(`accesoAislado.tarjeta.estados.${clave}`)} size="medium" />
       </Stack>
-      {decidida && solicitud.decididoPor && solicitud.decididoEn && (
+      {solicitud.contactoDesplazado && (
+        <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px', mt: 1 }}>{t('accesoAislado.tarjeta.desplazado')}</Typography>
+      )}
+      {decidida && solicitud.decididoEn && (
         <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px', mt: 1 }}>
-          {t('accesoAislado.tarjeta.decididoPor', { correo: solicitud.decididoPor, fecha: formatearFecha(solicitud.decididoEn) })}
+          {decididoPor(solicitud, t)}
           {solicitud.motivo ? ` · ${t('accesoAislado.tarjeta.motivo', { motivo: solicitud.motivo })}` : ''}
         </Typography>
       )}
-      {solicitud.estado !== 'Aprobada' && (
+      {!decidida && !puedoDecidir(solicitud) && (
+        <Typography sx={{ color: 'text.secondary', fontSize: 13, lineHeight: '18px', mt: 1 }}>
+          {solicitud.decideLaPlataforma ? t('accesoAislado.tarjeta.laPlataformaDecide') : t('accesoAislado.tarjeta.soloVerificados')}
+        </Typography>
+      )}
+      {solicitud.estado !== 'Aprobada' && puedoDecidir(solicitud) && (
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
           <Button variant={decidida ? 'outlined' : 'contained'} onClick={() => onDecidir(true)} aria-label={t('accesoAislado.tarjeta.aprobarEste', { correo: solicitud.correo })}>
             {decidida ? t('accesoAislado.tarjeta.reconsiderar') : t('accesoAislado.tarjeta.aprobar')}
@@ -112,6 +125,14 @@ function TarjetaAcceso({ solicitud, onDecidir }: { solicitud: AccesoSolicitadoDt
       )}
     </Card>
   );
+}
+
+/** Quién decidió: un contacto (su correo), la plataforma o la verificación del propio correo. */
+function decididoPor(solicitud: AccesoSolicitadoDto, t: TFunction): string {
+  const fecha = formatearFecha(solicitud.decididoEn ?? solicitud.desde);
+  if (solicitud.decididoVia === 'Plataforma') return t('accesoAislado.tarjeta.decididoPorLaPlataforma', { fecha });
+  if (solicitud.decididoVia === 'Verificacion') return t('accesoAislado.tarjeta.decididoPorVerificacion', { fecha });
+  return t('accesoAislado.tarjeta.decididoPor', { correo: solicitud.decididoPor ?? '', fecha });
 }
 
 /** Confirma una decisión que cambia quién entra a la cuenta: dice qué pasa y, al rechazar, deja anotar el motivo. */

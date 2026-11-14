@@ -36,19 +36,19 @@ public class AccesoAisladoTests
     {
         var tercero = Tercero(TenantB, "gerente@norte.co");
 
-        AccesoDelTercero.Nivel(tercero, "  Gerente@Norte.CO ", []).ShouldBe(NivelDeAcceso.Completo);
-        AccesoDelTercero.Nivel(tercero, "otro@norte.co", []).ShouldBe(NivelDeAcceso.Aislado);
-        AccesoDelTercero.Nivel(tercero, string.Empty, []).ShouldBe(NivelDeAcceso.Aislado);
+        AccesoDelTercero.Nivel(tercero, "  Gerente@Norte.CO ").ShouldBe(NivelDeAcceso.Completo);
+        AccesoDelTercero.Nivel(tercero, "otro@norte.co").ShouldBe(NivelDeAcceso.Aislado);
+        AccesoDelTercero.Nivel(tercero, string.Empty).ShouldBe(NivelDeAcceso.Aislado);
     }
 
     [Fact]
-    public void El_correo_de_un_vinculo_ya_aceptado_se_reconoce_como_contacto_aunque_no_este_en_la_lista()
+    public void El_correo_de_un_vinculo_ya_aceptado_ya_no_se_reconoce_solo_como_contacto()
     {
-        // Los terceros que aceptaron cuando el correo bastaba siguen entrando completos: se les reconoce, no se les bloquea.
+        // Antes se reconocía (no se bloqueaba a quien ya entraba); ahora lo decide la migración de datos: un correo que no es contacto entra aislado.
         var tercero = Tercero(TenantB);
 
-        AccesoDelTercero.Nivel(tercero, "ana@norte.co", ["Ana@Norte.co"]).ShouldBe(NivelDeAcceso.Completo);
-        AccesoDelTercero.CorreosConocidos(tercero, ["Ana@Norte.co", "ana@norte.co"]).ShouldBe(["ana@norte.co"]);
+        AccesoDelTercero.Nivel(tercero, "ana@norte.co").ShouldBe(NivelDeAcceso.Aislado);
+        AccesoDelTercero.CorreosQueDecidenLosAccesos(tercero).ShouldBeEmpty();
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class AccesoAisladoTests
 
         AccesoDelTercero.EsPrimerContacto(tercero, TenantA, terceroNuevo: false, hayVinculosDeOtroGrupo: true, hayDocumentos: true, hayContactoProbado: true)
             .ShouldBeFalse();
-        AccesoDelTercero.Nivel(tercero, "compras@empresa-a.co", []).ShouldBe(NivelDeAcceso.Aislado);
+        AccesoDelTercero.Nivel(tercero, "compras@empresa-a.co").ShouldBe(NivelDeAcceso.Aislado);
     }
 
     [Fact]
