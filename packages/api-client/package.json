@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./pruebas/sse": "./src/tiempoReal/pruebas/fetchSse.ts"
   },
   "scripts": {
     "generar": "orval --config orval.config.ts",

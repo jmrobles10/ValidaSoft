@@ -7,7 +7,7 @@ import {
   revocarCertificado,
   type ListarCertificadosParams,
 } from '@validasoft/api-client';
-import type { Estado } from '@validasoft/ui';
+import { abrirDescarga, type Estado } from '@validasoft/ui';
 import { conEmpresa, invalidarRuta } from '../../shared/consultas';
 
 /** Estados de una emisión (CE-5): el chip usa el estado canónico del mismo nombre. */
@@ -44,14 +44,10 @@ export function useCertificados(empresaId: string, params: ListarCertificadosPar
 /** `409 pdf-pendiente`: el PDF aún se genera (se reintenta en unos segundos). */
 export const pdfPendiente = (error: unknown) => esErrorApi(error) && error.codigo === 'pdf-pendiente';
 
-/** Descarga auditada del PDF (URL prefirmada de 5 minutos), en otra pestaña. */
+/** Descarga auditada del PDF (URL prefirmada de 5 minutos): el navegador lo descarga sin salir de la pantalla. */
 export function useDescargarCertificado(empresaId: string) {
   return useMutation({
-    mutationFn: async (folio: string) => {
-      const descarga = await descargarCertificado(folio, { empresa: empresaId });
-      window.open(descarga.url, '_blank', 'noopener');
-      return descarga;
-    },
+    mutationFn: async (folio: string) => abrirDescarga(await descargarCertificado(folio, { empresa: empresaId })),
   });
 }
 

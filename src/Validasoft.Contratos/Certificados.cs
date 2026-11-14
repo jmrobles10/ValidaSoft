@@ -112,8 +112,13 @@ public sealed record CertificadoPublicoDto(
     bool PdfDescargable,
     bool EnVerificacion = false);
 
-/// <summary>Clave pública Ed25519 en bruto (base64, 32 bytes) y como JWK (RFC 8037) para WebCrypto.</summary>
-public sealed record ClavePublicaDeCertificadosDto(string Kid, string Algoritmo, string ClavePublica, JwkDto Jwk, bool Vigente);
+/// <summary>
+/// Clave pública Ed25519 en bruto (base64, 32 bytes) y como JWK (RFC 8037) para WebCrypto. Una clave retirada (<see cref="Vigente"/>
+/// falso) trae <see cref="RetiradaEn"/>: solo valida certificados con <c>emitidoEn</c> anterior o igual a ella; y
+/// <see cref="VerificableHasta"/>: pasada esa fecha deja de publicarse. La vigente no trae ninguna de las dos.
+/// </summary>
+public sealed record ClavePublicaDeCertificadosDto(string Kid, string Algoritmo, string ClavePublica, JwkDto Jwk, bool Vigente,
+    DateTimeOffset? RetiradaEn = null, DateTimeOffset? VerificableHasta = null);
 
 public sealed record JwkDto(string Kty, string Crv, string X, string Kid, string Alg, string Use);
 

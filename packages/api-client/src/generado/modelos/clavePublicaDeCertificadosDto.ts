@@ -12,4 +12,8 @@ export interface ClavePublicaDeCertificadosDto {
   clavePublica: string;
   jwk: JwkDto;
   vigente: boolean;
+  /** @nullable */
+  retiradaEn?: string | null;
+  /** @nullable */
+  verificableHasta?: string | null;
 }

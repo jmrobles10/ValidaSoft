@@ -309,7 +309,7 @@ public class CertificadoTests
         emitido.Kid.ShouldBe(claves.Kid);
         emitido.UrlVerificacion.ShouldBe($"https://valida.norte.co/verificar/NORTE-C-2026-000001-1?huella={hash[..12]}");
 
-        var publica = claves.ClavePublica(emitido.Kid).ShouldNotBeNull();
+        var publica = claves.ClavePublica(emitido.Kid, Ahora).ShouldNotBeNull();
         publica.ShouldBe(SelloEd25519.ClavePublica(semilla));
         SelloEd25519.Verificar(publica, Convert.FromHexString(hash), Convert.FromBase64String(emitido.Sello)).ShouldBeTrue();
 
@@ -341,22 +341,112 @@ public class CertificadoTests
         Should.Throw<InvalidOperationException>(() => corta.Kid).Message.ShouldContain("32 bytes");
     }
 
-    [Fact]
-    public void Publica_la_clave_vigente_y_las_anteriores_para_verificar_tras_una_rotacion()
+    private static readonly DateTimeOffset Retiro = new(2027, 1, 15, 0, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Clave vigente <c>vs-2027</c> y una retirada <c>vs-2026</c> con los datos de <paramref name="retirada"/> (CL-2).</summary>
+    private static ClavesDeCertificados ConRetirada(byte[] publicaAnterior, Dictionary<string, string?>? retirada = null,
+        string? diasDeVerificacion = null)
     {
-        var anterior = SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla());
-        var claves = new ClavesDeCertificados(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        var valores = new Dictionary<string, string?>
         {
             ["Validasoft:Certificados:ClavePrivada"] = Convert.ToBase64String(SelloEd25519.GenerarSemilla()),
             ["Validasoft:Certificados:Kid"] = "vs-2027",
             ["Validasoft:Certificados:ClavesAnteriores:0:Kid"] = "vs-2026",
-            ["Validasoft:Certificados:ClavesAnteriores:0:ClavePublica"] = Convert.ToBase64String(anterior)
-        }).Build());
+            ["Validasoft:Certificados:ClavesAnteriores:0:ClavePublica"] = Convert.ToBase64String(publicaAnterior),
+            ["Validasoft:Certificados:ClavesAnteriores:0:RetiradaEn"] = "2027-01-15T00:00:00Z"
+        };
+        foreach (var (clave, valor) in retirada ?? [])
+            valores[$"Validasoft:Certificados:ClavesAnteriores:0:{clave}"] = valor;
+        if (diasDeVerificacion is not null)
+            valores["Validasoft:Certificados:DiasDeVerificacionDeClavesRetiradas"] = diasDeVerificacion;
+        return new ClavesDeCertificados(new ConfigurationBuilder().AddInMemoryCollection(valores).Build());
+    }
+
+    [Fact]
+    public void Publica_la_clave_vigente_y_las_retiradas_con_su_fecha_para_verificar_tras_una_rotacion()
+    {
+        var anterior = SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla());
+        var claves = ConRetirada(anterior);
+        var ahora = Retiro.AddDays(30);
 
         claves.Kid.ShouldBe("vs-2027");
-        claves.Publicadas().Select(c => (c.Kid, c.Vigente)).ShouldBe([("vs-2027", true), ("vs-2026", false)]);
-        claves.ClavePublica("vs-2026").ShouldBe(anterior);
+        claves.Publicadas(ahora).Select(c => (c.Kid, c.Vigente)).ShouldBe([("vs-2027", true), ("vs-2026", false)]);
+        claves.ClavePublica("vs-2026", ahora).ShouldBe(anterior);
+
+        var retirada = claves.Publicadas(ahora)[1];
+        retirada.RetiradaEn.ShouldBe(Retiro);
+        retirada.VerificableHasta.ShouldBe(Retiro.AddDays(ClavesDeCertificados.DiasPorOmision)); // 730 días por omisión
+        claves.Publicadas(ahora)[0].RetiradaEn.ShouldBeNull(); // la vigente no tiene fecha límite
     }
+
+    [Fact]
+    public void Una_clave_retirada_solo_valida_emisiones_anteriores_a_su_retiro()
+    {
+        var claves = ConRetirada(SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla()));
+        var ahora = Retiro.AddDays(30);
+        var retirada = claves.Publicadas(ahora).Single(c => !c.Vigente);
+
+        retirada.Valida(Retiro.AddDays(-1), ahora).ShouldBeTrue();
+        retirada.Valida(Retiro, ahora).ShouldBeTrue(); // el instante del retiro todavía cuenta
+        // Un sello con la clave retirada y fecha de emisión posterior al retiro no es de la plataforma: la clave ya no sellaba.
+        retirada.Valida(Retiro.AddSeconds(1), ahora).ShouldBeFalse();
+        // La vigente no tiene ese límite.
+        claves.Publicadas(ahora).Single(c => c.Vigente).Valida(ahora.AddDays(1), ahora).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Una_clave_retirada_deja_de_publicarse_y_de_validar_al_vencer_su_plazo()
+    {
+        var claves = ConRetirada(SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla()));
+        var ultimoDia = Retiro.AddDays(ClavesDeCertificados.DiasPorOmision);
+
+        claves.Publicadas(ultimoDia).Select(c => c.Kid).ShouldBe(["vs-2027", "vs-2026"]);
+        claves.Publicadas(ultimoDia).Single(c => !c.Vigente).Valida(Retiro.AddDays(-10), ultimoDia).ShouldBeTrue();
+
+        var despues = ultimoDia.AddSeconds(1);
+        claves.Publicadas(despues).Select(c => c.Kid).ShouldBe(["vs-2027"]);
+        claves.ClavePublica("vs-2026", despues).ShouldBeNull();
+        claves.Retiradas.Single().Valida(Retiro.AddDays(-10), despues).ShouldBeFalse(); // ni por una emisión vieja
+    }
+
+    [Fact]
+    public void El_plazo_se_configura_en_general_y_se_fija_por_clave_con_VerificableHasta()
+    {
+        var publica = SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla());
+
+        ConRetirada(publica, diasDeVerificacion: "90").Retiradas.Single().VerificableHasta.ShouldBe(Retiro.AddDays(90));
+        // La fecha explícita de la clave manda sobre el plazo general.
+        ConRetirada(publica, new() { ["VerificableHasta"] = "2028-06-30" }, diasDeVerificacion: "90")
+            .Retiradas.Single().VerificableHasta.ShouldBe(new DateTimeOffset(2028, 6, 30, 0, 0, 0, TimeSpan.Zero));
+    }
+
+    [Theory]
+    [InlineData("RetiradaEn", null, "RetiradaEn falta")]
+    [InlineData("RetiradaEn", "ayer", "RetiradaEn no es una fecha")]
+    [InlineData("VerificableHasta", "2027-01-15T00:00:00Z", "VerificableHasta debe ser posterior")]
+    [InlineData("VerificableHasta", "2026-12-31", "VerificableHasta debe ser posterior")]
+    [InlineData("VerificableHasta", "no-fecha", "VerificableHasta no es una fecha")]
+    [InlineData("Kid", "vs-2027", "repite el de otra clave")]
+    [InlineData("Kid", "", "Kid falta")]
+    [InlineData("ClavePublica", "", "ClavePublica falta")]
+    [InlineData("ClavePublica", "***", "ClavePublica no es base64")]
+    [InlineData("ClavePublica", "AAAA", "exactamente 32 bytes")]
+    public void Una_clave_retirada_mal_configurada_impide_cargar_con_el_motivo(string campo, string? valor, string mensaje)
+    {
+        var claves = ConRetirada(SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla()), new() { [campo] = valor });
+
+        var error = Should.Throw<InvalidOperationException>(() => claves.Kid);
+        error.Message.ShouldContain("ClavesAnteriores:0");
+        error.Message.ShouldContain(mensaje);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("3651")]
+    [InlineData("mucho")]
+    public void El_plazo_general_fuera_de_rango_impide_cargar(string dias) =>
+        Should.Throw<InvalidOperationException>(() => ConRetirada(SelloEd25519.ClavePublica(SelloEd25519.GenerarSemilla()), diasDeVerificacion: dias).Kid)
+            .Message.ShouldContain("DiasDeVerificacionDeClavesRetiradas");
 
     [Fact]
     public void No_emite_un_certificado_parcial() =>

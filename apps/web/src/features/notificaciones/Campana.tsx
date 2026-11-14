@@ -1,13 +1,12 @@
-import { Badge, IconButton, Popover, Tooltip } from '@mui/material';
 import type { NotificacionDto } from '@validasoft/api-client';
-import { Bell } from 'lucide-react';
+import { CampanaDeNotificaciones } from '@validasoft/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
 import { useBandejaNotificaciones, useMarcarLeida, useMarcarTodas } from './api';
-import { destinoDeNotificacion, textoContador } from './bandeja';
+import { destinoDeNotificacion } from './bandeja';
 import { DialogoPreferencias } from './DialogoPreferencias';
 import { PanelNotificaciones } from './PanelNotificaciones';
 import { useStreamNotificaciones } from './useStreamNotificaciones';
@@ -41,37 +40,15 @@ export function Campana({ empresaId }: { empresaId: string }) {
 
   return (
     <>
-      <Tooltip title={t('notificaciones.titulo')}>
-        <IconButton
-          aria-label={etiqueta}
-          aria-haspopup="dialog"
-          aria-expanded={ancla !== null}
-          onClick={(e) => setAncla(e.currentTarget)}
-          sx={{ flex: 'none' }}
-        >
-          <Badge
-            badgeContent={textoContador(noLeidas)}
-            invisible={noLeidas === 0}
-            color="error"
-            sx={{ '& .MuiBadge-badge': { fontSize: 11, height: 16, minWidth: 16, px: 0.5 } }}
-          >
-            <Bell size={18} strokeWidth={1.75} />
-          </Badge>
-        </IconButton>
-      </Tooltip>
-      <Popover
-        open={ancla !== null}
-        anchorEl={ancla}
-        onClose={() => setAncla(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{
-          paper: {
-            role: 'dialog',
-            'aria-labelledby': 'titulo-notificaciones',
-            sx: { width: 380, maxWidth: 'calc(100vw - 16px)', maxHeight: 'min(520px, calc(100vh - 64px))', display: 'flex', flexDirection: 'column' },
-          },
-        }}
+      <CampanaDeNotificaciones
+        noLeidas={noLeidas}
+        etiqueta={etiqueta}
+        titulo={t('notificaciones.titulo')}
+        ancla={ancla}
+        onAnclar={setAncla}
+        tamanoIcono={18}
+        ancho={380}
+        alturaMaxima="min(520px, calc(100vh - 64px))"
       >
         <PanelNotificaciones
           bandeja={consulta.data}
@@ -92,7 +69,7 @@ export function Campana({ empresaId }: { empresaId: string }) {
             setPreferencias(true);
           }}
         />
-      </Popover>
+      </CampanaDeNotificaciones>
       {preferencias && <DialogoPreferencias onCerrar={() => setPreferencias(false)} />}
     </>
   );

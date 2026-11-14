@@ -4,7 +4,6 @@ import { reiniciarCliente, type PreferenciasNotificacionDto } from '@validasoft/
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAvisos } from '../../shared/useAvisos';
 import { DialogoPreferencias } from './DialogoPreferencias';
-import { cambiosDePreferencias } from './preferencias';
 import { json, montar, prepararApi } from './pruebas/entorno';
 
 const RUTA = '/api/v1/usuarios/me/preferencias-notificacion';
@@ -16,12 +15,6 @@ const GUARDADAS: PreferenciasNotificacionDto = {
 afterEach(() => {
   reiniciarCliente();
   useAvisos.getState().cerrar();
-});
-
-describe('cambiosDePreferencias', () => {
-  it('solo devuelve lo que difiere de lo guardado (lo ausente vale true)', () => {
-    expect(cambiosDePreferencias({ a: true, b: false }, { a: true, b: true, c: true, d: false })).toEqual({ b: true, d: false });
-  });
 });
 
 describe('DialogoPreferencias', () => {

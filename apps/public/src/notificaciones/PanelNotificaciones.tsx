@@ -1,10 +1,7 @@
-import { Box, Button, IconButton, List, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
 import type { BandejaNotificacionesTerceroDto, NotificacionTerceroDto } from '@validasoft/api-client';
-import { ErrorEnLinea, EstadoVacio } from '@validasoft/ui';
-import { BellOff, Settings } from 'lucide-react';
+import { Logo, PanelDeNotificaciones, type MarcaDeNotificacion } from '@validasoft/ui';
 import { useTranslation } from 'react-i18next';
-import { ItemNotificacion } from './ItemNotificacion';
-import { useAhora } from './useAhora';
+import { LogoEmpresa } from '../shared/componentes';
 
 export interface PanelNotificacionesProps {
   bandeja: BandejaNotificacionesTerceroDto | undefined;
@@ -16,53 +13,36 @@ export interface PanelNotificacionesProps {
   onPreferencias: () => void;
 }
 
-/** Contenido del panel de la campana: cabecera con acciones, lista (o esqueleto, error o vacío) y aviso al pie. */
-export function PanelNotificaciones({ bandeja, cargando, error, onReintentar, onAbrir, onMarcarTodas, onPreferencias }: PanelNotificacionesProps) {
-  const { t } = useTranslation();
-  const ahora = useAhora();
-  const noLeidas = bandeja?.noLeidas ?? 0;
+/**
+ * La marca de la empresa que originó el aviso (logo y, si la tiene, su color en el borde). Los que no son de ninguna empresa (una
+ * propuesta desde un documento) llevan el ícono de Validasoft.
+ */
+function marcaDe({ empresa }: NotificacionTerceroDto): MarcaDeNotificacion {
+  return {
+    icono: empresa ? <LogoEmpresa nombre={empresa.nombre} logoUrl={empresa.logoUrl} tamano={32} /> : <Logo variante="icono" tamano={28} />,
+    color: empresa?.colorMarca ?? null,
+  };
+}
 
+/** Panel de la campana del tercero: el del paquete compartido con sus textos y la marca de la empresa de cada aviso. */
+export function PanelNotificaciones(props: PanelNotificacionesProps) {
+  const { t } = useTranslation();
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flex: 'none', pl: 2, pr: 1, py: 1, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography id="titulo-notificaciones" component="h2" sx={{ flex: 1, fontSize: 15, lineHeight: '22px', fontWeight: 600 }}>
-          {t('notificaciones.titulo')}
-        </Typography>
-        <Button size="small" variant="text" onClick={onMarcarTodas} disabled={noLeidas === 0} sx={{ whiteSpace: 'nowrap', minHeight: 32 }}>
-          {t('notificaciones.marcarTodas')}
-        </Button>
-        <Tooltip title={t('notificaciones.preferencias.abrir')}>
-          <IconButton size="small" aria-label={t('notificaciones.preferencias.abrir')} onClick={onPreferencias}>
-            <Settings size={18} strokeWidth={1.75} />
-          </IconButton>
-        </Tooltip>
-      </Stack>
-      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-        {cargando && !bandeja ? (
-          <Stack spacing={1.5} sx={{ p: 2 }} aria-label={t('comun.cargando')} role="status">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} variant="rounded" height={52} />
-            ))}
-          </Stack>
-        ) : error && !bandeja ? (
-          <Box sx={{ p: 2 }}>
-            <ErrorEnLinea mensaje={error} onReintentar={onReintentar} textoReintentar={t('comun.reintentar')} />
-          </Box>
-        ) : !bandeja || bandeja.datos.length === 0 ? (
-          <EstadoVacio compacto icono={BellOff} titulo={t('notificaciones.vacio')} texto={t('notificaciones.vacioAyuda')} />
-        ) : (
-          <List disablePadding aria-labelledby="titulo-notificaciones">
-            {bandeja.datos.map((n) => (
-              <ItemNotificacion key={n.id} notificacion={n} ahora={ahora} onAbrir={onAbrir} />
-            ))}
-          </List>
-        )}
-        {bandeja?.siguienteCursor && (
-          <Typography variant="caption" component="p" sx={{ color: 'text.secondary', px: 2, py: 1.5, textAlign: 'center' }}>
-            {t('notificaciones.hayMas')}
-          </Typography>
-        )}
-      </Box>
-    </Box>
+    <PanelDeNotificaciones
+      {...props}
+      alturaEsqueleto={52}
+      marcaDe={marcaDe}
+      textos={{
+        titulo: t('notificaciones.titulo'),
+        marcarTodas: t('notificaciones.marcarTodas'),
+        preferencias: t('notificaciones.preferencias.abrir'),
+        cargando: t('comun.cargando'),
+        reintentar: t('comun.reintentar'),
+        vacio: t('notificaciones.vacio'),
+        vacioAyuda: t('notificaciones.vacioAyuda'),
+        hayMas: t('notificaciones.hayMas'),
+        sinLeer: t('notificaciones.sinLeer'),
+      }}
+    />
   );
 }

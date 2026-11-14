@@ -10,7 +10,22 @@ Toda la configuración de servidor de Validasoft: qué clave es obligatoria, qu�
 
 Validasoft usa la configuración estándar de .NET: cada clave `Validasoft:Grupo:Nombre` de `appsettings.json` se puede fijar con una variable de entorno que usa dos guiones bajos como separador, por ejemplo `Validasoft__Almacen__Endpoint`. Las listas se numeran (`Validasoft__Webhooks__Reintentos__0=00:01:00`). Lo de **esta página se cambia por despliegue**, no desde la app; lo que se cambia desde la app está en [Configuración del grupo](configuracion-del-grupo.md), [de la empresa](configuracion-de-la-empresa.md) y [de Plataforma](configuracion-de-plataforma.md). Cómo se despliega está en [Despliegue](arquitectura-despliegue.md).
 
-> **Importante:** nunca pongas secretos reales en el repositorio, en una imagen ni en un `appsettings` versionado. Las claves y contraseñas de `appsettings.Development.json` y de `infra/compose/compose.yaml` son solo para desarrollo local y llevan «solo local» en su valor.
+> **Importante:** nunca pongas secretos reales en el repositorio, en una imagen ni en un `appsettings` versionado. Las claves y contraseñas de `appsettings.Development.json` y de `infra/compose/compose.yaml` son solo para desarrollo local y llevan «solo local» en su valor. **Fuera de `Development` la API no arranca con ellas**: ver «Claves propias del entorno».
+
+## Claves propias del entorno
+
+Cuatro claves están publicadas en el repositorio con valores de desarrollo (`appsettings.Development.json` e `infra/compose/compose.yaml`). **Fuera de `Development` la API no arranca** si alguna conserva ese valor, si su valor lleva el rótulo «solo local» o si falta una obligatoria: el error nombra la clave de configuración y nunca muestra el valor. Cada entorno (pruebas, preproducción, producción) necesita las suyas, distintas entre sí.
+
+| Clave | Formato | Cómo generarla |
+|---|---|---|
+| `Validasoft__Secretos__ClaveMaestra` | 32 bytes aleatorios en base64 | `openssl rand -base64 32` |
+| `Validasoft__Certificados__ClavePrivada` | Semilla Ed25519: 32 bytes aleatorios en base64 | `openssl rand -base64 32` |
+| `Validasoft__Sesiones__ClaveFirma` | Texto de al menos 32 bytes | `openssl rand -hex 32` (64 caracteres) |
+| `Validasoft__Plataforma__ClaveBootstrap` | Texto de al menos 32 caracteres; es opcional | `openssl rand -hex 32` |
+
+Sin `openssl`, en PowerShell: `[Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` da una clave en base64 y `[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLower()` una en texto hexadecimal.
+
+Se entregan como secretos de configuración (variables de entorno del orquestador, archivo `_FILE` o Key Vault), nunca en la imagen ni en el repositorio. Perder la maestra o la semilla del sello no tiene vuelta atrás ([Despliegue](arquitectura-despliegue.md)): respáldalas en el gestor de secretos. Cómo se rotan está en `ClavesAnteriores` (secretos) y en «Rotar la clave de sellado» (certificados), más abajo.
 
 ## Obligatorias
 
@@ -19,9 +34,9 @@ Sin estas la API no arranca o parte de ella no funciona.
 | Variable | Para qué sirve | Qué pasa sin ella |
 |---|---|---|
 | `ConnectionStrings__Validasoft` | Cadena de conexión de PostgreSQL 17 (`Host=…;Port=5432;Database=…;Username=…;Password=…`). | La API no arranca. |
-| `Validasoft__Secretos__ClaveMaestra` | 32 bytes aleatorios en base64. Cifra los secretos en reposo (llaves de OpenAI, secretos de webhook, números de cuenta, credenciales de listas) y deriva la clave de datos de cada grupo y de cada tercero. | La API no arranca. |
-| `Validasoft__Certificados__ClavePrivada` | Semilla Ed25519 de 32 bytes en base64 con la que se sellan los certificados. | La API no arranca. |
-| `Validasoft__Sesiones__ClaveFirma` | Clave (al menos 32 bytes) con la que se firman las sesiones de las personas, del tercero y de Plataforma. | Falla el inicio de sesión que usa el token de acceso (Bearer). |
+| `Validasoft__Secretos__ClaveMaestra` | 32 bytes aleatorios en base64. Cifra los secretos en reposo (llaves de OpenAI, secretos de webhook, números de cuenta, credenciales de listas) y deriva la clave de datos de cada grupo y de cada tercero. | La API no arranca (tampoco con la de desarrollo fuera de `Development`). |
+| `Validasoft__Certificados__ClavePrivada` | Semilla Ed25519 de 32 bytes en base64 con la que se sellan los certificados. | La API no arranca (tampoco con la de desarrollo fuera de `Development`). |
+| `Validasoft__Sesiones__ClaveFirma` | Clave (al menos 32 bytes) con la que se firman las sesiones de las personas, del tercero y de Plataforma. | La API no arranca fuera de `Development` (tampoco con la de desarrollo ni con menos de 32 bytes). |
 | `Validasoft__Almacen__Endpoint`, `__AccessKey` y `__SecretKey` | Almacén S3 compatible (MinIO u otro) de los documentos. | No se pueden subir ni descargar archivos. |
 | `Validasoft__Correo__Host` (y `__Puerto`, `__Seguridad`, `__Usuario`, `__Clave`) | Servidor SMTP de salida. | No salen correos. |
 | `Validasoft__Correo__UrlPublica` | URL pública con la que se arman los enlaces de los correos (`/e/{token}`, `/verificar/{folio}`). | Usa `http://localhost:5173`. |
@@ -30,9 +45,9 @@ Sin estas la API no arranca o parte de ella no funciona.
 
 | Variable | Para qué sirve | Por defecto |
 |---|---|---|
-| `ASPNETCORE_ENVIRONMENT` | `Development` activa la documentación interactiva `/docs` (Scalar), la semilla de catálogos de la ficha y los valores de `appsettings.Development.json`. | Producción |
+| `ASPNETCORE_ENVIRONMENT` | `Development` activa la documentación interactiva `/docs` (Scalar), la semilla de catálogos de la ficha y los valores de `appsettings.Development.json`. Es el único entorno que admite las claves de desarrollo del repositorio; en cualquier otro la API se niega a arrancar con ellas. | Producción |
 | `ASPNETCORE_HTTP_PORTS` | Puerto HTTP del proceso. | `8080` en la imagen |
-| `Validasoft__Plataforma__ClaveBootstrap` | Clave de arranque de Plataforma (al menos 32 caracteres): sirve para dar de alta al primer operador, canjear sesiones del backoffice y entrar con soporte. Se puede desactivar desde la consola. | Vacío: sin acceso por clave de arranque |
+| `Validasoft__Plataforma__ClaveBootstrap` | Clave de arranque de Plataforma (al menos 32 caracteres): sirve para dar de alta al primer operador, canjear sesiones del backoffice y entrar con soporte. Se puede desactivar desde la consola. Fuera de `Development` no puede ser la de desarrollo del repositorio. | Vacío: sin acceso por clave de arranque |
 | `Validasoft__Secretos__ClavesAnteriores` y `__ClavesFirmaHeredadas` | Claves maestras y de firma anteriores, para descifrar lo viejo mientras se rota. | Vacío |
 | `Validasoft__Persistencia__CrearEsquemaAlIniciar` | `true` crea y actualiza el esquema de la base al arrancar (solo desarrollo); en producción se aplica antes con `dotnet Validasoft.Api.dll db-apply`. | `false` |
 | `Validasoft__Apps__Web` y `Validasoft__Apps__Publica` | Carpetas de las apps estáticas que sirve la API (`/app/` y `/`). La imagen las fija en `frontend/web` y `frontend/public`. | Vacío: la API no las sirve |
@@ -148,7 +163,20 @@ Cada proceso corre en el mismo host; `00:00:00` apaga los que lo admiten.
 | `Validasoft__Habeas__BaseLegalRetencion` | Texto de la base legal de la retención. | El texto por omisión de la plataforma |
 | `Validasoft__Habeas__ExportacionesPorDia` y `__DiasDeVigenciaDeExportaciones` | Exportaciones de la bóveda por tercero y por día, y días que vive el ZIP (de 1 a 30). | `5` y `7` |
 | `Validasoft__Certificados__Kid` | Identificador de la clave de sellado que aparece en cada certificado. | Derivado de la clave |
-| `Validasoft__Certificados__ClavesAnteriores` | Claves de sellado anteriores, para verificar emisiones viejas tras una rotación (se publican en `/.well-known/validasoft-certificados.json`). | Vacío |
+| `Validasoft__Certificados__ClavesAnteriores__{n}__Kid`, `__ClavePublica`, `__RetiradaEn` y `__VerificableHasta` | Claves de sellado retiradas, para verificar emisiones viejas tras una rotación (se publican en `/.well-known/validasoft-certificados.json` con su fecha). `Kid` y `ClavePublica` (base64, 32 bytes) identifican la clave; `RetiradaEn` (ISO 8601) es **obligatoria**: la clave solo valida certificados emitidos hasta esa fecha. `VerificableHasta` es opcional: la fecha después de la cual la clave deja de publicarse. | Vacío |
+| `Validasoft__Certificados__DiasDeVerificacionDeClavesRetiradas` | Días, desde su `RetiradaEn`, que una clave retirada sigue publicándose cuando no trae `VerificableHasta` (de 1 a 3650). | `730` |
+
+**Rotar la clave de sellado.** Genera una semilla nueva (con otro `Kid`, o sin `Kid` para que se derive) y ponla en `ClavePrivada`; la clave pública de la anterior está en `/.well-known/validasoft-certificados.json`. Muévela a `ClavesAnteriores` con la fecha en que dejó de sellar:
+
+```
+Validasoft__Certificados__ClavePrivada=<semilla nueva en base64>
+Validasoft__Certificados__Kid=vs-2027
+Validasoft__Certificados__ClavesAnteriores__0__Kid=vs-2026
+Validasoft__Certificados__ClavesAnteriores__0__ClavePublica=<clave pública anterior en base64>
+Validasoft__Certificados__ClavesAnteriores__0__RetiradaEn=2027-01-15T00:00:00Z
+```
+
+Sin `RetiradaEn` la API no arranca, ni con una fecha futura (más de un día adelante). La clave retirada solo valida certificados con `emitidoEn` anterior o igual a `RetiradaEn` y, pasado su plazo (`VerificableHasta`, o `RetiradaEn` más `DiasDeVerificacionDeClavesRetiradas`), deja de publicarse: los certificados sellados con ella ya no se pueden verificar con las claves publicadas. Si necesitas seguir verificándolos, alarga el plazo a propósito con `VerificableHasta` (o el general) antes de que venza.
 
 ## Importador del Portal
 

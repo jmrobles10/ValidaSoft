@@ -1,7 +1,6 @@
 import type { ExcepcionDeRevisionDto, MotivoDeRevisionDto, RevisionAutomaticaDto } from '@validasoft/api-client';
-import { LOCALE } from '@validasoft/ui';
+import { haceCuanto, LOCALE } from '@validasoft/ui';
 import type { TFunction } from 'i18next';
-import { haceCuanto } from '../notificaciones/tipos';
 
 /** Niveles de la revisión automática de una empresa (ADR-0012): el sistema solo informa, sugiere o aprueba por sí solo. */
 export type NivelDeRevision = 'Manual' | 'Asistido' | 'Automatico';
