@@ -72,7 +72,7 @@ export function AppShell() {
   const primerSegmento = relativa.split('/')[0] ?? '';
   // La ficha del tercero cuelga de Vínculos (no hay lista de terceros).
   const seccionActual =
-    primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento === 'invitaciones' ? 'invitaciones/lotes' : primerSegmento || 'vinculos';
+    primerSegmento === 'expedientes' ? 'bandeja' : primerSegmento === 'terceros' ? 'vinculos' : primerSegmento === 'invitaciones' ? (enRuta('invitaciones/por-aprobar') ? 'invitaciones/por-aprobar' : 'invitaciones/lotes') : primerSegmento || 'vinculos';
 
   return (
     <Box

@@ -120,6 +120,12 @@ export function eventoATimeline(evento: EventoHistorialDto, contexto: ContextoHi
         detalle: t('historial.invitacion', { correo: texto(campo(datos, 'correoDestino')) ?? '', expira: expira ? formatearFecha(expira) : '—' }),
       };
     }
+    // Aprobación antes de invitar (decisión AI): a qué correo se retiene la invitación, quién la aprobó (el actor del evento) y por qué se rechazó.
+    case 'invitacion_por_aprobar_solicitada':
+    case 'invitacion_aprobada':
+      return { ...base, detalle: texto(campo(datos, 'correoDestino')) };
+    case 'invitacion_rechazada':
+      return { ...base, motivo };
     case 'acceso_aislado_solicitado':
     case 'acceso_aislado_aprobado':
     case 'acceso_aislado_rechazado':

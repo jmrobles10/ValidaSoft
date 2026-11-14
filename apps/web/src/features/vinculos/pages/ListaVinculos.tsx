@@ -1,4 +1,4 @@
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import { EstadoVinculo, esErrorApi, SCOPES, type VinculoDto } from '@validasoft/api-client';
 import {
   APARIENCIA_ESTADO,
@@ -13,7 +13,7 @@ import {
   usePaginacionCursor,
   type ColumnaTabla,
 } from '@validasoft/ui';
-import { FileUp, Search } from 'lucide-react';
+import { ClipboardCheck, FileUp, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
@@ -68,8 +68,14 @@ export function ListaVinculos() {
       {
         id: 'estado',
         encabezado: t('vinculos.columnas.estado'),
-        ancho: 160,
-        celda: (v) => <ChipEstado estado={estadoVisibleDelVinculo(v)} fecha={v.estado === 'Bloqueado' ? v.bloqueo?.desde : v.actualizadoEn} />,
+        ancho: 280,
+        celda: (v) => (
+          <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+            <ChipEstado estado={estadoVisibleDelVinculo(v)} fecha={v.estado === 'Bloqueado' ? v.bloqueo?.desde : v.actualizadoEn} />
+            {/* Decisión AI: la invitación espera la aprobación de otra persona; el estado del vínculo no cambia. */}
+            {v.invitacionPorAprobar?.estado === 'Pendiente' && <Chip size="small" variant="outlined" color="warning" label={t('vinculos.invitacionPorAprobar')} />}
+          </Stack>
+        ),
       },
       {
         id: 'referencias',
@@ -140,11 +146,19 @@ export function ListaVinculos() {
         titulo={t('vinculos.titulo')}
         subtitulo={t('vinculos.subtitulo', { empresa: empresa.nombre })}
         acciones={
-          permisos.puede(SCOPES.vinculosEscribir) && (
-            <Button variant="outlined" startIcon={<FileUp size={16} aria-hidden />} onClick={() => void navegar(`/e/${empresa.id}/invitaciones/lotes`)}>
-              {t('lotes.irALotes')}
-            </Button>
-          )
+          <>
+            {/* Decisión AI: solo se ofrece si algún tipo de vínculo exige aprobar la invitación (la campana también lleva a la bandeja). */}
+            {tipos.data?.some((tipo) => tipo.requiereAprobacionParaInvitar) && (
+              <Button variant="outlined" startIcon={<ClipboardCheck size={16} aria-hidden />} onClick={() => void navegar(`/e/${empresa.id}/invitaciones/por-aprobar`)}>
+                {t('invitaciones.porAprobar.irA')}
+              </Button>
+            )}
+            {permisos.puede(SCOPES.vinculosEscribir) && (
+              <Button variant="outlined" startIcon={<FileUp size={16} aria-hidden />} onClick={() => void navegar(`/e/${empresa.id}/invitaciones/lotes`)}>
+                {t('lotes.irALotes')}
+              </Button>
+            )}
+          </>
         }
       />
 

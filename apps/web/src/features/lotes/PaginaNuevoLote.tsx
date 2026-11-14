@@ -74,7 +74,8 @@ export function PaginaNuevoLote() {
       { nombre: nombre.trim() || null, archivo, vigenciaHoras: vigencia * 24 },
       {
         onSuccess: (lote) => {
-          mostrar(t('lotes.nuevoLote.creado'), 'success');
+          // Decisión AI: con un tipo que exige aprobación el lote espera a otra persona antes de enviar nada.
+          mostrar(lote.estado === 'PorAprobar' ? t('invitaciones.lote.creadoLotePorAprobar') : t('lotes.nuevoLote.creado'), 'success');
           void navegar(`/e/${empresa.id}/invitaciones/lotes/${lote.id}`);
         },
         onError: (error) => mostrar(mensajeDeError(error, t), 'error'),

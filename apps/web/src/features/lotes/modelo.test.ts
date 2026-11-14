@@ -20,6 +20,9 @@ describe('lote de invitación masiva', () => {
   it('las acciones dependen del estado', () => {
     expect(accionesDeLote({ estado: 'Procesando', totales: totales() })).toEqual(['pausar', 'cancelar']);
     expect(accionesDeLote({ estado: 'Pausado', totales: totales() })).toEqual(['reanudar', 'cancelar']);
+    // Por aprobar (decisión AI): no se pausa ni se reanuda; quien lo creó puede retirarlo mientras espera.
+    expect(accionesDeLote({ estado: 'PorAprobar', totales: totales() })).toEqual(['cancelar']);
+    expect(enCurso({ estado: 'PorAprobar' })).toBe(false);
     expect(accionesDeLote({ estado: 'CompletadoConErrores', totales: totales({ fallidas: 2 }) })).toEqual(['reintentar']);
     expect(accionesDeLote({ estado: 'Completado', totales: totales() })).toEqual([]);
     expect(accionesDeLote({ estado: 'Cancelado', totales: totales({ fallidas: 2 }) })).toEqual([]);
