@@ -245,6 +245,7 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/flujos/{id}/publicar': 'publicarFlujo',
   'GET /api/v1/flujos/{id}/versiones': 'listarVersionesFlujo',
   'GET /api/v1/flujos/{id}/versiones/{n}': 'obtenerVersionFlujo',
+  'POST /api/v1/flujos/seleccion/vista-previa': 'vistaPreviaSeleccionFlujo',
   'POST /api/v1/vinculos/{id}/expedientes': 'abrirExpediente',
   'GET /api/v1/expedientes': 'listarExpedientes',
   'GET /api/v1/expedientes/{id}': 'obtenerExpediente',
