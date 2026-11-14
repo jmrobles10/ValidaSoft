@@ -1,9 +1,15 @@
+import type { Locator } from '@playwright/test';
 import { abrirEmbebido } from '../../soporte/embebido';
 import { crearEscenario } from '../../soporte/semilla';
 import { expect, paso, recorrido } from '../nucleo';
 
 const NOMBRE = 'Laura Restrepo';
 const CORREO = 'laura.restrepo@constructorasur.co';
+
+// La primera fila muestra su etiqueta («Empresa», «Rol»); las demás nombran el control «Empresa de la fila N» y «Rol de la fila N».
+const empresaDeLaFila = (panel: Locator, n: number) =>
+  panel.getByRole('combobox', { name: n === 0 ? /^Empresa(?! de la fila)/ : `Empresa de la fila ${String(n + 1)}` });
+const rolDeLaFila = (panel: Locator, n: number) => panel.getByRole('combobox', { name: n === 0 ? /^Rol(?! de la fila)/ : `Rol de la fila ${String(n + 1)}` });
 
 recorrido(
   {
@@ -46,23 +52,20 @@ recorrido(
     await panel.getByLabel('Nombre').first().fill(NOMBRE);
     await panel.getByLabel('Correo').first().fill(CORREO);
     // El panel nace sin filas: la primera es Revisor de Constructora Sur; la segunda, Auditor de todo el grupo.
-    // Solo la primera fila de «Empresa» y «Rol» tiene nombre accesible (las demás llevan el `aria-label` en el contenedor): se llega por él.
-    const empresaDeLaFila = (n: number) => panel.locator('[aria-label="Empresa"]').nth(n).getByRole('combobox');
-    const rolDeLaFila = (n: number) => panel.locator('[aria-label="Rol"]').nth(n).getByRole('combobox');
     await panel.getByRole('button', { name: 'Agregar rol' }).click();
-    await empresaDeLaFila(0).click();
+    await empresaDeLaFila(panel, 0).click();
     await app.getByRole('option', { name: 'Constructora Sur S.A.S.', exact: true }).click();
     await panel.getByRole('button', { name: 'Agregar rol' }).click();
-    await empresaDeLaFila(1).click();
+    await empresaDeLaFila(panel, 1).click();
     await app.getByRole('option', { name: 'Todo el grupo', exact: true }).click();
-    await rolDeLaFila(1).click();
+    await rolDeLaFila(panel, 1).click();
     await app.getByRole('option', { name: 'Auditor', exact: true }).click();
     await paso(page, {
       titulo: 'Agrega una persona con sus roles',
       explicacion:
         'Escribe el nombre y el correo de la persona. Luego agrega un rol por cada empresa o uno para todo el grupo: cada fila elige la empresa (o «Todo el grupo») y el rol. ' +
         'Los roles son Administrador, Revisor, Oficial de cumplimiento y Auditor. Aquí la persona es Revisora en Constructora Sur y Auditora de todo el grupo. Sin ningún rol la persona no puede hacer nada en Validasoft.',
-      resaltar: [panel.getByLabel('Nombre').first(), panel.locator('[aria-label="Rol"]').nth(1)],
+      resaltar: [panel.getByLabel('Nombre').first(), rolDeLaFila(panel, 1)],
       variantes: [
         { cuando: 'El grupo admite el ingreso directo', entonces: 'Aparece la casilla «Enviar una invitación por correo», marcada por omisión: la persona recibe un correo para entrar con código y passkey.' },
         { cuando: 'El grupo no admite el ingreso directo', entonces: 'La casilla aparece desactivada y dice que hay que activar el ingreso directo en Configuración › Ingreso.' },
@@ -93,14 +96,14 @@ recorrido(
     await app.getByRole('menuitem', { name: 'Editar roles' }).click();
     const edicion = app.locator('[aria-labelledby="titulo-roles"]');
     await expect(edicion.getByRole('heading', { name: 'Editar roles' })).toBeVisible();
-    await edicion.locator('[aria-label="Rol"]').nth(1).getByRole('combobox').click();
+    await rolDeLaFila(edicion, 1).click();
     await app.getByRole('option', { name: 'Oficial de cumplimiento', exact: true }).click();
     await paso(page, {
       titulo: 'Cambia los roles de la persona',
       explicacion:
         'El panel «Editar roles» muestra la persona y sus filas de roles, con los mismos controles que al agregarla. Quitar una fila con la X y agregar otra cambia sus permisos. ' +
         'En este caso cambiamos su rol para todo el grupo a Oficial de cumplimiento. El cambio no se aplica en su sesión actual: se nota en su próximo ingreso.',
-      resaltar: edicion.locator('[aria-label="Rol"]').nth(1),
+      resaltar: rolDeLaFila(edicion, 1),
       variantes: [{ cuando: 'Quitas todas las filas de roles', entonces: 'La pantalla avisa que sin roles la persona no puede hacer nada en Validasoft.' }],
     });
     await edicion.getByRole('button', { name: 'Guardar roles' }).click();

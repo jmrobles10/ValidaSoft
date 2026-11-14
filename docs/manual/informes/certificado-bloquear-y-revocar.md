@@ -43,7 +43,7 @@ Bloquear un vínculo suspende su certificado: mientras esté bloqueado, quien lo
 
 La página de verificación dice «Este certificado está suspendido» y que el PDF solo se entrega mientras el certificado esté vigente. El motivo del bloqueo no aparece en ninguna parte: es interno. El tercero recibe un correo que dice que suspendiste su certificado, sin el motivo.
 
-> **Pantalla:** `/verificar/SC21C0-C-2026-000001-1`
+> **Pantalla:** `/verificar/S5D72E-C-2026-000001-1`
 
 ![Paso 2: Mira lo que ve quien verifica el certificado (escritorio)](../../../salida/manual/img/informes/certificado-bloquear-y-revocar/02-mira-lo-que-ve-quien-verifica-el-certificado-claro.webp)
 
@@ -59,7 +59,7 @@ Al desbloquear, el certificado vuelve a quedar vigente. Escribe brevemente por q
 
 Quien verifica ya ve «Este certificado está vigente», y el PDF vuelve a estar disponible para descargarlo. El tercero no tiene que hacer nada para que se restablezca.
 
-> **Pantalla:** `/verificar/SC21C0-C-2026-000001-1`
+> **Pantalla:** `/verificar/S5D72E-C-2026-000001-1`
 
 ![Paso 4: Confirma que el certificado vuelve a estar vigente (escritorio)](../../../salida/manual/img/informes/certificado-bloquear-y-revocar/04-confirma-que-el-certificado-vuelve-a-estar-vigen-claro.webp)
 
@@ -75,7 +75,7 @@ Revocar el certificado es definitivo: deja de ser válido para quien lo verifiqu
 
 La verificación dice «Este certificado fue revocado» y la fecha en que dejó de valer. Ni la justificación ni el PDF aparecen: sin vigencia no se entrega el documento. Para saber el motivo, quien verifica debe preguntarle a la empresa.
 
-> **Pantalla:** `/verificar/SC21C0-C-2026-000001-1`
+> **Pantalla:** `/verificar/S5D72E-C-2026-000001-1`
 
 ![Paso 6: Mira el certificado revocado (escritorio)](../../../salida/manual/img/informes/certificado-bloquear-y-revocar/06-mira-el-certificado-revocado-claro.webp)
 

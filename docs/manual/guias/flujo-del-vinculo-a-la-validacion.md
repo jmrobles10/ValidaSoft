@@ -158,12 +158,16 @@ Una verificación marcada **bloqueante** (por omisión lo es) impide aprobar el 
 
 ### 9. Aprobación
 
-Cuando **todas las etapas están aprobadas y las verificaciones bloqueantes están satisfechas y vigentes**, el expediente pasa a `Aprobado` y, **en la misma transacción**:
+Cuando **todas las etapas están aprobadas, las verificaciones bloqueantes están satisfechas y vigentes y, si el tipo de vínculo exige cuenta bancaria designada, la cuenta del vínculo está aprobada**, el expediente pasa a `Aprobado` y, **en la misma transacción**:
 
 - el vínculo pasa a `Activo`;
 - las secciones de la ficha quedan **aceptadas por la empresa** (evento `seccion.aceptada`), que es lo que un ERP lee como la ficha vigente;
 - se **emite el certificado** (etapa 10);
 - el tercero recibe un correo y una notificación de resultado, y se publican los eventos `expediente.aprobado`, `vinculo.activado` y `certificado.emitido`.
+
+Si el tipo de vínculo exige cuenta bancaria designada (el PROVEEDOR sembrado la exige) y la cuenta aún no está aprobada, el expediente **espera en `EnRevision`** aunque todas las áreas hayan aprobado: la empresa ve el aviso «Falta la cuenta bancaria designada» (con acceso a la cuenta del vínculo) y el tercero ve «Falta tu cuenta bancaria designada» (con acceso a «Mis cuentas»). Cuando dos personas de la empresa aprueban la cuenta, el expediente vuelve a evaluarse **en la misma transacción** y, si nada más falta, se aprueba solo. Rechazar la cuenta no rechaza el expediente: sigue esperando a que el tercero designe otra.
+
+> **Recorridos:** [Aprueba la cuenta bancaria designada de un proveedor](../vinculos/cuenta-designada-aprobar.md) · [Designa la cuenta en la que te paga una empresa](../tercero/cuentas-bancarias.md)
 
 Si algo de lo aprobado se ve mal más tarde, un administrador puede **desaprobar** el último expediente aprobado (el mismo vuelve a revisión y el vínculo a `EnValidacion`) o reabrir una etapa.
 
@@ -248,6 +252,7 @@ Cada hito de arriba deja un evento público que llega por **webhook firmado** (o
 | IA sin plan, llave o cupo | El documento va a una persona; el tercero nunca queda bloqueado por la IA. |
 | Política de devolución | Inmediata o al cerrar la etapa. |
 | Verificaciones bloqueantes o no | Pueden o no impedir el cierre del expediente. |
+| Tipo de vínculo con cuenta designada | Aunque todas las áreas aprueben, el expediente queda en revisión hasta que la empresa apruebe la cuenta que designa el tercero; entonces se aprueba solo. |
 | Vigencia del vínculo | Sin vigencia (0) el vínculo no vence por tiempo; con ella hay pre-vencimiento y renovación. |
 | Entorno | En el sandbox los correos no salen, la IA y las listas son simuladas y los certificados no se verifican en público. |
 | Integración | Un sistema integrado crea vínculos por API y los ve por webhooks; sin él, todo se hace desde la app. |

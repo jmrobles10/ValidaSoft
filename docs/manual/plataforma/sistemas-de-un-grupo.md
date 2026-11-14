@@ -77,7 +77,7 @@ Validasoft confirma con un aviso que el sistema quedó desactivado. En la lista,
 
 ## Paso 5. Reactiva el sistema
 
-Al reactivarlo, el sistema vuelve a poder pedir sesiones con sus llaves vigentes. Las sesiones y los tokens de antes no se recuperan, y las llaves que se revocaron no vuelven: esas se emiten de nuevo desde el grupo.
+Al reactivarlo, el sistema vuelve a ser válido: sus aserciones se aceptan otra vez y sus orígenes pueden volver a embeber Validasoft. Las sesiones y los tokens de antes no se recuperan, y las API keys no vuelven: se revocaron todas al desactivarlo, así que hay que emitir otras desde el grupo para que su backend vuelva a pedir sesiones.
 
 > **Pantalla:** `/plataforma/grupos`
 

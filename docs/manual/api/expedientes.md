@@ -1116,7 +1116,8 @@ Respuesta `200`:
           "subidoPor": "texto",
           "fecha": "2026-11-12T15:00:00Z"
         }
-      ]
+      ],
+      "esperandoCuentaDesignada": false
     }
   ],
   "siguienteCursor": "texto"
@@ -1947,7 +1948,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -2480,7 +2482,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -3015,7 +3018,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -3549,7 +3553,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -4095,7 +4100,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -4629,7 +4635,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -5163,7 +5170,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -5696,7 +5704,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -6287,7 +6296,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -6820,7 +6830,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -7367,7 +7378,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -7901,7 +7913,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -8436,7 +8449,8 @@ Respuesta `201`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -8602,6 +8616,7 @@ Campos de la respuesta `200`:
 | `requisitosFaltantes` | entero | no | por omisión 0 |
 | `tipo` | texto | no | por omisión "Inicial" |
 | `plazoCargueHasta` | fecha y hora o null | no |  |
+| `esperandoCuentaDesignada` | booleano | no | por omisión false |
 
 **Errores de negocio que lanza**
 
@@ -8816,7 +8831,8 @@ Respuesta `200`:
   ],
   "requisitosFaltantes": 0,
   "tipo": "Inicial",
-  "plazoCargueHasta": "2026-11-12T15:00:00Z"
+  "plazoCargueHasta": "2026-11-12T15:00:00Z",
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -9065,7 +9081,8 @@ Respuesta `200`:
   ],
   "requisitosFaltantes": 0,
   "tipo": "Inicial",
-  "plazoCargueHasta": "2026-11-12T15:00:00Z"
+  "plazoCargueHasta": "2026-11-12T15:00:00Z",
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -9876,7 +9893,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -10175,7 +10193,8 @@ Respuesta `200`:
   ],
   "requisitosFaltantes": 0,
   "tipo": "Inicial",
-  "plazoCargueHasta": "2026-11-12T15:00:00Z"
+  "plazoCargueHasta": "2026-11-12T15:00:00Z",
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -10756,7 +10775,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 
@@ -11067,7 +11087,8 @@ Respuesta `200`:
   ],
   "requisitosFaltantes": 0,
   "tipo": "Inicial",
-  "plazoCargueHasta": "2026-11-12T15:00:00Z"
+  "plazoCargueHasta": "2026-11-12T15:00:00Z",
+  "esperandoCuentaDesignada": false
 }
 ```
 

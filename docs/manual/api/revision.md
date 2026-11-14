@@ -1026,7 +1026,8 @@ Respuesta `200`:
       "subidoPor": "texto",
       "fecha": "2026-11-12T15:00:00Z"
     }
-  ]
+  ],
+  "esperandoCuentaDesignada": false
 }
 ```
 

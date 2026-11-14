@@ -27,7 +27,7 @@ Quien recibe el PDF del certificado escanea su código QR. Si el enlace no trae 
 
 Con el certificado vigente, la página muestra su «Huella», los 12 caracteres que identifican ese certificado, y la sección de autenticidad. Si el enlace no trae la huella, la comprobación «Huella del enlace» queda en aviso y te pide compararla con la impresa en el PDF.
 
-> **Pantalla:** `/verificar/S137F6-C-2026-000001-1`
+> **Pantalla:** `/verificar/SY1B59-C-2026-000001-1`
 
 ![Paso 1: Lee la huella que muestra la página (escritorio)](../../../salida/manual/img/publico/verificar-con-el-pdf/01-lee-la-huella-que-muestra-la-pagina-claro.webp)
 
@@ -35,7 +35,7 @@ Con el certificado vigente, la página muestra su «Huella», los 12 caracteres 
 
 Abre el PDF del certificado y busca la huella impresa; debe ser igual a la que muestra la página, carácter por carácter. Si coincide, el documento que tienes es el que Validasoft emitió. Si no coincide, o si el PDF no trae huella, no confíes en el documento: pide a la empresa que te envíe el certificado actual.
 
-> **Pantalla:** `/verificar/S137F6-C-2026-000001-1`
+> **Pantalla:** `/verificar/SY1B59-C-2026-000001-1`
 
 ![Paso 2: Compara la huella con la impresa en el PDF (escritorio)](../../../salida/manual/img/publico/verificar-con-el-pdf/02-compara-la-huella-con-la-impresa-en-el-pdf-claro.webp)
 

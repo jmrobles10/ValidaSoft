@@ -28,7 +28,7 @@ Quien escanea el código QR de un certificado con el celular llega a la página 
 
 Al escanear el QR se abre la verificación con el estado en grande: «Este certificado está vigente» y la empresa que validó al proveedor. Debajo, los datos del certificado en una columna: titular, folio, fecha de emisión y hasta cuándo vale.
 
-> **Pantalla:** `/verificar/SMA643-C-2026-000001-1`
+> **Pantalla:** `/verificar/SLD34B-C-2026-000001-1`
 
 ![Paso 1: Lee el estado del certificado (escritorio)](../../../salida/manual/img/movil/verificar-certificado/01-lee-el-estado-del-certificado-claro.webp)
 
@@ -42,7 +42,7 @@ Al escanear el QR se abre la verificación con el estado en grande: «Este certi
 
 La sección «Autenticidad» la calcula tu propio teléfono con las cuatro comprobaciones: contenido íntegro, huella del enlace, clave de la plataforma y sello válido. Si todas dicen «Correcto», el mensaje dice «Auténtico».
 
-> **Pantalla:** `/verificar/SMA643-C-2026-000001-1`
+> **Pantalla:** `/verificar/SLD34B-C-2026-000001-1`
 
 ![Paso 2: Comprueba la autenticidad en tu teléfono (escritorio)](../../../salida/manual/img/movil/verificar-certificado/02-comprueba-la-autenticidad-en-tu-telefono-claro.webp)
 
@@ -52,7 +52,7 @@ La sección «Autenticidad» la calcula tu propio teléfono con las cuatro compr
 
 El botón «Descargar PDF» baja el certificado para guardarlo o compartirlo. Mientras el certificado esté vigente, el PDF se entrega; si no, la página lo explica en lugar de bajarlo.
 
-> **Pantalla:** `/verificar/SMA643-C-2026-000001-1`
+> **Pantalla:** `/verificar/SLD34B-C-2026-000001-1`
 
 ![Paso 3: Descarga el PDF del certificado (escritorio)](../../../salida/manual/img/movil/verificar-certificado/03-descarga-el-pdf-del-certificado-claro.webp)
 

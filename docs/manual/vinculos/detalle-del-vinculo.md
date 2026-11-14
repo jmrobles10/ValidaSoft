@@ -52,7 +52,7 @@ En «Invitación» ves cuántos correos se enviaron y hasta cuándo vale el enla
 
 ## Paso 3. Revisa las referencias de cada sistema
 
-Cuando un sistema integrado crea o enlaza el vínculo, su identificador queda en «Referencias externas» con el nombre del sistema y su referencia (aquí «E2E» y «PRO-923619687-ND2388»). Un mismo vínculo puede tener una referencia por cada sistema; con esa referencia se encuentra también desde la lista.
+Cuando un sistema integrado crea o enlaza el vínculo, su identificador queda en «Referencias externas» con el nombre del sistema y su referencia (aquí «E2E» y «PRO-995676649-N3743B»). Un mismo vínculo puede tener una referencia por cada sistema; con esa referencia se encuentra también desde la lista.
 
 > **Pantalla:** `/e/{empresa}/vinculos/{id}`
 

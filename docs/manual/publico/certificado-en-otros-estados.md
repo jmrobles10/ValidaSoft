@@ -27,7 +27,7 @@ Cuando la empresa suspende el vínculo o revoca el certificado, el enlace de ver
 
 El estado dice «Este certificado está suspendido» y explica desde cuándo la empresa suspendió temporalmente el vínculo: mientras siga así, no lo aceptes. El motivo que la empresa escribió es interno y no aparece aquí. El PDF tampoco se entrega mientras el certificado no esté vigente.
 
-> **Pantalla:** `/verificar/SZCB51-C-2026-000001-1`
+> **Pantalla:** `/verificar/SNA9B3-C-2026-000001-1`
 
 ![Paso 1: Lee que el certificado está suspendido (escritorio)](../../../salida/manual/img/publico/certificado-en-otros-estados/01-lee-que-el-certificado-esta-suspendido-claro.webp)
 
@@ -42,7 +42,7 @@ El estado dice «Este certificado está suspendido» y explica desde cuándo la 
 
 Un certificado revocado dice «Este certificado fue revocado», la fecha desde la que dejó de valer y que no puede volver a usarse. La empresa puede decirte el motivo; la justificación que escribió no aparece en la página. Si el enlace es auténtico, la sección de autenticidad lo sigue confirmando, pero el certificado ya no sirve.
 
-> **Pantalla:** `/verificar/SZCB51-C-2026-000001-1`
+> **Pantalla:** `/verificar/SNA9B3-C-2026-000001-1`
 
 ![Paso 2: Lee que el certificado fue revocado (escritorio)](../../../salida/manual/img/publico/certificado-en-otros-estados/02-lee-que-el-certificado-fue-revocado-claro.webp)
 

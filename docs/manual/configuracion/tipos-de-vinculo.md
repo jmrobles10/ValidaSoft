@@ -53,7 +53,7 @@ El código empieza con letra y solo lleva mayúsculas, números y guion bajo; mi
 
 ## Paso 3. Activa las exigencias del vínculo
 
-«Exige cuenta bancaria designada» hace que, para cerrar el vínculo, haya una cuenta designada aprobada. «Exige un código por correo en el enlace» pide al tercero, además del enlace de la invitación, un código que le llega a su correo. Son reglas del tipo: todos los vínculos de este tipo las cumplen, sin importar el flujo que usen.
+«Exige cuenta bancaria designada» hace que el expediente del vínculo no se apruebe hasta que haya una cuenta designada aprobada por dos personas de la empresa: aunque todas las áreas aprueben, queda «En revisión» con el aviso «Falta la cuenta bancaria designada» y se cierra solo al aprobarse la cuenta ([Aprueba la cuenta bancaria designada de un proveedor](../vinculos/cuenta-designada-aprobar.md)). «Exige un código por correo en el enlace» pide al tercero, además del enlace de la invitación, un código que le llega a su correo. Son reglas del tipo: todos los vínculos de este tipo las cumplen, sin importar el flujo que usen.
 
 > **Pantalla:** `/e/{empresa}/tipos-vinculo`
 
@@ -61,6 +61,7 @@ El código empieza con letra y solo lleva mayúsculas, números y guion bajo; mi
 
 **Variantes**
 
+- **Activas «Exige cuenta bancaria designada»:** El proveedor ve en su revisión el aviso «Falta tu cuenta bancaria designada» hasta que la empresa apruebe la cuenta que designe, y el expediente solo se aprueba entonces.
 - **Activas «Exige código en el enlace»:** Al aceptar la invitación, el tercero escribe el código que le llega al correo antes de ver el expediente.
 - **No activas ninguna:** El tercero acepta solo con el enlace de la invitación, como en los demás vínculos.
 

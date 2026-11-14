@@ -55,6 +55,18 @@ export async function aprobarArea(app: FrameLocator, area: string): Promise<void
   await expect(regionDeArea(app, area).filter({ hasText: 'Aprobada' }).or(app.getByText(/Todas las áreas aprobaron el /))).toBeVisible();
 }
 
+/**
+ * La última área aprueba, pero el tipo de vínculo exige una cuenta bancaria designada y aprobada que aún no está (CB-4): el expediente
+ * sigue «En revisión» con el aviso «Falta la cuenta bancaria designada» y no se muestra como aprobado.
+ */
+export async function aprobarUltimaAreaYEsperarCuenta(app: FrameLocator, area: string): Promise<void> {
+  await regionDeArea(app, area).getByRole('button', { name: /^Aprobar área/ }).click();
+  const dialogo = app.getByRole('dialog', { name: new RegExp(`^Aprobar ${escapar(area)}`) });
+  await dialogo.getByRole('button', { name: /^Aprobar/ }).last().click();
+  await expect(dialogo).toBeHidden();
+  await expect(app.getByRole('alert').filter({ hasText: 'Falta la cuenta bancaria designada' })).toBeVisible();
+}
+
 /** Texto visible de un área (estado y bloqueos), para afirmar sobre lo que ve cada persona. */
 export async function estadoDeArea(app: FrameLocator, area: string): Promise<string> {
   return (await regionDeArea(app, area).innerText()).replace(/\s+/g, ' ');

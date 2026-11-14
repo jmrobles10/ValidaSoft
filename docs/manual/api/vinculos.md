@@ -383,7 +383,7 @@ Respuesta `200`:
 
 ### `POST /api/v1/vinculos/{id}/cuenta-designada/aprobar`
 
-**Aprobar cuenta designada.** Aprueba la cuenta propuesta (una persona con `cuentas:aprobar`); con la segunda persona queda designada.
+**Aprobar cuenta designada.** Aprueba la cuenta propuesta (una persona con `cuentas:aprobar`); con la segunda persona queda designada y, si el expediente abierto del vínculo la exigía y esperaba por ella (CB-4), se aprueba en la misma transacción.
 
 **Permiso cuentas:aprobar · Empresa activa (`X-Empresa`) · API (`/api/v1`) · SDK: `aprobarCuentaDesignada`**
 

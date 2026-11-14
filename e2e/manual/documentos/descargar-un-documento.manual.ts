@@ -50,8 +50,9 @@ recorrido(
     // 2) El visor.
     await ver.click();
     const visor = app.getByRole('dialog', { name: new RegExp(`^${RUT} · `) });
-    const descargar = visor.getByRole('link', { name: 'Descargar', exact: true });
+    const descargar = visor.getByRole('button', { name: 'Descargar', exact: true });
     await expect(descargar).toBeVisible();
+    await expect(descargar).toBeEnabled();
     await paso(page, {
       titulo: 'Revisa el documento en el visor',
       explicacion:

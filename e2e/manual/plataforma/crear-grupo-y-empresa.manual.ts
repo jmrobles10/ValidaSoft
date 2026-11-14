@@ -126,7 +126,7 @@ recorrido(
     });
 
     await consola.getByRole('button', { name: 'Crear grupo' }).click();
-    await expect(consola.getByRole('heading', { level: 1, name: `Grupo ${grupo} creado` })).toBeVisible();
+    await expect(consola.getByRole('heading', { level: 1, name: `${grupo} creado` })).toBeVisible();
     await expect(consola.getByLabel('API key del sistema ERP', { exact: true })).toBeVisible();
 
     await paso(page, {
