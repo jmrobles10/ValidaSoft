@@ -78,11 +78,12 @@ recorrido(
       await secreto.getByRole('button', { name: 'Ya lo guardé' }).click();
       const fila = page.getByRole('row', { name: new RegExp(`Ver ${receptor.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`) });
       await expect(fila).toBeVisible();
+      await expect(page.getByText('Sistema integrado', { exact: true })).toBeVisible();
       await paso(page, {
         titulo: 'Revisa el webhook creado',
         explicacion:
           'Al guardar, Validasoft muestra el secreto de firma una sola vez (como en [[integracion/webhooks]]) y el webhook aparece en la tabla, activo y con su dirección. ' +
-          'Desde ahora los eventos que elegiste se envían a esa dirección y se le atribuyen al sistema que escogiste.',
+          'El detalle del webhook muestra el «Sistema integrado» dueño; desde ahora los eventos que elegiste se envían a esa dirección y se le avisan a ese sistema.',
         resaltar: fila,
         avisos: true,
       });
