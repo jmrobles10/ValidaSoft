@@ -87,6 +87,8 @@ public static class ServiciosInfraestructura
 
     public static IServiceCollection AgregarValidasoft(this IServiceCollection servicios, IConfiguration configuracion)
     {
+        // Lo primero: fuera de Development el proceso no arranca con las claves de desarrollo del repositorio ni sin las obligatorias (CL-1).
+        servicios.AddHostedService<VerificacionDeClavesDeArranque>();
         servicios.AddSingleton(TimeProvider.System);
         // Fechas de calendario del negocio (vencimientos, «hoy») en la zona configurada, no en UTC (FE-1).
         Dominio.Documentos.CalculadoraDeVigencia.ZonaDeNegocio = Dominio.Documentos.CalculadoraDeVigencia.Zona(configuracion["Validasoft:ZonaHoraria"] ?? "America/Bogota");
