@@ -91,6 +91,9 @@ public static class CatalogoEventosPublicos
     [
         new("vinculo.creado", "Se creó el vínculo (empresa, tercero, tipo)."),
         new("vinculo.invitacion_enviada", "Se envió (o reenvió) la invitación al tercero."),
+        new("vinculo.invitacion_por_aprobar", "La invitación quedó retenida: el tipo de vínculo exige que otra persona la apruebe antes de escribirle al tercero (no hay correo ni enlace todavía)."),
+        new("vinculo.invitacion_aprobada", "Otra persona aprobó la invitación retenida; a continuación sale vinculo.invitacion_enviada."),
+        new("vinculo.invitacion_rechazada", "Otra persona rechazó la invitación retenida, con su motivo; el vínculo queda anulado (vinculo.anulado)."),
         new("vinculo.invitacion_aceptada", "El tercero aceptó la invitación y los textos legales."),
         new("vinculo.activado", "El vínculo quedó Activo al aprobarse su expediente."),
         new("vinculo.bloqueado", "El vínculo se bloqueó."),
@@ -136,7 +139,8 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         {
             VinculoCreado or InvitacionEnviada or InvitacionAceptada or VinculoActivado or VinculoBloqueado or VinculoDesbloqueado
                 or VinculoDesvinculado or VinculoReintegrado or VinculoAnulado or ReferenciaExternaAgregada or ContactosDeVinculoActualizados or CuentaDesignadaPropuesta
-                or CuentaDesignadaAprobada or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido => await DeVinculoAsync(evento, contexto, ct),
+                or CuentaDesignadaAprobada or CuentaDesignadaRechazada or VinculoPorVencer or VinculoVencido or InvitacionPorAprobarSolicitada or InvitacionAprobada
+                or InvitacionRechazada => await DeVinculoAsync(evento, contexto, ct),
             ExpedienteAbierto or ExpedienteEnviadoARevision or RevisionReanudada or ExpedienteObservado or ExpedienteReenviado
                 or ExpedienteAprobado or ExpedienteRechazado or ExpedienteCaducado or ExpedienteReabierto or ExpedienteDesaprobado or EtapaReabierta or SlaPorVencer or SlaIncumplido
                 => await DeExpedienteAsync(evento, contexto, ct),
@@ -167,6 +171,9 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
                 (await contexto.TipoVinculoAsync(tenantId, c.TipoVinculoId, ct))?.Codigo ?? string.Empty, c.FlujoId, c.Origen.ToString(),
                 nameof(EstadoVinculo.Invitado)),
             InvitacionEnviada i => new DatosInvitacionEnviadaDto(id, referencias, i.Canal, i.Expira),
+            InvitacionPorAprobarSolicitada p => new DatosInvitacionPorAprobarDto(id, referencias, p.VigenciaHoras, p.Fecha),
+            InvitacionAprobada a => new DatosInvitacionAprobadaDto(id, referencias, a.Fecha),
+            InvitacionRechazada r => new DatosInvitacionRechazadaDto(id, referencias, r.Motivo, r.Fecha),
             InvitacionAceptada a => new DatosInvitacionAceptadaDto(id, referencias, a.Fecha,
                 [.. (vinculo?.Consentimientos ?? []).Select(x => new ConsentimientoEnEventoDto(x.Tipo.ToString(), x.Version))]),
             VinculoActivado a => Estado(id, referencias, EstadoVinculo.Activo, null, null, null, a.ExpedienteId),
@@ -194,6 +201,9 @@ public sealed class MapeadorDelProcesoDeValidacion : IMapeadorDeEventos
         {
             VinculoCreado => "vinculo.creado",
             InvitacionEnviada => "vinculo.invitacion_enviada",
+            InvitacionPorAprobarSolicitada => "vinculo.invitacion_por_aprobar",
+            InvitacionAprobada => "vinculo.invitacion_aprobada",
+            InvitacionRechazada => "vinculo.invitacion_rechazada",
             InvitacionAceptada => "vinculo.invitacion_aceptada",
             VinculoActivado => "vinculo.activado",
             VinculoBloqueado => "vinculo.bloqueado",

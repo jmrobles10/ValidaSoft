@@ -15,6 +15,7 @@ import {
   reintegrarVinculo,
   type AccionVinculo,
   type EnlaceInvitacionDto,
+  type InvitacionPorAprobarDto,
   type ListarVinculosParams,
   type VinculoDto,
 } from '@validasoft/api-client';
@@ -69,7 +70,11 @@ export interface EntradaAccion {
   revalidar?: boolean;
 }
 
-export type ResultadoAccion = { tipo: 'vinculo'; vinculo: VinculoDto } | { tipo: 'invitacion'; invitacion: EnlaceInvitacionDto };
+/** Invitar devuelve el enlace que salió o, si el tipo exige aprobación (decisión AI), la invitación retenida. */
+export type ResultadoAccion =
+  | { tipo: 'vinculo'; vinculo: VinculoDto }
+  | { tipo: 'invitacion'; invitacion: EnlaceInvitacionDto }
+  | { tipo: 'retenida'; invitacion: InvitacionPorAprobarDto };
 
 /** Ejecuta la acción con `If-Match` = versión leída: si alguien cambió el vínculo, la API responde 412. */
 export function ejecutarAccion(empresaId: string, entrada: EntradaAccion): Promise<ResultadoAccion> {
@@ -80,7 +85,7 @@ export function ejecutarAccion(empresaId: string, entrada: EntradaAccion): Promi
   switch (accion) {
     case 'invitar':
       return invitarVinculo(vinculo.id, { correoDestino: texto || null, vigenciaHoras: entrada.vigenciaHoras ?? 72 }, opciones).then(
-        (invitacion): ResultadoAccion => ({ tipo: 'invitacion', invitacion }),
+        (respuesta): ResultadoAccion => ('expira' in respuesta ? { tipo: 'invitacion', invitacion: respuesta } : { tipo: 'retenida', invitacion: respuesta }),
       );
     case 'bloquear':
       return comoVinculo(bloquearVinculo(vinculo.id, { motivo: texto, hasta: entrada.hasta ?? null }, opciones));

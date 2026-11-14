@@ -137,8 +137,9 @@ public static class ContactosDelTercero
     {
         var normalizado = SolicitudDeAcceso.Normalizar(correo);
         var vinculos = await consulta.Query<Vinculo>().Where(v => v.AnyTenant() && v.TerceroId == terceroId).ToListAsync(ct);
+        // Una invitación retenida a la espera de aprobación (decisión AI) todavía no se hizo: no corrobora nada.
         var empresaIds = vinculos
-            .Where(v => v.Id != exceptoVinculoId && string.Equals(SolicitudDeAcceso.Normalizar(v.CorreoTercero), normalizado, StringComparison.Ordinal))
+            .Where(v => v.Id != exceptoVinculoId && !v.InvitacionPorAprobar && string.Equals(SolicitudDeAcceso.Normalizar(v.CorreoTercero), normalizado, StringComparison.Ordinal))
             .Select(v => v.EmpresaId)
             .Distinct()
             .ToArray();

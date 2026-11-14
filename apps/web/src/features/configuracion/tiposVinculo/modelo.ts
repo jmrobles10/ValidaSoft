@@ -1,4 +1,4 @@
-import type { AtributoPermitidoDto, CrearTipoVinculoDto, TipoVinculoDto } from '@validasoft/api-client';
+import type { AtributoPermitidoDto, CrearTipoVinculoDto, TipoDeAprobadores, TipoVinculoDto } from '@validasoft/api-client';
 
 /**
  * Tipos de vínculo del grupo y sus atributos permitidos. Los atributos alimentan las condiciones «Se pide a» de los
@@ -20,20 +20,42 @@ export interface AtributoBorrador {
   opciones: string;
 }
 
+/** Quién aprueba las invitaciones: un rol o un área (por su código, que se busca en la empresa de cada vínculo). */
+export interface AprobadoresBorrador {
+  tipo: TipoDeAprobadores;
+  valor: string;
+}
+
+/** Roles que pueden aprobar invitaciones (todos tienen `vinculos:escribir`; el auditor, que solo lee, no). */
+export const ROLES_QUE_APRUEBAN = ['Administrador', 'OficialCumplimiento', 'Revisor'] as const;
+
 export interface BorradorTipoVinculo {
   codigo: string;
   nombre: string;
   exigeCuentaDesignada: boolean;
   exigeOtpEnEnlace: boolean;
+  /** Decisión AI: invitar necesita la aprobación de otra persona antes de que salga el correo. */
+  requiereAprobacionParaInvitar: boolean;
+  aprobadores: AprobadoresBorrador;
   atributos: AtributoBorrador[];
 }
 
-export type CodigoErrorTipo = 'codigo-invalido' | 'nombre-requerido' | 'clave-requerida' | 'atributo-duplicado' | 'opciones-requeridas';
+export type CodigoErrorTipo = 'codigo-invalido' | 'nombre-requerido' | 'clave-requerida' | 'atributo-duplicado' | 'opciones-requeridas' | 'aprobadores-requeridos';
 
-export type ErrorTipoVinculo = { campo: 'codigo' | 'nombre'; codigo: CodigoErrorTipo } | { campo: 'atributo'; indice: number; codigo: CodigoErrorTipo };
+export type ErrorTipoVinculo =
+  | { campo: 'codigo' | 'nombre' | 'aprobadores'; codigo: CodigoErrorTipo }
+  | { campo: 'atributo'; indice: number; codigo: CodigoErrorTipo };
 
 export function borradorTipoNuevo(): BorradorTipoVinculo {
-  return { codigo: '', nombre: '', exigeCuentaDesignada: false, exigeOtpEnEnlace: false, atributos: [] };
+  return {
+    codigo: '',
+    nombre: '',
+    exigeCuentaDesignada: false,
+    exigeOtpEnEnlace: false,
+    requiereAprobacionParaInvitar: false,
+    aprobadores: { tipo: 'Rol', valor: '' },
+    atributos: [],
+  };
 }
 
 export function atributoNuevo(): AtributoBorrador {
@@ -46,6 +68,8 @@ export function borradorDeTipo(tipo: TipoVinculoDto): BorradorTipoVinculo {
     nombre: tipo.nombre,
     exigeCuentaDesignada: tipo.exigeCuentaDesignada,
     exigeOtpEnEnlace: tipo.exigeOtpEnEnlace ?? false,
+    requiereAprobacionParaInvitar: tipo.requiereAprobacionParaInvitar ?? false,
+    aprobadores: tipo.aprobadoresDeInvitacion ? { tipo: tipo.aprobadoresDeInvitacion.tipo, valor: tipo.aprobadoresDeInvitacion.valor } : { tipo: 'Rol', valor: '' },
     atributos: tipo.atributosPermitidos.map((a) => ({
       clave: a.clave,
       tipo: esTipoAtributo(a.tipo) ? a.tipo : 'Texto',
@@ -73,6 +97,7 @@ export function validarTipoVinculo(b: BorradorTipoVinculo): ErrorTipoVinculo[] {
   const errores: ErrorTipoVinculo[] = [];
   if (!codigoValido(b.codigo)) errores.push({ campo: 'codigo', codigo: 'codigo-invalido' });
   if (!b.nombre.trim()) errores.push({ campo: 'nombre', codigo: 'nombre-requerido' });
+  if (b.requiereAprobacionParaInvitar && !b.aprobadores.valor.trim()) errores.push({ campo: 'aprobadores', codigo: 'aprobadores-requeridos' });
   const vistas = new Set<string>();
   b.atributos.forEach((a, indice) => {
     const clave = a.clave.trim();
@@ -97,6 +122,9 @@ export function cuerpoTipoVinculo(b: BorradorTipoVinculo): CrearTipoVinculoDto {
     atributosPermitidos: atributos,
     exigeCuentaDesignada: b.exigeCuentaDesignada,
     exigeOtpEnEnlace: b.exigeOtpEnEnlace,
+    requiereAprobacionParaInvitar: b.requiereAprobacionParaInvitar,
+    // Sin la exigencia no viaja quién aprueba: el PUT reemplaza la configuración completa.
+    aprobadoresDeInvitacion: b.requiereAprobacionParaInvitar ? { tipo: b.aprobadores.tipo, valor: b.aprobadores.valor.trim() } : null,
   };
 }
 

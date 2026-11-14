@@ -6,6 +6,8 @@ import { configurarCliente, reiniciarCliente, type TipoVinculoDto } from '@valid
 import { createValidasoftTheme } from '@validasoft/ui';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../empresas/useEmpresas', () => ({ useEmpresaActiva: () => ({ empresa: { id: 'emp', nombre: 'Constructora Norte' }, empresas: [] }) }));
 import { DrawerTipoVinculo } from './DrawerTipoVinculo';
 import { borradorDeTipo, borradorTipoNuevo, codigoValido, cuerpoTipoVinculo, opcionesDeTexto, validarTipoVinculo, type BorradorTipoVinculo } from './modelo';
 
@@ -87,6 +89,8 @@ describe('validación de un tipo de vínculo (misma regla que TipoVinculo.Crear)
       nombre: ' Contratista ',
       exigeCuentaDesignada: false,
       exigeOtpEnEnlace: true,
+      requiereAprobacionParaInvitar: false,
+      aprobadores: { tipo: 'Area', valor: 'sobra' },
       atributos: [
         { clave: ' nivel ', tipo: 'Opcion', obligatorio: true, opciones: 'A\nB' },
         { clave: 'cargo', tipo: 'Texto', obligatorio: false, opciones: 'sobra' },
@@ -97,6 +101,8 @@ describe('validación de un tipo de vínculo (misma regla que TipoVinculo.Crear)
       nombre: 'Contratista',
       exigeCuentaDesignada: false,
       exigeOtpEnEnlace: true,
+      requiereAprobacionParaInvitar: false,
+      aprobadoresDeInvitacion: null, // sin la exigencia no viaja quién aprueba
       atributosPermitidos: [
         { clave: 'nivel', tipo: 'Opcion', obligatorio: true, opciones: ['A', 'B'] },
         { clave: 'cargo', tipo: 'Texto', obligatorio: false, opciones: null },
@@ -109,7 +115,23 @@ describe('validación de un tipo de vínculo (misma regla que TipoVinculo.Crear)
       atributosPermitidos: PROVEEDOR.atributosPermitidos,
       exigeCuentaDesignada: true,
       exigeOtpEnEnlace: true,
+      requiereAprobacionParaInvitar: false,
+      aprobadoresDeInvitacion: null,
     });
+  });
+
+  it('aprobación antes de invitar: con la exigencia hace falta decir quién aprueba y el cuerpo lleva el rol o el área', () => {
+    const exigente = valido({ requiereAprobacionParaInvitar: true });
+    expect(validarTipoVinculo(exigente)).toEqual([{ campo: 'aprobadores', codigo: 'aprobadores-requeridos' }]);
+    expect(validarTipoVinculo(valido({ requiereAprobacionParaInvitar: true, aprobadores: { tipo: 'Rol', valor: 'OficialCumplimiento' } }))).toEqual([]);
+    expect(cuerpoTipoVinculo({ ...exigente, aprobadores: { tipo: 'Area', valor: ' CUMPLIMIENTO ' } })).toMatchObject({
+      requiereAprobacionParaInvitar: true,
+      aprobadoresDeInvitacion: { tipo: 'Area', valor: 'CUMPLIMIENTO' },
+    });
+    // Ida y vuelta de lo guardado.
+    const guardado: TipoVinculoDto = { ...PROVEEDOR, requiereAprobacionParaInvitar: true, aprobadoresDeInvitacion: { tipo: 'Rol', valor: 'Revisor' } };
+    expect(borradorDeTipo(guardado)).toMatchObject({ requiereAprobacionParaInvitar: true, aprobadores: { tipo: 'Rol', valor: 'Revisor' } });
+    expect(cuerpoTipoVinculo(borradorDeTipo(guardado))).toMatchObject({ requiereAprobacionParaInvitar: true, aprobadoresDeInvitacion: { tipo: 'Rol', valor: 'Revisor' } });
   });
 });
 
@@ -154,6 +176,8 @@ describe('editor de tipos de vínculo', () => {
         nombre: 'Contratista',
         exigeCuentaDesignada: false,
         exigeOtpEnEnlace: false,
+        requiereAprobacionParaInvitar: false,
+        aprobadoresDeInvitacion: null,
         atributosPermitidos: [{ clave: 'nivelriesgo', tipo: 'Opcion', obligatorio: false, opciones: ['Bajo', 'Alto'] }],
       },
     });
@@ -174,5 +198,44 @@ describe('editor de tipos de vínculo', () => {
       metodo: 'PUT',
       cuerpo: { codigo: 'PROVEEDOR', atributosPermitidos: [{ clave: 'nivelRiesgo', tipo: 'Opcion', obligatorio: false, opciones: ['Bajo', 'Medio', 'Alto'] }] },
     });
+  });
+
+  it('aprobación antes de invitar: al activar el interruptor pide quién aprueba (un rol o un área) y lo manda con el tipo', async () => {
+    const usuario = userEvent.setup();
+    const areas = [{ id: 'a1', empresaId: 'emp', codigo: 'CUMPLIMIENTO', nombre: 'Cumplimiento', miembros: [], activa: true }];
+    const peticiones = montar(<DrawerTipoVinculo tipo={PROVEEDOR} claveIdempotencia="" onCerrar={() => undefined} />, (cuerpo) => (cuerpo === null ? json(areas) : json(PROVEEDOR)));
+    const guardar = screen.getByRole('button', { name: 'Guardar' });
+    expect(guardar).toBeEnabled();
+
+    await usuario.click(screen.getByRole('switch', { name: /Exige aprobación antes de invitar/ }));
+    expect(guardar).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Elige quién aprueba las invitaciones: un rol o un área.');
+
+    // Por un área de la empresa: se guarda su código, que se busca en la empresa de cada vínculo.
+    await usuario.click(screen.getByRole('button', { name: 'Un área' }));
+    await usuario.click(screen.getByRole('combobox', { name: /Área que aprueba/ }));
+    await usuario.click(await screen.findByRole('option', { name: 'Cumplimiento (CUMPLIMIENTO)' }));
+    await waitFor(() => expect(guardar).toBeEnabled());
+    await usuario.click(guardar);
+
+    await waitFor(() => expect(peticiones.some((p) => p.metodo === 'PUT')).toBe(true));
+    expect(peticiones.find((p) => p.metodo === 'PUT')?.cuerpo).toMatchObject({
+      codigo: 'PROVEEDOR',
+      requiereAprobacionParaInvitar: true,
+      aprobadoresDeInvitacion: { tipo: 'Area', valor: 'CUMPLIMIENTO' },
+    });
+  });
+
+  it('un tipo que ya exige aprobación abre con su rol elegido y apagar el interruptor deja de mandar quién aprueba', async () => {
+    const usuario = userEvent.setup();
+    const exigente: TipoVinculoDto = { ...PROVEEDOR, requiereAprobacionParaInvitar: true, aprobadoresDeInvitacion: { tipo: 'Rol', valor: 'OficialCumplimiento' } };
+    const peticiones = montar(<DrawerTipoVinculo tipo={exigente} claveIdempotencia="" onCerrar={() => undefined} />, (cuerpo) => (cuerpo === null ? json([]) : json(exigente)));
+    expect(screen.getByRole('switch', { name: /Exige aprobación antes de invitar/ })).toBeChecked();
+    expect(screen.getByRole('combobox', { name: /Rol que aprueba/ })).toHaveTextContent('Oficial de cumplimiento');
+
+    await usuario.click(screen.getByRole('switch', { name: /Exige aprobación antes de invitar/ }));
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }));
+    await waitFor(() => expect(peticiones.some((p) => p.metodo === 'PUT')).toBe(true));
+    expect(peticiones.find((p) => p.metodo === 'PUT')?.cuerpo).toMatchObject({ requiereAprobacionParaInvitar: false, aprobadoresDeInvitacion: null });
   });
 });

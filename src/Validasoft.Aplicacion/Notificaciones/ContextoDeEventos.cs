@@ -52,6 +52,9 @@ public interface IContextoDeEventos
 
     Task<IReadOnlyList<Area>> AreasAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
+    /// <summary>Las áreas de una empresa (quién aprueba las invitaciones se designa por el código de un área, decisión AI); por omisión ninguna (los contextos de prueba no la necesitan).</summary>
+    Task<IReadOnlyList<Area>> AreasDeLaEmpresaAsync(Guid tenantId, Guid empresaId, CancellationToken ct) => Task.FromResult<IReadOnlyList<Area>>([]);
+
     Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct);
 
     /// <summary>Delegaciones de revisión no revocadas de la empresa (OP-7): quienes las reciben se enteran de lo que le llega al área.</summary>
@@ -136,6 +139,9 @@ public sealed class ContextoDeEventos(IDocumentStore store) : IContextoDeEventos
 
     public async Task<IReadOnlyList<Area>> AreasAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         ids.Count == 0 ? [] : [.. await Sesion(Tenant(tenantId)).LoadManyAsync<Area>(ct, ids.Distinct().ToArray())];
+
+    public async Task<IReadOnlyList<Area>> AreasDeLaEmpresaAsync(Guid tenantId, Guid empresaId, CancellationToken ct) =>
+        [.. await Sesion(Tenant(tenantId)).Query<Area>().Where(a => a.EmpresaId == empresaId).ToListAsync(ct)];
 
     public async Task<IReadOnlyList<Usuario>> UsuariosAsync(Guid tenantId, IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         ids.Count == 0 ? [] : [.. await Sesion(Tenant(tenantId)).LoadManyAsync<Usuario>(ct, ids.Distinct().ToArray())];

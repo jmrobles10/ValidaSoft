@@ -151,6 +151,10 @@ export function crearRouter() {
               lazy: () => import('../features/terceros/fichaAceptada/PaginaFichaAceptada').then((m) => ({ Component: m.PaginaFichaAceptada })),
             },
             {
+              path: 'invitaciones/por-aprobar',
+              lazy: () => import('../features/invitaciones/PaginaInvitacionesPorAprobar').then((m) => ({ Component: m.PaginaInvitacionesPorAprobar })),
+            },
+            {
               path: 'invitaciones/lotes',
               lazy: () => import('../features/lotes/PaginaLotes').then((m) => ({ Component: m.PaginaLotes })),
             },

@@ -69,6 +69,25 @@ export interface EnlaceInvitacionDto {
   envios: number;
 }
 
+/**
+ * La invitación de un vínculo cuyo tipo exige aprobación antes de invitar (`VinculoDto.invitacionPorAprobar`; nulo si el vínculo no pasó por aprobación). `Pendiente`: está
+ * retenida (no salió el correo ni existe el enlace, y `invitacion` es nulo); `Aprobada`: otra persona la aprobó y salió; `Rechazada`: el vínculo quedó `Anulado` con
+ * `motivoDeRechazo`. `solicitadaPor` y `decididaPor` son `{tipoDeActor}:{id}`.
+ */
+export interface InvitacionPorAprobarDto {
+  estado: 'Pendiente' | 'Aprobada' | 'Rechazada';
+  correoDestino: string;
+  vigenciaHoras: number;
+  solicitadaEn: string;
+  solicitadaPor: string;
+  solicitadaPorNombre?: string | null;
+  decididaPor?: string | null;
+  decididaPorNombre?: string | null;
+  decididaEn?: string | null;
+  motivoDeRechazo?: string | null;
+  puedesDecidir?: boolean | null;
+}
+
 export interface VinculoDto {
   id: string;
   empresaId: string;
@@ -77,6 +96,8 @@ export interface VinculoDto {
   flujoId: string | null;
   estado: EstadoVinculo;
   invitacion: EnlaceInvitacionDto | null;
+  /** Aprobación previa a invitar: en qué va si el tipo de vínculo la exige (no cambia `estado`). */
+  invitacionPorAprobar?: InvitacionPorAprobarDto | null;
   invitacionAceptadaEn: string | null;
   referencias: ReferenciaExternaDto[];
   /** Contactos del tercero con la empresa del vínculo, por rol. */

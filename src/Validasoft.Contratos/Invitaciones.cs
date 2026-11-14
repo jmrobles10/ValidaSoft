@@ -48,11 +48,17 @@ public sealed record CrearLoteDto(string? Nombre = null, ArchivoDeLoteDto? Archi
 public sealed record TotalesLoteDto(int Filas, int Procesadas, int Pendientes, int Exitosas, int Fallidas, int Duplicadas, int Invalidas);
 
 /// <summary>
-/// <see cref="Estado"/>: <c>Procesando</c>, <c>Pausado</c>, <c>Completado</c>, <c>CompletadoConErrores</c> o <c>Cancelado</c>.
+/// <see cref="Estado"/>: <c>Procesando</c>, <c>Pausado</c>, <c>Completado</c>, <c>CompletadoConErrores</c>, <c>Cancelado</c> o <c>PorAprobar</c>.
 /// <see cref="CreadoPor"/>: <c>{tipoDeActor}:{id}</c>.
+/// Decisión AI: un lote con filas de un tipo de vínculo que exige aprobación para invitar nace <c>PorAprobar</c> (no se procesa ninguna fila) y lo decide otra persona
+/// como lote completo: <c>POST /invitaciones/lotes/{id}/aprobar</c> lo procesa y <c>…/rechazar</c> lo deja <c>Cancelado</c> con su <see cref="MotivoDeRechazo"/>.
+/// <see cref="TiposPorAprobar"/>: los tipos del lote que exigen aprobación (códigos). <see cref="PuedesDecidir"/> (solo en el detalle y la lista): quien consulta puede
+/// aprobarlo o rechazarlo. <see cref="AprobadoPor"/>: <c>{tipoDeActor}:{id}</c>.
 /// </summary>
 public sealed record LoteDto(Guid Id, string Nombre, string? Archivo, string Estado, TotalesLoteDto Totales, int VigenciaHoras, string CreadoPor,
-    DateTimeOffset CreadoEn, DateTimeOffset ActualizadoEn, DateTimeOffset? TerminadoEn, int Reintentos, long Version);
+    DateTimeOffset CreadoEn, DateTimeOffset ActualizadoEn, DateTimeOffset? TerminadoEn, int Reintentos, long Version,
+    IReadOnlyList<string>? TiposPorAprobar = null, string? AprobadoPor = null, DateTimeOffset? AprobadoEn = null, string? MotivoDeRechazo = null,
+    bool? PuedesDecidir = null);
 
 /// <summary>
 /// Fila del lote. <see cref="Estado"/>: <c>Pendiente</c>, <c>Exitosa</c>, <c>Fallida</c>, <c>Duplicada</c>, <c>Invalida</c> o

@@ -94,6 +94,9 @@ public static partial class ValidacionDeLote
         null => (nameof(AccionFilaLote.Invitado), null),
         { Estado: EstadoVinculo.Bloqueado or EstadoVinculo.Anulado or EstadoVinculo.Desvinculado } v =>
             (null, new ErrorDeFila(null, "vinculo-no-invitable", $"La empresa ya tiene ese vínculo y está {v.Estado}: no se puede invitar.")),
+        // Con su invitación retenida a la espera de aprobación (decisión AI) tampoco se reenvía desde un lote: se decide primero esa invitación.
+        { InvitacionPorAprobar: true } =>
+            (null, new ErrorDeFila(null, "invitacion-por-aprobar", "Ese vínculo ya tiene una invitación esperando aprobación: apruébala o recházala antes de invitarlo por lote.")),
         { Estado: EstadoVinculo.Invitado, InvitacionAceptada: false } => (nameof(AccionFilaLote.Reinvitado), null),
         _ => (nameof(AccionFilaLote.SinCambios), null)
     };

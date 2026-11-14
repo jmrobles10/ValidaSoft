@@ -263,7 +263,7 @@ public static class TiposVinculoEndpoints
         TimeProvider reloj, CancellationToken ct)
     {
         var tipo = TipoVinculo.Crear(dto.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada,
-            dto.ExigeOtpEnEnlace);
+            dto.ExigeOtpEnEnlace, dto.RequiereAprobacionParaInvitar, dto.AprobadoresDeInvitacion.ADominio());
 
         await using var sesion = sesiones.DelTenant();
         if (await sesion.Query<TipoVinculo>().AnyAsync(t => t.Codigo == tipo.Codigo, ct))
@@ -293,7 +293,7 @@ public static class TiposVinculoEndpoints
                 ?? throw ReglaDeNegocioException.NoEncontrado("tipo-vinculo-no-encontrado", "No existe ese tipo de vínculo.")).ADto();
     }
 
-    /// <summary>El código es inmutable; se editan nombre, atributos, cuenta designada, OTP en el enlace y estado.</summary>
+    /// <summary>El código es inmutable; se editan nombre, atributos, cuenta designada, OTP en el enlace, la aprobación previa a invitar (AI) y estado.</summary>
     [WolverinePut("/api/v1/tipos-vinculo/{id}")]
     [Authorize(Policy = Permisos.ConfiguracionEscribir)]
     public static async Task<TipoVinculoDto> Actualizar(Guid id, CrearTipoVinculoDto dto, bool? activo, ISesiones sesiones,
@@ -308,11 +308,13 @@ public static class TiposVinculoEndpoints
 
         var antes = tipo.ADto();
         var validado = TipoVinculo.Crear(tipo.Codigo, dto.Nombre, dto.AtributosPermitidos?.Select(a => a.ADominio()), dto.ExigeCuentaDesignada,
-            dto.ExigeOtpEnEnlace);
+            dto.ExigeOtpEnEnlace, dto.RequiereAprobacionParaInvitar, dto.AprobadoresDeInvitacion.ADominio());
         tipo.Nombre = validado.Nombre;
         tipo.AtributosPermitidos = validado.AtributosPermitidos;
         tipo.ExigeCuentaDesignada = validado.ExigeCuentaDesignada;
         tipo.ExigeOtpEnEnlace = validado.ExigeOtpEnEnlace;
+        tipo.RequiereAprobacionParaInvitar = validado.RequiereAprobacionParaInvitar;
+        tipo.AprobadoresDeInvitacion = validado.AprobadoresDeInvitacion;
         tipo.Activo = activo ?? tipo.Activo;
 
         sesion.Store(tipo);

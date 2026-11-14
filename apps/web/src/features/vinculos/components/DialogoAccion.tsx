@@ -75,7 +75,11 @@ export function DialogoAccion({ definicion, vinculo, empresaId, onCerrar }: Dial
       {
         onSuccess: (resultado) => {
           mostrar(
-            resultado.tipo === 'invitacion' ? t('acciones.invitar.exito', { correo: resultado.invitacion.correoDestino }) : t(`acciones.${accion}.exito`),
+            resultado.tipo === 'invitacion'
+              ? t('acciones.invitar.exito', { correo: resultado.invitacion.correoDestino })
+              : resultado.tipo === 'retenida'
+                ? t('acciones.invitar.retenida', { correo: resultado.invitacion.correoDestino })
+                : t(`acciones.${accion}.exito`),
           );
           onCerrar();
         },

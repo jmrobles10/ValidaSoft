@@ -1,7 +1,7 @@
-import { Box, Button, Chip, Link, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Link, Stack, Typography } from '@mui/material';
 import { esErrorApi, SCOPES, type EstadoFilaLote, type FilaLoteDto } from '@validasoft/api-client';
-import { BarraFiltros, Dato, EsqueletoTarjeta, EstadoVacio, FiltroMenu, PaginaEstado, RejillaDatos, TablaConCursor, type ColumnaTabla, usePaginacionCursor } from '@validasoft/ui';
-import { Ban, Download, Pause, Play, RotateCcw, SearchX } from 'lucide-react';
+import { BarraFiltros, Dato, EsqueletoTarjeta, EstadoVacio, FiltroMenu, formatearFecha, PaginaEstado, RejillaDatos, TablaConCursor, type ColumnaTabla, usePaginacionCursor } from '@validasoft/ui';
+import { Ban, CircleCheck, CircleSlash, Download, Pause, Play, RotateCcw, SearchX } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useParams } from 'react-router';
@@ -10,6 +10,9 @@ import { mensajeDeError } from '../../shared/errores';
 import { useAvisos } from '../../shared/useAvisos';
 import { usePermisos } from '../../shared/usePermisos';
 import { useEmpresaActiva } from '../empresas/useEmpresas';
+import { useNombresUsuarios } from '../configuracion/usuarios/api';
+import { mensajeDeErrorDeDecision, useDecidirLote } from '../invitaciones/api';
+import { DialogoRechazo } from '../invitaciones/DialogoRechazo';
 import { guardarArchivo } from '../vencimientos/api';
 import { useAccionLote, useDescargarLote, useFilasLote, useLote, type AccionLote } from './api';
 import { AvanceLote, ChipLote } from './componentes';
@@ -35,13 +38,18 @@ export function DetalleLote() {
   const consulta = useLote(empresa.id, loteId);
   const accion = useAccionLote(empresa.id);
   const descargar = useDescargarLote(empresa.id);
+  const decidir = useDecidirLote(empresa.id);
   const [estado, setEstado] = useState('');
   const [cancelando, setCancelando] = useState(false);
+  const [rechazando, setRechazando] = useState(false);
   const paginacion = usePaginacionCursor();
   const { reiniciar } = paginacion;
   useEffect(() => {
     reiniciar();
   }, [estado, reiniciar]);
+  // Quién aprobó el lote (decisión AI): su nombre, si se puede resolver.
+  const aprobadoPor = consulta.data?.aprobadoPor;
+  const nombres = useNombresUsuarios(empresa.id, useMemo(() => (aprobadoPor?.startsWith('Usuario:') ? [aprobadoPor.slice('Usuario:'.length)] : []), [aprobadoPor]));
   const filas = useFilasLote(empresa.id, consulta.data, { estado: estado || undefined, limite: 50, cursor: paginacion.cursor ?? undefined });
 
   const columnas = useMemo<ColumnaTabla<FilaLoteDto>[]>(
@@ -96,6 +104,23 @@ export function DetalleLote() {
       { accion: nombre, id: lote.id },
       { onSuccess: () => mostrar(exito, 'success'), onError: (error) => mostrar(mensajeDeError(error, t), 'error'), onSettled: () => setCancelando(false) },
     );
+  // Decisión AI: un lote con un tipo que exige aprobación espera a que otra persona lo apruebe o lo rechace como lote completo.
+  const puedeDecidir = lote.estado === 'PorAprobar' && lote.puedesDecidir === true && permisos.puede(SCOPES.vinculosEscribir);
+  const aprobar = () =>
+    decidir.mutate(
+      { loteId: lote.id, decision: 'aprobar' },
+      { onSuccess: () => mostrar(t('invitaciones.porAprobar.loteAprobado'), 'success'), onError: (error) => mostrar(mensajeDeErrorDeDecision(error, t), 'error') },
+    );
+  const rechazar = (motivo: string) =>
+    decidir.mutate(
+      { loteId: lote.id, decision: 'rechazar', motivo },
+      {
+        onSuccess: () => {
+          setRechazando(false);
+          mostrar(t('invitaciones.porAprobar.loteRechazado'), 'success');
+        },
+      },
+    );
   const informe = () =>
     descargar.mutate(
       { tipo: 'informe', id: lote.id },
@@ -113,6 +138,16 @@ export function DetalleLote() {
         subtitulo={<ChipLote estado={lote.estado} />}
         acciones={
           <>
+            {puedeDecidir && (
+              <>
+                <Button variant="outlined" color="error" startIcon={<CircleSlash size={16} aria-hidden />} disabled={decidir.isPending} onClick={() => setRechazando(true)}>
+                  {t('invitaciones.lote.rechazar')}
+                </Button>
+                <Button variant="contained" startIcon={<CircleCheck size={16} aria-hidden />} disabled={decidir.isPending} onClick={aprobar}>
+                  {t('invitaciones.lote.aprobar')}
+                </Button>
+              </>
+            )}
             {acciones.includes('pausar') && (
               <Button variant="outlined" startIcon={<Pause size={16} aria-hidden />} disabled={accion.isPending} onClick={() => ejecutar('pausar', t('lotes.detalle.pausado'))}>
                 {t('lotes.detalle.pausar')}
@@ -140,6 +175,18 @@ export function DetalleLote() {
         }
       />
       <Stack spacing={2}>
+        {lote.estado === 'PorAprobar' && (
+          <Alert severity="warning">
+            {t('invitaciones.lote.avisoPendiente')}
+            {lote.tiposPorAprobar && lote.tiposPorAprobar.length > 0 && <> {t('invitaciones.lote.avisoTipos', { tipos: lote.tiposPorAprobar.join(', ') })}</>}{' '}
+            {lote.puedesDecidir === true ? t('invitaciones.lote.decidesTu') : t('invitaciones.lote.decideOtra')}
+          </Alert>
+        )}
+        {lote.estado !== 'PorAprobar' && lote.aprobadoPor && lote.aprobadoEn && (
+          <Alert severity="info">{t('invitaciones.lote.aprobadoPor', { quien: nombres.get(lote.aprobadoPor.replace('Usuario:', '')) ?? t('invitaciones.aviso.alguien'), fecha: formatearFecha(lote.aprobadoEn) })}</Alert>
+        )}
+        {lote.motivoDeRechazo && <Alert severity="error">{t('invitaciones.lote.rechazadoMotivo', { motivo: lote.motivoDeRechazo })}</Alert>}
+        {decidir.isError && !rechazando && <Alert severity="error">{mensajeDeErrorDeDecision(decidir.error, t)}</Alert>}
         <Tarjeta>
           <Box sx={{ mb: 2 }}>
             <AvanceLote lote={lote} ancho="min(480px, 60vw)" />
@@ -174,6 +221,19 @@ export function DetalleLote() {
           vacio={<EstadoVacio compacto titulo={t('lotes.detalle.sinFilas')} />}
         />
       </Stack>
+      {rechazando && (
+        <DialogoRechazo
+          tipo="lote"
+          subtitulo={lote.nombre}
+          ocupado={decidir.isPending}
+          error={decidir.isError ? mensajeDeErrorDeDecision(decidir.error, t) : null}
+          onConfirmar={rechazar}
+          onCerrar={() => {
+            decidir.reset();
+            setRechazando(false);
+          }}
+        />
+      )}
       {cancelando && (
         <DialogoConfirmacion
           titulo={t('lotes.detalle.cancelarTitulo')}

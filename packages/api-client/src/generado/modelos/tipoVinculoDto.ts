@@ -4,6 +4,7 @@
  * Validasoft.Api | v1
  * OpenAPI spec version: 1.0.0
  */
+import type { AprobadoresDeInvitacionDto } from './aprobadoresDeInvitacionDto';
 import type { AtributoPermitidoDto } from './atributoPermitidoDto';
 
 export interface TipoVinculoDto {
@@ -14,4 +15,6 @@ export interface TipoVinculoDto {
   exigeCuentaDesignada: boolean;
   activo: boolean;
   exigeOtpEnEnlace?: boolean;
+  requiereAprobacionParaInvitar?: boolean;
+  aprobadoresDeInvitacion?: null | AprobadoresDeInvitacionDto;
 }

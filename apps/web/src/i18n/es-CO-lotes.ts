@@ -17,6 +17,7 @@ export const lotes = {
     Completado: 'Completado',
     CompletadoConErrores: 'Con errores',
     Cancelado: 'Cancelado',
+    PorAprobar: 'Por aprobar',
   },
   avance: '{{procesadas}} de {{total}}',
   resumen: '{{exitosas}} invitadas · {{fallidas}} fallidas · {{descartadas}} descartadas',

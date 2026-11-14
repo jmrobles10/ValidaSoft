@@ -65,6 +65,7 @@ export * from './generado/endpoints/listas-de-plataforma/listas-de-plataforma';
 export * from './generado/endpoints/listas-restrictivas/listas-restrictivas';
 export * from './generado/endpoints/informe-cumplimiento/informe-cumplimiento';
 export * from './generado/endpoints/lotes/lotes';
+export * from './generado/endpoints/invitaciones-por-aprobar/invitaciones-por-aprobar';
 export * from './generado/endpoints/plazos-de-cargue/plazos-de-cargue';
 export * from './generado/endpoints/informe-estado-expedientes/informe-estado-expedientes';
 export * from './generado/endpoints/informe-vinculos/informe-vinculos';

@@ -16,6 +16,7 @@ import type {
   ExpedienteDto,
   FichaDelVinculoDto,
   InvitacionDto,
+  InvitacionPorAprobarDto,
   JustificacionDto,
   PaginaDto,
   PaginaEventosDto,
@@ -154,6 +155,11 @@ async function condicional<T>(ctx: Contexto, p: Peticion): Promise<RespuestaCond
 
 const q = encodeURIComponent;
 
+/** ¿La respuesta de {@link ClienteValidasoft.invitaciones} `.enviar` es una invitación retenida a la espera de aprobación (y no el enlace que salió)? */
+export function invitacionRetenida(respuesta: EnlaceInvitacionDto | InvitacionPorAprobarDto): respuesta is InvitacionPorAprobarDto {
+  return !('expira' in respuesta);
+}
+
 /** Desde qué cursor, qué tipos y de a cuántos (1–200) leer los eventos. */
 export interface FiltroEventos {
   desde?: string;
@@ -238,9 +244,16 @@ export class ClienteValidasoft {
   };
 
   readonly invitaciones = {
-    /** Envía (o reenvía) la invitación al tercero. */
+    /**
+     * Envía (o reenvía) la invitación al tercero. Devuelve el enlace (201: salió) o, si el tipo de vínculo exige aprobación antes de invitar, la invitación retenida (202:
+     * `estado: 'Pendiente'`, hasta que otra persona la apruebe); {@link invitacionRetenida} distingue los dos.
+     */
     enviar: (vinculoId: string, invitacion: InvitacionDto = {}) =>
-      obtener<EnlaceInvitacionDto>(this.ctx, { metodo: 'POST', ruta: `api/v1/vinculos/${q(vinculoId)}/invitaciones`, cuerpo: invitacion }),
+      obtener<EnlaceInvitacionDto | InvitacionPorAprobarDto>(this.ctx, {
+        metodo: 'POST',
+        ruta: `api/v1/vinculos/${q(vinculoId)}/invitaciones`,
+        cuerpo: invitacion,
+      }),
   };
 
   readonly expedientes = {

@@ -3,8 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Validasoft.Aplicacion.Comun;
+using Validasoft.Aplicacion.Vinculos;
 using Validasoft.Contratos;
+using Validasoft.Dominio.Auditoria;
 using Validasoft.Dominio.Comun;
+using Validasoft.Dominio.Configuracion;
+using Validasoft.Dominio.Identidad;
 using Validasoft.Dominio.Invitaciones;
 using Wolverine;
 using Wolverine.Http;
@@ -60,8 +64,13 @@ public static class LotesEndpoints
         var filas = await ValidacionDeLote.ValidarAsync(empresa, Entradas(dto, configuracion), ahora, ct);
         var totales = new TotalesDeLote(filas.Count, filas.Count(f => f.Estado == EstadoFilaLote.Pendiente), 0, 0,
             filas.Count(f => f.Estado == EstadoFilaLote.Duplicada), filas.Count(f => f.Estado == EstadoFilaLote.Invalida));
+
+        // Aprobación antes de invitar (decisión AI): si alguna fila que va a invitar es de un tipo que lo exige, el lote completo espera una sola decisión antes de procesar nada.
+        var porAprobar = await TiposPorAprobarAsync(empresa, filas, ct);
+        if (porAprobar.Count > 0)
+            await AprobadoresDeInvitaciones.ExigirAprobadoresAsync(empresa, porAprobar, contexto, ct);
         var creado = LoteDeInvitacion.Crear(empresa.EmpresaId, dto.Nombre, dto.Archivo?.Nombre, dto.VigenciaHoras, totales,
-            new ActorDeLote(contexto.ActorTipo, contexto.ActorId), ahora);
+            new ActorDeLote(contexto.ActorTipo, contexto.ActorId), ahora, [.. porAprobar.Select(t => t.Id)]);
 
         empresa.Sesion.Events.StartStream<LoteDeInvitacion>(creado.LoteId, creado);
         foreach (var f in filas)
@@ -77,30 +86,46 @@ public static class LotesEndpoints
                 Errores = [.. f.Errores],
                 DuplicadaDe = f.DuplicadaDe
             });
-        await mensajes.PublishAsync(new ProcesarTandaDeLote(contexto.TenantRequerido(), creado.LoteId, creado.Ejecucion));
+        // Un lote por aprobar no encola su primera tanda: la encola quien lo apruebe (con una ejecución nueva).
+        if (porAprobar.Count == 0)
+            await mensajes.PublishAsync(new ProcesarTandaDeLote(contexto.TenantRequerido(), creado.LoteId, creado.Ejecucion));
+        else
+            AprobadoresDeInvitaciones.Auditar(empresa, contexto, "InvitacionDeLote", creado.LoteId, AccionConfiguracion.Creado, null,
+                new { Estado = nameof(EstadoLote.PorAprobar), creado.CreadoPor, Tipos = porAprobar.Select(t => t.Codigo) }, ahora);
         await empresa.Sesion.SaveChangesAsync(ct);
 
         var lote = await CargarAsync(empresa, creado.LoteId, ct);
-        return Results.Accepted($"/api/v1/invitaciones/lotes/{lote.Id}", lote.ADto());
+        return Results.Accepted($"/api/v1/invitaciones/lotes/{lote.Id}", (await ConAprobacionAsync(empresa, contexto, [lote], ct))[0]);
     }
 
-    /// <summary>Lotes de la empresa, del más reciente al más antiguo; cursor opaco.</summary>
+    /// <summary>
+    /// Lotes de la empresa, del más reciente al más antiguo; cursor opaco. <c>estado</c> filtra por el estado del lote (<c>PorAprobar</c> es la bandeja de quienes aprueban lotes,
+    /// decisión AI); cada lote por aprobar dice <c>puedesDecidir</c>.
+    /// </summary>
     [WolverineGet("/api/v1/invitaciones/lotes")]
     [Authorize(Policy = Permisos.VinculosLeer)]
-    public static async Task<PaginaDto<LoteDto>> Listar(SesionDeEmpresa empresa, int? limite, string? cursor, CancellationToken ct)
+    public static async Task<PaginaDto<LoteDto>> Listar(SesionDeEmpresa empresa, IContextoSolicitud contexto, string? estado, int? limite, string? cursor, CancellationToken ct)
     {
         var tamano = Math.Clamp(limite ?? 20, 1, 100);
         var desde = Peticiones.LeerDesplazamiento(cursor);
         var empresaId = empresa.EmpresaId;
-        var pagina = await empresa.Sesion.Query<LoteDeInvitacion>().Where(l => l.EmpresaId == empresaId)
-            .OrderByDescending(l => l.CreadoEn).Skip(desde).Take(tamano + 1).ToListAsync(ct);
-        return new PaginaDto<LoteDto>([.. pagina.Take(tamano).Select(l => l.ADto())],
+        var consulta = empresa.Sesion.Query<LoteDeInvitacion>().Where(l => l.EmpresaId == empresaId);
+        if (!string.IsNullOrWhiteSpace(estado))
+        {
+            if (!Enum.TryParse<EstadoLote>(estado, true, out var filtro) || !Enum.IsDefined(filtro))
+                throw ReglaDeNegocioException.Validacion("estado-invalido", $"'{estado}' no es un estado de lote.");
+            consulta = consulta.Where(l => l.Estado == filtro);
+        }
+
+        var pagina = await consulta.OrderByDescending(l => l.CreadoEn).Skip(desde).Take(tamano + 1).ToListAsync(ct);
+        return new PaginaDto<LoteDto>(await ConAprobacionAsync(empresa, contexto, [.. pagina.Take(tamano)], ct),
             pagina.Count > tamano ? Peticiones.EscribirDesplazamiento(desde + tamano) : null);
     }
 
     [WolverineGet("/api/v1/invitaciones/lotes/{id}")]
     [Authorize(Policy = Permisos.VinculosLeer)]
-    public static async Task<LoteDto> Obtener(Guid id, SesionDeEmpresa empresa, CancellationToken ct) => (await CargarAsync(empresa, id, ct)).ADto();
+    public static async Task<LoteDto> Obtener(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto, CancellationToken ct) =>
+        (await ConAprobacionAsync(empresa, contexto, [await CargarAsync(empresa, id, ct)], ct))[0];
 
     /// <summary>
     /// Filas en orden, con filtro opcional por estado (<c>Pendiente</c>, <c>Exitosa</c>, <c>Fallida</c>, <c>Duplicada</c>,
@@ -176,6 +201,109 @@ public static class LotesEndpoints
             return [reintento];
         }, ct);
 
+    /// <summary>
+    /// Aprueba el lote completo (una sola decisión para todas sus filas, decisión AI): pasa a <c>Procesando</c> y se encola la primera tanda; las invitaciones de sus filas salen sin
+    /// pedir una aprobación por vínculo. Quien aprueba debe ser de quienes designó <b>cada</b> tipo que exige aprobación (403 <c>no-es-aprobador-de-invitaciones</c>), una persona
+    /// (422 <c>usuario-delegado-requerido</c>) y no quien creó el lote (403 <c>separacion-de-funciones</c>); 409 <c>sin-lote-por-aprobar</c>.
+    /// </summary>
+    [WolverinePost("/api/v1/invitaciones/lotes/{id}/aprobar")]
+    [Authorize(Policy = Permisos.VinculosEscribir)]
+    public static async Task<LoteDto> Aprobar(Guid id, SesionDeEmpresa empresa, IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj, CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        var stream = await empresa.Sesion.Events.FetchForExclusiveWriting<LoteDeInvitacion>(id, ct);
+        var lote = Propio(stream.Aggregate, empresa);
+        var decisor = await AprobadoresDeInvitaciones.DecisorAsync(empresa, contexto, await TiposAsync(empresa, lote, ct), ct);
+
+        var ahora = reloj.GetUtcNow();
+        var aprobado = lote.Aprobar(decisor.UsuarioId, ahora);
+        stream.AppendOne(aprobado);
+        await mensajes.PublishAsync(new ProcesarTandaDeLote(contexto.TenantRequerido(), lote.Id, aprobado.Ejecucion));
+        AprobadoresDeInvitaciones.Auditar(empresa, contexto, "InvitacionDeLote", id, AccionConfiguracion.Modificado, new { Estado = nameof(EstadoLote.PorAprobar) },
+            new { Estado = nameof(EstadoLote.Procesando), aprobado.AprobadoPor, lote.CreadoPor }, ahora);
+        await empresa.Sesion.SaveChangesAsync(ct);
+        return (await ConAprobacionAsync(empresa, contexto, [await CargarAsync(empresa, id, ct)], ct))[0];
+    }
+
+    /// <summary>
+    /// Rechaza el lote completo con un motivo (422 <c>motivo-requerido</c>): queda <c>Cancelado</c>, ninguna fila se procesa y nunca se le escribió a ningún tercero. Las mismas reglas
+    /// de quién decide que al aprobarlo.
+    /// </summary>
+    [WolverinePost("/api/v1/invitaciones/lotes/{id}/rechazar")]
+    [Authorize(Policy = Permisos.VinculosEscribir)]
+    public static async Task<LoteDto> Rechazar(Guid id, MotivoDto dto, SesionDeEmpresa empresa, IContextoSolicitud contexto, IMessageBus mensajes, TimeProvider reloj,
+        CancellationToken ct)
+    {
+        empresa.UsarMensajeria(mensajes);
+        var stream = await empresa.Sesion.Events.FetchForExclusiveWriting<LoteDeInvitacion>(id, ct);
+        var lote = Propio(stream.Aggregate, empresa);
+        var decisor = await AprobadoresDeInvitaciones.DecisorAsync(empresa, contexto, await TiposAsync(empresa, lote, ct), ct);
+
+        var ahora = reloj.GetUtcNow();
+        var rechazado = lote.Rechazar(decisor.UsuarioId, dto.Motivo, await ProcesarTandaDeLoteHandler.ContarAsync(empresa.Sesion, id, ct), ahora);
+        stream.AppendOne(rechazado);
+        AprobadoresDeInvitaciones.Auditar(empresa, contexto, "InvitacionDeLote", id, AccionConfiguracion.Modificado, new { Estado = nameof(EstadoLote.PorAprobar) },
+            new { Estado = nameof(EstadoLote.Cancelado), rechazado.RechazadoPor, rechazado.Motivo, lote.CreadoPor }, ahora);
+        await empresa.Sesion.SaveChangesAsync(ct);
+        return (await ConAprobacionAsync(empresa, contexto, [await CargarAsync(empresa, id, ct)], ct))[0];
+    }
+
+    private static LoteDeInvitacion Propio(LoteDeInvitacion? lote, SesionDeEmpresa empresa) =>
+        lote is not null && lote.EmpresaId == empresa.EmpresaId
+            ? lote
+            : throw ReglaDeNegocioException.NoEncontrado("lote-no-encontrado", "No existe ese lote en la empresa.");
+
+    /// <summary>Los tipos de vínculo del lote que exigen aprobación (los guardados al crearlo).</summary>
+    private static async Task<IReadOnlyList<TipoVinculo>> TiposAsync(SesionDeEmpresa empresa, LoteDeInvitacion lote, CancellationToken ct) =>
+        lote.TiposPorAprobar.Count == 0
+            ? []
+            : [.. (await empresa.Sesion.Query<TipoVinculo>().ToListAsync(ct)).Where(t => lote.TiposPorAprobar.Contains(t.Id))];
+
+    /// <summary>
+    /// Los tipos de vínculo con aprobación previa a invitar (decisión AI) de las filas que van a invitar o reinvitar (las que no cambian nada, porque el tercero ya aceptó, no cuentan).
+    /// </summary>
+    private static async Task<IReadOnlyList<TipoVinculo>> TiposPorAprobarAsync(SesionDeEmpresa empresa, IReadOnlyList<FilaValidada> filas, CancellationToken ct)
+    {
+        var codigos = filas
+            .Where(f => f.Estado == EstadoFilaLote.Pendiente && (f.Accion == nameof(AccionFilaLote.Invitado) || f.Accion == nameof(AccionFilaLote.Reinvitado)))
+            .Select(f => f.Datos.TipoVinculo)
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return codigos.Count == 0
+            ? []
+            : [.. (await empresa.Sesion.Query<TipoVinculo>().ToListAsync(ct)).Where(t => t.Activo && t.RequiereAprobacionParaInvitar && codigos.Contains(t.Codigo))];
+    }
+
+    /// <summary>
+    /// Los lotes como DTO; los que pasaron por aprobación (decisión AI) con los códigos de sus tipos y, mientras esperan, si quien consulta puede decidirlos (aprueba cada tipo y no
+    /// los creó).
+    /// </summary>
+    internal static async Task<IReadOnlyList<LoteDto>> ConAprobacionAsync(SesionDeEmpresa empresa, IContextoSolicitud contexto, IReadOnlyList<LoteDeInvitacion> lotes,
+        CancellationToken ct)
+    {
+        if (lotes.All(l => l.TiposPorAprobar.Count == 0))
+            return [.. lotes.Select(l => l.ADto())];
+
+        var tipos = (await empresa.Sesion.Query<TipoVinculo>().ToListAsync(ct)).ToDictionary(t => t.Id);
+        var usuarios = await empresa.Sesion.Query<Usuario>().Where(u => u.Activo).ToListAsync(ct);
+        var areas = await empresa.Areas().ToListAsync(ct);
+        var yo = AprobadoresDeInvitaciones.UsuarioDe(contexto);
+
+        bool PuedeDecidir(LoteDeInvitacion lote) =>
+            yo is { } usuario &&
+            !(lote.CreadoPor.Tipo == ActorTipo.Usuario && string.Equals(lote.CreadoPor.Id, usuario.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+            lote.TiposPorAprobar.All(id => tipos.TryGetValue(id, out var tipo) &&
+                                           AprobadoresDeInvitaciones.Elegibles(tipo, empresa.EmpresaId, usuarios, areas).Any(u => u.Id == usuario));
+
+        return [.. lotes.Select(l => l.TiposPorAprobar.Count == 0
+            ? l.ADto()
+            : l.ADto() with
+            {
+                TiposPorAprobar = [.. l.TiposPorAprobar.Select(id => tipos.TryGetValue(id, out var tipo) ? tipo.Codigo : null).OfType<string>()],
+                PuedesDecidir = l.Estado == EstadoLote.PorAprobar ? PuedeDecidir(l) : null
+            })];
+    }
+
     /// <summary>Informe por fila en Excel: identificación, datos, estado, acción, errores y el vínculo creado o reutilizado.</summary>
     [WolverineGet("/api/v1/invitaciones/lotes/{id}/informe")]
     [Authorize(Policy = Permisos.VinculosLeer)]
@@ -238,7 +366,8 @@ public static class LotesEndpoints
 
     public static LoteDto ADto(this LoteDeInvitacion l) =>
         new(l.Id, l.Nombre, l.Archivo, l.Estado.ToString(), l.Totales.ADto(), l.VigenciaHoras, $"{l.CreadoPor.Tipo}:{l.CreadoPor.Id}", l.CreadoEn,
-            l.ActualizadoEn, l.TerminadoEn, l.Reintentos, l.Version);
+            l.ActualizadoEn, l.TerminadoEn, l.Reintentos, l.Version,
+            AprobadoPor: l.AprobadoPor is null ? null : $"{l.AprobadoPor.Tipo}:{l.AprobadoPor.Id}", AprobadoEn: l.AprobadoEn, MotivoDeRechazo: l.MotivoDeRechazo);
 
     public static TotalesLoteDto ADto(this TotalesDeLote t) =>
         new(t.Filas, t.Exitosas + t.Fallidas, t.Pendientes, t.Exitosas, t.Fallidas, t.Duplicadas, t.Invalidas);

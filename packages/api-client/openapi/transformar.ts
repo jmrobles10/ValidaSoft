@@ -67,6 +67,10 @@ const NOMBRES: Record<string, string> = {
   'GET /api/v1/vinculos/{id}': 'obtenerVinculo',
   'PATCH /api/v1/vinculos/{id}/atributos': 'actualizarAtributosVinculo',
   'POST /api/v1/vinculos/{id}/invitaciones': 'invitarVinculo',
+  // Aprobación antes de invitar (decisión AI): la bandeja de quienes aprueban y la decisión sobre cada invitación retenida.
+  'GET /api/v1/invitaciones/por-aprobar': 'listarInvitacionesPorAprobar',
+  'POST /api/v1/vinculos/{id}/invitacion/aprobar': 'aprobarInvitacionVinculo',
+  'POST /api/v1/vinculos/{id}/invitacion/rechazar': 'rechazarInvitacionVinculo',
   'POST /api/v1/vinculos/{id}/bloquear': 'bloquearVinculo',
   'POST /api/v1/vinculos/{id}/desbloquear': 'desbloquearVinculo',
   'POST /api/v1/vinculos/{id}/desvincular': 'desvincularVinculo',
@@ -426,6 +430,8 @@ const NOMBRES: Record<string, string> = {
   'POST /api/v1/invitaciones/lotes/{id}/reanudar': 'reanudarLote',
   'POST /api/v1/invitaciones/lotes/{id}/cancelar': 'cancelarLote',
   'POST /api/v1/invitaciones/lotes/{id}/reintentar': 'reintentarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/aprobar': 'aprobarLote',
+  'POST /api/v1/invitaciones/lotes/{id}/rechazar': 'rechazarLote',
   'GET /api/v1/invitaciones/lotes/{id}/informe': 'descargarInformeLote',
   // Operación de la revisión (OP-1…OP-19): campañas de renovación, delegación, SLA y ayudas por empresa.
   'POST /api/v1/campanias/vista-previa': 'previsualizarCampania',
@@ -496,7 +502,8 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
   crearTercero: { '200': 'TerceroDto', '201': 'TerceroDto' },
   // 201 al crear; 200 cuando otro sistema integrado se suma al vínculo existente (I-0).
   crearVinculo: { '200': 'VinculoDto', '201': 'VinculoDto' },
-  invitarVinculo: { '201': 'EnlaceInvitacionDto' },
+  // 201 con el enlace cuando salió; 202 cuando el tipo exige aprobación y la invitación quedó retenida (AI).
+  invitarVinculo: { '201': 'EnlaceInvitacionDto', '202': 'InvitacionPorAprobarDto' },
   crearTenant: { '201': 'TenantCreadoDto' },
   crearSistema: { '201': 'SistemaIntegradoDto' },
   crearWebhook: { '201': 'WebhookDto' },
@@ -552,7 +559,9 @@ const RESPUESTAS_REALES: Record<string, Record<string, string | null>> = {
 /** Enums textuales del dominio (docs/03 §3.1, docs/07 §3.1). */
 const ENUMS: Record<string, string[]> = {
   EstadoCorridaPortal: ['Encolada', 'EnCurso', 'Completada', 'Fallida'],
-  EstadoLote: ['Procesando', 'Pausado', 'Completado', 'CompletadoConErrores', 'Cancelado'],
+  EstadoLote: ['Procesando', 'Pausado', 'Completado', 'CompletadoConErrores', 'Cancelado', 'PorAprobar'],
+  EstadoAprobacionDeInvitacion: ['Pendiente', 'Aprobada', 'Rechazada'],
+  TipoDeAprobadores: ['Rol', 'Area'],
   EstadoFilaLote: ['Pendiente', 'Exitosa', 'Fallida', 'Duplicada', 'Invalida', 'Cancelada'],
   EstadoCampania: ['Procesando', 'Pausada', 'Completada', 'CompletadaConErrores', 'Cancelada'],
   EstadoFilaCampania: ['Pendiente', 'Exitosa', 'Fallida', 'Omitida', 'Cancelada'],
@@ -626,6 +635,8 @@ const PROPIEDADES_ENUM: Record<string, string> = {
   'RolAsignadoDto.rol': 'Rol',
   'ExpedienteDto.estado': 'EstadoExpediente',
   'LoteDto.estado': 'EstadoLote',
+  'InvitacionPorAprobarDto.estado': 'EstadoAprobacionDeInvitacion',
+  'AprobadoresDeInvitacionDto.tipo': 'TipoDeAprobadores',
   'FilaLoteDto.estado': 'EstadoFilaLote',
   'CampaniaDto.estado': 'EstadoCampania',
   'FilaCampaniaDto.estado': 'EstadoFilaCampania',
